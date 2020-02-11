@@ -1,0 +1,13 @@
+diff --git a/openvpn/src/openvpn/socket.c b/openvpn/src/openvpn/socket.c
+index 85f783a..c5a2d7f 100644
+--- a/openvpn/src/openvpn/socket.c
++++ b/openvpn/src/openvpn/socket.c
+@@ -22,6 +22,8 @@
+  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  */
+ 
++#define __APPLE_USE_RFC_2292
++
+ #ifdef HAVE_CONFIG_H
+ #include "config.h"
+ #elif defined(_MSC_VER)

@@ -1,0 +1,151 @@
+Pyobfsproxy integration test suite (PITS)
+
+THIS IS UNIMPLEMENTED. IT'S JUST A DESIGN DOC.
+
+Overview
+
+  Obfsproxy needs an automated and robust way of testing its pluggable
+  transports. While unit tests are certainly helpful, integration
+  tests provide realistic testing scenarios for network daemons like
+  obfsproxy.
+
+Motivation
+
+  Obfsproxy needs to be tested on how well it can proxy traffic from
+  one side to its other side. A basic integration test would be to
+  transfer a string from one side and see if it arrives intact on the
+  other side.
+
+  A more involved integration test is the "timeline tests" of
+  Stegotorus, developed by Zack Weinberg. Stegotorus integration tests
+  are configurable: you pass them a script file that defines the
+  behavior of the integration test connections. This allows
+  customizable connection establishment and tear down, and the ability
+  to send arbitrary data through the integration test connections.
+
+  That's good enough, but sometimes bugs appear on more complex
+  network interactions. For this reason, PITS was developed which has
+  support for:
+    + multiple network connections
+    + flexible connection behavior
+    + automated test case generation
+
+  The integration tests should also be cross-platform so that they can
+  be ran on Microsoft Windows.
+
+Design
+
+
+
+                  +-----------+                      +-----------+
+        |-------->| client    |<-------------------->| server    |<--------|
+        |  |----->| obfsproxy |<-------------------->| obfsproxy |<-----|  |
+        |  |  |-->|           |<-------------------->|           |<--|  |  |
+        |  |  |   +-----------+                      +-----------+   |  |  |
+        |  |  |                                                      |  |  |
+        v  v  v                                                      v  v  v
+   +---------------+                                            +---------------+
+   | PITS outbound |                                            | PITS inbound  |
+   +---------------+                                            +---------------+
+           ^                                                            |
+           |                                                            |
+           |                                                            v
+   +---------------+                                            +---------------+
+   |Test case file |<----------------<validation>-------------->|Transcript file|
+   +---------------+                                            +---------------+
+
+  PITS does integration tests by reading a user-provided test case
+  file which contains a description of the test that PITS should
+  perform.
+
+  A basic PITS test case usually involves launching two obfsproxies as
+  in the typical obfuscated bridge client-server scenario, exchanging
+  some data between them and finally checking if both sides received
+  the proper data.
+
+  A basic PITS test case usually involves opening a listening socket
+  (which in the case of a client-side obfsproxy, emulates the
+  server-side obfspoxy), and a number of outbound connections (which in
+  the case of a client-side obfsproxy, emulate the connections from the
+  Tor client).
+
+  Test case files contain instructions for the sockets of PITS. Through
+  test case files, PITS can be configured to perform the following
+  actions:
+    + Open and close connections
+    + Send arbitrary data through connections
+    + Pause connections
+
+  While conducting the tests, the PITS inbound and outbound sockets
+  record the data they sent and receive in a 'transcript'; after the
+  test is over, the transcript and test case file are post-processed
+  and compared with each other to check whether the intended
+  conversation was performed successfully.
+
+Test case files
+
+  The test case file format is line-oriented; each line is a command,
+  and the first character of the line is a directive followed by a
+  number of arguments.
+  Valid commands are:
+
+     # comment line    - note that # _only_ introduces a comment at the beginning
+                         of a line; elsewhere, it's either a syntax error or part
+                         of an argument
+
+     P number          - pause test-case execution for |number| milliseconds
+     ! <n>             - initiate connection with identifier <n>
+     * <n>             - Close connection <n> (through inbound socket)
+     > <n> <text>      - transmit <text> on <n> through outbound socket
+     < <n> <text>      - transmit <text> on <n> through inbound socket
+
+  Trailing whitespace is ignored.
+
+  Test cases have to close all established connections explicitly,
+  otherwise the test won't be validated correctly.
+
+Transcript files
+
+  Inbound and outbound sockets log received data to a transcript
+  file. The transcript file format is similar to the test case format:
+
+     ! <n>          - connection <n> established on inbound socket
+     > <text>       - <text> received on inbound socket
+     < <text>       - <text> received on outbound socket.
+     * <n>          - connection <n> destroyed on inbound socket
+
+  
+
+Test case results
+
+  After a test case is completed and the transcript file is written,
+  PITS needs to evalute whether the test case was successful; that is,
+  whether the transcript file correctly describes the test case.
+
+  Because of the properties of TCP, the following post-processing
+  happens to validate the transcript file with the test case file:
+
+  a) Both files are segregated: all the traffic and events of inbound
+     sockets are put on top, and the traffic and events of outbound
+     sockets are put on the bottom.
+
+     (This happens because TCP can't guarantee order of event arival in
+     one direction relative to the order of event arrival in the other
+     direction.)
+
+  b) In both files, for each socket identifier, we concatenate all its
+     traffic in a single 'transmit' directive. In the end, we place the
+     transmit line below the events (session establishment, etc.).
+
+     (This happens because TCP is a stream protocol.)
+
+  c) We string compare the transcript and test-case files.
+
+  XXX document any unexpected behaviors or untestable cases caused by
+  the above postprocessing.
+
+Acknowledgements
+
+  The script file format and the basic idea of PITS are concepts of
+  Zack Weinberg. They were implemented as part of Stegotorus:
+  https://gitweb.torproject.org/stegotorus.git/blob/HEAD:/src/test/tltester.cc

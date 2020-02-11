@@ -1,0 +1,16 @@
+.DS_Store
+IVPN Agent
+References/macOS/_deps
+References/Windows/IVPN Firewall Native x64.dll
+References/Windows/IVPN Firewall Native.dll
+References/Windows/IVPN Helpers Native x64.dll
+References/Windows/IVPN Helpers Native.dll
+References/Windows/Native Projects/bin/
+References/Windows/Native Projects/IVPN Firewall Native/Release/
+References/Windows/Native Projects/IVPN Firewall Native/x64/
+References/Windows/Native Projects/IVPN Helpers Native/Release/
+References/Windows/Native Projects/IVPN Helpers Native/x64/
+bin/
+References/Windows/WintunInstaller/.deps/
+References/Windows/WintunInstaller/obj/
+References/Windows/WireGuard/
