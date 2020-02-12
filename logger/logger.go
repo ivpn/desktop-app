@@ -2,7 +2,6 @@ package logger
 
 import (
 	"fmt"
-	"ivpn/daemon/service/platform"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 
 	"github.com/pkg/errors"
 )

@@ -2,13 +2,14 @@ package dns
 
 import (
 	"fmt"
-	"ivpn/daemon/netinfo"
-	"ivpn/daemon/service/platform"
 	"net"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/ivpn/desktop-app-daemon/netinfo"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 
 	"github.com/pkg/errors"
 )

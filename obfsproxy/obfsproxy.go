@@ -3,13 +3,14 @@ package obfsproxy
 import (
 	"errors"
 	"fmt"
-	"ivpn/daemon/logger"
-	"ivpn/daemon/shell"
 	"math/rand"
 	"net"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/shell"
 )
 
 var log *logger.Logger

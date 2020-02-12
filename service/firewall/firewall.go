@@ -2,9 +2,10 @@ package firewall
 
 import (
 	"fmt"
-	"ivpn/daemon/logger"
 	"net"
 	"sync"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
 )
 
 var log *logger.Logger

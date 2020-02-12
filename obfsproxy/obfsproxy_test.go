@@ -2,10 +2,11 @@ package obfsproxy_test
 
 import (
 	"fmt"
-	"ivpn/daemon/obfsproxy"
-	"ivpn/daemon/service/platform"
 	"testing"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/obfsproxy"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
 func TestStart(t *testing.T) {

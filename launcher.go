@@ -2,16 +2,17 @@ package main
 
 import (
 	"fmt"
-	"ivpn/daemon/logger"
-	"ivpn/daemon/netchange"
-	"ivpn/daemon/protocol"
-	"ivpn/daemon/service"
-	"ivpn/daemon/service/api"
-	"ivpn/daemon/service/platform"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/netchange"
+	"github.com/ivpn/desktop-app-daemon/protocol"
+	"github.com/ivpn/desktop-app-daemon/service"
+	"github.com/ivpn/desktop-app-daemon/service/api"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
 var log *logger.Logger

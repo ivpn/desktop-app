@@ -4,10 +4,11 @@ package iphlpapi
 
 import (
 	"encoding/binary"
-	"ivpn/daemon/logger"
 	"net"
 	"syscall"
 	"unsafe"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
 )
 
 var log *logger.Logger

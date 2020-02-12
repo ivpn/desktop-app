@@ -1,7 +1,7 @@
 package winlib_test
 
 import (
-	"ivpn/daemon/service/firewall/winlib"
+	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
 	"net"
 	"syscall"
 	"testing"

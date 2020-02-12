@@ -5,14 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"ivpn/daemon/logger"
-	"ivpn/daemon/vpn"
 	"net"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
 // ManagementInterface structure

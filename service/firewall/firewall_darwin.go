@@ -2,11 +2,12 @@ package firewall
 
 import (
 	"fmt"
-	"ivpn/daemon/netinfo"
-	"ivpn/daemon/service/platform"
-	"ivpn/daemon/shell"
 	"net"
 	"strings"
+
+	"github.com/ivpn/desktop-app-daemon/netinfo"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/shell"
 )
 
 // Useful commands for testing:

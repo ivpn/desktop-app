@@ -2,12 +2,13 @@ package wireguard
 
 import (
 	"io/ioutil"
-	"ivpn/daemon/logger"
-	"ivpn/daemon/netinfo"
-	"ivpn/daemon/vpn"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/netinfo"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 
 	"github.com/pkg/errors"
 )

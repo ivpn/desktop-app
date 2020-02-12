@@ -1,10 +1,10 @@
 package firewall
 
 import (
-	"fmt"
-	"ivpn/daemon/service/netinfo"
 	"net"
 	"testing"
+
+	"github.com/ivpn/desktop-app-daemon/netinfo"
 )
 
 func TestGetNetworkInterfaces(t *testing.T) {
@@ -17,8 +17,4 @@ func TestGetNetworkInterfaces(t *testing.T) {
 	if inf.Name != "lo0" {
 		t.Error("Expected network interface: lo0")
 	}
-}
-
-func TestGetLocalIPs(t *testing.T) {
-	fmt.Println(implGetLocalIPs())
 }

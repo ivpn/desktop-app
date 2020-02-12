@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"ivpn/daemon/logger"
 	"net"
 	"net/http"
 	"path"
 	"sync"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
 )
 
 // API URLs

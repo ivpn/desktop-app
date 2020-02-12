@@ -1,9 +1,10 @@
 package main
 
 import (
-	"ivpn/daemon/logger"
-	"ivpn/daemon/oshelpers/macos/libivpn"
 	"os"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/oshelpers/macos/libivpn"
 )
 
 // Prepare to start IVPN daemon for macOS

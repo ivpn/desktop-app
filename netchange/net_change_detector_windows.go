@@ -3,12 +3,13 @@ package netchange
 import (
 	"errors"
 	"fmt"
-	"ivpn/daemon/netinfo"
-	"ivpn/daemon/oshelpers/windows/iphlpapi"
-	"ivpn/daemon/oshelpers/windows/kernel32"
-	"ivpn/daemon/oshelpers/windows/winsock2"
 	"net"
 	"syscall"
+
+	"github.com/ivpn/desktop-app-daemon/netinfo"
+	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/iphlpapi"
+	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/kernel32"
+	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/winsock2"
 )
 
 // structure contains properties required for for macOS implementation

@@ -1,9 +1,10 @@
 package service
 
 import (
-	"ivpn/daemon/service/api"
-	"ivpn/daemon/service/firewall"
 	"net"
+
+	"github.com/ivpn/desktop-app-daemon/service/api"
+	"github.com/ivpn/desktop-app-daemon/service/firewall"
 )
 
 func (s *service) implIsGoingToPingServers(servers *api.ServersInfoResponse) error {

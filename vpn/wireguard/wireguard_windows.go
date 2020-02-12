@@ -2,15 +2,16 @@ package wireguard
 
 import (
 	"fmt"
-	"ivpn/daemon/service/dns"
-	"ivpn/daemon/shell"
-	"ivpn/daemon/vpn"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/service/dns"
+	"github.com/ivpn/desktop-app-daemon/shell"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sys/windows"

@@ -1,10 +1,11 @@
 package netchange
 
 import (
-	"ivpn/daemon/netinfo"
 	"os"
 	"strings"
 	"syscall"
+
+	"github.com/ivpn/desktop-app-daemon/netinfo"
 
 	"golang.org/x/net/route"
 )
