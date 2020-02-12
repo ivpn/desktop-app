@@ -2,15 +2,16 @@ package service
 
 import (
 	"fmt"
-	"ivpn/daemon/logger"
-	"ivpn/daemon/netinfo"
-	"ivpn/daemon/service/api"
-	"ivpn/daemon/service/firewall"
-	"ivpn/daemon/vpn"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/netinfo"
+	"github.com/ivpn/desktop-app-daemon/service/api"
+	"github.com/ivpn/desktop-app-daemon/service/firewall"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 
 	"github.com/pkg/errors"
 	"github.com/sparrc/go-ping"

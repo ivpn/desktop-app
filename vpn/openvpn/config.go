@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
-	"ivpn/daemon/logger"
-	"ivpn/daemon/netinfo"
-	"ivpn/daemon/service/platform"
 	"net"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/netinfo"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 
 	"github.com/pkg/errors"
 )

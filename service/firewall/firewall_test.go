@@ -2,10 +2,11 @@ package firewall_test
 
 import (
 	"fmt"
-	"ivpn/daemon/service/firewall"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/service/firewall"
 
 	//go get github.com/sparrc/go-ping
 	"github.com/sparrc/go-ping"
@@ -126,7 +127,7 @@ func TestClientConnected(t *testing.T) {
 
 	fmt.Println(isEnabled)
 
-	err = firewall.ClientConnected(net.IPv4(10,59,44,2))
+	err = firewall.ClientConnected(net.IPv4(10, 59, 44, 2))
 	if err != nil {
 		t.Error(err)
 		return

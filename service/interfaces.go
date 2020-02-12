@@ -3,10 +3,11 @@ package service
 // TODO: move interfaces definitions to a files which are using this interfaces
 
 import (
-	"ivpn/daemon/service/api"
-	"ivpn/daemon/vpn"
 	"net"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/service/api"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
 // Protocol - interface of communication protocol with IVPN application

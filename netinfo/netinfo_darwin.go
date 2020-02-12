@@ -3,9 +3,10 @@ package netinfo
 import (
 	"errors"
 	"fmt"
-	"ivpn/daemon/shell"
 	"net"
 	"strings"
+
+	"github.com/ivpn/desktop-app-daemon/shell"
 )
 
 // DefaultRoutingInterface - Get active routing interface

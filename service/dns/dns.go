@@ -1,8 +1,9 @@
 package dns
 
 import (
-	"ivpn/daemon/logger"
 	"net"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
 )
 
 var log *logger.Logger

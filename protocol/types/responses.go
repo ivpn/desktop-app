@@ -2,8 +2,9 @@ package types
 
 import (
 	"encoding/json"
-	"ivpn/daemon/logger"
-	"ivpn/daemon/service/api"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/service/api"
 )
 
 var log *logger.Logger

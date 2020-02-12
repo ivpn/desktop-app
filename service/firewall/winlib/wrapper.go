@@ -4,9 +4,10 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"ivpn/daemon/logger"
-	"ivpn/daemon/service/platform"
 	"syscall"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
 var log *logger.Logger

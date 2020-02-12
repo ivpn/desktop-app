@@ -5,7 +5,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"ivpn/daemon/oshelpers/windows/iphlpapi"
+	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/iphlpapi"
 )
 
 func getWindowsIPv4Routes() ([]iphlpapi.APIMibIPForwardRow, error) {

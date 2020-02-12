@@ -3,9 +3,10 @@ package shell
 import (
 	"bufio"
 	"fmt"
-	"ivpn/daemon/logger"
 	"os/exec"
 	"strings"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
 
 	"github.com/pkg/errors"
 )

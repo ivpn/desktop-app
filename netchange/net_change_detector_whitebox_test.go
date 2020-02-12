@@ -2,10 +2,11 @@ package netchange
 
 import (
 	"fmt"
-	"ivpn/daemon/netinfo"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/netinfo"
 )
 
 func TestDetectorDelay(t *testing.T) {

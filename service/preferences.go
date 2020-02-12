@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"ivpn/daemon/service/platform"
+
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
 // Preferences - IVPN service preferences

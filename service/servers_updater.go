@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"ivpn/daemon/service/api"
-	"ivpn/daemon/service/platform"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/service/api"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
 type serversUpdater struct {

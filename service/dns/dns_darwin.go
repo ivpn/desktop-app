@@ -1,9 +1,10 @@
 package dns
 
 import (
-	"ivpn/daemon/service/platform"
-	"ivpn/daemon/shell"
 	"net"
+
+	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/shell"
 
 	"github.com/pkg/errors"
 )

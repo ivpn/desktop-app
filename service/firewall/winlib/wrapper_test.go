@@ -2,7 +2,7 @@ package winlib_test
 
 import (
 	"fmt"
-	"ivpn/daemon/service/firewall/winlib"
+	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
 	"syscall"
 	"testing"
 )

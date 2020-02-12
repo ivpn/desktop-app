@@ -2,12 +2,13 @@ package netchange_test
 
 import (
 	"fmt"
-	"ivpn/daemon/netchange"
-	"ivpn/daemon/netinfo"
 	"net"
 	"os/exec"
 	"testing"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/netchange"
+	"github.com/ivpn/desktop-app-daemon/netinfo"
 )
 
 func TestDetector(t *testing.T) {

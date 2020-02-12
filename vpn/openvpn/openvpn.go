@@ -3,14 +3,15 @@ package openvpn
 import (
 	"errors"
 	"fmt"
-	"ivpn/daemon/logger"
-	"ivpn/daemon/obfsproxy"
-	"ivpn/daemon/service/platform"
-	"ivpn/daemon/shell"
-	"ivpn/daemon/vpn"
 	"net"
 	"strings"
 	"sync"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/obfsproxy"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/shell"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
 var log *logger.Logger

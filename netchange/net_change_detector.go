@@ -1,9 +1,10 @@
 package netchange
 
 import (
-	"ivpn/daemon/logger"
 	"net"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
 )
 
 var log *logger.Logger
