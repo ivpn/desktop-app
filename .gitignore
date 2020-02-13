@@ -14,3 +14,6 @@ bin/
 References/Windows/WintunInstaller/.deps/
 References/Windows/WintunInstaller/obj/
 References/Windows/WireGuard/
+.deps/
+References/Windows/etc/port.txt
+References/Windows/log/
