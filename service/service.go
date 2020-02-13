@@ -98,7 +98,7 @@ func (s *service) Connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 	// finalyze everything
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("On finalyzing VPN stop: ", r)
+			log.Error("Panic on VPN connection: ", r)
 			if err, ok := r.(error); ok {
 				log.ErrorTrace(err)
 			}
@@ -110,7 +110,7 @@ func (s *service) Connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 		// notify firewall that client is disconnected
 		err := firewall.ClientDisconnected()
 		if err != nil {
-			log.Error("Error on notifying FW about disconnected client:", err)
+			log.Error("(stopping) error on notifying FW about disconnected client:", err)
 		}
 
 		// notify routines to stop
@@ -119,7 +119,7 @@ func (s *service) Connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 		// resetting manual DNS (if it is necessary)
 		err = vpnProc.ResetManualDNS()
 		if err != nil {
-			log.Error("Error resetting manual DNS:", err)
+			log.Error("(stopping) error resetting manual DNS: ", err)
 		}
 
 		connectRoutinesWaiter.Wait()
@@ -228,7 +228,7 @@ func (s *service) Connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 		err = s.SetManualDNS(manualDNS)
 	}
 	if err != nil {
-		err = errors.Wrap(err, "Unable to set DNS")
+		err = errors.Wrap(err, "failed to set DNS")
 		log.Error(err.Error())
 		return err
 	}

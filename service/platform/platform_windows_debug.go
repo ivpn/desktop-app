@@ -35,10 +35,16 @@ func doOsInitForBuild() (instDir string) {
 		nativeHelpersDllPath = path.Join(installDir, `Native Projects/bin/Release/IVPN Firewall Native.dll`)
 	}
 
-	fmt.Println("!!!  DEBUG VERSION !!!!!!!!!!!!!!!!!!!!!!!")
-	//fmt.Printf("!!! DEBUG VERSION !!! Install dir hardcoded to          : '%s'\n", installDir)
+	servicePortFile = `C:/Program Files/IVPN Client/etc/port.txt`
+	if err = os.MkdirAll(filepath.Dir(servicePortFile), os.ModePerm); err != nil {
+		fmt.Printf("!!! DEBUG VERSION !!! ERROR	: '%s'\n", servicePortFile)
+		servicePortFile = ""
+	}
+
+	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	fmt.Printf("!!! DEBUG VERSION !!! wfpDllPath            : '%s'\n", wfpDllPath)
 	fmt.Printf("!!! DEBUG VERSION !!! nativeHelpersDllPath  : '%s'\n", nativeHelpersDllPath)
+	fmt.Printf("!!! DEBUG VERSION !!! servicePortFile	: '%s'\n", servicePortFile)
 	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
 	return installDir
