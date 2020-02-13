@@ -15,6 +15,15 @@ func doOsInitForBuild() (instDir string) {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to obtain folder of current binary: %s", err.Error()))
 	}
+
+	// When running tests, the installDir is detected as a dir where test located
+	// we need to point installDir to project root
+	// Therefore, we cutting rest after "desktop-app-daemon"
+	rootDir := "desktop-app-daemon"
+	if idx := strings.LastIndex(installDir, rootDir); idx > 0 {
+		installDir = installDir[:idx+len(rootDir)]
+	}
+
 	installDir = strings.ReplaceAll(installDir, `\`, `/`)
 	installDir = path.Join(installDir, "References/Windows")
 
