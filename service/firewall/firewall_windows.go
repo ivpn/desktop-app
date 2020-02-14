@@ -154,9 +154,14 @@ func implAllowLAN(allowLan bool, allowLanMulticast bool) error {
 	isAllowLAN = allowLan
 	isAllowLANMulticast = allowLanMulticast
 
-	if enabled, err := implGetEnabled(); enabled == false || err != nil {
+	enabled, err := implGetEnabled()
+	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
 	}
+	if enabled == false {
+		return nil
+	}
+
 	return reEnable()
 }
 
@@ -169,9 +174,14 @@ func implSetManualDNS(addr net.IP) error {
 
 	customDNS = addr
 
-	if enabled, err := implGetEnabled(); enabled == false || err != nil {
+	enabled, err := implGetEnabled()
+	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
 	}
+	if enabled == false {
+		return nil
+	}
+
 	return reEnable()
 }
 
@@ -203,8 +213,12 @@ func reEnable() (retErr error) {
 }
 
 func doEnable() (retErr error) {
-	if enabled, err := implGetEnabled(); enabled == true || err != nil {
+	enabled, err := implGetEnabled()
+	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
+	}
+	if enabled == true {
+		return nil
 	}
 
 	addressesV6, err := netinfo.GetAllLocalV6Addresses()
@@ -345,8 +359,12 @@ func doEnable() (retErr error) {
 }
 
 func doDisable() error {
-	if enabled, err := implGetEnabled(); enabled == false || err != nil {
-		return fmt.Errorf("failed to check if firewall enabled: %w", err)
+	enabled, err := implGetEnabled()
+	if err != nil {
+		return fmt.Errorf("failed to get info if firewall is on: %w", err)
+	}
+	if enabled == false {
+		return nil
 	}
 
 	// delete filters
@@ -394,8 +412,12 @@ func doAddClientIPFilters(clientLocalIP net.IP) (retErr error) {
 		return nil
 	}
 
-	if enabled, err := implGetEnabled(); enabled == false || err != nil {
-		return fmt.Errorf("failed to get info is firewall enabled : %w", err)
+	enabled, err := implGetEnabled()
+	if err != nil {
+		return fmt.Errorf("failed to get info if firewall is on: %w", err)
+	}
+	if enabled == false {
+		return nil
 	}
 
 	filters := make([]uint64, 0, len(v4Layers))
@@ -418,8 +440,12 @@ func doRemoveClientIPFilters() (retErr error) {
 		clientLocalIPFilterIDs = nil
 	}()
 
-	if enabled, err := implGetEnabled(); enabled == false || err != nil {
-		return fmt.Errorf("failed to get info is firewall enabled : %w", err)
+	enabled, err := implGetEnabled()
+	if err != nil {
+		return fmt.Errorf("failed to get info if firewall is on: %w", err)
+	}
+	if enabled == false {
+		return nil
 	}
 
 	for _, filterID := range clientLocalIPFilterIDs {
