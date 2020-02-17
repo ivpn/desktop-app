@@ -276,21 +276,24 @@ func addUserDefinedParameters(currParams []string, userParams string) ([]string,
 
 	for _, cfgLine := range currParams {
 		cfgParam := getParamFromConfigLine(cfgLine)
-		newCfgLine := ""
+		cfgLineToSave := cfgLine
 
-		for _, userLine := range userLines {
+		for i, userLine := range userLines {
 			userParam := getParamFromConfigLine(userLine)
 
-			if cfgParam == userParam {
-				newCfgLine = userLine
+			if len(userParam) > 0 && cfgParam == userParam {
+				cfgLineToSave = userLine
+				userLines[i] = ""
 				break
 			}
 		}
 
-		if newCfgLine == "" {
-			tmpCfg = append(tmpCfg, cfgLine)
-		} else {
-			tmpCfg = append(tmpCfg, newCfgLine)
+		tmpCfg = append(tmpCfg, cfgLineToSave)
+	}
+
+	for _, userLine := range userLines {
+		if len(userLine) > 0 {
+			tmpCfg = append(tmpCfg, userLine)
 		}
 	}
 
@@ -320,7 +323,7 @@ func isUserParametersAllowed(userParameters string) error {
 
 func getParamFromConfigLine(line string) string {
 	line = strings.TrimLeft(line, " \t")
-	words := strings.Split(line, " \t")
+	words := strings.Fields(line)
 
 	if len(words) <= 0 || len(words[0]) <= 0 {
 		return ""
