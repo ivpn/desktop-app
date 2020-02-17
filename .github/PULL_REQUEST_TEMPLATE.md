@@ -16,6 +16,7 @@ What kind of change does this PR introduce?
 Please check if your PR fulfills the following requirements:
 
 - [ ] I have read the CONTRIBUTING.md doc
+- [ ] The Git workflow follows our guidelines: CONTRIBUTING.md#git
 - [ ] I have added necessary documentation (if appropriate)
 
 ## What is the current behavior?

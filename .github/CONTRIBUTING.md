@@ -33,3 +33,30 @@ Follow these steps when you want to submit a pull request:
 1. Go over installation guides in the [README](/README.md#installation)
 2. Follow instructions in the [PR Template](/.github/PULL_REQUEST_TEMPLATE.md)
 3. Update the [README](/README.md) file with details of changes if applicable
+
+<a name="git"></a>
+## Git Workflow
+
+This project is using [Gitflow Workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow).
+
+### Branch naming guidelines
+
+Naming for branches is made with following structure:
+
+```
+<type>/<issue ID>-<short-summary-or-description>
+```
+
+In case when there is no issue:
+
+```
+<type>/<short-summary-or-description>
+```
+
+Where <type> can be `epic`, `feature`, `task`, `bugfix`, `hotfix` or `release`.
+
+### Branches
+
+`master` - The production branch. Clone or fork this repository for the latest copy.  
+`develop` - The active development branch. Pull requests should be directed to this branch.  
+`<feature branch>` - The feature of fix branch. Pull requests should be made from this branch into `develop` brach.
