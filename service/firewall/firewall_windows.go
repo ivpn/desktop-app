@@ -116,7 +116,7 @@ func implClientConnected(clientLocalIPAddress net.IP) (retErr error) {
 
 	err := doRemoveClientIPFilters()
 	if err != nil {
-		log.Error("Failed to remove previously defined client IP filters", err)
+		log.Error("Failed to remove previously defined client IP filters: ", err)
 	}
 	return doAddClientIPFilters(clientLocalIPAddress)
 }

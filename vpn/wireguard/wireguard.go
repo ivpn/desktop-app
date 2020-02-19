@@ -81,6 +81,13 @@ func (wg *WireGuard) DestinationIPs() []net.IP {
 	return []net.IP{wg.connectParams.hostIP}
 }
 
+// Init performs basic initialisations before connection
+// It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
+// (currently, in use by WireGuard(Windows))
+func (wg *WireGuard) Init() error {
+	return wg.init()
+}
+
 // Connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 func (wg *WireGuard) Connect(stateChan chan<- vpn.StateInfo) error {
 
