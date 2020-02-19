@@ -83,6 +83,11 @@ func NewStateInfoConnected(clientIP net.IP, serverIP net.IP) StateInfo {
 
 // Process represents VPN object operations
 type Process interface {
+	// Init performs basic initialisations before connection
+	// It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
+	// (currently, in use by WireGuard(Windows))
+	Init() error
+
 	// Connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 	Connect(stateChan chan<- StateInfo) error
 	Disconnect() error

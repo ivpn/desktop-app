@@ -37,6 +37,10 @@ type internalVariables struct {
 	isPaused      bool
 }
 
+func (wg *WireGuard) init() error {
+	return nil // do nothing for macOS
+}
+
 // connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	var routineStopWaiter sync.WaitGroup

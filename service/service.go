@@ -212,6 +212,11 @@ func (s *service) Connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 		}
 	}()
 
+	log.Info("Initialising...")
+	if err := vpnProc.Init(); err != nil {
+		return fmt.Errorf("failed to initialise VPN object: %w", err)
+	}
+
 	log.Info("Initializing firewall")
 	// Add host IP to firewall exceptions
 	err := firewall.AddHostsToExceptions(vpnProc.DestinationIPs())
