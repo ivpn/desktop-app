@@ -47,6 +47,20 @@ const (
 	_waitServiceStartTimeout   = time.Minute * 5
 )
 
+func (wg *WireGuard) init() error {
+	// uninstall WG service (if installed)
+
+	if installed, err := wg.isServiceInstalled(); installed == false || err != nil {
+		if err != nil {
+			return err
+		}
+		return nil // service not available (so, nothing to uninstall)
+	}
+
+	log.Warning("The IVPN WireGuard service is installed (it is not expected). Uninstalling it...")
+	return wg.uninstallService()
+}
+
 // connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	if wg.internals.isDisconnectRequested {
@@ -97,7 +111,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	for ; ; time.Sleep(time.Millisecond * 50) {
 		_, stat, err := wg.getServiceStatus(m)
 		if err != nil {
-			if err == windows.ERROR_SERVICE_DOES_NOT_EXIST {
+			if err == windows.ERROR_SERVICE_DOES_NOT_EXIST || err == windows.ERROR_SERVICE_DISABLED || err == windows.ERROR_SERVICE_NOT_ACTIVE || err == windows.ERROR_SERVICE_NOT_FOUND {
 				break
 			}
 		}
@@ -411,6 +425,26 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 }
 
 // uninstall WireGuard service
+func (wg *WireGuard) isServiceInstalled() (bool, error) {
+	// connect to service maneger
+	m, err := mgr.Connect()
+	if err != nil {
+		return false, fmt.Errorf("failed to connect windows service manager: %w", err)
+	}
+	defer m.Disconnect()
+
+	// looking for service
+	serviceName := wg.getServiceName()
+	s, err := m.OpenService(serviceName)
+	if err != nil {
+		return false, nil // service not available
+	}
+	s.Close()
+
+	return true, nil
+}
+
+// uninstall WireGuard service
 func (wg *WireGuard) uninstallService() error {
 	// NO parallel operations of serviceInstall OR serviceUninstall should be performed!
 	_globalInitMutex.Lock()
@@ -427,7 +461,7 @@ func (wg *WireGuard) uninstallService() error {
 	serviceName := wg.getServiceName()
 	s, err := m.OpenService(serviceName)
 	if err != nil {
-		return nil // service not available (so, nothing to disconnect)
+		return nil // service not available (so, nothing to uninstall)
 	}
 	s.Close()
 

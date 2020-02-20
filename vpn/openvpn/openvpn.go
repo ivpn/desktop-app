@@ -79,6 +79,13 @@ func (o *OpenVPN) DestinationIPs() []net.IP {
 	return o.connectParams.hostIPs
 }
 
+// Init performs basic initialisations before connection
+// It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
+// (currently, in use by WireGuard(Windows))
+func (o *OpenVPN) Init() error {
+	return nil // do nothing for OpenVPN
+}
+
 // Connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 
