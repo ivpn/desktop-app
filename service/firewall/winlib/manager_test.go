@@ -1,11 +1,14 @@
+// +build windows
+
 package winlib_test
 
 import (
-	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
 	"net"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
 
 	"github.com/sparrc/go-ping"
 )

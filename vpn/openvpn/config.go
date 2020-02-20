@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/ivpn/desktop-app-daemon/logger"
@@ -55,24 +54,6 @@ func CreateConnectionParams(
 		proxyUsername: proxyUsername,
 		proxyPassword: proxyPassword}
 }
-
-// parameters which are not allowed to be defined by user manually
-var deprecatedParametersRegExps = []*regexp.Regexp{
-	regexp.MustCompile("^ipchange$"),
-	regexp.MustCompile("^iproute$"),
-	regexp.MustCompile("^route-up$"),
-	regexp.MustCompile("^route-pre-down$"),
-	regexp.MustCompile("^up$"),
-	regexp.MustCompile("^down$"),
-	regexp.MustCompile("^up-restart$"),
-	regexp.MustCompile("^cd$"),
-	regexp.MustCompile("^chroot$"),
-	regexp.MustCompile("^daemon$"),
-	regexp.MustCompile("^management.*$"),
-	regexp.MustCompile("^ca$"),
-	regexp.MustCompile("^tls-auth$"),
-	regexp.MustCompile("^plugin$"),
-	regexp.MustCompile("^script-security$")}
 
 // WriteConfigFile saves OpenVPN connection parameters into a config file
 func (c *ConnectionParams) WriteConfigFile(

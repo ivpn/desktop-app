@@ -206,24 +206,23 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 
 	messageData := []byte(message)
 
-	reqType, err := getNetTypeName(messageData)
+	reqType, err := getNetTypeName(messageData, true)
 	if err != nil {
 		log.Error("Failed to parse request:", err)
 		return
 	}
 
-	log.Info("[<--] ", strings.Replace(reqType, "IVPN.", "", 1))
+	log.Info("[<--] ", reqType)
 
 	switch reqType {
-	case "IVPN.IVPNHelloRequest":
+	case "Hello":
 		sendResponse(conn, types.IVPNHelloResponse())
-		//sendResponse(conn, types.IVPNGetPreferencesResponse(make(map[string]string)))
 
 		serv, _ := p.service.ServersList()
 		sendResponse(conn, types.IVPNServerListResponse(serv))
 		break
 
-	case "IVPN.IVPNPingServers":
+	case "PingServers":
 		var req types.PingServers
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
@@ -237,7 +236,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNKillSwitchGetStatusRequest":
+	case "KillSwitchGetStatus":
 		if isEnabled, err := p.service.KillSwitchState(); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
 		} else {
@@ -245,7 +244,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNKillSwitchSetAllowLANMulticastRequest":
+	case "KillSwitchSetAllowLANMulticast":
 		var req types.KillSwitchSetAllowLANMulticastRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
@@ -254,7 +253,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNKillSwitchSetAllowLANRequest":
+	case "KillSwitchSetAllowLAN":
 		var req types.KillSwitchSetAllowLANRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
@@ -263,12 +262,12 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNKillSwitchGetIsPestistentRequest":
+	case "KillSwitchGetIsPestistent":
 		isPersistant := p.service.Preferences().IsFwPersistant
 		sendResponse(conn, types.IVPNKillSwitchGetIsPestistentResponse(isPersistant))
 		break
 
-	case "IVPN.IVPNKillSwitchSetIsPersistentRequest":
+	case "KillSwitchSetIsPersistent":
 		var req types.KillSwitchSetIsPersistentRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
@@ -282,7 +281,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNSetPreferenceRequest":
+	case "SetPreference":
 		var req types.SetPreferenceRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
@@ -293,7 +292,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNGenerateDiagnosticsRequest":
+	case "GenerateDiagnostics":
 		if log, log0, err := logger.GetLogText(1024 * 64); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
 		} else {
@@ -301,7 +300,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNSetAlternateDns":
+	case "SetAlternateDns":
 		var req types.SetAlternateDNS
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
@@ -331,7 +330,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNKillSwitchSetEnabledRequest":
+	case "KillSwitchSetEnabled":
 		var req types.KillSwitchSetEnabledRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
@@ -344,7 +343,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNPauseConnection":
+	case "PauseConnection":
 		if err := p.service.Pause(); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
 		} else {
@@ -352,7 +351,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNResumeConnection":
+	case "ResumeConnection":
 		if err := p.service.Resume(); err != nil {
 			sendResponse(conn, types.IVPNErrorResponse(err))
 		} else {
@@ -360,7 +359,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNDisconnectRequest":
+	case "Disconnect":
 		p._disconnectRequested = true
 
 		if err := p.service.Disconnect(); err != nil {
@@ -368,7 +367,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		}
 		break
 
-	case "IVPN.IVPNConnectRequest":
+	case "Connect":
 		p._disconnectRequested = false
 		requestTime := p.connectReqEnter()
 
@@ -466,19 +465,31 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 	}
 }
 
-func getNetTypeName(messageData []byte) (string, error) {
-	var dat map[string]interface{}
-
-	if err := json.Unmarshal(messageData, &dat); err != nil {
-		return "", err
+func getNetTypeName(messageData []byte, isRequest bool) (string, error) {
+	type RequestObject struct {
+		Command string
 	}
 
-	reqType, ok := dat["$type"].(string)
-	if ok == false {
-		return "", errors.New("bad JSON request, no '$type' field")
+	type ResponseObject struct {
+		Type string
 	}
 
-	return strings.Split(reqType, ",")[0], nil
+	if isRequest {
+		var cmdInfo RequestObject
+		if err := json.Unmarshal(messageData, &cmdInfo); err != nil {
+			log.Error("Failed to parse request:", err)
+			return "", fmt.Errorf("failed to parse request (unable to determine Command): %w", err)
+		}
+		return cmdInfo.Command, nil
+	}
+
+	var typInfo ResponseObject
+	if err := json.Unmarshal(messageData, &typInfo); err != nil {
+		log.Error("Failed to parse response:", err)
+		return "", fmt.Errorf("failed to parse response (unable to determine Type): %w", err)
+	}
+
+	return typInfo.Type, nil
 }
 
 func sendResponse(conn net.Conn, bytesToSend []byte) {
@@ -490,7 +501,7 @@ func sendResponse(conn net.Conn, bytesToSend []byte) {
 	conn.Write([]byte("\n"))
 
 	// Just for logging
-	if reqType, err := getNetTypeName(bytesToSend); err == nil {
+	if reqType, err := getNetTypeName(bytesToSend, false); err == nil {
 		log.Info("[-->] ", reqType)
 	} else {
 		log.Error("Protocol error: BAD DATA WAS SENT. ", err)
@@ -520,72 +531,42 @@ func (p *protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 }
 
 // parseReqAndCreateVpnObj - Parse 'connect' request and create VPN object
-func (p *protocol) parseReqAndCreateVpnObj(messageData []byte) (retVpnObj vpn.Process, manualDNS net.IP, err error) {
+func (p *protocol) parseReqAndCreateVpnObj(messageData []byte) (retVpnObj vpn.Process, retManualDNS net.IP, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("PANIC when parsing 'Connect' request: ", r)
-			// changing return values of main method
+			// changing return values
 			retVpnObj = nil
 			err = errors.New("panic when parsing 'Connect' request: " + fmt.Sprint(r))
 		}
 	}()
 
-	var dat map[string]interface{}
-
-	if err := json.Unmarshal(messageData, &dat); err != nil {
+	var r types.Connect
+	if err := json.Unmarshal(messageData, &r); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal json request: %w", err)
 	}
 
-	vpnType := (vpn.Type)(dat["VpnType"].(float64))
+	fmt.Println(string(messageData))
 
-	manualDNS = net.ParseIP(dat["CurrentDns"].(string))
+	retManualDNS = net.ParseIP(r.CurrentDNS)
 
-	if vpnType == vpn.OpenVPN {
-		var username string
-		var password string
-		var proxyType string
-		var proxyAddress string
-		var proxyUsername string
-		var proxyPassword string
-		var proxyPort int
-		var protocol int
+	if vpn.Type(r.VpnType) == vpn.OpenVPN {
 		var hosts []net.IP
-
-		params := dat["OpenVpnParameters"].(map[string]interface{})
-		username = params["Username"].(string)
-		password = params["Password"].(string)
-
-		if val := params["ProxyType"]; val != nil {
-			proxyType = val.(string)
-		}
-		if val := params["ProxyAddress"]; val != nil {
-			proxyAddress = val.(string)
-		}
-		if val := params["ProxyUsername"]; val != nil {
-			proxyUsername = val.(string)
-		}
-		if val := params["ProxyPassword"]; val != nil {
-			proxyPassword = val.(string)
-		}
-		if val := params["ProxyPort"]; val != nil {
-			proxyPort = int(val.(float64))
+		for _, v := range r.OpenVpnParameters.EntryVpnServer.IPAddresses {
+			hosts = append(hosts, net.ParseIP(v))
 		}
 
-		portObj := params["Port"].(map[string]interface{})
-		hostPort := (int)(portObj["Port"].(float64))
-		protocol = (int)(portObj["Protocol"].(float64))
-
-		svr := params["EntryVpnServer"].(map[string]interface{})
-		addreses := svr["IpAddresses"].(map[string]interface{})
-		addresesValues := addreses["$values"].([]interface{})
-		for _, v := range addresesValues {
-			hostValue := v.(string)
-			hosts = append(hosts, net.ParseIP(hostValue))
-		}
-
-		isTCP := protocol > 0
-
-		connectionParams := openvpn.CreateConnectionParams(username, password, isTCP, hostPort, hosts, proxyType, net.ParseIP(proxyAddress), proxyPort, proxyUsername, proxyPassword)
+		connectionParams := openvpn.CreateConnectionParams(
+			r.OpenVpnParameters.Username,
+			r.OpenVpnParameters.Password,
+			r.OpenVpnParameters.Port.Protocol > 0, // is TCP
+			r.OpenVpnParameters.Port.Port,
+			hosts,
+			r.OpenVpnParameters.ProxyType,
+			net.ParseIP(r.OpenVpnParameters.ProxyAddress),
+			r.OpenVpnParameters.ProxyPort,
+			r.OpenVpnParameters.ProxyUsername,
+			r.OpenVpnParameters.ProxyPassword)
 
 		prefs := p.service.Preferences()
 
@@ -600,46 +581,30 @@ func (p *protocol) parseReqAndCreateVpnObj(messageData []byte) (retVpnObj vpn.Pr
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create new openVPN object: %w", err)
 		}
-	} else if vpnType == vpn.WireGuard {
-		wgParams := dat["WireGuardParameters"].(map[string]interface{})
+	} else if vpn.Type(r.VpnType) == vpn.WireGuard {
+		hostValue := r.WireGuardParameters.EntryVpnServer.Hosts[rand.Intn(len(r.WireGuardParameters.EntryVpnServer.Hosts))]
 
-		portObj := wgParams["Port"].(map[string]interface{})
-		hostPort := (int)(portObj["Port"].(float64))
-
-		clientLocalIP := wgParams["InternalClientIp"].(string)
-		clientPrivateKey := wgParams["LocalPrivateKey"].(string)
-
-		svr := wgParams["EntryVpnServer"].(map[string]interface{})
-		hosts := svr["Hosts"].(map[string]interface{})
-		hostsValues := hosts["$values"].([]interface{})
-
-		hostsCnt := len(hostsValues)
-		if hostsCnt == 0 {
-			return nil, nil, errors.New("WireGuardParameters parsing error: no hosts defined")
-		}
-
-		hostValue := hostsValues[rand.Intn(hostsCnt)].(map[string]interface{})
-
-		hostIP := hostValue["Host"].(string)
-		hostPublicKey := hostValue["PublicKey"].(string)
-		hostLocalIP := hostValue["LocalIp"].(string)
-		// 10.0.0.1/24 => 10.0.0.1
-		hostLocalIP = strings.Split(hostLocalIP, "/")[0]
-
-		connectionParams := wireguard.CreateConnectionParams(net.ParseIP(clientLocalIP), clientPrivateKey, hostPort, net.ParseIP(hostIP), hostPublicKey, net.ParseIP(hostLocalIP))
+		connectionParams := wireguard.CreateConnectionParams(
+			net.ParseIP(r.WireGuardParameters.InternalClientIP),
+			r.WireGuardParameters.LocalPrivateKey,
+			r.WireGuardParameters.Port.Port,
+			net.ParseIP(hostValue.Host),
+			hostValue.PublicKey,
+			net.ParseIP(strings.Split(hostValue.LocalIP, "/")[0]))
 
 		retVpnObj, err = wireguard.NewWireGuardObject(
 			platform.WgBinaryPath(),
 			platform.WgToolBinaryPath(),
 			platform.WGConfigFilePath(),
 			connectionParams)
+
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create new WireGuard object: %w", err)
 		}
 	} else {
-		log.Error("Unexpected VPN type to connect: ", vpnType)
+		log.Error("Unexpected VPN type to connect: ", r.VpnType)
 		return nil, nil, errors.New("unexpected VPN type to connect")
 	}
 
-	return retVpnObj, manualDNS, nil
+	return retVpnObj, retManualDNS, nil
 }

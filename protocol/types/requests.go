@@ -2,8 +2,8 @@ package types
 
 // PingServers request to ping servers
 type PingServers struct {
-	RetryCount int `json:"retryCount"`
-	TimeOutMs  int `json:"timeOutMs"`
+	RetryCount int
+	TimeOutMs  int
 }
 
 // KillSwitchSetAllowLANMulticastRequest enable\disable LAN multicast acces for kill-switch
@@ -35,4 +35,46 @@ type KillSwitchSetEnabledRequest struct {
 // KillSwitchSetIsPersistentRequest request to mark kill-switch persistant
 type KillSwitchSetIsPersistentRequest struct {
 	IsPersistent bool
+}
+
+// Connect request to establish new VPN connection
+type Connect struct {
+	VpnType    int
+	CurrentDNS string
+
+	WireGuardParameters struct {
+		InternalClientIP string
+		LocalPrivateKey  string
+
+		Port struct {
+			Port int
+		}
+
+		EntryVpnServer struct {
+			Hosts []struct {
+				Host      string
+				PublicKey string `json:"public_key"`
+				LocalIP   string `json:"local_ip"`
+			}
+		}
+	}
+
+	OpenVpnParameters struct {
+		EntryVpnServer struct {
+			IPAddresses []string `json:"ip_addresses"`
+		} 
+
+		Username      string
+		Password      string
+		ProxyType     string
+		ProxyAddress  string
+		ProxyPort     int
+		ProxyUsername string
+		ProxyPassword string
+
+		Port struct {
+			Port     int
+			Protocol int
+		}
+	}
 }
