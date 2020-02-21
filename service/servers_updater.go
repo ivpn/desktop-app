@@ -12,13 +12,16 @@ import (
 )
 
 type serversUpdater struct {
-	servers *api.ServersInfoResponse
-	api     *api.API
+	servers           *api.ServersInfoResponse
+	api               *api.API
+	updatedNotifyChan chan struct{}
 }
 
 // CreateServersUpdater - constructor for serversUpdater object
 func CreateServersUpdater(apiObj *api.API) (ServersUpdater, error) {
 	updater := &serversUpdater{api: apiObj}
+
+	updater.updatedNotifyChan = make(chan struct{}, 1)
 
 	servers, err := updater.GetServers()
 	if err == nil && servers != nil {
@@ -70,7 +73,19 @@ func (s *serversUpdater) updateServers() (*api.ServersInfoResponse, error) {
 	s.servers = servers
 	writeServersToCache(servers)
 
+	select {
+	case s.updatedNotifyChan <- struct{}{}:
+		// notified
+	default:
+		// channel is full
+	}
+
 	return servers, nil
+}
+
+// UpdateNotifierChannel returns channel which is nitifying when servers was updated
+func (s *serversUpdater) UpdateNotifierChannel() chan struct{} {
+	return s.updatedNotifyChan
 }
 
 func readServersFromCache() (*api.ServersInfoResponse, error) {

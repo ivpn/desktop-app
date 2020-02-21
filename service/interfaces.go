@@ -19,6 +19,8 @@ type Protocol interface {
 // ServersUpdater - interface for updating server info mechanism
 type ServersUpdater interface {
 	GetServers() (*api.ServersInfoResponse, error)
+	// UpdateNotifierChannel returns channel which is nitifying when servers was updated
+	UpdateNotifierChannel() chan struct{}
 }
 
 // NetChangeDetector - object is detecting routing changes on a PC
@@ -40,6 +42,7 @@ type Service interface {
 
 	ServersList() (*api.ServersInfoResponse, error)
 	PingServers(retryCount int, timeoutMs int) (map[string]int, error)
+	ServersUpdateNotifierChannel() chan struct{}
 
 	KillSwitchState() (bool, error)
 	SetKillSwitchState(bool) error

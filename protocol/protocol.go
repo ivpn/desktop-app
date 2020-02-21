@@ -150,7 +150,11 @@ func (p *protocol) Start(startedOnPort chan<- int, service service.Service) erro
 
 func (p *protocol) processClient(conn net.Conn) {
 	log.Info("Client connected: ", conn.RemoteAddr())
+	stopChannel := make(chan struct{}, 1)
+
 	defer func() {
+		// notify routines to stop
+		close(stopChannel)
 
 		if r := recover(); r != nil {
 			log.Error("PANIC during client communication!: ", r)
@@ -174,6 +178,27 @@ func (p *protocol) processClient(conn net.Conn) {
 		if stopService {
 			log.Info("Stopping due to configuration: Stop IVPN Agent when application is not running")
 			p.Stop()
+		}
+	}()
+
+	// service changes notifier
+	go func() {
+		if r := recover(); r != nil {
+			log.Error("PANIC in client notifier!: ", r)
+			if err, ok := r.(error); ok {
+				log.ErrorTrace(err)
+			}
+		}
+
+		for {
+			select {
+			case <-p.service.ServersUpdateNotifierChannel():
+				// servers update notifier
+				serv, _ := p.service.ServersList()
+				sendResponse(conn, types.IVPNServerListResponse(serv))
+			case <-stopChannel:
+				return // stop loop
+			}
 		}
 	}()
 
