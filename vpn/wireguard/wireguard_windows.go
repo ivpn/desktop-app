@@ -147,6 +147,10 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 					}
 				}
 
+				if wg.internals.isDisconnectRequested {
+					break
+				}
+
 				if toDoOperation == resume {
 					log.Info("Resuming...")
 
