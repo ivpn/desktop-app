@@ -251,12 +251,12 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 	case "IVPN.IVPNPingServers":
 		var req types.PingServers
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		}
 
 		retMap, err := p.service.PingServers(req.RetryCount, req.TimeOutMs)
 		if err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 			sendResponse(conn, types.IVPNPingServersResponse(retMap))
 		}
@@ -264,7 +264,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 
 	case "IVPN.IVPNKillSwitchGetStatusRequest":
 		if isEnabled, err := p.service.KillSwitchState(); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 			sendResponse(conn, types.IVPNKillSwitchGetStatusResponse(isEnabled))
 		}
@@ -273,7 +273,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 	case "IVPN.IVPNKillSwitchSetAllowLANMulticastRequest":
 		var req types.KillSwitchSetAllowLANMulticastRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 			p.service.SetKillSwitchAllowLANMulticast(req.AllowLANMulticast)
 		}
@@ -282,7 +282,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 	case "IVPN.IVPNKillSwitchSetAllowLANRequest":
 		var req types.KillSwitchSetAllowLANRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 			p.service.SetKillSwitchAllowLAN(req.AllowLAN)
 		}
@@ -296,11 +296,11 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 	case "IVPN.IVPNKillSwitchSetIsPersistentRequest":
 		var req types.KillSwitchSetIsPersistentRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 			break
 		} else {
 			if err := p.service.SetKillSwitchIsPersistent(req.IsPersistent); err != nil {
-				sendResponse(conn, types.IVPNErrorResponse(err))
+				sendErrorResponse(conn, reqType, err)
 			} else {
 				sendResponse(conn, types.IVPNEmptyResponse())
 			}
@@ -310,17 +310,17 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 	case "IVPN.IVPNSetPreferenceRequest":
 		var req types.SetPreferenceRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 			if err := p.service.SetPreference(req.Key, req.Value); err != nil {
-				sendResponse(conn, types.IVPNErrorResponse(err))
+				sendErrorResponse(conn, reqType, err)
 			}
 		}
 		break
 
 	case "IVPN.IVPNGenerateDiagnosticsRequest":
 		if log, log0, err := logger.GetLogText(1024 * 64); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 			sendResponse(conn, types.IVPNDiagnosticsGeneratedResponse(log, log0))
 		}
@@ -329,7 +329,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 	case "IVPN.IVPNSetAlternateDns":
 		var req types.SetAlternateDNS
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 
 			var err error
@@ -359,10 +359,10 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 	case "IVPN.IVPNKillSwitchSetEnabledRequest":
 		var req types.KillSwitchSetEnabledRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 			if err := p.service.SetKillSwitchState(req.IsEnabled); err != nil {
-				sendResponse(conn, types.IVPNErrorResponse(err))
+				sendErrorResponse(conn, reqType, err)
 			} else {
 				sendResponse(conn, types.IVPNEmptyResponse())
 			}
@@ -371,7 +371,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 
 	case "IVPN.IVPNPauseConnection":
 		if err := p.service.Pause(); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 			sendResponse(conn, types.IVPNEmptyResponse())
 		}
@@ -379,7 +379,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 
 	case "IVPN.IVPNResumeConnection":
 		if err := p.service.Resume(); err != nil {
-			sendResponse(conn, types.IVPNErrorResponse(err))
+			sendErrorResponse(conn, reqType, err)
 		} else {
 			sendResponse(conn, types.IVPNEmptyResponse())
 		}
@@ -389,7 +389,7 @@ func (p *protocol) processRequest(conn net.Conn, message string) {
 		p._disconnectRequested = true
 
 		if err := p.service.Disconnect(); err != nil {
-			log.Error("Disconnection error: ", err)
+			sendErrorResponse(conn, reqType, err)
 		}
 		break
 
@@ -504,6 +504,11 @@ func getNetTypeName(messageData []byte) (string, error) {
 	}
 
 	return strings.Split(reqType, ",")[0], nil
+}
+
+func sendErrorResponse(conn net.Conn, requestCommand string, err error) {
+	log.Error(fmt.Sprintf("Error processing request '%s': %s", requestCommand, err))
+	sendResponse(conn, types.IVPNErrorResponse(err))
 }
 
 func sendResponse(conn net.Conn, bytesToSend []byte) {
