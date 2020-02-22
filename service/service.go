@@ -33,6 +33,8 @@ type service struct {
 
 	// Note: Disconnect() function will wait until VPN fully disconnects
 	runningWG sync.WaitGroup
+
+	isServersPingInProgress bool
 }
 
 // CreateService - service constructor
@@ -71,6 +73,11 @@ func (s *service) OnControlConnectionClosed() (isServiceMustBeClosed bool, err e
 // ServersList - get VPN servers info
 func (s *service) ServersList() (*api.ServersInfoResponse, error) {
 	return s.serversUpdater.GetServers()
+}
+
+// ServersUpdateNotifierChannel returns channel which is nitifying when servers was updated
+func (s *service) ServersUpdateNotifierChannel() chan struct{} {
+	return s.serversUpdater.UpdateNotifierChannel()
 }
 
 // connect
@@ -279,6 +286,7 @@ func (s *service) Pause() error {
 	}
 
 	log.Info("Pausing...")
+	firewall.ClientPaused()
 	return vpn.Pause()
 }
 
@@ -289,6 +297,7 @@ func (s *service) Resume() error {
 	}
 
 	log.Info("Resuming...")
+	firewall.ClientResumed()
 	return vpn.Resume()
 }
 
@@ -327,6 +336,15 @@ func (s *service) ResetManualDNS() error {
 }
 
 func (s *service) PingServers(retryCount int, timeoutMs int) (map[string]int, error) {
+
+	// do not allow multimple ping request simultaneously
+	if s.isServersPingInProgress {
+		log.Info("Servers pinging skipped. Ping already in progress")
+		return nil, nil
+	}
+	defer func() { s.isServersPingInProgress = false }()
+	s.isServersPingInProgress = true
+
 	vpn := s.vpn
 	if vpn != nil {
 		log.Info("Servers pinging skipped due to connected state")

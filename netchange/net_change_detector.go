@@ -101,7 +101,7 @@ func (d *Detector) notifyRoutingChange() {
 			log.Info("Route change detected. Internet traffic is no longer being routed through the VPN.")
 			// notified
 		default:
-			// channel if full
+			// channel is full
 		}
 	}
 }

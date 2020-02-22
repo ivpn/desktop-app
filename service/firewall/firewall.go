@@ -17,6 +17,7 @@ func init() {
 var (
 	connectedClientInterfaceIP net.IP
 	mutex                      sync.Mutex
+	isClientPaused             bool
 )
 
 // SetEnabled - change firewall state
@@ -39,8 +40,9 @@ func SetEnabled(enable bool) error {
 	if enable {
 		// To fulfill such flow (example): FWEnable -> Connected -> FWDisable -> FWEnable
 		// Here we should notify that client is still connected
+		// We must not do it in Paused state!
 		clientAddr := connectedClientInterfaceIP
-		if clientAddr != nil {
+		if clientAddr != nil && isClientPaused == false {
 			return implClientConnected(clientAddr)
 		}
 	}
@@ -77,10 +79,21 @@ func GetEnabled() (bool, error) {
 	return ret, err
 }
 
+// ClientPaused saves info about paused state of vpn
+func ClientPaused() {
+	isClientPaused = true
+}
+
+// ClientResumed saves info about resumed state of vpn
+func ClientResumed() {
+	isClientPaused = false
+}
+
 // ClientConnected - allow communication for local vpn/client IP address
 func ClientConnected(clientLocalIPAddress net.IP) error {
 	mutex.Lock()
 	defer mutex.Unlock()
+	ClientResumed()
 
 	log.Info("Client connected: ", clientLocalIPAddress)
 
@@ -96,6 +109,7 @@ func ClientConnected(clientLocalIPAddress net.IP) error {
 func ClientDisconnected() error {
 	mutex.Lock()
 	defer mutex.Unlock()
+	ClientResumed()
 
 	// Remove client interface from exceptions
 	if connectedClientInterfaceIP != nil {
