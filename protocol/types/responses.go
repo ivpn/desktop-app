@@ -5,6 +5,7 @@ import (
 
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/service/api"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
 var log *logger.Logger
@@ -64,7 +65,23 @@ func IVPNHelloResponse() []byte {
 	return data
 }
 
+// IVPNKillSwitchStatusResponse returns kill-switch status
+func IVPNKillSwitchStatusResponse(isEnabled, isPersistent, isAllowLAN, isAllowMulticast bool) []byte {
+
+	type IVPNKillSwitchStatusResponse struct {
+		Type             string
+		IsEnabled        bool
+		IsPersistent     bool
+		IsAllowLAN       bool
+		IsAllowMulticast bool
+	}
+
+	data, _ := marshalRespnse(IVPNKillSwitchStatusResponse{Type: "KillSwitchStatus", IsEnabled: isEnabled, IsPersistent: isPersistent, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowMulticast})
+	return data
+}
+
 // IVPNKillSwitchGetStatusResponse returns kill-switch status
+// TODO: command can be replaced by 'IVPNKillSwitchStatusResponse'
 func IVPNKillSwitchGetStatusResponse(status bool) []byte {
 	type IVPNKillSwitchGetStatusResponse struct {
 		Type      string
@@ -114,9 +131,10 @@ func IVPNSetAlternateDNSResponse(isSuccess bool, newDNS string) []byte {
 }
 
 // IVPNConnectedResponse notifying about established connection
-func IVPNConnectedResponse(timeSecFrom1970 int64, clientIP string, serverIP string) []byte {
+func IVPNConnectedResponse(timeSecFrom1970 int64, clientIP string, serverIP string, vpnType vpn.Type) []byte {
 	type IVPNConnectedResponse struct {
 		Type            string
+		VpnType         vpn.Type
 		TimeSecFrom1970 int64
 		ClientIP        string
 		ServerIP        string
@@ -125,7 +143,8 @@ func IVPNConnectedResponse(timeSecFrom1970 int64, clientIP string, serverIP stri
 	data, _ := marshalRespnse(IVPNConnectedResponse{Type: "Connected",
 		TimeSecFrom1970: timeSecFrom1970,
 		ClientIP:        clientIP,
-		ServerIP:        serverIP})
+		ServerIP:        serverIP,
+		VpnType:         vpnType})
 	return data
 }
 
@@ -150,15 +169,15 @@ func IVPNDisconnectedResponse(failure bool, authrnticationError bool, reasonDesc
 	return data
 }
 
-// IVPNStateResponse returns VPN connection state
-func IVPNStateResponse(state string, additionalInfo string) []byte {
+// IVPNVpnStateResponse returns VPN connection state
+func IVPNVpnStateResponse(state string, additionalInfo string) []byte {
 	type IVPNStateResponse struct {
 		Type                string
 		State               string
 		StateAdditionalInfo string
 	}
 
-	data, _ := marshalRespnse(IVPNStateResponse{Type: "State",
+	data, _ := marshalRespnse(IVPNStateResponse{Type: "VpnState",
 		State:               state,
 		StateAdditionalInfo: additionalInfo})
 	return data

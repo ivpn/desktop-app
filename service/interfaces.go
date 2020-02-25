@@ -44,9 +44,8 @@ type Service interface {
 	PingServers(retryCount int, timeoutMs int) (map[string]int, error)
 	ServersUpdateNotifierChannel() chan struct{}
 
-	KillSwitchState() (bool, error)
+	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast bool, err error)
 	SetKillSwitchState(bool) error
-
 	SetKillSwitchIsPersistent(isPersistant bool) error
 	SetKillSwitchAllowLANMulticast(isAllowLanMulticast bool) error
 	SetKillSwitchAllowLAN(isAllowLan bool) error

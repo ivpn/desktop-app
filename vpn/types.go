@@ -56,6 +56,8 @@ type StateInfo struct {
 	State       State
 	Description string
 
+	VpnType     Type
+	Time        int64  // unix time (sconds)
 	ClientIP    net.IP // applicable only for 'CONNECTED' state
 	ServerIP    net.IP // applicable only for 'CONNECTED' state
 	IsAuthError bool   // applicable only for 'EXITING' state

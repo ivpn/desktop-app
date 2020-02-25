@@ -12,6 +12,8 @@ import (
 	"github.com/ivpn/desktop-app-daemon/service/api"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
 	"github.com/ivpn/desktop-app-daemon/vpn"
+	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
+	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
 
 	"github.com/pkg/errors"
 	"github.com/sparrc/go-ping"
@@ -139,6 +141,17 @@ func (s *service) Connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 
 	routingChangeChan := make(chan struct{}, 1)
 
+	// Get VPN type (we need it to fill StateInfo by correct info)
+	var vpnType vpn.Type
+	switch t := vpnProc.(type) {
+	case *openvpn.OpenVPN:
+		vpnType = vpn.OpenVPN
+	case *wireguard.WireGuard:
+		vpnType = vpn.WireGuard
+	default:
+		log.Error(fmt.Sprintf("Unknown VPN connection type (%T)", t))
+	}
+
 	// goroutine: process + forward VPN state change
 	connectRoutinesWaiter.Add(1)
 	go func() {
@@ -152,6 +165,12 @@ func (s *service) Connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 		for isRuning := true; isRuning; {
 			select {
 			case state = <-internalStateChan:
+
+				// store info about current time
+				state.Time = time.Now().Unix()
+				// store info about VPN connection type
+				state.VpnType = vpnType
+
 				// forward state to 'stateChan'
 				stateChan <- state
 
@@ -297,14 +316,6 @@ func (s *service) Resume() error {
 
 	log.Info("Resuming...")
 	return vpn.Resume()
-}
-
-func (s *service) SetKillSwitchState(isEnabled bool) error {
-	return firewall.SetEnabled(isEnabled)
-}
-
-func (s *service) KillSwitchState() (bool, error) {
-	return firewall.GetEnabled()
 }
 
 func (s *service) SetManualDNS(dns net.IP) error {
@@ -470,6 +481,16 @@ func (s *service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 	log.Info(fmt.Sprintf("Pinged %d of %d servers (%d successfully)", len(retMap), len(servers.OpenvpnServers)+len(servers.WireguardServers), successfullyPinged))
 
 	return retMap, nil
+}
+
+func (s *service) SetKillSwitchState(isEnabled bool) error {
+	return firewall.SetEnabled(isEnabled)
+}
+
+func (s *service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast bool, err error) {
+	prefs := s.preferences
+	enabled, err := firewall.GetEnabled()
+	return enabled, prefs.IsFwPersistant, prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast, err
 }
 
 func (s *service) SetKillSwitchIsPersistent(isPersistant bool) error {
