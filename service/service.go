@@ -305,6 +305,7 @@ func (s *service) Pause() error {
 	}
 
 	log.Info("Pausing...")
+	firewall.ClientPaused()
 	return vpn.Pause()
 }
 
@@ -315,6 +316,7 @@ func (s *service) Resume() error {
 	}
 
 	log.Info("Resuming...")
+	firewall.ClientResumed()
 	return vpn.Resume()
 }
 

@@ -263,7 +263,7 @@ func (p *protocol) processRequest(message string) {
 		var req types.Hello
 
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		}
 
 		// TODO: remove TEST !
@@ -282,7 +282,7 @@ func (p *protocol) processRequest(message string) {
 		if req.GetStatus == true {
 			// send Firewall state
 			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
-				p.sendResponse(types.IVPNErrorResponse(err))
+				p.sendErrorResponse(reqType, err)
 			} else {
 				p.sendResponse(types.IVPNKillSwitchStatusResponse(isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast))
 			}
@@ -298,12 +298,12 @@ func (p *protocol) processRequest(message string) {
 	case "PingServers":
 		var req types.PingServers
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		}
 
 		retMap, err := p._service.PingServers(req.RetryCount, req.TimeOutMs)
 		if err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 			p.sendResponse(types.IVPNPingServersResponse(retMap))
 		}
@@ -311,7 +311,7 @@ func (p *protocol) processRequest(message string) {
 
 	case "KillSwitchGetStatus":
 		if isEnabled, _, _, _, err := p._service.KillSwitchState(); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 			p.sendResponse(types.IVPNKillSwitchGetStatusResponse(isEnabled))
 		}
@@ -320,10 +320,10 @@ func (p *protocol) processRequest(message string) {
 	case "KillSwitchSetEnabled":
 		var req types.KillSwitchSetEnabledRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 			if err := p._service.SetKillSwitchState(req.IsEnabled); err != nil {
-				p.sendResponse(types.IVPNErrorResponse(err))
+				p.sendErrorResponse(reqType, err)
 			} else {
 				p.sendResponse(types.IVPNEmptyResponse())
 			}
@@ -333,7 +333,7 @@ func (p *protocol) processRequest(message string) {
 	case "KillSwitchSetAllowLANMulticast":
 		var req types.KillSwitchSetAllowLANMulticastRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 			p._service.SetKillSwitchAllowLANMulticast(req.AllowLANMulticast)
 		}
@@ -342,7 +342,7 @@ func (p *protocol) processRequest(message string) {
 	case "KillSwitchSetAllowLAN":
 		var req types.KillSwitchSetAllowLANRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 			p._service.SetKillSwitchAllowLAN(req.AllowLAN)
 		}
@@ -356,11 +356,11 @@ func (p *protocol) processRequest(message string) {
 	case "KillSwitchSetIsPersistent":
 		var req types.KillSwitchSetIsPersistentRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 			break
 		} else {
 			if err := p._service.SetKillSwitchIsPersistent(req.IsPersistent); err != nil {
-				p.sendResponse(types.IVPNErrorResponse(err))
+				p.sendErrorResponse(reqType, err)
 			} else {
 				p.sendResponse(types.IVPNEmptyResponse())
 			}
@@ -370,17 +370,17 @@ func (p *protocol) processRequest(message string) {
 	case "SetPreference":
 		var req types.SetPreferenceRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 			if err := p._service.SetPreference(req.Key, req.Value); err != nil {
-				p.sendResponse(types.IVPNErrorResponse(err))
+				p.sendErrorResponse(reqType, err)
 			}
 		}
 		break
 
 	case "GenerateDiagnostics":
 		if log, log0, err := logger.GetLogText(1024 * 64); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 			p.sendResponse(types.IVPNDiagnosticsGeneratedResponse(log, log0))
 		}
@@ -389,7 +389,7 @@ func (p *protocol) processRequest(message string) {
 	case "SetAlternateDns":
 		var req types.SetAlternateDNS
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 
 			var err error
@@ -418,7 +418,7 @@ func (p *protocol) processRequest(message string) {
 
 	case "PauseConnection":
 		if err := p._service.Pause(); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 			p.sendResponse(types.IVPNEmptyResponse())
 		}
@@ -426,7 +426,7 @@ func (p *protocol) processRequest(message string) {
 
 	case "ResumeConnection":
 		if err := p._service.Resume(); err != nil {
-			p.sendResponse(types.IVPNErrorResponse(err))
+			p.sendErrorResponse(reqType, err)
 		} else {
 			p.sendResponse(types.IVPNEmptyResponse())
 		}
@@ -436,7 +436,7 @@ func (p *protocol) processRequest(message string) {
 		p._disconnectRequested = true
 
 		if err := p._service.Disconnect(); err != nil {
-			log.Error("Disconnection error: ", err)
+			p.sendErrorResponse(reqType, err)
 		}
 		break
 
@@ -538,12 +538,16 @@ func (p *protocol) processRequest(message string) {
 	default:
 		log.Warning("!!! Unsupported request type !!! ", reqType)
 		log.Debug("Unsupported request:", message)
-		//p.sendResponse( types.IVPNErrorResponse(errors.New("unsupported request:"+reqType)))
 	}
 }
 
 func (p *protocol) sendResponse(bytesToSend []byte) error {
 	return sendResponse(p.clientConnection(), bytesToSend)
+}
+
+func (p *protocol) sendErrorResponse(requestCommand string, err error) {
+	log.Error(fmt.Sprintf("Error processing request '%s': %s", requestCommand, err))
+	sendResponse(p.clientConnection(), types.IVPNErrorResponse(err))
 }
 
 func sendResponse(conn net.Conn, bytesToSend []byte) (retErr error) {
