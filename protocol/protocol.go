@@ -36,9 +36,12 @@ func CreateProtocol() (service.Protocol, error) {
 
 // Protocol - TCP interface to communicate with IVPN application
 type protocol struct {
+	_secret uint64
+
 	// new connections listener + current connection (needed to be able to stop service by closing them)
-	_connListener     *net.TCPListener
-	_clientConnection net.Conn
+	_connListener          *net.TCPListener
+	_clientConnection      net.Conn
+	_clientIsAuthenticated bool
 
 	_service service.Service
 
@@ -59,6 +62,7 @@ type protocol struct {
 }
 
 func (p *protocol) setClientConnection(conn net.Conn) {
+	p._clientIsAuthenticated = false
 	p._clientConnection = conn
 }
 
@@ -106,11 +110,12 @@ func (p *protocol) Stop() {
 }
 
 // Start - starts TCP interface to communicate with IVPN application (server to listen incoming connections)
-func (p *protocol) Start(startedOnPort chan<- int, service service.Service) error {
+func (p *protocol) Start(secret uint64, startedOnPort chan<- int, service service.Service) error {
 	if p._service != nil {
 		return errors.New("unable to start protocol communication. It is already initialized")
 	}
 	p._service = service
+	p._secret = secret
 
 	defer func() {
 		log.Warning("Protocol stopped")
@@ -143,7 +148,7 @@ func (p *protocol) Start(startedOnPort chan<- int, service service.Service) erro
 	}
 	startedOnPort <- openedPort
 
-	log.Info("IVPN service started: ", openedPortStr)
+	log.Info(fmt.Sprintf("IVPN service started: %d [...%s]", openedPort, fmt.Sprintf("%016x", secret)[12:]))
 	defer func() {
 		listener.Close()
 		log.Info("IVPN service stopped")
@@ -229,6 +234,32 @@ func (p *protocol) processClient(clientConn net.Conn) {
 		if err != nil {
 			log.Error("Error receiving data from client: ", err)
 			break
+		}
+
+		// CONNECTION AUTHENTICATION: First request should be 'Hello' with correct authentication secret
+		if p._clientIsAuthenticated == false {
+			messageData := []byte(message)
+			reqType, err := getNetTypeName(messageData, true)
+			if err != nil {
+				log.Error("Failed to parse initialisation request:", err)
+				return
+			}
+			// ensure if client use correct secret
+			if reqType != "Hello" {
+				logger.Error("Connection not authenticated. Closing.")
+				return
+			}
+			// parsing 'Hello' request
+			var hello types.Hello
+			if err := json.Unmarshal(messageData, &hello); err != nil {
+				p.sendErrorResponse(reqType, fmt.Errorf("connection authentication error: %w", err))
+				return
+			}
+			if hello.Secret != p._secret {
+				p.sendErrorResponse(reqType, fmt.Errorf("secret verification error"))
+				return
+			}
+			p._clientIsAuthenticated = true
 		}
 
 		// Processing requests from client (in seperate routine)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -20,6 +21,7 @@ var activeProtocol service.Protocol
 
 func init() {
 	log = logger.NewLogger("launch")
+	rand.Seed(time.Now().UnixNano())
 }
 
 // Launch -  initialize and start service
@@ -45,6 +47,8 @@ func Launch() {
 		logger.Warning("------------------------------------")
 	}
 
+	secret := rand.Uint64()
+
 	// obtain (over callback channel) a service listening port
 	startedOnPortChan := make(chan int, 1)
 	go func() {
@@ -58,10 +62,10 @@ func Launch() {
 				logger.Panic(err.Error())
 			}
 			defer file.Close()
-			file.WriteString(fmt.Sprintf("%d", openedPort))
+			file.WriteString(fmt.Sprintf("%d:%x", openedPort, secret))
 		}
 		// inform OS-specific implementation about listener port
-		doStartedOnPort(openedPort)
+		doStartedOnPort(openedPort, secret)
 	}()
 
 	defer func() {
@@ -76,7 +80,7 @@ func Launch() {
 	}
 
 	// run service
-	launchService(startedOnPortChan)
+	launchService(secret, startedOnPortChan)
 }
 
 // Stop the service
@@ -88,7 +92,7 @@ func Stop() {
 }
 
 // initialize and start service
-func launchService(startedOnPort chan<- int) {
+func launchService(secret uint64, startedOnPort chan<- int) {
 	// API object
 	apiObj, err := api.CreateAPI()
 	if err != nil {
@@ -120,7 +124,7 @@ func launchService(startedOnPort chan<- int) {
 	activeProtocol = protocol
 
 	// start receiving requests from client (synchronous)
-	if err := protocol.Start(startedOnPort, serv); err != nil {
+	if err := protocol.Start(secret, startedOnPort, serv); err != nil {
 		log.Error("Protocol stopped with error:", err)
 	}
 }

@@ -13,8 +13,8 @@ func doPrepareToRun() error {
 }
 
 // inform OS-specific implementation about listener port
-func doStartedOnPort(openedPort int) {
-	libivpn.StartXpcListener(openedPort)
+func doStartedOnPort(openedPort int, secret uint64) {
+	libivpn.StartXpcListener(openedPort, secret)
 }
 
 // OS-specific service finalizer

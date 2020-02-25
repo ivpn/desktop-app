@@ -12,7 +12,7 @@ import (
 
 // Protocol - interface of communication protocol with IVPN application
 type Protocol interface {
-	Start(startedOnPort chan<- int, service Service) error
+	Start(secret uint64, startedOnPort chan<- int, service Service) error
 	Stop()
 }
 

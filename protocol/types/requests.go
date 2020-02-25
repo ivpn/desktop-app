@@ -4,6 +4,7 @@ package types
 type Hello struct {
 	// connected client version
 	Version string
+	Secret  uint64
 
 	// GetServersList == true - client requests to send back info about all servers
 	GetServersList bool
