@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/api"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netchange"
 	"github.com/ivpn/desktop-app-daemon/protocol"
 	"github.com/ivpn/desktop-app-daemon/service"
-	"github.com/ivpn/desktop-app-daemon/service/api"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
@@ -109,7 +109,7 @@ func launchService(secret uint64, startedOnPort chan<- int) {
 	netDetector := netchange.Create()
 
 	// initialize service
-	serv, err := service.CreateService(updater, netDetector)
+	serv, err := service.CreateService(apiObj, updater, netDetector)
 	if err != nil {
 		log.Panic("Failed to initialize service:", err)
 	}

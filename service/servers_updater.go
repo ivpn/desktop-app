@@ -7,12 +7,13 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/service/api"
+	"github.com/ivpn/desktop-app-daemon/api"
+	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
 type serversUpdater struct {
-	servers           *api.ServersInfoResponse
+	servers           *types.ServersInfoResponse
 	api               *api.API
 	updatedNotifyChan chan struct{}
 }
@@ -38,7 +39,7 @@ func CreateServersUpdater(apiObj *api.API) (ServersUpdater, error) {
 
 // GetServers - get servers list.
 // Use cached data (if exists), otherwise - download servers list.
-func (s *serversUpdater) GetServers() (*api.ServersInfoResponse, error) {
+func (s *serversUpdater) GetServers() (*types.ServersInfoResponse, error) {
 	if s.servers != nil {
 		return s.servers, nil
 	}
@@ -64,11 +65,12 @@ func (s *serversUpdater) startUpdater() error {
 }
 
 // UpdateServers - download servers list
-func (s *serversUpdater) updateServers() (*api.ServersInfoResponse, error) {
+func (s *serversUpdater) updateServers() (*types.ServersInfoResponse, error) {
 	servers, err := s.api.DownloadServersList()
 	if err != nil {
 		return servers, fmt.Errorf("failed to download servers list: %w", err)
 	}
+	log.Info(fmt.Sprintf("Updated servers info (%d OpenVPN; %d WireGuard)\n", len(servers.OpenvpnServers), len(servers.WireguardServers)))
 
 	s.servers = servers
 	writeServersToCache(servers)
@@ -88,13 +90,13 @@ func (s *serversUpdater) UpdateNotifierChannel() chan struct{} {
 	return s.updatedNotifyChan
 }
 
-func readServersFromCache() (*api.ServersInfoResponse, error) {
+func readServersFromCache() (*types.ServersInfoResponse, error) {
 	data, err := ioutil.ReadFile(platform.ServersFile())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read servers cache file: %w", err)
 	}
 
-	servers := new(api.ServersInfoResponse)
+	servers := new(types.ServersInfoResponse)
 	if err := json.Unmarshal(data, servers); err != nil {
 		return nil, fmt.Errorf("failed to unmsrshal servers cache file: %w", err)
 	}
@@ -102,7 +104,7 @@ func readServersFromCache() (*api.ServersInfoResponse, error) {
 	return servers, nil
 }
 
-func writeServersToCache(servers *api.ServersInfoResponse) error {
+func writeServersToCache(servers *types.ServersInfoResponse) error {
 	if servers == nil {
 		return errors.New("nothing to save. Servers is null")
 	}

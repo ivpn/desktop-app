@@ -11,6 +11,16 @@ const (
 	WireGuard Type = iota
 )
 
+func (t Type) String() string {
+	switch t {
+	case OpenVPN:
+		return "OpenVPN"
+	case WireGuard:
+		return "WireGuard"
+	}
+	return "<Unknown>"
+}
+
 // State - state of VPN
 type State int
 

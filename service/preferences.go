@@ -18,6 +18,54 @@ type Preferences struct {
 	IsStopOnClientDisconnect bool
 	IsObfsproxy              bool
 	OpenVpnExtraParameters   string
+
+	AccountID string
+	Session   string
+	VPNUser   string
+	VPNPass   string
+
+	WGPublicKey  string
+	WGPrivateKey string
+	WGLocalIP    string
+}
+
+// SetCredentials save account credentials
+func (s *Preferences) SetCredentials(accountID string,
+	session string,
+	vpnUser string,
+	vpnPass string,
+	wgPublicKey string,
+	wgPrivateKey string,
+	wgLocalIP string) {
+
+	s.AccountID = strings.TrimSpace(accountID)
+	s.Session = strings.TrimSpace(session)
+	s.VPNUser = strings.TrimSpace(vpnUser)
+	s.VPNPass = strings.TrimSpace(vpnPass)
+
+	s.WGPublicKey = strings.TrimSpace(wgPublicKey)
+	s.WGPrivateKey = strings.TrimSpace(wgPrivateKey)
+	s.WGLocalIP = strings.TrimSpace(wgLocalIP)
+	s.savePreferences()
+}
+
+// Credentials account credentials
+func (s *Preferences) Credentials() (accountID string,
+	session string,
+	vpnUser string,
+	vpnPass string,
+	wgPublicKey string,
+	wgPrivateKey string) {
+
+	return s.AccountID, s.Session, s.VPNUser, s.VPNPass, s.WGPublicKey, s.WGPrivateKey
+}
+
+// UpdateWgCredentials save wireguard credentials
+func (s *Preferences) UpdateWgCredentials(wgPublicKey string, wgPrivateKey string) {
+	s.WGPublicKey = wgPublicKey
+	s.WGPrivateKey = wgPrivateKey
+
+	s.savePreferences()
 }
 
 func (s *Preferences) savePreferences() error {
@@ -28,6 +76,7 @@ func (s *Preferences) savePreferences() error {
 
 	return ioutil.WriteFile(platform.SettingsFile(), data, 0644)
 }
+
 func (s *Preferences) loadPreferences() error {
 	data, err := ioutil.ReadFile(platform.SettingsFile())
 
@@ -67,11 +116,3 @@ func (s *Preferences) loadPreferences() error {
 
 	return json.Unmarshal(data, s)
 }
-
-/*
-func (s *preferences) IsEnabledLogging() bool {
-	return s.isEnabledLogging
-}
-func (s *preferences) SetIsEnabledLogging(val bool) {
-	s.isEnabledLogging = val
-}*/

@@ -5,10 +5,24 @@ import (
 
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/oshelpers/macos/libivpn"
+	"github.com/ivpn/desktop-app-daemon/shell"
 )
 
 // Prepare to start IVPN daemon for macOS
 func doPrepareToRun() error {
+	// create symlink to 'ivpn' cli client
+
+	linkpath := "/usr/local/bin/ivpn"
+	if _, err := os.Stat(linkpath); err != nil {
+		if os.IsNotExist(err) {
+			log.Info("Creating symlink to IVPN CLI: ", linkpath)
+			err := shell.Exec(log, "ln", "-fs", "/Applications/IVPN.app/Contents/MacOS/cli/ivpn", linkpath)
+			if err != nil {
+				log.Error("Failed to create symlink to IVPN CLI: ", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -27,10 +41,6 @@ func doStopped() {
 
 // checkIsAdmin - check is application running with root privilages
 func doCheckIsAdmin() bool {
-	//logger.Debug("SUDO_UID:", os.Getenv("SUDO_UID"))
-	//logger.Debug("SUDO_GID:", os.Getenv("SUDO_GID"))
-	//logger.Debug("uid:", os.Geteuid())
-
 	uid := os.Geteuid()
 	if uid != 0 {
 		return false

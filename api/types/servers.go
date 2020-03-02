@@ -1,4 +1,4 @@
-package api
+package types
 
 // WireGuardServerHostInfo contains info about WG server host
 type WireGuardServerHostInfo struct {

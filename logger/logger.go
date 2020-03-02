@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/service/platform"
-
 	"github.com/pkg/errors"
 )
 
+var isCanPrintToConsole bool = true
 var isLoggingEnabled bool = true
 var writeMutex sync.Mutex
 var globalLogFile *os.File
@@ -23,16 +23,18 @@ var log *Logger
 
 func init() {
 	log = NewLogger("log")
+}
 
-	var err error
-
-	if _, err := os.Stat(platform.LogFile()); err == nil {
-		os.Rename(platform.LogFile(), platform.LogFile()+".0")
+// Init - initialize logfile
+func Init(logfile string) {
+	if _, err := os.Stat(logfile); err == nil {
+		os.Rename(logfile, logfile+".0")
 	}
 
-	globalLogFile, err = os.Create(platform.LogFile())
+	var err error
+	globalLogFile, err = os.Create(logfile)
 	if err != nil {
-		log.Error("Failed to create log-file: ", err.Error())
+		log.Error(fmt.Errorf("Failed to create log-file: %w", err))
 	}
 }
 
@@ -78,8 +80,17 @@ func IsEnabled() bool {
 	return isLoggingEnabled
 }
 
+// CanPrintToConsole define if logger can print to console
+func CanPrintToConsole(isCanPrint bool) {
+	isCanPrintToConsole = isCanPrint
+}
+
 // Enable switching on\off logging
 func Enable(isEnabled bool) {
+	if globalLogFile == nil {
+		log.Error(fmt.Errorf("log-file not initialized. Please, call 'logger.Init(...)'"))
+	}
+
 	if isLoggingEnabled == isEnabled {
 		return
 	}
@@ -306,10 +317,12 @@ func write(fields ...interface{}) {
 	writeMutex.Lock()
 	defer writeMutex.Unlock()
 
-	// printing into console
-	fmt.Println(fields...)
+	if isCanPrintToConsole {
+		// printing into console
+		fmt.Println(fields...)
+	}
 
-	if isLoggingEnabled {
+	if isLoggingEnabled && globalLogFile != nil {
 		// writting into log-file
 		globalLogFile.WriteString(fmt.Sprintln(fields...))
 	}

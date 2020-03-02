@@ -1,6 +1,6 @@
 package service
 
-import "github.com/ivpn/desktop-app-daemon/service/api"
+import "github.com/ivpn/desktop-app-daemon/api"
 
 func (s *service) implIsGoingToPingServers(servers *api.ServersInfoResponse) error {
 	// nothing to do for Windows implementation

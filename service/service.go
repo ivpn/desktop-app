@@ -7,10 +7,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/api"
+	commontypes "github.com/ivpn/desktop-app-daemon/api/common/types"
+	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
-	"github.com/ivpn/desktop-app-daemon/service/api"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
@@ -27,6 +30,7 @@ func init() {
 
 // Service - IVPN service
 type service struct {
+	api               *api.API
 	serversUpdater    ServersUpdater
 	netChangeDetector NetChangeDetector
 	vpn               vpn.Process
@@ -40,12 +44,13 @@ type service struct {
 }
 
 // CreateService - service constructor
-func CreateService(updater ServersUpdater, netChDetector NetChangeDetector) (Service, error) {
+func CreateService(api *api.API, updater ServersUpdater, netChDetector NetChangeDetector) (Service, error) {
 	if updater == nil {
 		return nil, errors.New("ServersUpdater is not defined")
 	}
 
 	serv := &service{
+		api:               api,
 		serversUpdater:    updater,
 		netChangeDetector: netChDetector}
 
@@ -73,7 +78,7 @@ func (s *service) OnControlConnectionClosed() (isServiceMustBeClosed bool, err e
 }
 
 // ServersList - get VPN servers info
-func (s *service) ServersList() (*api.ServersInfoResponse, error) {
+func (s *service) ServersList() (*types.ServersInfoResponse, error) {
 	return s.serversUpdater.GetServers()
 }
 
@@ -558,6 +563,52 @@ func (s *service) SetPreference(key string, val string) error {
 
 func (s *service) Preferences() Preferences {
 	return s.preferences
+}
+
+//////////////////////////////////////////////////////////
+// SESSIONS
+//////////////////////////////////////////////////////////
+
+func (s *service) SessionNew(accountID string, forceLogin bool) (*types.SessionsAuthenticateFullResponse, error) {
+	// generate new keys for WireGuard
+	publicKey, privateKey, err := wireguard.GenerateKeys(platform.WgToolBinaryPath())
+	if err != nil {
+		log.Warning("Failed to generate wireguard keys for new session: %s", err)
+	}
+
+	apiResp, err := s.api.SessionNew(accountID, publicKey, forceLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	if apiResp.Status != commontypes.CodeSuccess {
+
+		// Failed to create session
+		// Anyway, we must return whole response object
+		// (response can contain addition information about error which can be processed by a client)
+		return apiResp, fmt.Errorf("failed to create session: %d - %s", apiResp.Status, apiResp.ErrorMessage)
+
+	} else if apiResp.WireGuard.Status != commontypes.CodeSuccess {
+		publicKey = ""
+		privateKey = ""
+		err = fmt.Errorf("failed to register new WireGuard keys: %d - %s", apiResp.WireGuard.Status, apiResp.WireGuard.Message)
+	}
+
+	s.preferences.SetCredentials(accountID, apiResp.Token, apiResp.VpnUsername, apiResp.VpnPassword, publicKey, privateKey, apiResp.WireGuard.IPAddress)
+
+	return apiResp, err
+}
+
+func (s *service) SessionDelete() error {
+	session := s.Preferences().Session
+	if len(session) > 0 {
+		err := s.api.SessionDelete(session)
+		if err != nil {
+			return err
+		}
+	}
+	s.preferences.SetCredentials("", "", "", "", "", "", "")
+	return nil
 }
 
 //////////////////////////////////////////////////////////

@@ -3,11 +3,11 @@ package service
 import (
 	"net"
 
-	"github.com/ivpn/desktop-app-daemon/service/api"
+	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
 )
 
-func (s *service) implIsGoingToPingServers(servers *api.ServersInfoResponse) error {
+func (s *service) implIsGoingToPingServers(servers *types.ServersInfoResponse) error {
 
 	hosts := make([]net.IP, 0, len(servers.OpenvpnServers)+len(servers.WireguardServers))
 

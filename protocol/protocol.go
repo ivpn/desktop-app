@@ -102,7 +102,7 @@ func (p *protocol) Stop() {
 	}
 	if conn != nil {
 		// notifying client "service is going to stop" (client application (UI) will close)
-		sendResponse(conn, types.IVPNServiceExitingResponse())
+		sendResponse(conn, types.ServiceExitingResp{}, 0)
 
 		// closing current connection with a client
 		conn.Close()
@@ -219,7 +219,7 @@ func (p *protocol) processClient(clientConn net.Conn) {
 			case <-p._service.ServersUpdateNotifierChannel():
 				// servers update notifier
 				serv, _ := p._service.ServersList()
-				p.sendResponse(types.IVPNServerListResponse(serv))
+				p.sendResponse(&types.ServerListResp{VpnServers: *serv}, 0)
 			case <-stopChannel:
 				return // stop loop
 			}
@@ -239,24 +239,25 @@ func (p *protocol) processClient(clientConn net.Conn) {
 		// CONNECTION AUTHENTICATION: First request should be 'Hello' with correct authentication secret
 		if p._clientIsAuthenticated == false {
 			messageData := []byte(message)
-			reqType, err := getNetTypeName(messageData, true)
+
+			cmd, err := types.GetCommandBase(messageData)
 			if err != nil {
 				log.Error("Failed to parse initialisation request:", err)
 				return
 			}
 			// ensure if client use correct secret
-			if reqType != "Hello" {
+			if cmd.Command != "Hello" {
 				logger.Error("Connection not authenticated. Closing.")
 				return
 			}
 			// parsing 'Hello' request
 			var hello types.Hello
 			if err := json.Unmarshal(messageData, &hello); err != nil {
-				p.sendErrorResponse(reqType, fmt.Errorf("connection authentication error: %w", err))
+				p.sendErrorResponse(cmd, fmt.Errorf("connection authentication error: %w", err))
 				return
 			}
 			if hello.Secret != p._secret {
-				p.sendErrorResponse(reqType, fmt.Errorf("secret verification error"))
+				p.sendErrorResponse(cmd, fmt.Errorf("secret verification error"))
 				return
 			}
 			p._clientIsAuthenticated = true
@@ -281,20 +282,20 @@ func (p *protocol) processRequest(message string) {
 
 	messageData := []byte(message)
 
-	reqType, err := getNetTypeName(messageData, true)
+	reqCmd, err := types.GetCommandBase(messageData)
 	if err != nil {
 		log.Error("Failed to parse request:", err)
 		return
 	}
 
-	log.Info("[<--] ", reqType)
+	log.Info("[<--] ", reqCmd.Command)
 
-	switch reqType {
+	switch reqCmd.Command {
 	case "Hello":
 		var req types.Hello
 
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqType, err)
+			p.sendErrorResponse(reqCmd, err)
 		}
 
 		// TODO: remove TEST !
@@ -303,172 +304,241 @@ func (p *protocol) processRequest(message string) {
 		log.Info(fmt.Sprintf("Connected client version: '%s' [set KeepDaemonAlone = %t]", req.Version, req.KeepDaemonAlone))
 		p._keepAlone = req.KeepDaemonAlone
 
-		p.sendResponse(types.IVPNHelloResponse())
+		p.sendResponse(&types.HelloResp{Version: "1.0"}, req.Idx)
 
 		if req.GetServersList == true {
 			serv, _ := p._service.ServersList()
-			p.sendResponse(types.IVPNServerListResponse(serv))
+			p.sendResponse(&types.ServerListResp{VpnServers: *serv}, req.Idx)
 		}
 
 		if req.GetStatus == true {
-			// send Firewall state
-			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
-				p.sendErrorResponse(reqType, err)
-			} else {
-				p.sendResponse(types.IVPNKillSwitchStatusResponse(isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast))
-			}
+			/*
+				// send Firewall state
+				if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
+					p.sendErrorResponse(reqType, err)
+				} else {
+					p.sendResponse(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast})
+				}*/
 
 			// send VPN connection  state
 			vpnState := p._lastVPNState
 			if vpnState.State == vpn.CONNECTED {
-				p.sendResponse(types.IVPNConnectedResponse(vpnState.Time, vpnState.ClientIP.String(), vpnState.ServerIP.String(), vpnState.VpnType))
+				p.sendResponse(&types.ConnectedResp{TimeSecFrom1970: vpnState.Time, ClientIP: vpnState.ClientIP.String(), ServerIP: vpnState.ServerIP.String(), VpnType: vpnState.VpnType}, req.Idx)
 			}
 		}
+		break
+
+	case "GetVPNState":
+		// send VPN connection  state
+		vpnState := p._lastVPNState
+		if vpnState.State == vpn.CONNECTED {
+			p.sendResponse(&types.ConnectedResp{TimeSecFrom1970: vpnState.Time, ClientIP: vpnState.ClientIP.String(), ServerIP: vpnState.ServerIP.String(), VpnType: vpnState.VpnType}, reqCmd.Idx)
+		} else if vpnState.State == vpn.DISCONNECTED {
+			p.sendResponse(&types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqCmd.Idx)
+		} else {
+			p.sendResponse(&types.VpnStateResp{StateVal: vpnState.State, State: vpnState.State.String()}, reqCmd.Idx)
+		}
+
+		break
+
+	case "GetServers":
+		serv, _ := p._service.ServersList()
+		p.sendResponse(&types.ServerListResp{VpnServers: *serv}, reqCmd.Idx)
 		break
 
 	case "PingServers":
 		var req types.PingServers
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqType, err)
+			p.sendErrorResponse(reqCmd, err)
+			break
 		}
 
 		retMap, err := p._service.PingServers(req.RetryCount, req.TimeOutMs)
 		if err != nil {
-			p.sendErrorResponse(reqType, err)
-		} else {
-			p.sendResponse(types.IVPNPingServersResponse(retMap))
+			p.sendErrorResponse(reqCmd, err)
+			break
 		}
+
+		var results []types.PingResultType
+		for k, v := range retMap {
+			results = append(results, types.PingResultType{Host: k, Ping: v})
+		}
+
+		p.sendResponse(&types.PingServersResp{PingResults: results}, req.Idx)
 		break
 
 	case "KillSwitchGetStatus":
-		if isEnabled, _, _, _, err := p._service.KillSwitchState(); err != nil {
-			p.sendErrorResponse(reqType, err)
+		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
+			p.sendErrorResponse(reqCmd, err)
+			break
 		} else {
-			p.sendResponse(types.IVPNKillSwitchGetStatusResponse(isEnabled))
+			p.sendResponse(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast}, reqCmd.Idx)
 		}
 		break
 
 	case "KillSwitchSetEnabled":
-		var req types.KillSwitchSetEnabledRequest
+		var req types.KillSwitchSetEnabled
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqType, err)
-		} else {
-			if err := p._service.SetKillSwitchState(req.IsEnabled); err != nil {
-				p.sendErrorResponse(reqType, err)
-			} else {
-				p.sendResponse(types.IVPNEmptyResponse())
-			}
+			p.sendErrorResponse(reqCmd, err)
+			break
 		}
+
+		if err := p._service.SetKillSwitchState(req.IsEnabled); err != nil {
+			p.sendErrorResponse(reqCmd, err)
+			break
+		}
+
+		p.sendResponse(&types.EmptyResp{}, req.Idx)
 		break
 
 	case "KillSwitchSetAllowLANMulticast":
-		var req types.KillSwitchSetAllowLANMulticastRequest
+		var req types.KillSwitchSetAllowLANMulticast
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqType, err)
-		} else {
-			p._service.SetKillSwitchAllowLANMulticast(req.AllowLANMulticast)
+			p.sendErrorResponse(reqCmd, err)
+			break
 		}
+
+		p._service.SetKillSwitchAllowLANMulticast(req.AllowLANMulticast)
 		break
 
 	case "KillSwitchSetAllowLAN":
-		var req types.KillSwitchSetAllowLANRequest
+		var req types.KillSwitchSetAllowLAN
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqType, err)
-		} else {
-			p._service.SetKillSwitchAllowLAN(req.AllowLAN)
+			p.sendErrorResponse(reqCmd, err)
+			break
 		}
-		break
 
-	case "KillSwitchGetIsPestistent":
-		isPersistant := p._service.Preferences().IsFwPersistant
-		p.sendResponse(types.IVPNKillSwitchGetIsPestistentResponse(isPersistant))
+		p._service.SetKillSwitchAllowLAN(req.AllowLAN)
 		break
 
 	case "KillSwitchSetIsPersistent":
-		var req types.KillSwitchSetIsPersistentRequest
+		var req types.KillSwitchSetIsPersistent
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqType, err)
+			p.sendErrorResponse(reqCmd, err)
 			break
-		} else {
-			if err := p._service.SetKillSwitchIsPersistent(req.IsPersistent); err != nil {
-				p.sendErrorResponse(reqType, err)
-			} else {
-				p.sendResponse(types.IVPNEmptyResponse())
-			}
 		}
+
+		if err := p._service.SetKillSwitchIsPersistent(req.IsPersistent); err != nil {
+			p.sendErrorResponse(reqCmd, err)
+			break
+		}
+
+		p.sendResponse(&types.EmptyResp{}, req.Idx)
+		break
+
+	// TODO: can be fully replaced by 'KillSwitchGetStatus'
+	case "KillSwitchGetIsPestistent":
+		isPersistant := p._service.Preferences().IsFwPersistant
+		p.sendResponse(&types.KillSwitchGetIsPestistentResp{IsPersistent: isPersistant}, reqCmd.Idx)
 		break
 
 	case "SetPreference":
 		var req types.SetPreferenceRequest
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqType, err)
-		} else {
-			if err := p._service.SetPreference(req.Key, req.Value); err != nil {
-				p.sendErrorResponse(reqType, err)
-			}
+			p.sendErrorResponse(reqCmd, err)
+			break
+		}
+
+		if err := p._service.SetPreference(req.Key, req.Value); err != nil {
+			p.sendErrorResponse(reqCmd, err)
 		}
 		break
 
 	case "GenerateDiagnostics":
 		if log, log0, err := logger.GetLogText(1024 * 64); err != nil {
-			p.sendErrorResponse(reqType, err)
+			p.sendErrorResponse(reqCmd, err)
 		} else {
-			p.sendResponse(types.IVPNDiagnosticsGeneratedResponse(log, log0))
+			p.sendResponse(&types.DiagnosticsGeneratedResp{ServiceLog: log, ServiceLog0: log0}, reqCmd.Idx)
 		}
 		break
 
 	case "SetAlternateDns":
 		var req types.SetAlternateDNS
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqType, err)
+			p.sendErrorResponse(reqCmd, err)
+			break
+		}
+
+		var err error
+		if ip := net.ParseIP(req.DNS); ip == nil || ip.Equal(net.IPv4zero) || ip.Equal(net.IPv4bcast) {
+			err = p._service.ResetManualDNS()
 		} else {
-
-			var err error
-			if ip := net.ParseIP(req.DNS); ip == nil || ip.Equal(net.IPv4zero) || ip.Equal(net.IPv4bcast) {
-				err = p._service.ResetManualDNS()
-			} else {
-				err = p._service.SetManualDNS(ip)
-
-				if err != nil {
-					// DNS set failed. Trying to reset DNS
-					errReset := p._service.ResetManualDNS()
-					if errReset != nil {
-						log.ErrorTrace(errReset)
-					}
-				}
-			}
+			err = p._service.SetManualDNS(ip)
 
 			if err != nil {
-				log.ErrorTrace(err)
-				p.sendResponse(types.IVPNSetAlternateDNSResponse(false, net.IPv4zero.String()))
-			} else {
-				p.sendResponse(types.IVPNSetAlternateDNSResponse(true, req.DNS))
+				// DNS set failed. Trying to reset DNS
+				errReset := p._service.ResetManualDNS()
+				if errReset != nil {
+					log.ErrorTrace(errReset)
+				}
 			}
+		}
+
+		if err != nil {
+			log.ErrorTrace(err)
+			p.sendResponse(&types.SetAlternateDNSResp{IsSuccess: false, ChangedDNS: net.IPv4zero.String()}, req.Idx)
+		} else {
+			p.sendResponse(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.DNS}, req.Idx)
 		}
 		break
 
 	case "PauseConnection":
 		if err := p._service.Pause(); err != nil {
-			p.sendErrorResponse(reqType, err)
-		} else {
-			p.sendResponse(types.IVPNEmptyResponse())
+			p.sendErrorResponse(reqCmd, err)
+			break
 		}
+
+		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
 		break
 
 	case "ResumeConnection":
 		if err := p._service.Resume(); err != nil {
-			p.sendErrorResponse(reqType, err)
-		} else {
-			p.sendResponse(types.IVPNEmptyResponse())
+			p.sendErrorResponse(reqCmd, err)
+			break
 		}
+
+		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+		break
+
+	case "SessionNew":
+		var req types.SessionNew
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(reqCmd, err)
+			break
+		}
+
+		apiResp, err := p._service.SessionNew(req.AccountID, req.ForceLogin)
+		if err != nil {
+			// If apiResp is not nil - we must return it to client
+			// (response can contain addition information about error which can be processed by a client)
+			// If apiResp == nil - it is communication error (we just return an error)
+			if apiResp == nil {
+				p.sendErrorResponse(reqCmd, err)
+				break
+			} else {
+				log.Error(err)
+			}
+		}
+		p.sendResponse(&types.SessionNewResp{APIResponse: *apiResp}, reqCmd.Idx)
+		break
+
+	case "SessionDelete":
+		err := p._service.SessionDelete()
+		if err != nil {
+			p.sendErrorResponse(reqCmd, err)
+			break
+		}
+		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
 		break
 
 	case "Disconnect":
 		p._disconnectRequested = true
 
 		if err := p._service.Disconnect(); err != nil {
-			p.sendErrorResponse(reqType, err)
+			p.sendErrorResponse(reqCmd, err)
+			break
 		}
+		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
 		break
 
 	case "Connect":
@@ -508,7 +578,11 @@ func (p *protocol) processRequest(message string) {
 				p._lastVPNState = vpn.NewStateInfo(vpn.DISCONNECTED, "")
 
 				// Sending "Disconnected" only in one place (after VPN process stopped)
-				p.sendResponse(types.IVPNDisconnectedResponse(disconnectAuthError, disconnectAuthError, disconnectDescription))
+				authErr := 0
+				if disconnectAuthError == true {
+					authErr = 1
+				}
+				p.sendResponse(&types.DisconnectedResp{Failure: disconnectAuthError, Reason: authErr, ReasonDescription: disconnectDescription}, reqCmd.Idx)
 			}
 
 			// wait all routines to stop
@@ -540,14 +614,14 @@ func (p *protocol) processRequest(message string) {
 					case vpn.CONNECTED:
 						// Do not send "Connected" notification if we are giong to establish new connection immediately
 						if cnt, _ := p.connectReqCount(); cnt == 1 || p._disconnectRequested == true {
-							p.sendResponse(types.IVPNConnectedResponse(state.Time, state.ClientIP.String(), state.ServerIP.String(), state.VpnType))
+							p.sendResponse(&types.ConnectedResp{TimeSecFrom1970: state.Time, ClientIP: state.ClientIP.String(), ServerIP: state.ServerIP.String(), VpnType: state.VpnType}, reqCmd.Idx)
 						} else {
 							log.Debug("Skip sending 'Connected' notification. New connection request is awaiting ", cnt)
 						}
 					case vpn.EXITING:
 						disconnectAuthError = state.IsAuthError
 					default:
-						p.sendResponse(types.IVPNVpnStateResponse(state.State.String(), ""))
+						p.sendResponse(&types.VpnStateResp{StateVal: state.State, State: state.State.String()}, 0)
 					}
 				case <-isExitChan:
 					break state_forward_loop
@@ -556,7 +630,7 @@ func (p *protocol) processRequest(message string) {
 		}()
 
 		// Send 'connecting' status
-		p.sendResponse(types.IVPNVpnStateResponse(vpn.CONNECTING.String(), ""))
+		p.sendResponse(&types.VpnStateResp{StateVal: vpn.CONNECTING, State: vpn.CONNECTING.String()}, 0)
 
 		// SYNCHRONOUSLY start VPN connection process (wait until it finished)
 		if err := p.processConnectRequest(messageData, stateChan); err != nil {
@@ -567,75 +641,41 @@ func (p *protocol) processRequest(message string) {
 		break
 
 	default:
-		log.Warning("!!! Unsupported request type !!! ", reqType)
+		log.Warning("!!! Unsupported request type !!! ", reqCmd.Command)
 		log.Debug("Unsupported request:", message)
 	}
 }
 
-func (p *protocol) sendResponse(bytesToSend []byte) error {
-	return sendResponse(p.clientConnection(), bytesToSend)
-}
-
-func (p *protocol) sendErrorResponse(requestCommand string, err error) {
-	log.Error(fmt.Sprintf("Error processing request '%s': %s", requestCommand, err))
-	sendResponse(p.clientConnection(), types.IVPNErrorResponse(err))
-}
-
-func sendResponse(conn net.Conn, bytesToSend []byte) (retErr error) {
-	defer func() {
-		if retErr != nil {
-			retErr = fmt.Errorf("failed to send response to client: %w", retErr)
-			log.Error(retErr)
-		}
-	}()
-
-	if bytesToSend == nil {
-		return fmt.Errorf("response is nil")
+func (p *protocol) sendResponse(cmd interface{}, idx int) error {
+	if p._clientIsAuthenticated == false {
+		return fmt.Errorf("client is not authenticated")
 	}
 
-	if _, err := conn.Write(bytesToSend); err != nil {
-		return err
+	err := sendResponse(p.clientConnection(), cmd, idx)
+	if err != nil {
+		log.Error(err)
 	}
+	return err
+}
 
-	if _, err := conn.Write([]byte("\n")); err != nil {
-		return err
+func (p *protocol) sendErrorResponse(request types.CommandBase, err error) {
+	log.Error(fmt.Sprintf("Error processing request '%s': %s", request.Command, err))
+	sendResponse(p.clientConnection(), &types.ErrorResp{ErrorMessage: err.Error()}, request.Idx)
+}
+
+func sendResponse(conn net.Conn, cmd interface{}, idx int) (retErr error) {
+	if err := types.Send(conn, cmd, idx); err != nil {
+		return fmt.Errorf("failed to send command: %w", err)
 	}
 
 	// Just for logging
-	if reqType, err := getNetTypeName(bytesToSend, false); err == nil {
+	if reqType := types.GetTypeName(cmd); len(reqType) > 0 {
 		log.Info("[-->] ", reqType)
 	} else {
-		return fmt.Errorf("protocol error: BAD DATA SENT (%w)", err)
+		return fmt.Errorf("protocol error: BAD DATA SENT")
 	}
 
 	return nil
-}
-
-func getNetTypeName(messageData []byte, isRequest bool) (string, error) {
-	type RequestObject struct {
-		Command string
-	}
-
-	type ResponseObject struct {
-		Type string
-	}
-
-	if isRequest {
-		var cmdInfo RequestObject
-		if err := json.Unmarshal(messageData, &cmdInfo); err != nil {
-			log.Error("Failed to parse request:", err)
-			return "", fmt.Errorf("failed to parse request (unable to determine Command): %w", err)
-		}
-		return cmdInfo.Command, nil
-	}
-
-	var typInfo ResponseObject
-	if err := json.Unmarshal(messageData, &typInfo); err != nil {
-		log.Error("Failed to parse response:", err)
-		return "", fmt.Errorf("failed to parse response (unable to determine Type): %w", err)
-	}
-
-	return typInfo.Type, nil
 }
 
 func (p *protocol) processConnectRequest(messageData []byte, stateChan chan<- vpn.StateInfo) (err error) {
@@ -649,7 +689,7 @@ func (p *protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 
 	vpnObj, manualDNS, err := p.parseReqAndCreateVpnObj(messageData)
 	if err != nil {
-		return fmt.Errorf("failed to parse VPN connection request: %w", err)
+		return fmt.Errorf("connection request failed: %w", err)
 	}
 
 	if p._disconnectRequested == true {
@@ -686,9 +726,22 @@ func (p *protocol) parseReqAndCreateVpnObj(messageData []byte) (retVpnObj vpn.Pr
 			hosts = append(hosts, net.ParseIP(v))
 		}
 
+		prefs := p._service.Preferences()
+
+		username := r.OpenVpnParameters.Username
+		password := r.OpenVpnParameters.Password
+		if len(username) == 0 || len(password) == 0 {
+			username = prefs.VPNUser
+			password = prefs.VPNPass
+		}
+
+		if len(username) == 0 || len(password) == 0 {
+			return nil, retManualDNS, fmt.Errorf("not logged into an account")
+		}
+
 		connectionParams := openvpn.CreateConnectionParams(
-			r.OpenVpnParameters.Username,
-			r.OpenVpnParameters.Password,
+			username,
+			password,
 			r.OpenVpnParameters.Port.Protocol > 0, // is TCP
 			r.OpenVpnParameters.Port.Port,
 			hosts,
@@ -697,8 +750,6 @@ func (p *protocol) parseReqAndCreateVpnObj(messageData []byte) (retVpnObj vpn.Pr
 			r.OpenVpnParameters.ProxyPort,
 			r.OpenVpnParameters.ProxyUsername,
 			r.OpenVpnParameters.ProxyPassword)
-
-		prefs := p._service.Preferences()
 
 		retVpnObj, err = openvpn.NewOpenVpnObject(
 			platform.OpenVpnBinaryPath(),
@@ -714,9 +765,22 @@ func (p *protocol) parseReqAndCreateVpnObj(messageData []byte) (retVpnObj vpn.Pr
 	} else if vpn.Type(r.VpnType) == vpn.WireGuard {
 		hostValue := r.WireGuardParameters.EntryVpnServer.Hosts[rand.Intn(len(r.WireGuardParameters.EntryVpnServer.Hosts))]
 
+		internalIP := r.WireGuardParameters.InternalClientIP
+		privateKey := r.WireGuardParameters.LocalPrivateKey
+
+		if len(internalIP) == 0 || len(privateKey) == 0 {
+			prefs := p._service.Preferences()
+			internalIP = prefs.WGLocalIP
+			privateKey = prefs.WGPrivateKey
+		}
+
+		if len(internalIP) == 0 || len(privateKey) == 0 {
+			return nil, retManualDNS, fmt.Errorf("not logged into an account")
+		}
+
 		connectionParams := wireguard.CreateConnectionParams(
-			net.ParseIP(r.WireGuardParameters.InternalClientIP),
-			r.WireGuardParameters.LocalPrivateKey,
+			net.ParseIP(internalIP),
+			privateKey,
 			r.WireGuardParameters.Port.Port,
 			net.ParseIP(hostValue.Host),
 			hostValue.PublicKey,

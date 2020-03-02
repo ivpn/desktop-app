@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/service/api"
+	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
@@ -18,7 +18,7 @@ type Protocol interface {
 
 // ServersUpdater - interface for updating server info mechanism
 type ServersUpdater interface {
-	GetServers() (*api.ServersInfoResponse, error)
+	GetServers() (*types.ServersInfoResponse, error)
 	// UpdateNotifierChannel returns channel which is nitifying when servers was updated
 	UpdateNotifierChannel() chan struct{}
 }
@@ -40,7 +40,7 @@ type Service interface {
 	// - err: error
 	OnControlConnectionClosed() (isServiceMustBeClosed bool, err error)
 
-	ServersList() (*api.ServersInfoResponse, error)
+	ServersList() (*types.ServersInfoResponse, error)
 	PingServers(retryCount int, timeoutMs int) (map[string]int, error)
 	ServersUpdateNotifierChannel() chan struct{}
 
@@ -61,4 +61,7 @@ type Service interface {
 
 	Pause() error
 	Resume() error
+
+	SessionNew(accountID string, forceLogin bool) (*types.SessionsAuthenticateFullResponse, error)
+	SessionDelete() error
 }
