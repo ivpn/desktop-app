@@ -15,6 +15,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/service"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/version"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
@@ -299,12 +300,13 @@ func (p *protocol) processRequest(message string) {
 		}
 
 		// TODO: remove TEST !
-		req.KeepDaemonAlone = true
+		//req.KeepDaemonAlone = true
 
 		log.Info(fmt.Sprintf("Connected client version: '%s' [set KeepDaemonAlone = %t]", req.Version, req.KeepDaemonAlone))
 		p._keepAlone = req.KeepDaemonAlone
 
-		p.sendResponse(&types.HelloResp{Version: "1.0"}, req.Idx)
+		helloResp := types.HelloResp{Version: version.Version()}
+		p.sendResponse(&helloResp, req.Idx)
 
 		if req.GetServersList == true {
 			serv, _ := p._service.ServersList()
