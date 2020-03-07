@@ -13,6 +13,7 @@ import (
 	"github.com/ivpn/desktop-app-cli/protocol"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/version"
 )
 
 // ICommand interface for command line command
@@ -43,6 +44,7 @@ func addCommand(cmd ICommand) {
 
 func printHeader() {
 	fmt.Println("Command-line interface for IVPN client (www.ivpn.net)")
+	fmt.Println("version:" + version.GetFullVersion())
 }
 
 func printUsageAll() {
@@ -76,9 +78,11 @@ func main() {
 	addCommand(&cmdDisconnect{})
 
 	if len(os.Args) < 2 {
-		printUsageAll()
+		printHeader()
+		fmt.Printf("Please, use command: '%s -h' for help\n", filepath.Base(os.Args[0]))
 		os.Exit(1)
 	}
+
 	// initialize command handler
 	port, secret, err := readDaemonPort()
 	if err != nil {
@@ -115,7 +119,9 @@ func main() {
 
 	// unknown command
 	if isProcessed == false {
-		fmt.Printf("Error. Unexpected command %s\n", os.Args[1])
+		if os.Args[1] != "-h" && os.Args[1] != "--h" && os.Args[1] != "-help" && os.Args[1] != "--help" {
+			fmt.Printf("Error. Unexpected command %s\n", os.Args[1])
+		}
 		printUsageAll()
 		os.Exit(1)
 	}

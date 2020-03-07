@@ -38,24 +38,24 @@ func (e NotImplemented) Error() string {
 
 //-----------------------------------------------
 func printState(state vpn.State, connected types.ConnectedResp) {
-	fmt.Printf("VPN state             : %v\n", state)
+	fmt.Printf("VPN state               : %v\n", state)
 
 	if state != vpn.CONNECTED {
 		return
 	}
 	since := time.Unix(connected.TimeSecFrom1970, 0)
-	fmt.Printf("\tVPN type            : %v\n", connected.VpnType)
-	fmt.Printf("\tLocal IP            : %v\n", connected.ClientIP)
-	fmt.Printf("\tServer IP           : %v\n", connected.ServerIP)
-	fmt.Printf("\tConnected           : %v\n", since)
+	fmt.Printf("    VPN type            : %v\n", connected.VpnType)
+	fmt.Printf("    Local IP            : %v\n", connected.ClientIP)
+	fmt.Printf("    Server IP           : %v\n", connected.ServerIP)
+	fmt.Printf("    Connected           : %v\n", since)
 }
 
 func printFirewallState(isEnabled, isPersistent, isAllowLAN, isAllowMulticast bool) {
 	fmt.Println("Firewall state:")
-	fmt.Printf("\tEnabled             : %v\n", isEnabled)
-	fmt.Printf("\tPersistent          : %v\n", isPersistent)
-	fmt.Printf("\tAllow LAN           : %v\n", isAllowLAN)
-	fmt.Printf("\tAllow LAN multicast : %v\n", isAllowMulticast)
+	fmt.Printf("    Enabled             : %v\n", isEnabled)
+	fmt.Printf("    Persistent          : %v\n", isPersistent)
+	fmt.Printf("    Allow LAN           : %v\n", isAllowLAN)
+	fmt.Printf("    Allow LAN multicast : %v\n", isAllowMulticast)
 }
 
 //-----------------------------------------------

@@ -34,6 +34,10 @@ func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, time
 		defer c._receiversLocker.Unlock()
 
 		c._requestIdx++
+		if c._requestIdx == 0 {
+			c._requestIdx++
+		}
+
 		receiver = createReceiver(c._requestIdx, response)
 
 		c._receivers[receiver] = struct{}{}

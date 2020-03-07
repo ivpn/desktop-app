@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	commonapitypes "github.com/ivpn/desktop-app-daemon/api/common/types"
 	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
@@ -54,7 +53,7 @@ func (c *Client) Connect() (err error) {
 
 	c._conn, err = net.Dial("tcp", fmt.Sprintf(":%d", c._port))
 	if err != nil {
-		return fmt.Errorf("failed to connect to IVPN daemon: %w", err)
+		return fmt.Errorf("failed to connect to IVPN daemon (does IVPN daemon/service running?): %w", err)
 	}
 
 	logger.Info("Connected")
@@ -67,7 +66,7 @@ func (c *Client) Connect() (err error) {
 
 	if err := c.sendRecvTimeOut(&helloReq, &helloResp, time.Second*5); err != nil {
 		if _, ok := errors.Unwrap(err).(ResponseTimeout); ok {
-			return fmt.Errorf("Failed to send 'Hello' request (another instance of IVPN Client running?): %w", err)
+			return fmt.Errorf("Failed to send 'Hello' request (does another instance of IVPN Client running?): %w", err)
 		}
 		return fmt.Errorf("Failed to send 'Hello' request: %w", err)
 	}
@@ -88,8 +87,8 @@ func (c *Client) SessionNew(accountID string, forceLogin bool) error {
 		return err
 	}
 
-	if resp.APIResponse.Status != commonapitypes.CodeSuccess {
-		return fmt.Errorf("[%d] %s", resp.APIResponse.Status, resp.APIResponse.ErrorMessage)
+	if len(resp.Session.Session) <= 0 {
+		return fmt.Errorf("[%d] %s", resp.APIStatus, resp.APIErrorMessage)
 	}
 
 	return nil

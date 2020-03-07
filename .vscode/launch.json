@@ -11,7 +11,9 @@
             "mode": "auto",
             "program": "${workspaceRoot}/main.go",
             "env": {},
-            "args": ["state"],
+            //"args": [],
+            //"args": ["-h"],
+            //"args": ["state"],
             //"args": ["connect", "-s", "rs.gw.ivpn.net"],
             //"buildFlags": "-tags debug"
         }
