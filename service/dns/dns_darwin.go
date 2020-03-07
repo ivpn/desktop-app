@@ -1,18 +1,17 @@
 package dns
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/shell"
-
-	"github.com/pkg/errors"
 )
 
 func implPause() error {
 	err := shell.Exec(log, platform.DNSScript(), "-pause")
 	if err != nil {
-		return errors.Wrap(err, "DNS pause: Failed to change DNS")
+		return fmt.Errorf("DNS pause: Failed to change DNS: %w", err)
 	}
 	return nil
 }
@@ -20,7 +19,7 @@ func implPause() error {
 func implResume() error {
 	err := shell.Exec(log, platform.DNSScript(), "-resume")
 	if err != nil {
-		return errors.Wrap(err, "DNS resume: Failed to change DNS")
+		return fmt.Errorf("DNS resume: Failed to change DNS: %w", err)
 	}
 
 	return nil
@@ -32,7 +31,7 @@ func implResume() error {
 func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 	err := shell.Exec(log, platform.DNSScript(), "-set_alternate_dns", addr.String())
 	if err != nil {
-		return errors.Wrap(err, "Set manual DNS: Failed to change DNS")
+		return fmt.Errorf("set manual DNS: Failed to change DNS: %w", err)
 	}
 
 	return nil
@@ -43,7 +42,7 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 func implDeleteManual(localInterfaceIP net.IP) error {
 	err := shell.Exec(log, platform.DNSScript(), "-delete_alternate_dns")
 	if err != nil {
-		return errors.Wrap(err, "Reset manual DNS: Failed to change DNS")
+		return fmt.Errorf("reset manual DNS: Failed to change DNS: %w", err)
 	}
 
 	return nil

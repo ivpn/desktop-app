@@ -1,8 +1,8 @@
 package service
 
-import "github.com/ivpn/desktop-app-daemon/api"
+import "github.com/ivpn/desktop-app-daemon/api/types"
 
-func (s *service) implIsGoingToPingServers(servers *api.ServersInfoResponse) error {
+func (s *Service) implIsGoingToPingServers(servers *types.ServersInfoResponse) error {
 	// nothing to do for Windows implementation
 	// firewall configured to allow all connectivity for service
 	return nil

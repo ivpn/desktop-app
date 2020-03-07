@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/service/platform"
-	"github.com/pkg/errors"
 )
 
 var isCanPrintToConsole bool = true
@@ -263,21 +262,8 @@ func _panic(name string, v ...interface{}) {
 	panic(runtimeInfo + methodInfo + ": " + mes)
 }
 
-type stackTracer interface {
-	StackTrace() errors.StackTrace
-}
-
-func getErrorDetails(e error) string {
-	var strs []string
-	strs = append(strs, e.Error())
-
-	if err, ok := e.(stackTracer); ok {
-		for _, f := range err.StackTrace() {
-			strs = append(strs, fmt.Sprintf("%+s:%d", f, f))
-		}
-	}
-
-	return strings.Join(strs, "\n")
+func getErrorDetails(err error) string {
+	return fmt.Sprintf("%v", err)
 }
 
 func getCallerMethodName() (string, error) {
@@ -285,12 +271,12 @@ func getCallerMethodName() (string, error) {
 	// Skip 5 levels to get the caller
 	n := runtime.Callers(5, fpcs)
 	if n == 0 {
-		return "", errors.New("no caller")
+		return "", fmt.Errorf("no caller")
 	}
 
 	caller := runtime.FuncForPC(fpcs[0] - 1)
 	if caller == nil {
-		return "", errors.New("msg caller is nil")
+		return "", fmt.Errorf("msg caller is nil")
 	}
 
 	return caller.Name(), nil

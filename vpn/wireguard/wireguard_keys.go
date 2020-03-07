@@ -3,6 +3,7 @@ package wireguard
 import (
 	"io"
 	"os/exec"
+	"strings"
 )
 
 // GenerateKeys generates new WireGuard keys pair
@@ -32,5 +33,5 @@ func GenerateKeys(wgToolBinaryPath string) (publicKey string, privateKey string,
 	}
 	publicKey = string(out)
 
-	return publicKey, privateKey, nil
+	return strings.TrimSpace(publicKey), strings.TrimSpace(privateKey), nil
 }

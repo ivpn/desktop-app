@@ -88,9 +88,6 @@ type Connect struct {
 	CurrentDNS string
 
 	WireGuardParameters struct {
-		InternalClientIP string
-		LocalPrivateKey  string
-
 		Port struct {
 			Port int
 		}
@@ -105,13 +102,12 @@ type Connect struct {
 			IPAddresses []string `json:"ip_addresses"`
 		}
 
-		Username      string
-		Password      string
-		ProxyType     string
-		ProxyAddress  string
-		ProxyPort     int
-		ProxyUsername string
-		ProxyPassword string
+		MultihopExitSrvID string
+		ProxyType         string
+		ProxyAddress      string
+		ProxyPort         int
+		ProxyUsername     string
+		ProxyPassword     string
 
 		Port struct {
 			Port     int
@@ -144,4 +140,16 @@ type SessionNew struct {
 // SessionDelete logout from current device
 type SessionDelete struct {
 	CommandBase
+}
+
+// WireGuardGenerateNewKeys - generate WG keys
+type WireGuardGenerateNewKeys struct {
+	CommandBase
+	OnlyUpdateIfNecessary bool
+}
+
+// WireGuardSetKeysRotationInterval -  change WG keys rotation interval
+type WireGuardSetKeysRotationInterval struct {
+	CommandBase
+	Interval int64
 }

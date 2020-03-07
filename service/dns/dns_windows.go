@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -10,8 +11,6 @@ import (
 
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
-
-	"github.com/pkg/errors"
 )
 
 var (
@@ -124,7 +123,7 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) (err error) {
 		// if there was defined DNS - remove it from non-VPN inerfaces (if necessary)
 		// (skipping VPN interface, because its data will be owerwrited)
 		if err := implDeleteManual(nil); err != nil {
-			return errors.Wrap(err, "Failed to set DNS")
+			return fmt.Errorf("Failed to set DNS: %w", err)
 		}
 	}
 

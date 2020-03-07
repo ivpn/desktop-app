@@ -1,34 +1,35 @@
 package api
 
 import (
-	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net"
-	"net/http"
-	"path"
 	"sync"
+	"time"
 
-	commontypes "github.com/ivpn/desktop-app-daemon/api/common/types"
 	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/logger"
 )
 
 // API URLs
 const (
-	_apiHost           = "api.ivpn.net"
-	_serversPath       = "v4/servers.json"
-	_sessionNewPath    = "v4/session/new"
-	_sessionDeletePath = "v4/session/delete"
+	_defaultRequestTimeout = time.Second * 15
+	_apiHost               = "api.ivpn.net"
+	_serversPath           = "v4/servers.json"
+	_sessionNewPath        = "v4/session/new"
+	_sessionDeletePath     = "v4/session/delete"
+	_wgKeySetPath          = "v4/session/wg/set"
 )
 
 var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("api")
+}
+
+// IConnectivityInfo information about connectivity
+type IConnectivityInfo interface {
+	IsConnectivityBlocked() bool
 }
 
 // API contains data about IVPN API servers
@@ -91,155 +92,85 @@ func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 }
 
 // SessionNew - try to register new session
-func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) (*types.SessionsAuthenticateFullResponse, error) {
-	request := &commontypes.SessionAuthenticateRequest{
-		Username:   accountID,
+func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) (
+	*types.SessionNewResponse,
+	*types.SessionNewErrorLimitResponse,
+	*types.APIErrorResponse,
+	error) {
+
+	var sucessResp types.SessionNewResponse
+	var errorLimitResp types.SessionNewErrorLimitResponse
+	var apiErr types.APIErrorResponse
+
+	request := &types.SessionNewRequest{
+		AccountID:  accountID,
 		PublicKey:  wgPublicKey,
 		ForceLogin: forceLogin}
-	resp := new(types.SessionsAuthenticateFullResponse)
-	if err := a.request(_sessionNewPath, "POST", "application/json", request, resp); err != nil {
-		return nil, err
+
+	data, err := a.requestRaw(_sessionNewPath, "POST", "application/json", request)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	return resp, nil
+
+	// Check is it API error
+	if err := json.Unmarshal(data, &apiErr); err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
+	}
+
+	// success
+	if apiErr.Status == types.CodeSuccess {
+		if err := json.Unmarshal(data, &sucessResp); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
+		}
+		return &sucessResp, nil, &apiErr, nil
+	}
+
+	// Session limit check
+	if apiErr.Status == types.CodeSessionsLimitReached {
+		if err := json.Unmarshal(data, &errorLimitResp); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
+		}
+		return nil, &errorLimitResp, &apiErr, fmt.Errorf("API error: [%d] %s", apiErr.Status, apiErr.Message)
+	}
+
+	return nil, nil, &apiErr, fmt.Errorf("API error: [%d] %s", apiErr.Status, apiErr.Message)
 }
 
 // SessionDelete - remove session
 func (a *API) SessionDelete(session string) error {
-	request := &commontypes.SessionTokenRequest{Token: session}
-	resp := new(types.APIError)
+	request := &types.SessionDeleteRequest{Session: session}
+	resp := &types.APIErrorResponse{}
 	if err := a.request(_sessionDeletePath, "POST", "application/json", request, resp); err != nil {
 		return err
 	}
-	if resp.Status != commontypes.CodeSuccess {
-		return fmt.Errorf("[%d] %s", resp.Status, resp.Message)
+	if resp.Status != types.CodeSuccess {
+		return fmt.Errorf("API error: [%d] %s", resp.Status, resp.Message)
 	}
 	return nil
 }
 
-func (a *API) getAlternateIPs() (lastGoodIP net.IP, ipList []net.IP) {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
+// WireGuardKeySet - update WG key
+func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePublicWgKey string) (localIP net.IP, err error) {
 
-	return a.lastGoodAlternateIP, a.alternateIPs
-}
+	request := &types.SessionWireGuardKeySetRequest{
+		Session:            session,
+		PublicKey:          newPublicWgKey,
+		ConnectedPublicKey: activePublicWgKey}
 
-func (a *API) saveLastGoodAlternateIP(lastGoodIP net.IP) {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
+	resp := &types.SessionsWireGuardResponse{}
 
-	a.lastGoodAlternateIP = lastGoodIP
-}
-
-func getURL(host string, urlpath string) string {
-	return "https://" + path.Join(host, urlpath)
-}
-
-func newRequest(urlPath string, method string, contentType string, body io.Reader) (*http.Request, error) {
-	if len(method) == 0 {
-		method = "GET"
-	}
-
-	req, err := http.NewRequest(method, urlPath, body)
-	if err != nil {
+	if err := a.request(_wgKeySetPath, "POST", "application/json", request, resp); err != nil {
 		return nil, err
 	}
 
-	if len(contentType) > 0 {
-		req.Header.Add("Content-type", contentType)
+	if resp.Status != types.CodeSuccess {
+		return nil, fmt.Errorf("API error: [%d] %s", resp.Status, resp.Message)
 	}
 
-	return req, nil
-}
-
-func (a *API) doRequest(urlPath string, method string, contentType string, request interface{}) (resp *http.Response, err error) {
-	lastIP, ips := a.getAlternateIPs()
-
-	// When trying to access API server by alternate IPs (not by DNS name)
-	// we need to configure TLS to use api.ivpn.net hostname
-	// (to avoid certificate errors)
-	transCfg := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			ServerName: _apiHost,
-		},
-	}
-	// configure http-client with preconfigured TLS transport
-	client := &http.Client{Transport: transCfg}
-
-	data := []byte{}
-	if request != nil {
-		data, err = json.Marshal(request)
-		if err != nil {
-			return nil, err
-		}
+	localIP = net.ParseIP(resp.IPAddress)
+	if localIP == nil {
+		return nil, fmt.Errorf("failed to set WG key (failed to parse local IP in API response)")
 	}
 
-	bodyBuffer := bytes.NewBuffer(data)
-
-	// access API by last good IP (if defined)
-	if lastIP != nil {
-		req, err := newRequest(getURL(lastIP.String(), urlPath), method, contentType, bodyBuffer)
-		if err != nil {
-			return nil, err
-		}
-
-		resp, err := client.Do(req)
-		if err == nil {
-			return resp, nil
-		}
-	}
-
-	// try to access API server by host DNS
-	req, err := newRequest(getURL(_apiHost, urlPath), method, contentType, bodyBuffer)
-	if err != nil {
-		return nil, err
-	}
-	firstResp, firstErr := client.Do(req)
-	if firstErr == nil {
-		// save last good IP
-		a.saveLastGoodAlternateIP(nil)
-		return firstResp, firstErr
-	}
-	log.Warning("Failed to access " + _apiHost)
-
-	// try to access API server by alternate IP
-	for i, ip := range ips {
-		log.Info(fmt.Sprintf("Trying to use alternate API IP #%d...", i))
-
-		req, err := newRequest(getURL(ip.String(), urlPath), method, contentType, bodyBuffer)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := client.Do(req)
-
-		if err != nil {
-			fmt.Println("Failed: ", err.Error())
-			continue
-		}
-
-		// save last good IP
-		a.saveLastGoodAlternateIP(ip)
-
-		log.Info(fmt.Sprintf("Success!"))
-		return resp, err
-	}
-
-	return firstResp, fmt.Errorf("Unable to access IVPN API server: %w", firstErr)
-}
-
-func (a *API) request(urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}) error {
-	resp, err := a.doRequest(urlPath, method, contentType, requestObject)
-	if err != nil {
-		return fmt.Errorf("API request failed: %w", err)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to get API HTTP response body: %w", err)
-	}
-
-	if err := json.Unmarshal(body, responseObject); err != nil {
-		return fmt.Errorf("failed to deserialize API response: %w", err)
-	}
-
-	return nil
+	return localIP, nil
 }

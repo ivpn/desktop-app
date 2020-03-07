@@ -13,7 +13,6 @@ import (
 	"github.com/ivpn/desktop-app-daemon/shell"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 
-	"github.com/pkg/errors"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
@@ -64,7 +63,7 @@ func (wg *WireGuard) init() error {
 // connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	if wg.internals.isDisconnectRequested {
-		return errors.New("disconnection already requested for this object. To make a new connection, please, initialize new one")
+		return fmt.Errorf("disconnection already requested for this object. To make a new connection, please, initialize new one")
 	}
 
 	defer func() {
@@ -78,7 +77,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 	err := wg.disconnectInternal()
 	if err != nil {
-		return errors.Wrap(err, "failed to disconnect before new connection")
+		return fmt.Errorf("failed to disconnect before new connection: %w", err)
 	}
 
 	// connect to service maneger
@@ -362,7 +361,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	log.Info("Installing service...")
 	err = shell.Exec(nil, wg.binaryPath, "/installtunnelservice", wg.configFilePath)
 	if err != nil {
-		return errors.Wrap(err, "failed to install WireGuard service")
+		return fmt.Errorf("failed to install WireGuard service: %w", err)
 	}
 
 	// connect to service maneger
@@ -387,7 +386,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 
 	// service install timeout
 	if isInstalled == false {
-		return errors.New("service not installed (timeout)")
+		return fmt.Errorf("service not installed (timeout)")
 	}
 
 	// wait for service starting
@@ -395,7 +394,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	for started := time.Now(); time.Since(started) < _waitServiceStartTimeout; time.Sleep(time.Millisecond * 10) {
 		_, stat, err := wg.getServiceStatus(m)
 		if err != nil {
-			return errors.Wrap(err, "service start error")
+			return fmt.Errorf("service start error: %w", err)
 		}
 
 		if stat == svc.Running {
@@ -403,12 +402,12 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 			isStarted = true
 			break
 		} else if stat == svc.Stopped {
-			return errors.New("WireGuard service stopped")
+			return fmt.Errorf("WireGuard service stopped")
 		}
 	}
 
 	if isStarted == false {
-		return errors.New("service not started (timeout)")
+		return fmt.Errorf("service not started (timeout)")
 	}
 
 	// CONNECTED
@@ -473,7 +472,7 @@ func (wg *WireGuard) uninstallService() error {
 	// stop service
 	err = shell.Exec(nil, wg.binaryPath, "/uninstalltunnelservice", wg.getTunnelName())
 	if err != nil {
-		return errors.Wrap(err, "failed to uninstall WireGuard service")
+		return fmt.Errorf("failed to uninstall WireGuard service: %w", err)
 	}
 
 	lastUninstallRetryTime := time.Now()
@@ -495,7 +494,7 @@ func (wg *WireGuard) uninstallService() error {
 			log.Info("Retry: uninstalling service...")
 			err = shell.Exec(nil, wg.binaryPath, "/uninstalltunnelservice", wg.getTunnelName())
 			if err != nil {
-				return errors.Wrap(err, "failed to uninstall WireGuard service")
+				return fmt.Errorf("failed to uninstall WireGuard service: %w", err)
 			}
 			lastUninstallRetryTime = time.Now()
 			nextUninstallRetryTime = nextUninstallRetryTime * 2
@@ -503,7 +502,7 @@ func (wg *WireGuard) uninstallService() error {
 	}
 
 	if isUninstalled == false {
-		return errors.New("service not uninstalled (timeout)")
+		return fmt.Errorf("service not uninstalled (timeout)")
 	}
 
 	log.Info("Service uninstalled")

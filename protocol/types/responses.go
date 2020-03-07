@@ -1,10 +1,9 @@
 package types
 
 import (
-	//commontypes "github.com/ivpn/desktop-app-daemon/api/common/types"
-
 	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/service/preferences"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
@@ -34,6 +33,38 @@ type ServiceExitingResp struct {
 type HelloResp struct {
 	CommandBase
 	Version string
+	Session SessionResp
+	//Account preferences.AccountStatus
+}
+
+// SessionResp information about session
+type SessionResp struct {
+	AccountID          string
+	Session            string
+	WgPublicKey        string
+	WgLocalIP          string
+	WgKeyGenerated     int64 // Unix time
+	WgKeysRegenInerval int64 // seconds
+}
+
+// CreateSessionResp create new session info object to send to client
+func CreateSessionResp(s preferences.SessionStatus) SessionResp {
+	return SessionResp{
+		AccountID:          s.AccountID,
+		Session:            s.Session,
+		WgPublicKey:        s.WGPublicKey,
+		WgLocalIP:          s.WGLocalIP,
+		WgKeyGenerated:     s.WGKeyGenerated.Unix(),
+		WgKeysRegenInerval: int64(s.WGKeysRegenInerval.Seconds())}
+}
+
+// SessionNewResp - information about created session (or error info)
+type SessionNewResp struct {
+	CommandBase
+	APIStatus       int
+	APIErrorMessage string
+	Session         SessionResp
+	Account         preferences.AccountStatus
 }
 
 // KillSwitchStatusResp returns kill-switch status
@@ -110,10 +141,4 @@ type PingResultType struct {
 type PingServersResp struct {
 	CommandBase
 	PingResults []PingResultType
-}
-
-// SessionNewResp - information about created session
-type SessionNewResp struct {
-	CommandBase
-	APIResponse types.SessionsAuthenticateFullResponse
 }

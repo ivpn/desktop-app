@@ -7,7 +7,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
 )
 
-func (s *service) implIsGoingToPingServers(servers *types.ServersInfoResponse) error {
+func (s *Service) implIsGoingToPingServers(servers *types.ServersInfoResponse) error {
 
 	hosts := make([]net.IP, 0, len(servers.OpenvpnServers)+len(servers.WireguardServers))
 

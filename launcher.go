@@ -14,14 +14,21 @@ import (
 	"github.com/ivpn/desktop-app-daemon/protocol"
 	"github.com/ivpn/desktop-app-daemon/service"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/service/wgkeys"
 )
 
 var log *logger.Logger
-var activeProtocol service.Protocol
+var activeProtocol IProtocol
 
 func init() {
 	log = logger.NewLogger("launch")
 	rand.Seed(time.Now().UnixNano())
+}
+
+// IProtocol - interface of communication protocol with IVPN application
+type IProtocol interface {
+	Start(secret uint64, startedOnPort chan<- int, serv protocol.Service) error
+	Stop()
 }
 
 // Launch -  initialize and start service
@@ -108,11 +115,8 @@ func launchService(secret uint64, startedOnPort chan<- int) {
 	// network change detector
 	netDetector := netchange.Create()
 
-	// initialize service
-	serv, err := service.CreateService(apiObj, updater, netDetector)
-	if err != nil {
-		log.Panic("Failed to initialize service:", err)
-	}
+	// WireGuard keys manager
+	wgKeysMgr := wgkeys.CreateKeysManager(apiObj, platform.WgToolBinaryPath())
 
 	// communication protocol
 	protocol, err := protocol.CreateProtocol()
@@ -122,6 +126,12 @@ func launchService(secret uint64, startedOnPort chan<- int) {
 
 	// save protocol (to be able to stop it)
 	activeProtocol = protocol
+
+	// initialize service
+	serv, err := service.CreateService(protocol, apiObj, updater, netDetector, wgKeysMgr)
+	if err != nil {
+		log.Panic("Failed to initialize service:", err)
+	}
 
 	// start receiving requests from client (synchronous)
 	if err := protocol.Start(secret, startedOnPort, serv); err != nil {

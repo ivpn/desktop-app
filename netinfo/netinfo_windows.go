@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net"
-
-	"github.com/pkg/errors"
 )
 
 // doDefaultGatewayIP - returns: default gateway IP

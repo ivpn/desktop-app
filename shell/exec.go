@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/ivpn/desktop-app-daemon/logger"
-
-	"github.com/pkg/errors"
 )
 
 // Exec - execute external process
@@ -34,7 +32,7 @@ func Exec(logger *logger.Logger, name string, args ...string) error {
 
 		exCode, e := GetCmdExitCode(err)
 		if e != nil {
-			return errors.Wrap(e, fmt.Sprintf("ExitCode=%d", exCode))
+			return fmt.Errorf("ExitCode=%d: %w", exCode, e)
 		}
 
 		return err
@@ -47,7 +45,7 @@ func Exec(logger *logger.Logger, name string, args ...string) error {
 // error received from 'Exec(...)'
 func GetCmdExitCode(err error) (retCode int, retErr error) {
 	if err == nil {
-		return 0, errors.New("unable to get the command exit-code. Error object os nil")
+		return 0, fmt.Errorf("unable to get the command exit-code. Error object os nil")
 	}
 
 	if exitError, ok := err.(*exec.ExitError); ok {

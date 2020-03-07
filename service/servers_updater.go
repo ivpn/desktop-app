@@ -19,7 +19,7 @@ type serversUpdater struct {
 }
 
 // CreateServersUpdater - constructor for serversUpdater object
-func CreateServersUpdater(apiObj *api.API) (ServersUpdater, error) {
+func CreateServersUpdater(apiObj *api.API) (IServersUpdater, error) {
 	updater := &serversUpdater{api: apiObj}
 
 	updater.updatedNotifyChan = make(chan struct{}, 1)

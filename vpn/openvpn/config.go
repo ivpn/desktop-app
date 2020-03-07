@@ -2,6 +2,7 @@ package openvpn
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -11,28 +12,38 @@ import (
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
-
-	"github.com/pkg/errors"
 )
 
 // ConnectionParams represents OpenVPN connection parameters
 type ConnectionParams struct {
-	username      string
-	password      string
-	tcp           bool
-	hostPort      int
-	hostIPs       []net.IP
-	proxyType     string
-	proxyAddress  net.IP
-	proxyPort     int
-	proxyUsername string
-	proxyPassword string
+	username          string
+	password          string
+	multihopExitSrvID string
+	tcp               bool
+	hostPort          int
+	hostIPs           []net.IP
+	proxyType         string
+	proxyAddress      net.IP
+	proxyPort         int
+	proxyUsername     string
+	proxyPassword     string
+}
+
+// SetCredentials update WG credentials
+func (cp *ConnectionParams) SetCredentials(username, password string) {
+	cp.password = password
+	cp.username = username
+
+	// MultiHop configuration is based just by adding "@exit_server_id" to the end of username
+	// And forwarding this info on server
+	if len(cp.multihopExitSrvID) > 0 {
+		cp.username = fmt.Sprintf("%s@%s", username, cp.multihopExitSrvID)
+	}
 }
 
 // CreateConnectionParams creates OpenVPN connection parameters object
 func CreateConnectionParams(
-	username string,
-	password string,
+	multihopExitSrvID string,
 	tcp bool,
 	hostPort int,
 	hostIPs []net.IP,
@@ -43,16 +54,15 @@ func CreateConnectionParams(
 	proxyPassword string) ConnectionParams {
 
 	return ConnectionParams{
-		username:      username,
-		password:      password,
-		tcp:           tcp,
-		hostPort:      hostPort,
-		hostIPs:       hostIPs,
-		proxyType:     proxyType,
-		proxyAddress:  proxyAddress,
-		proxyPort:     proxyPort,
-		proxyUsername: proxyUsername,
-		proxyPassword: proxyPassword}
+		multihopExitSrvID: multihopExitSrvID,
+		tcp:               tcp,
+		hostPort:          hostPort,
+		hostIPs:           hostIPs,
+		proxyType:         proxyType,
+		proxyAddress:      proxyAddress,
+		proxyPort:         proxyPort,
+		proxyUsername:     proxyUsername,
+		proxyPassword:     proxyPassword}
 }
 
 // WriteConfigFile saves OpenVPN connection parameters into a config file
@@ -138,7 +148,7 @@ func (c *ConnectionParams) generateConfiguration(
 			err := ioutil.WriteFile(platform.OpenvpnProxyAuthFile(), []byte(fmt.Sprintf("%s\n%s", c.proxyUsername, c.proxyPassword)), 0644)
 			if err != nil {
 				log.Error(err)
-				return nil, errors.Wrap(err, "Failed to save file with proxy credentials")
+				return nil, fmt.Errorf("Failed to save file with proxy credentials: %w", err)
 			}
 		}
 

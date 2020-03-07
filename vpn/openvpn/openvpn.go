@@ -59,6 +59,10 @@ func NewOpenVpnObject(
 	extraParameters string,
 	connectionParams ConnectionParams) (*OpenVPN, error) {
 
+	if len(connectionParams.username) == 0 || len(connectionParams.password) == 0 {
+		return nil, fmt.Errorf("OpenVPN user credentials not defined")
+	}
+
 	return &OpenVPN{
 			state:           vpn.DISCONNECTED,
 			binaryPath:      binaryPath,
@@ -78,6 +82,9 @@ func (o *OpenVPN) DestinationIPs() []net.IP {
 	}
 	return o.connectParams.hostIPs
 }
+
+// Type just returns VPN type
+func (o *OpenVPN) Type() vpn.Type { return vpn.OpenVPN }
 
 // Init performs basic initialisations before connection
 // It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
