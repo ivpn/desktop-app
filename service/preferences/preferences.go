@@ -126,10 +126,11 @@ func (p *Preferences) setSession(accountID string,
 	wgLocalIP string) {
 
 	p.Session = SessionStatus{
-		AccountID:   strings.TrimSpace(accountID),
-		Session:     strings.TrimSpace(session),
-		OpenVPNUser: strings.TrimSpace(vpnUser),
-		OpenVPNPass: strings.TrimSpace(vpnPass)}
+		AccountID:          strings.TrimSpace(accountID),
+		Session:            strings.TrimSpace(session),
+		OpenVPNUser:        strings.TrimSpace(vpnUser),
+		OpenVPNPass:        strings.TrimSpace(vpnPass),
+		WGKeysRegenInerval: p.Session.WGKeysRegenInerval} // keep 'WGKeysRegenInerval' from previus Session object
 
 	p.Session.updateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP)
 }

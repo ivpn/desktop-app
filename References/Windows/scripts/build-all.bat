@@ -1,6 +1,9 @@
 @ECHO OFF
 setlocal
 set SCRIPTDIR=%~dp0
+set APPVER=%1
+set COMMIT=""
+set DATE=""
 
 rem ==================================================
 rem DEFINE required WireGuard version here
@@ -10,6 +13,16 @@ rem ==================================================
 echo ==================================================
 echo ============ BUILDING IVPN Service ===============
 echo ==================================================
+
+rem Getting info about current date
+FOR /F "tokens=* USEBACKQ" %%F IN (`date /T`) DO SET DATE=%%F
+rem Getting info about commit
+cd %SCRIPTDIR%\..\..\..
+FOR /F "tokens=* USEBACKQ" %%F IN (`git rev-list -1 HEAD`) DO SET COMMIT=%%F
+
+echo APPVER: %APPVER%
+echo COMMIT: %COMMIT%
+echo DATE  : %DATE%
 
 rem Checking if msbuild available
 WHERE msbuild >nul 2>&1
@@ -39,7 +52,7 @@ goto :success
 	echo [*] Updating servers.json ...
 	curl -#fLo %SCRIPTDIR%..\etc\servers.json https://api.ivpn.net/v4/servers.json || exit /b 1
 	goto :eof
-	
+
 :build_agent
 	set GOOS=windows
 	set GOPATH=%SCRIPTDIR%..\.deps\wireguard-windows\.deps\gopath
@@ -55,10 +68,10 @@ goto :success
 	set CC=%~2-w64-mingw32-gcc
 	set GOARCH=%~3
 	echo [*] Building IVPN service %1
-	
+
 	if exist "bin\%~1\IVPN Service.exe" del "bin\%~1\IVPN Service.exe" || exit /b 1
-	
-	go build -tags release -o "bin\%~1\IVPN Service.exe" || exit /b 1
+
+	go build -tags release -o "bin\%~1\IVPN Service.exe" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app-daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app-daemon/version._time=%DATE%" || exit /b 1
 	goto :eof
 
 :build_native_libs
@@ -88,7 +101,7 @@ goto :success
 			rd /s /q "%SCRIPTDIR%..\.deps" || exit /b 1
 			sleep 2
 		)
-		
+
 		echo [*] Creating .deps ...
 		mkdir "%SCRIPTDIR%..\.deps" || exit /b 1
 		cd "%SCRIPTDIR%..\.deps" 	|| exit /b 1
@@ -102,7 +115,7 @@ goto :success
 	) else (
 		cd "%SCRIPTDIR%..\.deps\wireguard-windows" 	|| exit /b 1
 	)
-	
+
 	echo [*] Building wireguard-windows ...
 	call build.bat || exit /b 1
 

@@ -20,3 +20,4 @@ References/Windows/log/
 References/Windows/etc/settings.json
 __debug_bin
 desktop-app-daemon
+References/Windows/etc/openvpn.cfg
