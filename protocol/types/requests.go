@@ -142,6 +142,11 @@ type SessionDelete struct {
 	CommandBase
 }
 
+// SessionStatus get session status
+type SessionStatus struct {
+	CommandBase
+}
+
 // WireGuardGenerateNewKeys - generate WG keys
 type WireGuardGenerateNewKeys struct {
 	CommandBase

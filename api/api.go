@@ -17,6 +17,7 @@ const (
 	_apiHost               = "api.ivpn.net"
 	_serversPath           = "v4/servers.json"
 	_sessionNewPath        = "v4/session/new"
+	_sessionStatusPath     = "v4/session/status"
 	_sessionDeletePath     = "v4/session/delete"
 	_wgKeySetPath          = "v4/session/wg/set"
 )
@@ -134,6 +135,39 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) 
 	}
 
 	return nil, nil, &apiErr, fmt.Errorf("API error: [%d] %s", apiErr.Status, apiErr.Message)
+}
+
+// SessionStatus - get session status
+func (a *API) SessionStatus(session string) (
+	*types.ServiceStatusAPIResp,
+	*types.APIErrorResponse,
+	error) {
+
+	//var sucessResp types.ServiceStatusAPIResp
+	var resp types.SessionStatusResponse
+	var apiErr types.APIErrorResponse
+
+	request := &types.SessionStatusRequest{Session: session}
+
+	data, err := a.requestRaw(_sessionStatusPath, "POST", "application/json", request)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Check is it API error
+	if err := json.Unmarshal(data, &apiErr); err != nil {
+		return nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
+	}
+
+	// success
+	if apiErr.Status == types.CodeSuccess {
+		if err := json.Unmarshal(data, &resp); err != nil {
+			return nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
+		}
+		return &resp.ServiceStatus, &apiErr, nil
+	}
+
+	return nil, &apiErr, fmt.Errorf("API error: [%d] %s", apiErr.Status, apiErr.Message)
 }
 
 // SessionDelete - remove session

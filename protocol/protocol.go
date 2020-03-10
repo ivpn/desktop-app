@@ -70,6 +70,11 @@ type Service interface {
 		err error)
 
 	SessionDelete() error
+	SessionStatus() (
+		apiCode int,
+		apiErrorMsg string,
+		accountInfo preferences.AccountStatus,
+		err error)
 
 	WireGuardGenerateKeys(updateIfNecessary bool) error
 	WireGuardSetKeysRotationInterval(interval int64)
@@ -595,6 +600,24 @@ func (p *Protocol) processRequest(message string) {
 			break
 		}
 		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+		break
+
+	case "SessionStatus":
+		var resp types.SessionStatusResp
+		apiCode, apiErrMsg, accountInfo, err := p._service.SessionStatus()
+		if err != nil && apiCode == 0 {
+			// if apiCode == 0 - it is not API error. Sending error response
+			p.sendErrorResponse(reqCmd, err)
+			break
+		}
+		// Sending session info
+		resp = types.SessionStatusResp{
+			APIStatus:       apiCode,
+			APIErrorMessage: apiErrMsg,
+			Account:         accountInfo}
+
+		// send response
+		p.sendResponse(&resp, reqCmd.Idx)
 		break
 
 	case "WireGuardGenerateNewKeys":

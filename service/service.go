@@ -753,13 +753,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 	if err != nil {
 		// if SessionsLimit response
 		if errorLimitResp != nil {
-			accountInfo = preferences.AccountStatus{
-				CurrentPlan:   errorLimitResp.SessionLimitData.CurrentPlan,
-				Upgradable:    errorLimitResp.SessionLimitData.Upgradable,
-				UpgradeToPlan: errorLimitResp.SessionLimitData.UpgradeToPlan,
-				UpgradeToURL:  errorLimitResp.SessionLimitData.UpgradeToURL,
-				Limit:         errorLimitResp.SessionLimitData.Limit}
-
+			accountInfo = s.createAccountStatus(errorLimitResp.SessionLimitData)
 			return apiCode, apiErr.Message, accountInfo, err
 		}
 
@@ -777,19 +771,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 	}
 
 	// get account status info
-	accountInfo = preferences.AccountStatus{
-		Active:         sucessResp.ServiceStatus.Active,
-		ActiveUntil:    sucessResp.ServiceStatus.ActiveUntil,
-		CurrentPlan:    sucessResp.ServiceStatus.CurrentPlan,
-		PaymentMethod:  sucessResp.ServiceStatus.PaymentMethod,
-		IsRenewable:    sucessResp.ServiceStatus.IsRenewable,
-		WillAutoRebill: sucessResp.ServiceStatus.WillAutoRebill,
-		IsFreeTrial:    sucessResp.ServiceStatus.IsFreeTrial,
-		Capabilities:   sucessResp.ServiceStatus.Capabilities,
-		Upgradable:     sucessResp.ServiceStatus.Upgradable,
-		UpgradeToPlan:  sucessResp.ServiceStatus.UpgradeToPlan,
-		UpgradeToURL:   sucessResp.ServiceStatus.UpgradeToURL,
-		Limit:          0}
+	accountInfo = s.createAccountStatus(sucessResp.ServiceStatus)
 
 	// save session info
 	s._preferences.SetSession(accountID,
@@ -827,6 +809,58 @@ func (s *Service) SessionDelete() error {
 	s._evtReceiver.OnServiceSessionChanged()
 
 	return nil
+}
+
+// SessionStatus receives session status
+func (s *Service) SessionStatus() (
+	apiCode int,
+	apiErrorMsg string,
+	accountInfo preferences.AccountStatus,
+	err error) {
+
+	session := s.Preferences().Session
+	stat, apiErr, err := s._api.SessionStatus(session.Session)
+
+	apiCode = 0
+	if apiErr != nil {
+		apiCode = apiErr.Status
+	}
+
+	if err != nil {
+		// in case of other API error
+		if apiErr != nil {
+			return apiCode, apiErr.Message, accountInfo, err
+		}
+
+		// not API error
+		return apiCode, "", accountInfo, err
+	}
+
+	if stat == nil {
+		return apiCode, "", accountInfo, fmt.Errorf("unexpected error when creating requesting session status")
+	}
+
+	// get account status info
+	accountInfo = s.createAccountStatus(*stat)
+
+	// success
+	return apiCode, "", accountInfo, nil
+}
+
+func (s *Service) createAccountStatus(apiResp types.ServiceStatusAPIResp) preferences.AccountStatus {
+	return preferences.AccountStatus{
+		Active:         apiResp.Active,
+		ActiveUntil:    apiResp.ActiveUntil,
+		CurrentPlan:    apiResp.CurrentPlan,
+		PaymentMethod:  apiResp.PaymentMethod,
+		IsRenewable:    apiResp.IsRenewable,
+		WillAutoRebill: apiResp.WillAutoRebill,
+		IsFreeTrial:    apiResp.IsFreeTrial,
+		Capabilities:   apiResp.Capabilities,
+		Upgradable:     apiResp.Upgradable,
+		UpgradeToPlan:  apiResp.UpgradeToPlan,
+		UpgradeToURL:   apiResp.UpgradeToURL,
+		Limit:          apiResp.Limit}
 }
 
 //////////////////////////////////////////////////////////

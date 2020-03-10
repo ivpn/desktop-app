@@ -67,6 +67,14 @@ type SessionNewResp struct {
 	Account         preferences.AccountStatus
 }
 
+// SessionStatusResp - information about created session (or error info)
+type SessionStatusResp struct {
+	CommandBase
+	APIStatus       int
+	APIErrorMessage string
+	Account         preferences.AccountStatus
+}
+
 // KillSwitchStatusResp returns kill-switch status
 type KillSwitchStatusResp struct {
 	CommandBase

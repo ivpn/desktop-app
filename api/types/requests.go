@@ -12,6 +12,11 @@ type SessionDeleteRequest struct {
 	Session string `json:"session_token"`
 }
 
+// SessionStatusRequest request to get session status
+type SessionStatusRequest struct {
+	Session string `json:"session_token"`
+}
+
 // SessionWireGuardKeySetRequest request to set new WK key for a session
 type SessionWireGuardKeySetRequest struct {
 	Session            string `json:"session_token"`
