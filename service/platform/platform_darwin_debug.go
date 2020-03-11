@@ -34,8 +34,7 @@ func doOsInitForBuild() {
 	// common variables initialization
 	settingsDir = "/Library/Application Support/IVPN"
 	settingsFile = path.Join(settingsDir, "settings.json")
-	servicePortFile = path.Join(settingsDir, "port.txt")
-	serversFile = path.Join(settingsDir, "servers.json") // path.Join(installDir, "References/macOS/etc/servers.json")
+	serversFile = path.Join(settingsDir, "servers.json")
 	openvpnConfigFile = path.Join(settingsDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(settingsDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(settingsDir, "wireguard.conf")

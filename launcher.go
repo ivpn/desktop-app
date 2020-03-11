@@ -15,6 +15,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/service"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/service/wgkeys"
+	"github.com/ivpn/desktop-app-daemon/version"
 )
 
 var log *logger.Logger
@@ -39,6 +40,10 @@ func Launch() {
 		// OS-specific service finalizer
 		doStopped()
 	}()
+
+	platform.Init()
+	logger.Init(platform.LogFile())
+	logger.Info("version:" + version.GetFullVersion())
 
 	tzName, tzOffsetSec := time.Now().Zone()
 	log.Info("Starting IVPN daemon", fmt.Sprintf(" [%s]", runtime.GOOS), fmt.Sprintf(" [timezone: %s %d (%dh)]", tzName, tzOffsetSec, tzOffsetSec/(60*60)), " ...")

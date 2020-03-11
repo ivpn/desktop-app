@@ -1,6 +1,6 @@
 package service
 
-// ErrorNotLoggedIn - error, usr not logged in into account
+// ErrorNotLoggedIn - error, user not logged in into account
 type ErrorNotLoggedIn struct {
 }
 

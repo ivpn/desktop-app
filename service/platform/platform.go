@@ -32,11 +32,20 @@ var (
 )
 
 func init() {
+	// initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
+	doInitConstants()
+	if len(servicePortFile) <= 0 {
+		panic("Path to service port file not defined ('platform.servicePortFile' is empty)")
+	}
+}
+
+// Init - initialize all preferences required for a daemon
+// Must be called on beginning of application start by a daemon(service)
+func Init() {
 	obfsproxyHostPort = 5145
 
 	// do variables initialization for current OS
 	doOsInit()
-
 	ensureFileExists("openVpnBinaryPath", openVpnBinaryPath)
 	ensureFileExists("openvpnCaKeyFile", openvpnCaKeyFile)
 	ensureFileExists("openvpnTaKeyFile", openvpnTaKeyFile)

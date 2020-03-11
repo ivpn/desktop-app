@@ -10,6 +10,15 @@ import (
 	"strings"
 )
 
+// initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
+func doInitConstants() {
+	servicePortFile = `C:/Program Files/IVPN Client/etc/port.txt`
+	if err = os.MkdirAll(filepath.Dir(servicePortFile), os.ModePerm); err != nil {
+		fmt.Printf("!!! DEBUG VERSION !!! ERROR	: '%s'\n", servicePortFile)
+		servicePortFile = ""
+	}
+}
+
 func doOsInitForBuild() (instDir string) {
 	installDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
@@ -33,12 +42,6 @@ func doOsInitForBuild() (instDir string) {
 	if Is64Bit() == false {
 		wfpDllPath = path.Join(installDir, `Native Projects/bin/Release/IVPN Firewall Native.dll`)
 		nativeHelpersDllPath = path.Join(installDir, `Native Projects/bin/Release/IVPN Firewall Native.dll`)
-	}
-
-	servicePortFile = `C:/Program Files/IVPN Client/etc/port.txt`
-	if err = os.MkdirAll(filepath.Dir(servicePortFile), os.ModePerm); err != nil {
-		fmt.Printf("!!! DEBUG VERSION !!! ERROR	: '%s'\n", servicePortFile)
-		servicePortFile = ""
 	}
 
 	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")

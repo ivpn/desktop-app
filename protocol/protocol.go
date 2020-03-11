@@ -350,9 +350,6 @@ func (p *Protocol) processRequest(message string) {
 			p.sendErrorResponse(reqCmd, err)
 		}
 
-		// TODO: remove TEST !
-		//req.KeepDaemonAlone = true
-
 		log.Info(fmt.Sprintf("Connected client version: '%s' [set KeepDaemonAlone = %t]", req.Version, req.KeepDaemonAlone))
 		p._keepAlone = req.KeepDaemonAlone
 

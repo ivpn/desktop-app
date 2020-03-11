@@ -1,7 +1,5 @@
 package service
 
-// TODO: move interfaces definitions to a files which are using this interfaces
-
 import (
 	"net"
 	"time"

@@ -28,12 +28,7 @@ func initVars(_installDir string) {
 	// common variables initialization
 	settingsDir = path.Join(_installDir, "etc")
 	settingsFile = path.Join(settingsDir, "settings.json")
-	if len(servicePortFile) <= 0 {
-		servicePortFile = path.Join(settingsDir, "port.txt")
-	} else {
-		// debug version can have different port file value
-		fmt.Println("!!! WARNING!!! Non-standard service port file: ", servicePortFile)
-	}
+
 	serversFile = path.Join(settingsDir, "servers.json")
 	openvpnConfigFile = path.Join(settingsDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(settingsDir, "proxyauth.txt")
