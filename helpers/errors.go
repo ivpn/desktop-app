@@ -29,8 +29,8 @@ func (e ErrorNotImplemented) Error() string {
 
 func getCallerMethodName() (string, error) {
 	fpcs := make([]uintptr, 1)
-	// Skip 5 levels to get the caller
-	n := runtime.Callers(5, fpcs)
+	// Skip 3 levels to get the caller
+	n := runtime.Callers(3, fpcs)
 	if n == 0 {
 		return "", fmt.Errorf("no caller")
 	}

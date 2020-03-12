@@ -33,9 +33,15 @@ type internalVariables struct {
 	command       *exec.Cmd
 	isGoingToStop bool
 	isPaused      bool
+	defGateway    net.IP
 }
 
 func (wg *WireGuard) init() error {
+	defaultGwIP, err := netinfo.DefaultGatewayIP()
+	if err != nil {
+		return nil, fmt.Errorf("unable to determine default gateway IP: %w", err)
+	}
+	wg.internals.defGateway = defaultGwIP
 	return nil // do nothing for macOS
 }
 
@@ -308,7 +314,7 @@ func (wg *WireGuard) setRoutes() error {
 
 	// Update routing to remote server (remote_server default_router 255.255.255)
 	// example command: sudo route -n add -net 145.239.239.55 192.168.1.1 255.255.255.255
-	if err := shell.Exec(log, "route", "-n", "add", "-net", wg.connectParams.hostIP.String(), wg.defGateway.String(), "255.255.255.255"); err != nil {
+	if err := shell.Exec(log, "route", "-n", "add", "-net", wg.connectParams.hostIP.String(), wg.internals.defGateway.String(), "255.255.255.255"); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
@@ -373,6 +379,13 @@ func getFreeTunInterfaceName() (string, error) {
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
-	// nothing
+
+	// TODO: check if we need it for this platform
+	// Same as "0.0.0.0/0" but such type of configuration is disabling internal WireGuard-s Firewall
+	// It blocks everything except WireGuard traffic.
+	// We need to disable WireGurd-s firewall because we have our own implementation of firewall.
+	//  For details, refer to WireGuard-windows sources: tunnel\ifaceconfig.go (enableFirewall(...) method)
+	peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1")
+
 	return interfaceCfg, peerCfg
 }

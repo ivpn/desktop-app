@@ -8,9 +8,17 @@ import (
 	"strings"
 )
 
+var usrCfgDir string
+
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
-	servicePortFile = "/tmp/ivpn/port.txt"
+	usrDir, err := os.UserConfigDir()
+	if err != nil {
+		panic("Unable to determine user's configuration dirrectory: " + err.Error())
+	}
+	usrCfgDir = usrDir
+	settingsDir = path.Join(usrCfgDir, "ivpn")
+	servicePortFile = path.Join(settingsDir, "port.txt")
 }
 
 func doOsInit() {
@@ -32,12 +40,13 @@ func doOsInitForBuild() {
 	}
 
 	// common variables initialization
-	settingsDir = "/tmp/ivpn" //path.Join(installDir, "References/linux/tmp")
 	settingsFile = path.Join(settingsDir, "settings.json")
 	serversFile = path.Join(settingsDir, "servers.json") // path.Join(installDir, "References/macOS/etc/servers.json")
+
+	//tmpDir := "/tmp/ivpn"
 	openvpnConfigFile = path.Join(settingsDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(settingsDir, "proxyauth.txt")
-	wgConfigFilePath = path.Join(settingsDir, "wireguard.conf")
+	wgConfigFilePath = path.Join(settingsDir, "wgivpn.conf")
 
 	logDir = path.Join(rootDir, "References/linux/tmp")
 	logFile = path.Join(logDir, "IVPN Agent.log")

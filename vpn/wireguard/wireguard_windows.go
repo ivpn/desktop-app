@@ -281,6 +281,13 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 
 	interfaceCfg = append(interfaceCfg, "Address = "+wg.connectParams.clientLocalIP.String())
 
+	// TODO: check if we need it for this platform
+	// Same as "0.0.0.0/0" but such type of configuration is disabling internal WireGuard-s Firewall
+	// It blocks everything except WireGuard traffic.
+	// We need to disable WireGurd-s firewall because we have our own implementation of firewall.
+	//  For details, refer to WireGuard-windows sources: tunnel\ifaceconfig.go (enableFirewall(...) method)
+	peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1")
+
 	return interfaceCfg, peerCfg
 }
 

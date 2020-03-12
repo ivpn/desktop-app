@@ -54,7 +54,6 @@ type WireGuard struct {
 	toolBinaryPath string
 	configFilePath string
 	connectParams  ConnectionParams
-	defGateway     net.IP
 
 	// Must be implemeted (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	internals internalVariables
@@ -66,16 +65,10 @@ func NewWireGuardObject(wgBinaryPath string, wgToolBinaryPath string, wgConfigFi
 		return nil, fmt.Errorf("WireGuard local credentials not defined")
 	}
 
-	defaultGwIP, err := netinfo.DefaultGatewayIP()
-	if err != nil {
-		return nil, fmt.Errorf("unable to determine default gateway IP: %w", err)
-	}
-
 	return &WireGuard{
 		binaryPath:     wgBinaryPath,
 		toolBinaryPath: wgToolBinaryPath,
 		configFilePath: wgConfigFilePath,
-		defGateway:     defaultGwIP,
 		connectParams:  connectionParams}, nil
 }
 
@@ -181,12 +174,7 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 		"[Peer]",
 		"PublicKey = " + wg.connectParams.hostPublicKey,
 		"Endpoint = " + wg.connectParams.hostIP.String() + ":" + strconv.Itoa(wg.connectParams.hostPort),
-		"PersistentKeepalive = 25",
-		// Same as "0.0.0.0/0" but such type of configuration is disabling internal WireGuard-s Firewall
-		// It blocks everything except WireGuard traffic.
-		// We need to disable WireGurd-s firewall because we have our own implementation of firewall.
-		//  For details, refer to WireGuard-windows sources: tunnel\ifaceconfig.go (enableFirewall(...) method)
-		"AllowedIPs = 128.0.0.0/1, 0.0.0.0/1"}
+		"PersistentKeepalive = 25"}
 
 	// add some OS-specific configurations (if necessary)
 	iCfg, pCgf := wg.getOSSpecificConfigParams()

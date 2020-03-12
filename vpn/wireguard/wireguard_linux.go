@@ -1,8 +1,15 @@
 package wireguard
 
 import (
+	"fmt"
 	"net"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"time"
 
+	"github.com/ivpn/desktop-app-daemon/shell"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
@@ -11,18 +18,50 @@ type internalVariables struct {
 }
 
 func (wg *WireGuard) init() error {
-	// TODO: not implemented
 	return nil
 }
 
 // connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
-	// TODO: not implemented
+	// do not forget to remove config file after finishing configuration
+	defer os.Remove(wg.configFilePath)
+	// generate configuration
+	err := wg.generateAndSaveConfigFile(wg.configFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to save WG config file: %w", err)
+	}
+
+	err = shell.Exec(log, wg.binaryPath, "up", wg.configFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to start WireGuard: %w", err)
+	}
+
+	// notify connected
+	stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP)
+
+	wgInterfaceName := filepath.Base(wg.configFilePath)
+	wgInterfaceName = strings.TrimSuffix(wgInterfaceName, path.Ext(wgInterfaceName))
+	// wait until wireguard interface is available
+	for {
+		time.Sleep(time.Microsecond * 100)
+		i, err := net.InterfaceByName(wgInterfaceName)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+		if i == nil {
+			break
+		}
+	}
+
 	return nil
 }
 
 func (wg *WireGuard) disconnect() error {
-	// TODO: not implemented
+	err := shell.Exec(log, wg.binaryPath, "down", wg.configFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to stop WireGuard: %w", err)
+	}
 	return nil
 }
 
@@ -51,50 +90,9 @@ func (wg *WireGuard) resetManualDNS() error {
 	return nil
 }
 
-func (wg *WireGuard) initialize(utunName string) error {
-	// TODO: not implemented
-	return nil
-}
-
-func (wg *WireGuard) initializeConfiguration(utunName string) error {
-	// TODO: not implemented
-	return nil
-}
-
-// Configure WireGuard interface
-// example command: ipconfig set utun7 MANUAL 10.0.0.121 255.255.255.0
-func (wg *WireGuard) initializeUnunInterface(utunName string) error {
-	// TODO: not implemented
-	return nil
-}
-
-// WireGuard configuration
-func (wg *WireGuard) setWgConfiguration(utunName string) error {
-	// TODO: not implemented
-	return nil
-}
-
-func (wg *WireGuard) setRoutes() error {
-	// TODO: not implemented
-	return nil
-}
-
-func (wg *WireGuard) removeRoutes() error {
-	// TODO: not implemented
-	return nil
-}
-
-func (wg *WireGuard) setDNS() error {
-	// TODO: not implemented
-	return nil
-}
-
-func (wg *WireGuard) removeDNS() error {
-	// TODO: not implemented
-	return nil
-}
-
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
-	// TODO: not implemented
+	interfaceCfg = append(interfaceCfg, "Address = "+wg.connectParams.clientLocalIP.String()+"/32")
+
+	peerCfg = append(peerCfg, "AllowedIPs = 0.0.0.0/0")
 	return interfaceCfg, peerCfg
 }
