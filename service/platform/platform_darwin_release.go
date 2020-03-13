@@ -5,12 +5,9 @@ package platform
 import "path"
 
 func doOsInitForBuild() {
-	// macOS-specivic variable initialization
+	// macOS-specific variable initialization
 	firewallScript = "/Applications/IVPN.app/Contents/Resources/etc/firewall.sh"
-	ensureFileExists("firewallScript", firewallScript)
-
 	dnsScript = "/Applications/IVPN.app/Contents/Resources/etc/dns.sh"
-	ensureFileExists("firewallScript", dnsScript)
 
 	// common variables initialization
 	settingsDir = "/Library/Application Support/IVPN"

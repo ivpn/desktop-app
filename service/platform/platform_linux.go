@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+var (
+	firewallScript string
+)
+
 var usrCfgDir string
 
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
@@ -39,6 +43,9 @@ func doOsInitForBuild() {
 		installDir = installDir[:idx+len(rootDir)]
 	}
 
+	// Linux-specific variable initialization
+	firewallScript = path.Join(installDir, "References/linux/etc/firewall.sh")
+
 	// common variables initialization
 	settingsFile = path.Join(settingsDir, "settings.json")
 	serversFile = path.Join(settingsDir, "servers.json") // path.Join(installDir, "References/macOS/etc/servers.json")
@@ -60,6 +67,11 @@ func doOsInitForBuild() {
 
 	obfsproxyStartScript = path.Join(installDir, "References/linux/obfsproxy/obfsproxy.sh")
 
-	wgBinaryPath = path.Join("/usr/bin", "wg-quick") //path.Join(installDir, "References/macOS/_deps/wg_inst/wireguard-go")
-	wgToolBinaryPath = path.Join("/usr/bin", "wg")   // path.Join(installDir, "References/macOS/_deps/wg_inst/wg")
+	wgBinaryPath = path.Join("/usr/bin", "wg-quick")
+	wgToolBinaryPath = path.Join("/usr/bin", "wg")
+}
+
+// FirewallScript returns path to firewal script
+func FirewallScript() string {
+	return firewallScript
 }

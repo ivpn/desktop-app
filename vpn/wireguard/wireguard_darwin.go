@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/shell"
@@ -39,7 +40,7 @@ type internalVariables struct {
 func (wg *WireGuard) init() error {
 	defaultGwIP, err := netinfo.DefaultGatewayIP()
 	if err != nil {
-		return nil, fmt.Errorf("unable to determine default gateway IP: %w", err)
+		return fmt.Errorf("unable to determine default gateway IP: %w", err)
 	}
 	wg.internals.defGateway = defaultGwIP
 	return nil // do nothing for macOS

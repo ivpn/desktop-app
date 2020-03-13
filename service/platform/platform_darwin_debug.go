@@ -24,12 +24,9 @@ func doOsInitForBuild() {
 		installDir = installDir[:idx+len(rootDir)]
 	}
 
-	// macOS-specivic variable initialization
+	// macOS-specific variable initialization
 	firewallScript = path.Join(installDir, "References/macOS/etc/firewall.sh")
-	ensureFileExists("firewallScript", firewallScript)
-
 	dnsScript = path.Join(installDir, "References/macOS/etc/dns.sh")
-	ensureFileExists("firewallScript", dnsScript)
 
 	// common variables initialization
 	settingsDir = "/Library/Application Support/IVPN"

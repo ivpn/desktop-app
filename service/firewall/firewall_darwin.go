@@ -87,7 +87,7 @@ func implClientDisconnected() error {
 }
 
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
-	localIPs, err := getLocalIPs()
+	localIPs, err := getLanIPs()
 	if err != nil {
 		return fmt.Errorf("failed to get local IPs: %w", err)
 	}
@@ -241,8 +241,8 @@ func removeAllHostsFromExceptions() error {
 
 //---------------------------------------------------------------------
 
-// getlocalIPs - returns list of local IPs
-func getLocalIPs() ([]string, error) {
+// getLanIPs - returns list of local IPs
+func getLanIPs() ([]string, error) {
 
 	ifaces, err := net.Interfaces()
 	if err != nil {
