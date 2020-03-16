@@ -20,7 +20,7 @@ function get_firewall_enabled {
     return 1
 }
 
-# Load rules into the anchor and enable the firewall if disabled
+# Load rules
 function enable_firewall {
     get_firewall_enabled
 
@@ -28,9 +28,6 @@ function enable_firewall {
       echo "Firewall is already enabled. Please disable it first" >&2
       return 1
     fi
-
-    # Flush rules and delete custom chains
-    # disable_firewall
 
     set -e
 
@@ -84,7 +81,7 @@ function enable_firewall {
 }
 
 
-# Remove all rules from the anchor and disable the firewall
+# Remove all rules
 function disable_firewall {
     # Flush rules and delete custom chains
 
@@ -123,8 +120,8 @@ function disable_firewall {
 
 function client_connected {
   IFACE=$1
-  ${IPv4BIN} -A ${OUT_IVPN_IF} -i ${IFACE} -p all -j ACCEPT
-  ${IPv4BIN} -A ${IN_IVPN_IF} -i ${IFACE} -p all -j ACCEPT
+  ${IPv4BIN} -A ${OUT_IVPN_IF} -o ${IFACE} -j ACCEPT
+  ${IPv4BIN} -A ${IN_IVPN_IF} -i ${IFACE} -j ACCEPT
 }
 
 function client_disconnected {
