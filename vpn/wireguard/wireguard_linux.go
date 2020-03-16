@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/shell"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 )
@@ -18,19 +19,49 @@ type internalVariables struct {
 }
 
 func (wg *WireGuard) init() error {
+	// stop current WG connection (if exists)
+	//
+	// ifname := filepath.Base(wg.configFilePath)
+	// ifname = strings.TrimSuffix(ifname, path.Ext(ifname))
+	// err := shell.Exec(log, "ip", "link", "set", "down", ifname) // command: sudo ip link set down wgivpn
+	// if err != nil {
+	// 	log.Warning(err)
+	// }
+	// err = shell.Exec(log, "ip", "link", "delete", ifname) // command: sudo ip link delete wgivpn
+	// if err != nil {
+	// 	log.Warning(err)
+	// }
+
 	return nil
 }
 
 // connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
-	// do not forget to remove config file after finishing configuration
-	defer os.Remove(wg.configFilePath)
+
+	defer func() {
+		// do not forget to remove config file after finishing configuration
+		if err := os.Remove(wg.configFilePath); err != nil {
+			log.Warning(fmt.Sprintf("failed to remove WG configuration: %s", err))
+		}
+
+		// restore DNS configuration
+		if err := dns.DeleteManual(nil); err != nil {
+			log.Warning(fmt.Sprintf("failed to restore DNS configuration: %s", err))
+		}
+	}()
+
 	// generate configuration
 	err := wg.generateAndSaveConfigFile(wg.configFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to save WG config file: %w", err)
 	}
 
+	// update DNS configuration
+	if err := dns.SetManual(wg.connectParams.hostLocalIP, nil); err != nil {
+		return fmt.Errorf("failed to set DNS: %w", err)
+	}
+
+	// start WG
 	err = shell.Exec(log, wg.binaryPath, "up", wg.configFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to start WireGuard: %w", err)
