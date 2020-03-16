@@ -9,15 +9,26 @@ OUT_IVPN=IVPN-OUT
 IN_IVPN_IF=IVPN-IN-VPN
 OUT_IVPN_IF=IVPN-OUT-VPN
 
+# returns 0 if chain exists
+function chain_exists()
+{
+    local bin=$1
+    local chain_name=$2
+    ${bin} -n -L ${chain_name} >/dev/null 2>&1
+}
+
+function create_chain()
+{
+  local bin=$1
+  local chain_name=$2
+  chain_exists ${bin} ${chain_name} || ${bin} -N ${chain_name}
+}
+
 # Checks if the IVPN Firewall is enabled
 # 0 - if enabled
 # 1 - if not enabled
 function get_firewall_enabled {
-  ${IPv4BIN} -L -n | grep 'IVPN-OUT' &> /dev/null
-  if [ $? == 0 ]; then
-     return 0
-  fi
-    return 1
+  chain_exists ${IPv4BIN} ${OUT_IVPN}
 }
 
 # Load rules
@@ -36,8 +47,8 @@ function enable_firewall {
     ${IPv6BIN} -P INPUT DROP
     ${IPv6BIN} -P OUTPUT DROP
     # IPv6: define chains
-    ${IPv6BIN} -N ${IN_IVPN}
-    ${IPv6BIN} -N ${OUT_IVPN}
+    create_chain ${IPv6BIN} ${IN_IVPN}
+    create_chain ${IPv6BIN} ${OUT_IVPN}
     # IPv6: allow  local (lo) interface
     ${IPv6BIN} -A ${OUT_IVPN} -o lo -j ACCEPT
     ${IPv6BIN} -A ${IN_IVPN} -i lo -j ACCEPT
@@ -51,11 +62,11 @@ function enable_firewall {
     ${IPv4BIN} -P OUTPUT DROP
 
     # define chains
-    ${IPv4BIN} -N ${IN_IVPN}
-    ${IPv4BIN} -N ${OUT_IVPN}
+    create_chain ${IPv4BIN} ${IN_IVPN}
+    create_chain ${IPv4BIN} ${OUT_IVPN}
 
-    ${IPv4BIN} -N ${IN_IVPN_IF}
-    ${IPv4BIN} -N ${OUT_IVPN_IF}
+    create_chain ${IPv4BIN} ${IN_IVPN_IF}
+    create_chain ${IPv4BIN} ${OUT_IVPN_IF}
 
     # allow  local (lo) interface
     ${IPv4BIN} -A ${OUT_IVPN} -o lo -j ACCEPT
@@ -154,18 +165,20 @@ function main {
     elif [[ $1 = "-add_exceptions" ]]; then
 
       shift
-      ${IPv4BIN} -A ${OUT_IVPN_IF} -p all -d $@ -j ACCEPT
-      ${IPv4BIN} -A ${OUT_IVPN_IF} -p all -s $@ -j ACCEPT
-      ${IPv4BIN} -A ${IN_IVPN_IF} -p all -d $@ -j ACCEPT
-      ${IPv4BIN} -A ${IN_IVPN_IF} -p all -s $@ -j ACCEPT
+      create_chain ${IPv4BIN} ${IN_IVPN_IF}
+      create_chain ${IPv4BIN} ${OUT_IVPN_IF}
+      ${IPv4BIN} -A ${OUT_IVPN_IF} -d $@ -j ACCEPT
+      ${IPv4BIN} -A ${OUT_IVPN_IF} -s $@ -j ACCEPT
+      ${IPv4BIN} -A ${IN_IVPN_IF} -d $@ -j ACCEPT
+      ${IPv4BIN} -A ${IN_IVPN_IF} -s $@ -j ACCEPT
 
     elif [[ $1 = "-remove_exceptions" ]]; then
 
       shift
-      ${IPv4BIN} -D ${OUT_IVPN_IF} -p all -d $@ -j ACCEPT
-      ${IPv4BIN} -D ${OUT_IVPN_IF} -p all -s $@ -j ACCEPT
-      ${IPv4BIN} -D ${IN_IVPN_IF} -p all -d $@ -j ACCEPT
-      ${IPv4BIN} -D ${IN_IVPN_IF} -p all -s $@ -j ACCEPT
+      ${IPv4BIN} -D ${OUT_IVPN_IF} -d $@ -j ACCEPT
+      ${IPv4BIN} -D ${OUT_IVPN_IF} -s $@ -j ACCEPT
+      ${IPv4BIN} -D ${IN_IVPN_IF} -d $@ -j ACCEPT
+      ${IPv4BIN} -D ${IN_IVPN_IF} -s $@ -j ACCEPT
 
     elif [[ $1 = "-connected" ]]; then
         client_connected $2
