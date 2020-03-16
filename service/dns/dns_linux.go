@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-
-	"github.com/ivpn/desktop-app-daemon/helpers"
 )
 
 var (
@@ -40,13 +38,13 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 
 		if _, err := os.Stat(resolvFile); err == nil {
 			// if DNS-config exists
-			if err := helpers.CopyFile(resolvFile, resolvBackupFile); err != nil {
+			if err := os.Rename(resolvFile, resolvBackupFile); err != nil {
 				return fmt.Errorf("failed to backup DNS configuration: %w", err)
 			}
 		}
 	}
 
-	out, err := os.Create(resolvFile)
+	out, err := os.OpenFile(resolvFile, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to update DNS configuration (%w)", err)
 	}
@@ -72,12 +70,8 @@ func implDeleteManual(localInterfaceIP net.IP) error {
 		return nil
 	}
 
-	if err := helpers.CopyFile(resolvBackupFile, resolvFile); err != nil {
+	if err := os.Rename(resolvBackupFile, resolvFile); err != nil {
 		return fmt.Errorf("failed to restore DNS configuration: %w", err)
-	}
-
-	if err := os.Remove(resolvBackupFile); err != nil {
-		log.Warning(fmt.Sprintf("DNS restore error (error removing backup DNS file: '%s')", err))
 	}
 
 	return nil
