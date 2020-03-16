@@ -13,7 +13,7 @@ OUT_IVPN_IF=IVPN-OUT-VPN
 # 0 - if enabled
 # 1 - if not enabled
 function get_firewall_enabled {
-  ${IPv4BIN} -L | grep 'IVPN-OUT' &> /dev/null
+  ${IPv4BIN} -L -n | grep 'IVPN-OUT' &> /dev/null
   if [ $? == 0 ]; then
      return 0
   fi
