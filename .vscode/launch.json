@@ -15,7 +15,7 @@
             //"args": ["-h"],
             //"args": ["state"],
             //"args": ["connect", "-s", "rs.gw.ivpn.net"],
-            //"buildFlags": "-tags debug"
+            "buildFlags": "-tags debug"
         }
     ]
 }

@@ -1,2 +1,4 @@
 desktop-app-cli
 ivpn
+/References/Linux/_out_bin/*
+/References/Linux/_tmp/*
