@@ -22,3 +22,7 @@ __debug_bin
 desktop-app-daemon
 References/Windows/etc/openvpn.cfg
 /References/linux/tmp/*
+/References/linux/etc/settings.json
+/References/Linux/etc/settings.json
+/References/Linux/scripts/_out_bin/*
+/References/Linux/tmp/port.txt

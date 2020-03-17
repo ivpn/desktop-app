@@ -87,11 +87,12 @@ fi
 echo "======================================================"
 echo "=============== IVPN Agent ==========================="
 echo "======================================================"
-cd ../../../
-
 echo "Version: $VERSION"
 echo "Date   : $DATE"
 echo "Commit : $COMMIT"
+
+cd ../../../
+
 if [[ "$@" == *"-debug"* ]]
 then
     echo "Compiling in DEBUG mode"

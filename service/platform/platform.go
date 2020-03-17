@@ -7,11 +7,12 @@ import (
 )
 
 var (
-	settingsDir     string
+	settingsDir string // TODO: remove this variable: not in use by public interface
+	logDir      string // TODO: remove this variable: not in use by public interface
+
 	settingsFile    string
 	servicePortFile string
 	serversFile     string
-	logDir          string
 	logFile         string
 	openvpnLogFile  string
 
