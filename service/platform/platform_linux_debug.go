@@ -26,8 +26,7 @@ func doOsInitForBuild() {
 
 	installDir = path.Join(installDir, "References/Linux")
 
-	logDir = "/opt/ivpn/log"
-	settingsDir = installDir
+	logDir := "/opt/ivpn/log"
 
 	firewallScript = path.Join(installDir, "etc/firewall.sh")
 	openvpnCaKeyFile = path.Join(installDir, "etc/ca.crt")

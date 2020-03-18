@@ -12,8 +12,8 @@ func doInitConstants() {
 
 func doOsInit() {
 	doOsInitForBuild()
-	ensureFileExists("firewallScript", firewallScript)
-	ensureFileExists("dnsScript", dnsScript)
+	panicIfFileNotExists("firewallScript", firewallScript)
+	panicIfFileNotExists("dnsScript", dnsScript)
 }
 
 // FirewallScript returns path to firewal script

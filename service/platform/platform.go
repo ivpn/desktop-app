@@ -3,13 +3,11 @@ package platform
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
 var (
-	settingsDir string // TODO: remove this variable: not in use by public interface
-	logDir      string // TODO: remove this variable: not in use by public interface
-
 	settingsFile    string
 	servicePortFile string
 	serversFile     string
@@ -47,31 +45,54 @@ func Init() {
 
 	// do variables initialization for current OS
 	doOsInit()
-	ensureFileExists("openVpnBinaryPath", openVpnBinaryPath)
-	ensureFileExists("openvpnCaKeyFile", openvpnCaKeyFile)
-	ensureFileExists("openvpnTaKeyFile", openvpnTaKeyFile)
+	makeDir("logFile", filepath.Dir(logFile))
+	makeDir("settingsFile", filepath.Dir(settingsFile))
 
-	ensureFileExists("obfsproxyStartScript", obfsproxyStartScript)
+	// checling availability of OpenVPN binaries
+	panicIfFileNotExists("openvpnCaKeyFile", openvpnCaKeyFile)
+	panicIfFileNotExists("openvpnTaKeyFile", openvpnTaKeyFile)
+	if err := isFileExists("openVpnBinaryPath", openVpnBinaryPath); err != nil {
+		fmt.Println(fmt.Errorf("WARNING! OpenVPN functionality not accessible: %w", err))
+	}
 
-	ensureFileExists("wgBinaryPath", wgBinaryPath)
-	ensureFileExists("wgToolBinaryPath", wgToolBinaryPath)
+	// checling availability of obfsproxy binaries
+	if err := isFileExists("obfsproxyStartScript", obfsproxyStartScript); err != nil {
+		fmt.Println(fmt.Errorf("WARNING! obfsproxy functionality not accessible: %w", err))
+	}
 
-	makeDir("settingsDir", settingsDir)
-	makeDir("logDir", logDir)
+	// checling availability of WireGuard binaries
+	if err := isFileExists("wgBinaryPath", wgBinaryPath); err != nil {
+		fmt.Println(fmt.Errorf("WARNING! WireGuard functionality not accessible: %w", err))
+	}
+	if err := isFileExists("wgToolBinaryPath", wgToolBinaryPath); err != nil {
+		fmt.Println(fmt.Errorf("WARNING! WireGuard functionality not accessible: %w", err))
+	}
 }
 
-func ensureFileExists(description string, file string) {
+func panicIfFileNotExists(description string, file string) {
+	if err := isFileExists(description, file); err != nil {
+		panic(fmt.Errorf("[Initialisation (plafrorm)] %w", err))
+	}
+}
+
+func isFileExists(description string, file string) (err error) {
+	defer func() {
+		if err != nil {
+			fmt.Printf("[Initialisation (plafrorm)] %s\n", err)
+		}
+	}()
+
 	if len(file) == 0 {
-		panic(fmt.Sprintf("[Initialisation (plafrorm)] Parameter not initialized: %s", description))
+		return fmt.Errorf("parameter not initialized: %s", description)
 	}
 
 	if _, err := os.Stat(file); err != nil {
 		if os.IsNotExist(err) {
-			panic(fmt.Sprintf("[Initialisation (plafrorm)] File not exists (%s): '%s'", description, file))
-		} else {
-			panic(fmt.Sprintf("[Initialisation (plafrorm)] File existing check error: %s (%s:%s)", err.Error(), description, file))
+			return fmt.Errorf("file not exists (%s): '%s'", description, file)
 		}
+		return fmt.Errorf("file existing check error: %s (%s:%s)", err.Error(), description, file)
 	}
+	return nil
 }
 
 func makeDir(description string, dirpath string) {
