@@ -17,6 +17,10 @@
 # Remove repository (https://www.ostechnix.com/how-to-delete-a-repository-and-gpg-key-in-ubuntu/):
 #     add-apt-repository -r ppa:wireguard/wireguard
 #     apt update
+# List of services:
+#     systemctl --type=service
+# Start service:
+#     systemctl start ivpn-service
 
 cd "$(dirname "$0")"
 
@@ -75,23 +79,34 @@ echo "======================================================"
 set -e
 
 TMPDIR="$SCRIPT_DIR/_tmp"
+TMPDIRSRVC="$TMPDIR/srvc"
 if [ -d "$TMPDIR" ]; then rm -Rf $TMPDIR; fi
 mkdir -p $TMPDIR
+mkdir -p $TMPDIRSRVC
 
+cd $TMPDIRSRVC
+
+echo "Preparing service..."
+fpm -v $VERSION -n ivpn-service -s pleaserun -t dir --deb-no-default-config-files /usr/local/bin/ivpn-service
+
+echo '---------------------------'
 cd $TMPDIR
 
 echo "DEB package..."
 fpm -d openvpn -d obfsproxy \
   --deb-no-default-config-files -s dir -t deb -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
   --description "Client for IVPN service (https://www.ivpn.net)\nCommand line interface. Try 'ivpn' from command line." \
+  --after-install "$SCRIPT_DIR/package_scripts/after-install.sh" \
   --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
   --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
   $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
   $DAEMON_REPO_ABS_PATH/References/Linux/obfsproxy=/opt/ivpn/ \
   $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/local/bin/ \
-  $OUT_DIR/ivpn=/usr/local/bin/
+  $OUT_DIR/ivpn=/usr/local/bin/ \
+  $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
 
 echo '---------------------------'
+cd $TMPDIR
 
 echo "RPM package..."
 fpm -d openvpn -d obfsproxy \
@@ -102,9 +117,10 @@ fpm -d openvpn -d obfsproxy \
   $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
   $DAEMON_REPO_ABS_PATH/References/Linux/obfsproxy=/opt/ivpn/ \
   $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/local/bin/ \
-  $OUT_DIR/ivpn=/usr/local/bin/
+  $OUT_DIR/ivpn=/usr/local/bin/ \
+  $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
 
 mkdir -p $OUT_DIR
-yes | cp -rf $TMPDIR/* $OUT_DIR
+yes | cp -rf $TMPDIR/*.* $OUT_DIR
 
 set +e
