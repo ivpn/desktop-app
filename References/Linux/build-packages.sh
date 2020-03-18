@@ -3,9 +3,20 @@
 # To be able to build packages the 'fpm' tool shall be installed 
 # (https://fpm.readthedocs.io/en/latest/installing.html)
 
-# Useful commands:
-#   To view *.deb package content:
+# Useful commands (Ubuntu):
+#
+# To view *.deb package content:
 #     dpkg -c ivpn_1.0_amd64.deb
+# List of installet packets:
+#     dpkg --list [<mask>]
+# Remove packet:
+#     dpkg --remove <packetname>
+# Remove (2):
+#     apt-get purge curl
+#     apt-get autoremove
+# Remove repository (https://www.ostechnix.com/how-to-delete-a-repository-and-gpg-key-in-ubuntu/):
+#     add-apt-repository -r ppa:wireguard/wireguard
+#     apt update
 
 cd "$(dirname "$0")"
 
@@ -70,8 +81,11 @@ mkdir -p $TMPDIR
 cd $TMPDIR
 
 echo "DEB package..."
-fpm --deb-no-default-config-files -s dir -t deb -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
-  --description "Client for IVPN service (https://www.ivpn.net)" \
+fpm -d openvpn -d obfsproxy \
+  --deb-no-default-config-files -s dir -t deb -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
+  --description "Client for IVPN service (https://www.ivpn.net)\nCommand line interface. Try 'ivpn' from command line." \
+  --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
+  --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
   $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
   $DAEMON_REPO_ABS_PATH/References/Linux/obfsproxy=/opt/ivpn/ \
   $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/local/bin/ \
@@ -80,8 +94,11 @@ fpm --deb-no-default-config-files -s dir -t deb -n ivpn -v $VERSION --url https:
 echo '---------------------------'
 
 echo "RPM package..."
-fpm --deb-no-default-config-files -s dir -t rpm -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
-  --description "Client for IVPN service (https://www.ivpn.net)" \
+fpm -d openvpn -d obfsproxy \
+  --deb-no-default-config-files -s dir -t rpm -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
+  --description "Client for IVPN service (https://www.ivpn.net)\nCommand line interface. Try 'ivpn' from command line." \
+  --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
+  --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
   $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
   $DAEMON_REPO_ABS_PATH/References/Linux/obfsproxy=/opt/ivpn/ \
   $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/local/bin/ \
