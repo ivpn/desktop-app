@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # To be able to build packages the 'fpm' tool shall be installed 
 # (https://fpm.readthedocs.io/en/latest/installing.html)
@@ -25,7 +25,7 @@
 cd "$(dirname "$0")"
 
 # check result of last executed command
-function CheckLastResult
+CheckLastResult()
 {
   if ! [ $? -eq 0 ]
   then #check result of last command
@@ -89,38 +89,38 @@ cd $TMPDIRSRVC
 echo "Preparing service..."
 fpm -v $VERSION -n ivpn-service -s pleaserun -t dir --deb-no-default-config-files /usr/local/bin/ivpn-service
 
-echo '---------------------------'
-cd $TMPDIR
 
+CreatePackage()
+{
+  PKG_TYPE=$1
+  EXTRA_ARGS=$2
+
+  cd $TMPDIR
+  
+  fpm -d openvpn $EXTRA_ARGS \
+    --deb-no-default-config-files -s dir -t $PKG_TYPE -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
+    --description "$(printf "Client for IVPN service (https://www.ivpn.net)\nCommand line interface v$VERSION. Try 'ivpn' from command line.")" \
+    --after-install "$SCRIPT_DIR/package_scripts/after-install.sh" \
+    --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
+    --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
+    $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
+    $DAEMON_REPO_ABS_PATH/References/Linux/obfsproxy=/opt/ivpn/ \
+    $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/local/bin/ \
+    $OUT_DIR/ivpn=/usr/local/bin/ \
+    $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
+}
+
+echo '---------------------------'
 echo "DEB package..."
-fpm -d openvpn -d obfsproxy \
-  --deb-no-default-config-files -s dir -t deb -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
-  --description "Client for IVPN service (https://www.ivpn.net)\nCommand line interface. Try 'ivpn' from command line." \
-  --after-install "$SCRIPT_DIR/package_scripts/after-install.sh" \
-  --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
-  --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
-  $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
-  $DAEMON_REPO_ABS_PATH/References/Linux/obfsproxy=/opt/ivpn/ \
-  $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/local/bin/ \
-  $OUT_DIR/ivpn=/usr/local/bin/ \
-  $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
+CreatePackage "deb" "-d obfsproxy"
 
 echo '---------------------------'
-cd $TMPDIR
-
 echo "RPM package..."
-fpm -d openvpn -d obfsproxy \
-  --deb-no-default-config-files -s dir -t rpm -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
-  --description "Client for IVPN service (https://www.ivpn.net)\nCommand line interface. Try 'ivpn' from command line." \
-  --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
-  --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
-  $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
-  $DAEMON_REPO_ABS_PATH/References/Linux/obfsproxy=/opt/ivpn/ \
-  $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/local/bin/ \
-  $OUT_DIR/ivpn=/usr/local/bin/ \
-  $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
+CreatePackage "rpm"
 
+echo '---------------------------'
+echo "Copying compiled pachages to '$OUT_DIR'..."
 mkdir -p $OUT_DIR
-yes | cp -rf $TMPDIR/*.* $OUT_DIR
+yes | cp -f $TMPDIR/*.* $OUT_DIR
 
 set +e
