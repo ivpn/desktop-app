@@ -11,6 +11,7 @@ var (
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
 	servicePortFile = "/opt/ivpn/port.txt"
+	obfsproxyStartScript = "/usr/bin/obfsproxy"
 }
 
 func doOsInit() {

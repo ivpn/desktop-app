@@ -26,3 +26,4 @@ References/Windows/etc/openvpn.cfg
 /References/Linux/etc/settings.json
 /References/Linux/scripts/_out_bin/*
 /References/Linux/tmp/port.txt
+/References/Linux/etc/openvpn.cfg

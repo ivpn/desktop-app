@@ -15,7 +15,6 @@ func doOsInitForBuild() {
 	openvpnTaKeyFile = path.Join(installDir, "etc/ta.key")
 	openvpnUpScript = path.Join(installDir, "etc/client.up")
 	openvpnDownScript = path.Join(installDir, "etc/client.down")
-	obfsproxyStartScript = path.Join(installDir, "obfsproxy/obfsproxy.sh")
 
 	settingsFile = path.Join(installDir, "etc/settings.json")
 	serversFile = path.Join(installDir, "etc/servers.json")
