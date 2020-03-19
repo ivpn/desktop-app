@@ -104,7 +104,6 @@ CreatePackage()
     --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
     --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
     $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
-    $DAEMON_REPO_ABS_PATH/References/Linux/obfsproxy=/opt/ivpn/ \
     $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/local/bin/ \
     $OUT_DIR/ivpn=/usr/local/bin/ \
     $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
