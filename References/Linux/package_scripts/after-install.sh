@@ -50,7 +50,7 @@ else
     echo "[+] Service install FAILED!"
 fi
 
-if [ "$NEED_TO_SAVE_INSTRUCTIONS" == true ]; then
+if $NEED_TO_SAVE_INSTRUCTIONS == true ; then
     echo $INSTALL_OUTPUT > $INSTRUCTIONS_FILE
     echo "[!] Service start instructions saved into file: '$INSTRUCTIONS_FILE'"
 fi 
