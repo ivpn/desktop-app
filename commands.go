@@ -1,28 +1,17 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"text/tabwriter"
 	"time"
 
+	"github.com/ivpn/desktop-app-cli/flags"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 )
-
-// BadParameter error
-type BadParameter struct {
-	Message string
-}
-
-func (e BadParameter) Error() string {
-	if len(e.Message) == 0 {
-		return "bad parameter"
-	}
-	return e.Message
-}
 
 // NotImplemented error
 type NotImplemented struct {
@@ -59,86 +48,54 @@ func printFirewallState(isEnabled, isPersistent, isAllowLAN, isAllowMulticast bo
 }
 
 //-----------------------------------------------
-type commandBase struct {
-	fs *flag.FlagSet
-}
-
-//-----------------------------------------------
 type cmdLogin struct {
-	commandBase
+	flags.CmdInfo
 	loginAccountID string
 	forceLogin     bool
 }
 
-func (c *cmdLogin) Description() (string, bool) {
-	return "Login operation (register accountID)", true
-}
 func (c *cmdLogin) Init() {
-	c.fs = flag.NewFlagSet("login", flag.ExitOnError)
+	c.Initialize("login", "Login operation (register accountID)")
+	c.DefaultStringVar(&c.loginAccountID, "ACCOUNT_ID")
+	c.BoolVar(&c.forceLogin, "force", false, "Log out from all other devices")
+}
 
-	c.fs.StringVar(&c.loginAccountID, "a", "", "Account ID")
-	c.fs.StringVar(&c.loginAccountID, "account", "", "Account ID")
-	c.fs.BoolVar(&c.forceLogin, "force", false, "Log out from all other devices")
-}
-func (c *cmdLogin) FlagSet() *flag.FlagSet {
-	return c.fs
-}
 func (c *cmdLogin) Run() error {
 	if len(c.loginAccountID) == 0 {
-		return BadParameter{}
+		return flags.BadParameter{}
 	}
-
 	return _proto.SessionNew(c.loginAccountID, c.forceLogin)
 }
 
 //-----------------------------------------------
 type cmdLogout struct {
-	commandBase
-}
-
-func (c *cmdLogout) Description() (string, bool) {
-	return "Logout from this device (if logged-in)", false
+	flags.CmdInfo
 }
 
 func (c *cmdLogout) Init() {
-	c.fs = flag.NewFlagSet("logout", flag.ExitOnError)
+	c.Initialize("logout", "Logout from this device (if logged-in)")
 }
-
-func (c *cmdLogout) FlagSet() *flag.FlagSet {
-	return c.fs
-}
-
 func (c *cmdLogout) Run() error {
 	return _proto.SessionDelete()
 }
 
 //-----------------------------------------------
 type cmdFirewall struct {
-	commandBase
+	flags.CmdInfo
 	status bool
 	on     bool
 	off    bool
 }
 
-func (c *cmdFirewall) Description() (string, bool) {
-	return "Firewall management", true
-}
-
 func (c *cmdFirewall) Init() {
-	c.fs = flag.NewFlagSet("firewall", flag.ExitOnError)
-
-	c.fs.BoolVar(&c.status, "status", false, "Show info about current firewall status")
-	c.fs.BoolVar(&c.off, "off", false, "Switch-off firewall")
-	c.fs.BoolVar(&c.on, "on", false, "Switch-on firewall")
+	c.Initialize("firewall", "Firewall management")
+	c.BoolVar(&c.status, "status", false, "(default) Show info about current firewall status")
+	c.BoolVar(&c.off, "off", false, "Switch-off firewall")
+	c.BoolVar(&c.on, "on", false, "Switch-on firewall")
 }
-
-func (c *cmdFirewall) FlagSet() *flag.FlagSet {
-	return c.fs
-}
-
 func (c *cmdFirewall) Run() error {
 	if c.on && c.off {
-		return BadParameter{}
+		return flags.BadParameter{}
 	}
 
 	if c.on {
@@ -158,28 +115,19 @@ func (c *cmdFirewall) Run() error {
 
 //-----------------------------------------------
 type cmdServers struct {
-	commandBase
+	flags.CmdInfo
 	protocol string
 	filter   string
 }
 
-func (c *cmdServers) Description() (string, bool) {
-	return "Show servers list", true
-}
-
 func (c *cmdServers) Init() {
-	c.fs = flag.NewFlagSet("servers", flag.ExitOnError)
-	c.fs.StringVar(&c.protocol, "p", "", "Show only servers for the given protocol. Possible values: 'wireguard' ('wg'), 'openvpn' ('ovpn')")
-	c.fs.StringVar(&c.protocol, "protocol", "", "Show only servers for the given protocol. Possible values: 'wireguard' ('wg'), 'openvpn' ('ovpn')")
+	c.Initialize("servers", "Show servers list")
+	c.StringVar(&c.protocol, "p", "", "PROTO", "Show only servers for the given protocol. Possible values: 'wireguard' ('wg'), 'openvpn' ('ovpn')")
+	c.StringVar(&c.protocol, "protocol", "", "PROTO", "Show only servers for the given protocol. Possible values: 'wireguard' ('wg'), 'openvpn' ('ovpn')")
 
-	c.fs.StringVar(&c.filter, "f", "", "Filter servers: show only servers which contains <filter_string> in description (eg. -f 'US')")
-	c.fs.StringVar(&c.filter, "filter", "", "Filter servers: show only servers which contains <filter_string> in description (eg. -f 'US')")
+	c.StringVar(&c.filter, "f", "", "MASK", "Filter servers: show only servers which contains <filter_string> in description (eg. -f 'US')")
+	c.StringVar(&c.filter, "filter", "", "MASK", "Filter servers: show only servers which contains <filter_string> in description (eg. -f 'US')")
 }
-
-func (c *cmdServers) FlagSet() *flag.FlagSet {
-	return c.fs
-}
-
 func (c *cmdServers) Run() error {
 	servers, err := _proto.GetServers()
 	if err != nil {
@@ -220,21 +168,12 @@ func (c *cmdServers) Run() error {
 
 //-----------------------------------------------
 type cmdState struct {
-	commandBase
-}
-
-func (c *cmdState) Description() (string, bool) {
-	return "Prints full info about IVPN state", false
+	flags.CmdInfo
 }
 
 func (c *cmdState) Init() {
-	c.fs = flag.NewFlagSet("state", flag.ExitOnError)
+	c.Initialize("state", "Prints full info about IVPN state")
 }
-
-func (c *cmdState) FlagSet() *flag.FlagSet {
-	return c.fs
-}
-
 func (c *cmdState) Run() error {
 	fwstate, err := _proto.FirewallStatus()
 	if err != nil {
@@ -254,21 +193,12 @@ func (c *cmdState) Run() error {
 
 //-----------------------------------------------
 type cmdDisconnect struct {
-	commandBase
-}
-
-func (c *cmdDisconnect) Description() (string, bool) {
-	return "Disconnect active VPN connection (if connected)", false
+	flags.CmdInfo
 }
 
 func (c *cmdDisconnect) Init() {
-	c.fs = flag.NewFlagSet("disconnect", flag.ExitOnError)
+	c.Initialize("disconnect", "Disconnect active VPN connection (if connected)")
 }
-
-func (c *cmdDisconnect) FlagSet() *flag.FlagSet {
-	return c.fs
-}
-
 func (c *cmdDisconnect) Run() error {
 	if err := _proto.Disconnect(); err != nil {
 		return err
@@ -278,39 +208,66 @@ func (c *cmdDisconnect) Run() error {
 
 //-----------------------------------------------
 type cmdConnect struct {
-	commandBase
-	gateway string
-	//port    int
+	flags.CmdInfo
+	gateway         string
+	obfsproxy       bool
+	firewall        bool
+	dns             string
+	antitracker     bool
+	antitrackerHard bool
 }
 
-func (c *cmdConnect) Description() (string, bool) {
-	return "Establish new VPN connection", true
-}
 func (c *cmdConnect) Init() {
-	c.fs = flag.NewFlagSet("connect", flag.ExitOnError)
+	c.Initialize("connect", "Establish new VPN connection")
+	c.DefaultStringVar(&c.gateway, "SERVER_ID")
+	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
+	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
 
-	c.fs.StringVar(&c.gateway, "s", "", "Server ID (gateway)")
-	c.fs.StringVar(&c.gateway, "server", "", "Server ID (gateway)")
+	c.BoolVar(&c.firewall, "f", false, "Enable firewall (will be disabled after disconnection)")
+	c.BoolVar(&c.firewall, "firewall", false, "Enable firewall (will be disabled after disconnection)")
 
-	//c.fs.StringVar(&c.gateway, "port", "", "Connection port")
+	c.StringVar(&c.dns, "dns", "", "DNS_IP", "Use custom DNS for this connection\n(if 'antitracker' is enabled - this parameter will be ignored)")
 
-}
-func (c *cmdConnect) FlagSet() *flag.FlagSet {
-	return c.fs
+	c.BoolVar(&c.antitracker, "antitracker", false, "Enable antitracker for this connection")
+	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'hardcore' antitracker for this connection")
 }
 func (c *cmdConnect) Run() error {
 	if len(c.gateway) == 0 {
-		return BadParameter{}
+		return flags.BadParameter{}
 	}
-
+	// connection request
 	req := types.Connect{}
-	serverFound := false
 
+	// get servers list from daemon
+	serverFound := false
 	servers, err := _proto.GetServers()
 	if err != nil {
 		return err
 	}
 
+	// FW for current connection
+	req.FirewallOnDuringConnection = c.firewall
+
+	// set Manual DNS if defined
+	if len(c.dns) > 0 {
+		dns := net.ParseIP(c.dns)
+		if dns == nil {
+			return flags.BadParameter{}
+		}
+		req.CurrentDNS = dns.String()
+	}
+	// set antitracker DNS (if defined). It will overwrite 'custom DNS' parameter
+	if c.antitracker || c.antitrackerHard {
+		if c.antitracker {
+			req.CurrentDNS = servers.Config.Antitracker.Default.IP
+		}
+		if c.antitrackerHard {
+			req.CurrentDNS = servers.Config.Antitracker.Hardcore.IP
+		}
+	}
+
+	// looking for connection server
+	// WireGuard
 	for _, s := range servers.WireguardServers {
 		if s.Gateway == c.gateway {
 			serverFound = true
@@ -321,7 +278,7 @@ func (c *cmdConnect) Run() error {
 			break
 		}
 	}
-
+	// OpenVPN
 	for _, s := range servers.OpenvpnServers {
 		if s.Gateway == c.gateway {
 			serverFound = true
@@ -337,11 +294,11 @@ func (c *cmdConnect) Run() error {
 		return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
 	}
 
+	fmt.Println("Connecting...")
 	connected, err := _proto.ConnectVPN(req)
 
 	if err != nil {
 		err = fmt.Errorf("failed to connect: %w", err)
-		//fmt.Printf("%v\n", err)
 		fmt.Printf("Disconnecting...\n")
 		if err2 := _proto.Disconnect(); err2 != nil {
 			fmt.Printf("Failed to disconnect: %v\n", err2)

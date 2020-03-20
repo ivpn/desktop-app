@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -9,7 +8,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
+	"github.com/ivpn/desktop-app-cli/flags"
 	"github.com/ivpn/desktop-app-cli/protocol"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
@@ -19,9 +20,13 @@ import (
 // ICommand interface for command line command
 type ICommand interface {
 	Init()
-	Description() (description string, isHasArguments bool)
-	FlagSet() *flag.FlagSet
+	Parse(arguments []string) error
 	Run() error
+
+	Name() string
+	Description() string
+	Usage()
+	UsageFormetted(w *tabwriter.Writer)
 }
 
 var (
@@ -31,14 +36,6 @@ var (
 
 func addCommand(cmd ICommand) {
 	cmd.Init()
-
-	if description, hasArguments := cmd.Description(); hasArguments == false {
-		cmd.FlagSet().Usage = func() {
-			fmt.Printf("%s - %s\n", cmd.FlagSet().Name(), description)
-			fmt.Printf("  Usage of %s: no arguments for this command\n", cmd.FlagSet().Name())
-		}
-	}
-
 	_commands = append(_commands, cmd)
 }
 
@@ -49,39 +46,28 @@ func printHeader() {
 
 func printUsageAll() {
 	printHeader()
-	fmt.Printf("Usage: %s <command> [-parameter1 [<argument>] ... -parameterN [<argument>]] [-h|-help] \n", filepath.Base(os.Args[0]))
+	fmt.Printf("Usage: %s [-option [<optionArg>] ...] <command> [-h|-help] \n", filepath.Base(os.Args[0]))
 
 	fmt.Println("COMANDS:")
-	fmt.Println()
+	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	for _, c := range _commands {
-
-		description, isHasArguments := c.Description()
-		fmt.Printf("%s - %s\n", c.FlagSet().Name(), description)
-		if isHasArguments {
-			fmt.Printf("  ")
-			c.FlagSet().Usage()
-		}
-		fmt.Println()
+		c.UsageFormetted(writer)
 	}
+	writer.Flush()
 }
 
 func main() {
 	logger.CanPrintToConsole(false)
 
 	// initialize all possible commands
+	stateCmd := cmdState{}
+	addCommand(&stateCmd)
 	addCommand(&cmdLogin{})
 	addCommand(&cmdLogout{})
 	addCommand(&cmdServers{})
 	addCommand(&cmdFirewall{})
-	addCommand(&cmdState{})
 	addCommand(&cmdConnect{})
 	addCommand(&cmdDisconnect{})
-
-	if len(os.Args) < 2 {
-		printHeader()
-		fmt.Printf("Please, use command: '%s -h' for help\n", filepath.Base(os.Args[0]))
-		os.Exit(1)
-	}
 
 	// initialize command handler
 	port, secret, err := readDaemonPort()
@@ -91,28 +77,17 @@ func main() {
 
 	_proto = protocol.CreateClient(port, secret)
 
+	if len(os.Args) < 2 {
+		stateCmd.Run()
+		return
+	}
+
 	// process command
 	isProcessed := false
 	for _, c := range _commands {
-		if c.FlagSet().Name() == os.Args[1] {
+		if c.Name() == os.Args[1] {
 			isProcessed = true
-
-			c.FlagSet().Parse(os.Args[2:])
-
-			printHeader()
-
-			fmt.Println(c.FlagSet().Name() + "...")
-			//fmt.Printf("DEBUG: %+v\n", c)
-
-			if err := c.Run(); err != nil {
-				fmt.Printf("Error: %s\n", err.Error())
-				if _, ok := err.(BadParameter); ok == true {
-					c.FlagSet().Usage()
-				}
-				os.Exit(1)
-			}
-
-			fmt.Println("Success")
+			runCommand(c, os.Args[2:])
 			break
 		}
 	}
@@ -123,6 +98,24 @@ func main() {
 			fmt.Printf("Error. Unexpected command %s\n", os.Args[1])
 		}
 		printUsageAll()
+		os.Exit(1)
+	}
+}
+
+func runCommand(c ICommand, args []string) {
+	if err := c.Parse(args); err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		if _, ok := err.(flags.BadParameter); ok == true {
+			c.Usage()
+		}
+		os.Exit(1)
+	}
+
+	if err := c.Run(); err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		if _, ok := err.(flags.BadParameter); ok == true {
+			c.Usage()
+		}
 		os.Exit(1)
 	}
 }

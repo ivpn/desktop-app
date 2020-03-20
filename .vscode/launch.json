@@ -13,6 +13,11 @@
             "env": {},
             //"args": [],
             //"args": ["-h"],
+            //"args": ["login", "-force", "abc"],
+            //"args": ["servers", "-h"],
+            //"args": ["connect", "sk.gw.ivpn.net"],
+            //"args": ["connect", "-f", "sk.gw.ivpn.net", "-dns", "1.1.1.1", "456"],
+            //"args": ["connect","-o", "-dns", "1.1.1.1", "-antitracker_hard", "-f", "sk.gw.ivpn.net"],
             //"args": ["state"],
             //"args": ["connect", "-s", "rs.gw.ivpn.net"],
             "buildFlags": "-tags debug"
