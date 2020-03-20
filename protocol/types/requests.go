@@ -84,8 +84,9 @@ type WGHost struct {
 // Connect request to establish new VPN connection
 type Connect struct {
 	CommandBase
-	VpnType    vpn.Type
-	CurrentDNS string
+	VpnType                    vpn.Type
+	CurrentDNS                 string
+	FirewallOnDuringConnection bool
 
 	WireGuardParameters struct {
 		Port struct {

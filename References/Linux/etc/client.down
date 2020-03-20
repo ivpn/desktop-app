@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# script based on: https://github.com/OpenVPN/openvpn/tree/master/contrib/pull-resolv-conf
-
 if [ -e /etc/resolv.conf.ivpnsave ] ; then
   mv /etc/resolv.conf.ivpnsave /etc/resolv.conf
 fi

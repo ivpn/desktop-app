@@ -116,7 +116,7 @@ func implAddHostsToExceptions(IPs []net.IP) error {
 // SetManualDNS - configure firewall to allow DNS which is out of VPN tunnel
 // Applicable to Windows implementation (to allow custom DNS from local network)
 func implSetManualDNS(addr net.IP) error {
-	// not in use for macOS
+	// not in use for Linux
 	return nil
 }
 

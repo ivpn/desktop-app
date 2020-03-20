@@ -2,6 +2,8 @@ package openvpn
 
 import (
 	"net"
+
+	"github.com/ivpn/desktop-app-daemon/service/dns"
 )
 
 type platformSpecificProperties struct {
@@ -29,11 +31,9 @@ func (o *OpenVPN) implOnResume() error {
 }
 
 func (o *OpenVPN) implOnSetManualDNS(addr net.IP) error {
-	// TODO: not implemented
-	return nil
+	return dns.SetManual(addr, nil)
 }
 
 func (o *OpenVPN) implOnResetManualDNS() error {
-	// TODO: not implemented
-	return nil
+	return dns.DeleteManual(nil)
 }

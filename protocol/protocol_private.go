@@ -52,7 +52,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 			r.OpenVpnParameters.ProxyUsername,
 			r.OpenVpnParameters.ProxyPassword)
 
-		return p._service.ConnectOpenVPN(connectionParams, retManualDNS, stateChan)
+		return p._service.ConnectOpenVPN(connectionParams, retManualDNS, r.FirewallOnDuringConnection, stateChan)
 
 	} else if vpn.Type(r.VpnType) == vpn.WireGuard {
 		hostValue := r.WireGuardParameters.EntryVpnServer.Hosts[rand.Intn(len(r.WireGuardParameters.EntryVpnServer.Hosts))]
@@ -63,7 +63,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 			hostValue.PublicKey,
 			net.ParseIP(strings.Split(hostValue.LocalIP, "/")[0]))
 
-		return p._service.ConnectWireGuard(connectionParams, retManualDNS, stateChan)
+		return p._service.ConnectWireGuard(connectionParams, retManualDNS, r.FirewallOnDuringConnection, stateChan)
 
 	}
 

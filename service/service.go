@@ -127,7 +127,7 @@ func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 }
 
 // ConnectOpenVPN start OpenVPN connection
-func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
 
@@ -147,11 +147,11 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, stateChan)
+	return s.keepConnection(createVpnObjfunc, manualDNS, firewallDuringConnection, stateChan)
 }
 
 // ConnectWireGuard start WireGuard connection
-func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS net.IP, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	// stop active connection (if exists)
 	if err := s.Disconnect(); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
@@ -185,10 +185,10 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, stateChan)
+	return s.keepConnection(createVpnObjfunc, manualDNS, firewallDuringConnection, stateChan)
 }
 
-func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	defer func() { s._vpnReconnectRequested = false }()
 
 	prefs := s.Preferences()
@@ -205,7 +205,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		}
 
 		// start connection
-		err = s.connect(vpnObj, manualDNS, stateChan)
+		err = s.connect(vpnObj, manualDNS, firewallDuringConnection, stateChan)
 		if err != nil {
 			return err
 		}
@@ -224,7 +224,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 }
 
 // Connect connect vpn
-func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	var connectRoutinesWaiter sync.WaitGroup
 
 	// stop active connection (if exists)
@@ -245,6 +245,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 	internalStateChan := make(chan vpn.StateInfo, 1)
 	stopChannel := make(chan bool, 1)
 
+	fwInitState := false
 	// finalyze everything
 	defer func() {
 		if r := recover(); r != nil {
@@ -261,6 +262,14 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 		err := firewall.ClientDisconnected()
 		if err != nil {
 			log.Error("(stopping) error on notifying FW about disconnected client:", err)
+		}
+
+		// when we were requested to enable firewall for this connection
+		// And initial FW state was disabled - we have to disable it back
+		if firewallDuringConnection == true && fwInitState == false {
+			if err = firewall.SetEnabled(false); err != nil {
+				log.Error("(stopping) failed to disable firewall:", err)
+			}
 		}
 
 		// notify routines to stop
@@ -374,6 +383,24 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, stateChan chan<
 	}
 
 	log.Info("Initializing firewall")
+	if firewallDuringConnection == true {
+		// in case to ebale FW for this connection parameter:
+		// - check initial FW state
+		// - if it disabled - enable it (will be disabled on disconnect)
+		fw, err := firewall.GetEnabled()
+		if err != nil {
+			log.Error("Failed to check firewall state:", err.Error())
+			return err
+		}
+		fwInitState = fw
+		if fwInitState == false {
+			if err := firewall.SetEnabled(true); err != nil {
+				log.Error("Failed to enable firewall:", err.Error())
+				return err
+			}
+		}
+	}
+
 	// Add host IP to firewall exceptions
 	err := firewall.AddHostsToExceptions(vpnProc.DestinationIPs())
 	if err != nil {

@@ -55,8 +55,8 @@ type Service interface {
 	SetManualDNS(dns net.IP) error
 	ResetManualDNS() error
 
-	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, stateChan chan<- vpn.StateInfo) error
-	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS net.IP, stateChan chan<- vpn.StateInfo) error
+	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
+	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
 	Disconnect() error
 	Connected() bool
 
