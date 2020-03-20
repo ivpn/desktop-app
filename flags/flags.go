@@ -48,7 +48,9 @@ func (c *CmdInfo) Parse(arguments []string) error {
 		if len(c.fs.Args()) > 1 {
 			return BadParameter{}
 		}
-		*c.defaultArg = c.fs.Args()[0]
+		if len(c.fs.Args()) > 0 {
+			*c.defaultArg = c.fs.Args()[0]
+		}
 	} else if len(c.fs.Args()) > 0 {
 		return BadParameter{}
 	}

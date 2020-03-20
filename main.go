@@ -79,6 +79,7 @@ func main() {
 
 	if len(os.Args) < 2 {
 		stateCmd.Run()
+
 		return
 	}
 

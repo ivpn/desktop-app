@@ -11,6 +11,8 @@ import (
 	"github.com/ivpn/desktop-app-cli/flags"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/vpn"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // NotImplemented error
@@ -26,21 +28,29 @@ func (e NotImplemented) Error() string {
 }
 
 //-----------------------------------------------
+func printAccountInfo(accountID string) {
+	status := "Not logged in"
+	if len(accountID) > 0 {
+		return // Do nothing in case of logged in
+	}
+	fmt.Printf("Account                 : %v\n", status)
+}
+
 func printState(state vpn.State, connected types.ConnectedResp) {
-	fmt.Printf("VPN state               : %v\n", state)
+	fmt.Printf("VPN                     : %v\n", state)
 
 	if state != vpn.CONNECTED {
 		return
 	}
 	since := time.Unix(connected.TimeSecFrom1970, 0)
-	fmt.Printf("    VPN type            : %v\n", connected.VpnType)
+	fmt.Printf("    Protocol            : %v\n", connected.VpnType)
 	fmt.Printf("    Local IP            : %v\n", connected.ClientIP)
 	fmt.Printf("    Server IP           : %v\n", connected.ServerIP)
 	fmt.Printf("    Connected           : %v\n", since)
 }
 
 func printFirewallState(isEnabled, isPersistent, isAllowLAN, isAllowMulticast bool) {
-	fmt.Println("Firewall state:")
+	fmt.Println("Firewall:")
 	fmt.Printf("    Enabled             : %v\n", isEnabled)
 	fmt.Printf("    Persistent          : %v\n", isPersistent)
 	fmt.Printf("    Allow LAN           : %v\n", isAllowLAN)
@@ -62,7 +72,13 @@ func (c *cmdLogin) Init() {
 
 func (c *cmdLogin) Run() error {
 	if len(c.loginAccountID) == 0 {
-		return flags.BadParameter{}
+		fmt.Print("Enter your Account ID: ")
+		data, err := terminal.ReadPassword(0)
+		if err != nil {
+			return fmt.Errorf("failed to read accountID: %w", err)
+		}
+		fmt.Println("")
+		c.loginAccountID = string(data)
 	}
 	return _proto.SessionNew(c.loginAccountID, c.forceLogin)
 }
@@ -139,7 +155,7 @@ func (c *cmdServers) Run() error {
 	const padding = 1
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', tabwriter.AlignRight|tabwriter.Debug)
 
-	fmt.Fprintln(w, "PROTOCOL\tGATEWAY\tCITY\tCOUNTRY\t")
+	fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\t")
 
 	if c.protocol != "openvpn" && c.protocol != "ovpn" {
 		for _, s := range servers.WireguardServers {
@@ -185,8 +201,15 @@ func (c *cmdState) Run() error {
 		return err
 	}
 
+	printAccountInfo(_proto.GetHelloResponse().Session.AccountID)
 	printState(state, connected)
 	printFirewallState(fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast)
+
+	fmt.Println("\nTips: ")
+	if len(_proto.GetHelloResponse().Session.AccountID) == 0 {
+		fmt.Println("  ivpn login        Log in with your Account ID")
+	}
+	fmt.Println("  ivpn -help        Show all commands")
 
 	return nil
 }
@@ -281,6 +304,12 @@ func (c *cmdConnect) Run() error {
 	// OpenVPN
 	for _, s := range servers.OpenvpnServers {
 		if s.Gateway == c.gateway {
+
+			// TODO: obfsproxy configuration for this connection must be sent in 'Connect' request (avoid using daemon preferences)
+			if err = _proto.SetPreferences("enable_obfsproxy", fmt.Sprint(c.obfsproxy)); err != nil {
+				return err
+			}
+
 			serverFound = true
 			req.VpnType = vpn.OpenVPN
 			req.OpenVpnParameters.Port.Port = 2049

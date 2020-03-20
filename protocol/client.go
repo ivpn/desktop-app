@@ -24,6 +24,8 @@ type Client struct {
 	_defaultTimeout  time.Duration
 	_receivers       map[*receiverChannel]struct{}
 	_receiversLocker sync.Mutex
+
+	_helloResponse types.HelloResp
 }
 
 // ResponseTimeout error
@@ -62,9 +64,8 @@ func (c *Client) Connect() (err error) {
 	go c.receiverRoutine()
 
 	helloReq := types.Hello{Secret: c._secret, KeepDaemonAlone: true, GetStatus: true, Version: "1.0"}
-	var helloResp types.HelloResp
 
-	if err := c.sendRecvTimeOut(&helloReq, &helloResp, time.Second*5); err != nil {
+	if err := c.sendRecvTimeOut(&helloReq, &c._helloResponse, time.Second*5); err != nil {
 		if _, ok := errors.Unwrap(err).(ResponseTimeout); ok {
 			return fmt.Errorf("Failed to send 'Hello' request (does another instance of IVPN Client running?): %w", err)
 		}
@@ -72,6 +73,11 @@ func (c *Client) Connect() (err error) {
 	}
 
 	return nil
+}
+
+// GetHelloResponse returns initialisation response from daemon
+func (c *Client) GetHelloResponse() types.HelloResp {
+	return c._helloResponse
 }
 
 // SessionNew creates new session
@@ -104,6 +110,23 @@ func (c *Client) SessionDelete() error {
 	var resp types.EmptyResp
 
 	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetPreferences sends config parameter to daemon
+// TODO: avoid using keys as a strings
+func (c *Client) SetPreferences(key, value string) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.SetPreference{Key: key, Value: value}
+
+	// TODO: daemon have to return confirmation
+	if err := c.send(&req, 0); err != nil {
 		return err
 	}
 
