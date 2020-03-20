@@ -9,6 +9,7 @@ import (
 
 	"github.com/ivpn/desktop-app-daemon/api"
 	"github.com/ivpn/desktop-app-daemon/api/types"
+	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
@@ -128,8 +129,16 @@ func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 
 // ConnectOpenVPN start OpenVPN connection
 func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
+
+		if helpers.FileExists(platform.OpenVpnBinaryPath()) == false {
+			return nil, fmt.Errorf("OpenVPN binariy not available")
+		}
+		if prefs.IsObfsproxy == true && helpers.FileExists(platform.ObfsproxyStartScript()) == false {
+			return nil, fmt.Errorf("obfsproxy not found")
+		}
 
 		connectionParams.SetCredentials(prefs.Session.OpenVPNUser, prefs.Session.OpenVPNPass)
 
@@ -155,6 +164,10 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 	// stop active connection (if exists)
 	if err := s.Disconnect(); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
+	}
+
+	if helpers.FileExists(platform.WgBinaryPath()) == false || helpers.FileExists(platform.WgToolBinaryPath()) == false {
+		return fmt.Errorf("WireGuard binaries not available. Please, install WireGuard")
 	}
 
 	// Update WG keys, if necessary

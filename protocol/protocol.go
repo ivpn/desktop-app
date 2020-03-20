@@ -487,8 +487,10 @@ func (p *Protocol) processRequest(message string) {
 		p.sendResponse(&types.KillSwitchGetIsPestistentResp{IsPersistent: isPersistant}, reqCmd.Idx)
 		break
 
+	// TODO: must return response
+	// TODO: avoid using raw key as a string
 	case "SetPreference":
-		var req types.SetPreferenceRequest
+		var req types.SetPreference
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(reqCmd, err)
 			break

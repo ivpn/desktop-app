@@ -61,8 +61,8 @@ type KillSwitchSetIsPersistent struct {
 	IsPersistent bool
 }
 
-// SetPreferenceRequest sets daemon configuration parameter
-type SetPreferenceRequest struct {
+// SetPreference sets daemon configuration parameter
+type SetPreference struct {
 	CommandBase
 	Key   string
 	Value string
