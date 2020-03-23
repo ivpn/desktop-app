@@ -37,11 +37,11 @@ func doOsInitForBuild() (instDir string) {
 	installDir = path.Join(installDir, "References/Windows")
 
 	wfpDllPath = path.Join(installDir, `Native Projects/bin/Release/IVPN Firewall Native x64.dll`)
-	nativeHelpersDllPath = path.Join(installDir, `Native Projects/bin/Release/IVPN Firewall Native x64.dll`)
+	nativeHelpersDllPath = path.Join(installDir, `Native Projects/bin/Release/IVPN Helpers Native x64.dll`)
 
 	if Is64Bit() == false {
 		wfpDllPath = path.Join(installDir, `Native Projects/bin/Release/IVPN Firewall Native.dll`)
-		nativeHelpersDllPath = path.Join(installDir, `Native Projects/bin/Release/IVPN Firewall Native.dll`)
+		nativeHelpersDllPath = path.Join(installDir, `Native Projects/bin/Release/IVPN Helpers Native.dll`)
 	}
 
 	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")

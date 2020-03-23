@@ -741,7 +741,7 @@ func (p *Protocol) processRequest(message string) {
 					case vpn.EXITING:
 						disconnectAuthError = state.IsAuthError
 					default:
-						p.sendResponse(&types.VpnStateResp{StateVal: state.State, State: state.State.String()}, 0)
+						p.sendResponse(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo}, 0)
 					}
 				case <-isExitChan:
 					break state_forward_loop
