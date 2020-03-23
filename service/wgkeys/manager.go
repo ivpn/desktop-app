@@ -82,6 +82,7 @@ func (m *KeysManager) StartKeysRotation() error {
 			waitInterval := time.Until(lastUpdate.Add(interval))
 			if isLastUpdateFailed {
 				waitInterval = time.Hour
+				lastUpdate = time.Now()
 			}
 
 			// update immediately, if it is a time

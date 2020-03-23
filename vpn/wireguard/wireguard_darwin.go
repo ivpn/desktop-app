@@ -307,6 +307,10 @@ func (wg *WireGuard) setWgConfiguration(utunName string) error {
 func (wg *WireGuard) setRoutes() error {
 	log.Info("Modifying routing table...")
 
+	if net.IPv4(127, 0, 0, 1).Equal(wg.connectParams.hostIP) {
+		return fmt.Errorf("WG server IP error (unable to use '127.0.0.1' as WG server IP)")
+	}
+
 	// Update main route
 	// example command: sudo route -n add -net 0/1 10.0.0.1
 	if err := shell.Exec(log, "route", "-n", "add", "-net", "0/1", wg.connectParams.hostLocalIP.String()); err != nil {
