@@ -19,3 +19,5 @@ References/Windows/etc/port.txt
 References/Windows/log/
 References/Windows/etc/settings.json
 desktop-app-daemon
+References/Windows/etc/openvpn.cfg
+__debug_bin

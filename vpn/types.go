@@ -59,6 +59,11 @@ type StateInfo struct {
 	ClientIP    net.IP // applicable only for 'CONNECTED' state
 	ServerIP    net.IP // applicable only for 'CONNECTED' state
 	IsAuthError bool   // applicable only for 'EXITING' state
+
+	// TODO: try to avoid using this protocol-specific parameter in future
+	// Currently, in use by OpenVPN connection to inform about "RECONNECTING" reason (e.g. "tls-error", "init_instance"...)
+	// UI client using this info in order to determine is it necessary to try to connect with another port
+	StateAdditionalInfo string
 }
 
 // NewStateInfo - create new state object (not applicable for CONNECTED state)
