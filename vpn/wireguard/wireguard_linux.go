@@ -112,13 +112,11 @@ func (wg *WireGuard) resume() error {
 }
 
 func (wg *WireGuard) setManualDNS(addr net.IP) error {
-	// TODO: not implemented
-	return nil
+	return dns.SetManual(addr, nil)
 }
 
 func (wg *WireGuard) resetManualDNS() error {
-	// TODO: not implemented
-	return nil
+	return dns.DeleteManual(nil)
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {

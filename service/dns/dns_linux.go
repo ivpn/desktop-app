@@ -42,6 +42,9 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 				return fmt.Errorf("failed to backup DNS configuration: %w", err)
 			}
 		}
+	} else {
+		// do nothing if we already changed DNS
+		return nil
 	}
 
 	out, err := os.OpenFile(resolvFile, os.O_CREATE|os.O_WRONLY, 0644)

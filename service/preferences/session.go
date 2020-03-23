@@ -27,6 +27,14 @@ func (s *SessionStatus) IsLoggedIn() bool {
 	return true
 }
 
+// IsWGCredentialsOk returns 'true' when WireGuard credentials are initialized
+func (s *SessionStatus) IsWGCredentialsOk() bool {
+	if len(s.WGPublicKey) == 0 || len(s.WGLocalIP) == 0 || len(s.WGPrivateKey) == 0 {
+		return false
+	}
+	return true
+}
+
 func (s *SessionStatus) updateWgCredentials(wgPublicKey string, wgPrivateKey string, wgLocalIP string) {
 	if len(wgLocalIP) > 0 {
 		if net.ParseIP(wgLocalIP) == nil {

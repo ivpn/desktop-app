@@ -180,9 +180,13 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		session := s.Preferences().Session
 
+		if session.IsWGCredentialsOk() == false {
+			return nil, fmt.Errorf("WireGuard credentials are not defined (please, regenerate WG credentials or re-login)")
+		}
+
 		localip := net.ParseIP(session.WGLocalIP)
 		if localip == nil {
-			return nil, fmt.Errorf("error updating WG connection preferences (failed parsing local IP)")
+			return nil, fmt.Errorf("error updating WG connection preferences (failed parsing local IP for WG connection)")
 		}
 		connectionParams.SetCredentials(session.WGPrivateKey, localip)
 
