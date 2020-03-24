@@ -46,7 +46,7 @@ func printHeader() {
 
 func printUsageAll() {
 	printHeader()
-	fmt.Printf("Usage: %s <command> [-option [<optionArg>] ...] [-h|-help] [<command_parameter>]\n", filepath.Base(os.Args[0]))
+	fmt.Printf("Usage: %s COMMAND [OPTIONS...] [COMMAND_PARAMETER] [-h|-help]\n", filepath.Base(os.Args[0]))
 
 	fmt.Println("COMANDS:")
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
@@ -54,6 +54,16 @@ func printUsageAll() {
 		c.UsageFormetted(writer)
 	}
 	writer.Flush()
+}
+
+func printServStartInstructions() {
+	fmt.Printf("Please, restart 'ivpn-service'\n")
+
+	// print service install instructions (if exists)
+	content, err := ioutil.ReadFile("/opt/ivpn/service_install.txt")
+	if err == nil {
+		fmt.Println(string(content))
+	}
 }
 
 func main() {
@@ -73,10 +83,18 @@ func main() {
 	// initialize command handler
 	port, secret, err := readDaemonPort()
 	if err != nil {
-		fmt.Printf("ERROR: %s\n", err)
+		fmt.Printf("ERROR: Unable to connect service: %s\n", err)
+		printServStartInstructions()
+		os.Exit(1)
 	}
 
 	proto := protocol.CreateClient(port, secret)
+	if err := proto.Connect(); err != nil {
+		fmt.Printf("ERROR: Failed to connect service : %s\n", err)
+		printServStartInstructions()
+		os.Exit(1)
+	}
+
 	commands.Initialize(proto)
 
 	if len(os.Args) < 2 {

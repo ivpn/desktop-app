@@ -12,6 +12,8 @@
 #     dpkg -c ivpn_1.0_amd64.deb
 # List of installet packets:
 #     dpkg --list [<mask>]
+# Install package:
+#     apt-get install <pkg-name>
 # Remove packet:
 #     dpkg --remove <packetname>
 # Remove (2):
@@ -64,6 +66,14 @@ while getopts ":v:" opt; do
 #   ;;
   esac
 done
+
+if [ -z "$VERSION" ]
+then
+  echo "Usage:"
+  echo "    $0 -v <version>"
+  exit 1 
+fi
+
 echo '---------------------------'
 echo "Building IVPN Daemon ($DAEMON_REPO_ABS_PATH)...";
 echo '---------------------------'
