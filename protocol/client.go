@@ -116,6 +116,22 @@ func (c *Client) SessionDelete() error {
 	return nil
 }
 
+// SessionStatus get session status
+func (c *Client) SessionStatus() (ret types.SessionStatusResp, err error) {
+	if err := c.ensureConnected(); err != nil {
+		return ret, err
+	}
+
+	req := types.SessionStatus{}
+	var resp types.SessionStatusResp
+
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return ret, err
+	}
+
+	return resp, nil
+}
+
 // SetPreferences sends config parameter to daemon
 // TODO: avoid using keys as a strings
 func (c *Client) SetPreferences(key, value string) error {

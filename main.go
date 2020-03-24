@@ -10,6 +10,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/ivpn/desktop-app-cli/commands"
 	"github.com/ivpn/desktop-app-cli/flags"
 	"github.com/ivpn/desktop-app-cli/protocol"
 	"github.com/ivpn/desktop-app-daemon/logger"
@@ -31,7 +32,6 @@ type ICommand interface {
 
 var (
 	_commands []ICommand
-	_proto    *protocol.Client
 )
 
 func addCommand(cmd ICommand) {
@@ -46,7 +46,7 @@ func printHeader() {
 
 func printUsageAll() {
 	printHeader()
-	fmt.Printf("Usage: %s [-option [<optionArg>] ...] <command> [-h|-help] \n", filepath.Base(os.Args[0]))
+	fmt.Printf("Usage: %s <command> [-option [<optionArg>] ...] [-h|-help] [<command_parameter>]\n", filepath.Base(os.Args[0]))
 
 	fmt.Println("COMANDS:")
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
@@ -60,14 +60,15 @@ func main() {
 	logger.CanPrintToConsole(false)
 
 	// initialize all possible commands
-	stateCmd := cmdState{}
+	stateCmd := commands.CmdState{}
 	addCommand(&stateCmd)
-	addCommand(&cmdLogin{})
-	addCommand(&cmdLogout{})
-	addCommand(&cmdServers{})
-	addCommand(&cmdFirewall{})
-	addCommand(&cmdConnect{})
-	addCommand(&cmdDisconnect{})
+	addCommand(&commands.CmdLogin{})
+	addCommand(&commands.CmdLogout{})
+	addCommand(&commands.CmdAccount{})
+	addCommand(&commands.CmdServers{})
+	addCommand(&commands.CmdFirewall{})
+	addCommand(&commands.CmdConnect{})
+	addCommand(&commands.CmdDisconnect{})
 
 	// initialize command handler
 	port, secret, err := readDaemonPort()
@@ -75,11 +76,14 @@ func main() {
 		fmt.Printf("ERROR: %s\n", err)
 	}
 
-	_proto = protocol.CreateClient(port, secret)
+	proto := protocol.CreateClient(port, secret)
+	commands.Initialize(proto)
 
 	if len(os.Args) < 2 {
-		stateCmd.Run()
-
+		if err := stateCmd.Run(); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
 		return
 	}
 
@@ -105,7 +109,7 @@ func main() {
 
 func runCommand(c ICommand, args []string) {
 	if err := c.Parse(args); err != nil {
-		fmt.Printf("Error: %s\n", err.Error())
+		fmt.Printf("Error: %v\n", err)
 		if _, ok := err.(flags.BadParameter); ok == true {
 			c.Usage()
 		}
@@ -113,7 +117,7 @@ func runCommand(c ICommand, args []string) {
 	}
 
 	if err := c.Run(); err != nil {
-		fmt.Printf("Error: %s\n", err.Error())
+		fmt.Printf("Error: %v\n", err)
 		if _, ok := err.(flags.BadParameter); ok == true {
 			c.Usage()
 		}
