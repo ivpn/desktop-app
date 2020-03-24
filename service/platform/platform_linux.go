@@ -7,7 +7,7 @@ import (
 var (
 	firewallScript string
 	logDir         string = "/opt/ivpn/log"
-	tmpDir         string = "/opt/ivpn/tmp"
+	tmpDir         string = "/opt/ivpn/mutable"
 )
 
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)

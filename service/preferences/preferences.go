@@ -58,7 +58,7 @@ func (p *Preferences) SavePreferences() error {
 		return fmt.Errorf("failed to save preferences file (json marshal error): %w", err)
 	}
 
-	return ioutil.WriteFile(platform.SettingsFile(), data, 0644)
+	return ioutil.WriteFile(platform.SettingsFile(), data, 0600) // read\write only for privilaged user
 }
 
 // LoadPreferences loads preferences

@@ -863,6 +863,10 @@ func (s *Service) SessionStatus() (
 	err error) {
 
 	session := s.Preferences().Session
+	if session.IsLoggedIn() == false {
+		return apiCode, "", accountInfo, ErrorNotLoggedIn{}
+	}
+
 	stat, apiErr, err := s._api.SessionStatus(session.Session)
 
 	apiCode = 0

@@ -14,9 +14,9 @@ func doOsInitForBuild() {
 	openvpnTaKeyFile = path.Join(installDir, "etc/ta.key")
 	openvpnUpScript = path.Join(installDir, "etc/client.up")
 	openvpnDownScript = path.Join(installDir, "etc/client.down")
-	settingsFile = path.Join(installDir, "etc/settings.json")
 	serversFile = path.Join(installDir, "etc/servers.json")
 
+	settingsFile = path.Join(tmpDir, "settings.json")
 	openvpnConfigFile = path.Join(tmpDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(tmpDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(tmpDir, "wgivpn.conf")

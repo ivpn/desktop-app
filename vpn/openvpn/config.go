@@ -1,7 +1,6 @@
 package openvpn
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -30,14 +29,14 @@ type ConnectionParams struct {
 }
 
 // SetCredentials update WG credentials
-func (cp *ConnectionParams) SetCredentials(username, password string) {
-	cp.password = password
-	cp.username = username
+func (c *ConnectionParams) SetCredentials(username, password string) {
+	c.password = password
+	c.username = username
 
 	// MultiHop configuration is based just by adding "@exit_server_id" to the end of username
 	// And forwarding this info on server
-	if len(cp.multihopExitSrvID) > 0 {
-		cp.username = fmt.Sprintf("%s@%s", username, cp.multihopExitSrvID)
+	if len(c.multihopExitSrvID) > 0 {
+		c.username = fmt.Sprintf("%s@%s", username, c.multihopExitSrvID)
 	}
 }
 
@@ -79,21 +78,16 @@ func (c *ConnectionParams) WriteConfigFile(
 		return fmt.Errorf("failed to generate openvpn configuration : %w", err)
 	}
 
-	file, err := os.Create(filePathToSave)
-	if err != nil {
-		return fmt.Errorf("failed to create openvpn configuration file: %w", err)
-	}
-	defer file.Close()
+	configText := strings.Join(cfg, "\n")
 
-	writer := bufio.NewWriter(file)
-	for _, line := range cfg {
-		fmt.Fprintln(writer, line)
+	err = ioutil.WriteFile(filePathToSave, []byte(configText), 0600)
+	if err != nil {
+		return fmt.Errorf("failed to save OpenVPN configuration into a file: %w", err)
 	}
-	writer.Flush()
 
 	log.Info("Configuring OpenVPN...\n",
 		"=====================\n",
-		strings.Join(cfg, "\n"),
+		configText,
 		"\n=====================\n")
 
 	return nil
