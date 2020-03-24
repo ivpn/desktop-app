@@ -29,7 +29,7 @@ func (c *CmdState) Run() error {
 	printFirewallState(fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast)
 
 	fmt.Println("\nTips: ")
-	if len(_proto.GetHelloResponse().Session.AccountID) == 0 {
+	if len(_proto.GetHelloResponse().Session.Session) == 0 {
 		fmt.Println("  ivpn login        Log in with your Account ID")
 	}
 	fmt.Println("  ivpn -help        Show all commands")

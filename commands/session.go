@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-cli/flags"
+	"github.com/ivpn/desktop-app-daemon/api/types"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -58,9 +59,22 @@ func (c *CmdAccount) Init() {
 	c.Initialize("account", "Get info about current account")
 }
 func (c *CmdAccount) Run() error {
+	defer func() {
+		helloResp := _proto.GetHelloResponse()
+		if len(helloResp.Command) > 0 && (len(helloResp.Session.Session) == 0) {
+			// We received 'hello' response but no session info - print tips to login
+			fmt.Println("Tips: ")
+			fmt.Println("  ivpn login        Log in with your Account ID\n")
+		}
+	}()
+
 	stat, err := _proto.SessionStatus()
 	if err != nil {
 		return err
+	}
+
+	if stat.APIStatus != types.CodeSuccess {
+		return fmt.Errorf("API error: %v %v", stat.APIStatus, stat.APIErrorMessage)
 	}
 
 	acc := stat.Account
@@ -80,20 +94,4 @@ func (c *CmdAccount) Run() error {
 	}
 	w.Flush()
 	return nil
-	//stat.Account.
-
-	/*
-		Active         bool
-		ActiveUntil    int64
-		CurrentPlan    string
-		PaymentMethod  string
-		IsRenewable    bool
-		WillAutoRebill bool
-		IsFreeTrial    bool
-		Capabilities   []string
-		Upgradable     bool
-		UpgradeToPlan  string
-		UpgradeToURL   string
-		Limit          int
-	*/
 }

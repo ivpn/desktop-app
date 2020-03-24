@@ -33,10 +33,18 @@ try_systemd_stop() {
     fi
 }
 
-echo "[+] Removing other files ..."
-# Normally, all files whic were installed aldo will be delete automatically
-# But ivpn-service also writing to 'etc' additional temporary files (uninstaller know nothing about them)
-# Therefore, ]we are completely removing all content or 'etc'
-rm -rf /opt/ivpn || echo "[-] Removing files failed"
+IVPN_DIR="/opt/ivpn"
+IVPN_TMP="/opt/ivpn/mutable"
+IVPN_LOG="/opt/ivpn/log"
+if [ -d $IVPN_TMP ] ; then
+  echo "[+] Removing other files ..."
+  # Normally, all files which were installed, deleted automatically
+  # But ivpn-service also writing to 'etc' additional temporary files (uninstaller know nothing about them)
+  # Therefore, we are completely removing all content of '/opt/ivpn/tmp'
+  rm -rf $IVPN_TMP|| echo "[-] Removing '$IVPN_TMP' folder failed"
+  rm -rf $IVPN_LOG|| echo "[-] Removing '$IVPN_LOG' folder failed"
+  #remove 'ivpn' folder (if empyt)
+  silent sudo rmdir $IVPN_DIR
+fi 
 
 try_systemd_stop

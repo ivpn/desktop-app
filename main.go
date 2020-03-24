@@ -56,16 +56,6 @@ func printUsageAll() {
 	writer.Flush()
 }
 
-func printServStartInstructions() {
-	fmt.Printf("Please, restart 'ivpn-service'\n")
-
-	// print service install instructions (if exists)
-	content, err := ioutil.ReadFile("/opt/ivpn/service_install.txt")
-	if err == nil {
-		fmt.Println(string(content))
-	}
-}
-
 func main() {
 	logger.CanPrintToConsole(false)
 
@@ -83,14 +73,14 @@ func main() {
 	// initialize command handler
 	port, secret, err := readDaemonPort()
 	if err != nil {
-		fmt.Printf("ERROR: Unable to connect service: %s\n", err)
+		fmt.Printf("ERROR: Unable to connect to service: %s\n", err)
 		printServStartInstructions()
 		os.Exit(1)
 	}
 
 	proto := protocol.CreateClient(port, secret)
 	if err := proto.Connect(); err != nil {
-		fmt.Printf("ERROR: Failed to connect service : %s\n", err)
+		fmt.Printf("ERROR: Failed to connect to service : %s\n", err)
 		printServStartInstructions()
 		os.Exit(1)
 	}
