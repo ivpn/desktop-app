@@ -45,8 +45,12 @@ func Init() {
 
 	// do variables initialization for current OS
 	doOsInit()
+	makeDir("servicePortFile", filepath.Dir(servicePortFile))
 	makeDir("logFile", filepath.Dir(logFile))
+	makeDir("openvpnLogFile", filepath.Dir(openvpnLogFile))
 	makeDir("settingsFile", filepath.Dir(settingsFile))
+	makeDir("openvpnConfigFile", filepath.Dir(openvpnConfigFile))
+	makeDir("wgConfigFilePath", filepath.Dir(wgConfigFilePath))
 
 	// checling availability of OpenVPN binaries
 	panicIfFileNotExists("openvpnCaKeyFile", openvpnCaKeyFile)

@@ -6,11 +6,13 @@ import (
 
 var (
 	firewallScript string
+	logDir         string = "/opt/ivpn/log"
+	tmpDir         string = "/opt/ivpn/tmp"
 )
 
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
-	servicePortFile = "/opt/ivpn/port.txt"
+	servicePortFile = path.Join(tmpDir, "port.txt")
 	obfsproxyStartScript = "/usr/bin/obfsproxy"
 }
 
