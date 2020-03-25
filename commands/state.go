@@ -2,8 +2,10 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/ivpn/desktop-app-cli/flags"
+	"github.com/ivpn/desktop-app-daemon/service"
 )
 
 type CmdState struct {
@@ -30,9 +32,10 @@ func (c *CmdState) Run() error {
 
 	fmt.Println("\nTips: ")
 	if len(_proto.GetHelloResponse().Session.Session) == 0 {
-		fmt.Println("  ivpn login        Log in with your Account ID")
+		fmt.Println(" ", service.ErrorNotLoggedIn{})
+		fmt.Printf("  %s account -login  ACCOUNT_ID         Log in with your Account ID\n", os.Args[0])
 	}
-	fmt.Println("  ivpn -help        Show all commands")
+	fmt.Printf("  %s -help                              Show all commands\n", os.Args[0])
 
 	return nil
 }

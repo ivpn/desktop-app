@@ -87,7 +87,7 @@ func (c *CmdConnect) Run() error {
 		fmt.Println("Error: Not logged in")
 		fmt.Println("")
 		fmt.Println("Tips: ")
-		fmt.Println("  ivpn login        Log in with your Account ID")
+		fmt.Printf("  %s account -login  ACCOUNT_ID         Log in with your Account ID\n", os.Args[0])
 		fmt.Println("")
 		return service.ErrorNotLoggedIn{}
 	}

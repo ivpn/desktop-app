@@ -64,8 +64,6 @@ func main() {
 	addCommand(&stateCmd)
 	addCommand(&commands.CmdConnect{})
 	addCommand(&commands.CmdDisconnect{})
-	addCommand(&commands.CmdLogin{})
-	addCommand(&commands.CmdLogout{})
 	addCommand(&commands.CmdAccount{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})

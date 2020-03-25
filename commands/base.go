@@ -42,5 +42,5 @@ func printFirewallState(isEnabled, isPersistent, isAllowLAN, isAllowMulticast bo
 	fmt.Printf("    Enabled             : %v\n", isEnabled)
 	fmt.Printf("    Persistent          : %v\n", isPersistent)
 	fmt.Printf("    Allow LAN           : %v\n", isAllowLAN)
-	fmt.Printf("    Allow LAN multicast : %v\n", isAllowMulticast)
+	//fmt.Printf("    Allow LAN multicast : %v\n", isAllowMulticast)
 }

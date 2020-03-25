@@ -1,6 +1,7 @@
 #!/bin/sh
 
 NEED_TO_SAVE_INSTRUCTIONS=true
+IVPN_ETC="/opt/ivpn/etc"
 IVPN_TMP="/opt/ivpn/mutable"
 INSTRUCTIONS_FILE="$IVPN_TMP/service_install.txt"
 mkdir -p $IVPN_TMP
@@ -32,7 +33,11 @@ try_systemd_install() {
     fi
 }
 
-echo "[ ] Files installed"
+echo "[+] Defining access rights for files ..."
+chmod 0644 $IVPN_ETC/*
+chmod 0744 $IVPN_ETC/*.sh
+chmod 0744 $IVPN_ETC/*.up 
+chmod 0744 $IVPN_ETC/*.down
 
 echo "[+] Service install start (pleaserun) ..."
 INSTALL_OUTPUT=$(sh /usr/share/pleaserun/ivpn-service/install.sh) 

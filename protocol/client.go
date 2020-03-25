@@ -175,6 +175,38 @@ func (c *Client) FirewallSet(isOn bool) error {
 	return nil
 }
 
+// FirewallAllowLan set configuration 'allow LAN'
+func (c *Client) FirewallAllowLan(allow bool) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	// changing killswitch configuration
+	req := types.KillSwitchSetAllowLAN{AllowLAN: allow, Synchronously: true}
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// FirewallAllowLanMulticast set configuration 'allow LAN multicast'
+func (c *Client) FirewallAllowLanMulticast(allow bool) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	// changing killswitch configuration
+	req := types.KillSwitchSetAllowLANMulticast{AllowLANMulticast: allow, Synchronously: true}
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // FirewallStatus get firewall state
 func (c *Client) FirewallStatus() (state types.KillSwitchStatusResp, err error) {
 	if err := c.ensureConnected(); err != nil {
