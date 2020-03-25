@@ -109,7 +109,14 @@ func (c *CmdInfo) usage(w *tabwriter.Writer) {
 
 	// Format output
 	// command
-	fmt.Fprintln(writer, fmt.Sprintf("%s %s\t%s", c.Name(), c.defaultArgName, c.Description()))
+	lines := strings.Split(c.Description(), "\n")
+	fmt.Fprintln(writer, fmt.Sprintf("%s %s\t%s", c.Name(), c.defaultArgName, lines[0]))
+	if len(lines) > 1 {
+		for i := 1; i < len(lines); i++ {
+			fmt.Fprintln(writer, fmt.Sprintf("  %s %s\t%s", "", "", lines[i]))
+		}
+	}
+
 	// loop trough flags map
 	for _, usage := range keys {
 		flag, _ := tmpmap[usage]

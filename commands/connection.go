@@ -3,9 +3,11 @@ package commands
 import (
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/ivpn/desktop-app-cli/flags"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
+	"github.com/ivpn/desktop-app-daemon/service"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
@@ -28,16 +30,25 @@ func (c *CmdDisconnect) Run() error {
 type CmdConnect struct {
 	flags.CmdInfo
 	gateway         string
+	any             bool
 	obfsproxy       bool
 	firewall        bool
 	dns             string
 	antitracker     bool
 	antitrackerHard bool
+
+	filter_proto       bool
+	filter_location    bool
+	filter_city        bool
+	filter_country     bool
+	filter_countryCode bool
 }
 
 func (c *CmdConnect) Init() {
-	c.Initialize("connect", "Establish new VPN connection. Use serverID (Location) as an argument (see 'servers' command)")
-	c.DefaultStringVar(&c.gateway, "SERVER_ID")
+	c.Initialize("connect", "Establish new VPN connection. Use server location as an argument.\nLOCATION can be a mask for filtering servers (see 'servers' command)")
+	c.DefaultStringVar(&c.gateway, "LOCATION")
+	c.BoolVar(&c.any, "any", false, "When LOCATION points to more then one servers - use first found server to connect")
+
 	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
 	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
 
@@ -48,7 +59,14 @@ func (c *CmdConnect) Init() {
 
 	c.BoolVar(&c.antitracker, "antitracker", false, "Enable antitracker for this connection")
 	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'hardcore' antitracker for this connection")
+
+	c.BoolVar(&c.filter_proto, "fp", false, "Apply LOCATION as a filter to protocol type (can be used short names 'wg' or 'ovpn')")
+	c.BoolVar(&c.filter_location, "fl", false, "Apply LOCATION as a filter to server location (serverID)")
+	c.BoolVar(&c.filter_country, "fc", false, "Apply LOCATION as a filter to country name")
+	c.BoolVar(&c.filter_countryCode, "fcc", false, "Apply LOCATION as a filter to country code")
+	c.BoolVar(&c.filter_city, "fcity", false, "Apply LOCATION as a filter to city name")
 }
+
 func (c *CmdConnect) Run() error {
 	if len(c.gateway) == 0 {
 		return flags.BadParameter{}
@@ -62,6 +80,32 @@ func (c *CmdConnect) Run() error {
 	if err != nil {
 		return err
 	}
+
+	helloResp := _proto.GetHelloResponse()
+	if len(helloResp.Command) > 0 && (len(helloResp.Session.Session) == 0) {
+		// We received 'hello' response but no session info - print tips to login
+		fmt.Println("Error: Not logged in")
+		fmt.Println("")
+		fmt.Println("Tips: ")
+		fmt.Println("  ivpn login        Log in with your Account ID")
+		fmt.Println("")
+		return service.ErrorNotLoggedIn{}
+	}
+
+	svrs := serversFilter(serversList(servers), c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country)
+	if len(svrs) > 1 {
+		if c.any == false {
+			fmt.Printf("More then one server found (filtering by '%s')\n", c.gateway)
+			fmt.Println("Please specify server more correctly or use flag '-any'")
+			fmt.Println("\nTips:")
+			fmt.Printf("\t%s servers        Show servers list\n", os.Args[0])
+			fmt.Printf("\t%s connect -h     Show usage of 'connect' command\n", os.Args[0])
+			return nil
+		}
+		fmt.Printf("More then one server found (filtering by '%s')\n", c.gateway)
+		fmt.Printf("Taking first found server...\n")
+	}
+	c.gateway = svrs[0].gateway
 
 	// FW for current connection
 	req.FirewallOnDuringConnection = c.firewall
@@ -88,6 +132,8 @@ func (c *CmdConnect) Run() error {
 	// WireGuard
 	for _, s := range servers.WireguardServers {
 		if s.Gateway == c.gateway {
+			fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s...\n", s.City, s.CountryCode, s.Country, s.Gateway)
+
 			serverFound = true
 			host := s.Hosts[0]
 			req.VpnType = vpn.WireGuard
@@ -99,6 +145,7 @@ func (c *CmdConnect) Run() error {
 	// OpenVPN
 	for _, s := range servers.OpenvpnServers {
 		if s.Gateway == c.gateway {
+			fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s...\n", s.City, s.CountryCode, s.Country, s.Gateway)
 
 			// TODO: obfsproxy configuration for this connection must be sent in 'Connect' request (avoid using daemon preferences)
 			if err = _proto.SetPreferences("enable_obfsproxy", fmt.Sprint(c.obfsproxy)); err != nil {

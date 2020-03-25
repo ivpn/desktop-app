@@ -62,13 +62,13 @@ func main() {
 	// initialize all possible commands
 	stateCmd := commands.CmdState{}
 	addCommand(&stateCmd)
+	addCommand(&commands.CmdConnect{})
+	addCommand(&commands.CmdDisconnect{})
 	addCommand(&commands.CmdLogin{})
 	addCommand(&commands.CmdLogout{})
 	addCommand(&commands.CmdAccount{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
-	addCommand(&commands.CmdConnect{})
-	addCommand(&commands.CmdDisconnect{})
 
 	// initialize command handler
 	port, secret, err := readDaemonPort()
