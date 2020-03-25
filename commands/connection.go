@@ -19,7 +19,7 @@ func (c *CmdDisconnect) Init() {
 	c.Initialize("disconnect", "Disconnect active VPN connection (if connected)")
 }
 func (c *CmdDisconnect) Run() error {
-	if err := _proto.Disconnect(); err != nil {
+	if err := _proto.DisconnectVPN(); err != nil {
 		return err
 	}
 	return nil
@@ -171,7 +171,7 @@ func (c *CmdConnect) Run() error {
 	if err != nil {
 		err = fmt.Errorf("failed to connect: %w", err)
 		fmt.Printf("Disconnecting...\n")
-		if err2 := _proto.Disconnect(); err2 != nil {
+		if err2 := _proto.DisconnectVPN(); err2 != nil {
 			fmt.Printf("Failed to disconnect: %v\n", err2)
 		}
 		return err

@@ -63,16 +63,28 @@ func (c *Client) Connect() (err error) {
 	// start receiver
 	go c.receiverRoutine()
 
+	if _, err := c.SendHello(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SendHello - send initial message and get current status
+func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
+	if err := c.ensureConnected(); err != nil {
+		return helloResponse, err
+	}
+
 	helloReq := types.Hello{Secret: c._secret, KeepDaemonAlone: true, GetStatus: true, Version: "1.0"}
 
 	if err := c.sendRecvTimeOut(&helloReq, &c._helloResponse, time.Second*5); err != nil {
 		if _, ok := errors.Unwrap(err).(ResponseTimeout); ok {
-			return fmt.Errorf("Failed to send 'Hello' request (does another instance of IVPN Client running?): %w", err)
+			return helloResponse, fmt.Errorf("Failed to send 'Hello' request (does another instance of IVPN Client running?): %w", err)
 		}
-		return fmt.Errorf("Failed to send 'Hello' request: %w", err)
+		return helloResponse, fmt.Errorf("Failed to send 'Hello' request: %w", err)
 	}
-
-	return nil
+	return c._helloResponse, nil
 }
 
 // GetHelloResponse returns initialisation response from daemon
@@ -275,8 +287,8 @@ func (c *Client) GetVPNState() (vpn.State, types.ConnectedResp, error) {
 	return vpn.DISCONNECTED, respConnected, fmt.Errorf("failed to receive VPN state (not expected return type)")
 }
 
-// Disconnect disconnect active VPN connection
-func (c *Client) Disconnect() error {
+// DisconnectVPN disconnect active VPN connection
+func (c *Client) DisconnectVPN() error {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
@@ -326,4 +338,34 @@ func (c *Client) ConnectVPN(req types.Connect) (types.ConnectedResp, error) {
 	}
 
 	return respConnected, fmt.Errorf("connect request failed (not expected return type)")
+}
+
+// WGKeysGenerate regenerate WG keys
+func (c *Client) WGKeysGenerate() error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.WireGuardGenerateNewKeys{}
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WGKeysRotationInterval changes WG keys rotation interval
+func (c *Client) WGKeysRotationInterval(uinxTimeInterval int64) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.WireGuardSetKeysRotationInterval{Interval: uinxTimeInterval}
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
+
+	return nil
 }

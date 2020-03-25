@@ -67,6 +67,7 @@ func main() {
 	addCommand(&commands.CmdAccount{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
+	addCommand(&commands.CmdWireGuard{})
 
 	// initialize command handler
 	port, secret, err := readDaemonPort()

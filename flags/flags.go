@@ -148,6 +148,13 @@ func (c *CmdInfo) StringVar(p *string, name string, defValue string, argNAme str
 	c.argNames[name] = argNAme
 }
 
+// IntVar defines an int flag with specified name, default value, and usage string.
+// The argument p points to an int variable in which to store the value of the flag.
+func (c *CmdInfo) IntVar(p *int, name string, defValue int, argNAme string, usage string) {
+	c.fs.IntVar(p, name, defValue, usage)
+	c.argNames[name] = argNAme
+}
+
 // BoolVar defines a bool flag with specified name, default value, and usage string.
 // The argument p points to a bool variable in which to store the value of the flag.
 func (c *CmdInfo) BoolVar(p *bool, name string, defValue bool, usage string) {

@@ -42,8 +42,7 @@ func (c *CmdServers) Run() error {
 		return err
 	}
 
-	const padding = 1
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, padding, ' ', tabwriter.AlignRight|tabwriter.Debug)
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight|tabwriter.Debug)
 
 	fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\t")
 
