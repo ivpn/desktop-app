@@ -34,7 +34,7 @@ func SetEnabled(enable bool) error {
 	err := implSetEnabled(enable)
 	if err != nil {
 		log.Error(err)
-		return fmt.Errorf("failed to check is firewall enabled : %w", err)
+		return fmt.Errorf("failed to change firewall state : %w", err)
 	}
 
 	if enable {

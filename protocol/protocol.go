@@ -454,6 +454,9 @@ func (p *Protocol) processRequest(message string) {
 		}
 
 		p._service.SetKillSwitchAllowLANMulticast(req.AllowLANMulticast)
+		if req.Synchronously {
+			p.sendResponse(&types.EmptyResp{}, req.Idx)
+		}
 		break
 
 	case "KillSwitchSetAllowLAN":
@@ -464,6 +467,10 @@ func (p *Protocol) processRequest(message string) {
 		}
 
 		p._service.SetKillSwitchAllowLAN(req.AllowLAN)
+		if req.Synchronously {
+			p.sendResponse(&types.EmptyResp{}, req.Idx)
+		}
+
 		break
 
 	case "KillSwitchSetIsPersistent":

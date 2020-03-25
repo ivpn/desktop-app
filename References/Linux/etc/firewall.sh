@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Useful commands
+#   List all rules: 
+#     sudo iptables -L -v
+#     or
+#     sudo iptables -S
+
 IPv4BIN=/sbin/iptables
 IPv6BIN=/sbin/ip6tables
 
@@ -37,7 +43,7 @@ function enable_firewall {
 
     if (( $? == 0 )); then
       echo "Firewall is already enabled. Please disable it first" >&2
-      return 1
+      return 0
     fi
 
     set -e
@@ -77,8 +83,8 @@ function enable_firewall {
     ${IPv4BIN} -A ${IN_IVPN} -p udp --dport 68 -j ACCEPT
 
     # enable all ICMP ping outgoing request (needed to be able to ping VPN servers)
-    ${IPv4BIN} -A ${OUT_IVPN} -p icmp --icmp-type 8 -d 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-    ${IPv4BIN} -A ${IN_IVPN} -p icmp --icmp-type 0 -s 0/0 -m state --state ESTABLISHED,RELATED -j ACCEPT
+    #${IPv4BIN} -A ${OUT_IVPN} -p icmp --icmp-type 8 -d 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    #${IPv4BIN} -A ${IN_IVPN} -p icmp --icmp-type 0 -s 0/0 -m state --state ESTABLISHED,RELATED -j ACCEPT
 
     # assign our chains to global (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
     ${IPv4BIN} -A OUTPUT -j ${OUT_IVPN}
@@ -90,7 +96,6 @@ function enable_firewall {
 
     echo "IVPN Firewall enabled"
 }
-
 
 # Remove all rules
 function disable_firewall {
@@ -167,6 +172,14 @@ function main {
       shift
       create_chain ${IPv4BIN} ${IN_IVPN_IF}
       create_chain ${IPv4BIN} ${OUT_IVPN_IF}
+
+      # remove same rule if exists (just to avoid duplicates)
+      ${IPv4BIN} -D ${OUT_IVPN_IF} -d $@ -j ACCEPT
+      ${IPv4BIN} -D ${OUT_IVPN_IF} -s $@ -j ACCEPT
+      ${IPv4BIN} -D ${IN_IVPN_IF} -d $@ -j ACCEPT
+      ${IPv4BIN} -D ${IN_IVPN_IF} -s $@ -j ACCEPT
+
+      #add new rule
       ${IPv4BIN} -A ${OUT_IVPN_IF} -d $@ -j ACCEPT
       ${IPv4BIN} -A ${OUT_IVPN_IF} -s $@ -j ACCEPT
       ${IPv4BIN} -A ${IN_IVPN_IF} -d $@ -j ACCEPT

@@ -36,12 +36,20 @@ type PingServers struct {
 type KillSwitchSetAllowLANMulticast struct {
 	CommandBase
 	AllowLANMulticast bool
+
+	// When true - deamon returns empty response as confirmation
+	// Needed for supporting old UI clients which are don't require confirmation
+	Synchronously bool
 }
 
 // KillSwitchSetAllowLAN enable\disable LAN acces for kill-switch
 type KillSwitchSetAllowLAN struct {
 	CommandBase
 	AllowLAN bool
+
+	// When true - deamon returns empty response as confirmation
+	// Needed for supporting old UI clients which are don't require confirmation
+	Synchronously bool
 }
 
 // KillSwitchSetEnabled request to enable\disable kill-switch
