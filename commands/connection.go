@@ -37,11 +37,14 @@ type CmdConnect struct {
 	antitracker     bool
 	antitrackerHard bool
 
-	filter_proto       bool
+	filter_proto       string
 	filter_location    bool
 	filter_city        bool
 	filter_country     bool
 	filter_countryCode bool
+	filter_invert      bool
+
+	fastest bool
 }
 
 func (c *CmdConnect) Init() {
@@ -60,15 +63,19 @@ func (c *CmdConnect) Init() {
 	c.BoolVar(&c.antitracker, "antitracker", false, "Enable antitracker for this connection")
 	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'hardcore' antitracker for this connection")
 
-	c.BoolVar(&c.filter_proto, "fp", false, "Apply LOCATION as a filter to protocol type (can be used short names 'wg' or 'ovpn')")
+	c.StringVar(&c.filter_proto, "fp", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
 	c.BoolVar(&c.filter_location, "fl", false, "Apply LOCATION as a filter to server location (serverID)")
 	c.BoolVar(&c.filter_country, "fc", false, "Apply LOCATION as a filter to country name")
 	c.BoolVar(&c.filter_countryCode, "fcc", false, "Apply LOCATION as a filter to country code")
 	c.BoolVar(&c.filter_city, "fcity", false, "Apply LOCATION as a filter to city name")
+
+	c.BoolVar(&c.filter_invert, "filter_invert", false, "Invert filtering")
+
+	c.BoolVar(&c.fastest, "fastest", false, "Connect to fastest server")
 }
 
 func (c *CmdConnect) Run() error {
-	if len(c.gateway) == 0 {
+	if len(c.gateway) == 0 && c.fastest == false {
 		return flags.BadParameter{}
 	}
 	// connection request
@@ -92,20 +99,41 @@ func (c *CmdConnect) Run() error {
 		return service.ErrorNotLoggedIn{}
 	}
 
-	svrs := serversFilter(serversList(servers), c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country)
-	if len(svrs) > 1 {
-		if c.any == false {
-			fmt.Printf("More then one server found (filtering by '%s')\n", c.gateway)
-			fmt.Println("Please specify server more correctly or use flag '-any'")
-			fmt.Println("\nTips:")
-			fmt.Printf("\t%s servers        Show servers list\n", os.Args[0])
-			fmt.Printf("\t%s connect -h     Show usage of 'connect' command\n", os.Args[0])
-			return nil
+	svrs := serversList(servers)
+	svrs = serversFilter(svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
+
+	srvID := ""
+
+	// Fastest server
+	if c.fastest && len(svrs) > 1 {
+		if err := serversPing(svrs, true); err != nil && c.any == false {
+			if c.any {
+				fmt.Printf("Error: Failed to ping servers to determine fastest: %s\n", err)
+			} else {
+				return err
+			}
 		}
-		fmt.Printf("More then one server found (filtering by '%s')\n", c.gateway)
-		fmt.Printf("Taking first found server...\n")
+		srvID = svrs[len(svrs)-1].gateway
 	}
-	c.gateway = svrs[0].gateway
+
+	// if we not foud required server before (by 'fastest' option)
+	if len(srvID) == 0 {
+		// 'any' option
+		if len(svrs) > 1 {
+			//fmt.Printf("More then one server found (filtering by '%s')\n", c.gateway)
+			fmt.Println("More then one server found")
+			if c.any == false {
+				fmt.Println("Please specify server more correctly or use flag '-any'")
+				fmt.Println("\nTips:")
+				fmt.Printf("\t%s servers        Show servers list\n", os.Args[0])
+				fmt.Printf("\t%s connect -h     Show usage of 'connect' command\n", os.Args[0])
+				return nil
+			}
+			fmt.Printf("Taking first found server\n")
+		}
+		srvID = svrs[0].gateway
+	}
+	c.gateway = srvID
 
 	// FW for current connection
 	req.FirewallOnDuringConnection = c.firewall
