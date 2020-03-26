@@ -264,7 +264,7 @@ func (i *ManagementInterface) miCommunication() {
 			}
 			stateStr := params[1]
 
-			state, err := parseState(stateStr)
+			state, err := vpn.ParseState(stateStr)
 			if err != nil {
 				i.log.Error("Unable to parse VPN state:", err.Error())
 			} else {
@@ -273,6 +273,8 @@ func (i *ManagementInterface) miCommunication() {
 				var clientIP net.IP
 				var serverIP net.IP
 				var isAuthError bool
+				var additionalInfo string
+
 				// If state is Connected - save local and server IP addresses
 				if state == vpn.CONNECTED {
 					if len(params) > 3 {
@@ -286,15 +288,20 @@ func (i *ManagementInterface) miCommunication() {
 					if strings.Contains(msgText, "auth-failure") { //if (params[2] == "auth-failure")
 						isAuthError = true
 					}
+				} else if state == vpn.RECONNECTING {
+					if len(params[2]) >= 3 {
+						additionalInfo = params[2]
+					}
 				}
 
 				// save current state info
 				state := vpn.StateInfo{
-					State:       state,
-					Description: msgText,
-					ClientIP:    clientIP,
-					ServerIP:    serverIP,
-					IsAuthError: isAuthError}
+					State:               state,
+					Description:         msgText,
+					ClientIP:            clientIP,
+					ServerIP:            serverIP,
+					IsAuthError:         isAuthError,
+					StateAdditionalInfo: additionalInfo}
 
 				select {
 				case i.stateChan <- state: // notify: state was changed
@@ -348,31 +355,4 @@ func (i *ManagementInterface) addRouteAddCommand(command string) {
 
 	i.routeAddCmds = append(i.routeAddCmds, command)
 	i.log.Debug("New route-add command (", len(i.routeAddCmds), "): ", command)
-}
-
-// ParseState - Converts string representation of OpenVPN state to vpn.State
-func parseState(stateStr string) (vpn.State, error) {
-	stateStr = strings.Trim(stateStr, " \t;,.")
-	switch stateStr {
-	case "CONNECTING":
-		return vpn.CONNECTING, nil
-	case "WAIT":
-		return vpn.WAIT, nil
-	case "AUTH":
-		return vpn.AUTH, nil
-	case "GET_CONFIG":
-		return vpn.GETCONFIG, nil
-	case "ASSIGN_IP":
-		return vpn.ASSIGNIP, nil
-	case "ADD_ROUTES":
-		return vpn.ADDROUTES, nil
-	case "CONNECTED":
-		return vpn.CONNECTED, nil
-	case "RECONNECTING":
-		return vpn.RECONNECTING, nil
-	case "EXITING":
-		return vpn.EXITING, nil
-	default:
-		return vpn.DISCONNECTED, errors.New("unexpected state:" + stateStr)
-	}
 }

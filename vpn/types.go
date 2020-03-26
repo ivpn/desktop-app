@@ -1,6 +1,10 @@
 package vpn
 
-import "net"
+import (
+	"errors"
+	"net"
+	"strings"
+)
 
 // Type - VPN type
 type Type int
@@ -30,6 +34,7 @@ const (
 	ADDROUTES    State = iota // Adding routes to system.
 	CONNECTED    State = iota // Initialization Sequence Completed.
 	RECONNECTING State = iota // A restart has occurred.
+	TCP_CONNECT  State = iota // TCP_CONNECT
 	EXITING      State = iota // A graceful exit is in progress.
 )
 
@@ -48,7 +53,37 @@ func (s State) String() string {
 		"ADDROUTES",
 		"CONNECTED",
 		"RECONNECTING",
+		"TCP_CONNECT",
 		"EXITING"}[s]
+}
+
+// ParseState - Converts string representation of OpenVPN state to vpn.State
+func ParseState(stateStr string) (State, error) {
+	stateStr = strings.Trim(stateStr, " \t;,.")
+	switch stateStr {
+	case "CONNECTING":
+		return CONNECTING, nil
+	case "WAIT":
+		return WAIT, nil
+	case "AUTH":
+		return AUTH, nil
+	case "GET_CONFIG":
+		return GETCONFIG, nil
+	case "ASSIGN_IP":
+		return ASSIGNIP, nil
+	case "ADD_ROUTES":
+		return ADDROUTES, nil
+	case "CONNECTED":
+		return CONNECTED, nil
+	case "RECONNECTING":
+		return RECONNECTING, nil
+	case "TCP_CONNECT":
+		return TCP_CONNECT, nil
+	case "EXITING":
+		return EXITING, nil
+	default:
+		return DISCONNECTED, errors.New("unexpected state:" + stateStr)
+	}
 }
 
 // StateInfo - VPN state + additional information
@@ -59,6 +94,11 @@ type StateInfo struct {
 	ClientIP    net.IP // applicable only for 'CONNECTED' state
 	ServerIP    net.IP // applicable only for 'CONNECTED' state
 	IsAuthError bool   // applicable only for 'EXITING' state
+
+	// TODO: try to avoid using this protocol-specific parameter in future
+	// Currently, in use by OpenVPN connection to inform about "RECONNECTING" reason (e.g. "tls-error", "init_instance"...)
+	// UI client using this info in order to determine is it necessary to try to connect with another port
+	StateAdditionalInfo string
 }
 
 // NewStateInfo - create new state object (not applicable for CONNECTED state)
