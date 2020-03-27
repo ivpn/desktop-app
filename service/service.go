@@ -9,12 +9,12 @@ import (
 
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
+	"github.com/ivpn/desktop-app-daemon/ping"
 	"github.com/ivpn/desktop-app-daemon/service/api"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 
 	"github.com/pkg/errors"
-	"github.com/sparrc/go-ping"
 )
 
 var log *logger.Logger

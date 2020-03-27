@@ -1,13 +1,13 @@
 package winlib_test
 
 import (
-	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
 	"net"
 	"syscall"
 	"testing"
 	"time"
 
-	"github.com/sparrc/go-ping"
+	"github.com/ivpn/desktop-app-daemon/ping"
+	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
 )
 
 func TestBlockAll(t *testing.T) {
