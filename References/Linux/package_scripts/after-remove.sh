@@ -14,22 +14,19 @@ try_systemd_stop() {
         echo "[ ] systemd detected. Trying to stop service ..."
         
         echo "[+] Stopping service"
-        systemctl stop ivpn-service
+        silent systemctl stop ivpn-service
 
         echo "[+] Disabling service"
-        systemctl disable ivpn-service   
-
-        if [ -d "/lib/systemd/system/" ] ; then
+        silent systemctl disable ivpn-service   
+        
+        if [ -f "/etc/systemd/system/ivpn-service.service" ]; then
             echo "[+] Removing service"
             silent rm /etc/systemd/system/ivpn-service.service
-            silent rm /etc/systemd/system/ivpn-service.service
-        fi 
-
-        if [ -d "/usr/lib/systemd/system" ] ; then
+        fi
+        if [ -f "/usr/lib/systemd/system/ivpn-service.service" ]; then
             echo "[+] Removing service"
             silent rm /usr/lib/systemd/system/ivpn-service.service
-            silent rm /usr/lib/systemd/system/ivpn-service.service
-        fi     
+        fi       
     fi
 }
 

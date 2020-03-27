@@ -59,6 +59,13 @@ func printUsageAll() {
 func main() {
 	logger.CanPrintToConsole(false)
 
+	if len(os.Args) == 2 {
+		if os.Args[1] == "?" || os.Args[1] == "-?" || os.Args[1] == "-h" || os.Args[1] == "--h" || os.Args[1] == "-help" || os.Args[1] == "--help" {
+			printUsageAll()
+			os.Exit(0)
+		}
+	}
+
 	// initialize all possible commands
 	stateCmd := commands.CmdState{}
 	addCommand(&stateCmd)
@@ -107,9 +114,7 @@ func main() {
 
 	// unknown command
 	if isProcessed == false {
-		if os.Args[1] != "-h" && os.Args[1] != "--h" && os.Args[1] != "-help" && os.Args[1] != "--help" {
-			fmt.Printf("Error. Unexpected command %s\n", os.Args[1])
-		}
+		fmt.Printf("Error. Unexpected command %s\n", os.Args[1])
 		printUsageAll()
 		os.Exit(1)
 	}

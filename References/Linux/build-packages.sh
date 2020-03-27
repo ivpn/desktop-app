@@ -27,6 +27,9 @@
 #     systemctl --type=service
 # Start service:
 #     systemctl start ivpn-service
+# Remove BROKEN package (which is unable to uninstall by normal ways)
+#     sudo mv /var/lib/dpkg/info/ivpn.* /tmp/
+#     sudo dpkg --remove --force-remove-reinstreq ivpn
 
 cd "$(dirname "$0")"
 
