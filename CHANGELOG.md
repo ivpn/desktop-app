@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.11.6 - 2020-03-27
+
+[FIXED] Deadlock issue in 'ping' package
+
+## Version 2.11.5 - 2020-03-26
+
+[IMPROVED] Updated CA certificate for OpenVPN  
+[FIXED] "Automatically change port" feature
+
 ## Version 2.11.4 - 2020-03-04
 
 [FIXED] (Windows) Potential local privilege escalation vulnerability

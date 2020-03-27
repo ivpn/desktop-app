@@ -6,10 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/ping"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
-
-	//go get github.com/sparrc/go-ping
-	"github.com/sparrc/go-ping"
 )
 
 func CheckConnectivity() bool {

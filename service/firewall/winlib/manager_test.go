@@ -1,5 +1,3 @@
-// +build windows
-
 package winlib_test
 
 import (
@@ -8,9 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/ping"
 	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
-
-	"github.com/sparrc/go-ping"
 )
 
 func TestBlockAll(t *testing.T) {
