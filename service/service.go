@@ -12,14 +12,13 @@ import (
 	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
+	"github.com/ivpn/desktop-app-daemon/ping"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/service/preferences"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
-
-	"github.com/sparrc/go-ping"
 )
 
 var log *logger.Logger
