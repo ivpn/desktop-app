@@ -74,7 +74,7 @@ func (c *CmdConnect) Init() {
 	c.BoolVar(&c.fastest, "fastest", false, "Connect to fastest server")
 }
 
-func (c *CmdConnect) Run() error {
+func (c *CmdConnect) Run() (retError error) {
 	if len(c.gateway) == 0 && c.fastest == false {
 		return flags.BadParameter{}
 	}
@@ -118,16 +118,26 @@ func (c *CmdConnect) Run() error {
 
 	// if we not foud required server before (by 'fastest' option)
 	if len(srvID) == 0 {
-		// 'any' option
-		if len(svrs) > 1 {
-			//fmt.Printf("More then one server found (filtering by '%s')\n", c.gateway)
-			fmt.Println("More then one server found")
-			if c.any == false {
+		defer func() {
+			if retError != nil {
 				fmt.Println("Please specify server more correctly or use flag '-any'")
 				fmt.Println("\nTips:")
 				fmt.Printf("\t%s servers        Show servers list\n", os.Args[0])
 				fmt.Printf("\t%s connect -h     Show usage of 'connect' command\n", os.Args[0])
-				return nil
+			}
+		}()
+
+		// no servers found
+		if len(svrs) == 0 {
+			fmt.Println("No servers found by your filter")
+			return fmt.Errorf("no servers found by your filter")
+		}
+
+		// 'any' option
+		if len(svrs) > 1 {
+			fmt.Println("More than one server found")
+			if c.any == false {
+				return fmt.Errorf("more than one server found")
 			}
 			fmt.Printf("Taking first found server\n")
 		}

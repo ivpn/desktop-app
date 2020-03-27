@@ -51,7 +51,7 @@ func (c *CmdLogs) doShow() error {
 	fname := "/opt/ivpn/log/IVPN Agent.log"
 	file, err := os.Open(fname)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer file.Close()
 
