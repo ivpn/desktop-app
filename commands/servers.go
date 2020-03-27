@@ -162,7 +162,15 @@ func serversPing(servers []serverDesc, needSort bool) error {
 
 	if needSort {
 		sort.Slice(servers, func(i, j int) bool {
-			return (servers[i].pingMs == 0 && servers[j].pingMs > 0) || servers[i].pingMs > servers[j].pingMs
+			if servers[i].pingMs == 0 && servers[j].pingMs == 0 {
+				return strings.Compare(servers[i].city, servers[j].city) < 0
+			} else if servers[i].pingMs <= 0 {
+				return true
+			} else if servers[j].pingMs <= 0 {
+				return false
+			}
+
+			return servers[i].pingMs > servers[j].pingMs
 		})
 	}
 
