@@ -59,13 +59,6 @@ func printUsageAll() {
 func main() {
 	logger.CanPrintToConsole(false)
 
-	if len(os.Args) == 2 {
-		if os.Args[1] == "?" || os.Args[1] == "-?" || os.Args[1] == "-h" || os.Args[1] == "--h" || os.Args[1] == "-help" || os.Args[1] == "--help" {
-			printUsageAll()
-			os.Exit(0)
-		}
-	}
-
 	// initialize all possible commands
 	stateCmd := commands.CmdState{}
 	addCommand(&stateCmd)
@@ -76,6 +69,13 @@ func main() {
 	addCommand(&commands.CmdFirewall{})
 	addCommand(&commands.CmdWireGuard{})
 	addCommand(&commands.CmdLogs{})
+
+	if len(os.Args) == 2 {
+		if os.Args[1] == "?" || os.Args[1] == "-?" || os.Args[1] == "-h" || os.Args[1] == "--h" || os.Args[1] == "-help" || os.Args[1] == "--help" {
+			printUsageAll()
+			os.Exit(0)
+		}
+	}
 
 	// initialize command handler
 	port, secret, err := readDaemonPort()
