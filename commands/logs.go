@@ -41,7 +41,7 @@ func (c *CmdLogs) Run() error {
 
 func (c *CmdLogs) setSetLogging(enable bool) error {
 	if enable {
-		_proto.SetPreferences("enable_logging", "true")
+		return _proto.SetPreferences("enable_logging", "true")
 	}
 	return _proto.SetPreferences("enable_logging", "false")
 }
