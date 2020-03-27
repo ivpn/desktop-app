@@ -117,18 +117,20 @@ func serversFilter(servers []serverDesc, mask string, proto string, useGw, useCi
 				continue
 			}
 		}
-		if (checkAll || useGw) && strings.Contains(strings.ToLower(s.gateway), mask) {
+
+		if (checkAll || useGw) && strings.ToLower(s.gateway) == mask {
 			isOK = true
 		}
-		if (checkAll || useCity) && strings.Contains(strings.ToLower(s.city), mask) {
+		if (checkAll || useCity) && strings.ToLower(s.city) == mask {
 			isOK = true
 		}
-		if (checkAll || useCCode) && strings.Contains(strings.ToLower(s.countryCode), mask) {
+		if (checkAll || useCCode) && strings.ToLower(s.countryCode) == mask {
 			isOK = true
 		}
-		if (checkAll || useCountry) && strings.Contains(strings.ToLower(s.country), mask) {
+		if (checkAll || useCountry) && strings.ToLower(s.country) == mask {
 			isOK = true
 		}
+
 		if invertFilter {
 			isOK = !isOK
 		}
