@@ -69,7 +69,15 @@ func (c *CmdAccount) doLogin(accountID string, force bool) error {
 		fmt.Println("")
 		accountID = string(data)
 	}
-	return _proto.SessionNew(accountID, force)
+	apiStatus, err := _proto.SessionNew(accountID, force)
+	if err != nil {
+		if apiStatus == types.CodeSessionsLimitReached {
+			fmt.Println("Tips: ")
+			fmt.Printf("  %s account -force -login  ACCOUNT_ID         Log in with your Account ID and logout from all other devices\n\n", os.Args[0])
+		}
+		return err
+	}
+	return nil
 }
 
 func (c *CmdAccount) doLogout() error {

@@ -9,5 +9,5 @@ func (e BadParameter) Error() string {
 	if len(e.Message) == 0 {
 		return "bad parameter"
 	}
-	return e.Message
+	return "bad parameter (" + e.Message + ")"
 }

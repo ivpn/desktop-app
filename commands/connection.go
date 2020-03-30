@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/ivpn/desktop-app-cli/flags"
+	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/service"
 	"github.com/ivpn/desktop-app-daemon/vpn"
@@ -22,6 +24,9 @@ func (c *CmdDisconnect) Run() error {
 	if err := _proto.DisconnectVPN(); err != nil {
 		return err
 	}
+
+	showState()
+
 	return nil
 }
 
@@ -44,6 +49,8 @@ type CmdConnect struct {
 	filter_countryCode bool
 	filter_invert      bool
 
+	multiopExitSvr string
+
 	fastest bool
 }
 
@@ -54,6 +61,8 @@ func (c *CmdConnect) Init() {
 
 	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
 	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
+
+	c.StringVar(&c.multiopExitSvr, "exit_svr", "", "LOCATION", "OpenVPN only: Specify exit-server for multi-hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
 
 	c.BoolVar(&c.firewall, "f", false, "Enable firewall (will be disabled after disconnection)")
 	c.BoolVar(&c.firewall, "firewall", false, "Enable firewall (will be disabled after disconnection)")
@@ -100,50 +109,90 @@ func (c *CmdConnect) Run() (retError error) {
 	}
 
 	svrs := serversList(servers)
-	svrs = serversFilter(svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
 
-	srvID := ""
+	// MULTI\SINGLE -HOP
+	if len(c.multiopExitSvr) > 0 {
+		// MULTI-HOP
+		if c.fastest {
+			return flags.BadParameter{Message: "'fastest' flag is not applicable for Multi-Hop connection [exit_svr]"}
+		}
 
-	// Fastest server
-	if c.fastest && len(svrs) > 1 {
-		if err := serversPing(svrs, true); err != nil && c.any == false {
-			if c.any {
-				fmt.Printf("Error: Failed to ping servers to determine fastest: %s\n", err)
-			} else {
-				return err
+		if len(c.filter_proto) > 0 {
+			pType, err := getVpnTypeByFlag(c.filter_proto)
+			if err != nil || pType != vpn.OpenVPN {
+				return flags.BadParameter{Message: "protocol flag [fp] is not applicable for Multi-Hop connection [exit_svr], only OpenVPN connection allowed"}
 			}
 		}
-		srvID = svrs[len(svrs)-1].gateway
+
+		if c.filter_location || c.filter_city || c.filter_countryCode || c.filter_country || c.filter_invert {
+			fmt.Println("WARNING: filtering flags are ignored for Multi-Hop connection [exit_svr]")
+		}
+
+		entrySvrs := serversFilter(svrs, c.gateway, ProtoName_OpenVPN, false, false, false, false, false)
+		if len(entrySvrs) == 0 || len(entrySvrs) > 1 {
+			return flags.BadParameter{Message: "specify correct entry server ID for multi-hop connection"}
+		}
+
+		exitSvrs := serversFilter(svrs, c.multiopExitSvr, ProtoName_OpenVPN, false, false, false, false, false)
+		if len(exitSvrs) == 0 || len(exitSvrs) > 1 {
+			return flags.BadParameter{Message: "specify correct exit server ID for multi-hop connection"}
+		}
+		entrySvr := entrySvrs[0]
+		exitSvr := exitSvrs[0]
+
+		if entrySvr.gateway == exitSvr.gateway || entrySvr.countryCode == exitSvr.countryCode {
+			return flags.BadParameter{Message: "unable to use entry- and exit- servers from the same country for multi-hop connection"}
+		}
+
+		c.gateway = entrySvr.gateway
+		c.multiopExitSvr = exitSvr.gateway
+	} else {
+		//SINGLE-HOP
+		svrs = serversFilter(svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
+
+		srvID := ""
+
+		// Fastest server
+		if c.fastest && len(svrs) > 1 {
+			if err := serversPing(svrs, true); err != nil && c.any == false {
+				if c.any {
+					fmt.Printf("Error: Failed to ping servers to determine fastest: %s\n", err)
+				} else {
+					return err
+				}
+			}
+			srvID = svrs[len(svrs)-1].gateway
+		}
+
+		// if we not foud required server before (by 'fastest' option)
+		if len(srvID) == 0 {
+			defer func() {
+				if retError != nil {
+					fmt.Println("Please specify server more correctly or use flag '-any'")
+					fmt.Println("\nTips:")
+					fmt.Printf("\t%s servers        Show servers list\n", os.Args[0])
+					fmt.Printf("\t%s connect -h     Show usage of 'connect' command\n", os.Args[0])
+				}
+			}()
+
+			// no servers found
+			if len(svrs) == 0 {
+				fmt.Println("No servers found by your filter")
+				return fmt.Errorf("no servers found by your filter")
+			}
+
+			// 'any' option
+			if len(svrs) > 1 {
+				fmt.Println("More than one server found")
+				if c.any == false {
+					return fmt.Errorf("more than one server found")
+				}
+				fmt.Printf("Taking first found server\n")
+			}
+			srvID = svrs[0].gateway
+		}
+		c.gateway = srvID
 	}
-
-	// if we not foud required server before (by 'fastest' option)
-	if len(srvID) == 0 {
-		defer func() {
-			if retError != nil {
-				fmt.Println("Please specify server more correctly or use flag '-any'")
-				fmt.Println("\nTips:")
-				fmt.Printf("\t%s servers        Show servers list\n", os.Args[0])
-				fmt.Printf("\t%s connect -h     Show usage of 'connect' command\n", os.Args[0])
-			}
-		}()
-
-		// no servers found
-		if len(svrs) == 0 {
-			fmt.Println("No servers found by your filter")
-			return fmt.Errorf("no servers found by your filter")
-		}
-
-		// 'any' option
-		if len(svrs) > 1 {
-			fmt.Println("More than one server found")
-			if c.any == false {
-				return fmt.Errorf("more than one server found")
-			}
-			fmt.Printf("Taking first found server\n")
-		}
-		srvID = svrs[0].gateway
-	}
-	c.gateway = srvID
 
 	// FW for current connection
 	req.FirewallOnDuringConnection = c.firewall
@@ -159,10 +208,18 @@ func (c *CmdConnect) Run() (retError error) {
 	// set antitracker DNS (if defined). It will overwrite 'custom DNS' parameter
 	if c.antitracker || c.antitrackerHard {
 		if c.antitracker {
-			req.CurrentDNS = servers.Config.Antitracker.Default.IP
+			if len(c.multiopExitSvr) > 0 {
+				req.CurrentDNS = servers.Config.Antitracker.Default.MultihopIP
+			} else {
+				req.CurrentDNS = servers.Config.Antitracker.Default.IP
+			}
 		}
 		if c.antitrackerHard {
-			req.CurrentDNS = servers.Config.Antitracker.Hardcore.IP
+			if len(c.multiopExitSvr) > 0 {
+				req.CurrentDNS = servers.Config.Antitracker.Hardcore.MultihopIP
+			} else {
+				req.CurrentDNS = servers.Config.Antitracker.Hardcore.IP
+			}
 		}
 	}
 
@@ -181,21 +238,63 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 	}
 	// OpenVPN
-	for _, s := range servers.OpenvpnServers {
-		if s.Gateway == c.gateway {
-			fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s...\n", s.City, s.CountryCode, s.Country, s.Gateway)
+	if serverFound == false {
+		var entrySvr *apitypes.OpenvpnServerInfo = nil
+		var exitSvr *apitypes.OpenvpnServerInfo = nil
 
-			// TODO: obfsproxy configuration for this connection must be sent in 'Connect' request (avoid using daemon preferences)
-			if err = _proto.SetPreferences("enable_obfsproxy", fmt.Sprint(c.obfsproxy)); err != nil {
-				return err
+		// exit server
+		if len(c.multiopExitSvr) > 0 {
+			for _, s := range servers.OpenvpnServers {
+				if s.Gateway == c.multiopExitSvr {
+					exitSvr = &s
+					break
+				}
 			}
+		}
+		// entry server
+		for _, s := range servers.OpenvpnServers {
+			if s.Gateway == c.gateway {
+				entrySvr = &s
+				// TODO: obfsproxy configuration for this connection must be sent in 'Connect' request (avoid using daemon preferences)
+				if err = _proto.SetPreferences("enable_obfsproxy", fmt.Sprint(c.obfsproxy)); err != nil {
+					return err
+				}
 
-			serverFound = true
-			req.VpnType = vpn.OpenVPN
-			req.OpenVpnParameters.Port.Port = 2049
-			req.OpenVpnParameters.Port.Protocol = 0 // IS TCP
-			req.OpenVpnParameters.EntryVpnServer.IPAddresses = s.IPAddresses
-			break
+				serverFound = true
+				req.VpnType = vpn.OpenVPN
+				req.OpenVpnParameters.Port.Port = 2049
+				req.OpenVpnParameters.Port.Protocol = 0 // IS TCP
+				req.OpenVpnParameters.EntryVpnServer.IPAddresses = s.IPAddresses
+
+				if len(c.multiopExitSvr) > 0 {
+					// get Multi-Hop ID
+					req.OpenVpnParameters.MultihopExitSrvID = strings.Split(c.multiopExitSvr, ".")[0]
+				}
+				break
+			}
+			if len(c.multiopExitSvr) == 0 {
+				if entrySvr != nil {
+					break
+				}
+				if entrySvr != nil && exitSvr != nil {
+					break
+				}
+			}
+		}
+
+		if entrySvr == nil {
+			return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
+		}
+		if len(c.multiopExitSvr) > 0 && exitSvr == nil {
+			return fmt.Errorf("serverID not found in servers list (%s)", c.multiopExitSvr)
+		}
+
+		if len(c.multiopExitSvr) == 0 {
+			fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s...\n", entrySvr.City, entrySvr.CountryCode, entrySvr.Country, entrySvr.Gateway)
+		} else {
+			fmt.Printf("[OpenVPN] Connecting Multi-Hop...\n")
+			fmt.Printf("\tentry server: %s, %s (%s) %s\n", entrySvr.City, entrySvr.CountryCode, entrySvr.Country, entrySvr.Gateway)
+			fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvr.City, exitSvr.CountryCode, exitSvr.Country, exitSvr.Gateway)
 		}
 	}
 
@@ -204,8 +303,7 @@ func (c *CmdConnect) Run() (retError error) {
 	}
 
 	fmt.Println("Connecting...")
-	connected, err := _proto.ConnectVPN(req)
-
+	_, err = _proto.ConnectVPN(req)
 	if err != nil {
 		err = fmt.Errorf("failed to connect: %w", err)
 		fmt.Printf("Disconnecting...\n")
@@ -215,7 +313,7 @@ func (c *CmdConnect) Run() (retError error) {
 		return err
 	}
 
-	printState(vpn.CONNECTED, connected)
+	showState()
 
 	return nil
 }

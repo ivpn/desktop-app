@@ -93,23 +93,23 @@ func (c *Client) GetHelloResponse() types.HelloResp {
 }
 
 // SessionNew creates new session
-func (c *Client) SessionNew(accountID string, forceLogin bool) error {
+func (c *Client) SessionNew(accountID string, forceLogin bool) (apiStatus int, err error) {
 	if err := c.ensureConnected(); err != nil {
-		return err
+		return 0, err
 	}
 
 	req := types.SessionNew{AccountID: accountID, ForceLogin: forceLogin}
 	var resp types.SessionNewResp
 
 	if err := c.sendRecv(&req, &resp); err != nil {
-		return err
+		return 0, err
 	}
 
 	if len(resp.Session.Session) <= 0 {
-		return fmt.Errorf("[%d] %s", resp.APIStatus, resp.APIErrorMessage)
+		return resp.APIStatus, fmt.Errorf("[%d] %s", resp.APIStatus, resp.APIErrorMessage)
 	}
 
-	return nil
+	return resp.APIStatus, nil
 }
 
 // SessionDelete remove session

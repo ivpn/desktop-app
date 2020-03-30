@@ -8,8 +8,14 @@ import (
 	"text/tabwriter"
 
 	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 
 	"github.com/ivpn/desktop-app-cli/flags"
+)
+
+const (
+	ProtoName_OpenVPN   = "OpenVPN"
+	ProtoName_WireGuard = "WireGuard"
 )
 
 type CmdServers struct {
@@ -82,6 +88,25 @@ func (c *CmdServers) Run() error {
 }
 
 // ---------------------
+
+func getVpnTypeByFlag(proto string) (t vpn.Type, err error) {
+	proto = strings.ToLower(proto)
+
+	if len(proto) == 0 {
+		return t, fmt.Errorf("parameter is empty")
+	}
+
+	if proto == "wg" || proto == strings.ToLower(ProtoName_WireGuard) {
+		return vpn.WireGuard, nil
+	}
+
+	if proto == "ovpn" || proto == strings.ToLower(ProtoName_OpenVPN) {
+		return vpn.OpenVPN, nil
+	}
+
+	return t, flags.BadParameter{Message: "protocol definition not correct"}
+}
+
 func serversList(servers apitypes.ServersInfoResponse) []serverDesc {
 	ret := make([]serverDesc, 0, len(servers.OpenvpnServers)+len(servers.WireguardServers))
 	for _, s := range servers.WireguardServers {
@@ -89,14 +114,14 @@ func serversList(servers apitypes.ServersInfoResponse) []serverDesc {
 		for _, h := range s.Hosts {
 			hosts[strings.ToLower(strings.TrimSpace(h.Host))] = struct{}{}
 		}
-		ret = append(ret, serverDesc{protocol: "WireGuard", gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
+		ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 	}
 	for _, s := range servers.OpenvpnServers {
 		hosts := make(map[string]struct{}, len(s.IPAddresses))
 		for _, h := range s.IPAddresses {
 			hosts[strings.ToLower(strings.TrimSpace(h))] = struct{}{}
 		}
-		ret = append(ret, serverDesc{protocol: "OpenVPN", gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
+		ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 	}
 	return ret
 }
@@ -105,15 +130,17 @@ func serversFilter(servers []serverDesc, mask string, proto string, useGw, useCi
 	if len(mask) == 0 {
 		return servers
 	}
-	proto = strings.ToLower(proto)
 	mask = strings.ToLower(mask)
 	checkAll := !(useGw || useCity || useCCode || useCountry)
 
 	ret := make([]serverDesc, 0, len(servers))
 	for _, s := range servers {
 		isOK := false
+
 		if len(proto) > 0 {
-			if !(strings.ToLower(s.protocol) == proto || (proto == "wg" && s.protocol == "WireGuard") || (proto == "ovpn" && s.protocol == "OpenVPN")) {
+			sProto, err1 := getVpnTypeByFlag(s.protocol)
+			fProto, err2 := getVpnTypeByFlag(proto)
+			if sProto != fProto || err1 != nil || err2 != nil {
 				continue
 			}
 		}
