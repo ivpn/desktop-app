@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/ivpn/desktop-app-cli/flags"
@@ -11,6 +12,47 @@ import (
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/service"
 	"github.com/ivpn/desktop-app-daemon/vpn"
+)
+
+type port struct {
+	port int
+	tcp  bool
+}
+
+func (p *port) IsTCP() int {
+	if p.tcp {
+		return 1
+	}
+	return 0
+}
+
+func (p *port) String() string {
+	protoName := "UDP"
+	if p.tcp {
+		protoName = "TCP"
+	}
+	return fmt.Sprintf("%s:%d", protoName, p.port)
+}
+
+var (
+	portsWireGuard = [...]port{
+		port{port: 2049},
+		port{port: 2050},
+		port{port: 53},
+		port{port: 1194},
+		port{port: 30587},
+		port{port: 41893},
+		port{port: 48574},
+		port{port: 58237}}
+
+	portsOpenVpn = [...]port{
+		port{port: 2049},
+		port{port: 2050},
+		port{port: 53},
+		port{port: 1194},
+		port{port: 443, tcp: true},
+		port{port: 1443, tcp: true},
+		port{port: 80, tcp: true}}
 )
 
 type CmdDisconnect struct {
@@ -35,6 +77,7 @@ func (c *CmdDisconnect) Run() error {
 type CmdConnect struct {
 	flags.CmdInfo
 	gateway         string
+	port            string
 	any             bool
 	obfsproxy       bool
 	firewall        bool
@@ -57,12 +100,17 @@ type CmdConnect struct {
 func (c *CmdConnect) Init() {
 	c.Initialize("connect", "Establish new VPN connection. Use server location as an argument.\nLOCATION can be a mask for filtering servers (see 'servers' command)")
 	c.DefaultStringVar(&c.gateway, "LOCATION")
+
+	c.StringVar(&c.port, "port", "", "PROTOCOL:PORT", fmt.Sprintf("Port to connect to (default: %s - OpenVPN, %s - WireGuard)\nOpenVPN: %s\nWireGuard: %s",
+		portsOpenVpn[0].String(), portsWireGuard[0].String(),
+		allPortsString(portsOpenVpn[:]), allPortsString(portsWireGuard[:])))
+
 	c.BoolVar(&c.any, "any", false, "When LOCATION points to more then one servers - use first found server to connect")
 
 	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
 	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
 
-	c.StringVar(&c.multiopExitSvr, "exit_svr", "", "LOCATION", "OpenVPN only: Specify exit-server for multi-hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
+	c.StringVar(&c.multiopExitSvr, "exit_svr", "", "LOCATION", "OpenVPN only: Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
 
 	c.BoolVar(&c.firewall, "f", false, "Enable firewall (will be disabled after disconnection)")
 	c.BoolVar(&c.firewall, "firewall", false, "Enable firewall (will be disabled after disconnection)")
@@ -87,6 +135,14 @@ func (c *CmdConnect) Run() (retError error) {
 	if len(c.gateway) == 0 && c.fastest == false {
 		return flags.BadParameter{}
 	}
+
+	// show current state after on finished
+	defer func() {
+		if retError == nil {
+			showState()
+		}
+	}()
+
 	// connection request
 	req := types.Connect{}
 
@@ -166,18 +222,17 @@ func (c *CmdConnect) Run() (retError error) {
 
 		// if we not foud required server before (by 'fastest' option)
 		if len(srvID) == 0 {
-			defer func() {
-				if retError != nil {
-					fmt.Println("Please specify server more correctly or use flag '-any'")
-					fmt.Println("\nTips:")
-					fmt.Printf("\t%s servers        Show servers list\n", os.Args[0])
-					fmt.Printf("\t%s connect -h     Show usage of 'connect' command\n", os.Args[0])
-				}
-			}()
+			showTipsServerFilterError := func() {
+				fmt.Println("Please specify server more correctly or use flag '-any'")
+				fmt.Println("\nTips:")
+				fmt.Printf("\t%s servers        Show servers list\n", os.Args[0])
+				fmt.Printf("\t%s connect -h     Show usage of 'connect' command\n", os.Args[0])
+			}
 
 			// no servers found
 			if len(svrs) == 0 {
 				fmt.Println("No servers found by your filter")
+				showTipsServerFilterError()
 				return fmt.Errorf("no servers found by your filter")
 			}
 
@@ -185,6 +240,7 @@ func (c *CmdConnect) Run() (retError error) {
 			if len(svrs) > 1 {
 				fmt.Println("More than one server found")
 				if c.any == false {
+					showTipsServerFilterError()
 					return fmt.Errorf("more than one server found")
 				}
 				fmt.Printf("Taking first found server\n")
@@ -227,13 +283,21 @@ func (c *CmdConnect) Run() (retError error) {
 	// WireGuard
 	for _, s := range servers.WireguardServers {
 		if s.Gateway == c.gateway {
-			fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s...\n", s.City, s.CountryCode, s.Country, s.Gateway)
 
 			serverFound = true
 			host := s.Hosts[0]
 			req.VpnType = vpn.WireGuard
-			req.WireGuardParameters.Port.Port = 2049
 			req.WireGuardParameters.EntryVpnServer.Hosts = []types.WGHost{types.WGHost{Host: host.Host, PublicKey: host.PublicKey, LocalIP: host.LocalIP}}
+
+			// port
+			p, err := getPort(vpn.WireGuard, c.port)
+			if err != nil {
+				return err
+			}
+			req.WireGuardParameters.Port.Port = p.port
+
+			fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s %s...\n", s.City, s.CountryCode, s.Country, s.Gateway, p.String())
+
 			break
 		}
 	}
@@ -251,6 +315,8 @@ func (c *CmdConnect) Run() (retError error) {
 				}
 			}
 		}
+
+		var destPort port
 		// entry server
 		for _, s := range servers.OpenvpnServers {
 			if s.Gateway == c.gateway {
@@ -262,9 +328,15 @@ func (c *CmdConnect) Run() (retError error) {
 
 				serverFound = true
 				req.VpnType = vpn.OpenVPN
-				req.OpenVpnParameters.Port.Port = 2049
-				req.OpenVpnParameters.Port.Protocol = 0 // IS TCP
 				req.OpenVpnParameters.EntryVpnServer.IPAddresses = s.IPAddresses
+
+				// port
+				destPort, err = getPort(vpn.OpenVPN, c.port)
+				if err != nil {
+					return err
+				}
+				req.OpenVpnParameters.Port.Port = destPort.port
+				req.OpenVpnParameters.Port.Protocol = destPort.IsTCP()
 
 				if len(c.multiopExitSvr) > 0 {
 					// get Multi-Hop ID
@@ -290,10 +362,10 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 
 		if len(c.multiopExitSvr) == 0 {
-			fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s...\n", entrySvr.City, entrySvr.CountryCode, entrySvr.Country, entrySvr.Gateway)
+			fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s %s...\n", entrySvr.City, entrySvr.CountryCode, entrySvr.Country, entrySvr.Gateway, destPort.String())
 		} else {
 			fmt.Printf("[OpenVPN] Connecting Multi-Hop...\n")
-			fmt.Printf("\tentry server: %s, %s (%s) %s\n", entrySvr.City, entrySvr.CountryCode, entrySvr.Country, entrySvr.Gateway)
+			fmt.Printf("\tentry server: %s, %s (%s) %s %s\n", entrySvr.City, entrySvr.CountryCode, entrySvr.Country, entrySvr.Gateway, destPort.String())
 			fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvr.City, exitSvr.CountryCode, exitSvr.Country, exitSvr.Gateway)
 		}
 	}
@@ -313,7 +385,115 @@ func (c *CmdConnect) Run() (retError error) {
 		return err
 	}
 
-	showState()
-
 	return nil
+}
+
+func getPort(vpnType vpn.Type, portInfo string) (port, error) {
+	var err error
+	var portPtr *int
+	var isTCPPtr *bool
+	if len(portInfo) > 0 {
+		portPtr, isTCPPtr, err = parsePort(portInfo)
+		if err != nil {
+			return port{}, err
+		}
+	}
+
+	var retPort port
+	if vpnType == vpn.WireGuard {
+		if isTCPPtr != nil && *isTCPPtr {
+			return port{}, flags.BadParameter{Message: "port"}
+		}
+		retPort = portsWireGuard[0] // default port
+	} else {
+		retPort = portsOpenVpn[0] // default port
+	}
+
+	if portPtr != nil {
+		retPort.port = *portPtr
+	}
+	if isTCPPtr != nil {
+		retPort.tcp = *isTCPPtr
+	}
+
+	// ckeck is port allowed
+	if vpnType == vpn.WireGuard {
+		if isPortAllowed(portsWireGuard[:], retPort) == false {
+			fmt.Printf("WARNING: using non-standard port '%s' (allowed ports: %s)\n", retPort.String(), allPortsString(portsWireGuard[:]))
+		}
+	} else {
+		if isPortAllowed(portsOpenVpn[:], retPort) == false {
+			fmt.Printf("WARNING: using non-standard port '%s' (allowed ports: %s)\n", retPort.String(), allPortsString(portsOpenVpn[:]))
+		}
+	}
+
+	return retPort, nil
+}
+
+func isPortAllowed(ports []port, thePort port) bool {
+	for _, p := range ports {
+		if p.port == thePort.port && p.tcp == thePort.tcp {
+			return true
+		}
+	}
+	return false
+}
+
+func allPortsString(ports []port) string {
+	s := make([]string, 0, len(ports))
+	for _, p := range ports {
+		s = append(s, p.String())
+	}
+	return strings.Join(s, " ,")
+}
+
+// parsing port info from string in format "PROTOCOL:PORT"
+func parsePort(portInfo string) (pPort *int, pIsTCP *bool, err error) {
+
+	var port int
+	var isTCP bool
+
+	if len(portInfo) == 0 {
+		return nil, nil, nil
+	}
+
+	portInfo = strings.ToLower(portInfo)
+
+	fields := strings.Split(portInfo, ":")
+	if len(fields) > 2 {
+		return nil, nil, flags.BadParameter{Message: "port"}
+	}
+
+	protoStr := ""
+	portStr := ""
+	if len(fields) == 2 {
+		protoStr = fields[0]
+		portStr = fields[1]
+	} else {
+		if _, err := strconv.Atoi(fields[0]); err != nil {
+			protoStr = fields[0]
+		} else {
+			portStr = fields[0]
+		}
+	}
+
+	if len(protoStr) > 0 {
+		if protoStr == "tcp" {
+			isTCP = true
+		} else if protoStr == "udp" {
+			isTCP = false
+		} else {
+			return nil, nil, flags.BadParameter{Message: "port"}
+		}
+	}
+
+	if len(portStr) > 0 {
+		p, err := strconv.Atoi(portStr)
+		if err != nil {
+			return nil, nil, flags.BadParameter{Message: "port"}
+		}
+		port = p
+	}
+
+	return &port, &isTCP, nil
 }

@@ -114,7 +114,7 @@ func serversList(servers apitypes.ServersInfoResponse) []serverDesc {
 		for _, h := range s.Hosts {
 			hosts[strings.ToLower(strings.TrimSpace(h.Host))] = struct{}{}
 		}
-		ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
+		ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 	}
 	for _, s := range servers.OpenvpnServers {
 		hosts := make(map[string]struct{}, len(s.IPAddresses))
