@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"strconv"
@@ -284,7 +285,9 @@ func (p *Protocol) processClient(clientConn net.Conn) {
 		// will listen for message to process ending in newline (\n)
 		message, err := reader.ReadString('\n')
 		if err != nil {
-			log.Error("Error receiving data from client: ", err)
+			if err != io.EOF {
+				log.Error("Error receiving data from client: ", err)
+			}
 			break
 		}
 

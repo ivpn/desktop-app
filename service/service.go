@@ -27,6 +27,11 @@ func init() {
 	log = logger.NewLogger("servc")
 }
 
+const (
+	// SessionCheckInterval - the interval for periodical ckeck session status
+	SessionCheckInterval time.Duration = time.Second * 10 //time.Hour * 6
+)
+
 // Service - IVPN service
 type Service struct {
 	_evtReceiver           IServiceEventsReceiver
@@ -40,9 +45,13 @@ type Service struct {
 	_connectMutex          sync.Mutex
 
 	// Note: Disconnect() function will wait until VPN fully disconnects
-	_runningWG sync.WaitGroup
+	_vpnRunningWaiter sync.WaitGroup
 
 	_isServersPingInProgress bool
+
+	// nil - when session checker stopped
+	// to stop -> write to channel (it is synchronous channel)
+	_sessionCheckerStopChn chan struct{}
 }
 
 // CreateService - service constructor
@@ -96,6 +105,11 @@ func (s *Service) init() error {
 			log.Error("Failed to start WG keys rotation:", err)
 		}
 	}
+
+	// Check session status (start as go-routine to do not block service initialisation)
+	go s.SessionStatus()
+	// Start session status checker
+	s.startSessionChecker()
 
 	return nil
 }
@@ -248,11 +262,14 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
 	}
 
+	// check session status each disconnection
+	defer s.SessionStatus()
+
 	s._connectMutex.Lock()
 	defer s._connectMutex.Unlock()
 
-	s._runningWG.Add(1)
-	defer s._runningWG.Done()
+	s._vpnRunningWaiter.Add(1)
+	defer s._vpnRunningWaiter.Done()
 
 	log.Info("Connecting...")
 	// save vpn object
@@ -466,7 +483,7 @@ func (s *Service) Disconnect() error {
 		return fmt.Errorf("failed to disconnect VPN: %w", err)
 	}
 
-	s._runningWG.Wait()
+	s._vpnRunningWaiter.Wait()
 
 	return nil
 }
@@ -784,6 +801,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 			log.Info("Logging in - FAILED: ", err)
 		} else {
 			log.Info("Logging in - SUCCESS")
+
 		}
 	}()
 	sucessResp, errorLimitResp, apiErr, err := s._api.SessionNew(accountID, publicKey, forceLogin)
@@ -829,20 +847,31 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 	s._evtReceiver.OnServiceSessionChanged()
 
 	// success
+	s.startSessionChecker()
 	return apiCode, "", accountInfo, nil
 }
 
 // SessionDelete removes session info
 func (s *Service) SessionDelete() error {
+	return s.logOut(true)
+}
+
+func (s *Service) logOut(needToDeleteOnBackend bool) error {
+
+	// stop session checker (use goroutine to avoid deadlocks)
+	go s.stopSessionChecker()
+
 	// stop WG keys rotation
 	s._wgKeysMgr.StopKeysRotation()
 
-	session := s.Preferences().Session
-	if session.IsLoggedIn() {
-		log.Info("Logging out")
-		err := s._api.SessionDelete(session.Session)
-		if err != nil {
-			return err
+	if needToDeleteOnBackend {
+		session := s.Preferences().Session
+		if session.IsLoggedIn() {
+			log.Info("Logging out")
+			err := s._api.SessionDelete(session.Session)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -866,11 +895,19 @@ func (s *Service) SessionStatus() (
 		return apiCode, "", accountInfo, ErrorNotLoggedIn{}
 	}
 
+	log.Info("Checking session status...")
 	stat, apiErr, err := s._api.SessionStatus(session.Session)
 
 	apiCode = 0
 	if apiErr != nil {
 		apiCode = apiErr.Status
+
+		// Session not found - can happens when user forced to logout from another device
+		if apiCode == types.SessionNotFound {
+			// Logging out now
+			log.Info("Session not found. Logging out.")
+			s.logOut(false)
+		}
 	}
 
 	if err != nil {
@@ -908,6 +945,50 @@ func (s *Service) createAccountStatus(apiResp types.ServiceStatusAPIResp) prefer
 		UpgradeToPlan:  apiResp.UpgradeToPlan,
 		UpgradeToURL:   apiResp.UpgradeToURL,
 		Limit:          apiResp.Limit}
+}
+
+func (s *Service) startSessionChecker() {
+	// ensure that session achecker is not running
+	s.stopSessionChecker()
+
+	session := s.Preferences().Session
+	if session.IsLoggedIn() == false {
+		return
+	}
+
+	s._sessionCheckerStopChn = make(chan struct{})
+	go func() {
+		log.Info("Session checker started")
+		defer log.Info("Session checker stopped")
+
+		stopChn := s._sessionCheckerStopChn
+		for {
+			// wait for timeout or stop request
+			select {
+			case <-stopChn:
+				return
+			case <-time.After(SessionCheckInterval):
+				break
+			}
+
+			// check status
+			s.SessionStatus()
+
+			// if not logged-in - no sense to check status anymore
+			session := s.Preferences().Session
+			if session.IsLoggedIn() == false {
+				return
+			}
+		}
+	}()
+}
+
+func (s *Service) stopSessionChecker() {
+	stopChan := s._sessionCheckerStopChn
+	s._sessionCheckerStopChn = nil
+	if stopChan != nil {
+		stopChan <- struct{}{}
+	}
 }
 
 //////////////////////////////////////////////////////////
