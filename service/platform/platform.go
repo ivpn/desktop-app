@@ -162,7 +162,7 @@ func CheckExecutableRights(description string, file string) error {
 
 	mode, err := IsFileExists(description, file, 0)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if len(description) > 0 {

@@ -365,14 +365,28 @@ func (p *Protocol) processRequest(message string) {
 		prefs := p._service.Preferences()
 
 		wg, ovpn, obfsp := p._service.GetDisabledFunctions()
+		var (
+			wgErr    string
+			ovpnErr  string
+			obfspErr string
+		)
+		if wg != nil {
+			wgErr = wg.Error()
+		}
+		if ovpn != nil {
+			ovpnErr = ovpn.Error()
+		}
+		if obfsp != nil {
+			obfspErr = obfsp.Error()
+		}
 		// send back Hello message with account session info
 		helloResp := types.HelloResp{
 			Version: version.Version(),
 			Session: types.CreateSessionResp(prefs.Session),
 			DisabledFunctions: types.DisabledFunctionality{
-				WireGuard: wg != nil,
-				OpenVPN:   ovpn != nil,
-				Obfsproxy: obfsp != nil}}
+				WireGuardError: wgErr,
+				OpenVPNError:   ovpnErr,
+				ObfsproxyError: obfspErr}}
 
 		p.sendResponse(&helloResp, req.Idx)
 

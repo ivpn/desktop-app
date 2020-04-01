@@ -144,12 +144,12 @@ func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGaurd on Linux)
 func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
-	ovpnErr = platform.CheckExecutableRights("", platform.OpenVpnBinaryPath())
-	obfspErr = platform.CheckExecutableRights("", platform.ObfsproxyStartScript())
+	ovpnErr = platform.CheckExecutableRights("OpenVPN binary", platform.OpenVpnBinaryPath())
+	obfspErr = platform.CheckExecutableRights("obfsproxy binary", platform.ObfsproxyStartScript())
 
-	wgErr = platform.CheckExecutableRights("", platform.WgBinaryPath())
+	wgErr = platform.CheckExecutableRights("WireGuard binary", platform.WgBinaryPath())
 	if wgErr == nil {
-		wgErr = platform.CheckExecutableRights("", platform.WgToolBinaryPath())
+		wgErr = platform.CheckExecutableRights("WireGuard tools binary", platform.WgToolBinaryPath())
 	}
 
 	return wgErr, ovpnErr, obfspErr
