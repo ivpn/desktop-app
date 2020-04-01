@@ -9,7 +9,6 @@ import (
 
 	"github.com/ivpn/desktop-app-daemon/api"
 	"github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/ping"
@@ -140,17 +139,35 @@ func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 	return s._serversUpdater.UpdateNotifierChannel()
 }
 
+// GetDisabledFunctions returns info about funtions which are disabled
+// Some functionality can be not accessible
+// It can happen, for example, if some external binaries not installed
+// (e.g. obfsproxy or WireGaurd on Linux)
+func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
+	ovpnErr = platform.CheckExecutableRights("", platform.OpenVpnBinaryPath())
+	obfspErr = platform.CheckExecutableRights("", platform.ObfsproxyStartScript())
+
+	wgErr = platform.CheckExecutableRights("", platform.WgBinaryPath())
+	if wgErr == nil {
+		wgErr = platform.CheckExecutableRights("", platform.WgToolBinaryPath())
+	}
+
+	return wgErr, ovpnErr, obfspErr
+}
+
 // ConnectOpenVPN start OpenVPN connection
 func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
 
-		if helpers.FileExists(platform.OpenVpnBinaryPath()) == false {
-			return nil, fmt.Errorf("OpenVPN binariy not available")
+		// checking if functionality accessible
+		_, ovpnErr, obfspErr := s.GetDisabledFunctions()
+		if ovpnErr != nil {
+			return nil, ovpnErr
 		}
-		if prefs.IsObfsproxy == true && helpers.FileExists(platform.ObfsproxyStartScript()) == false {
-			return nil, fmt.Errorf("obfsproxy not found")
+		if prefs.IsObfsproxy == true && obfspErr != nil {
+			return nil, obfspErr
 		}
 
 		connectionParams.SetCredentials(prefs.Session.OpenVPNUser, prefs.Session.OpenVPNPass)
@@ -179,8 +196,10 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
 	}
 
-	if helpers.FileExists(platform.WgBinaryPath()) == false || helpers.FileExists(platform.WgToolBinaryPath()) == false {
-		return fmt.Errorf("WireGuard binaries not available. Please, install WireGuard")
+	// checking if functionality accessible
+	wgErr, _, _ := s.GetDisabledFunctions()
+	if wgErr != nil {
+		return wgErr
 	}
 
 	// Update WG keys, if necessary

@@ -6,7 +6,7 @@ import (
 	"path"
 )
 
-func doOsInitForBuild() {
+func doOsInitForBuild() (warnings []string, errors []error) {
 	installDir := "/opt/ivpn"
 
 	firewallScript = path.Join(installDir, "etc/firewall.sh")
@@ -23,4 +23,5 @@ func doOsInitForBuild() {
 
 	logFile = path.Join(logDir, "IVPN Agent.log")
 	openvpnLogFile = path.Join(logDir, "openvpn.log")
+	return nil, nil
 }

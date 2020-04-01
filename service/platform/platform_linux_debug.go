@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func doOsInitForBuild() {
+func doOsInitForBuild() (warnings []string, errors []error) {
 	installDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to obtain folder of current binary: %s", err.Error()))
@@ -40,4 +40,6 @@ func doOsInitForBuild() {
 
 	logFile = path.Join(logDir, "IVPN Agent.log")
 	openvpnLogFile = path.Join(logDir, "openvpn.log")
+
+	return nil, nil
 }

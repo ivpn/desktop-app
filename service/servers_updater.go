@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/api"
@@ -48,6 +49,8 @@ func (s *serversUpdater) GetServers() (*types.ServersInfoResponse, error) {
 	if servers != nil && err == nil {
 		s.servers = servers
 		return servers, nil
+	} else if err != nil {
+		log.Warning(err)
 	}
 
 	return s.updateServers()
@@ -73,7 +76,9 @@ func (s *serversUpdater) updateServers() (*types.ServersInfoResponse, error) {
 	log.Info(fmt.Sprintf("Updated servers info (%d OpenVPN; %d WireGuard)\n", len(servers.OpenvpnServers), len(servers.WireguardServers)))
 
 	s.servers = servers
-	writeServersToCache(servers)
+	if err := writeServersToCache(servers); err != nil {
+		log.Error("failed to save servers cache file: ", err)
+	}
 
 	select {
 	case s.updatedNotifyChan <- struct{}{}:
@@ -91,6 +96,20 @@ func (s *serversUpdater) UpdateNotifierChannel() chan struct{} {
 }
 
 func readServersFromCache() (*types.ServersInfoResponse, error) {
+	stat, err := os.Stat(platform.ServersFile())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to read servers cache file: %w", err)
+		}
+		return nil, fmt.Errorf("failed to info about servers cache file: %w", err)
+	}
+
+	mode := stat.Mode()
+	if mode != platform.DefaultFilePermissionForConfig {
+		os.Remove(platform.ServersFile())
+		return nil, fmt.Errorf(fmt.Sprintf("skip reading servers cache file (wrong permissions: %o but expected %o)", mode, platform.DefaultFilePermissionForConfig))
+	}
+
 	data, err := ioutil.ReadFile(platform.ServersFile())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read servers cache file: %w", err)
@@ -118,5 +137,5 @@ func writeServersToCache(servers *types.ServersInfoResponse) error {
 		return errors.New("failed to serialize servers")
 	}
 
-	return ioutil.WriteFile(platform.ServersFile(), data, 0644)
+	return ioutil.WriteFile(platform.ServersFile(), data, platform.DefaultFilePermissionForConfig) // only owner (root) can read/write file
 }

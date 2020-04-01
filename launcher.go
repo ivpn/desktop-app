@@ -41,8 +41,25 @@ func Launch() {
 		doStopped()
 	}()
 
-	platform.Init()
+	warnings, errors := platform.Init()
 	logger.Init(platform.LogFile())
+
+	if len(warnings) > 0 {
+		for _, w := range warnings {
+			logger.Warning(w)
+		}
+	}
+
+	if len(errors) > 0 {
+		for _, e := range errors {
+			logger.Error(e)
+		}
+
+		logger.Info("Daemon failed to start due to initialisation errors")
+		os.Exit(1)
+		return
+	}
+
 	logger.Info("version:" + version.GetFullVersion())
 
 	tzName, tzOffsetSec := time.Now().Zone()

@@ -40,6 +40,12 @@ type Service interface {
 	// - err: error
 	OnControlConnectionClosed() (isServiceMustBeClosed bool, err error)
 
+	// GetDisabledFunctions returns info about funtions which are disabled
+	// Some functionality can be not accessible
+	// It can happen, for example, if some external binaries not installed
+	// (e.g. obfsproxy or WireGaurd on Linux)
+	GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error)
+
 	ServersList() (*apitypes.ServersInfoResponse, error)
 	PingServers(retryCount int, timeoutMs int) (map[string]int, error)
 	ServersUpdateNotifierChannel() chan struct{}
@@ -358,10 +364,15 @@ func (p *Protocol) processRequest(message string) {
 
 		prefs := p._service.Preferences()
 
+		wg, ovpn, obfsp := p._service.GetDisabledFunctions()
 		// send back Hello message with account session info
 		helloResp := types.HelloResp{
 			Version: version.Version(),
-			Session: types.CreateSessionResp(prefs.Session)}
+			Session: types.CreateSessionResp(prefs.Session),
+			DisabledFunctions: types.DisabledFunctionality{
+				WireGuard: wg != nil,
+				OpenVPN:   ovpn != nil,
+				Obfsproxy: obfsp != nil}}
 
 		p.sendResponse(&helloResp, req.Idx)
 

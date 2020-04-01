@@ -29,11 +29,21 @@ type ServiceExitingResp struct {
 	CommandBase
 }
 
+// DisabledFunctionality Some functionality can be not accessible
+// It can happen, for example, if some external binaries not installed
+// (e.g. obfsproxy or WireGaurd on Linux)
+type DisabledFunctionality struct {
+	WireGuard bool
+	OpenVPN   bool
+	Obfsproxy bool
+}
+
 // HelloResp response on initial request
 type HelloResp struct {
 	CommandBase
-	Version string
-	Session SessionResp
+	Version           string
+	Session           SessionResp
+	DisabledFunctions DisabledFunctionality
 	//Account preferences.AccountStatus
 }
 

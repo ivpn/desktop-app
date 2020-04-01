@@ -139,7 +139,7 @@ func (c *ConnectionParams) generateConfiguration(
 		proxyAuthFile := ""
 		if c.proxyUsername != "" && c.proxyPassword != "" {
 			proxyAuthFile = "\"" + platform.OpenvpnProxyAuthFile() + "\""
-			err := ioutil.WriteFile(platform.OpenvpnProxyAuthFile(), []byte(fmt.Sprintf("%s\n%s", c.proxyUsername, c.proxyPassword)), 0644)
+			err := ioutil.WriteFile(platform.OpenvpnProxyAuthFile(), []byte(fmt.Sprintf("%s\n%s", c.proxyUsername, c.proxyPassword)), 0600)
 			if err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("Failed to save file with proxy credentials: %w", err)

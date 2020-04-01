@@ -13,15 +13,15 @@ var (
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
 	servicePortFile = path.Join(tmpDir, "port.txt")
-	obfsproxyStartScript = "/usr/bin/obfsproxy"
 }
 
-func doOsInit() {
+func doOsInit() (warnings []string, errors []error) {
 	openVpnBinaryPath = path.Join("/usr/sbin", "openvpn")
+	obfsproxyStartScript = "/usr/bin/obfsproxy"
 	wgBinaryPath = path.Join("/usr/bin", "wg-quick")
 	wgToolBinaryPath = path.Join("/usr/bin", "wg")
 
-	doOsInitForBuild()
+	return doOsInitForBuild()
 }
 
 // FirewallScript returns path to firewal script
