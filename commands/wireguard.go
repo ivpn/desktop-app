@@ -32,11 +32,19 @@ func (c *CmdWireGuard) Run() error {
 	defer func() {
 		helloResp := _proto.GetHelloResponse()
 		if len(helloResp.Session.Session) == 0 {
-			fmt.Println("\nTips: ")
-			fmt.Println(" ", service.ErrorNotLoggedIn{})
-			fmt.Printf("  %s account -login  ACCOUNT_ID         Log in with your Account ID\n", os.Args[0])
+			fmt.Println(service.ErrorNotLoggedIn{})
+
+			PrintTips([]TipType{TipLogin})
 		}
 	}()
+
+	resp, err := _proto.SendHello()
+	if err != nil {
+		return err
+	}
+	if len(resp.DisabledFunctions.WireGuardError) > 0 {
+		return fmt.Errorf("WireGuard functionality disabled:\n\t" + resp.DisabledFunctions.WireGuardError)
+	}
 
 	if c.regenerate {
 		fmt.Println("Regenerating WG keys...")
@@ -72,6 +80,10 @@ func (c *CmdWireGuard) getState() error {
 	resp, err := _proto.SendHello()
 	if err != nil {
 		return err
+	}
+
+	if len(resp.Session.Session) == 0 {
+		return nil
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)

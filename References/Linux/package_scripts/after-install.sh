@@ -34,10 +34,10 @@ try_systemd_install() {
 }
 
 echo "[+] Defining access rights for files ..."
-chmod 0644 $IVPN_ETC/*
-chmod 0744 $IVPN_ETC/*.sh
-chmod 0744 $IVPN_ETC/*.up 
-chmod 0744 $IVPN_ETC/*.down
+chmod 0400 $IVPN_ETC/*          # can read only owner (root)
+chmod 0700 $IVPN_ETC/*.sh       # can execute only owner (root)
+chmod 0700 $IVPN_ETC/*.up       # can execute only owner (root)
+chmod 0700 $IVPN_ETC/*.down     # can execute only owner (root)
 
 echo "[+] Service install start (pleaserun) ..."
 INSTALL_OUTPUT=$(sh /usr/share/pleaserun/ivpn-service/install.sh) 

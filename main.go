@@ -26,8 +26,8 @@ type ICommand interface {
 
 	Name() string
 	Description() string
-	Usage()
-	UsageFormetted(w *tabwriter.Writer)
+	Usage(short bool)
+	UsageFormetted(w *tabwriter.Writer, short bool)
 }
 
 var (
@@ -41,19 +41,23 @@ func addCommand(cmd ICommand) {
 
 func printHeader() {
 	fmt.Println("Command-line interface for IVPN client (www.ivpn.net)")
-	fmt.Println("version:" + version.GetFullVersion())
+	fmt.Println("version:" + version.GetFullVersion() + "\n")
 }
 
-func printUsageAll() {
+func printUsageAll(short bool) {
 	printHeader()
-	fmt.Printf("Usage: %s COMMAND [OPTIONS...] [COMMAND_PARAMETER] [-h|-help]\n", filepath.Base(os.Args[0]))
+	fmt.Printf("Usage: %s COMMAND [OPTIONS...] [COMMAND_PARAMETER] [-h|-help]\n\n", filepath.Base(os.Args[0]))
 
 	fmt.Println("COMANDS:")
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	for _, c := range _commands {
-		c.UsageFormetted(writer)
+		c.UsageFormetted(writer, short)
 	}
 	writer.Flush()
+
+	if short {
+		commands.PrintTips([]commands.TipType{commands.TipHelpCommand, commands.TipHelpFull})
+	}
 }
 
 func main() {
@@ -64,15 +68,22 @@ func main() {
 	addCommand(&stateCmd)
 	addCommand(&commands.CmdConnect{})
 	addCommand(&commands.CmdDisconnect{})
-	addCommand(&commands.CmdAccount{})
+	addCommand(&commands.CmdLogin{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
 	addCommand(&commands.CmdWireGuard{})
 	addCommand(&commands.CmdLogs{})
+	addCommand(&commands.CmdLogin{})
+	addCommand(&commands.CmdLogout{})
+	addCommand(&commands.CmdAccount{})
 
-	if len(os.Args) == 2 {
+	if len(os.Args) >= 2 {
 		if os.Args[1] == "?" || os.Args[1] == "-?" || os.Args[1] == "-h" || os.Args[1] == "--h" || os.Args[1] == "-help" || os.Args[1] == "--help" {
-			printUsageAll()
+			if len(os.Args) >= 3 && strings.ToLower(os.Args[2]) == "-full" {
+				printUsageAll(false) // detailed commans descriptions
+			} else {
+				printUsageAll(true) // short commands descriptions
+			}
 			os.Exit(0)
 		}
 	}
@@ -99,6 +110,7 @@ func main() {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
+
 		return
 	}
 
@@ -115,7 +127,7 @@ func main() {
 	// unknown command
 	if isProcessed == false {
 		fmt.Printf("Error. Unexpected command %s\n", os.Args[1])
-		printUsageAll()
+		printUsageAll(true)
 		os.Exit(1)
 	}
 }
@@ -124,7 +136,7 @@ func runCommand(c ICommand, args []string) {
 	if err := c.Parse(args); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		if _, ok := err.(flags.BadParameter); ok == true {
-			c.Usage()
+			c.Usage(false)
 		}
 		os.Exit(1)
 	}
@@ -132,7 +144,7 @@ func runCommand(c ICommand, args []string) {
 	if err := c.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		if _, ok := err.(flags.BadParameter); ok == true {
-			c.Usage()
+			c.Usage(false)
 		}
 		os.Exit(1)
 	}

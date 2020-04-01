@@ -2,10 +2,10 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/ivpn/desktop-app-cli/flags"
 	"github.com/ivpn/desktop-app-daemon/service"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
 type CmdState struct {
@@ -16,16 +16,7 @@ func (c *CmdState) Init() {
 	c.Initialize("state", "Prints full info about IVPN state")
 }
 func (c *CmdState) Run() error {
-	err := showState()
-
-	fmt.Println("\nTips: ")
-	if len(_proto.GetHelloResponse().Session.Session) == 0 {
-		fmt.Println(" ", service.ErrorNotLoggedIn{})
-		fmt.Printf("  %s account -login  ACCOUNT_ID         Log in with your Account ID\n", os.Args[0])
-	}
-	fmt.Printf("  %s -help                              Show all commands\n", os.Args[0])
-
-	return err
+	return showState()
 }
 
 func showState() error {
@@ -42,6 +33,18 @@ func showState() error {
 	printAccountInfo(_proto.GetHelloResponse().Session.AccountID)
 	printState(state, connected)
 	printFirewallState(fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast)
+
+	tips := make([]TipType, 0, 3)
+	if len(_proto.GetHelloResponse().Session.Session) == 0 {
+		fmt.Println(" ", service.ErrorNotLoggedIn{})
+		tips = append(tips, TipLogin)
+	}
+	if state == vpn.CONNECTED {
+		tips = append(tips, TipDisconnect)
+	}
+	tips = append(tips, TipHelp)
+	tips = append(tips, TipHelpFull)
+	PrintTips(tips)
 
 	return nil
 }

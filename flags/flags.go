@@ -31,7 +31,7 @@ func (c *CmdInfo) Initialize(name, description string) {
 	c.description = description
 	c.fs = flag.NewFlagSet(name, flag.ExitOnError)
 	c.fs.Usage = func() {
-		c.Usage()
+		c.Usage(false)
 	}
 }
 
@@ -64,17 +64,17 @@ func (c *CmdInfo) Name() string { return c.fs.Name() }
 func (c *CmdInfo) Description() string { return c.description }
 
 // Usage - prints command usage
-func (c *CmdInfo) Usage() {
+func (c *CmdInfo) Usage(short bool) {
 	fmt.Printf("Command usage:\n")
-	c.usage(nil)
+	c.usage(nil, short)
 }
 
 // UsageFormetted - prints command usage into tabwriter
-func (c *CmdInfo) UsageFormetted(w *tabwriter.Writer) {
-	c.usage(w)
+func (c *CmdInfo) UsageFormetted(w *tabwriter.Writer, short bool) {
+	c.usage(w, short)
 }
 
-func (c *CmdInfo) usage(w *tabwriter.Writer) {
+func (c *CmdInfo) usage(w *tabwriter.Writer, short bool) {
 
 	type flagInfo struct {
 		DetailedName string
@@ -115,6 +115,9 @@ func (c *CmdInfo) usage(w *tabwriter.Writer) {
 		for i := 1; i < len(lines); i++ {
 			fmt.Fprintln(writer, fmt.Sprintf("  %s %s\t%s", "", "", lines[i]))
 		}
+	}
+	if short {
+		return
 	}
 
 	// loop trough flags map

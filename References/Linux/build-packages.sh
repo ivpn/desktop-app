@@ -129,6 +129,7 @@ CreatePackage()
 
 echo '---------------------------'
 echo "DEB package..."
+# to add dependency from another packet add extra arg "-d", example: "-d obfsproxy" 
 CreatePackage "deb" "-d obfsproxy"
 
 echo '---------------------------'

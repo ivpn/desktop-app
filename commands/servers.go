@@ -35,14 +35,16 @@ func (c *CmdServers) Init() {
 	c.DefaultStringVar(&c.filter, "FILTER")
 
 	c.StringVar(&c.proto, "p", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
+	c.StringVar(&c.proto, "protocol", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
 
 	c.BoolVar(&c.location, "l", false, "Apply FILTER to server location (serverID)")
+	c.BoolVar(&c.location, "location", false, "Apply FILTER to server location (serverID)")
 
 	c.BoolVar(&c.country, "c", false, "Apply FILTER to country name")
 	c.BoolVar(&c.country, "country", false, "Apply FILTER to country name")
 
 	c.BoolVar(&c.countryCode, "cc", false, "Apply FILTER to country code")
-	c.BoolVar(&c.countryCode, "countrycode", false, "Apply FILTER to country code")
+	c.BoolVar(&c.countryCode, "country_code", false, "Apply FILTER to country code")
 
 	c.BoolVar(&c.city, "city", false, "Apply FILTER to city name")
 
@@ -71,7 +73,12 @@ func (c *CmdServers) Run() error {
 		fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\t")
 	}
 
-	svrs := serversFilter(slist, c.filter, c.proto, c.location, c.city, c.countryCode, c.country, c.filterInvert)
+	helloResp := _proto.GetHelloResponse()
+	isWgDisabled := len(helloResp.DisabledFunctions.WireGuardError) > 0
+	isOpenVPNDisabled := len(helloResp.DisabledFunctions.OpenVPNError) > 0
+
+	svrs := serversFilter(isWgDisabled, isOpenVPNDisabled,
+		slist, c.filter, c.proto, c.location, c.city, c.countryCode, c.country, c.filterInvert)
 	for _, s := range svrs {
 		str := ""
 		if c.ping {
@@ -83,6 +90,13 @@ func (c *CmdServers) Run() error {
 	}
 
 	w.Flush()
+
+	if isOpenVPNDisabled {
+		fmt.Println("WARNING: OpenVPN servers were not shown because OpenVPN functionality disabled:\n\t", helloResp.DisabledFunctions.OpenVPNError)
+	}
+	if isWgDisabled {
+		fmt.Println("WARNING: WireGuard servers were not shown because WireGuard functionality disabled:\n\t", helloResp.DisabledFunctions.WireGuardError)
+	}
 
 	return nil
 }
@@ -126,8 +140,22 @@ func serversList(servers apitypes.ServersInfoResponse) []serverDesc {
 	return ret
 }
 
-func serversFilter(servers []serverDesc, mask string, proto string, useGw, useCity, useCCode, useCountry, invertFilter bool) []serverDesc {
-	if len(mask) == 0 {
+func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc, mask string, proto string, useGw, useCity, useCCode, useCountry, invertFilter bool) []serverDesc {
+	if isWgDisabled || isOvpnDisabled {
+		oldSvrs := servers
+		servers = make([]serverDesc, 0, len(oldSvrs))
+		for _, s := range oldSvrs {
+			if isWgDisabled && s.protocol == ProtoName_WireGuard {
+				continue
+			}
+			if isOvpnDisabled && s.protocol == ProtoName_OpenVPN {
+				continue
+			}
+			servers = append(servers, s)
+		}
+	}
+
+	if len(mask) == 0 && len(proto) == 0 {
 		return servers
 	}
 	mask = strings.ToLower(mask)
@@ -143,6 +171,10 @@ func serversFilter(servers []serverDesc, mask string, proto string, useGw, useCi
 			if sProto != fProto || err1 != nil || err2 != nil {
 				continue
 			}
+		}
+
+		if len(mask) == 0 {
+			isOK = true
 		}
 
 		if (checkAll || useGw) && strings.ToLower(s.gateway) == mask {

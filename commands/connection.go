@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 
@@ -80,7 +79,7 @@ type CmdConnect struct {
 	port            string
 	any             bool
 	obfsproxy       bool
-	firewall        bool
+	firewallOff     bool
 	dns             string
 	antitracker     bool
 	antitrackerHard bool
@@ -112,19 +111,27 @@ func (c *CmdConnect) Init() {
 
 	c.StringVar(&c.multiopExitSvr, "exit_svr", "", "LOCATION", "OpenVPN only: Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
 
-	c.BoolVar(&c.firewall, "f", false, "Enable firewall (will be disabled after disconnection)")
-	c.BoolVar(&c.firewall, "firewall", false, "Enable firewall (will be disabled after disconnection)")
+	c.BoolVar(&c.firewallOff, "fw_off", false, "Do not enable firewall for this connection")
 
 	c.StringVar(&c.dns, "dns", "", "DNS_IP", "Use custom DNS for this connection\n(if 'antitracker' is enabled - this parameter will be ignored)")
 
 	c.BoolVar(&c.antitracker, "antitracker", false, "Enable antitracker for this connection")
 	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'hardcore' antitracker for this connection")
 
-	c.StringVar(&c.filter_proto, "fp", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
-	c.BoolVar(&c.filter_location, "fl", false, "Apply LOCATION as a filter to server location (serverID)")
-	c.BoolVar(&c.filter_country, "fc", false, "Apply LOCATION as a filter to country name")
-	c.BoolVar(&c.filter_countryCode, "fcc", false, "Apply LOCATION as a filter to country code")
-	c.BoolVar(&c.filter_city, "fcity", false, "Apply LOCATION as a filter to city name")
+	// filters
+	c.StringVar(&c.filter_proto, "p", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
+	c.StringVar(&c.filter_proto, "protocol", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
+
+	c.BoolVar(&c.filter_location, "l", false, "Apply LOCATION as a filter to server location (serverID)")
+	c.BoolVar(&c.filter_location, "location", false, "Apply LOCATION as a filter to server location (serverID)")
+
+	c.BoolVar(&c.filter_country, "c", false, "Apply LOCATION as a filter to country name")
+	c.BoolVar(&c.filter_country, "country", false, "Apply LOCATION as a filter to country name")
+
+	c.BoolVar(&c.filter_countryCode, "cc", false, "Apply LOCATION as a filter to country code")
+	c.BoolVar(&c.filter_countryCode, "country_code", false, "Apply LOCATION as a filter to country code")
+
+	c.BoolVar(&c.filter_city, "city", false, "Apply LOCATION as a filter to city name")
 
 	c.BoolVar(&c.filter_invert, "filter_invert", false, "Invert filtering")
 
@@ -157,17 +164,32 @@ func (c *CmdConnect) Run() (retError error) {
 	if len(helloResp.Command) > 0 && (len(helloResp.Session.Session) == 0) {
 		// We received 'hello' response but no session info - print tips to login
 		fmt.Println("Error: Not logged in")
-		fmt.Println("")
-		fmt.Println("Tips: ")
-		fmt.Printf("  %s account -login  ACCOUNT_ID         Log in with your Account ID\n", os.Args[0])
-		fmt.Println("")
+
+		fmt.Println()
+		PrintTips([]TipType{TipLogin})
+		fmt.Println()
+
 		return service.ErrorNotLoggedIn{}
 	}
 
 	svrs := serversList(servers)
 
+	isWgDisabled := len(helloResp.DisabledFunctions.WireGuardError) > 0
+	isOpenVPNDisabled := len(helloResp.DisabledFunctions.OpenVPNError) > 0
+	funcWarnDisabledProtocols := func() {
+		if isOpenVPNDisabled {
+			fmt.Println("WARNING: OpenVPN functionality disabled:\n\t", helloResp.DisabledFunctions.OpenVPNError)
+		}
+		if isWgDisabled {
+			fmt.Println("WARNING: WireGuard functionality disabled:\n\t", helloResp.DisabledFunctions.WireGuardError)
+		}
+	}
+
 	// MULTI\SINGLE -HOP
 	if len(c.multiopExitSvr) > 0 {
+		if isOpenVPNDisabled {
+			return fmt.Errorf(helloResp.DisabledFunctions.OpenVPNError)
+		}
 		// MULTI-HOP
 		if c.fastest {
 			return flags.BadParameter{Message: "'fastest' flag is not applicable for Multi-Hop connection [exit_svr]"}
@@ -184,12 +206,12 @@ func (c *CmdConnect) Run() (retError error) {
 			fmt.Println("WARNING: filtering flags are ignored for Multi-Hop connection [exit_svr]")
 		}
 
-		entrySvrs := serversFilter(svrs, c.gateway, ProtoName_OpenVPN, false, false, false, false, false)
+		entrySvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, ProtoName_OpenVPN, false, false, false, false, false)
 		if len(entrySvrs) == 0 || len(entrySvrs) > 1 {
 			return flags.BadParameter{Message: "specify correct entry server ID for multi-hop connection"}
 		}
 
-		exitSvrs := serversFilter(svrs, c.multiopExitSvr, ProtoName_OpenVPN, false, false, false, false, false)
+		exitSvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multiopExitSvr, ProtoName_OpenVPN, false, false, false, false, false)
 		if len(exitSvrs) == 0 || len(exitSvrs) > 1 {
 			return flags.BadParameter{Message: "specify correct exit server ID for multi-hop connection"}
 		}
@@ -204,7 +226,7 @@ func (c *CmdConnect) Run() (retError error) {
 		c.multiopExitSvr = exitSvr.gateway
 	} else {
 		//SINGLE-HOP
-		svrs = serversFilter(svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
+		svrs = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
 
 		srvID := ""
 
@@ -223,15 +245,16 @@ func (c *CmdConnect) Run() (retError error) {
 		// if we not foud required server before (by 'fastest' option)
 		if len(srvID) == 0 {
 			showTipsServerFilterError := func() {
-				fmt.Println("Please specify server more correctly or use flag '-any'")
-				fmt.Println("\nTips:")
-				fmt.Printf("\t%s servers        Show servers list\n", os.Args[0])
-				fmt.Printf("\t%s connect -h     Show usage of 'connect' command\n", os.Args[0])
+				fmt.Println()
+				PrintTips([]TipType{TipServers, TipConnectHelp})
 			}
 
 			// no servers found
 			if len(svrs) == 0 {
 				fmt.Println("No servers found by your filter")
+				fmt.Println("Please specify server more correctly")
+
+				funcWarnDisabledProtocols() // print info about disabled functionality
 				showTipsServerFilterError()
 				return fmt.Errorf("no servers found by your filter")
 			}
@@ -239,6 +262,8 @@ func (c *CmdConnect) Run() (retError error) {
 			// 'any' option
 			if len(svrs) > 1 {
 				fmt.Println("More than one server found")
+				fmt.Println("Please specify server more correctly or use flag '-any'")
+
 				if c.any == false {
 					showTipsServerFilterError()
 					return fmt.Errorf("more than one server found")
@@ -251,7 +276,7 @@ func (c *CmdConnect) Run() (retError error) {
 	}
 
 	// FW for current connection
-	req.FirewallOnDuringConnection = c.firewall
+	req.FirewallOnDuringConnection = !c.firewallOff
 
 	// set Manual DNS if defined
 	if len(c.dns) > 0 {
