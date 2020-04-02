@@ -4,7 +4,7 @@ package platform
 
 import "path"
 
-func doOsInitForBuild() {
+func doOsInitForBuild() (warnings []string, errors []error) {
 	// macOS-specific variable initialization
 	firewallScript = "/Applications/IVPN.app/Contents/Resources/etc/firewall.sh"
 	dnsScript = "/Applications/IVPN.app/Contents/Resources/etc/dns.sh"
@@ -31,4 +31,6 @@ func doOsInitForBuild() {
 
 	wgBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"
 	wgToolBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wg"
+
+	return nil, nil
 }

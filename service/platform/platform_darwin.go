@@ -10,10 +10,21 @@ func doInitConstants() {
 	servicePortFile = "/Library/Application Support/IVPN/port.txt"
 }
 
-func doOsInit() {
-	doOsInitForBuild()
-	panicIfFileNotExists("firewallScript", firewallScript)
-	panicIfFileNotExists("dnsScript", dnsScript)
+func doOsInit() (warnings []string, errors []error) {
+	warnings, errors = doOsInitForBuild()
+
+	if errors == nil {
+		errors = make([]error, 0)
+	}
+
+	if err := CheckExecutableRights("firewallScript", firewallScript); err != nil {
+		errors = append(errors, err)
+	}
+	if err := CheckExecutableRights("dnsScript", dnsScript); err != nil {
+		errors = append(errors, err)
+	}
+
+	return warnings, errors
 }
 
 // FirewallScript returns path to firewal script
