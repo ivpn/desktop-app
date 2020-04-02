@@ -28,7 +28,7 @@ func init() {
 
 const (
 	// SessionCheckInterval - the interval for periodical ckeck session status
-	SessionCheckInterval time.Duration = time.Second * 10 //time.Hour * 6
+	SessionCheckInterval time.Duration = time.Hour * 6
 )
 
 // Service - IVPN service
