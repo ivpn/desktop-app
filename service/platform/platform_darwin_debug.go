@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func doOsInitForBuild() {
+func doOsInitForBuild() (warnings []string, errors []error) {
 	installDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to obtain folder of current binary: %s", err.Error()))
@@ -50,4 +50,6 @@ func doOsInitForBuild() {
 
 	wgBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wireguard-go")
 	wgToolBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wg")
+
+	return nil, nil
 }

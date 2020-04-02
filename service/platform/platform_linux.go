@@ -21,7 +21,17 @@ func doOsInit() (warnings []string, errors []error) {
 	wgBinaryPath = path.Join("/usr/bin", "wg-quick")
 	wgToolBinaryPath = path.Join("/usr/bin", "wg")
 
-	return doOsInitForBuild()
+	warnings, errors = doOsInitForBuild()
+
+	if errors == nil {
+		errors = make([]error, 0)
+	}
+
+	if err := CheckExecutableRights("firewallScript", firewallScript); err != nil {
+		errors = append(errors, err)
+	}
+
+	return warnings, errors
 }
 
 // FirewallScript returns path to firewal script

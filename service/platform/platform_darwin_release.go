@@ -4,20 +4,20 @@ package platform
 
 import "path"
 
-func doOsInitForBuild() {
+func doOsInitForBuild() (warnings []string, errors []error) {
 	// macOS-specific variable initialization
 	firewallScript = "/Applications/IVPN.app/Contents/Resources/etc/firewall.sh"
 	dnsScript = "/Applications/IVPN.app/Contents/Resources/etc/dns.sh"
 
 	// common variables initialization
-	settingsDir = "/Library/Application Support/IVPN"
+	settingsDir := "/Library/Application Support/IVPN"
 	settingsFile = path.Join(settingsDir, "settings.json")
 	serversFile = path.Join(settingsDir, "servers.json")
 	openvpnConfigFile = path.Join(settingsDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(settingsDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(settingsDir, "wireguard.conf")
 
-	logDir = "/Library/Logs/"
+	logDir := "/Library/Logs/"
 	logFile = path.Join(logDir, "IVPN Agent.log")
 	openvpnLogFile = path.Join(logDir, "openvpn.log")
 
@@ -31,4 +31,6 @@ func doOsInitForBuild() {
 
 	wgBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"
 	wgToolBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wg"
+
+	return nil, nil
 }

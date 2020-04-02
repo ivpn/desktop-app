@@ -281,8 +281,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
 	}
 
-	// check session status each disconnection
-	defer s.SessionStatus()
+	// check session status each disconnection (asynchronously, in separate goroutine)
+	defer func() { go s.SessionStatus() }()
 
 	s._connectMutex.Lock()
 	defer s._connectMutex.Unlock()
