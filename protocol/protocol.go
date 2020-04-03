@@ -438,7 +438,15 @@ func (p *Protocol) processRequest(message string) {
 		break
 
 	case "GetServers":
-		serv, _ := p._service.ServersList()
+		serv, err := p._service.ServersList()
+		if err != nil {
+			p.sendErrorResponse(reqCmd, err)
+			break
+		}
+		if serv == nil {
+			p.sendErrorResponse(reqCmd, fmt.Errorf("failed to get servers info"))
+			break
+		}
 		p.sendResponse(&types.ServerListResp{VpnServers: *serv}, reqCmd.Idx)
 		break
 

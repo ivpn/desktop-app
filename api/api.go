@@ -45,6 +45,14 @@ func CreateAPI() (*API, error) {
 	return &API{}, nil
 }
 
+// IsAlternateIPsInitialised - checks if the alternate IP initialised
+func (a *API) IsAlternateIPsInitialised() bool {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	return len(a.alternateIPs) > 0
+}
+
 // SetAlternateIPs save info about alternate servers IP addresses
 func (a *API) SetAlternateIPs(IPs []string) error {
 	if len(IPs) == 0 {
