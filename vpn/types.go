@@ -101,11 +101,12 @@ type StateInfo struct {
 	State       State
 	Description string
 
-	VpnType     Type
-	Time        int64  // unix time (sconds)
-	ClientIP    net.IP // applicable only for 'CONNECTED' state
-	ServerIP    net.IP // applicable only for 'CONNECTED' state
-	IsAuthError bool   // applicable only for 'EXITING' state
+	VpnType      Type
+	Time         int64  // unix time (sconds)
+	ClientIP     net.IP // applicable only for 'CONNECTED' state
+	ServerIP     net.IP // applicable only for 'CONNECTED' state
+	ExitServerID string // applicable only for 'CONNECTED' state
+	IsAuthError  bool   // applicable only for 'EXITING' state
 
 	// TODO: try to avoid using this protocol-specific parameter in future
 	// Currently, in use by OpenVPN connection to inform about "RECONNECTING" reason (e.g. "tls-error", "init_instance"...)

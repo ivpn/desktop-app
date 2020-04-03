@@ -407,7 +407,13 @@ func (p *Protocol) processRequest(message string) {
 			// send VPN connection  state
 			vpnState := p._lastVPNState
 			if vpnState.State == vpn.CONNECTED {
-				p.sendResponse(&types.ConnectedResp{TimeSecFrom1970: vpnState.Time, ClientIP: vpnState.ClientIP.String(), ServerIP: vpnState.ServerIP.String(), VpnType: vpnState.VpnType}, req.Idx)
+				p.sendResponse(&types.ConnectedResp{
+					TimeSecFrom1970: vpnState.Time,
+					ClientIP:        vpnState.ClientIP.String(),
+					ServerIP:        vpnState.ServerIP.String(),
+					VpnType:         vpnState.VpnType,
+					ExitServerID:    vpnState.ExitServerID},
+					req.Idx)
 			}
 		}
 		break
@@ -416,7 +422,13 @@ func (p *Protocol) processRequest(message string) {
 		// send VPN connection  state
 		vpnState := p._lastVPNState
 		if vpnState.State == vpn.CONNECTED {
-			p.sendResponse(&types.ConnectedResp{TimeSecFrom1970: vpnState.Time, ClientIP: vpnState.ClientIP.String(), ServerIP: vpnState.ServerIP.String(), VpnType: vpnState.VpnType}, reqCmd.Idx)
+			p.sendResponse(&types.ConnectedResp{
+				TimeSecFrom1970: vpnState.Time,
+				ClientIP:        vpnState.ClientIP.String(),
+				ServerIP:        vpnState.ServerIP.String(),
+				VpnType:         vpnState.VpnType,
+				ExitServerID:    vpnState.ExitServerID},
+				reqCmd.Idx)
 		} else if vpnState.State == vpn.DISCONNECTED {
 			p.sendResponse(&types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqCmd.Idx)
 		} else {
@@ -769,7 +781,13 @@ func (p *Protocol) processRequest(message string) {
 					case vpn.CONNECTED:
 						// Do not send "Connected" notification if we are giong to establish new connection immediately
 						if cnt, _ := p.connectReqCount(); cnt == 1 || p._disconnectRequestCmdIdx > 0 {
-							p.sendResponse(&types.ConnectedResp{TimeSecFrom1970: state.Time, ClientIP: state.ClientIP.String(), ServerIP: state.ServerIP.String(), VpnType: state.VpnType}, reqCmd.Idx)
+							p.sendResponse(&types.ConnectedResp{
+								TimeSecFrom1970: state.Time,
+								ClientIP:        state.ClientIP.String(),
+								ServerIP:        state.ServerIP.String(),
+								VpnType:         state.VpnType,
+								ExitServerID:    state.ExitServerID},
+								reqCmd.Idx)
 						} else {
 							log.Debug("Skip sending 'Connected' notification. New connection request is awaiting ", cnt)
 						}

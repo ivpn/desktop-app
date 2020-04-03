@@ -124,6 +124,7 @@ type ConnectedResp struct {
 	TimeSecFrom1970 int64
 	ClientIP        string
 	ServerIP        string
+	ExitServerID    string
 }
 
 // DisconnectedResp notifying about stopped connetion

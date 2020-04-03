@@ -156,6 +156,11 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 				// save current state
 				o.state = stateInf.State
 
+				if o.state == vpn.CONNECTED {
+					// save exitServerID (in MultiHop)
+					stateInf.ExitServerID = o.connectParams.multihopExitSrvID
+				}
+
 				// forward state
 				stateChan <- stateInf
 
