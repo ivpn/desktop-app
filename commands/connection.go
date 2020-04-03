@@ -1,8 +1,12 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -75,6 +79,7 @@ func (c *CmdDisconnect) Run() error {
 
 type CmdConnect struct {
 	flags.CmdInfo
+	last            bool
 	gateway         string
 	port            string
 	any             bool
@@ -136,10 +141,12 @@ func (c *CmdConnect) Init() {
 	c.BoolVar(&c.filter_invert, "filter_invert", false, "Invert filtering")
 
 	c.BoolVar(&c.fastest, "fastest", false, "Connect to fastest server")
+
+	c.BoolVar(&c.last, "last", false, "Connect with last successful connection parameters")
 }
 
 func (c *CmdConnect) Run() (retError error) {
-	if len(c.gateway) == 0 && c.fastest == false {
+	if len(c.gateway) == 0 && c.fastest == false && c.last == false {
 		return flags.BadParameter{}
 	}
 
@@ -160,6 +167,7 @@ func (c *CmdConnect) Run() (retError error) {
 		return err
 	}
 
+	// check is logged-in
 	helloResp := _proto.GetHelloResponse()
 	if len(helloResp.Command) > 0 && (len(helloResp.Session.Session) == 0) {
 		// We received 'hello' response but no session info - print tips to login
@@ -172,8 +180,10 @@ func (c *CmdConnect) Run() (retError error) {
 		return service.ErrorNotLoggedIn{}
 	}
 
+	// requesting servers list
 	svrs := serversList(servers)
 
+	// check which VPN protocols can be used
 	isWgDisabled := len(helloResp.DisabledFunctions.WireGuardError) > 0
 	isOpenVPNDisabled := len(helloResp.DisabledFunctions.OpenVPNError) > 0
 	funcWarnDisabledProtocols := func() {
@@ -182,6 +192,14 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 		if isWgDisabled {
 			fmt.Println("WARNING: WireGuard functionality disabled:\n\t", helloResp.DisabledFunctions.WireGuardError)
+		}
+	}
+
+	// do we need to connect with last succesfull connection parameters
+	if c.last {
+		fmt.Println("Enabled '-last' parameter. Using parameters from last successful connection")
+		if c.restoreLastConnectionInfo() == false {
+			return fmt.Errorf("no information about last connection")
 		}
 	}
 
@@ -246,7 +264,12 @@ func (c *CmdConnect) Run() (retError error) {
 		if len(srvID) == 0 {
 			showTipsServerFilterError := func() {
 				fmt.Println()
-				PrintTips([]TipType{TipServers, TipConnectHelp})
+
+				tips := []TipType{TipServers, TipConnectHelp}
+				if c.lastConnectionExist() {
+					tips = append(tips, TipLastConnection)
+				}
+				PrintTips(tips)
 			}
 
 			// no servers found
@@ -262,9 +285,9 @@ func (c *CmdConnect) Run() (retError error) {
 			// 'any' option
 			if len(svrs) > 1 {
 				fmt.Println("More than one server found")
-				fmt.Println("Please specify server more correctly or use flag '-any'")
 
 				if c.any == false {
+					fmt.Println("Please specify server more correctly or use flag '-any'")
 					showTipsServerFilterError()
 					return fmt.Errorf("more than one server found")
 				}
@@ -410,7 +433,98 @@ func (c *CmdConnect) Run() (retError error) {
 		return err
 	}
 
+	// save last connection parameters
+	c.saveLastConnectionInfo()
+
 	return nil
+}
+
+// LastConnectionInfo information about last connection parameters
+type LastConnectionInfo struct {
+	Gateway         string
+	Port            string
+	Obfsproxy       bool
+	FirewallOff     bool
+	DNS             string
+	Antitracker     bool
+	AntitrackerHard bool
+
+	MultiopExitSvr string
+}
+
+func (c *CmdConnect) lastConnectionInfoFile() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	file := filepath.Join(home, ".ivpn")
+
+	if err := os.MkdirAll(file, os.ModePerm); err != nil {
+		return ""
+	}
+
+	file = filepath.Join(file, "last_connection")
+	return file
+}
+
+func (c *CmdConnect) lastConnectionExist() bool {
+	if _, err := os.Stat(c.lastConnectionInfoFile()); err == nil {
+		return true
+	}
+	return false
+}
+
+func (c *CmdConnect) saveLastConnectionInfo() {
+	ci := LastConnectionInfo{
+		Gateway:         c.gateway,
+		Port:            c.port,
+		Obfsproxy:       c.obfsproxy,
+		FirewallOff:     c.firewallOff,
+		DNS:             c.dns,
+		Antitracker:     c.antitracker,
+		AntitrackerHard: c.antitrackerHard,
+		MultiopExitSvr:  c.multiopExitSvr}
+
+	// File path to save info about last usedserver
+	data, err := json.Marshal(ci)
+	if err != nil {
+		return
+	}
+
+	if file := c.lastConnectionInfoFile(); len(file) > 0 {
+		ioutil.WriteFile(file, data, 0600) // read only for owner
+	}
+}
+
+func (c *CmdConnect) restoreLastConnectionInfo() bool {
+	ci := LastConnectionInfo{}
+
+	file := ""
+	if file = c.lastConnectionInfoFile(); len(file) == 0 {
+		return false
+	}
+
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		return false
+	}
+
+	err = json.Unmarshal(data, &ci)
+	if err != nil {
+		return false
+	}
+
+	c.gateway = ci.Gateway
+	c.port = ci.Port
+	c.obfsproxy = ci.Obfsproxy
+	c.firewallOff = ci.FirewallOff
+	c.dns = ci.DNS
+	c.antitracker = ci.Antitracker
+	c.antitrackerHard = ci.AntitrackerHard
+	c.multiopExitSvr = ci.MultiopExitSvr
+
+	return true
 }
 
 func getPort(vpnType vpn.Type, portInfo string) (port, error) {

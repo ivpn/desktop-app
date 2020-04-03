@@ -20,6 +20,7 @@ const (
 	TipDisconnect      TipType = iota
 	TipFirewallDisable TipType = iota
 	TipFirewallEnable  TipType = iota
+	TipLastConnection  TipType = iota
 )
 
 func PrintTips(tips []TipType) {
@@ -71,6 +72,9 @@ func PrintTip(w *tabwriter.Writer, tip TipType) {
 		break
 	case TipFirewallEnable:
 		str = newTip("firewall -on", "Enable firewall (to block all connectivity outside VPN)")
+		break
+	case TipLastConnection:
+		str = newTip("connect -last", "Connect with last successful connection parameters")
 		break
 	}
 
