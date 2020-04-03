@@ -71,7 +71,8 @@ func (c *CmdFirewall) Run() error {
 		return err
 	}
 
-	printFirewallState(state.IsEnabled, state.IsPersistent, state.IsAllowLAN, state.IsAllowMulticast)
+	w := printFirewallState(nil, state.IsEnabled, state.IsPersistent, state.IsAllowLAN, state.IsAllowMulticast)
+	w.Flush()
 
 	// TIPS
 	tips := make([]TipType, 0, 2)

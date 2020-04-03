@@ -247,5 +247,5 @@ type serverDesc struct {
 }
 
 func (s *serverDesc) String() string {
-	return fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t", s.protocol, s.gateway, s.city, s.countryCode, s.country)
+	return fmt.Sprintf("%s, %s (%s), %s", s.gateway, s.city, s.countryCode, s.country)
 }
