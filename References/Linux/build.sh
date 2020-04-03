@@ -35,6 +35,9 @@ echo "Commit : $COMMIT"
 
 cd $SCRIPT_DIR/../../
 
+echo "* updating dependencies..."
+go get -v
+
 if [[ "$@" == *"-debug"* ]]
 then
     echo "Compiling in DEBUG mode"

@@ -72,5 +72,14 @@ func (c *CmdFirewall) Run() error {
 	}
 
 	printFirewallState(state.IsEnabled, state.IsPersistent, state.IsAllowLAN, state.IsAllowMulticast)
+
+	// TIPS
+	tips := make([]TipType, 0, 2)
+	if state.IsEnabled == false {
+		tips = append(tips, TipFirewallEnable)
+	} else {
+		tips = append(tips, TipFirewallDisable)
+	}
+	PrintTips(tips)
 	return nil
 }

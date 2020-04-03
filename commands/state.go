@@ -34,6 +34,7 @@ func showState() error {
 	printState(state, connected)
 	printFirewallState(fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast)
 
+	// TIPS
 	tips := make([]TipType, 0, 3)
 	if len(_proto.GetHelloResponse().Session.Session) == 0 {
 		fmt.Println(" ", service.ErrorNotLoggedIn{})
@@ -41,6 +42,11 @@ func showState() error {
 	}
 	if state == vpn.CONNECTED {
 		tips = append(tips, TipDisconnect)
+		if fwstate.IsEnabled == false {
+			tips = append(tips, TipFirewallEnable)
+		}
+	} else if fwstate.IsEnabled {
+		tips = append(tips, TipFirewallDisable)
 	}
 	tips = append(tips, TipHelp)
 	tips = append(tips, TipHelpFull)
