@@ -33,7 +33,6 @@ try_systemd_stop() {
 IVPN_DIR="/opt/ivpn"
 IVPN_TMP="/opt/ivpn/mutable"
 IVPN_LOG="/opt/ivpn/log"
-IVPN_SAVED_DNS_FILE="/etc/resolv.conf.ivpnsave"
 if [ -d $IVPN_TMP ] ; then
   echo "[+] Removing other files ..."
   # Normally, all files which were installed, deleted automatically
@@ -45,6 +44,7 @@ if [ -d $IVPN_TMP ] ; then
   silent sudo rmdir $IVPN_DIR
 fi 
 
+IVPN_SAVED_DNS_FILE="/etc/resolv.conf.ivpnsave"
 if [ -f $IVPN_SAVED_DNS_FILE ]; then 
   echo "[+] restoring DNS configuration"
   mv $IVPN_SAVED_DNS_FILE /etc/resolv.conf || echo "[-] Restoring DNS failed" 

@@ -39,6 +39,13 @@ chmod 0700 $IVPN_ETC/*.sh       # can execute only owner (root)
 chmod 0700 $IVPN_ETC/*.up       # can execute only owner (root)
 chmod 0700 $IVPN_ETC/*.down     # can execute only owner (root)
 
+
+IVPN_SAVED_DNS_FILE="/etc/resolv.conf.ivpnsave"
+if [ -f $IVPN_SAVED_DNS_FILE ]; then 
+  echo "[+] restoring DNS configuration from previous installation"
+  mv $IVPN_SAVED_DNS_FILE /etc/resolv.conf || echo "[-] Restoring DNS failed" 
+fi
+
 echo "[+] Service install start (pleaserun) ..."
 INSTALL_OUTPUT=$(sh /usr/share/pleaserun/ivpn-service/install.sh) 
 if [ $? -eq 0 ]; then 
