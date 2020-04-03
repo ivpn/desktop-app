@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/ivpn/desktop-app-cli/flags"
@@ -51,7 +50,6 @@ func showState() error {
 	// TIPS
 	tips := make([]TipType, 0, 3)
 	if len(_proto.GetHelloResponse().Session.Session) == 0 {
-		fmt.Println(" ", service.ErrorNotLoggedIn{})
 		tips = append(tips, TipLogin)
 	}
 	if state == vpn.CONNECTED {
@@ -66,6 +64,9 @@ func showState() error {
 	tips = append(tips, TipHelpFull)
 	PrintTips(tips)
 
+	if len(_proto.GetHelloResponse().Session.Session) == 0 {
+		return service.ErrorNotLoggedIn{}
+	}
 	return nil
 }
 
