@@ -167,3 +167,16 @@ type WireGuardSetKeysRotationInterval struct {
 	CommandBase
 	Interval int64
 }
+
+// SetCredentials - manually set RAW credentials
+type SetCredentials struct {
+	CommandBase
+	AccountID      string
+	Session        string
+	VpnUser        string
+	VpnPass        string
+	WgPublicKey    string
+	WgPrivateKey   string
+	WgLocalIP      string
+	WgKeyGenerated int64 // Unix time
+}

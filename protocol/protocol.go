@@ -70,6 +70,8 @@ type Service interface {
 	Pause() error
 	Resume() error
 
+	SetRawCredentials(AccountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64) error
+
 	SessionNew(accountID string, forceLogin bool) (
 		apiCode int,
 		apiErrorMsg string,
@@ -590,6 +592,28 @@ func (p *Protocol) processRequest(message string) {
 		}
 
 		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+		break
+
+	case "SetCredentials":
+		var r types.SetCredentials
+		if err := json.Unmarshal(messageData, &r); err != nil {
+			p.sendErrorResponse(reqCmd, err)
+			break
+		}
+
+		if err := p._service.SetRawCredentials(r.AccountID,
+			r.Session,
+			r.VpnUser,
+			r.VpnPass,
+			r.WgPublicKey,
+			r.WgPrivateKey,
+			r.WgLocalIP,
+			r.WgKeyGenerated); err != nil {
+			p.sendErrorResponse(reqCmd, err)
+		} else {
+			p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+		}
+
 		break
 
 	case "SessionNew":

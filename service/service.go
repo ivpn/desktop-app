@@ -796,6 +796,34 @@ func (s *Service) Preferences() preferences.Preferences {
 // SESSIONS
 //////////////////////////////////////////////////////////
 
+func (s *Service) setCredentials(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64) error {
+	// save session info
+	s._preferences.SetSession(accountID,
+		session,
+		vpnUser,
+		vpnPass,
+		wgPublicKey,
+		wgPrivateKey,
+		wgLocalIP)
+
+	// manually set info about WG keys timestamp
+	if wgKeyGenerated > 0 {
+		s._preferences.Session.WGKeyGenerated = time.Unix(wgKeyGenerated, 0)
+	}
+
+	// notify clients about sesssion update
+	s._evtReceiver.OnServiceSessionChanged()
+
+	// success
+	s.startSessionChecker()
+	return nil
+}
+
+// SetRawCredentials - set all credentials manually
+func (s *Service) SetRawCredentials(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64) error {
+	return s.setCredentials(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP, wgKeyGenerated)
+}
+
 // SessionNew creates new session
 func (s *Service) SessionNew(accountID string, forceLogin bool) (
 	apiCode int,
@@ -853,20 +881,14 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 	// get account status info
 	accountInfo = s.createAccountStatus(sucessResp.ServiceStatus)
 
-	// save session info
-	s._preferences.SetSession(accountID,
+	s.setCredentials(accountID,
 		sucessResp.Token,
 		sucessResp.VpnUsername,
 		sucessResp.VpnPassword,
 		publicKey,
 		privateKey,
-		sucessResp.WireGuard.IPAddress)
+		sucessResp.WireGuard.IPAddress, 0)
 
-	// notify clients about sesssion update
-	s._evtReceiver.OnServiceSessionChanged()
-
-	// success
-	s.startSessionChecker()
 	return apiCode, "", accountInfo, nil
 }
 
