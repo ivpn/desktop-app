@@ -56,6 +56,8 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		return fmt.Errorf("failed to save WG config file: %w", err)
 	}
 
+	//wg.disconnect()
+
 	// update DNS configuration
 	if err := dns.SetManual(wg.connectParams.hostLocalIP, nil); err != nil {
 		return fmt.Errorf("failed to set DNS: %w", err)
@@ -121,6 +123,7 @@ func (wg *WireGuard) resetManualDNS() error {
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
 	interfaceCfg = append(interfaceCfg, "Address = "+wg.connectParams.clientLocalIP.String()+"/32")
+	interfaceCfg = append(interfaceCfg, "SaveConfig = true")
 
 	peerCfg = append(peerCfg, "AllowedIPs = 0.0.0.0/0")
 	return interfaceCfg, peerCfg
