@@ -173,8 +173,8 @@ type SetCredentials struct {
 	CommandBase
 	AccountID      string
 	Session        string
-	VpnUser        string
-	VpnPass        string
+	OvpnUser       string
+	OvpnPass       string
 	WgPublicKey    string
 	WgPrivateKey   string
 	WgLocalIP      string

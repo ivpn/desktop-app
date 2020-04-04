@@ -623,8 +623,8 @@ func (p *Protocol) processRequest(message string) {
 
 		if err := p._service.SetRawCredentials(r.AccountID,
 			r.Session,
-			r.VpnUser,
-			r.VpnPass,
+			r.OvpnUser,
+			r.OvpnPass,
 			r.WgPublicKey,
 			r.WgPrivateKey,
 			r.WgLocalIP,

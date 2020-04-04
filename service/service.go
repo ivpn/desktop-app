@@ -821,6 +821,10 @@ func (s *Service) setCredentials(accountID, session, vpnUser, vpnPass, wgPublicK
 
 // SetRawCredentials - set all credentials manually
 func (s *Service) SetRawCredentials(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64) error {
+	sess := s.Preferences().Session
+	if sess.IsLoggedIn() {
+		return fmt.Errorf("already logged in")
+	}
 	return s.setCredentials(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP, wgKeyGenerated)
 }
 
