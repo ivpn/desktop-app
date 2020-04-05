@@ -50,6 +50,13 @@ func init() {
 	makeDir("logDir", logDir)
 }
 
+// Init - initialize all preferences required for a daemon
+// Must be called on beginning of application start by a daemon(service)
+func Init() (warnings []string, errors []error) {
+	doInitOperations()
+	return nil, nil
+}
+
 func ensureFileExists(description string, file string) {
 	if len(file) == 0 {
 		panic(fmt.Sprintf("[Initialisation (plafrorm)] Parameter not initialized: %s", description))

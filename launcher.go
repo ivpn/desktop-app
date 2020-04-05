@@ -31,6 +31,8 @@ func Launch() {
 		doStopped()
 	}()
 
+	platform.Init()
+
 	tzName, tzOffsetSec := time.Now().Zone()
 	log.Info("Starting IVPN daemon", fmt.Sprintf(" [%s]", runtime.GOOS), fmt.Sprintf(" [timezone: %s %d (%dh)]", tzName, tzOffsetSec, tzOffsetSec/(60*60)), " ...")
 	log.Info(fmt.Sprintf("args: %s", os.Args))

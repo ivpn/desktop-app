@@ -46,3 +46,14 @@ func doOsInitForBuild() {
 	wgBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wireguard-go")
 	wgToolBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wg")
 }
+
+func doInitOperations() error {
+	serversFile := ServersFile()
+	if _, err := os.Stat(serversFile); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("!!!DEBUG!!! File '%s' not exists (will be downloaded from backend; will lead to errors in case of failed download!)", serversFile)
+		}
+		return err
+	}
+	return nil
+}
