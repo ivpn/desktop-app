@@ -809,6 +809,7 @@ func (s *Service) setCredentials(accountID, session, vpnUser, vpnPass, wgPublicK
 	// manually set info about WG keys timestamp
 	if wgKeyGenerated > 0 {
 		s._preferences.Session.WGKeyGenerated = time.Unix(wgKeyGenerated, 0)
+		s._preferences.SavePreferences()
 	}
 
 	// notify clients about sesssion update
