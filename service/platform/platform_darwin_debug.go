@@ -53,3 +53,14 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 
 	return nil, nil
 }
+
+func doInitOperations() (w string, e error) {
+	serversFile := ServersFile()
+	if _, err := os.Stat(serversFile); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Sprintf("!!!DEBUG!!! File '%s' not exists (will be downloaded from backend; will lead to errors in case of failed download!)", serversFile), nil
+		}
+		return "", err
+	}
+	return "", nil
+}

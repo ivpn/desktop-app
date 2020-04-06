@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.11.8 - 2020-04-05
+
+[FIXED] macOS client start issue after the clean install
+
 ## Version 2.11.6 - 2020-03-27
 
 [FIXED] Deadlock issue in 'ping' package

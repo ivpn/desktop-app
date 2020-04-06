@@ -113,6 +113,15 @@ func Init() (warnings []string, errors []error) {
 	if err := CheckExecutableRights("wgToolBinaryPath", wgToolBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
 	}
+
+	w, e := doInitOperations()
+	if len(w)>0 {
+		warnings = append(warnings, w)
+	}
+	if e != nil {
+		errors = append(errors, e)
+	}
+
 	return warnings, errors
 }
 

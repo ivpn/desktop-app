@@ -34,6 +34,8 @@ func doOsInit() (warnings []string, errors []error) {
 	return warnings, errors
 }
 
+func doInitOperations() (w string, e error) { return "", nil }
+
 // FirewallScript returns path to firewal script
 func FirewallScript() string {
 	return firewallScript

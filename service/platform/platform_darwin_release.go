@@ -2,7 +2,13 @@
 
 package platform
 
-import "path"
+import (
+	"fmt"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
+)
 
 func doOsInitForBuild() (warnings []string, errors []error) {
 	// macOS-specific variable initialization
@@ -33,4 +39,50 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	wgToolBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wg"
 
 	return nil, nil
+}
+
+func doInitOperations() (w string, e error) {
+	serversFile := ServersFile()
+	if _, err := os.Stat(serversFile); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("File '%s' does not exists. Copying from bundle...\n", serversFile)
+			// Servers file is not exists on required place
+			// Probably, it is first start after clean install
+			// Copying it from a bundle
+			os.MkdirAll(filepath.Base(serversFile), os.ModePerm)
+			if _, err = copyFile("/Applications/IVPN.app/Contents/Resources/etc/servers.json", serversFile); err != nil {
+				return err.String(), nil
+			}
+			return "", nil
+		}
+
+		return err.String(), nil
+	}
+	return "", nil
+}
+
+func copyFile(src, dst string) (int64, error) {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return 0, err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return 0, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	destination.Chmod(DefaultFilePermissionForConfig)
+	if err != nil {
+		return 0, err
+	}
+	defer destination.Close()
+	nBytes, err := io.Copy(destination, source)
+	return nBytes, err
 }
