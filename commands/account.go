@@ -9,6 +9,7 @@ import (
 	"github.com/ivpn/desktop-app-cli/flags"
 	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/service"
+	"github.com/ivpn/desktop-app-daemon/vpn"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -42,13 +43,22 @@ func (c *CmdLogin) Run() error {
 }
 
 func doLogin(accountID string, force bool) error {
+	// checking if we are logged-in
+	_proto.SessionStatus() // do not check error response (could be received 'not logged in' errors)
+	helloResp := _proto.GetHelloResponse()
+	if len(helloResp.Session.Session) != 0 {
+		fmt.Println("Already logged in")
+		PrintTips([]TipType{TipLogout})
+		return fmt.Errorf("unable login (please, log out first)")
+	}
+
+	// login
 	if len(accountID) == 0 {
 		fmt.Print("Enter your Account ID: ")
 		data, err := terminal.ReadPassword(0)
 		if err != nil {
 			return fmt.Errorf("failed to read accountID: %w", err)
 		}
-		fmt.Println("")
 		accountID = string(data)
 	}
 
@@ -56,7 +66,6 @@ func doLogin(accountID string, force bool) error {
 	if err != nil {
 		if apiStatus == types.CodeSessionsLimitReached {
 			PrintTips([]TipType{TipForceLogin})
-			fmt.Println("")
 		}
 		return err
 	}
@@ -84,7 +93,25 @@ func (c *CmdAccount) Run() error {
 //----------------------------------------------------------------------------------------
 
 func doLogout() error {
-	err := _proto.SessionDelete()
+	// checking if we are logged-in
+	_proto.SessionStatus() // do not check error response (could be received 'not logged in' errors)
+	helloResp := _proto.GetHelloResponse()
+	if len(helloResp.Session.Session) == 0 {
+		return fmt.Errorf("already logged out")
+	}
+
+	// do not allow to logout if VPN connected
+	state, _, err := _proto.GetVPNState()
+	if err != nil {
+		return err
+	}
+	if state != vpn.DISCONNECTED {
+		PrintTips([]TipType{TipDisconnect})
+		return fmt.Errorf("unable to log out (please, disconnect VPN first)")
+	}
+
+	// delete session
+	err = _proto.SessionDelete()
 	if err != nil {
 		return err
 	}

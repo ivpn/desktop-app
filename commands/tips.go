@@ -13,6 +13,7 @@ const (
 	TipHelp            TipType = iota
 	TipHelpFull        TipType = iota
 	TipHelpCommand     TipType = iota
+	TipLogout          TipType = iota
 	TipLogin           TipType = iota
 	TipForceLogin      TipType = iota
 	TipServers         TipType = iota
@@ -37,6 +38,7 @@ func PrintTips(tips []TipType) {
 	}
 
 	writer.Flush()
+	fmt.Println("")
 }
 
 func PrintTip(w *tabwriter.Writer, tip TipType) {
@@ -51,6 +53,9 @@ func PrintTip(w *tabwriter.Writer, tip TipType) {
 		break
 	case TipHelpCommand:
 		str = newTip("COMMAND -h", "Show detailed description of command")
+		break
+	case TipLogout:
+		str = newTip("logout", "Logout from this device")
 		break
 	case TipLogin:
 		str = newTip("login ACCOUNT_ID", "Log in with your Account ID")

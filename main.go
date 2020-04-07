@@ -107,7 +107,7 @@ func main() {
 
 	if len(os.Args) < 2 {
 		if err := stateCmd.Run(); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Printf("\n%v\n", err)
 			os.Exit(1)
 		}
 
