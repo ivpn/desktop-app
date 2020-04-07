@@ -179,7 +179,7 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 	defer func() {
 		log.Warning("Protocol stopped")
 
-		// Disconnect VPN (if not connected)
+		// Disconnect VPN (if connected)
 		p._service.Disconnect()
 	}()
 

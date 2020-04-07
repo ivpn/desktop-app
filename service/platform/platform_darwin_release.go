@@ -51,12 +51,12 @@ func doInitOperations() (w string, e error) {
 			// Copying it from a bundle
 			os.MkdirAll(filepath.Base(serversFile), os.ModePerm)
 			if _, err = copyFile("/Applications/IVPN.app/Contents/Resources/etc/servers.json", serversFile); err != nil {
-				return err.String(), nil
+				return err.Error(), nil
 			}
 			return "", nil
 		}
 
-		return err.String(), nil
+		return err.Error(), nil
 	}
 	return "", nil
 }
