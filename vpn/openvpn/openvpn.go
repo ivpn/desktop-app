@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -18,6 +20,44 @@ var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("ovpn")
+}
+
+// GetOpenVPNVersion trying to get openvpn binary version
+func GetOpenVPNVersion(ovpnBinary string) []int {
+
+	regexp := regexp.MustCompile("(?i)^OpenVPN ([0-9.]*) ")
+	version := make([]int, 0)
+
+	outProcessFunc := func(text string, isError bool) {
+		if isError || len(version) > 0 {
+			return
+		}
+
+		columns := regexp.FindStringSubmatch(text)
+		if len(columns) < 2 {
+			return
+		}
+		ver := columns[1]
+		if len(ver) == 0 {
+			return
+		}
+		verNums := make([]int, 0, 3)
+		for _, num := range strings.Split(ver, ".") {
+			n, err := strconv.Atoi(num)
+			if err != nil {
+				return
+			}
+			if len(verNums) == 0 && n == 0 {
+				continue
+			}
+			verNums = append(verNums, n)
+		}
+		version = verNums
+	}
+
+	shell.ExecAndProcessOutput(nil, outProcessFunc, "", ovpnBinary, "--version")
+
+	return version
 }
 
 // OpenVPN structure represents all data of OpenVPN connection
