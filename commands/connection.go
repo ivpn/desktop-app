@@ -113,7 +113,7 @@ func (c *CmdConnect) Init() {
 
 	c.StringVar(&c.multiopExitSvr, "exit_svr", "", "LOCATION", "OpenVPN only: Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
 
-	c.BoolVar(&c.firewallOff, "fw_off", false, "Do not enable firewall for this connection")
+	c.BoolVar(&c.firewallOff, "fw_off", false, "Do not enable firewall for this connection\n(has effect only if Firewall not enabled before)")
 
 	c.StringVar(&c.dns, "dns", "", "DNS_IP", "Use custom DNS for this connection\n(if 'antitracker' is enabled - this parameter will be ignored)")
 
@@ -315,8 +315,19 @@ func (c *CmdConnect) Run() (retError error) {
 	}
 
 	// FW for current connection
-	req.FirewallOnDuringConnection = !c.firewallOff
-
+	req.FirewallOnDuringConnection = true
+	if c.firewallOff {
+		// check current WF state
+		state, err := _proto.FirewallStatus()
+		if err != nil {
+			return fmt.Errorf("unable to check Firewall state: %w", err)
+		}
+		if state.IsEnabled == false {
+			req.FirewallOnDuringConnection = false
+		} else {
+			fmt.Println("WARNING! Firewall option ignored (Firewall already enabled manually)")
+		}
+	}
 	// get configuration
 	cfg, _ := config.GetConfig()
 
@@ -338,6 +349,10 @@ func (c *CmdConnect) Run() (retError error) {
 			return err
 		}
 		req.CurrentDNS = atDNS
+
+		if len(c.dns) > 0 {
+			fmt.Println("WARNING! Manual DNS configuration ignored due to AntiTracker")
+		}
 	}
 
 	// set Manual DNS if defined (only in case if AntiTracker not defined)
@@ -353,10 +368,6 @@ func (c *CmdConnect) Run() (retError error) {
 			PrintDnsConfigInfo(cfg.CustomDNS)
 			req.CurrentDNS = cfg.CustomDNS
 		}
-	}
-
-	if len(c.dns) > 0 {
-		fmt.Println("WARNING! Manual DNS configuration ignored due to AntiTracker")
 	}
 
 	// looking for connection server
