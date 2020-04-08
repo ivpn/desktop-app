@@ -16,6 +16,8 @@ import (
 
 // internalVariables of wireguard implementation for Linux
 type internalVariables struct {
+	manualDNS net.IP
+	isRunning bool
 }
 
 func (wg *WireGuard) init() error {
@@ -38,7 +40,9 @@ func (wg *WireGuard) init() error {
 // connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
+	wg.internals.isRunning = true
 	defer func() {
+		wg.internals.isRunning = false
 		// do not forget to remove config file after finishing configuration
 		if err := os.Remove(wg.configFilePath); err != nil {
 			log.Warning(fmt.Sprintf("failed to remove WG configuration: %s", err))
@@ -56,11 +60,11 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		return fmt.Errorf("failed to save WG config file: %w", err)
 	}
 
-	//wg.disconnect()
-
 	// update DNS configuration
-	if err := dns.SetManual(wg.connectParams.hostLocalIP, nil); err != nil {
-		return fmt.Errorf("failed to set DNS: %w", err)
+	if wg.internals.manualDNS == nil {
+		if err := dns.SetManual(wg.connectParams.hostLocalIP, nil); err != nil {
+			return fmt.Errorf("failed to set DNS: %w", err)
+		}
 	}
 
 	// start WG
@@ -114,10 +118,18 @@ func (wg *WireGuard) resume() error {
 }
 
 func (wg *WireGuard) setManualDNS(addr net.IP) error {
+	// set DNS called outside
+	wg.internals.manualDNS = addr
 	return dns.SetManual(addr, nil)
 }
 
 func (wg *WireGuard) resetManualDNS() error {
+	// reset DNS called outside
+	wg.internals.manualDNS = nil
+	if wg.internals.isRunning {
+		// changing DNS to default value for current WireGuard connection
+		return dns.SetManual(wg.connectParams.hostLocalIP, nil)
+	}
 	return dns.DeleteManual(nil)
 }
 

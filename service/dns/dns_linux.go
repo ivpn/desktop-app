@@ -77,13 +77,9 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 		return nil
 	}
 
-	created, err := createBackupIfNotExists()
+	_, err := createBackupIfNotExists()
 	if err != nil {
 		return err
-	}
-	if created == false {
-		// do nothing if we already changed DNS (probably, DNS was set by OpenVPN client.up script)
-		return nil
 	}
 
 	// Save new configuration
