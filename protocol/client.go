@@ -384,3 +384,22 @@ func (c *Client) PingServers() (pingResults []types.PingResultType, err error) {
 
 	return resp.PingResults, nil
 }
+
+// SetManualDNS - sets manual DNS for current VPN connection
+func (c *Client) SetManualDNS(dns string) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.SetAlternateDns{DNS: dns}
+	var resp types.SetAlternateDNSResp
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
+
+	if resp.IsSuccess == false {
+		return fmt.Errorf("DNS not changed")
+	}
+
+	return nil
+}

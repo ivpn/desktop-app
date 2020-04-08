@@ -57,6 +57,9 @@ func (c *CmdInfo) Parse(arguments []string) error {
 	return nil
 }
 
+// NFlag returns the number of flags that have been set.
+func (c *CmdInfo) NFlag() int { return c.fs.NFlag() }
+
 // Name - command name
 func (c *CmdInfo) Name() string { return c.fs.Name() }
 
@@ -111,13 +114,13 @@ func (c *CmdInfo) usage(w *tabwriter.Writer, short bool) {
 	// command
 	lines := strings.Split(c.Description(), "\n")
 	fmt.Fprintln(writer, fmt.Sprintf("%s %s\t%s", c.Name(), c.defaultArgName, lines[0]))
+	if short {
+		return
+	}
 	if len(lines) > 1 {
 		for i := 1; i < len(lines); i++ {
 			fmt.Fprintln(writer, fmt.Sprintf("  %s %s\t%s", "", "", lines[i]))
 		}
-	}
-	if short {
-		return
 	}
 
 	// loop trough flags map

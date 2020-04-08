@@ -16,10 +16,10 @@ type CmdLogs struct {
 }
 
 func (c *CmdLogs) Init() {
-	c.Initialize("logs", "Possibility to enable\\view logs")
+	c.Initialize("logs", "Logging management")
 	c.BoolVar(&c.show, "show", false, "(default) Show logs")
-	c.BoolVar(&c.enable, "enable", false, "Enable logging")
-	c.BoolVar(&c.disable, "disable", false, "Disable logging")
+	c.BoolVar(&c.enable, "on", false, "Enable logging")
+	c.BoolVar(&c.disable, "off", false, "Disable logging")
 }
 func (c *CmdLogs) Run() error {
 	if c.enable && c.disable {
@@ -48,7 +48,7 @@ func (c *CmdLogs) setSetLogging(enable bool) error {
 
 func (c *CmdLogs) doShow() error {
 
-	fname := "/opt/ivpn/log/IVPN Agent.log"
+	fname := "/opt/ivpn/log/IVPN_Agent.log"
 	file, err := os.Open(fname)
 	if err != nil {
 		return err

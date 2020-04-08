@@ -1,15 +1,12 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/ivpn/desktop-app-cli/commands/config"
 	"github.com/ivpn/desktop-app-cli/flags"
 	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
@@ -102,17 +99,17 @@ type CmdConnect struct {
 }
 
 func (c *CmdConnect) Init() {
-	c.Initialize("connect", "Establish new VPN connection. Use server location as an argument.\nLOCATION can be a mask for filtering servers (see 'servers' command)")
+	c.Initialize("connect", "Establish new VPN connection\nLOCATION can be a mask for filtering servers (see 'servers' command)")
 	c.DefaultStringVar(&c.gateway, "LOCATION")
 
 	c.StringVar(&c.port, "port", "", "PROTOCOL:PORT", fmt.Sprintf("Port to connect to (default: %s - OpenVPN, %s - WireGuard)\nOpenVPN: %s\nWireGuard: %s",
 		portsOpenVpn[0].String(), portsWireGuard[0].String(),
 		allPortsString(portsOpenVpn[:]), allPortsString(portsWireGuard[:])))
 
-	c.BoolVar(&c.any, "any", false, "When LOCATION points to more then one servers - use first found server to connect")
+	c.BoolVar(&c.any, "any", false, "When LOCATION points to more than one server, use first found server to connect")
 
-	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
-	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy (only enable if you have trouble connecting)")
+	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy")
+	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy")
 
 	c.StringVar(&c.multiopExitSvr, "exit_svr", "", "LOCATION", "OpenVPN only: Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
 
@@ -120,15 +117,15 @@ func (c *CmdConnect) Init() {
 
 	c.StringVar(&c.dns, "dns", "", "DNS_IP", "Use custom DNS for this connection\n(if 'antitracker' is enabled - this parameter will be ignored)")
 
-	c.BoolVar(&c.antitracker, "antitracker", false, "Enable antitracker for this connection")
-	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'hardcore' antitracker for this connection")
+	c.BoolVar(&c.antitracker, "antitracker", false, "Enable AntiTracker for this connection")
+	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'Hard Core' AntiTracker for this connection")
 
 	// filters
-	c.StringVar(&c.filter_proto, "p", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
-	c.StringVar(&c.filter_proto, "protocol", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
+	c.StringVar(&c.filter_proto, "p", "", "PROTOCOL", "Protocol type OpenVPN|ovpn|WireGuard|wg")
+	c.StringVar(&c.filter_proto, "protocol", "", "PROTOCOL", "Protocol type OpenVPN|ovpn|WireGuard|wg")
 
-	c.BoolVar(&c.filter_location, "l", false, "Apply LOCATION as a filter to server location (serverID)")
-	c.BoolVar(&c.filter_location, "location", false, "Apply LOCATION as a filter to server location (serverID)")
+	c.BoolVar(&c.filter_location, "l", false, "Apply LOCATION as a filter to server location (Hostname)")
+	c.BoolVar(&c.filter_location, "location", false, "Apply LOCATION as a filter to server location (Hostname)")
 
 	c.BoolVar(&c.filter_country, "c", false, "Apply LOCATION as a filter to country name")
 	c.BoolVar(&c.filter_country, "country", false, "Apply LOCATION as a filter to country name")
@@ -198,9 +195,28 @@ func (c *CmdConnect) Run() (retError error) {
 	// do we need to connect with last succesfull connection parameters
 	if c.last {
 		fmt.Println("Enabled '-last' parameter. Using parameters from last successful connection")
-		if c.restoreLastConnectionInfo() == false {
+		ci := config.RestoreLastConnectionInfo()
+		if ci == nil {
 			return fmt.Errorf("no information about last connection")
 		}
+
+		// reset filters
+		c.filter_proto = ""
+		c.filter_location = false
+		c.filter_city = false
+		c.filter_countryCode = false
+		c.filter_country = false
+		c.filter_invert = false
+
+		// load last connection parameters
+		c.gateway = ci.Gateway
+		c.port = ci.Port
+		c.obfsproxy = ci.Obfsproxy
+		c.firewallOff = ci.FirewallOff
+		c.dns = ci.DNS
+		c.antitracker = ci.Antitracker
+		c.antitrackerHard = ci.AntitrackerHard
+		c.multiopExitSvr = ci.MultiopExitSvr
 	}
 
 	// MULTI\SINGLE -HOP
@@ -266,7 +282,7 @@ func (c *CmdConnect) Run() (retError error) {
 				fmt.Println()
 
 				tips := []TipType{TipServers, TipConnectHelp}
-				if c.lastConnectionExist() {
+				if config.LastConnectionExist() {
 					tips = append(tips, TipLastConnection)
 				}
 				PrintTips(tips)
@@ -301,29 +317,41 @@ func (c *CmdConnect) Run() (retError error) {
 	// FW for current connection
 	req.FirewallOnDuringConnection = !c.firewallOff
 
-	// set Manual DNS if defined
-	if len(c.dns) > 0 {
-		dns := net.ParseIP(c.dns)
-		if dns == nil {
-			return flags.BadParameter{}
-		}
-		req.CurrentDNS = dns.String()
-	}
+	// get configuration
+	cfg, _ := config.GetConfig()
+
 	// set antitracker DNS (if defined). It will overwrite 'custom DNS' parameter
-	if c.antitracker || c.antitrackerHard {
-		if c.antitracker {
-			if len(c.multiopExitSvr) > 0 {
-				req.CurrentDNS = servers.Config.Antitracker.Default.MultihopIP
-			} else {
-				req.CurrentDNS = servers.Config.Antitracker.Default.IP
-			}
+	if c.antitracker == false && c.antitrackerHard == false {
+		// AntiTracker parameters not defined for current connection
+		// Taking default configuration parameters (if defined)
+		if cfg.Antitracker || cfg.AntitrackerHardcore {
+			// print info
+			PrintAntitrackerConfigInfo(cfg.Antitracker, cfg.AntitrackerHardcore)
+			// set values
+			c.antitracker = cfg.Antitracker
+			c.antitrackerHard = cfg.AntitrackerHardcore
 		}
-		if c.antitrackerHard {
-			if len(c.multiopExitSvr) > 0 {
-				req.CurrentDNS = servers.Config.Antitracker.Hardcore.MultihopIP
-			} else {
-				req.CurrentDNS = servers.Config.Antitracker.Hardcore.IP
+	}
+	if c.antitracker || c.antitrackerHard {
+		atDNS, err := GetAntitrackerIP(c.antitrackerHard, len(c.multiopExitSvr) > 0, &servers)
+		if err != nil {
+			return err
+		}
+		req.CurrentDNS = atDNS
+	}
+
+	// set Manual DNS if defined (only in case if AntiTracker not defined)
+	if len(req.CurrentDNS) == 0 {
+		if len(c.dns) > 0 {
+			dns := net.ParseIP(c.dns)
+			if dns == nil {
+				return flags.BadParameter{}
 			}
+			req.CurrentDNS = dns.String()
+		} else if len(cfg.CustomDNS) > 0 {
+			// using default DNS configuration
+			PrintDnsConfigInfo(cfg.CustomDNS)
+			req.CurrentDNS = cfg.CustomDNS
 		}
 	}
 
@@ -434,49 +462,7 @@ func (c *CmdConnect) Run() (retError error) {
 	}
 
 	// save last connection parameters
-	c.saveLastConnectionInfo()
-
-	return nil
-}
-
-// LastConnectionInfo information about last connection parameters
-type LastConnectionInfo struct {
-	Gateway         string
-	Port            string
-	Obfsproxy       bool
-	FirewallOff     bool
-	DNS             string
-	Antitracker     bool
-	AntitrackerHard bool
-
-	MultiopExitSvr string
-}
-
-func (c *CmdConnect) lastConnectionInfoFile() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-
-	file := filepath.Join(home, ".ivpn")
-
-	if err := os.MkdirAll(file, os.ModePerm); err != nil {
-		return ""
-	}
-
-	file = filepath.Join(file, "last_connection")
-	return file
-}
-
-func (c *CmdConnect) lastConnectionExist() bool {
-	if _, err := os.Stat(c.lastConnectionInfoFile()); err == nil {
-		return true
-	}
-	return false
-}
-
-func (c *CmdConnect) saveLastConnectionInfo() {
-	ci := LastConnectionInfo{
+	config.SaveLastConnectionInfo(config.LastConnectionInfo{
 		Gateway:         c.gateway,
 		Port:            c.port,
 		Obfsproxy:       c.obfsproxy,
@@ -484,47 +470,9 @@ func (c *CmdConnect) saveLastConnectionInfo() {
 		DNS:             c.dns,
 		Antitracker:     c.antitracker,
 		AntitrackerHard: c.antitrackerHard,
-		MultiopExitSvr:  c.multiopExitSvr}
+		MultiopExitSvr:  c.multiopExitSvr})
 
-	// File path to save info about last usedserver
-	data, err := json.Marshal(ci)
-	if err != nil {
-		return
-	}
-
-	if file := c.lastConnectionInfoFile(); len(file) > 0 {
-		ioutil.WriteFile(file, data, 0600) // read only for owner
-	}
-}
-
-func (c *CmdConnect) restoreLastConnectionInfo() bool {
-	ci := LastConnectionInfo{}
-
-	file := ""
-	if file = c.lastConnectionInfoFile(); len(file) == 0 {
-		return false
-	}
-
-	data, err := ioutil.ReadFile(file)
-	if err != nil {
-		return false
-	}
-
-	err = json.Unmarshal(data, &ci)
-	if err != nil {
-		return false
-	}
-
-	c.gateway = ci.Gateway
-	c.port = ci.Port
-	c.obfsproxy = ci.Obfsproxy
-	c.firewallOff = ci.FirewallOff
-	c.dns = ci.DNS
-	c.antitracker = ci.Antitracker
-	c.antitrackerHard = ci.AntitrackerHard
-	c.multiopExitSvr = ci.MultiopExitSvr
-
-	return true
+	return nil
 }
 
 func getPort(vpnType vpn.Type, portInfo string) (port, error) {
@@ -583,7 +531,7 @@ func allPortsString(ports []port) string {
 	for _, p := range ports {
 		s = append(s, p.String())
 	}
-	return strings.Join(s, " ,")
+	return strings.Join(s, ", ")
 }
 
 // parsing port info from string in format "PROTOCOL:PORT"

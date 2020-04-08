@@ -20,7 +20,7 @@ type CmdWireGuard struct {
 func (c *CmdWireGuard) Init() {
 	c.Initialize("wgkeys", "WireGuard keys management")
 	c.BoolVar(&c.state, "state", false, "(default) Show WireGuard configuration")
-	c.IntVar(&c.rotationInterval, "rotation_interval", 0, "DAYS", "Set WireGuard keys rotation interval. [1-30] days")
+	c.IntVar(&c.rotationInterval, "rotation_interval", 0, "DAYS", "Set WireGuard keys rotation interval. [1-30] days (default = 7 days)")
 	c.BoolVar(&c.regenerate, "regenerate", false, "Regenerate WireGuard keys")
 }
 func (c *CmdWireGuard) Run() error {

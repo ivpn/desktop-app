@@ -52,6 +52,9 @@ func printUsageAll(short bool) {
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	for _, c := range _commands {
 		c.UsageFormetted(writer, short)
+		if short == false {
+			fmt.Fprintln(writer, "\t")
+		}
 	}
 	writer.Flush()
 
@@ -68,10 +71,11 @@ func main() {
 	addCommand(&stateCmd)
 	addCommand(&commands.CmdConnect{})
 	addCommand(&commands.CmdDisconnect{})
-	addCommand(&commands.CmdLogin{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
 	addCommand(&commands.CmdWireGuard{})
+	//addCommand(&commands.CmdDns{})
+	//addCommand(&commands.CmdAntitracker{})
 	addCommand(&commands.CmdLogs{})
 	addCommand(&commands.CmdLogin{})
 	addCommand(&commands.CmdLogout{})

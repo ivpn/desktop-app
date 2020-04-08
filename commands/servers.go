@@ -34,11 +34,11 @@ func (c *CmdServers) Init() {
 	c.Initialize("servers", "Show servers list\n(FILTER - optional parameter: show only servers which contains FILTER in server description)")
 	c.DefaultStringVar(&c.filter, "FILTER")
 
-	c.StringVar(&c.proto, "p", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
-	c.StringVar(&c.proto, "protocol", "", "PROTOCOL", "Protocol type [WireGuard/OpenVPN] (can be used short names 'wg' or 'ovpn')")
+	c.StringVar(&c.proto, "p", "", "PROTOCOL", "Protocol type OpenVPN|ovpn|WireGuard|wg")
+	c.StringVar(&c.proto, "protocol", "", "PROTOCOL", "Protocol type OpenVPN|ovpn|WireGuard|wg")
 
-	c.BoolVar(&c.location, "l", false, "Apply FILTER to server location (serverID)")
-	c.BoolVar(&c.location, "location", false, "Apply FILTER to server location (serverID)")
+	c.BoolVar(&c.location, "l", false, "Apply FILTER to server location (Hostname)")
+	c.BoolVar(&c.location, "location", false, "Apply FILTER to server location (Hostname)")
 
 	c.BoolVar(&c.country, "c", false, "Apply FILTER to country name")
 	c.BoolVar(&c.country, "country", false, "Apply FILTER to country name")
