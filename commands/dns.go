@@ -16,9 +16,9 @@ type CmdDns struct {
 }
 
 func (c *CmdDns) Init() {
-	c.Initialize("dns", "Specifying default configuration of 'custom DNS' for VPN connection\nDNS_IP - optional parameter used to set custom dns value (ignored when AntiTracker enabled)")
+	c.Initialize("dns", "Default 'custom DNS' management for VPN connection\nDNS_IP - optional parameter used to set custom dns value (ignored when AntiTracker enabled)")
 	c.DefaultStringVar(&c.dns, "DNS_IP")
-	c.BoolVar(&c.reset, "reset", false, "Reset DNS server to a default")
+	c.BoolVar(&c.reset, "off", false, "Reset DNS server to a default")
 }
 
 func (c *CmdDns) Run() error {
@@ -71,7 +71,7 @@ type CmdAntitracker struct {
 }
 
 func (c *CmdAntitracker) Init() {
-	c.Initialize("antitracker", "Specifying default AntiTracker configuration for VPN connection")
+	c.Initialize("antitracker", "Default AntiTracker configuration management for VPN connection")
 	c.BoolVar(&c.def, "default", false, "Enable AntiTracker")
 	c.BoolVar(&c.hardcore, "hardcore", false, "Enable AntiTracker 'hardcore' mode")
 	c.BoolVar(&c.off, "off", false, "Disable AntiTracker")

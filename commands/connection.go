@@ -355,6 +355,10 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 	}
 
+	if len(c.dns) > 0 {
+		fmt.Println("WARNING! Manual DNS configuration ignored due to AntiTracker")
+	}
+
 	// looking for connection server
 	// WireGuard
 	for _, s := range servers.WireguardServers {

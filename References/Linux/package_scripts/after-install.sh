@@ -34,10 +34,11 @@ try_systemd_install() {
 }
 
 echo "[+] Defining access rights for files ..."
-chmod 0400 $IVPN_ETC/*          # can read only owner (root)
-chmod 0700 $IVPN_ETC/*.sh       # can execute only owner (root)
-chmod 0700 $IVPN_ETC/*.up       # can execute only owner (root)
-chmod 0700 $IVPN_ETC/*.down     # can execute only owner (root)
+silent chmod 0400 $IVPN_ETC/*             # can read only owner (root)
+silent chmod 0600 $IVPN_ETC/servers.json  # can read/wrire only owner (root)
+silent chmod 0700 $IVPN_ETC/*.sh          # can execute only owner (root)
+silent chmod 0700 $IVPN_ETC/*.up          # can execute only owner (root)
+silent chmod 0700 $IVPN_ETC/*.down        # can execute only owner (root)
 
 
 IVPN_SAVED_DNS_FILE="/etc/resolv.conf.ivpnsave"
