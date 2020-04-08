@@ -567,7 +567,7 @@ func (p *Protocol) processRequest(message string) {
 		break
 
 	case "SetAlternateDns":
-		var req types.SetAlternateDNS
+		var req types.SetAlternateDns
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(reqCmd, err)
 			break
@@ -845,5 +845,6 @@ func (p *Protocol) processRequest(message string) {
 	default:
 		log.Warning("!!! Unsupported request type !!! ", reqCmd.Command)
 		log.Debug("Unsupported request:", message)
+		p.sendErrorResponse(reqCmd, fmt.Errorf("unsupported request: '%s'", reqCmd.Command))
 	}
 }

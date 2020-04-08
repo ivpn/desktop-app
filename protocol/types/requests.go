@@ -76,8 +76,8 @@ type SetPreference struct {
 	Value string
 }
 
-// SetAlternateDNS request to set custom DNS
-type SetAlternateDNS struct {
+// SetAlternateDns request to set custom DNS
+type SetAlternateDns struct {
 	CommandBase
 	DNS string
 }

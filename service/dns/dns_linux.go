@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -37,25 +38,30 @@ func implResume() error {
 // 'addr' parameter - DNS IP value
 // 'localInterfaceIP' - not in use for macOS implementation
 func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
+	stopDNSChangeMonitoring()
+
 	if addr == nil {
 		return implDeleteManual(nil)
 	}
 
-	if _, err := os.Stat(resolvBackupFile); err != nil {
-		// if no backup exists - create backup of DNS configuration
-
-		if _, err := os.Stat(resolvFile); err == nil {
-			// if DNS-config exists
-			if err := os.Rename(resolvFile, resolvBackupFile); err != nil {
-				return fmt.Errorf("failed to backup DNS configuration: %w", err)
+	createBackupIfNotExists := func() (created bool, er error) {
+		if _, err := os.Stat(resolvBackupFile); err != nil {
+			// if no backup exists - create backup of DNS configuration
+			if _, err := os.Stat(resolvFile); err == nil {
+				// if DNS-config exists
+				if err := os.Rename(resolvFile, resolvBackupFile); err != nil {
+					return false, fmt.Errorf("failed to backup DNS configuration: %w", err)
+				}
+				return true, nil
 			}
 		}
-	} else {
-		// do nothing if we already changed DNS
-		return nil
+		return false, nil
 	}
 
 	saveNewConfig := func() error {
+		createBackupIfNotExists()
+
+		// create new configuration
 		out, err := os.OpenFile(resolvFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 		if err != nil {
 			return fmt.Errorf("failed to update DNS configuration (%w)", err)
@@ -70,6 +76,16 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 		}
 		return nil
 	}
+
+	created, err := createBackupIfNotExists()
+	if err != nil {
+		return err
+	}
+	if created == false {
+		// do nothing if we already changed DNS (probably, DNS was set by OpenVPN client.up script)
+		return nil
+	}
+
 	// Save new configuration
 	if err := saveNewConfig(); err != nil {
 		return err
@@ -99,7 +115,7 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 				return
 			}
 
-			// wait
+			// wait for changes
 			var evt fsnotify.Event
 			select {
 			case evt = <-w.Events:
@@ -114,13 +130,20 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 				log.Error(fmt.Errorf("failed to remove warcher (fsnotify error): %w", err))
 			}
 
+			// wait 2 seconds for reaction (in case if we are stopping of when multiple consecutive file changes)
+			select {
+			case <-time.After(time.Second * 2):
+			case <-done:
+				// monitoring stopped
+				return
+			}
+
 			// restore DNS configuration
 			log.Info(fmt.Sprintf("DNS-change monitoring: DNS was changed outside [%s]. Restoring ...", evt.Op.String()))
 			if err := saveNewConfig(); err != nil {
 				log.Error(err)
 			}
 		}
-
 	}()
 
 	return nil
@@ -130,12 +153,7 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
 	// stop file change monitoring
-	select {
-	case done <- struct{}{}:
-		break
-	default:
-		break
-	}
+	stopDNSChangeMonitoring()
 
 	if _, err := os.Stat(resolvBackupFile); err != nil {
 		// nothing to restore
@@ -148,4 +166,14 @@ func implDeleteManual(localInterfaceIP net.IP) error {
 	}
 
 	return nil
+}
+
+func stopDNSChangeMonitoring() {
+	// stop file change monitoring
+	select {
+	case done <- struct{}{}:
+		break
+	default:
+		break
+	}
 }

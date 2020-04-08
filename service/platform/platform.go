@@ -115,7 +115,7 @@ func Init() (warnings []string, errors []error) {
 	}
 
 	w, e := doInitOperations()
-	if len(w)>0 {
+	if len(w) > 0 {
 		warnings = append(warnings, w)
 	}
 	if e != nil {
@@ -139,7 +139,7 @@ func IsFileExists(description string, file string, fileMode os.FileMode) (os.Fil
 	stat, err := os.Stat(file)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return 0, fmt.Errorf("file not exists %s: '%s'", description, file)
+			return 0, fmt.Errorf("file does not exist %s: '%s'", description, file)
 		}
 		return 0, fmt.Errorf("file existing check error %s '%s' : %w", description, file, err)
 	}
@@ -160,7 +160,7 @@ func IsFileExists(description string, file string, fileMode os.FileMode) (os.Fil
 }
 
 // CheckExecutableRights checks file has access permission to be writable
-// If file not exists or it can be writable by someone alse except root - retun error
+// If file does not exist or it can be writable by someone alse except root - retun error
 func CheckExecutableRights(description string, file string) error {
 	if len(file) > 0 {
 		// 'file' can be presented as executable with arguments (e.g. 'dns.sh -up')
