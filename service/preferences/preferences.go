@@ -17,6 +17,11 @@ func init() {
 	log = logger.NewLogger("sprefs")
 }
 
+const (
+	// DefaultWGKeysInterval - Default WireGuard keys rotation interval
+	DefaultWGKeysInterval = time.Hour * 24 * 7
+)
+
 // Preferences - IVPN service preferences
 type Preferences struct {
 	IsLogging                bool
@@ -109,7 +114,7 @@ func (p *Preferences) LoadPreferences() error {
 	}
 
 	if p.Session.WGKeysRegenInerval <= 0 {
-		p.Session.WGKeysRegenInerval = time.Hour * 24 * 7
+		p.Session.WGKeysRegenInerval = DefaultWGKeysInterval
 		log.Info(fmt.Sprintf("default value for preferences: WgKeysRegenInervalDays=%v", p.Session.WGKeysRegenInerval))
 		p.SavePreferences()
 	}
@@ -131,6 +136,10 @@ func (p *Preferences) setSession(accountID string,
 		OpenVPNUser:        strings.TrimSpace(vpnUser),
 		OpenVPNPass:        strings.TrimSpace(vpnPass),
 		WGKeysRegenInerval: p.Session.WGKeysRegenInerval} // keep 'WGKeysRegenInerval' from previus Session object
+
+	if p.Session.WGKeysRegenInerval <= 0 {
+		p.Session.WGKeysRegenInerval = DefaultWGKeysInterval
+	}
 
 	p.Session.updateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP)
 }

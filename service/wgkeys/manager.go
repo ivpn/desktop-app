@@ -143,21 +143,40 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		return fmt.Errorf("WG KeysManager not initialized")
 	}
 
+	// Check update configuration
+	// (not blocked by mutex bacause in order to return immediately if nothing to do)
+	session, activePublicKey, _, _, lastUpdate, interval := m._service.WireGuardGetKeys()
+
+	// function to check if update required
+	isNecessaryIpdate := func() (bool, error) {
+		if onlyUpdateIfNecessary == false {
+			return true, nil
+		}
+		if interval <= 0 {
+			// update interval must be defined
+			return false, fmt.Errorf("unable to 'GenerateOrUpdateKeys' (update interval is not defined)")
+		}
+		if len(activePublicKey) > 0 {
+			// If active WG key defined - key will be updated only if it is a time to do it
+			if lastUpdate.Add(interval).After(time.Now()) {
+				// it is not a time to regenerate keys
+				return false, nil
+			}
+		}
+		return true, nil
+	}
+
+	if haveToUpdate, err := isNecessaryIpdate(); haveToUpdate == false || err != nil {
+		return err
+	}
+
 	m._mutex.Lock()
 	defer m._mutex.Unlock()
 
-	session, activePublicKey, _, _, lastUpdate, interval := m._service.WireGuardGetKeys()
-	// update interval must be defined
-	if onlyUpdateIfNecessary && interval <= 0 {
-		return fmt.Errorf("unable to 'GenerateOrUpdateKeys' (update interval is not defined)")
-	}
-
-	// If active WG key defined - key will be updated only if it is a time to do it
-	if onlyUpdateIfNecessary && len(activePublicKey) > 0 {
-		if lastUpdate.Add(interval).After(time.Now()) {
-			// it is not a time to regenerate keys
-			return nil
-		}
+	// Check update configuration second time (locked by mutex)
+	session, activePublicKey, _, _, lastUpdate, interval = m._service.WireGuardGetKeys()
+	if haveToUpdate, err := isNecessaryIpdate(); haveToUpdate == false || err != nil {
+		return err
 	}
 
 	log.Info("Updating WG keys...")
@@ -181,11 +200,14 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	}
 
 	log.Info(fmt.Sprintf("WG keys updated (%s:%s) ", localIP.String(), pub))
+
+	// notify service about new keys
 	m._service.WireGuardSaveNewKeys(pub, priv, localIP)
 
 	// If no active WG keys defined - new keys will be generated + key rotation will be started
 	if len(activePublicKey) == 0 {
 		m.StartKeysRotation()
 	}
+
 	return nil
 }

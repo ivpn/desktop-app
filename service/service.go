@@ -44,7 +44,7 @@ type Service struct {
 	_connectMutex          sync.Mutex
 
 	// Note: Disconnect() function will wait until VPN fully disconnects
-	_vpnRunningWaiter sync.WaitGroup
+	_done chan struct{}
 
 	_isServersPingInProgress bool
 
@@ -302,8 +302,18 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	s._connectMutex.Lock()
 	defer s._connectMutex.Unlock()
 
-	s._vpnRunningWaiter.Add(1)
-	defer s._vpnRunningWaiter.Done()
+	s._done = make(chan struct{})
+	defer func() {
+		// notify: connection stopped
+		done := s._done
+		s._done = nil
+		if done != nil {
+			select {
+			case done <- struct{}{}:
+			default:
+			}
+		}
+	}()
 
 	log.Info("Connecting...")
 	// save vpn object
@@ -507,6 +517,8 @@ func (s *Service) Disconnect() error {
 		return nil
 	}
 
+	done := s._done
+
 	log.Info("Disconnecting...")
 
 	// stop detections for routing changes
@@ -517,7 +529,10 @@ func (s *Service) Disconnect() error {
 		return fmt.Errorf("failed to disconnect VPN: %w", err)
 	}
 
-	s._vpnRunningWaiter.Wait()
+	// wait for stop
+	if done != nil {
+		<-done
+	}
 
 	return nil
 }
@@ -1063,19 +1078,23 @@ func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, 
 	// notify clients about sesssion (wg keys) update
 	s._evtReceiver.OnServiceSessionChanged()
 
-	vpnObj := s._vpn
-	if vpnObj == nil {
-		return
-	}
-	if vpnObj.Type() != vpn.WireGuard {
-		return
-	}
-	if s.Connected() == false {
-		return
-	}
-	log.Info("Reconnecting WireGuard connection with new credentials...")
-	s._vpnReconnectRequested = true
-	s.Disconnect()
+	go func() {
+		// reconnect in separate routinr (do not block current thread)
+		vpnObj := s._vpn
+		if vpnObj == nil {
+			return
+		}
+		if vpnObj.Type() != vpn.WireGuard {
+			return
+		}
+		if s.Connected() == false {
+			return
+		}
+		log.Info("Reconnecting WireGuard connection with new credentials...")
+		s._vpnReconnectRequested = true
+
+		s.Disconnect()
+	}()
 }
 
 // WireGuardSetKeysRotationInterval change WG key rotation interval
@@ -1110,19 +1129,14 @@ func (s *Service) WireGuardGenerateKeys(updateIfNecessary bool) error {
 	}
 
 	// Update WG keys, if necessary
-	// No sense to try to update if firewall is enabled (VPN is in disconnected state now)
-	enabled, _, _, _, err := s.KillSwitchState()
-
-	if err == nil && enabled == false {
-		var err error
-		if updateIfNecessary {
-			err = s._wgKeysMgr.UpdateKeysIfNecessary()
-		} else {
-			err = s._wgKeysMgr.GenerateKeys()
-		}
-		if err != nil {
-			return fmt.Errorf("failed to regenerate WireGuard keys: %w", err)
-		}
+	var err error
+	if updateIfNecessary {
+		err = s._wgKeysMgr.UpdateKeysIfNecessary()
+	} else {
+		err = s._wgKeysMgr.GenerateKeys()
+	}
+	if err != nil {
+		return fmt.Errorf("failed to regenerate WireGuard keys: %w", err)
 	}
 
 	return nil
