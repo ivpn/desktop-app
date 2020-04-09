@@ -72,8 +72,8 @@ type CmdAntitracker struct {
 
 func (c *CmdAntitracker) Init() {
 	c.Initialize("antitracker", "Default AntiTracker configuration management for VPN connection")
-	c.BoolVar(&c.def, "default", false, "Enable AntiTracker")
-	c.BoolVar(&c.hardcore, "hardcore", false, "Enable AntiTracker 'hardcore' mode")
+	c.BoolVar(&c.def, "on", false, "Enable AntiTracker")
+	c.BoolVar(&c.hardcore, "on_hardcore", false, "Enable AntiTracker 'hardcore' mode")
 	c.BoolVar(&c.off, "off", false, "Disable AntiTracker")
 }
 

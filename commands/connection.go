@@ -273,7 +273,11 @@ func (c *CmdConnect) Run() (retError error) {
 					return err
 				}
 			}
-			srvID = svrs[len(svrs)-1].gateway
+			fastestSrv := svrs[len(svrs)-1]
+			if fastestSrv.pingMs == 0 {
+				fmt.Println("WARNING! Servers pinging problem.")
+			}
+			srvID = fastestSrv.gateway
 		}
 
 		// if we not foud required server before (by 'fastest' option)
