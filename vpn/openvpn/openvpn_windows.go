@@ -11,6 +11,9 @@ type platformSpecificProperties struct {
 	manualDNS net.IP
 }
 
+func (o *OpenVPN) implInit() error             { return nil }
+func (o *OpenVPN) implIsCanUseParamsV24() bool { return true }
+
 func (o *OpenVPN) implOnConnected() error {
 	// on Windows it is not possible to change network interface properties (over WMI) until it not enabled
 	// apply DNS value when VPN connected (TAP interface enabled)

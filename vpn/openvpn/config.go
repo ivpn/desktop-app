@@ -71,9 +71,10 @@ func (c *ConnectionParams) WriteConfigFile(
 	miPort int,
 	logFile string,
 	obfsproxyPort int,
-	extraParameters string) error {
+	extraParameters string,
+	isCanUseV24Params bool) error {
 
-	cfg, err := c.generateConfiguration(miAddr, miPort, logFile, obfsproxyPort, extraParameters)
+	cfg, err := c.generateConfiguration(miAddr, miPort, logFile, obfsproxyPort, extraParameters, isCanUseV24Params)
 	if err != nil {
 		return fmt.Errorf("failed to generate openvpn configuration : %w", err)
 	}
@@ -98,7 +99,8 @@ func (c *ConnectionParams) generateConfiguration(
 	miPort int,
 	logFile string,
 	obfsproxyPort int,
-	extraParameters string) (cfg []string, err error) {
+	extraParameters string,
+	isCanUseV24Params bool) (cfg []string, err error) {
 
 	if obfsproxyPort > 0 {
 		c.tcp = true
@@ -128,8 +130,13 @@ func (c *ConnectionParams) generateConfiguration(
 	// If the handshake fails openvpn will attempt to reset our connection with our peer and try again.
 	cfg = append(cfg, "hand-window 6")
 
-	// To change default connection-check time - uncomment next two lines:
-	cfg = append(cfg, "pull-filter ignore \"ping\"")
+	if isCanUseV24Params {
+		cfg = append(cfg, "compress")
+		cfg = append(cfg, "pull-filter ignore \"ping\"")
+	}
+	// To change default connection-check time:
+	// 	pull-filter ignore "ping"
+	//	keepalive 8 30
 	cfg = append(cfg, "keepalive 8 30")
 
 	// proxy
@@ -202,7 +209,6 @@ func (c *ConnectionParams) generateConfiguration(
 
 	cfg = append(cfg, "cipher AES-256-CBC")
 	cfg = append(cfg, "remote-cert-tls server")
-	cfg = append(cfg, "compress")
 	cfg = append(cfg, "verb 4")
 
 	if upCmd := platform.OpenvpnUpScript(); upCmd != "" {

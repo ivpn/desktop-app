@@ -10,6 +10,9 @@ type platformSpecificProperties struct {
 	// no specific properties for macOS implementation
 }
 
+func (o *OpenVPN) implInit() error             { return nil }
+func (o *OpenVPN) implIsCanUseParamsV24() bool { return true }
+
 func (o *OpenVPN) implOnConnected() error {
 	// not in use in macOS implementation
 	return nil

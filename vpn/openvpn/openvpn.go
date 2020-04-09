@@ -127,10 +127,11 @@ func (o *OpenVPN) DestinationIPs() []net.IP {
 func (o *OpenVPN) Type() vpn.Type { return vpn.OpenVPN }
 
 // Init performs basic initialisations before connection
-// It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
-// (currently, in use by WireGuard(Windows))
+// It is usefull, for example:
+//	- for WireGuard(Windows) - to ensure that WG service is fully uninstalled
+//	- for OpenVPN(Linux) - to ensure that OpenVPN has correct version
 func (o *OpenVPN) Init() error {
-	return nil // do nothing for OpenVPN
+	return o.implInit()
 }
 
 // Connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
@@ -274,14 +275,22 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		miIP, miPort,
 		o.logFile,
 		obfsproxyPort,
-		o.extraParameters)
+		o.extraParameters,
+		o.implIsCanUseParamsV24())
 
 	if err != nil {
 		return fmt.Errorf("failed to write configuration file: %w", err)
 	}
 
+	outProcessFunc := func(text string, isError bool) {
+		if isError {
+			log.Info(fmt.Sprintf("[OpenVPN] ERROR: %s", text))
+		} else {
+			log.Info(fmt.Sprintf("[OpenVPN] %s", text))
+		}
+	}
 	// SYNCHRONOUSLY execute openvpn process (wait untill it finished)
-	if err = shell.Exec(log, o.binaryPath, "--config", o.configPath); err != nil {
+	if err = shell.ExecAndProcessOutput(log, outProcessFunc, "", o.binaryPath, "--config", o.configPath); err != nil {
 		return fmt.Errorf("failed to start OpenVPN process: %w", err)
 	}
 

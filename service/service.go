@@ -145,20 +145,6 @@ func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 // (e.g. obfsproxy or WireGaurd on Linux)
 func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
 	ovpnErr = platform.CheckExecutableRights("OpenVPN binary", platform.OpenVpnBinaryPath())
-	if ovpnErr == nil && implIsNeedCheckOvpnVer() {
-		// Check OpenVPN minimum version
-		minVer := []int{2, 4}
-		verNums := openvpn.GetOpenVPNVersion(platform.OpenVpnBinaryPath())
-		for i := range minVer {
-			if len(verNums) <= i {
-				continue
-			}
-			if verNums[i] < minVer[i] {
-				ovpnErr = fmt.Errorf("OpenVPN version '%v' not supported (minimum required version '%v')", verNums, minVer)
-				break
-			}
-		}
-	}
 
 	obfspErr = platform.CheckExecutableRights("obfsproxy binary", platform.ObfsproxyStartScript())
 
