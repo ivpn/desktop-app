@@ -133,7 +133,10 @@ func (c *ConnectionParams) generateConfiguration(
 	if isCanUseV24Params {
 		cfg = append(cfg, "compress")
 		cfg = append(cfg, "pull-filter ignore \"ping\"")
+	} else {
+		cfg = append(cfg, "comp-lzo no")
 	}
+
 	// To change default connection-check time:
 	// 	pull-filter ignore "ping"
 	//	keepalive 8 30

@@ -135,6 +135,10 @@ func (i *ManagementInterface) start() error {
 		i.isConnected = true
 
 		defer func() {
+			//erase connection properties
+			i.pushReplyDNS = nil
+			i.pushReplyCmds = make([]string, 0)
+
 			i.listener.Close()
 			i.log.Info("OpenVPN MI stopped")
 			i.isConnected = false // mark: connection is closed
@@ -289,11 +293,12 @@ func (i *ManagementInterface) miCommunication() {
 				// If state is Connected - save local and server IP addresses
 				if state == vpn.CONNECTED {
 					if len(params) > 3 {
-						clientIP = net.ParseIP(params[3])
+						clientIP = net.ParseIP(strings.TrimSpace(params[3]))
 					}
 					if len(params) > 4 {
-						serverIP = net.ParseIP(params[4])
+						serverIP = net.ParseIP(strings.TrimSpace(params[4]))
 					}
+
 				} else if state == vpn.EXITING {
 					//>STATE:1563526742,EXITING,auth-failure,,,,,
 					if strings.Contains(msgText, "auth-failure") { //if (params[2] == "auth-failure")

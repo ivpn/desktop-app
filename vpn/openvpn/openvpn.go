@@ -282,13 +282,18 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		return fmt.Errorf("failed to write configuration file: %w", err)
 	}
 
+	// Reading OpenVPN console output
 	outProcessFunc := func(text string, isError bool) {
+		if len(text) == 0 {
+			return
+		}
 		if isError {
 			log.Info(fmt.Sprintf("[OpenVPN] ERROR: %s", text))
 		} else {
 			log.Info(fmt.Sprintf("[OpenVPN] %s", text))
 		}
 	}
+
 	// SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 	if err = shell.ExecAndProcessOutput(log, outProcessFunc, "", o.binaryPath, "--config", o.configPath); err != nil {
 		return fmt.Errorf("failed to start OpenVPN process: %w", err)

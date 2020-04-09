@@ -18,12 +18,13 @@ func (o *OpenVPN) implInit() error {
 	o.psProps.isCanUseParamsV24 = true
 
 	if err := platform.CheckExecutableRights("OpenVPN binary", o.binaryPath); err != nil {
-		return nil
+		return err
 	}
 
 	// Check OpenVPN minimum version
 	minVer := []int{2, 3}
 	verNums := GetOpenVPNVersion(o.binaryPath)
+	log.Info("OpenVPN version:", verNums)
 	for i := range minVer {
 		if len(verNums) <= i {
 			continue
@@ -67,9 +68,8 @@ func (o *OpenVPN) implOnSetManualDNS(addr net.IP) error {
 }
 
 func (o *OpenVPN) implOnResetManualDNS() error {
-
 	mi := o.managementInterface
-	if o.state != vpn.DISCONNECTED && o.state != vpn.EXITING && o.IsPaused() == false {
+	if mi != nil && mi.isConnected && o.state != vpn.DISCONNECTED && o.state != vpn.EXITING && o.IsPaused() == false {
 		// restore default dns pushed by OpenVPN server
 		defaultDNS := mi.pushReplyDNS
 		if defaultDNS != nil {
