@@ -184,6 +184,9 @@ func (i *ManagementInterface) miCommunication() {
 		i.log.Info("OpenVPN MI disconnected: ", i.miConn.RemoteAddr())
 	}()
 
+	// request version info
+	i.sendResponse("version")
+
 	reader := bufio.NewReader(i.miConn)
 	for {
 		// will listen for message to process ending in newline (\n)

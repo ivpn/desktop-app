@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,40 +25,33 @@ func init() {
 
 // GetOpenVPNVersion trying to get openvpn binary version
 func GetOpenVPNVersion(ovpnBinary string) []int {
-
-	regexp := regexp.MustCompile("(?i)^OpenVPN ([0-9.]*) ")
-	version := make([]int, 0)
-
-	outProcessFunc := func(text string, isError bool) {
-		if isError || len(version) > 0 {
-			return
-		}
-
-		columns := regexp.FindStringSubmatch(text)
-		if len(columns) < 2 {
-			return
-		}
-		ver := columns[1]
-		if len(ver) == 0 {
-			return
-		}
-		verNums := make([]int, 0, 3)
-		for _, num := range strings.Split(ver, ".") {
-			n, err := strconv.Atoi(num)
-			if err != nil {
-				return
-			}
-			if len(verNums) == 0 && n == 0 {
-				continue
-			}
-			verNums = append(verNums, n)
-		}
-		version = verNums
+	cmd := exec.Command(ovpnBinary, "--version")
+	out, _ := cmd.CombinedOutput()
+	if out == nil || len(out) == 0 {
+		return nil
 	}
 
-	shell.ExecAndProcessOutput(nil, outProcessFunc, "", ovpnBinary, "--version")
-
-	return version
+	regexp := regexp.MustCompile("(?i)^OpenVPN ([0-9.]*) ")
+	columns := regexp.FindStringSubmatch(string(out))
+	if len(columns) < 2 {
+		return nil
+	}
+	ver := columns[1]
+	if len(ver) == 0 {
+		return nil
+	}
+	verNums := make([]int, 0, 3)
+	for _, num := range strings.Split(ver, ".") {
+		n, err := strconv.Atoi(num)
+		if err != nil {
+			return nil
+		}
+		if len(verNums) == 0 && n == 0 {
+			continue
+		}
+		verNums = append(verNums, n)
+	}
+	return verNums
 }
 
 // OpenVPN structure represents all data of OpenVPN connection
@@ -282,20 +276,36 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		return fmt.Errorf("failed to write configuration file: %w", err)
 	}
 
-	// Reading OpenVPN console output
+	// Saving first lines of OpenVPN console output into buffer
+	// (can be useful in case of OpenVPN start error to analyze it in a log)
+	const maxBufSize int = 256
+	strOut := strings.Builder{}
+	strErr := strings.Builder{}
 	outProcessFunc := func(text string, isError bool) {
 		if len(text) == 0 {
 			return
 		}
 		if isError {
-			log.Info(fmt.Sprintf("[OpenVPN] ERROR: %s", text))
+			if strErr.Len() > maxBufSize {
+				return
+			}
+			strErr.WriteString(text)
 		} else {
-			log.Info(fmt.Sprintf("[OpenVPN] %s", text))
+			if strOut.Len() > maxBufSize {
+				return
+			}
+			strOut.WriteString(text)
 		}
 	}
 
 	// SYNCHRONOUSLY execute openvpn process (wait untill it finished)
 	if err = shell.ExecAndProcessOutput(log, outProcessFunc, "", o.binaryPath, "--config", o.configPath); err != nil {
+		if strOut.Len() > 0 {
+			log.Info(fmt.Sprintf("OpenVPN start ERROR. Output: %s...", strOut.String()))
+		}
+		if strErr.Len() > 0 {
+			log.Info(fmt.Sprintf("OpenVPN start ERROR. Errors output : %s...", strErr.String()))
+		}
 		return fmt.Errorf("failed to start OpenVPN process: %w", err)
 	}
 

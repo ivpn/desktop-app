@@ -288,16 +288,13 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	s._connectMutex.Lock()
 	defer s._connectMutex.Unlock()
 
-	s._done = make(chan struct{})
+	s._done = make(chan struct{}, 1)
 	defer func() {
 		// notify: connection stopped
 		done := s._done
 		s._done = nil
 		if done != nil {
-			select {
-			case done <- struct{}{}:
-			default:
-			}
+			done <- struct{}{}
 		}
 	}()
 
