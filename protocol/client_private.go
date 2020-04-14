@@ -64,7 +64,7 @@ func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, time
 	return nil
 }
 
-func (c *Client) sendRecvRaw(request interface{}) (data []byte, cmdBase types.CommandBase, err error) {
+func (c *Client) sendRecvAny(request interface{}, responses ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
 	var receiver *receiverChannel
 
 	// thread-safe receiver registration
@@ -73,7 +73,7 @@ func (c *Client) sendRecvRaw(request interface{}) (data []byte, cmdBase types.Co
 		defer c._receiversLocker.Unlock()
 
 		c._requestIdx++
-		receiver = createReceiver(c._requestIdx, nil)
+		receiver = createReceiverAny(c._requestIdx, responses...)
 
 		c._receivers[receiver] = struct{}{}
 	}()
@@ -147,7 +147,7 @@ func (c *Client) receiverRoutine() {
 			defer c._receiversLocker.Unlock()
 
 			for receiver := range c._receivers {
-				if receiver.IsExpectedResponse(cmd.Idx) {
+				if receiver.IsExpectedResponse(cmd.Idx, cmd.Command) {
 					isProcessed = true
 					receiver.PushResponse(messageData)
 					break
