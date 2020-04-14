@@ -91,81 +91,45 @@ type Service interface {
 
 // CreateProtocol - Create new protocol object
 func CreateProtocol() (*Protocol, error) {
-	return &Protocol{}, nil
+	return &Protocol{_connections: make(map[net.Conn]struct{})}, nil
 }
 
 // Protocol - TCP interface to communicate with IVPN application
 type Protocol struct {
 	_secret uint64
 
-	// new connections listener + current connection (needed to be able to stop service by closing them)
-	_connListener          *net.TCPListener
-	_clientConnection      net.Conn
-	_clientIsAuthenticated bool
+	// connections listener
+	_connListener *net.TCPListener
+
+	_connectionsMutex sync.RWMutex
+	_connections      map[net.Conn]struct{}
 
 	_service Service
 
-	_connectMutex            sync.Mutex
+	_vpnConnectMutex         sync.Mutex
 	_disconnectRequestCmdIdx int
 
 	_connectRequestsMutex   sync.Mutex
 	_connectRequests        int
 	_connectRequestLastTime time.Time
 
-	// _keepAlone informs daemon\service to do nothing when client disconnects
-	// 		false (default) - VPN disconnects when client disconnects from a daemon
-	// 		true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
-	_keepAlone bool
-
 	// keep info about last VPN state
 	_lastVPNState vpn.StateInfo
 }
 
-func (p *Protocol) setClientConnection(conn net.Conn) {
-	p._clientIsAuthenticated = false
-	p._clientConnection = conn
-}
-func (p *Protocol) clientConnection() net.Conn {
-	return p._clientConnection
-}
-
-func (p *Protocol) connectReqCount() (int, time.Time) {
-	p._connectRequestsMutex.Lock()
-	defer p._connectRequestsMutex.Unlock()
-
-	return p._connectRequests, p._connectRequestLastTime
-}
-func (p *Protocol) connectReqEnter() time.Time {
-	p._connectRequestsMutex.Lock()
-	defer p._connectRequestsMutex.Unlock()
-
-	p._connectRequestLastTime = time.Now()
-	p._connectRequests++
-	return p._connectRequestLastTime
-}
-func (p *Protocol) connectReqExit() {
-	p._connectRequestsMutex.Lock()
-	defer p._connectRequestsMutex.Unlock()
-
-	p._connectRequests--
-}
-
+// Stop - stop communication
 func (p *Protocol) Stop() {
 	log.Info("Stopping")
 
 	listener := p._connListener
-	conn := p._clientConnection
 	if listener != nil {
 		// do not accept new incoming connections
 		listener.Close()
 	}
-	if conn != nil {
-		// notifying client "service is going to stop" (client application (UI) will close)
-		sendResponse(conn, types.ServiceExitingResp{}, 0)
 
-		// closing current connection with a client
-		conn.Close()
-	}
+	// Notifying clients "service is going to stop" (client application (UI) will close)
+	// Closing and erasing all clients connections
+	p.notifyClientsDaemonExiting()
 }
 
 // Start - starts TCP interface to communicate with IVPN application (server to listen incoming connections)
@@ -220,17 +184,23 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 			log.Error("Server: failed to accept incoming connection:", err)
 			return fmt.Errorf("(server) failed to accept incoming connection: %w", err)
 		}
-		p.processClient(conn)
+		go p.processClient(conn)
 	}
 }
 
-func (p *Protocol) processClient(clientConn net.Conn) {
-	// save connection
-	p.setClientConnection(clientConn)
+func (p *Protocol) processClient(conn net.Conn) {
+	// keepAlone informs daemon\service to do nothing when client disconnects
+	// 		false (default) - VPN disconnects when client disconnects from a daemon
+	// 		true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
+	keepAlone := false
+	// The first requiest from a client should be 'Hello' request with correct secret
+	// In case of wrong secret - the daemon drops connection
+	isAuthenticated := false
 
-	log.Info("Client connected: ", clientConn.RemoteAddr())
+	p.clientConnected(conn)
+	log.Info("Client connected: ", conn.RemoteAddr())
+
 	stopChannel := make(chan struct{}, 1)
-
 	defer func() {
 		// notify routines to stop
 		close(stopChannel)
@@ -241,12 +211,11 @@ func (p *Protocol) processClient(clientConn net.Conn) {
 				log.ErrorTrace(err)
 			}
 		}
-		clientConn.Close()
-		log.Info("Client disconnected: ", clientConn.RemoteAddr())
-		// resret client connection
-		p.setClientConnection(nil)
 
-		if p._keepAlone == false {
+		p.clientDisconnected(conn)
+		log.Info("Client disconnected: ", conn.RemoteAddr())
+
+		if keepAlone == false {
 			stopService, err := p._service.OnControlConnectionClosed()
 			if err != nil {
 				log.Error(err)
@@ -280,14 +249,14 @@ func (p *Protocol) processClient(clientConn net.Conn) {
 			case <-p._service.ServersUpdateNotifierChannel():
 				// servers update notifier
 				serv, _ := p._service.ServersList()
-				p.sendResponse(&types.ServerListResp{VpnServers: *serv}, 0)
+				p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, 0)
 			case <-stopChannel:
 				return // stop loop
 			}
 		}
 	}()
 
-	reader := bufio.NewReader(clientConn)
+	reader := bufio.NewReader(conn)
 	// run loop forever (or until ctrl-c)
 	for {
 		// will listen for message to process ending in newline (\n)
@@ -300,46 +269,47 @@ func (p *Protocol) processClient(clientConn net.Conn) {
 		}
 
 		// CONNECTION AUTHENTICATION: First request should be 'Hello' with correct authentication secret
-		if p._clientIsAuthenticated == false {
+		if isAuthenticated == false {
 			messageData := []byte(message)
 
 			cmd, err := types.GetCommandBase(messageData)
 			if err != nil {
-				log.Error("Failed to parse initialisation request:", err)
+				log.Error(fmt.Sprintf("%sFailed to parse initialisation request:", p.connLogID(conn)), err)
 				return
 			}
 			// ensure if client use correct secret
 			if cmd.Command != "Hello" {
-				logger.Error("Connection not authenticated. Closing.")
+				logger.Error(fmt.Sprintf("%sConnection not authenticated. Closing.", p.connLogID(conn)))
 				return
 			}
 			// parsing 'Hello' request
 			var hello types.Hello
 			if err := json.Unmarshal(messageData, &hello); err != nil {
-				p.sendErrorResponse(cmd, fmt.Errorf("connection authentication error: %w", err))
+				p.sendErrorResponse(conn, cmd, fmt.Errorf("connection authentication error: %w", err))
 				return
 			}
 			if hello.Secret != p._secret {
-				p.sendErrorResponse(cmd, fmt.Errorf("secret verification error"))
+				p.sendErrorResponse(conn, cmd, fmt.Errorf("secret verification error"))
 				return
 			}
-			p._clientIsAuthenticated = true
+			keepAlone = hello.KeepDaemonAlone
+			isAuthenticated = true
 		}
 
 		// Processing requests from client (in seperate routine)
-		go p.processRequest(message)
+		go p.processRequest(conn, message)
 	}
 }
 
-func (p *Protocol) processRequest(message string) {
+func (p *Protocol) processRequest(conn net.Conn, message string) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("PANIC during processing request!: ", r)
+			log.Error(fmt.Sprintf("%sPANIC during processing request!: ", p.connLogID(conn)), r)
 			if err, ok := r.(error); ok {
 				log.ErrorTrace(err)
 			}
-			log.Info("Closing connection and recovering state")
-			p.clientConnection().Close()
+			log.Info(fmt.Sprintf("%sClosing connection and recovering state", p.connLogID(conn)))
+			conn.Close()
 		}
 	}()
 
@@ -347,23 +317,21 @@ func (p *Protocol) processRequest(message string) {
 
 	reqCmd, err := types.GetCommandBase(messageData)
 	if err != nil {
-		log.Error("Failed to parse request:", err)
+		log.Error(fmt.Sprintf("%sFailed to parse request:", p.connLogID(conn)), err)
 		return
 	}
 
-	log.Info("[<--] ", reqCmd.Command)
+	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command)
 
 	switch reqCmd.Command {
 	case "Hello":
 		var req types.Hello
 
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 		}
 
-		log.Info(fmt.Sprintf("Connected client version: '%s' [set KeepDaemonAlone = %t]", req.Version, req.KeepDaemonAlone))
-		p._keepAlone = req.KeepDaemonAlone
-
+		log.Info(fmt.Sprintf("%sConnected client version: '%s' [set KeepDaemonAlone = %t]", p.connLogID(conn), req.Version, req.KeepDaemonAlone))
 		prefs := p._service.Preferences()
 
 		wg, ovpn, obfsp := p._service.GetDisabledFunctions()
@@ -390,26 +358,26 @@ func (p *Protocol) processRequest(message string) {
 				OpenVPNError:   ovpnErr,
 				ObfsproxyError: obfspErr}}
 
-		p.sendResponse(&helloResp, req.Idx)
+		p.sendResponse(conn, &helloResp, req.Idx)
 
 		if req.GetServersList == true {
 			serv, _ := p._service.ServersList()
-			p.sendResponse(&types.ServerListResp{VpnServers: *serv}, req.Idx)
+			p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, req.Idx)
 		}
 
 		if req.GetStatus == true {
 			/*
 				// send Firewall state
 				if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
-					p.sendErrorResponse(reqType, err)
+					p.sendErrorResponse(clientConn, reqType, err)
 				} else {
-					p.sendResponse(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast})
+					p.sendResponse(clientConn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast})
 				}*/
 
 			// send VPN connection  state
 			vpnState := p._lastVPNState
 			if vpnState.State == vpn.CONNECTED {
-				p.sendResponse(&types.ConnectedResp{
+				p.sendResponse(conn, &types.ConnectedResp{
 					TimeSecFrom1970: vpnState.Time,
 					ClientIP:        vpnState.ClientIP.String(),
 					ServerIP:        vpnState.ServerIP.String(),
@@ -424,7 +392,7 @@ func (p *Protocol) processRequest(message string) {
 		// send VPN connection  state
 		vpnState := p._lastVPNState
 		if vpnState.State == vpn.CONNECTED {
-			p.sendResponse(&types.ConnectedResp{
+			p.sendResponse(conn, &types.ConnectedResp{
 				TimeSecFrom1970: vpnState.Time,
 				ClientIP:        vpnState.ClientIP.String(),
 				ServerIP:        vpnState.ServerIP.String(),
@@ -432,9 +400,9 @@ func (p *Protocol) processRequest(message string) {
 				ExitServerID:    vpnState.ExitServerID},
 				reqCmd.Idx)
 		} else if vpnState.State == vpn.DISCONNECTED {
-			p.sendResponse(&types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqCmd.Idx)
+			p.sendResponse(conn, &types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqCmd.Idx)
 		} else {
-			p.sendResponse(&types.VpnStateResp{StateVal: vpnState.State, State: vpnState.State.String()}, reqCmd.Idx)
+			p.sendResponse(conn, &types.VpnStateResp{StateVal: vpnState.State, State: vpnState.State.String()}, reqCmd.Idx)
 		}
 
 		break
@@ -442,26 +410,26 @@ func (p *Protocol) processRequest(message string) {
 	case "GetServers":
 		serv, err := p._service.ServersList()
 		if err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 		if serv == nil {
-			p.sendErrorResponse(reqCmd, fmt.Errorf("failed to get servers info"))
+			p.sendErrorResponse(conn, reqCmd, fmt.Errorf("failed to get servers info"))
 			break
 		}
-		p.sendResponse(&types.ServerListResp{VpnServers: *serv}, reqCmd.Idx)
+		p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, reqCmd.Idx)
 		break
 
 	case "PingServers":
 		var req types.PingServers
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
 		retMap, err := p._service.PingServers(req.RetryCount, req.TimeOutMs)
 		if err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
@@ -470,55 +438,55 @@ func (p *Protocol) processRequest(message string) {
 			results = append(results, types.PingResultType{Host: k, Ping: v})
 		}
 
-		p.sendResponse(&types.PingServersResp{PingResults: results}, req.Idx)
+		p.sendResponse(conn, &types.PingServersResp{PingResults: results}, req.Idx)
 		break
 
 	case "KillSwitchGetStatus":
 		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
-			p.sendResponse(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast}, reqCmd.Idx)
+			p.sendResponse(conn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast}, reqCmd.Idx)
 		}
 		break
 
 	case "KillSwitchSetEnabled":
 		var req types.KillSwitchSetEnabled
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
 		if err := p._service.SetKillSwitchState(req.IsEnabled); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		p.sendResponse(&types.EmptyResp{}, req.Idx)
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		break
 
 	case "KillSwitchSetAllowLANMulticast":
 		var req types.KillSwitchSetAllowLANMulticast
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
 		p._service.SetKillSwitchAllowLANMulticast(req.AllowLANMulticast)
 		if req.Synchronously {
-			p.sendResponse(&types.EmptyResp{}, req.Idx)
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 		break
 
 	case "KillSwitchSetAllowLAN":
 		var req types.KillSwitchSetAllowLAN
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
 		p._service.SetKillSwitchAllowLAN(req.AllowLAN)
 		if req.Synchronously {
-			p.sendResponse(&types.EmptyResp{}, req.Idx)
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 
 		break
@@ -526,22 +494,22 @@ func (p *Protocol) processRequest(message string) {
 	case "KillSwitchSetIsPersistent":
 		var req types.KillSwitchSetIsPersistent
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
 		if err := p._service.SetKillSwitchIsPersistent(req.IsPersistent); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		p.sendResponse(&types.EmptyResp{}, req.Idx)
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		break
 
 	// TODO: can be fully replaced by 'KillSwitchGetStatus'
 	case "KillSwitchGetIsPestistent":
 		isPersistant := p._service.Preferences().IsFwPersistant
-		p.sendResponse(&types.KillSwitchGetIsPestistentResp{IsPersistent: isPersistant}, reqCmd.Idx)
+		p.sendResponse(conn, &types.KillSwitchGetIsPestistentResp{IsPersistent: isPersistant}, reqCmd.Idx)
 		break
 
 	// TODO: must return response
@@ -549,27 +517,27 @@ func (p *Protocol) processRequest(message string) {
 	case "SetPreference":
 		var req types.SetPreference
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
 		if err := p._service.SetPreference(req.Key, req.Value); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 		}
 		break
 
 	case "GenerateDiagnostics":
 		if log, log0, err := logger.GetLogText(1024 * 64); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
-			p.sendResponse(&types.DiagnosticsGeneratedResp{ServiceLog: log, ServiceLog0: log0}, reqCmd.Idx)
+			p.sendResponse(conn, &types.DiagnosticsGeneratedResp{ServiceLog: log, ServiceLog0: log0}, reqCmd.Idx)
 		}
 		break
 
 	case "SetAlternateDns":
 		var req types.SetAlternateDns
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
@@ -590,34 +558,34 @@ func (p *Protocol) processRequest(message string) {
 
 		if err != nil {
 			log.ErrorTrace(err)
-			p.sendResponse(&types.SetAlternateDNSResp{IsSuccess: false, ChangedDNS: net.IPv4zero.String()}, req.Idx)
+			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ChangedDNS: net.IPv4zero.String()}, req.Idx)
 		} else {
-			p.sendResponse(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.DNS}, req.Idx)
+			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.DNS}, req.Idx)
 		}
 		break
 
 	case "PauseConnection":
 		if err := p._service.Pause(); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 		break
 
 	case "ResumeConnection":
 		if err := p._service.Resume(); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 		break
 
 	case "SetCredentials":
 		var r types.SetCredentials
 		if err := json.Unmarshal(messageData, &r); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
@@ -629,9 +597,9 @@ func (p *Protocol) processRequest(message string) {
 			r.WgPrivateKey,
 			r.WgLocalIP,
 			r.WgKeyGenerated); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
-			p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+			p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 		}
 
 		break
@@ -639,7 +607,7 @@ func (p *Protocol) processRequest(message string) {
 	case "SessionNew":
 		var req types.SessionNew
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
@@ -649,7 +617,7 @@ func (p *Protocol) processRequest(message string) {
 		if err != nil {
 			if apiCode == 0 {
 				// if apiCode == 0 - it is not API error. Sending error response
-				p.sendErrorResponse(reqCmd, err)
+				p.sendErrorResponse(conn, reqCmd, err)
 				break
 			}
 			// sending API error info
@@ -668,16 +636,16 @@ func (p *Protocol) processRequest(message string) {
 		}
 
 		// send response
-		p.sendResponse(&resp, reqCmd.Idx)
+		p.sendResponse(conn, &resp, reqCmd.Idx)
 		break
 
 	case "SessionDelete":
 		err := p._service.SessionDelete()
 		if err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
-		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 		break
 
 	case "SessionStatus":
@@ -685,7 +653,7 @@ func (p *Protocol) processRequest(message string) {
 		apiCode, apiErrMsg, accountInfo, err := p._service.SessionStatus()
 		if err != nil && apiCode == 0 {
 			// if apiCode == 0 - it is not API error. Sending error response
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 		// Sending session info
@@ -695,49 +663,49 @@ func (p *Protocol) processRequest(message string) {
 			Account:         accountInfo}
 
 		// send response
-		p.sendResponse(&resp, reqCmd.Idx)
+		p.sendResponse(conn, &resp, reqCmd.Idx)
 		break
 
 	case "WireGuardGenerateNewKeys":
 		var req types.WireGuardGenerateNewKeys
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 		if err := p._service.WireGuardGenerateKeys(req.OnlyUpdateIfNecessary); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
-		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 		break
 
 	case "WireGuardSetKeysRotationInterval":
 		var req types.WireGuardSetKeysRotationInterval
 		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
 		p._service.WireGuardSetKeysRotationInterval(req.Interval)
-		p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 		break
 
 	case "Disconnect":
 		p._disconnectRequestCmdIdx = reqCmd.Idx
 
 		if p._service.Connected() == false {
-			p.sendResponse(&types.EmptyResp{}, reqCmd.Idx)
+			p.sendResponse(conn, &types.DisconnectedResp{Reason: types.DisconnectRequested}, reqCmd.Idx)
 			break
 		}
 
 		if err := p._service.Disconnect(); err != nil {
-			p.sendErrorResponse(reqCmd, err)
+			p.sendErrorResponse(conn, reqCmd, err)
 		}
 		break
 
 	case "Connect":
 		p._disconnectRequestCmdIdx = 0
-		requestTime := p.connectReqEnter()
+		requestTime := p.vpnConnectReqEnter()
 
 		stateChan := make(chan vpn.StateInfo, 1)
 		isExitChan := make(chan bool, 1)
@@ -749,12 +717,12 @@ func (p *Protocol) processRequest(message string) {
 			log.ErrorTrace(err)
 		}
 
-		p._connectMutex.Lock()
-		defer p._connectMutex.Unlock()
-		defer p.connectReqExit()
+		p._vpnConnectMutex.Lock()
+		defer p._vpnConnectMutex.Unlock()
+		defer p.vpnConnectReqExit()
 
 		// skip sending 'disconnected' state because we are giong to connect immediately
-		if _, lastRequestTime := p.connectReqCount(); requestTime.Equal(lastRequestTime) == false {
+		if _, lastRequestTime := p.vpnConnectReqCount(); requestTime.Equal(lastRequestTime) == false {
 			log.Info("Skipping awaited connection request. Newest request received.")
 			return
 		}
@@ -768,20 +736,25 @@ func (p *Protocol) processRequest(message string) {
 			close(isExitChan)
 
 			// Do not send "Disconnected" notification if we are giong to establish new connection immediately
-			if cnt, _ := p.connectReqCount(); cnt == 1 || p._disconnectRequestCmdIdx > 0 {
+			if cnt, _ := p.vpnConnectReqCount(); cnt == 1 || p._disconnectRequestCmdIdx > 0 {
 				p._lastVPNState = vpn.NewStateInfo(vpn.DISCONNECTED, "")
 
 				// Sending "Disconnected" only in one place (after VPN process stopped)
-				authErr := 0
+				disconnectionReason := types.Unknown
 				if disconnectAuthError == true {
-					authErr = 1
+					disconnectionReason = types.AuthenticationError
+				}
+				if p._disconnectRequestCmdIdx > 0 {
+					// notify clients that disconnection was manually requested by one of connected clients
+					// (prevent UI clients trying to reconnect)
+					disconnectionReason = types.DisconnectRequested
 				}
 
 				respIdx := p._disconnectRequestCmdIdx
 				if respIdx == 0 {
 					respIdx = reqCmd.Idx
 				}
-				p.sendResponse(&types.DisconnectedResp{Failure: true, Reason: authErr, ReasonDescription: disconnectDescription}, respIdx)
+				p.notifyClients(&types.DisconnectedResp{Failure: true, Reason: disconnectionReason, ReasonDescription: disconnectDescription})
 			}
 
 			// wait all routines to stop
@@ -812,21 +785,21 @@ func (p *Protocol) processRequest(message string) {
 					switch state.State {
 					case vpn.CONNECTED:
 						// Do not send "Connected" notification if we are giong to establish new connection immediately
-						if cnt, _ := p.connectReqCount(); cnt == 1 || p._disconnectRequestCmdIdx > 0 {
-							p.sendResponse(&types.ConnectedResp{
+						if cnt, _ := p.vpnConnectReqCount(); cnt == 1 || p._disconnectRequestCmdIdx > 0 {
+							p.notifyClients(&types.ConnectedResp{
 								TimeSecFrom1970: state.Time,
 								ClientIP:        state.ClientIP.String(),
 								ServerIP:        state.ServerIP.String(),
 								VpnType:         state.VpnType,
-								ExitServerID:    state.ExitServerID},
-								reqCmd.Idx)
+								ExitServerID:    state.ExitServerID})
+
 						} else {
 							log.Debug("Skip sending 'Connected' notification. New connection request is awaiting ", cnt)
 						}
 					case vpn.EXITING:
 						disconnectAuthError = state.IsAuthError
 					default:
-						p.sendResponse(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo}, 0)
+						p.notifyClients(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo})
 					}
 				case <-isExitChan:
 					break state_forward_loop
@@ -845,6 +818,6 @@ func (p *Protocol) processRequest(message string) {
 	default:
 		log.Warning("!!! Unsupported request type !!! ", reqCmd.Command)
 		log.Debug("Unsupported request:", message)
-		p.sendErrorResponse(reqCmd, fmt.Errorf("unsupported request: '%s'", reqCmd.Command))
+		p.sendErrorResponse(conn, reqCmd, fmt.Errorf("unsupported request: '%s'", reqCmd.Command))
 	}
 }

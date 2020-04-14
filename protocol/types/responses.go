@@ -127,11 +127,21 @@ type ConnectedResp struct {
 	ExitServerID    string
 }
 
+// DisconnectionReason - disconnection reason
+type DisconnectionReason int
+
+// Disconnection reason types
+const (
+	Unknown             DisconnectionReason = iota
+	AuthenticationError DisconnectionReason = iota
+	DisconnectRequested DisconnectionReason = iota
+)
+
 // DisconnectedResp notifying about stopped connetion
 type DisconnectedResp struct {
 	CommandBase
 	Failure           bool
-	Reason            int
+	Reason            DisconnectionReason //int
 	ReasonDescription string
 }
 

@@ -17,5 +17,5 @@ func (p *Protocol) OnServiceSessionChanged() {
 		Version: version.Version(),
 		Session: types.CreateSessionResp(service.Preferences().Session)}
 
-	p.sendResponse(&helloResp, 0)
+	p.notifyClients(&helloResp)
 }
