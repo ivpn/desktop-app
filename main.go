@@ -95,14 +95,14 @@ func main() {
 	// initialize command handler
 	port, secret, err := readDaemonPort()
 	if err != nil {
-		fmt.Printf("ERROR: Unable to connect to service: %s\n", err)
+		fmt.Fprintf(os.Stderr, "ERROR: Unable to connect to service: %s\n", err)
 		printServStartInstructions()
 		os.Exit(1)
 	}
 
 	proto := protocol.CreateClient(port, secret)
 	if err := proto.Connect(); err != nil {
-		fmt.Printf("ERROR: Failed to connect to service : %s\n", err)
+		fmt.Fprintf(os.Stderr, "ERROR: Failed to connect to service : %s\n", err)
 		printServStartInstructions()
 		os.Exit(1)
 	}
@@ -111,10 +111,9 @@ func main() {
 
 	if len(os.Args) < 2 {
 		if err := stateCmd.Run(); err != nil {
-			fmt.Printf("\n%v\n", err)
+			fmt.Fprintf(os.Stderr, "\n%v\n", err)
 			os.Exit(1)
 		}
-
 		return
 	}
 
@@ -130,7 +129,7 @@ func main() {
 
 	// unknown command
 	if isProcessed == false {
-		fmt.Printf("Error. Unexpected command %s\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "Error. Unexpected command %s\n", os.Args[1])
 		printUsageAll(true)
 		os.Exit(1)
 	}
@@ -138,7 +137,7 @@ func main() {
 
 func runCommand(c ICommand, args []string) {
 	if err := c.Parse(args); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		if _, ok := err.(flags.BadParameter); ok == true {
 			c.Usage(false)
 		}
@@ -146,7 +145,7 @@ func runCommand(c ICommand, args []string) {
 	}
 
 	if err := c.Run(); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		if _, ok := err.(flags.BadParameter); ok == true {
 			c.Usage(false)
 		}
