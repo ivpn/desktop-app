@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -68,8 +69,13 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	}
 
 	// start WG
-	err = shell.Exec(log, wg.binaryPath, "up", wg.configFilePath)
+	log.Info("Shell exec: ", wg.binaryPath, "up", wg.configFilePath)
+	cmd := exec.Command(wg.binaryPath, "up", wg.configFilePath)
+	outBytes, err := cmd.CombinedOutput()
 	if err != nil {
+		if len(outBytes) > 0 {
+			log.Error(fmt.Sprintf("'%s' error. Output: %s", wg.binaryPath, string(outBytes)))
+		}
 		return fmt.Errorf("failed to start WireGuard: %w", err)
 	}
 
