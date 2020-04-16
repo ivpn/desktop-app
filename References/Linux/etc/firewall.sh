@@ -6,8 +6,8 @@
 #     or
 #     sudo iptables -S
 
-IPv4BIN=/sbin/iptables
-IPv6BIN=/sbin/ip6tables
+IPv4BIN=iptables
+IPv6BIN=ip6tables
 
 IN_IVPN=IVPN-IN
 OUT_IVPN=IVPN-OUT
