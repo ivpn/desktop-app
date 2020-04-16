@@ -125,6 +125,7 @@ type ConnectedResp struct {
 	ClientIP        string
 	ServerIP        string
 	ExitServerID    string
+	ManualDNS       string
 }
 
 // DisconnectedResp notifying about stopped connetion

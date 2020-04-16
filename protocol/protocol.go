@@ -16,6 +16,7 @@ import (
 	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
+	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/preferences"
 	"github.com/ivpn/desktop-app-daemon/version"
 	"github.com/ivpn/desktop-app-daemon/vpn"
@@ -414,7 +415,8 @@ func (p *Protocol) processRequest(message string) {
 					ClientIP:        vpnState.ClientIP.String(),
 					ServerIP:        vpnState.ServerIP.String(),
 					VpnType:         vpnState.VpnType,
-					ExitServerID:    vpnState.ExitServerID},
+					ExitServerID:    vpnState.ExitServerID,
+					ManualDNS:       dns.GetLastManualDNS()},
 					req.Idx)
 			}
 		}
@@ -429,7 +431,8 @@ func (p *Protocol) processRequest(message string) {
 				ClientIP:        vpnState.ClientIP.String(),
 				ServerIP:        vpnState.ServerIP.String(),
 				VpnType:         vpnState.VpnType,
-				ExitServerID:    vpnState.ExitServerID},
+				ExitServerID:    vpnState.ExitServerID,
+				ManualDNS:       dns.GetLastManualDNS()},
 				reqCmd.Idx)
 		} else if vpnState.State == vpn.DISCONNECTED {
 			p.sendResponse(&types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqCmd.Idx)
