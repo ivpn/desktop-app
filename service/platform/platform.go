@@ -139,7 +139,7 @@ func IsFileExists(description string, file string, fileMode os.FileMode) (os.Fil
 	stat, err := os.Stat(file)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return 0, fmt.Errorf("file does not exist %s: '%s'", description, file)
+			return 0, fmt.Errorf("%w %s: '%s'", err, description, file)
 		}
 		return 0, fmt.Errorf("file existing check error %s '%s' : %w", description, file, err)
 	}

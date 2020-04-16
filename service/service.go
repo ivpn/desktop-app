@@ -1,8 +1,10 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -151,6 +153,16 @@ func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
 	wgErr = platform.CheckExecutableRights("WireGuard binary", platform.WgBinaryPath())
 	if wgErr == nil {
 		wgErr = platform.CheckExecutableRights("WireGuard tools binary", platform.WgToolBinaryPath())
+	}
+
+	if errors.Is(ovpnErr, os.ErrNotExist) {
+		ovpnErr = fmt.Errorf("%w. Please install OpenVPN", ovpnErr)
+	}
+	if errors.Is(obfspErr, os.ErrNotExist) {
+		obfspErr = fmt.Errorf("%w. Please install obfsproxy binary", obfspErr)
+	}
+	if errors.Is(wgErr, os.ErrNotExist) {
+		wgErr = fmt.Errorf("%w. Please install WireGuard", wgErr)
 	}
 
 	return wgErr, ovpnErr, obfspErr
