@@ -16,6 +16,7 @@ IVPN CLI is distributed on the official site [www.ivpn.net](www.ivpn.net).
 * [Authors](#Authors)
 * [Acknowledgements](#acknowledgements)
 
+<a name="installation"></a>
 ## Installation
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
@@ -42,6 +43,7 @@ There is a dependency from **IVPN Daemon for IVPN Client Desktop** sources. So, 
 
 #### Windows
 
+<a name="versioning"></a>
 ## Versioning
 
 Project is using [Semantic Versioning (SemVer)](https://semver.org) for creating release versions.
@@ -54,22 +56,27 @@ SemVer is a 3-component system in the format of `x.y.z` where:
 
 So we have: `Major.Minor.Patch`
 
+<a name="contributing"></a>
 ## Contributing
 
 If you are interested in contributing to IVPN CLI project, please read our [Contributing Guidelines](/.github/CONTRIBUTING.md).
 
+<a name="security"></a>
 ## Security Policy
 
 If you want to report a security problem, please read our [Security Policy](/.github/SECURITY.md).
 
+<a name="license"></a>
 ## License
 
 This project is licensed under the GPLv3 - see the [License](/LICENSE.md) file for details.
 
+<a name="Authors"></a>
 ## Authors
 
 See the [Authors](/AUTHORS) file for the list of contributors who participated in this project.
 
+<a name="acknowledgements"></a>
 ## Acknowledgements
 
 See the [Acknowledgements](/ACKNOWLEDGEMENTS.md) file for the list of third party libraries used in this project.
