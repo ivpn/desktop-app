@@ -219,6 +219,10 @@ func (c *CmdConnect) Run() (retError error) {
 		c.multiopExitSvr = ci.MultiopExitSvr
 	}
 
+	if c.obfsproxy && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
+		return fmt.Errorf(helloResp.DisabledFunctions.ObfsproxyError)
+	}
+
 	// MULTI\SINGLE -HOP
 	if len(c.multiopExitSvr) > 0 {
 		if isOpenVPNDisabled {
@@ -280,7 +284,7 @@ func (c *CmdConnect) Run() (retError error) {
 			srvID = fastestSrv.gateway
 		}
 
-		// if we not foud required server before (by 'fastest' option)
+		// if we not found required server before (by 'fastest' option)
 		if len(srvID) == 0 {
 			showTipsServerFilterError := func() {
 				fmt.Println()
@@ -341,7 +345,7 @@ func (c *CmdConnect) Run() (retError error) {
 		// Taking default configuration parameters (if defined)
 		if cfg.Antitracker || cfg.AntitrackerHardcore {
 			// print info
-			PrintAntitrackerConfigInfo(cfg.Antitracker, cfg.AntitrackerHardcore)
+			printAntitrackerConfigInfo(nil, cfg.Antitracker, cfg.AntitrackerHardcore).Flush()
 			// set values
 			c.antitracker = cfg.Antitracker
 			c.antitrackerHard = cfg.AntitrackerHardcore
@@ -369,7 +373,7 @@ func (c *CmdConnect) Run() (retError error) {
 			req.CurrentDNS = dns.String()
 		} else if len(cfg.CustomDNS) > 0 {
 			// using default DNS configuration
-			PrintDnsConfigInfo(cfg.CustomDNS)
+			printDNSConfigInfo(nil, cfg.CustomDNS).Flush()
 			req.CurrentDNS = cfg.CustomDNS
 		}
 	}
@@ -382,7 +386,7 @@ func (c *CmdConnect) Run() (retError error) {
 			serverFound = true
 			host := s.Hosts[0]
 			req.VpnType = vpn.WireGuard
-			req.WireGuardParameters.EntryVpnServer.Hosts = []types.WGHost{types.WGHost{Host: host.Host, PublicKey: host.PublicKey, LocalIP: host.LocalIP}}
+			req.WireGuardParameters.EntryVpnServer.Hosts = []types.WGHost{{Host: host.Host, PublicKey: host.PublicKey, LocalIP: host.LocalIP}}
 
 			// port
 			p, err := getPort(vpn.WireGuard, c.port)
