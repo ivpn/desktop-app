@@ -278,7 +278,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 
 	// Saving first lines of OpenVPN console output into buffer
 	// (can be useful in case of OpenVPN start error to analyze it in a log)
-	const maxBufSize int = 256
+	const maxBufSize int = 512
 	strOut := strings.Builder{}
 	strErr := strings.Builder{}
 	outProcessFunc := func(text string, isError bool) {

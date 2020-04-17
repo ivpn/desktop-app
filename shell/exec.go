@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/ivpn/desktop-app-daemon/logger"
 )
@@ -60,12 +61,12 @@ func GetCmdExitCode(err error) (retCode int, retErr error) {
 func ExecAndProcessOutput(logger *logger.Logger, outProcessFunc func(text string, isError bool), textToHideInLog string, name string, args ...string) error {
 	outChan := make(chan string, 1)
 	errChan := make(chan string, 1)
-	done := make(chan bool)
+	var wg sync.WaitGroup
+
+	wg.Add(1)
 	// parsing out channels
 	go func() {
-		defer func() {
-			done <- true
-		}()
+		defer wg.Done()
 
 		if outProcessFunc == nil {
 			return
@@ -97,7 +98,8 @@ func ExecAndProcessOutput(logger *logger.Logger, outProcessFunc func(text string
 	}()
 
 	err := ExecEx(logger, outChan, errChan, textToHideInLog, name, args...)
-	<-done
+	wg.Wait()
+
 	return err
 }
 
@@ -114,6 +116,8 @@ func ExecEx(logger *logger.Logger, outChan chan<- string, errChan chan<- string,
 
 	cmd := exec.Command(name, args...)
 
+	var wg sync.WaitGroup
+
 	if outChan != nil {
 		outPipe, err := cmd.StdoutPipe()
 		if err != nil {
@@ -123,7 +127,9 @@ func ExecEx(logger *logger.Logger, outChan chan<- string, errChan chan<- string,
 			return err
 		}
 		outPipeScanner := bufio.NewScanner(outPipe)
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for outPipeScanner.Scan() {
 				outChan <- outPipeScanner.Text()
 			}
@@ -140,7 +146,9 @@ func ExecEx(logger *logger.Logger, outChan chan<- string, errChan chan<- string,
 			return err
 		}
 		errPipeScanner := bufio.NewScanner(errPipe)
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for errPipeScanner.Scan() {
 				errChan <- errPipeScanner.Text()
 			}
@@ -155,6 +163,7 @@ func ExecEx(logger *logger.Logger, outChan chan<- string, errChan chan<- string,
 		return err
 	}
 
+	wg.Wait()
 	if err := cmd.Wait(); err != nil {
 		if logger != nil {
 			logger.Error("Shell exec: ", err)
