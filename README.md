@@ -39,35 +39,29 @@ These instructions will get you a copy of the project up and running on your loc
 
 #### Linux
 
-  * set `$GOPATH` variable to your projects folder
-    example: `export GOPATH=$HOME/Projects`
-  * create folder structure in a projects folder `$GOPATH/src/github.com/ivpn`
-    ```
-    cd $GOPATH
-    mkdir -p src/github.com/ivpn
-    ```
-  * clone CLI project repository
-    ```
-    cd $GOPATH/src/github.com/ivpn
-    git clone https://github.com/ivpn/desktop-app-cli.git
-    ```
-  *  There is a dependency from a [Daemon for IVPN Client Desktop](https://github.com/ivpn/desktop-app-daemon) project. So, it is necessary to clone it's sources:
-    ```
-    cd $GOPATH/src/github.com/ivpn
-    git clone https://github.com/ivpn/desktop-app-daemon.git
-    ```
-    An additional step required while the CLI project has beta status - switch to `feature/WC-903-Console-client` branch of daemon project:
-    ```
-    cd desktop-app-daemon
-    git checkout feature/WC-903-Console-client
-    ```
+  * Set `$GOPATH` variable to your projects folder  
+      -  example: `export GOPATH=$HOME/Projects`  
 
-  * To compile projects and to build `.DEB` and `.RPM` packages just run `build-packages.sh` script:
-    ```
-    cd $GOPATH/src/github.com/ivpn/desktop-app-cli
-    References/Linux/build-packages.sh -v 0.0.1
-    ```
-  Compiled packages can be found at `$GOPATH/src/github.com/ivpn/desktop-app-cli/References/Linux/_out_bin`
+  * Create folder structure in a projects folder `$GOPATH/src/github.com/ivpn`  
+      -  `cd $GOPATH`  
+      -  `mkdir -p src/github.com/ivpn`  
+
+  * Clone CLI project repository  
+      -  `cd $GOPATH/src/github.com/ivpn`  
+      -  `git clone https://github.com/ivpn/desktop-app-cli.git`  
+    
+  *  There is a dependency from a [Daemon for IVPN Client Desktop](https://github.com/ivpn/desktop-app-daemon) project. So, it is necessary to clone it's sources:  
+      -  `cd $GOPATH/src/github.com/ivpn`  
+      -  `git clone https://github.com/ivpn/desktop-app-daemon.git`  
+    An additional step required while the CLI project has beta status - switch to `feature/WC-903-Console-client` branch of daemon project:  
+      -  `cd desktop-app-daemon`  
+      -  `git checkout feature/WC-903-Console-client`  
+    
+  * To compile projects and to build `.DEB` and `.RPM` packages just run `build-packages.sh` script:  
+      -  `cd $GOPATH/src/github.com/ivpn/desktop-app-cli`  
+      -  `References/Linux/build-packages.sh -v 0.0.1`  
+    
+Compiled packages can be found at `$GOPATH/src/github.com/ivpn/desktop-app-cli/References/Linux/_out_bin`  
 
 #### macOS
 
