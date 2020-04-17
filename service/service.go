@@ -14,6 +14,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/ping"
+	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/service/preferences"
@@ -67,6 +68,10 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 		_serversUpdater:    updater,
 		_netChangeDetector: netChDetector,
 		_wgKeysMgr:         wgKeysMgr}
+
+	if err := dns.Initialise(); err != nil {
+		log.Error("DNS initialisation failed: %s", err)
+	}
 
 	if err := serv.init(); err != nil {
 		return nil, fmt.Errorf("service initialisaton error : %w", err)

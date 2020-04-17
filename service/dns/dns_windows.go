@@ -92,6 +92,11 @@ func catchPanic(err *error) {
 	}
 }
 
+// implInitialise doing initialisation stuff (called on application start)
+func implInitialise() error {
+	return nil
+}
+
 // Pause - (on vpn paused) temporary restore OS default DNS parameters
 func implPause() error {
 	// Not in use for Windows implementation
