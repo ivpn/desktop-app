@@ -6,7 +6,7 @@ It divided on two parts:
   - IVPN service/daemon (repository [ivpn-desktop-daemon](https://github.com/ivpn/desktop-app-daemon))  
 Can be compiled for different platforms: Windows, macOS, Linux
 
-IVPN CLI is distributed on the official site [https://www.ivpn.net](www.ivpn.net).  
+IVPN CLI is distributed on the official site [https://www.ivpn.net](https://www.ivpn.net).  
 
 * [Installation](#installation)
 * [Versioning](#versioning)
