@@ -1,9 +1,9 @@
 # IVPN command line interface (CLI)
 
-**IVPN command line interface** is an official IVPN command line client.
-It divided on two parts:
-  - IVPN CLI (this repository)
-  - IVPN service/daemon (repository [ivpn-desktop-daemon](https://github.com/ivpn/desktop-app-daemon))
+**IVPN command line interface** is an official IVPN command line client.  
+It divided on two parts:  
+  - IVPN CLI (this repository)  
+  - IVPN service/daemon (repository [ivpn-desktop-daemon](https://github.com/ivpn/desktop-app-daemon))  
 Can be compiled for different platforms: Windows, macOS, Linux
 
 IVPN CLI is distributed on the official site [www.ivpn.net](www.ivpn.net).  
