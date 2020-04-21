@@ -128,14 +128,12 @@ func checkStatus() error {
 	helloResp := _proto.GetHelloResponse()
 	if len(helloResp.Command) > 0 && (len(helloResp.Session.Session) == 0) {
 		// We received 'hello' response but no session info - print tips to login
-		fmt.Printf("Error: Not logged in\n\n")
+		fmt.Printf("Error: Not logged in")
 
 		fmt.Println()
 		PrintTips([]TipType{TipLogin})
-		fmt.Println()
 
-		fmt.Println(service.ErrorNotLoggedIn{})
-		return nil
+		return service.ErrorNotLoggedIn{}
 	}
 
 	if err != nil {
