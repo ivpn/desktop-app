@@ -48,7 +48,7 @@ func printUsageAll(short bool) {
 	printHeader()
 	fmt.Printf("Usage: %s COMMAND [OPTIONS...] [COMMAND_PARAMETER] [-h|-help]\n\n", filepath.Base(os.Args[0]))
 
-	fmt.Println("COMANDS:")
+	fmt.Println("COMMANDS:")
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	for _, c := range _commands {
 		c.UsageFormetted(writer, short)
