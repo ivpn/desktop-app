@@ -6,7 +6,7 @@ It divided on two parts:
   - IVPN service/daemon (repository [ivpn-desktop-daemon](https://github.com/ivpn/desktop-app-daemon))  
 Can be compiled for different platforms: Windows, macOS, Linux
 
-IVPN CLI is distributed on the official site [www.ivpn.net](www.ivpn.net).  
+IVPN CLI is distributed on the official site [https://www.ivpn.net](www.ivpn.net).  
 
 * [Installation](#installation)
 * [Versioning](#versioning)
@@ -49,18 +49,18 @@ These instructions will get you a copy of the project up and running on your loc
   * Clone CLI project repository  
       -  `cd $GOPATH/src/github.com/ivpn`  
       -  `git clone https://github.com/ivpn/desktop-app-cli.git`  
-    
+
   *  There is a dependency from a [Daemon for IVPN Client Desktop](https://github.com/ivpn/desktop-app-daemon) project. So, it is necessary to clone it's sources:  
       -  `cd $GOPATH/src/github.com/ivpn`  
       -  `git clone https://github.com/ivpn/desktop-app-daemon.git`  
     An additional step required while the CLI project has beta status - switch to `feature/WC-903-Console-client` branch of daemon project:  
       -  `cd desktop-app-daemon`  
       -  `git checkout feature/WC-903-Console-client`  
-    
+
   * To compile projects and to build `.DEB` and `.RPM` packages just run `build-packages.sh` script:  
       -  `cd $GOPATH/src/github.com/ivpn/desktop-app-cli`  
       -  `References/Linux/build-packages.sh -v 0.0.1`  
-    
+
 Compiled packages can be found at `$GOPATH/src/github.com/ivpn/desktop-app-cli/References/Linux/_out_bin`  
 
 #### macOS
