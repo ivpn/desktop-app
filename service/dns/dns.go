@@ -13,6 +13,12 @@ func init() {
 	log = logger.NewLogger("dns")
 }
 
+// Initialise is doing initialisation stuff
+// Must be called on application start
+func Initialise() error {
+	return implInitialise()
+}
+
 // Pause pauses DNS (restore original DNS)
 func Pause() error {
 	return implPause()

@@ -22,6 +22,22 @@ func init() {
 	done = make(chan struct{})
 }
 
+// implInitialise doing initialisation stuff (called on application start)
+func implInitialise() error {
+	// check if backup DNS file exists
+	if _, err := os.Stat(resolvBackupFile); err != nil {
+		// nothing to restore
+		return nil
+	}
+
+	log.Info("Detected DNS configuration from the previous VPN connection. Restoring OS-default DNS values ...")
+	// restore it
+	if err := implDeleteManual(nil); err != nil {
+		return fmt.Errorf("failed to restore DNS to default: %w", err)
+	}
+	return nil
+}
+
 func implPause() error {
 	return implDeleteManual(nil)
 }

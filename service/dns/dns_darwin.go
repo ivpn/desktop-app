@@ -8,6 +8,11 @@ import (
 	"github.com/ivpn/desktop-app-daemon/shell"
 )
 
+// implInitialise doing initialisation stuff (called on application start)
+func implInitialise() error {
+	return nil
+}
+
 func implPause() error {
 	err := shell.Exec(log, platform.DNSScript(), "-pause")
 	if err != nil {
