@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/service/platform"
-
-	"github.com/pkg/errors"
 )
 
+var isCanPrintToConsole bool = true
 var isLoggingEnabled bool = true
 var writeMutex sync.Mutex
 var globalLogFile *os.File
@@ -23,16 +22,18 @@ var log *Logger
 
 func init() {
 	log = NewLogger("log")
+}
 
-	var err error
-
-	if _, err := os.Stat(platform.LogFile()); err == nil {
-		os.Rename(platform.LogFile(), platform.LogFile()+".0")
+// Init - initialize logfile
+func Init(logfile string) {
+	if _, err := os.Stat(logfile); err == nil {
+		os.Rename(logfile, logfile+".0")
 	}
 
-	globalLogFile, err = os.Create(platform.LogFile())
+	var err error
+	globalLogFile, err = os.Create(logfile)
 	if err != nil {
-		log.Error("Failed to create log-file: ", err.Error())
+		log.Error(fmt.Errorf("Failed to create log-file: %w", err))
 	}
 }
 
@@ -78,8 +79,17 @@ func IsEnabled() bool {
 	return isLoggingEnabled
 }
 
+// CanPrintToConsole define if logger can print to console
+func CanPrintToConsole(isCanPrint bool) {
+	isCanPrintToConsole = isCanPrint
+}
+
 // Enable switching on\off logging
 func Enable(isEnabled bool) {
+	if globalLogFile == nil {
+		log.Error(fmt.Errorf("log-file not initialized. Please, call 'logger.Init(...)'"))
+	}
+
 	if isLoggingEnabled == isEnabled {
 		return
 	}
@@ -252,21 +262,8 @@ func _panic(name string, v ...interface{}) {
 	panic(runtimeInfo + methodInfo + ": " + mes)
 }
 
-type stackTracer interface {
-	StackTrace() errors.StackTrace
-}
-
-func getErrorDetails(e error) string {
-	var strs []string
-	strs = append(strs, e.Error())
-
-	if err, ok := e.(stackTracer); ok {
-		for _, f := range err.StackTrace() {
-			strs = append(strs, fmt.Sprintf("%+s:%d", f, f))
-		}
-	}
-
-	return strings.Join(strs, "\n")
+func getErrorDetails(err error) string {
+	return fmt.Sprintf("%v", err)
 }
 
 func getCallerMethodName() (string, error) {
@@ -274,12 +271,12 @@ func getCallerMethodName() (string, error) {
 	// Skip 5 levels to get the caller
 	n := runtime.Callers(5, fpcs)
 	if n == 0 {
-		return "", errors.New("no caller")
+		return "", fmt.Errorf("no caller")
 	}
 
 	caller := runtime.FuncForPC(fpcs[0] - 1)
 	if caller == nil {
-		return "", errors.New("msg caller is nil")
+		return "", fmt.Errorf("msg caller is nil")
 	}
 
 	return caller.Name(), nil
@@ -306,10 +303,12 @@ func write(fields ...interface{}) {
 	writeMutex.Lock()
 	defer writeMutex.Unlock()
 
-	// printing into console
-	fmt.Println(fields...)
+	if isCanPrintToConsole {
+		// printing into console
+		fmt.Println(fields...)
+	}
 
-	if isLoggingEnabled {
+	if isLoggingEnabled && globalLogFile != nil {
 		// writting into log-file
 		globalLogFile.WriteString(fmt.Sprintln(fields...))
 	}

@@ -40,7 +40,7 @@ func doPrepareToRun() error {
 }
 
 // inform OS-specific implementation about listener port
-func doStartedOnPort(port int) {
+func doStartedOnPort(port int, secret uint64) {
 }
 
 // OS-specific service finalizer

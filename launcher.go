@@ -2,24 +2,34 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/api"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netchange"
 	"github.com/ivpn/desktop-app-daemon/protocol"
 	"github.com/ivpn/desktop-app-daemon/service"
-	"github.com/ivpn/desktop-app-daemon/service/api"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/service/wgkeys"
+	"github.com/ivpn/desktop-app-daemon/version"
 )
 
 var log *logger.Logger
-var activeProtocol service.Protocol
+var activeProtocol IProtocol
 
 func init() {
 	log = logger.NewLogger("launch")
+	rand.Seed(time.Now().UnixNano())
+}
+
+// IProtocol - interface of communication protocol with IVPN application
+type IProtocol interface {
+	Start(secret uint64, startedOnPort chan<- int, serv protocol.Service) error
+	Stop()
 }
 
 // Launch -  initialize and start service
@@ -31,7 +41,26 @@ func Launch() {
 		doStopped()
 	}()
 
-	platform.Init()
+	warnings, errors := platform.Init()
+	logger.Init(platform.LogFile())
+
+	if len(warnings) > 0 {
+		for _, w := range warnings {
+			logger.Warning(w)
+		}
+	}
+
+	if len(errors) > 0 {
+		for _, e := range errors {
+			logger.Error(e)
+		}
+
+		logger.Info("Daemon failed to start due to initialisation errors")
+		os.Exit(1)
+		return
+	}
+
+	logger.Info("version:" + version.GetFullVersion())
 
 	tzName, tzOffsetSec := time.Now().Zone()
 	log.Info("Starting IVPN daemon", fmt.Sprintf(" [%s]", runtime.GOOS), fmt.Sprintf(" [timezone: %s %d (%dh)]", tzName, tzOffsetSec, tzOffsetSec/(60*60)), " ...")
@@ -47,6 +76,8 @@ func Launch() {
 		logger.Warning("------------------------------------")
 	}
 
+	secret := rand.Uint64()
+
 	// obtain (over callback channel) a service listening port
 	startedOnPortChan := make(chan int, 1)
 	go func() {
@@ -60,10 +91,10 @@ func Launch() {
 				logger.Panic(err.Error())
 			}
 			defer file.Close()
-			file.WriteString(fmt.Sprintf("%d", openedPort))
+			file.WriteString(fmt.Sprintf("%d:%x", openedPort, secret))
 		}
 		// inform OS-specific implementation about listener port
-		doStartedOnPort(openedPort)
+		doStartedOnPort(openedPort, secret)
 	}()
 
 	defer func() {
@@ -78,7 +109,7 @@ func Launch() {
 	}
 
 	// run service
-	launchService(startedOnPortChan)
+	launchService(secret, startedOnPortChan)
 }
 
 // Stop the service
@@ -90,7 +121,7 @@ func Stop() {
 }
 
 // initialize and start service
-func launchService(startedOnPort chan<- int) {
+func launchService(secret uint64, startedOnPort chan<- int) {
 	// API object
 	apiObj, err := api.CreateAPI()
 	if err != nil {
@@ -106,11 +137,8 @@ func launchService(startedOnPort chan<- int) {
 	// network change detector
 	netDetector := netchange.Create()
 
-	// initialize service
-	serv, err := service.CreateService(updater, netDetector)
-	if err != nil {
-		log.Panic("Failed to initialize service:", err)
-	}
+	// WireGuard keys manager
+	wgKeysMgr := wgkeys.CreateKeysManager(apiObj, platform.WgToolBinaryPath())
 
 	// communication protocol
 	protocol, err := protocol.CreateProtocol()
@@ -121,8 +149,14 @@ func launchService(startedOnPort chan<- int) {
 	// save protocol (to be able to stop it)
 	activeProtocol = protocol
 
+	// initialize service
+	serv, err := service.CreateService(protocol, apiObj, updater, netDetector, wgKeysMgr)
+	if err != nil {
+		log.Panic("Failed to initialize service:", err)
+	}
+
 	// start receiving requests from client (synchronous)
-	if err := protocol.Start(startedOnPort, serv); err != nil {
+	if err := protocol.Start(secret, startedOnPort, serv); err != nil {
 		log.Error("Protocol stopped with error:", err)
 	}
 }

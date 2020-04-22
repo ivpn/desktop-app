@@ -1,4 +1,4 @@
 {
     "go.inferGopath": false,
-    "go.testFlags": ["-tags debug"]
+    //"go.testFlags": ["-tags debug"]
 }

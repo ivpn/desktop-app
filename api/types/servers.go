@@ -1,4 +1,4 @@
-package api
+package types
 
 // WireGuardServerHostInfo contains info about WG server host
 type WireGuardServerHostInfo struct {
@@ -50,7 +50,7 @@ type ConfigInfo struct {
 	API         InfoAPI         `json:"api"`
 }
 
-// ServersInfoResponse all info from servers.json 
+// ServersInfoResponse all info from servers.json
 type ServersInfoResponse struct {
 	WireguardServers []WireGuardServerInfo `json:"wireguard"`
 	OpenvpnServers   []OpenvpnServerInfo   `json:"openvpn"`

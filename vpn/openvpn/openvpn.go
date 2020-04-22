@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -18,6 +21,37 @@ var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("ovpn")
+}
+
+// GetOpenVPNVersion trying to get openvpn binary version
+func GetOpenVPNVersion(ovpnBinary string) []int {
+	cmd := exec.Command(ovpnBinary, "--version")
+	out, _ := cmd.CombinedOutput()
+	if out == nil || len(out) == 0 {
+		return nil
+	}
+
+	regexp := regexp.MustCompile("(?i)^OpenVPN ([0-9.]*) ")
+	columns := regexp.FindStringSubmatch(string(out))
+	if len(columns) < 2 {
+		return nil
+	}
+	ver := columns[1]
+	if len(ver) == 0 {
+		return nil
+	}
+	verNums := make([]int, 0, 3)
+	for _, num := range strings.Split(ver, ".") {
+		n, err := strconv.Atoi(num)
+		if err != nil {
+			return nil
+		}
+		if len(verNums) == 0 && n == 0 {
+			continue
+		}
+		verNums = append(verNums, n)
+	}
+	return verNums
 }
 
 // OpenVPN structure represents all data of OpenVPN connection
@@ -59,6 +93,10 @@ func NewOpenVpnObject(
 	extraParameters string,
 	connectionParams ConnectionParams) (*OpenVPN, error) {
 
+	if len(connectionParams.username) == 0 || len(connectionParams.password) == 0 {
+		return nil, fmt.Errorf("OpenVPN user credentials not defined")
+	}
+
 	return &OpenVPN{
 			state:           vpn.DISCONNECTED,
 			binaryPath:      binaryPath,
@@ -79,11 +117,15 @@ func (o *OpenVPN) DestinationIPs() []net.IP {
 	return o.connectParams.hostIPs
 }
 
+// Type just returns VPN type
+func (o *OpenVPN) Type() vpn.Type { return vpn.OpenVPN }
+
 // Init performs basic initialisations before connection
-// It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
-// (currently, in use by WireGuard(Windows))
+// It is usefull, for example:
+//	- for WireGuard(Windows) - to ensure that WG service is fully uninstalled
+//	- for OpenVPN(Linux) - to ensure that OpenVPN has correct version
 func (o *OpenVPN) Init() error {
-	return nil // do nothing for OpenVPN
+	return o.implInit()
 }
 
 // Connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
@@ -148,6 +190,11 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 			case stateInf = <-intarnalStateChan:
 				// save current state
 				o.state = stateInf.State
+
+				if o.state == vpn.CONNECTED {
+					// save exitServerID (in MultiHop)
+					stateInf.ExitServerID = o.connectParams.multihopExitSrvID
+				}
 
 				// forward state
 				stateChan <- stateInf
@@ -222,14 +269,43 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		miIP, miPort,
 		o.logFile,
 		obfsproxyPort,
-		o.extraParameters)
+		o.extraParameters,
+		o.implIsCanUseParamsV24())
 
 	if err != nil {
 		return fmt.Errorf("failed to write configuration file: %w", err)
 	}
 
+	// Saving first lines of OpenVPN console output into buffer
+	// (can be useful in case of OpenVPN start error to analyze it in a log)
+	const maxBufSize int = 512
+	strOut := strings.Builder{}
+	strErr := strings.Builder{}
+	outProcessFunc := func(text string, isError bool) {
+		if len(text) == 0 {
+			return
+		}
+		if isError {
+			if strErr.Len() > maxBufSize {
+				return
+			}
+			strErr.WriteString(text)
+		} else {
+			if strOut.Len() > maxBufSize {
+				return
+			}
+			strOut.WriteString(text)
+		}
+	}
+
 	// SYNCHRONOUSLY execute openvpn process (wait untill it finished)
-	if err = shell.Exec(log, o.binaryPath, "--config", o.configPath); err != nil {
+	if err = shell.ExecAndProcessOutput(log, outProcessFunc, "", o.binaryPath, "--config", o.configPath); err != nil {
+		if strOut.Len() > 0 {
+			log.Info(fmt.Sprintf("OpenVPN start ERROR. Output: %s...", strOut.String()))
+		}
+		if strErr.Len() > 0 {
+			log.Info(fmt.Sprintf("OpenVPN start ERROR. Errors output : %s...", strErr.String()))
+		}
 		return fmt.Errorf("failed to start OpenVPN process: %w", err)
 	}
 

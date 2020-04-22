@@ -12,12 +12,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/shell"
 	"github.com/ivpn/desktop-app-daemon/vpn"
-
-	"github.com/pkg/errors"
 )
 
 //TODO: BE CAREFUL! Constant string! (can be changed after WireGuard update)
@@ -35,9 +34,15 @@ type internalVariables struct {
 	command       *exec.Cmd
 	isGoingToStop bool
 	isPaused      bool
+	defGateway    net.IP
 }
 
 func (wg *WireGuard) init() error {
+	defaultGwIP, err := netinfo.DefaultGatewayIP()
+	if err != nil {
+		return fmt.Errorf("unable to determine default gateway IP: %w", err)
+	}
+	wg.internals.defGateway = defaultGwIP
 	return nil // do nothing for macOS
 }
 
@@ -56,13 +61,13 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	}()
 
 	if wg.internals.isGoingToStop {
-		return errors.New("disconnection already requested for this object. To make a new connection, please, initialize new one")
+		return fmt.Errorf("disconnection already requested for this object. To make a new connection, please, initialize new one")
 	}
 
 	utunName, err := getFreeTunInterfaceName()
 	if err != nil {
 		log.Error(err.Error())
-		return errors.Wrap(err, "Unable to start WireGuard. Failed to obtain free utun interface")
+		return fmt.Errorf("unable to start WireGuard. Failed to obtain free utun interface: %w", err)
 	}
 
 	log.Info("Starting WireGuard in interface ", utunName)
@@ -73,7 +78,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	// output reader
 	outPipe, err := wg.internals.command.StdoutPipe()
 	if err != nil {
-		return errors.Wrap(err, "Failed to start WireGuard")
+		return fmt.Errorf("Failed to start WireGuard: %w", err)
 	}
 	outPipeScanner := bufio.NewScanner(outPipe)
 	routineStopWaiter.Add(1)
@@ -101,7 +106,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	// error reader
 	errPipe, err := wg.internals.command.StderrPipe()
 	if err != nil {
-		return errors.Wrap(err, "Failed to start WireGuard")
+		return fmt.Errorf("failed to start WireGuard: %w", err)
 	}
 	errPipeScanner := bufio.NewScanner(errPipe)
 	routineStopWaiter.Add(1)
@@ -116,7 +121,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	// start
 	if err := wg.internals.command.Start(); err != nil {
 		log.Error(err.Error())
-		return errors.Wrap(err, "Failed to start WireGuard process")
+		return fmt.Errorf("failed to start WireGuard process: %w", err)
 	}
 
 	// waiting to start and initialize
@@ -160,7 +165,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		// error will be received anyway. We are logging it only if process was stopped unexpectable
 		if wg.internals.isGoingToStop == false {
 			log.Error(err.Error())
-			return errors.Wrap(err, "WireGuard prosess error")
+			return fmt.Errorf("WireGuard prosess error: %w", err)
 		}
 	}
 	return nil
@@ -190,11 +195,11 @@ func (wg *WireGuard) pause() error {
 	wg.internals.isPaused = true
 
 	if err := wg.removeRoutes(); err != nil {
-		return errors.Wrap(err, "Failed to remove routes")
+		return fmt.Errorf("failed to remove routes: %w", err)
 	}
 
 	if err := dns.Pause(); err != nil {
-		return errors.Wrap(err, "Failed to restore DNS")
+		return fmt.Errorf("failed to restore DNS: %w", err)
 	}
 	return nil
 }
@@ -205,11 +210,11 @@ func (wg *WireGuard) resume() error {
 	}()
 
 	if err := wg.setRoutes(); err != nil {
-		return errors.Wrap(err, "Failed to set routes")
+		return fmt.Errorf("failed to set routes: %w", err)
 	}
 
 	if err := dns.Resume(); err != nil {
-		return errors.Wrap(err, "Failed to set DNS")
+		return fmt.Errorf("failed to set DNS: %w", err)
 	}
 	return nil
 }
@@ -224,16 +229,16 @@ func (wg *WireGuard) resetManualDNS() error {
 
 func (wg *WireGuard) initialize(utunName string) error {
 	if err := wg.initializeConfiguration(utunName); err != nil {
-		return errors.Wrap(err, "Failed to initialize configuration")
+		return fmt.Errorf("failed to initialize configuration: %w", err)
 	}
 
 	if err := wg.setRoutes(); err != nil {
-		return errors.Wrap(err, "Failed to set routes")
+		return fmt.Errorf("failed to set routes: %w", err)
 	}
 
 	err := wg.setDNS()
 	if err != nil {
-		return errors.Wrap(err, "Failed to set DNS")
+		return fmt.Errorf("failed to set DNS: %w", err)
 	}
 	return nil
 }
@@ -244,7 +249,7 @@ func (wg *WireGuard) initializeConfiguration(utunName string) error {
 	// Configure WireGuard interface
 	// example command: ipconfig set utun7 MANUAL 10.0.0.121 255.255.255.0
 	if err := wg.initializeUnunInterface(utunName); err != nil {
-		return errors.Wrap(err, "Failed to initialize interface")
+		return fmt.Errorf("failed to initialize interface: %w", err)
 	}
 
 	// WireGuard configuration
@@ -266,7 +271,7 @@ func (wg *WireGuard) setWgConfiguration(utunName string) error {
 		// few retries if local port is already in use
 		if retries >= 5 {
 			// not more than 5 retries
-			return errors.New("failed to set wireguard configuration")
+			return fmt.Errorf("failed to set wireguard configuration")
 		}
 
 		// generate configuration
@@ -314,7 +319,7 @@ func (wg *WireGuard) setRoutes() error {
 
 	// Update routing to remote server (remote_server default_router 255.255.255)
 	// example command: sudo route -n add -net 145.239.239.55 192.168.1.1 255.255.255.255
-	if err := shell.Exec(log, "route", "-n", "add", "-net", wg.connectParams.hostIP.String(), wg.defGateway.String(), "255.255.255.255"); err != nil {
+	if err := shell.Exec(log, "route", "-n", "add", "-net", wg.connectParams.hostIP.String(), wg.internals.defGateway.String(), "255.255.255.255"); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
@@ -341,7 +346,7 @@ func (wg *WireGuard) setDNS() error {
 	log.Info("Updating DNS server to " + wg.connectParams.hostLocalIP.String() + "...")
 	err := shell.Exec(log, platform.DNSScript(), "-up_set_dns", wg.connectParams.hostLocalIP.String())
 	if err != nil {
-		return errors.Wrap(err, "Failed to change DNS")
+		return fmt.Errorf("failed to change DNS: %w", err)
 	}
 
 	return nil
@@ -351,7 +356,7 @@ func (wg *WireGuard) removeDNS() error {
 	log.Info("Restoring DNS server.")
 	err := shell.Exec(log, platform.DNSScript(), "-down", wg.connectParams.hostLocalIP.String())
 	if err != nil {
-		return errors.Wrap(err, "Failed to restore DNS")
+		return fmt.Errorf("failed to restore DNS: %w", err)
 	}
 
 	return nil
@@ -379,6 +384,13 @@ func getFreeTunInterfaceName() (string, error) {
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
-	// nothing
+
+	// TODO: check if we need it for this platform
+	// Same as "0.0.0.0/0" but such type of configuration is disabling internal WireGuard-s Firewall
+	// It blocks everything except WireGuard traffic.
+	// We need to disable WireGurd-s firewall because we have our own implementation of firewall.
+	//  For details, refer to WireGuard-windows sources: tunnel\ifaceconfig.go (enableFirewall(...) method)
+	peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1")
+
 	return interfaceCfg, peerCfg
 }

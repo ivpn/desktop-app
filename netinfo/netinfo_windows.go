@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"net"
-
-	"github.com/pkg/errors"
 )
 
 // doDefaultGatewayIP - returns: default gateway IP
@@ -30,5 +28,5 @@ func doDefaultGatewayIP() (defGatewayIP net.IP, err error) {
 		}
 	}
 
-	return nil, errors.New("failed to determine default route")
+	return nil, fmt.Errorf("failed to determine default route")
 }

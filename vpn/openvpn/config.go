@@ -1,39 +1,48 @@
 package openvpn
 
 import (
-	"bufio"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
-
-	"github.com/pkg/errors"
 )
 
 // ConnectionParams represents OpenVPN connection parameters
 type ConnectionParams struct {
-	username      string
-	password      string
-	tcp           bool
-	hostPort      int
-	hostIPs       []net.IP
-	proxyType     string
-	proxyAddress  net.IP
-	proxyPort     int
-	proxyUsername string
-	proxyPassword string
+	username          string
+	password          string
+	multihopExitSrvID string
+	tcp               bool
+	hostPort          int
+	hostIPs           []net.IP
+	proxyType         string
+	proxyAddress      net.IP
+	proxyPort         int
+	proxyUsername     string
+	proxyPassword     string
+}
+
+// SetCredentials update WG credentials
+func (c *ConnectionParams) SetCredentials(username, password string) {
+	c.password = password
+	c.username = username
+
+	// MultiHop configuration is based just by adding "@exit_server_id" to the end of username
+	// And forwarding this info on server
+	if len(c.multihopExitSrvID) > 0 {
+		c.username = fmt.Sprintf("%s@%s", username, c.multihopExitSrvID)
+	}
 }
 
 // CreateConnectionParams creates OpenVPN connection parameters object
 func CreateConnectionParams(
-	username string,
-	password string,
+	multihopExitSrvID string,
 	tcp bool,
 	hostPort int,
 	hostIPs []net.IP,
@@ -44,35 +53,16 @@ func CreateConnectionParams(
 	proxyPassword string) ConnectionParams {
 
 	return ConnectionParams{
-		username:      username,
-		password:      password,
-		tcp:           tcp,
-		hostPort:      hostPort,
-		hostIPs:       hostIPs,
-		proxyType:     proxyType,
-		proxyAddress:  proxyAddress,
-		proxyPort:     proxyPort,
-		proxyUsername: proxyUsername,
-		proxyPassword: proxyPassword}
+		multihopExitSrvID: multihopExitSrvID,
+		tcp:               tcp,
+		hostPort:          hostPort,
+		hostIPs:           hostIPs,
+		proxyType:         proxyType,
+		proxyAddress:      proxyAddress,
+		proxyPort:         proxyPort,
+		proxyUsername:     proxyUsername,
+		proxyPassword:     proxyPassword}
 }
-
-// parameters which are not allowed to be defined by user manually
-var deprecatedParametersRegExps = []*regexp.Regexp{
-	regexp.MustCompile("^ipchange$"),
-	regexp.MustCompile("^iproute$"),
-	regexp.MustCompile("^route-up$"),
-	regexp.MustCompile("^route-pre-down$"),
-	regexp.MustCompile("^up$"),
-	regexp.MustCompile("^down$"),
-	regexp.MustCompile("^up-restart$"),
-	regexp.MustCompile("^cd$"),
-	regexp.MustCompile("^chroot$"),
-	regexp.MustCompile("^daemon$"),
-	regexp.MustCompile("^management.*$"),
-	regexp.MustCompile("^ca$"),
-	regexp.MustCompile("^tls-auth$"),
-	regexp.MustCompile("^plugin$"),
-	regexp.MustCompile("^script-security$")}
 
 // WriteConfigFile saves OpenVPN connection parameters into a config file
 func (c *ConnectionParams) WriteConfigFile(
@@ -81,28 +71,24 @@ func (c *ConnectionParams) WriteConfigFile(
 	miPort int,
 	logFile string,
 	obfsproxyPort int,
-	extraParameters string) error {
+	extraParameters string,
+	isCanUseV24Params bool) error {
 
-	cfg, err := c.generateConfiguration(miAddr, miPort, logFile, obfsproxyPort, extraParameters)
+	cfg, err := c.generateConfiguration(miAddr, miPort, logFile, obfsproxyPort, extraParameters, isCanUseV24Params)
 	if err != nil {
 		return fmt.Errorf("failed to generate openvpn configuration : %w", err)
 	}
 
-	file, err := os.Create(filePathToSave)
-	if err != nil {
-		return fmt.Errorf("failed to create openvpn configuration file: %w", err)
-	}
-	defer file.Close()
+	configText := strings.Join(cfg, "\n")
 
-	writer := bufio.NewWriter(file)
-	for _, line := range cfg {
-		fmt.Fprintln(writer, line)
+	err = ioutil.WriteFile(filePathToSave, []byte(configText), 0600)
+	if err != nil {
+		return fmt.Errorf("failed to save OpenVPN configuration into a file: %w", err)
 	}
-	writer.Flush()
 
 	log.Info("Configuring OpenVPN...\n",
 		"=====================\n",
-		strings.Join(cfg, "\n"),
+		configText,
 		"\n=====================\n")
 
 	return nil
@@ -113,7 +99,8 @@ func (c *ConnectionParams) generateConfiguration(
 	miPort int,
 	logFile string,
 	obfsproxyPort int,
-	extraParameters string) (cfg []string, err error) {
+	extraParameters string,
+	isCanUseV24Params bool) (cfg []string, err error) {
 
 	if obfsproxyPort > 0 {
 		c.tcp = true
@@ -143,8 +130,16 @@ func (c *ConnectionParams) generateConfiguration(
 	// If the handshake fails openvpn will attempt to reset our connection with our peer and try again.
 	cfg = append(cfg, "hand-window 6")
 
-	// To change default connection-check time - uncomment next two lines:
-	cfg = append(cfg, "pull-filter ignore \"ping\"")
+	if isCanUseV24Params {
+		cfg = append(cfg, "compress")
+		cfg = append(cfg, "pull-filter ignore \"ping\"")
+	} else {
+		cfg = append(cfg, "comp-lzo no")
+	}
+
+	// To change default connection-check time:
+	// 	pull-filter ignore "ping"
+	//	keepalive 8 30
 	cfg = append(cfg, "keepalive 8 30")
 
 	// proxy
@@ -154,10 +149,10 @@ func (c *ConnectionParams) generateConfiguration(
 		proxyAuthFile := ""
 		if c.proxyUsername != "" && c.proxyPassword != "" {
 			proxyAuthFile = "\"" + platform.OpenvpnProxyAuthFile() + "\""
-			err := ioutil.WriteFile(platform.OpenvpnProxyAuthFile(), []byte(fmt.Sprintf("%s\n%s", c.proxyUsername, c.proxyPassword)), 0644)
+			err := ioutil.WriteFile(platform.OpenvpnProxyAuthFile(), []byte(fmt.Sprintf("%s\n%s", c.proxyUsername, c.proxyPassword)), 0600)
 			if err != nil {
 				log.Error(err)
-				return nil, errors.Wrap(err, "Failed to save file with proxy credentials")
+				return nil, fmt.Errorf("Failed to save file with proxy credentials: %w", err)
 			}
 		}
 
@@ -217,7 +212,6 @@ func (c *ConnectionParams) generateConfiguration(
 
 	cfg = append(cfg, "cipher AES-256-CBC")
 	cfg = append(cfg, "remote-cert-tls server")
-	cfg = append(cfg, "compress")
 	cfg = append(cfg, "verb 4")
 
 	if upCmd := platform.OpenvpnUpScript(); upCmd != "" {

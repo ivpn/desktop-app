@@ -3,15 +3,24 @@ package platform
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
+)
+
+const (
+	// WrongExecutableFilePermssionsMask - file permissions mask for executables which are not allowed. Executable files should not have write access for someone else except root
+	WrongExecutableFilePermissionsMask os.FileMode = 0022
+	// DefaultFilePermissionForConfig - mutable config files should have permissions read/write only for owner (root)
+	DefaultFilePermissionForConfig os.FileMode = 0600
+	// DefaultFilePermissionForStaticConfig - unmutable config files should have permissions read/write only for owner (root)
+	DefaultFilePermissionForStaticConfig os.FileMode = 0400
 )
 
 var (
-	settingsDir     string
 	settingsFile    string
 	servicePortFile string
 	serversFile     string
-	logDir          string
 	logFile         string
 	openvpnLogFile  string
 
@@ -32,53 +41,158 @@ var (
 )
 
 func init() {
-	obfsproxyHostPort = 5145
-
-	// do variables initialization for current OS
-	doOsInit()
-
-	ensureFileExists("openVpnBinaryPath", openVpnBinaryPath)
-	ensureFileExists("openvpnCaKeyFile", openvpnCaKeyFile)
-	ensureFileExists("openvpnTaKeyFile", openvpnTaKeyFile)
-
-	ensureFileExists("obfsproxyStartScript", obfsproxyStartScript)
-
-	ensureFileExists("wgBinaryPath", wgBinaryPath)
-	ensureFileExists("wgToolBinaryPath", wgToolBinaryPath)
-
-	makeDir("settingsDir", settingsDir)
-	makeDir("logDir", logDir)
+	// initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
+	doInitConstants()
+	if len(servicePortFile) <= 0 {
+		panic("Path to service port file not defined ('platform.servicePortFile' is empty)")
+	}
 }
 
 // Init - initialize all preferences required for a daemon
 // Must be called on beginning of application start by a daemon(service)
 func Init() (warnings []string, errors []error) {
-	doInitOperations()
-	return nil, nil
-}
 
-func ensureFileExists(description string, file string) {
-	if len(file) == 0 {
-		panic(fmt.Sprintf("[Initialisation (plafrorm)] Parameter not initialized: %s", description))
+	obfsproxyHostPort = 5145
+
+	// do variables initialization for current OS
+	warnings, errors = doOsInit()
+	if errors == nil {
+		errors = make([]error, 0)
+	}
+	if warnings == nil {
+		warnings = make([]string, 0)
 	}
 
-	if _, err := os.Stat(file); err != nil {
+	// creating required folders
+	if err := makeDir("servicePortFile", filepath.Dir(servicePortFile)); err != nil {
+		errors = append(errors, err)
+	}
+	if err := makeDir("logFile", filepath.Dir(logFile)); err != nil {
+		errors = append(errors, err)
+	}
+	if err := makeDir("openvpnLogFile", filepath.Dir(openvpnLogFile)); err != nil {
+		errors = append(errors, err)
+	}
+	if err := makeDir("settingsFile", filepath.Dir(settingsFile)); err != nil {
+		errors = append(errors, err)
+	}
+	if err := makeDir("openvpnConfigFile", filepath.Dir(openvpnConfigFile)); err != nil {
+		errors = append(errors, err)
+	}
+	if err := makeDir("wgConfigFilePath", filepath.Dir(wgConfigFilePath)); err != nil {
+		errors = append(errors, err)
+	}
+
+	// checking file permissions
+	if _, err := IsFileExists("openvpnCaKeyFile", openvpnCaKeyFile, DefaultFilePermissionForStaticConfig); err != nil {
+		errors = append(errors, err)
+	}
+	if _, err := IsFileExists("openvpnTaKeyFile", openvpnTaKeyFile, DefaultFilePermissionForStaticConfig); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := CheckExecutableRights("openvpnUpScript", openvpnUpScript); err != nil {
+		errors = append(errors, err)
+	}
+	if err := CheckExecutableRights("openvpnDownScript", openvpnUpScript); err != nil {
+		errors = append(errors, err)
+	}
+
+	// checking availability of OpenVPN binaries
+	if err := CheckExecutableRights("openVpnBinaryPath", openVpnBinaryPath); err != nil {
+		warnings = append(warnings, fmt.Errorf("OpenVPN functionality not accessible: %w", err).Error())
+	}
+	// checking availability of obfsproxy binaries
+	if err := CheckExecutableRights("obfsproxyStartScript", obfsproxyStartScript); err != nil {
+		warnings = append(warnings, fmt.Errorf("obfsproxy functionality not accessible: %w", err).Error())
+	}
+	// checling availability of WireGuard binaries
+	if err := CheckExecutableRights("wgBinaryPath", wgBinaryPath); err != nil {
+		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
+	}
+	if err := CheckExecutableRights("wgToolBinaryPath", wgToolBinaryPath); err != nil {
+		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
+	}
+
+	w, e := doInitOperations()
+	if len(w) > 0 {
+		warnings = append(warnings, w)
+	}
+	if e != nil {
+		errors = append(errors, e)
+	}
+
+	return warnings, errors
+}
+
+// IsFileExists checking file avvailability. If file available - return nil
+// When expected file permissin defined (fileMode!=0) - returns error in case if file permission not equal to expected
+func IsFileExists(description string, file string, fileMode os.FileMode) (os.FileMode, error) {
+	if len(description) > 0 {
+		description = fmt.Sprintf("(%s)", description)
+	}
+
+	if len(file) == 0 {
+		return 0, fmt.Errorf("parameter not initialized %s", description)
+	}
+
+	stat, err := os.Stat(file)
+	if err != nil {
 		if os.IsNotExist(err) {
-			panic(fmt.Sprintf("[Initialisation (plafrorm)] File not exists (%s): '%s'", description, file))
-		} else {
-			panic(fmt.Sprintf("[Initialisation (plafrorm)] File existing check error: %s (%s:%s)", err.Error(), description, file))
+			return 0, fmt.Errorf("%w %s: '%s'", err, description, file)
+		}
+		return 0, fmt.Errorf("file existing check error %s '%s' : %w", description, file, err)
+	}
+	mode := stat.Mode()
+
+	if stat.IsDir() {
+		return mode, fmt.Errorf("'%s' is directory %s", file, description)
+	}
+
+	if fileMode != 0 {
+
+		if mode != fileMode {
+			return mode, fmt.Errorf(fmt.Sprintf("file '%s' %s has wrong permissions (%o but expected %o)", file, description, mode, fileMode))
 		}
 	}
+
+	return mode, nil
 }
 
-func makeDir(description string, dirpath string) {
+// CheckExecutableRights checks file has access permission to be writable
+// If file does not exist or it can be writable by someone alse except root - retun error
+func CheckExecutableRights(description string, file string) error {
+	if len(file) > 0 {
+		// 'file' can be presented as executable with arguments (e.g. 'dns.sh -up')
+		// Trying here to take only executable file path without arguments
+		file = strings.Split(file, " -")[0]
+		file = strings.Split(file, "\t-")[0]
+	}
+
+	mode, err := IsFileExists(description, file, 0)
+	if err != nil {
+		return err
+	}
+
+	if len(description) > 0 {
+		description = fmt.Sprintf("(%s)", description)
+	}
+
+	if (mode & WrongExecutableFilePermissionsMask) > 0 {
+		return fmt.Errorf("file '%s' %s has permissins to be modifyied by everyone %o", file, description, mode)
+	}
+	return nil
+}
+
+func makeDir(description string, dirpath string) error {
 	if len(dirpath) == 0 {
-		panic(fmt.Sprintf("[Initialisation (plafrorm)] Parameter not initialized: %s", description))
+		return fmt.Errorf("parameter not initialized: %s", description)
 	}
 
 	if err := os.MkdirAll(dirpath, os.ModePerm); err != nil {
-		panic(fmt.Sprintf("[Initialisation (plafrorm)] Unable to create directory error: %s (%s:%s)", err.Error(), description, dirpath))
+		return fmt.Errorf("unable to create directory error: %s (%s:%s)", err.Error(), description, dirpath)
 	}
+	return nil
 }
 
 // Is64Bit - returns 'true' if binary compiled in 64-bit architecture

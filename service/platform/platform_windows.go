@@ -26,20 +26,15 @@ func initVars(_installDir string) {
 	_installDir = strings.ReplaceAll(_installDir, `\`, `/`)
 
 	// common variables initialization
-	settingsDir = path.Join(_installDir, "etc")
+	settingsDir := path.Join(_installDir, "etc")
 	settingsFile = path.Join(settingsDir, "settings.json")
-	if len(servicePortFile) <= 0 {
-		servicePortFile = path.Join(settingsDir, "port.txt")
-	} else {
-		// debug version can have different port file value
-		fmt.Println("!!! WARNING!!! Non-standard service port file: ", servicePortFile)
-	}
+
 	serversFile = path.Join(settingsDir, "servers.json")
 	openvpnConfigFile = path.Join(settingsDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(settingsDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(settingsDir, "IVPN.conf") // will be used also for WireGuard service name (e.g. "WireGuardTunnel$IVPN")
 
-	logDir = path.Join(_installDir, "log")
+	logDir := path.Join(_installDir, "log")
 	logFile = path.Join(logDir, "IVPN Agent.log")
 	openvpnLogFile = path.Join(logDir, "openvpn.log")
 
@@ -61,11 +56,11 @@ func initVars(_installDir string) {
 	wgBinaryPath = path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")
 	wgToolBinaryPath = path.Join(_installDir, "WireGuard", _wgArchDir, "wg.exe")
 
-	ensureFileExists("wfpDllPath", wfpDllPath)
-	ensureFileExists("nativeHelpersDllPath", nativeHelpersDllPath)
+	panicIfFileNotExists("wfpDllPath", wfpDllPath)
+	panicIfFileNotExists("nativeHelpersDllPath", nativeHelpersDllPath)
 }
 
-func doInitOperations() error {}
+func doInitOperations() (w string, e error) { return "", nil }
 
 // WindowsWFPDllPath - Path to Windows DLL with helper methods for WFP (Windows Filtering Platform)
 func WindowsWFPDllPath() string {

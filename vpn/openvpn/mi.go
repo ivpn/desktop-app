@@ -31,6 +31,9 @@ type ManagementInterface struct {
 
 	isConnected           bool
 	isDisconnectRequested bool
+
+	pushReplyCmds []string
+	pushReplyDNS  net.IP
 }
 
 // StartManagementInterface - starts TCP interface to communicate with IVPN application (server to listen incoming connections)
@@ -132,6 +135,10 @@ func (i *ManagementInterface) start() error {
 		i.isConnected = true
 
 		defer func() {
+			//erase connection properties
+			i.pushReplyDNS = nil
+			i.pushReplyCmds = make([]string, 0)
+
 			i.listener.Close()
 			i.log.Info("OpenVPN MI stopped")
 			i.isConnected = false // mark: connection is closed
@@ -165,6 +172,7 @@ func (i *ManagementInterface) miCommunication() {
 	mesRegexp := regexp.MustCompile("^>([a-zA-Z0-9-]+):(.*)")
 	mesNeedPassRegexp := regexp.MustCompile("Need '(.+)' username/password")
 	mesLogRouteAddCmdRegexp := regexp.MustCompile(".*route(.exe)?[ \t]+add[ \t]+")
+	mesLogPushReplyCmdRegexp := regexp.MustCompile(".*PUSH.*'PUSH_REPLY[ ,]*(.*)'")
 
 	if i.miConn == nil {
 		i.log.Panic("INTERNAL ERROR: OpenVPN MI connection is null!")
@@ -175,6 +183,9 @@ func (i *ManagementInterface) miCommunication() {
 		i.miConn.Close()
 		i.log.Info("OpenVPN MI disconnected: ", i.miConn.RemoteAddr())
 	}()
+
+	// request version info
+	i.sendResponse("version")
 
 	reader := bufio.NewReader(i.miConn)
 	for {
@@ -214,7 +225,14 @@ func (i *ManagementInterface) miCommunication() {
 				if mesLogRouteAddCmdRegexp.MatchString(cmdStr) {
 					i.addRouteAddCommand(cmdStr)
 				}
+			} else {
+				// LOG:1586341059,,PUSH: Received control message: 'PUSH_REPLY,redirect-gateway def1,explicit-exit-notify 3,comp-lzo no,route-gateway 10.34.44.1,topology subnet,ping 10,ping-restart 60,dhcp-option DNS 10.34.44.1,ifconfig 10.34.44.19 255.255.252.0,peer-id 17,cipher AES-256-GCM'
+				cols := mesLogPushReplyCmdRegexp.FindStringSubmatch(msgText)
+				if len(cols) == 2 {
+					i.onPushReplyCommands(strings.Split(cols[1], ","))
+				}
 			}
+
 			break
 
 		case "INFO":
@@ -278,11 +296,12 @@ func (i *ManagementInterface) miCommunication() {
 				// If state is Connected - save local and server IP addresses
 				if state == vpn.CONNECTED {
 					if len(params) > 3 {
-						clientIP = net.ParseIP(params[3])
+						clientIP = net.ParseIP(strings.TrimSpace(params[3]))
 					}
 					if len(params) > 4 {
-						serverIP = net.ParseIP(params[4])
+						serverIP = net.ParseIP(strings.TrimSpace(params[4]))
 					}
+
 				} else if state == vpn.EXITING {
 					//>STATE:1563526742,EXITING,auth-failure,,,,,
 					if strings.Contains(msgText, "auth-failure") { //if (params[2] == "auth-failure")
@@ -315,6 +334,28 @@ func (i *ManagementInterface) miCommunication() {
 		}
 
 	}
+}
+func (i *ManagementInterface) onPushReplyCommands(cmds []string) {
+	// LOG:1586341059,,PUSH: Received control message: 'PUSH_REPLY,redirect-gateway def1,explicit-exit-notify 3,comp-lzo no,route-gateway 10.34.44.1,topology subnet,ping 10,ping-restart 60,dhcp-option DNS 10.34.44.1,ifconfig 10.34.44.19 255.255.252.0,peer-id 17,cipher AES-256-GCM'
+	var dns net.IP = nil
+	for idx, cmd := range cmds {
+		cmd = strings.ToLower(strings.TrimSpace(cmd))
+		cmds[idx] = cmd
+
+		// dhcp-option DNS 10.34.44.1
+		if strings.HasPrefix(cmd, "dhcp-option dns ") {
+			if cols := strings.Split(cmd, " "); len(cols) == 3 {
+				dns = net.ParseIP(cols[2])
+				if dns == nil {
+					i.log.Warning("Unable to parse pushed DNS: ", cols[2])
+				} else {
+					i.log.Info("DNS pushed: ", dns)
+				}
+			}
+		}
+	}
+	i.pushReplyDNS = dns
+	i.pushReplyCmds = cmds
 }
 
 func (i *ManagementInterface) sendResponse(commands ...string) error {

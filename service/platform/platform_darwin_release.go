@@ -10,24 +10,20 @@ import (
 	"path/filepath"
 )
 
-func doOsInitForBuild() {
-	// macOS-specivic variable initialization
+func doOsInitForBuild() (warnings []string, errors []error) {
+	// macOS-specific variable initialization
 	firewallScript = "/Applications/IVPN.app/Contents/Resources/etc/firewall.sh"
-	ensureFileExists("firewallScript", firewallScript)
-
 	dnsScript = "/Applications/IVPN.app/Contents/Resources/etc/dns.sh"
-	ensureFileExists("firewallScript", dnsScript)
 
 	// common variables initialization
-	settingsDir = "/Library/Application Support/IVPN"
+	settingsDir := "/Library/Application Support/IVPN"
 	settingsFile = path.Join(settingsDir, "settings.json")
-	servicePortFile = path.Join(settingsDir, "port.txt")
 	serversFile = path.Join(settingsDir, "servers.json")
 	openvpnConfigFile = path.Join(settingsDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(settingsDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(settingsDir, "wireguard.conf")
 
-	logDir = "/Library/Logs/"
+	logDir := "/Library/Logs/"
 	logFile = path.Join(logDir, "IVPN Agent.log")
 	openvpnLogFile = path.Join(logDir, "openvpn.log")
 
@@ -41,9 +37,11 @@ func doOsInitForBuild() {
 
 	wgBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"
 	wgToolBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wg"
+
+	return nil, nil
 }
 
-func doInitOperations() error {
+func doInitOperations() (w string, e error) {
 	serversFile := ServersFile()
 	if _, err := os.Stat(serversFile); err != nil {
 		if os.IsNotExist(err) {
@@ -53,14 +51,14 @@ func doInitOperations() error {
 			// Copying it from a bundle
 			os.MkdirAll(filepath.Base(serversFile), os.ModePerm)
 			if _, err = copyFile("/Applications/IVPN.app/Contents/Resources/etc/servers.json", serversFile); err != nil {
-				fmt.Println(err)
-				return err
+				return err.Error(), nil
 			}
-			return nil
+			return "", nil
 		}
-		return err
+
+		return err.Error(), nil
 	}
-	return nil
+	return "", nil
 }
 
 func copyFile(src, dst string) (int64, error) {
@@ -80,7 +78,7 @@ func copyFile(src, dst string) (int64, error) {
 	defer source.Close()
 
 	destination, err := os.Create(dst)
-	destination.Chmod(0600)
+	destination.Chmod(DefaultFilePermissionForConfig)
 	if err != nil {
 		return 0, err
 	}

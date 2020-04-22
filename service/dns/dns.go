@@ -7,9 +7,16 @@ import (
 )
 
 var log *logger.Logger
+var lastManualDNS net.IP
 
 func init() {
 	log = logger.NewLogger("dns")
+}
+
+// Initialise is doing initialisation stuff
+// Must be called on application start
+func Initialise() error {
+	return implInitialise()
 }
 
 // Pause pauses DNS (restore original DNS)
@@ -27,6 +34,9 @@ func Resume() error {
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func SetManual(addr net.IP, localInterfaceIP net.IP) error {
 	ret := implSetManual(addr, localInterfaceIP)
+	if ret == nil {
+		lastManualDNS = addr
+	}
 	return ret
 }
 
@@ -34,5 +44,18 @@ func SetManual(addr net.IP, localInterfaceIP net.IP) error {
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func DeleteManual(localInterfaceIP net.IP) error {
 	ret := implDeleteManual(localInterfaceIP)
+	if ret == nil {
+		lastManualDNS = nil
+	}
 	return ret
+}
+
+// GetLastManualDNS - returns information about current manual DNS
+func GetLastManualDNS() string {
+	// TODO: get real DNS configuration of the OS
+	dns := lastManualDNS
+	if dns == nil {
+		return ""
+	}
+	return dns.String()
 }

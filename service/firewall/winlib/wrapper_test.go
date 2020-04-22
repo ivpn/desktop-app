@@ -1,10 +1,13 @@
+// +build windows
+
 package winlib_test
 
 import (
 	"fmt"
-	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
 	"syscall"
 	"testing"
+
+	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
 )
 
 func TestFuncsCall(t *testing.T) {

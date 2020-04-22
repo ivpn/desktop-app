@@ -1,6 +1,7 @@
 package wireguard
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"strconv"
@@ -9,8 +10,6 @@ import (
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/vpn"
-
-	"github.com/pkg/errors"
 )
 
 var log *logger.Logger
@@ -29,22 +28,24 @@ type ConnectionParams struct {
 	hostLocalIP      net.IP
 }
 
+// SetCredentials update WG credentials
+func (cp *ConnectionParams) SetCredentials(privateKey string, localIP net.IP) {
+	cp.clientPrivateKey = privateKey
+	cp.clientLocalIP = localIP
+}
+
 // CreateConnectionParams initializing connection parameters object
 func CreateConnectionParams(
-	clientLocalIP net.IP,
-	clientPrivateKey string,
 	hostPort int,
 	hostIP net.IP,
 	hostPublicKey string,
 	hostLocalIP net.IP) ConnectionParams {
 
 	return ConnectionParams{
-		clientLocalIP:    clientLocalIP,
-		clientPrivateKey: clientPrivateKey,
-		hostPort:         hostPort,
-		hostIP:           hostIP,
-		hostPublicKey:    hostPublicKey,
-		hostLocalIP:      hostLocalIP}
+		hostPort:      hostPort,
+		hostIP:        hostIP,
+		hostPublicKey: hostPublicKey,
+		hostLocalIP:   hostLocalIP}
 }
 
 // WireGuard structure represents all data of wireguard connection
@@ -53,7 +54,6 @@ type WireGuard struct {
 	toolBinaryPath string
 	configFilePath string
 	connectParams  ConnectionParams
-	defGateway     net.IP
 
 	// Must be implemeted (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	internals internalVariables
@@ -61,17 +61,14 @@ type WireGuard struct {
 
 // NewWireGuardObject creates new wireguard structure
 func NewWireGuardObject(wgBinaryPath string, wgToolBinaryPath string, wgConfigFilePath string, connectionParams ConnectionParams) (*WireGuard, error) {
-
-	defaultGwIP, err := netinfo.DefaultGatewayIP()
-	if err != nil {
-		return nil, errors.Wrap(err, "Unable to determine default gateway IP")
+	if connectionParams.clientLocalIP == nil || len(connectionParams.clientPrivateKey) == 0 {
+		return nil, fmt.Errorf("WireGuard local credentials not defined")
 	}
 
 	return &WireGuard{
 		binaryPath:     wgBinaryPath,
 		toolBinaryPath: wgToolBinaryPath,
 		configFilePath: wgConfigFilePath,
-		defGateway:     defaultGwIP,
 		connectParams:  connectionParams}, nil
 }
 
@@ -80,6 +77,9 @@ func NewWireGuardObject(wgBinaryPath string, wgToolBinaryPath string, wgConfigFi
 func (wg *WireGuard) DestinationIPs() []net.IP {
 	return []net.IP{wg.connectParams.hostIP}
 }
+
+// Type just returns VPN type
+func (wg *WireGuard) Type() vpn.Type { return vpn.WireGuard }
 
 // Init performs basic initialisations before connection
 // It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
@@ -140,7 +140,7 @@ func (wg *WireGuard) ResetManualDNS() error {
 func (wg *WireGuard) generateAndSaveConfigFile(cfgFilePath string) error {
 	cfg, err := wg.generateConfig()
 	if err != nil {
-		return errors.Wrap(err, "failed to generate WireGuard configuration")
+		return fmt.Errorf("failed to generate WireGuard configuration: %w", err)
 	}
 
 	// write configuration into temporary file
@@ -148,7 +148,7 @@ func (wg *WireGuard) generateAndSaveConfigFile(cfgFilePath string) error {
 
 	err = ioutil.WriteFile(cfgFilePath, []byte(configText), 0600)
 	if err != nil {
-		return errors.Wrap(err, "failed to save WireGuard configuration into a file")
+		return fmt.Errorf("failed to save WireGuard configuration into a file: %w", err)
 	}
 
 	log.Info("WireGuard  configuration:",
@@ -162,7 +162,7 @@ func (wg *WireGuard) generateAndSaveConfigFile(cfgFilePath string) error {
 func (wg *WireGuard) generateConfig() ([]string, error) {
 	listenPort, err := netinfo.GetFreePort()
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to obtain free local port")
+		return nil, fmt.Errorf("unable to obtain free local port: %w", err)
 	}
 
 	interfaceCfg := []string{
@@ -174,12 +174,7 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 		"[Peer]",
 		"PublicKey = " + wg.connectParams.hostPublicKey,
 		"Endpoint = " + wg.connectParams.hostIP.String() + ":" + strconv.Itoa(wg.connectParams.hostPort),
-		"PersistentKeepalive = 25",
-		// Same as "0.0.0.0/0" but such type of configuration is disabling internal WireGuard-s Firewall
-		// It blocks everything except WireGuard traffic.
-		// We need to disable WireGurd-s firewall because we have our own implementation of firewall.
-		//  For details, refer to WireGuard-windows sources: tunnel\ifaceconfig.go (enableFirewall(...) method)
-		"AllowedIPs = 128.0.0.0/1, 0.0.0.0/1"}
+		"PersistentKeepalive = 25"}
 
 	// add some OS-specific configurations (if necessary)
 	iCfg, pCgf := wg.getOSSpecificConfigParams()

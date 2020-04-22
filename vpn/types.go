@@ -15,6 +15,16 @@ const (
 	WireGuard Type = iota
 )
 
+func (t Type) String() string {
+	switch t {
+	case OpenVPN:
+		return "OpenVPN"
+	case WireGuard:
+		return "WireGuard"
+	}
+	return "<Unknown>"
+}
+
 // State - state of VPN
 type State int
 
@@ -91,9 +101,12 @@ type StateInfo struct {
 	State       State
 	Description string
 
-	ClientIP    net.IP // applicable only for 'CONNECTED' state
-	ServerIP    net.IP // applicable only for 'CONNECTED' state
-	IsAuthError bool   // applicable only for 'EXITING' state
+	VpnType      Type
+	Time         int64  // unix time (sconds)
+	ClientIP     net.IP // applicable only for 'CONNECTED' state
+	ServerIP     net.IP // applicable only for 'CONNECTED' state
+	ExitServerID string // applicable only for 'CONNECTED' state
+	IsAuthError  bool   // applicable only for 'EXITING' state
 
 	// TODO: try to avoid using this protocol-specific parameter in future
 	// Currently, in use by OpenVPN connection to inform about "RECONNECTING" reason (e.g. "tls-error", "init_instance"...)
@@ -123,6 +136,8 @@ func NewStateInfoConnected(clientIP net.IP, serverIP net.IP) StateInfo {
 
 // Process represents VPN object operations
 type Process interface {
+	// Type just returns VPN type
+	Type() Type
 	// Init performs basic initialisations before connection
 	// It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
 	// (currently, in use by WireGuard(Windows))

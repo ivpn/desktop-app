@@ -5,10 +5,26 @@ var (
 	dnsScript      string
 )
 
-func doOsInit() {
-	doOsInitForBuild()
-	ensureFileExists("firewallScript", firewallScript)
-	ensureFileExists("dnsScript", dnsScript)
+// initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
+func doInitConstants() {
+	servicePortFile = "/Library/Application Support/IVPN/port.txt"
+}
+
+func doOsInit() (warnings []string, errors []error) {
+	warnings, errors = doOsInitForBuild()
+
+	if errors == nil {
+		errors = make([]error, 0)
+	}
+
+	if err := CheckExecutableRights("firewallScript", firewallScript); err != nil {
+		errors = append(errors, err)
+	}
+	if err := CheckExecutableRights("dnsScript", dnsScript); err != nil {
+		errors = append(errors, err)
+	}
+
+	return warnings, errors
 }
 
 // FirewallScript returns path to firewal script

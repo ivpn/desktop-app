@@ -8,4 +8,4 @@
 #define ERROR_METHOD_NOT_FOUND -2
 
 void UnLoadLibrary();
-int start_xpc_listener(char *name, int serviceTcpPort);
+int start_xpc_listener(char *name, int serviceTcpPort, uint64_t secret);
