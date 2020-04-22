@@ -107,8 +107,8 @@ type Protocol struct {
 
 	_service Service
 
-	_vpnConnectMutex         sync.Mutex
-	_disconnectRequestCmdIdx int
+	_vpnConnectMutex     sync.Mutex
+	_disconnectRequested bool
 
 	_connectRequestsMutex   sync.Mutex
 	_connectRequests        int
@@ -465,6 +465,14 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
+
+		// notify all clients about KillSwitch status
+		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
+			log.Error(err)
+		} else {
+			p.notifyClients(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast})
+		}
+
 		break
 
 	case "KillSwitchSetAllowLANMulticast":
@@ -507,6 +515,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
+
+		// notify all clients about KillSwitch status
+		isPersistant := p._service.Preferences().IsFwPersistant
+		p.notifyClients(&types.KillSwitchGetIsPestistentResp{IsPersistent: isPersistant})
 		break
 
 	// TODO: can be fully replaced by 'KillSwitchGetStatus'
@@ -694,7 +706,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		break
 
 	case "Disconnect":
-		p._disconnectRequestCmdIdx = reqCmd.Idx
+		p._disconnectRequested = true
 
 		if p._service.Connected() == false {
 			p.sendResponse(conn, &types.DisconnectedResp{Reason: types.DisconnectRequested}, reqCmd.Idx)
@@ -707,7 +719,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		break
 
 	case "Connect":
-		p._disconnectRequestCmdIdx = 0
+		p._disconnectRequested = false
 		requestTime := p.vpnConnectReqEnter()
 
 		stateChan := make(chan vpn.StateInfo, 1)
@@ -739,24 +751,23 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			close(isExitChan)
 
 			// Do not send "Disconnected" notification if we are giong to establish new connection immediately
-			if cnt, _ := p.vpnConnectReqCount(); cnt == 1 || p._disconnectRequestCmdIdx > 0 {
+			if cnt, _ := p.vpnConnectReqCount(); cnt == 1 || p._disconnectRequested {
 				p._lastVPNState = vpn.NewStateInfo(vpn.DISCONNECTED, "")
 
 				// Sending "Disconnected" only in one place (after VPN process stopped)
 				disconnectionReason := types.Unknown
 				if disconnectAuthError == true {
 					disconnectionReason = types.AuthenticationError
+					if len(disconnectDescription) == 0 {
+						disconnectDescription = "authentication failure"
+					}
 				}
-				if p._disconnectRequestCmdIdx > 0 {
+				if p._disconnectRequested {
 					// notify clients that disconnection was manually requested by one of connected clients
 					// (prevent UI clients trying to reconnect)
 					disconnectionReason = types.DisconnectRequested
 				}
 
-				respIdx := p._disconnectRequestCmdIdx
-				if respIdx == 0 {
-					respIdx = reqCmd.Idx
-				}
 				p.notifyClients(&types.DisconnectedResp{Failure: true, Reason: disconnectionReason, ReasonDescription: disconnectDescription})
 			}
 
@@ -788,7 +799,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 					switch state.State {
 					case vpn.CONNECTED:
 						// Do not send "Connected" notification if we are giong to establish new connection immediately
-						if cnt, _ := p.vpnConnectReqCount(); cnt == 1 || p._disconnectRequestCmdIdx > 0 {
+						if cnt, _ := p.vpnConnectReqCount(); cnt == 1 || p._disconnectRequested {
 							p.notifyClients(&types.ConnectedResp{
 								TimeSecFrom1970: state.Time,
 								ClientIP:        state.ClientIP.String(),

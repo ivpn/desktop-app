@@ -138,7 +138,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		}
 	}()
 
-	if p._disconnectRequestCmdIdx > 0 {
+	if p._disconnectRequested {
 		log.Info("Disconnection was requested. Canceling connection.")
 		return p._service.Disconnect()
 	}
