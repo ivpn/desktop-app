@@ -262,25 +262,20 @@ func (c *Client) GetVPNState() (vpn.State, types.ConnectedResp, error) {
 
 	req := types.GetVPNState{}
 
-	data, cmdBase, err := c.sendRecvRaw(&req)
+	_, _, err := c.sendRecvAny(&req, &respConnected, &respDisconnected, &respState)
 	if err != nil {
 		return vpn.DISCONNECTED, respConnected, err
 	}
 
-	switch cmdBase.Command {
-	case types.GetTypeName(respConnected):
-		if err := deserialize(data, &respConnected); err != nil {
-			return vpn.DISCONNECTED, respConnected, fmt.Errorf("response deserialisation failed: %w", err)
-		}
+	if len(respConnected.Command) > 0 {
 		return vpn.CONNECTED, respConnected, nil
+	}
 
-	case types.GetTypeName(respDisconnected):
+	if len(respDisconnected.Command) > 0 {
 		return vpn.DISCONNECTED, respConnected, nil
+	}
 
-	case types.GetTypeName(respState):
-		if err := deserialize(data, &respState); err != nil {
-			return vpn.DISCONNECTED, respConnected, fmt.Errorf("response deserialisation failed: %w", err)
-		}
+	if len(respState.Command) > 0 {
 		return respState.StateVal, respConnected, nil
 	}
 
@@ -297,12 +292,12 @@ func (c *Client) DisconnectVPN() error {
 	respEmpty := types.EmptyResp{}
 	respDisconnected := types.DisconnectedResp{}
 
-	_, cmdBase, err := c.sendRecvRaw(&req)
+	_, _, err := c.sendRecvAny(&req, &respDisconnected, &respEmpty)
 	if err != nil {
 		return err
 	}
 
-	if cmdBase.Command != types.GetTypeName(respEmpty) && cmdBase.Command != types.GetTypeName(respDisconnected) {
+	if len(respDisconnected.Command) == 0 && len(respEmpty.Command) == 0 {
 		return fmt.Errorf("disconnect request failed (not expected return type)")
 	}
 
@@ -318,22 +313,16 @@ func (c *Client) ConnectVPN(req types.Connect) (types.ConnectedResp, error) {
 		return respConnected, err
 	}
 
-	data, cmdBase, err := c.sendRecvRaw(&req)
+	_, _, err := c.sendRecvAny(&req, &respConnected, &respDisconnected)
 	if err != nil {
 		return respConnected, err
 	}
 
-	switch cmdBase.Command {
-	case types.GetTypeName(respConnected):
-		if err := deserialize(data, &respConnected); err != nil {
-			return respConnected, fmt.Errorf("response deserialisation failed: %w", err)
-		}
+	if len(respConnected.Command) > 0 {
 		return respConnected, nil
+	}
 
-	case types.GetTypeName(respDisconnected):
-		if err := deserialize(data, &respDisconnected); err != nil {
-			return respConnected, fmt.Errorf("response deserialisation failed: %w", err)
-		}
+	if len(respDisconnected.Command) > 0 {
 		return respConnected, fmt.Errorf("%s", respDisconnected.ReasonDescription)
 	}
 
