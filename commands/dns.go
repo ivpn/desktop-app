@@ -2,6 +2,9 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"strings"
+	"text/tabwriter"
 
 	"github.com/ivpn/desktop-app-cli/commands/config"
 	"github.com/ivpn/desktop-app-cli/flags"
@@ -31,6 +34,7 @@ func (c *CmdDns) Run() error {
 		return err
 	}
 
+	var servers *apitypes.ServersInfoResponse
 	// do we have to change custom DNS configuration ?
 	if c.reset || len(c.dns) > 0 {
 		cfg.CustomDNS = ""
@@ -44,20 +48,44 @@ func (c *CmdDns) Run() error {
 		}
 
 		// update DNS if VPN is connected
-		state, _, err := _proto.GetVPNState()
+		state, connectedInfo, err := _proto.GetVPNState()
 		if err != nil {
 			return err
 		}
 		if state == vpn.CONNECTED {
-			if err := _proto.SetManualDNS(cfg.CustomDNS); err != nil {
-				return err
+			svrs, _ := _proto.GetServers()
+			servers = &svrs
+			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectedInfo.ManualDNS, servers)
+			if c.reset && (isAntitracker || isAtHardcore) {
+				fmt.Println("Nothing to disable")
+			} else {
+				if err := _proto.SetManualDNS(cfg.CustomDNS); err != nil {
+					return err
+				}
+				fmt.Println("Custom DNS successfully changed for current VPN connection")
 			}
-			fmt.Println("Custom DNS successfully changed for current VPN connection")
 		}
 	}
 
-	// print status
-	PrintDnsConfigInfo(cfg.CustomDNS)
+	// print state
+	var w *tabwriter.Writer
+
+	state, connected, err := _proto.GetVPNState()
+	if err != nil {
+		return err
+	}
+
+	if state == vpn.CONNECTED {
+		if servers == nil {
+			svrs, _ := _proto.GetServers()
+			servers = &svrs
+		}
+		w = printDNSState(w, connected.ManualDNS, servers)
+	}
+
+	w = printDNSConfigInfo(w, cfg.CustomDNS)
+	w.Flush()
+
 	return nil
 }
 
@@ -87,6 +115,14 @@ func (c *CmdAntitracker) Run() error {
 		return err
 	}
 
+	var servers apitypes.ServersInfoResponse
+	var dns string
+
+	servers, err = _proto.GetServers()
+	if err != nil {
+		return err
+	}
+
 	// do we have to change antitracker configuration ?
 	if c.off || c.def || c.hardcore {
 		cfg.Antitracker = false
@@ -109,53 +145,76 @@ func (c *CmdAntitracker) Run() error {
 			return err
 		}
 		if state == vpn.CONNECTED {
-			dns := ""
-			if cfg.Antitracker || cfg.AntitrackerHardcore {
-				dns, err = GetAntitrackerIP(cfg.AntitrackerHardcore, len(connectInfo.ExitServerID) > 0, nil)
+			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectInfo.ManualDNS, &servers)
+			if c.off && !(isAntitracker || isAtHardcore) {
+				fmt.Println("AntiTracker already disabled")
+			} else {
+				if cfg.Antitracker || cfg.AntitrackerHardcore {
+					dns, err = GetAntitrackerIP(cfg.AntitrackerHardcore, len(connectInfo.ExitServerID) > 0, &servers)
+				}
+				if err := _proto.SetManualDNS(dns); err != nil {
+					return err
+				}
+				fmt.Println("AntiTracker successfully updated for current VPN connection")
 			}
-			if err := _proto.SetManualDNS(dns); err != nil {
-				return err
-			}
-			fmt.Println("AntiTracker successfully updated for current VPN connection")
 		}
 	}
 
-	// print status
-	PrintAntitrackerConfigInfo(cfg.Antitracker, cfg.AntitrackerHardcore)
+	// print state
+	var w *tabwriter.Writer
+
+	state, connected, err := _proto.GetVPNState()
+	if err != nil {
+		return err
+	}
+
+	if state == vpn.CONNECTED {
+		servers, _ := _proto.GetServers()
+		w = printDNSState(w, connected.ManualDNS, &servers)
+	}
+
+	w = printAntitrackerConfigInfo(w, cfg.Antitracker, cfg.AntitrackerHardcore)
+	w.Flush()
+
 	return nil
 }
 
 //----------------------------------------------------------------------------------------
 
-func PrintDnsConfigInfo(customDNS string) {
-	if len(customDNS) > 0 {
-		fmt.Println("[default configuration] Custom DNS :", customDNS)
-	} else {
-		fmt.Println("[default configuration] Custom DNS : not defined")
+func printDNSConfigInfo(w *tabwriter.Writer, customDNS string) *tabwriter.Writer {
+	if w == nil {
+		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
+
+	if len(customDNS) > 0 {
+		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tCustom DNS %v", customDNS))
+	} else {
+		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tCustom DNS not defined"))
+	}
+
+	return w
 }
 
-func PrintAntitrackerConfigInfo(antitracker, antitrackerHardcore bool) {
-	if antitrackerHardcore {
-		fmt.Println("[default configuration] AntiTracker: Enabled (hardcore)")
-	} else if antitracker {
-		fmt.Println("[default configuration] AntiTracker: Enabled")
-	} else {
-		fmt.Println("[default configuration] AntiTracker: Disabled")
+func printAntitrackerConfigInfo(w *tabwriter.Writer, antitracker, antitrackerHardcore bool) *tabwriter.Writer {
+	if w == nil {
+		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
+
+	if antitrackerHardcore {
+		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tAntiTracker Enabled (Hardcore)"))
+	} else if antitracker {
+		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tAntiTracker Enabled"))
+	} else {
+		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tAntiTracker Disabled"))
+	}
+
+	return w
 }
 
 //----------------------------------------------------------------------------------------
 
 // GetAntitrackerIP - returns IP of antitracker DNS
 func GetAntitrackerIP(isHardcore, isMultihop bool, servers *apitypes.ServersInfoResponse) (string, error) {
-	if servers == nil {
-		srvs, err := _proto.GetServers()
-		if err != nil {
-			return "", err
-		}
-		servers = &srvs
-	}
 
 	if isHardcore {
 		if isMultihop {
@@ -168,4 +227,24 @@ func GetAntitrackerIP(isHardcore, isMultihop bool, servers *apitypes.ServersInfo
 		return servers.Config.Antitracker.Default.MultihopIP, nil
 	}
 	return servers.Config.Antitracker.Default.IP, nil
+}
+
+// IsAntiTrackerIP returns info 'is this IP equals to antitracker IP'
+func IsAntiTrackerIP(dns string, servers *apitypes.ServersInfoResponse) (antitracker, antitrackerHardcore bool) {
+	if servers == nil {
+		return false, false
+	}
+
+	dns = strings.TrimSpace(dns)
+	if len(dns) == 0 {
+		return false, false
+	}
+
+	if dns == servers.Config.Antitracker.Default.IP || dns == servers.Config.Antitracker.Default.MultihopIP {
+		return true, false
+	} else if dns == servers.Config.Antitracker.Hardcore.IP || dns == servers.Config.Antitracker.Hardcore.MultihopIP {
+		return true, true
+	}
+
+	return false, false
 }

@@ -180,13 +180,13 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 		if (checkAll || useGw) && strings.ToLower(s.gateway) == mask {
 			isOK = true
 		}
-		if (checkAll || useCity) && strings.ToLower(s.city) == mask {
+		if (checkAll || useCity) && strings.Contains(strings.ToLower(s.city), mask) {
 			isOK = true
 		}
 		if (checkAll || useCCode) && strings.ToLower(s.countryCode) == mask {
 			isOK = true
 		}
-		if (checkAll || useCountry) && strings.ToLower(s.country) == mask {
+		if (checkAll || useCountry) && strings.Contains(strings.ToLower(s.country), mask) {
 			isOK = true
 		}
 

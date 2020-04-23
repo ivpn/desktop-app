@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/ivpn/desktop-app-cli/flags"
+	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/service"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 )
@@ -13,7 +14,7 @@ type CmdState struct {
 }
 
 func (c *CmdState) Init() {
-	c.Initialize("state", "Prints full info about IVPN state")
+	c.Initialize("status", "Prints full info about IVPN state")
 }
 func (c *CmdState) Run() error {
 	return showState()
@@ -33,8 +34,9 @@ func showState() error {
 	serverInfo := ""
 	exitServerInfo := ""
 
+	var servers apitypes.ServersInfoResponse
 	if state == vpn.CONNECTED {
-		servers, err := _proto.GetServers()
+		servers, err = _proto.GetServers()
 		if err == nil {
 			slist := serversList(servers)
 			serverInfo = getServerInfoByIP(slist, connected.ServerIP)
@@ -44,6 +46,9 @@ func showState() error {
 
 	w := printAccountInfo(nil, _proto.GetHelloResponse().Session.AccountID)
 	printState(w, state, connected, serverInfo, exitServerInfo)
+	if state == vpn.CONNECTED {
+		printDNSState(w, connected.ManualDNS, &servers)
+	}
 	printFirewallState(w, fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast)
 	w.Flush()
 

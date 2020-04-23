@@ -6,6 +6,7 @@ As a contributor, here are the guidelines we would like you to follow:
 * [Contributing Code](#contributing)
 * [Creating an Issue](#issue)
 * [Pull Requests](#pr)
+* [Git Workflow](#git)
 
 <a name="contributing"></a>
 ## Contributing Code
