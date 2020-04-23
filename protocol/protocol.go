@@ -464,14 +464,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
+		// send the response to the requestor
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-
-		// notify all clients about KillSwitch status
-		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
-			log.Error(err)
-		} else {
-			p.notifyClients(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast})
-		}
+		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 
 		break
 
@@ -486,6 +481,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if req.Synchronously {
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
+		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 		break
 
 	case "KillSwitchSetAllowLAN":
@@ -499,7 +495,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if req.Synchronously {
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
-
+		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 		break
 
 	case "KillSwitchSetIsPersistent":
@@ -514,11 +510,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
+		// send the response to the requestor
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-
-		// notify all clients about KillSwitch status
-		isPersistant := p._service.Preferences().IsFwPersistant
-		p.notifyClients(&types.KillSwitchGetIsPestistentResp{IsPersistent: isPersistant})
+		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 		break
 
 	// TODO: can be fully replaced by 'KillSwitchGetStatus'
@@ -573,9 +567,12 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if err != nil {
 			log.ErrorTrace(err)
+			// send the response to the requestor
 			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ChangedDNS: net.IPv4zero.String()}, req.Idx)
 		} else {
+			// send the response to the requestor
 			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.DNS}, req.Idx)
+			// all clients will be notified in case of successfull change by OnDNSChanged() handler
 		}
 		break
 

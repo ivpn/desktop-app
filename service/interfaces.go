@@ -34,4 +34,6 @@ type IWgKeysManager interface {
 // IServiceEventsReceiver is the receiver for service events (normally, it is protocol object)
 type IServiceEventsReceiver interface {
 	OnServiceSessionChanged()
+	OnDNSChanged(dns net.IP)
+	OnKillSwitchStateChanged()
 }

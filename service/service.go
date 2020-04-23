@@ -344,7 +344,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 		// when we were requested to enable firewall for this connection
 		// And initial FW state was disabled - we have to disable it back
 		if firewallDuringConnection == true && fwInitState == false {
-			if err = firewall.SetEnabled(false); err != nil {
+			if err = s.SetKillSwitchState(false); err != nil {
 				log.Error("(stopping) failed to disable firewall:", err)
 			}
 		}
@@ -471,7 +471,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 		}
 		fwInitState = fw
 		if fwInitState == false {
-			if err := firewall.SetEnabled(true); err != nil {
+			if err := s.SetKillSwitchState(true); err != nil {
 				log.Error("Failed to enable firewall:", err.Error())
 				return err
 			}
@@ -580,7 +580,11 @@ func (s *Service) SetManualDNS(dns net.IP) error {
 		return fmt.Errorf("failed to set manual DNS: %w", err)
 	}
 
-	return vpn.SetManualDNS(dns)
+	err := vpn.SetManualDNS(dns)
+	if err == nil {
+		s._evtReceiver.OnDNSChanged(dns)
+	}
+	return err
 }
 
 // ResetManualDNS set dns to default
@@ -594,7 +598,11 @@ func (s *Service) ResetManualDNS() error {
 		return fmt.Errorf("failed to reset manual DNS: %w", err)
 	}
 
-	return vpn.ResetManualDNS()
+	err := vpn.ResetManualDNS()
+	if err == nil {
+		s._evtReceiver.OnDNSChanged(nil)
+	}
+	return err
 }
 
 // PingServers ping vpn servers
@@ -742,7 +750,11 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 
 // SetKillSwitchState enable\disable killswitch
 func (s *Service) SetKillSwitchState(isEnabled bool) error {
-	return firewall.SetEnabled(isEnabled)
+	err := firewall.SetEnabled(isEnabled)
+	if err == nil {
+		s._evtReceiver.OnKillSwitchStateChanged()
+	}
+	return err
 }
 
 // KillSwitchState returns killswitch state
@@ -758,7 +770,11 @@ func (s *Service) SetKillSwitchIsPersistent(isPersistant bool) error {
 	prefs.IsFwPersistant = isPersistant
 	s.setPreferences(prefs)
 
-	return firewall.SetPersistant(isPersistant)
+	err := firewall.SetPersistant(isPersistant)
+	if err == nil {
+		s._evtReceiver.OnKillSwitchStateChanged()
+	}
+	return err
 }
 
 // SetKillSwitchAllowLAN change kill-switch value
@@ -777,7 +793,11 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 	prefs.IsFwAllowLANMulticast = isAllowLanMulticast
 	s.setPreferences(prefs)
 
-	return firewall.AllowLAN(prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast)
+	err := firewall.AllowLAN(prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast)
+	if err == nil {
+		s._evtReceiver.OnKillSwitchStateChanged()
+	}
+	return err
 }
 
 // SetPreference set preference value

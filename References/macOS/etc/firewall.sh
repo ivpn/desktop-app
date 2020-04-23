@@ -62,7 +62,7 @@ function enable_firewall {
 
     if (( $? == 0 )); then
       echo "Firewall is already enabled. Please disable it first" >&2
-      return 1
+      return 0
     fi
 
     set -e
