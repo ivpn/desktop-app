@@ -9,11 +9,11 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceRoot}",
+            "program": "${workspaceRoot}/main.go",
             "env": {},
-            "args": [],
+            //"args": [],
             //"args": ["-h"],
-            //"args": ["servers", "-ping"],
+            "args": ["servers", "-ping"],
             //"args": ["logs"],
             //"args": ["login"],
             //"args": ["account"],
@@ -25,7 +25,6 @@
             //"args": ["connect","-o", "-dns", "1.1.1.1", "-antitracker_hard", "-f", "sk.gw.ivpn.net"],
             //"args": ["state"],
             //"args": ["connect", "-s", "rs.gw.ivpn.net"],
-            //"args": ["connect", "-last"],
             "buildFlags": "-tags debug"
         }
     ]
