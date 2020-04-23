@@ -262,19 +262,20 @@ func (c *Client) GetVPNState() (vpn.State, types.ConnectedResp, error) {
 
 	req := types.GetVPNState{}
 
-	_, cmdBase, err := c.sendRecvAny(&req, &respConnected, &respDisconnected, &respState)
+	_, _, err := c.sendRecvAny(&req, &respConnected, &respDisconnected, &respState)
 	if err != nil {
 		return vpn.DISCONNECTED, respConnected, err
 	}
 
-	switch cmdBase.Command {
-	case types.GetTypeName(respConnected):
+	if len(respConnected.Command) > 0 {
 		return vpn.CONNECTED, respConnected, nil
+	}
 
-	case types.GetTypeName(respDisconnected):
+	if len(respDisconnected.Command) > 0 {
 		return vpn.DISCONNECTED, respConnected, nil
+	}
 
-	case types.GetTypeName(respState):
+	if len(respState.Command) > 0 {
 		return respState.StateVal, respConnected, nil
 	}
 
@@ -291,9 +292,13 @@ func (c *Client) DisconnectVPN() error {
 	respEmpty := types.EmptyResp{}
 	respDisconnected := types.DisconnectedResp{}
 
-	_, _, err := c.sendRecvAny(&req, &respEmpty, &respDisconnected)
+	_, _, err := c.sendRecvAny(&req, &respDisconnected, &respEmpty)
 	if err != nil {
 		return err
+	}
+
+	if len(respDisconnected.Command) == 0 && len(respEmpty.Command) == 0 {
+		return fmt.Errorf("disconnect request failed (not expected return type)")
 	}
 
 	return nil
@@ -308,16 +313,16 @@ func (c *Client) ConnectVPN(req types.Connect) (types.ConnectedResp, error) {
 		return respConnected, err
 	}
 
-	_, cmdBase, err := c.sendRecvAny(&req, &respConnected, &respDisconnected)
+	_, _, err := c.sendRecvAny(&req, &respConnected, &respDisconnected)
 	if err != nil {
 		return respConnected, err
 	}
 
-	switch cmdBase.Command {
-	case types.GetTypeName(respConnected):
+	if len(respConnected.Command) > 0 {
 		return respConnected, nil
+	}
 
-	case types.GetTypeName(respDisconnected):
+	if len(respDisconnected.Command) > 0 {
 		return respConnected, fmt.Errorf("%s", respDisconnected.ReasonDescription)
 	}
 

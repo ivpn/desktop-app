@@ -9,39 +9,29 @@ import (
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 )
 
-func createReceiver(waitingIdx int, waitingObject interface{}) *receiverChannel {
-	receiver := createReceiverAny(waitingIdx, waitingObject)
-	receiver._waitingAny = false // accept only response with correspond Idx
-	return receiver
-}
+func createReceiver(waitingIdx int, waitingObjectsList ...interface{}) *receiverChannel {
+	waitingObjects := make(map[string]interface{})
 
-// receiver waits for any response from a waitingObjects list (waitingIdx ignored when received any of expected types)
-func createReceiverAny(waitingIdx int, waitingObjects ...interface{}) *receiverChannel {
-	receiver := &receiverChannel{
-		_waitingIdx:     waitingIdx,
-		_waitingObjects: make(map[string]interface{}),
-		_channel:        make(chan []byte, 1)}
-
-	for _, wo := range waitingObjects {
+	for _, wo := range waitingObjectsList {
 		if wo == nil {
 			continue
 		}
-		receiver._waitingObjects[types.GetTypeName(wo)] = wo
+		waitingType := types.GetTypeName(wo)
+		waitingObjects[waitingType] = wo
 	}
 
-	// acceptable any response with correspond 'waitingIdx' or 'waitingType'
-	receiver._waitingAny = true
+	receiver := &receiverChannel{
+		_waitingIdx:     waitingIdx,
+		_waitingObjects: waitingObjects,
+		_channel:        make(chan []byte, 1)}
 
 	return receiver
 }
 
 type receiverChannel struct {
-	_channel chan []byte
-
-	_waitingIdx     int
-	_waitingObjects map[string]interface{}
-	_waitingAny     bool // when true - receiver waits for any response from a waitingObjects list (waitingIdx ignored when received any of expected types)
-
+	_waitingIdx      int
+	_waitingObjects  map[string]interface{}
+	_channel         chan []byte
 	_receivedData    []byte
 	_receivedCmdBase types.CommandBase
 }
@@ -50,15 +40,28 @@ func (r *receiverChannel) GetReceivedRawData() (data []byte, cmdBaseObj types.Co
 	return r._receivedData, r._receivedCmdBase
 }
 
-func (r *receiverChannel) IsExpectedResponse(respIdx int, commandName string) bool {
-	if r._waitingAny {
-		if _, exist := r._waitingObjects[commandName]; exist {
-			return true
-		}
-	}
-	if r._waitingIdx == respIdx {
+func (r *receiverChannel) IsExpectedResponse(respIdx int, command string) bool {
+	// response is acceptable when:
+	// - received expected responseIndex
+	// - we are not waiting for response index but received one of responses from _waitingObjects
+	// - when we do not care about responseIndex and response objects
+
+	if r._waitingIdx == 0 && len(r._waitingObjects) == 0 {
 		return true
 	}
+
+	if r._waitingIdx != 0 {
+		if r._waitingIdx == respIdx {
+			return true
+		}
+	} else {
+		if len(r._waitingObjects) > 0 {
+			if _, ok := r._waitingObjects[command]; ok {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 
@@ -72,15 +75,20 @@ func (r *receiverChannel) PushResponse(responseData []byte) {
 
 func (r *receiverChannel) Wait(timeout time.Duration) (err error) {
 	select {
-	case r._receivedData = <-r._channel: // save response to internal variable
+	case r._receivedData = <-r._channel:
+
 		// check type of response
 		if err := deserialize(r._receivedData, &r._receivedCmdBase); err != nil {
 			return fmt.Errorf("response deserialisation failed: %w", err)
 		}
 
-		// deserialize (if response is expected)
 		if len(r._waitingObjects) > 0 {
-			if wo, exists := r._waitingObjects[r._receivedCmdBase.Command]; exists && wo != nil {
+			if wo, ok := r._waitingObjects[r._receivedCmdBase.Command]; ok {
+				// deserialize response into expected object type
+				if err := deserialize(r._receivedData, wo); err != nil {
+					return fmt.Errorf("response deserialisation failed: %w", err)
+				}
+			} else {
 				// check is it Error object
 				var errObj types.ErrorResp
 				if r._receivedCmdBase.Command == types.GetTypeName(errObj) {
@@ -89,16 +97,9 @@ func (r *receiverChannel) Wait(timeout time.Duration) (err error) {
 					}
 					return fmt.Errorf(errObj.ErrorMessage)
 				}
-				// deserialize response into expected object type
-				if err := deserialize(r._receivedData, wo); err != nil {
-					return fmt.Errorf("response deserialisation failed: %w", err)
-				}
-			} else {
-				// if it is not expected response - return error
 				return fmt.Errorf("received unexpected data (type:%s)", r._receivedCmdBase.Command)
 			}
 		}
-
 		return nil
 
 	case <-time.After(timeout):

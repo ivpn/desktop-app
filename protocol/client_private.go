@@ -64,16 +64,18 @@ func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, time
 	return nil
 }
 
-func (c *Client) sendRecvAny(request interface{}, responses ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
+func (c *Client) sendRecvAny(request interface{}, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
 	var receiver *receiverChannel
 
+	var reqIdx int
 	// thread-safe receiver registration
 	func() {
 		c._receiversLocker.Lock()
 		defer c._receiversLocker.Unlock()
 
 		c._requestIdx++
-		receiver = createReceiverAny(c._requestIdx, responses...)
+		reqIdx = c._requestIdx
+		receiver = createReceiver(0, waitingObjects...)
 
 		c._receivers[receiver] = struct{}{}
 	}()
@@ -87,7 +89,7 @@ func (c *Client) sendRecvAny(request interface{}, responses ...interface{}) (dat
 	}()
 
 	// send request
-	if err := c.send(request, receiver._waitingIdx); err != nil {
+	if err := c.send(request, reqIdx); err != nil {
 		return nil, types.CommandBase{}, err
 	}
 
