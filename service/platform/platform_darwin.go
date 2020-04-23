@@ -1,5 +1,7 @@
 package platform
 
+import "path"
+
 var (
 	firewallScript string
 	dnsScript      string
@@ -8,6 +10,10 @@ var (
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
 	servicePortFile = "/Library/Application Support/IVPN/port.txt"
+
+	logDir := "/Library/Logs/"
+	logFile = path.Join(logDir, "IVPN Agent.log")
+	openvpnLogFile = path.Join(logDir, "openvpn.log")
 }
 
 func doOsInit() (warnings []string, errors []error) {

@@ -13,6 +13,9 @@ var (
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
 	servicePortFile = path.Join(tmpDir, "port.txt")
+
+	logFile = path.Join(logDir, "IVPN_Agent.log")
+	openvpnLogFile = path.Join(logDir, "openvpn.log")
 }
 
 func doOsInit() (warnings []string, errors []error) {

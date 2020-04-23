@@ -15,6 +15,10 @@ var (
 func doOsInit() {
 	installDir := doOsInitForBuild()
 	initVars(installDir)
+
+	logDir := path.Join(_installDir, "log")
+	logFile = path.Join(logDir, "IVPN Agent.log")
+	openvpnLogFile = path.Join(logDir, "openvpn.log")
 }
 
 func initVars(_installDir string) {
@@ -33,10 +37,6 @@ func initVars(_installDir string) {
 	openvpnConfigFile = path.Join(settingsDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(settingsDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(settingsDir, "IVPN.conf") // will be used also for WireGuard service name (e.g. "WireGuardTunnel$IVPN")
-
-	logDir := path.Join(_installDir, "log")
-	logFile = path.Join(logDir, "IVPN Agent.log")
-	openvpnLogFile = path.Join(logDir, "openvpn.log")
 
 	openVpnBinaryPath = path.Join(_installDir, "OpenVPN", _archDir, "openvpn.exe")
 	openvpnCaKeyFile = path.Join(settingsDir, "ca.crt")
