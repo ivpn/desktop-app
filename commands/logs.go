@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ivpn/desktop-app-cli/flags"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
 type CmdLogs struct {
@@ -48,7 +49,7 @@ func (c *CmdLogs) setSetLogging(enable bool) error {
 
 func (c *CmdLogs) doShow() error {
 
-	fname := "/opt/ivpn/log/IVPN_Agent.log"
+	fname := platform.LogFile()
 	file, err := os.Open(fname)
 	if err != nil {
 		return err
