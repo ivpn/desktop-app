@@ -4,7 +4,15 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
+)
+
+const (
+	// WrongExecutableFilePermissionsMask - file permissions mask for executables which are not allowed. Executable files should not have write access for someone else except root
+	WrongExecutableFilePermissionsMask os.FileMode = 0
+	// DefaultFilePermissionForConfig - mutable config files should have permissions read/write only for owner (root)
+	DefaultFilePermissionForConfig os.FileMode = 0
+	// DefaultFilePermissionForStaticConfig - unmutable config files should have permissions read/write only for owner (root)
+	DefaultFilePermissionForStaticConfig os.FileMode = 0
 )
 
 var (
@@ -12,22 +20,26 @@ var (
 	nativeHelpersDllPath string
 )
 
-func doOsInit() {
-	installDir := doOsInitForBuild()
-	initVars(installDir)
+func doInitConstants() {
+	doInitConstantsForBuild()
 
-	logDir := path.Join(_installDir, "log")
+	logDir := path.Join(getInstallDir(), "log")
 	logFile = path.Join(logDir, "IVPN Agent.log")
 	openvpnLogFile = path.Join(logDir, "openvpn.log")
 }
 
-func initVars(_installDir string) {
+func doOsInit() (warnings []string, errors []error) {
+	doOsInitForBuild()
+	_installDir := getInstallDir()
+
 	_archDir := "x86_64"
 	if Is64Bit() == false {
 		_archDir = "x86"
 	}
 
-	_installDir = strings.ReplaceAll(_installDir, `\`, `/`)
+	if errors == nil {
+		errors = make([]error, 0)
+	}
 
 	// common variables initialization
 	settingsDir := path.Join(_installDir, "etc")
@@ -50,14 +62,20 @@ func initVars(_installDir string) {
 	if _, err := os.Stat(path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")); err != nil {
 		_wgArchDir = "x86"
 		if _, err := os.Stat(path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")); err != nil {
-			panic(fmt.Sprintf("[Initialisation (plafrorm)] Unabale to find WireGuard binary: %s ..<x86_64\\x86>", path.Join(_installDir, "WireGuard")))
+			errors = append(errors, fmt.Errorf("Unabale to find WireGuard binary: %s ..<x86_64\\x86>", path.Join(_installDir, "WireGuard")))
 		}
 	}
 	wgBinaryPath = path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")
 	wgToolBinaryPath = path.Join(_installDir, "WireGuard", _wgArchDir, "wg.exe")
 
-	panicIfFileNotExists("wfpDllPath", wfpDllPath)
-	panicIfFileNotExists("nativeHelpersDllPath", nativeHelpersDllPath)
+	if _, err := os.Stat(wfpDllPath); err != nil {
+		errors = append(errors, fmt.Errorf("file not exists: '%s'", wfpDllPath))
+	}
+	if _, err := os.Stat(nativeHelpersDllPath); err != nil {
+		errors = append(errors, fmt.Errorf("file not exists: '%s'", nativeHelpersDllPath))
+	}
+
+	return warnings, errors
 }
 
 func doInitOperations() (w string, e error) { return "", nil }

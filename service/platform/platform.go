@@ -8,15 +8,6 @@ import (
 	"strings"
 )
 
-const (
-	// WrongExecutableFilePermssionsMask - file permissions mask for executables which are not allowed. Executable files should not have write access for someone else except root
-	WrongExecutableFilePermissionsMask os.FileMode = 0022
-	// DefaultFilePermissionForConfig - mutable config files should have permissions read/write only for owner (root)
-	DefaultFilePermissionForConfig os.FileMode = 0600
-	// DefaultFilePermissionForStaticConfig - unmutable config files should have permissions read/write only for owner (root)
-	DefaultFilePermissionForStaticConfig os.FileMode = 0400
-)
-
 var (
 	settingsFile    string
 	servicePortFile string
@@ -91,11 +82,16 @@ func Init() (warnings []string, errors []error) {
 		errors = append(errors, err)
 	}
 
-	if err := CheckExecutableRights("openvpnUpScript", openvpnUpScript); err != nil {
-		errors = append(errors, err)
+	if len(openvpnUpScript) > 0 {
+		if err := CheckExecutableRights("openvpnUpScript", openvpnUpScript); err != nil {
+			errors = append(errors, err)
+		}
 	}
-	if err := CheckExecutableRights("openvpnDownScript", openvpnUpScript); err != nil {
-		errors = append(errors, err)
+
+	if len(openvpnDownScript) > 0 {
+		if err := CheckExecutableRights("openvpnDownScript", openvpnDownScript); err != nil {
+			errors = append(errors, err)
+		}
 	}
 
 	// checking availability of OpenVPN binaries

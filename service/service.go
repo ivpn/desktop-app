@@ -70,7 +70,11 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 		_wgKeysMgr:         wgKeysMgr}
 
 	if err := dns.Initialise(); err != nil {
-		log.Error("DNS initialisation failed: %s", err)
+		log.Error(fmt.Sprintf("failed to initialise DNS : %s", err))
+	}
+
+	if err := firewall.Initialise(); err != nil {
+		return nil, fmt.Errorf("service initialisaton error : %w", err)
 	}
 
 	if err := serv.init(); err != nil {

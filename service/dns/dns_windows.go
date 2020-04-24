@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"syscall"
 	"time"
@@ -14,10 +15,8 @@ import (
 )
 
 var (
-	_dll = syscall.NewLazyDLL(platform.WindowsNativeHelpersDllPath())
-	//_fSetDNSByIndex   = _dll.NewProc("SetDNSByIndex")   // DWORD _cdecl SetDNSByIndex(const WORD interfaceIdx, const char* dnsIP, byte operation)
-	_fSetDNSByMAC     = _dll.NewProc("SetDNSByMAC")     // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
-	_fSetDNSByLocalIP = _dll.NewProc("SetDNSByLocalIP") // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
+	_fSetDNSByMAC     *syscall.LazyProc // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
+	_fSetDNSByLocalIP *syscall.LazyProc // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
 )
 
 var dnsMutex sync.Mutex
@@ -31,6 +30,22 @@ const (
 	OperationAdd Operation = 1
 	OperationDel Operation = 2
 )
+
+// implInitialise doing initialisation stuff (called on application start)
+func implInitialise() error {
+	helpersDllPath := platform.WindowsNativeHelpersDllPath()
+	if len(helpersDllPath) == 0 {
+		return fmt.Errorf("unable to initialize DNS wrapper: helpers dll path not initialized")
+	}
+	if _, err := os.Stat(helpersDllPath); err != nil {
+		return fmt.Errorf("unable to initialize DNS wrapper (helpers dll not found) : '%s'", helpersDllPath)
+	}
+
+	dll := syscall.NewLazyDLL(helpersDllPath)
+	_fSetDNSByMAC = dll.NewProc("SetDNSByMAC")         // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
+	_fSetDNSByLocalIP = dll.NewProc("SetDNSByLocalIP") // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
+	return nil
+}
 
 func fSetDNSByMAC(interfaceMACAddr net.HardwareAddr, dns net.IP, op Operation) error {
 	dnsString := dns.String()
@@ -90,11 +105,6 @@ func catchPanic(err *error) {
 			*err = errors.New(fmt.Sprint(r))
 		}
 	}
-}
-
-// implInitialise doing initialisation stuff (called on application start)
-func implInitialise() error {
-	return nil
 }
 
 // Pause - (on vpn paused) temporary restore OS default DNS parameters

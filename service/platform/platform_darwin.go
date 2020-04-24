@@ -1,6 +1,18 @@
 package platform
 
-import "path"
+import (
+	"os"
+	"path"
+)
+
+const (
+	// WrongExecutableFilePermissionsMask - file permissions mask for executables which are not allowed. Executable files should not have write access for someone else except root
+	WrongExecutableFilePermissionsMask os.FileMode = 0022
+	// DefaultFilePermissionForConfig - mutable config files should have permissions read/write only for owner (root)
+	DefaultFilePermissionForConfig os.FileMode = 0600
+	// DefaultFilePermissionForStaticConfig - unmutable config files should have permissions read/write only for owner (root)
+	DefaultFilePermissionForStaticConfig os.FileMode = 0400
+)
 
 var (
 	firewallScript string

@@ -30,6 +30,8 @@ func init() {
 	allowedHosts = make(map[string]bool)
 }
 
+func implInitialise() error { return nil }
+
 func implGetEnabled() (bool, error) {
 	err := shell.Exec(nil, platform.FirewallScript(), "-status")
 

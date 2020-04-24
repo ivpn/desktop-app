@@ -20,6 +20,12 @@ var (
 	isClientPaused             bool
 )
 
+// Initialise is doing initialisation stuff
+// Must be called on application start
+func Initialise() error {
+	return implInitialise()
+}
+
 // SetEnabled - change firewall state
 func SetEnabled(enable bool) error {
 	mutex.Lock()

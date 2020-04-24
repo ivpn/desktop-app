@@ -34,12 +34,21 @@ const (
 	filterDName   = "IVPN Kill Switch filter"
 )
 
-func init() {
-	pInfo, err := manager.GetProviderInfo(providerKey)
-	if err == nil {
-		// save initial persistant state into package-variable
-		isPersistant = pInfo.IsPersistent
+// implInitialise doing initialisation stuff (called on application start)
+func implInitialise() error {
+	if err := winlib.Initialise(platform.WindowsWFPDllPath()); err != nil {
+		return err
 	}
+
+	pInfo, err := manager.GetProviderInfo(providerKey)
+	if err != nil {
+		return err
+	}
+
+	// save initial persistant state into package-variable
+	isPersistant = pInfo.IsPersistent
+
+	return nil
 }
 
 func implGetEnabled() (bool, error) {
