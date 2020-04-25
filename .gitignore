@@ -3,3 +3,7 @@ ivpn
 /References/Linux/_out_bin/*
 /References/Linux/_tmp/*
 *.DS_Store
+.deps/
+bin/
+desktop-app-cli.exe
+ivpn.exe
