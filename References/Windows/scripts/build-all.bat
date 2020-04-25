@@ -32,7 +32,6 @@ IF %ERRORLEVEL% NEQ 0 (
 	goto :error
 )
 
-
 call :build_native_libs || goto :error
 
 set needRebuildWireGuard=0
@@ -46,6 +45,16 @@ if %needRebuildWireGuard% == 1 call :build_wireguard || goto :error
 call :update_servers_info || goto :error
 call :build_agent || goto :error
 call ::build_wintun_installer || goto :error
+
+(
+	rem Save Go variables (to be able to compile CLI with the same Go version)
+	rem parenthesis "()" are important here !
+	endlocal
+	set "IVPN_GOROOT=%GOROOT%"
+	set "IVPN_PATH=%PATH%"
+)
+
+rem THE END
 goto :success
 
 :update_servers_info
@@ -59,14 +68,14 @@ goto :success
 	set GOROOT=%SCRIPTDIR%..\.deps\wireguard-windows\.deps\go
 	set PATH=%SCRIPTDIR%..\.deps\wireguard-windows\.deps\go\bin;%PATH%
 	cd "%SCRIPTDIR%..\..\.."
-	call :build_agent_plat x86 i686 386 		|| exit /b 1
-	call :build_agent_plat x86_64 x86_64 amd64 	|| exit /b 1
+
+	call :build_agent_plat x86 386 		|| exit /b 1
+	call :build_agent_plat x86_64 amd64 	|| exit /b 1
 	goto :eof
 
 :build_agent_plat
-	set PATH=%SCRIPTDIR%..\.deps\wireguard-windows\.deps\%~2-w64-mingw32-native\bin;%PATH%
-	set CC=%~2-w64-mingw32-gcc
-	set GOARCH=%~3
+	set GOARCH=%~2
+
 	echo [*] Building IVPN service %1
 
 	if exist "bin\%~1\IVPN Service.exe" del "bin\%~1\IVPN Service.exe" || exit /b 1
