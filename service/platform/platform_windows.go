@@ -65,7 +65,7 @@ func initVars(_installDir string) {
 	ensureFileExists("nativeHelpersDllPath", nativeHelpersDllPath)
 }
 
-func doInitOperations() error {}
+func doInitOperations() error { return nil }
 
 // WindowsWFPDllPath - Path to Windows DLL with helper methods for WFP (Windows Filtering Platform)
 func WindowsWFPDllPath() string {
