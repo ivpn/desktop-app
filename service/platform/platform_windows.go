@@ -6,6 +6,7 @@ import (
 	"path"
 )
 
+// file permissins check is disabled for Windows
 const (
 	// WrongExecutableFilePermissionsMask - file permissions mask for executables which are not allowed. Executable files should not have write access for someone else except root
 	WrongExecutableFilePermissionsMask os.FileMode = 0
@@ -23,9 +24,16 @@ var (
 func doInitConstants() {
 	doInitConstantsForBuild()
 
-	logDir := path.Join(getInstallDir(), "log")
-	logFile = path.Join(logDir, "IVPN Agent.log")
-	openvpnLogFile = path.Join(logDir, "openvpn.log")
+	installDir := getInstallDir()
+	if len(servicePortFile) <= 0 {
+		servicePortFile = path.Join(installDir, "etc/port.txt")
+	} else {
+		// debug version can have different port file value
+		fmt.Println("!!! WARNING!!! Non-standard service port file: ", servicePortFile)
+	}
+
+	logFile = path.Join(installDir, "log/IVPN Agent.log")
+	openvpnLogFile = path.Join(installDir, "log/openvpn.log")
 }
 
 func doOsInit() (warnings []string, errors []error) {

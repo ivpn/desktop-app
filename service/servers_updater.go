@@ -128,7 +128,7 @@ func readServersFromCache() (svrs *types.ServersInfoResponse, apiIPs []string, e
 
 	// check servers.json file has correct access rights (can we use it's data?)
 	mode := stat.Mode()
-	if mode != platform.DefaultFilePermissionForConfig {
+	if platform.DefaultFilePermissionForConfig != 0 && mode != platform.DefaultFilePermissionForConfig {
 		os.Remove(platform.ServersFile())
 		// we can not use servers info from this file
 		// but we can try to get IP addresses of alternate IP's

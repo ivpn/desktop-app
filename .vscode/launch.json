@@ -12,7 +12,8 @@
             "program": "${workspaceRoot}",
             "env": {},
             "args": [],
-            "buildFlags": "-tags debug"
+            //"buildFlags": "-tags debug"
+            "buildFlags": ""
         }
     ]
 }

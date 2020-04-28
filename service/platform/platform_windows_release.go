@@ -4,23 +4,14 @@ package platform
 
 import (
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 	"strings"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstantsForBuild() {
-	installDir := getInstallDir()
-
-	// TODO: use standard user setting folder (here must be a constant path to 'servicePortFile')
-	if len(servicePortFile) <= 0 {
-		servicePortFile = path.Join(installDir, "etc/port.txt")
-	} else {
-		// debug version can have different port file value
-		fmt.Println("!!! WARNING!!! Non-standard service port file: ", servicePortFile)
-	}
 }
 
 func doOsInitForBuild() {
@@ -34,9 +25,25 @@ func doOsInitForBuild() {
 }
 
 func getInstallDir() string {
-	installDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	ret := ""
+
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\IVPN Client`, registry.QUERY_VALUE|registry.WOW64_64KEY)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to obtain folder of current binary: %s", err.Error()))
+		fmt.Println("ERROR: ", err)
 	}
-	return strings.ReplaceAll(installDir, `\`, `/`)
+	defer k.Close()
+
+	if err == nil {
+		ret, _, err = k.GetStringValue("")
+		if err != nil {
+			fmt.Println("ERROR: ", err)
+		}
+	}
+
+	if len(ret) == 0 {
+		fmt.Println("WARNING: There is no info about IVPN Client install folder in the registry. Is IVPN Client installed?")
+		return ""
+	}
+
+	return strings.ReplaceAll(ret, `\`, `/`)
 }
