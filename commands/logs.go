@@ -49,31 +49,43 @@ func (c *CmdLogs) setSetLogging(enable bool) error {
 
 func (c *CmdLogs) doShow() error {
 
+	isPartOfFile := false
+	isSomethingPrinted := false
+
 	fname := platform.LogFile()
 	file, err := os.Open(fname)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		file.Close()
+		if isSomethingPrinted {
+			fmt.Println("##############")
+		}
+		if isPartOfFile {
+			fmt.Println("Printed the last part of the log.")
+		}
+		fmt.Println("Log file:", fname)
+	}()
 
 	stat, err := os.Stat(fname)
 	size := stat.Size()
 
-	isPartOfFile := false
 	maxBytesToRead := int64(60 * 50)
 	if size > maxBytesToRead {
 		isPartOfFile = true
 		if _, err := file.Seek(-maxBytesToRead, io.SeekEnd); err != nil {
-			return nil
+			return err
 		}
 	}
 
 	buff := make([]byte, maxBytesToRead)
 	if _, err := file.Read(buff); err != nil {
-		return nil
+		return err
 	}
 
 	fmt.Println(string(buff))
+	isSomethingPrinted = true
 
 	if isPartOfFile {
 		fmt.Println("##############")

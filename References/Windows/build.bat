@@ -36,19 +36,19 @@ goto :success
 
 :build_skip_ivpn_vars
 
-	if exist "bin\x86\ivpn.exe" del "bin\x86\ivpn.exe" || exit /b 1
-	if exist "bin\x86_64\ivpn.exe" del "bin\x86_64\ivpn.exe" || exit /b 1
+	if exist "bin\x86\cli\ivpn.exe" del "bin\x86\cli\ivpn.exe" || exit /b 1
+	if exist "bin\x86_64\cli\ivpn.exe" del "bin\x86_64\cli\ivpn.exe" || exit /b 1
 
 	set GOOS=windows
 
 	echo [ ] x86 ...
 	set GOARCH=386
 
-	go build -tags release -o "bin\x86\ivpn.exe" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app-daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app-daemon/version._time=%DATE%" || exit /b 1
+	go build -tags release -o "bin\x86\cli\ivpn.exe" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app-daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app-daemon/version._time=%DATE%" || exit /b 1
 
 	echo [ ] x86_64 ...
 	set GOARCH=amd64
-	go build -tags release -o "bin\x86_64\ivpn.exe" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app-daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app-daemon/version._time=%DATE%" || exit /b 1
+	go build -tags release -o "bin\x86_64\cli\ivpn.exe" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app-daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app-daemon/version._time=%DATE%" || exit /b 1
 
 	goto :eof
 
