@@ -1002,6 +1002,14 @@ func (s *Service) SessionStatus() (
 	stat, apiErr, err := s._api.SessionStatus(session.Session)
 	log.Info("Session status request: done")
 
+	currSession := s.Preferences().Session
+	if currSession.Session != session.Session {
+		// It could happen that logout\login was performed during the session check
+		// Ignoring result if there is already a new session
+		log.Info("Ignoring requested session status result. Local session already changed.")
+		return apiCode, "", accountInfo, ErrorNotLoggedIn{}
+	}
+
 	apiCode = 0
 	if apiErr != nil {
 		apiCode = apiErr.Status
