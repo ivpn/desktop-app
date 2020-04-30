@@ -171,7 +171,11 @@ func (i *ManagementInterface) miCommunication() {
 
 	mesRegexp := regexp.MustCompile("^>([a-zA-Z0-9-]+):(.*)")
 	mesNeedPassRegexp := regexp.MustCompile("Need '(.+)' username/password")
-	mesLogRouteAddCmdRegexp := regexp.MustCompile(".*route(.exe)?[ \t]+add[ \t]+")
+	// 'route add ...' commands detection RegExp
+	// expected: c:\windows\system32\route.exe add 128.0.0.0 mask 128.0.0.0 10.42.40.1
+	// expected: /sbin/ip route add 0.0.0.0/1 via 10.60.40.1
+	// ignored (example): linux route add commandfailed: external program exited with error status: 2
+	mesLogRouteAddCmdRegexp := regexp.MustCompile(".*route(.exe)?[ \t]+add[ \t]+.*([0-9]{1,3}[.]){3,3}[0-9]{1,3}.*([0-9]{1,3}[.]){3,3}[0-9]{1,3}.*")
 	mesLogPushReplyCmdRegexp := regexp.MustCompile(".*PUSH.*'PUSH_REPLY[ ,]*(.*)'")
 
 	if i.miConn == nil {

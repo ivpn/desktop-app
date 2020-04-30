@@ -153,5 +153,8 @@ func writeServersToCache(servers *types.ServersInfoResponse) error {
 		return errors.New("failed to serialize servers")
 	}
 
-	return ioutil.WriteFile(platform.ServersFile(), data, platform.DefaultFilePermissionForConfig) // only owner (root) can read/write file
+	if platform.DefaultFilePermissionForConfig == 0 {
+		return ioutil.WriteFile(platform.ServersFile(), data, 0600)
+	}
+	return ioutil.WriteFile(platform.ServersFile(), data, platform.DefaultFilePermissionForConfig)
 }

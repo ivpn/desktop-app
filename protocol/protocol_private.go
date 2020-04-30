@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
+	"github.com/ivpn/desktop-app-daemon/version"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
@@ -107,13 +108,13 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd interface{}, idx int) (retErr
 }
 
 // -------------- VPN connection requests counter ---------------
-func (p *Protocol) vpnConnectReqCount() (int, time.Time) {
+func (p *Protocol) vpnConnectReqCounter() (int, time.Time) {
 	p._connectRequestsMutex.Lock()
 	defer p._connectRequestsMutex.Unlock()
 
 	return p._connectRequests, p._connectRequestLastTime
 }
-func (p *Protocol) vpnConnectReqEnter() time.Time {
+func (p *Protocol) vpnConnectReqCounterIncrease() time.Time {
 	p._connectRequestsMutex.Lock()
 	defer p._connectRequestsMutex.Unlock()
 
@@ -121,11 +122,40 @@ func (p *Protocol) vpnConnectReqEnter() time.Time {
 	p._connectRequests++
 	return p._connectRequestLastTime
 }
-func (p *Protocol) vpnConnectReqExit() {
+func (p *Protocol) vpnConnectReqCounterDecrease() {
 	p._connectRequestsMutex.Lock()
 	defer p._connectRequestsMutex.Unlock()
 
 	p._connectRequests--
+}
+
+func (p *Protocol) createHelloResponse() *types.HelloResp {
+	prefs := p._service.Preferences()
+
+	wg, ovpn, obfsp := p._service.GetDisabledFunctions()
+	var (
+		wgErr    string
+		ovpnErr  string
+		obfspErr string
+	)
+	if wg != nil {
+		wgErr = wg.Error()
+	}
+	if ovpn != nil {
+		ovpnErr = ovpn.Error()
+	}
+	if obfsp != nil {
+		obfspErr = obfsp.Error()
+	}
+	// send back Hello message with account session info
+	helloResp := types.HelloResp{
+		Version: version.Version(),
+		Session: types.CreateSessionResp(prefs.Session),
+		DisabledFunctions: types.DisabledFunctionality{
+			WireGuardError: wgErr,
+			OpenVPNError:   ovpnErr,
+			ObfsproxyError: obfspErr}}
+	return &helloResp
 }
 
 // -------------- processing connection request ---------------

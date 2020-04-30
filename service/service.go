@@ -316,6 +316,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 		s._done = nil
 		if done != nil {
 			done <- struct{}{}
+			// Closing channel
+			// Note: reading from empty and closed channel will not lead to deadlock (immediately returns zero value)
+			close(done)
 		}
 	}()
 
@@ -995,8 +998,9 @@ func (s *Service) SessionStatus() (
 		return apiCode, "", accountInfo, ErrorNotLoggedIn{}
 	}
 
-	log.Info("Checking session status...")
+	log.Info("Requesting session status...")
 	stat, apiErr, err := s._api.SessionStatus(session.Session)
+	log.Info("Session status request: done")
 
 	apiCode = 0
 	if apiErr != nil {

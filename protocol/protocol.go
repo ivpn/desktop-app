@@ -18,7 +18,6 @@ import (
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/preferences"
-	"github.com/ivpn/desktop-app-daemon/version"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
@@ -333,33 +332,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		log.Info(fmt.Sprintf("%sConnected client version: '%s' [set KeepDaemonAlone = %t]", p.connLogID(conn), req.Version, req.KeepDaemonAlone))
-		prefs := p._service.Preferences()
-
-		wg, ovpn, obfsp := p._service.GetDisabledFunctions()
-		var (
-			wgErr    string
-			ovpnErr  string
-			obfspErr string
-		)
-		if wg != nil {
-			wgErr = wg.Error()
-		}
-		if ovpn != nil {
-			ovpnErr = ovpn.Error()
-		}
-		if obfsp != nil {
-			obfspErr = obfsp.Error()
-		}
 		// send back Hello message with account session info
-		helloResp := types.HelloResp{
-			Version: version.Version(),
-			Session: types.CreateSessionResp(prefs.Session),
-			DisabledFunctions: types.DisabledFunctionality{
-				WireGuardError: wgErr,
-				OpenVPNError:   ovpnErr,
-				ObfsproxyError: obfspErr}}
-
-		p.sendResponse(conn, &helloResp, req.Idx)
+		p.sendResponse(conn, p.createHelloResponse(), req.Idx)
 
 		if req.GetServersList == true {
 			serv, _ := p._service.ServersList()
@@ -367,14 +341,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		if req.GetStatus == true {
-			/*
-				// send Firewall state
-				if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
-					p.sendErrorResponse(clientConn, reqType, err)
-				} else {
-					p.sendResponse(clientConn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast})
-				}*/
-
 			// send VPN connection  state
 			vpnState := p._lastVPNState
 			if vpnState.State == vpn.CONNECTED {
@@ -649,6 +615,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// send response
 		p.sendResponse(conn, &resp, reqCmd.Idx)
+
+		// notify all clients about changed session status
+		p.notifyClients(p.createHelloResponse())
+
 		break
 
 	case "SessionDelete":
@@ -658,6 +628,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+
+		// notify all clients about changed session status
+		p.notifyClients(p.createHelloResponse())
 		break
 
 	case "SessionStatus":
@@ -717,7 +690,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	case "Connect":
 		p._disconnectRequested = false
-		requestTime := p.vpnConnectReqEnter()
+		requestTime := p.vpnConnectReqCounterIncrease()
 
 		stateChan := make(chan vpn.StateInfo, 1)
 		isExitChan := make(chan bool, 1)
@@ -731,11 +704,12 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		p._vpnConnectMutex.Lock()
 		defer p._vpnConnectMutex.Unlock()
-		defer p.vpnConnectReqExit()
 
-		// skip sending 'disconnected' state because we are giong to connect immediately
-		if _, lastRequestTime := p.vpnConnectReqCount(); requestTime.Equal(lastRequestTime) == false {
-			log.Info("Skipping awaited connection request. Newest request received.")
+		defer p.vpnConnectReqCounterDecrease()
+
+		// skip this request if new connection request available
+		if _, lastRequestTime := p.vpnConnectReqCounter(); requestTime.Equal(lastRequestTime) == false {
+			log.Info("Skipping connection request. Newest request received.")
 			return
 		}
 
@@ -748,7 +722,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			close(isExitChan)
 
 			// Do not send "Disconnected" notification if we are giong to establish new connection immediately
-			if cnt, _ := p.vpnConnectReqCount(); cnt == 1 || p._disconnectRequested {
+			if cnt, _ := p.vpnConnectReqCounter(); cnt == 1 || p._disconnectRequested {
 				p._lastVPNState = vpn.NewStateInfo(vpn.DISCONNECTED, "")
 
 				// Sending "Disconnected" only in one place (after VPN process stopped)
@@ -796,7 +770,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 					switch state.State {
 					case vpn.CONNECTED:
 						// Do not send "Connected" notification if we are giong to establish new connection immediately
-						if cnt, _ := p.vpnConnectReqCount(); cnt == 1 || p._disconnectRequested {
+						if cnt, _ := p.vpnConnectReqCounter(); cnt == 1 || p._disconnectRequested {
 							p.notifyClients(&types.ConnectedResp{
 								TimeSecFrom1970: state.Time,
 								ClientIP:        state.ClientIP.String(),
