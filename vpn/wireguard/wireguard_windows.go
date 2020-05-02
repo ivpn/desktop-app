@@ -417,12 +417,10 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 		return fmt.Errorf("service not started (timeout)")
 	}
 
-	// CONNECTED
-	log.Info("Connection started")
-	stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP)
 	// WireGuard interface is configured to correct DNS.
 	// But we must to be sure if non-ivpn interfaces are configured to our DNS
 	// (it needed ONLY if DNS IP located in local network)
+	// Also, it is neded to inform 'dns' package about last DNS value (used by 'protocol' to ptovide dns status to clients)
 	manualDNS := wg.internals.manualDNS
 	if manualDNS != nil {
 		dns.SetManual(manualDNS, nil)
@@ -430,6 +428,11 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 		// delete manual DNS (if defined)
 		dns.DeleteManual(nil)
 	}
+
+	// CONNECTED
+	log.Info("Connection started")
+	// Send 'connected' notification only after 'dns' package informed about correct DNS value
+	stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP)
 
 	return nil
 }

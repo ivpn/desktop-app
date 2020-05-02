@@ -196,15 +196,17 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 					stateInf.ExitServerID = o.connectParams.multihopExitSrvID
 				}
 
-				// forward state
-				stateChan <- stateInf
-
 				if o.state == vpn.CONNECTED {
 					o.clientIP = stateInf.ClientIP
 					o.implOnConnected() // process "on connected" event (if necessary)
 				} else {
 					o.clientIP = nil
 				}
+
+				// forward state
+				// Notifying about 'connected' state only after 'o.implOnConnected()'
+				// There could be additional stuff to do: e.g. change DNS (in implementation for Windows)
+				stateChan <- stateInf
 
 			case <-stopStateChan: // openvpn process stopped
 				return // stop goroutine
