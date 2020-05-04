@@ -2,10 +2,13 @@ package platform
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
+	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
 )
 
@@ -16,13 +19,14 @@ var (
 	logFile         string
 	openvpnLogFile  string
 
-	openVpnBinaryPath    string
-	openvpnCaKeyFile     string
-	openvpnTaKeyFile     string
-	openvpnConfigFile    string
-	openvpnUpScript      string
-	openvpnDownScript    string
-	openvpnProxyAuthFile string
+	openVpnBinaryPath     string
+	openvpnCaKeyFile      string
+	openvpnTaKeyFile      string
+	openvpnConfigFile     string
+	openvpnUpScript       string
+	openvpnDownScript     string
+	openvpnProxyAuthFile  string
+	openvpnUserParamsFile string
 
 	obfsproxyStartScript string
 	obfsproxyHostPort    int
@@ -119,6 +123,8 @@ func Init() (warnings []string, errors []error) {
 		errors = append(errors, e)
 	}
 
+	createOpenVpnUserParamsFileExample()
+
 	return warnings, errors
 }
 
@@ -134,6 +140,27 @@ func checkFileAccessRigthsExecutable(paramName string, file string) error {
 		return fmt.Errorf("(%s) %w", paramName, err)
 	}
 	return nil
+}
+
+func createOpenVpnUserParamsFileExample() error {
+	if len(openvpnUserParamsFile) <= 0 {
+		return nil // openvpnUserParamsFile is not defined
+	}
+
+	if helpers.FileExists(openvpnUserParamsFile) {
+		if err := filerights.CheckFileAccessRigthsConfig(openvpnUserParamsFile); err == nil {
+			return nil // file is exists with correct permissions
+		}
+		// 'openvpnUserParamsFile' has wrong permissions. Removing it.
+		os.Remove(openvpnUserParamsFile)
+	}
+
+	var builder strings.Builder
+	builder.WriteString("# This file contains additional user-defined parameters for OpenVPN configuration.\n")
+	builder.WriteString("# All parameters defined here will be added to default OpenVPN configuration used by IVPN Client.\n")
+	builder.WriteString("# All changes are done at your own risk! We recommend keeping this file empty.\n")
+
+	return ioutil.WriteFile(openvpnUserParamsFile, []byte(builder.String()), filerights.DefaultFilePermissionsForConfig())
 }
 
 func makeDir(description string, dirpath string) error {
@@ -213,6 +240,11 @@ func OpenvpnDownScript() string {
 // OpenvpnProxyAuthFile path to openvpn proxy credentials file
 func OpenvpnProxyAuthFile() string {
 	return openvpnProxyAuthFile
+}
+
+// OpenvpnUserParamsFile returns a path to a user-defined extra peremeters for OpenVPN configuration
+func OpenvpnUserParamsFile() string {
+	return openvpnUserParamsFile
 }
 
 // ObfsproxyStartScript path to obfsproxy binary

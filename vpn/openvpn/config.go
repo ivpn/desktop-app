@@ -257,12 +257,6 @@ func addUserDefinedParameters(currParams []string, userParams string) ([]string,
 		return currParams, nil
 	}
 
-	// check OpenVPN extra parameters defined by user
-	// Some parameters can be deprecated (e.g. parameters which can execute external command)
-	if err := isUserParametersAllowed(userParams); err != nil {
-		return nil, err
-	}
-
 	// loop trough all extraParameters defined by user
 	// (looking if user-defined parameters overlap an existing parameters)
 	tmpCfg := make([]string, 1)
@@ -292,27 +286,6 @@ func addUserDefinedParameters(currParams []string, userParams string) ([]string,
 	}
 
 	return tmpCfg, nil
-}
-
-// check if user parameter is allowed
-func isUserParametersAllowed(userParameters string) error {
-
-	lines := strings.Split(userParameters, "\n")
-
-	for _, line := range lines {
-
-		command := getParamFromConfigLine(line)
-		if command == "" {
-			continue
-		}
-
-		_, ok := _AllowedOpenvpnParams[command]
-		if ok == false {
-			return errors.New(fmt.Sprint("Parameter '", command, "' is deprecated"))
-		}
-	}
-
-	return nil
 }
 
 func getParamFromConfigLine(line string) string {

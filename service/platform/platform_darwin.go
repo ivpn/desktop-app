@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"os"
 	"path"
 )
 
@@ -16,6 +17,12 @@ func doInitConstants() {
 	logDir := "/Library/Logs/"
 	logFile = path.Join(logDir, "IVPN Agent.log")
 	openvpnLogFile = path.Join(logDir, "openvpn.log")
+
+	userCfgDir, err := os.UserConfigDir()
+	if err == nil {
+		// $HOME/Library/Application Support/IVPN/ovpn_extra_params.txt
+		openvpnUserParamsFile = path.Join(userCfgDir, "IVPN/ovpn_extra_params.txt")
+	}
 }
 
 func doOsInit() (warnings []string, errors []error) {

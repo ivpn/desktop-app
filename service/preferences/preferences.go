@@ -30,7 +30,6 @@ type Preferences struct {
 	IsFwAllowLANMulticast    bool
 	IsStopOnClientDisconnect bool
 	IsObfsproxy              bool
-	OpenVpnExtraParameters   string
 
 	// last known account status
 	//Account AccountStatus
@@ -85,7 +84,6 @@ func (p *Preferences) LoadPreferences() error {
 			IsFwAllowLANMulticast    string `json:"firewall_allow_lan_multicast"`
 			IsStopOnClientDisconnect string `json:"is_stop_server_on_client_disconnect"`
 			IsObfsproxy              string `json:"enable_obfsproxy"`
-			OpenVpnExtraParameters   string `json:"open_vpn_extra_parameters"`
 		}
 		oldStylePrefs := &PreferencesOld{}
 
@@ -99,7 +97,6 @@ func (p *Preferences) LoadPreferences() error {
 		p.IsFwAllowLANMulticast = oldStylePrefs.IsFwAllowLANMulticast == "1"
 		p.IsStopOnClientDisconnect = oldStylePrefs.IsStopOnClientDisconnect == "1"
 		p.IsObfsproxy = oldStylePrefs.IsObfsproxy == "1"
-		p.OpenVpnExtraParameters = oldStylePrefs.OpenVpnExtraParameters
 
 		return nil
 	}

@@ -308,6 +308,10 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		if strErr.Len() > 0 {
 			log.Info(fmt.Sprintf("OpenVPN start ERROR. Errors output : %s...", strErr.String()))
 		}
+
+		if len(o.extraParameters) > 0 {
+			return fmt.Errorf("failed to start OpenVPN process: %w. Please, ensure that user-defined OpenVPN configuration parameters are correct", err)
+		}
 		return fmt.Errorf("failed to start OpenVPN process: %w", err)
 	}
 
@@ -322,7 +326,7 @@ func (o *OpenVPN) Disconnect() error {
 	}
 
 	// waiting untill process is running
-	// (ensure all disconnection operations performed (e.g. obgsproxy is stopped, etc. ...))
+	// (ensure all disconnection operations performed (e.g. obfsproxy is stopped, etc. ...))
 	o.runningWG.Wait()
 
 	return nil

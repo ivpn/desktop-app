@@ -1,16 +1,19 @@
 package service
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/api"
 	"github.com/ivpn/desktop-app-daemon/api/types"
+	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/ping"
@@ -202,12 +205,62 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 
 		connectionParams.SetCredentials(prefs.Session.OpenVPNUser, prefs.Session.OpenVPNPass)
 
+		openVpnExtraParameters := ""
+		// read user-defined extra parameters for OpenVPN configuration (if exists)
+		extraParamsFile := platform.OpenvpnUserParamsFile()
+
+		if helpers.FileExists(extraParamsFile) {
+			if err := filerights.CheckFileAccessRigthsConfig(extraParamsFile); err != nil {
+				log.Info("NOTE! User-defined OpenVPN parameters are ignored! %w", err)
+				os.Remove(extraParamsFile)
+			} else {
+				// read file line by line
+				openVpnExtraParameters = func() string {
+					var allParams strings.Builder
+
+					file, err := os.Open(extraParamsFile)
+					if err != nil {
+						log.Error(err)
+						return ""
+					}
+					defer file.Close()
+
+					scanner := bufio.NewScanner(file)
+					for scanner.Scan() {
+						line := scanner.Text()
+						line = strings.TrimSpace(line)
+						if len(line) <= 0 {
+							continue
+						}
+						if strings.HasPrefix(line, "#") {
+							continue // comment
+						}
+						if strings.HasPrefix(line, ";") {
+							continue // comment
+						}
+						allParams.WriteString(line + "\n")
+					}
+
+					if err := scanner.Err(); err != nil {
+						log.Error("Failed to parse '%s': %s", extraParamsFile, err)
+						return ""
+					}
+					return allParams.String()
+				}()
+
+				if len(openVpnExtraParameters) > 0 {
+					log.Info(fmt.Sprintf("WARNING! User-defined OpenVPN parameters loaded from file '%s'!", extraParamsFile))
+				}
+			}
+		}
+
+		// creating OpenVPN object
 		vpnObj, err := openvpn.NewOpenVpnObject(
 			platform.OpenVpnBinaryPath(),
 			platform.OpenvpnConfigFile(),
 			platform.OpenvpnLogFile(),
 			prefs.IsObfsproxy,
-			prefs.OpenVpnExtraParameters,
+			openVpnExtraParameters,
 			connectionParams)
 
 		if err != nil {
@@ -835,9 +888,6 @@ func (s *Service) SetPreference(key string, val string) error {
 		if val, err := strconv.ParseBool(val); err == nil {
 			prefs.IsObfsproxy = val
 		}
-		break
-	case "open_vpn_extra_parameters":
-		prefs.OpenVpnExtraParameters = val
 		break
 	case "firewall_is_persistent":
 		log.Debug("Skipping 'firewall_is_persistent' value. IVPNKillSwitchSetIsPersistentRequest should be used")
