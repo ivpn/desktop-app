@@ -5,7 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
+
+	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
 )
 
 var (
@@ -75,38 +76,38 @@ func Init() (warnings []string, errors []error) {
 	}
 
 	// checking file permissions
-	if _, err := IsFileExists("openvpnCaKeyFile", openvpnCaKeyFile, DefaultFilePermissionForStaticConfig); err != nil {
+	if err := checkFileAccessRigthsStaticConfig("openvpnCaKeyFile", openvpnCaKeyFile); err != nil {
 		errors = append(errors, err)
 	}
-	if _, err := IsFileExists("openvpnTaKeyFile", openvpnTaKeyFile, DefaultFilePermissionForStaticConfig); err != nil {
+	if err := checkFileAccessRigthsStaticConfig("openvpnTaKeyFile", openvpnTaKeyFile); err != nil {
 		errors = append(errors, err)
 	}
 
 	if len(openvpnUpScript) > 0 {
-		if err := CheckExecutableRights("openvpnUpScript", openvpnUpScript); err != nil {
+		if err := checkFileAccessRigthsExecutable("openvpnUpScript", openvpnUpScript); err != nil {
 			errors = append(errors, err)
 		}
 	}
 
 	if len(openvpnDownScript) > 0 {
-		if err := CheckExecutableRights("openvpnDownScript", openvpnDownScript); err != nil {
+		if err := checkFileAccessRigthsExecutable("openvpnDownScript", openvpnDownScript); err != nil {
 			errors = append(errors, err)
 		}
 	}
 
 	// checking availability of OpenVPN binaries
-	if err := CheckExecutableRights("openVpnBinaryPath", openVpnBinaryPath); err != nil {
+	if err := checkFileAccessRigthsExecutable("openVpnBinaryPath", openVpnBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("OpenVPN functionality not accessible: %w", err).Error())
 	}
 	// checking availability of obfsproxy binaries
-	if err := CheckExecutableRights("obfsproxyStartScript", obfsproxyStartScript); err != nil {
+	if err := checkFileAccessRigthsExecutable("obfsproxyStartScript", obfsproxyStartScript); err != nil {
 		warnings = append(warnings, fmt.Errorf("obfsproxy functionality not accessible: %w", err).Error())
 	}
 	// checling availability of WireGuard binaries
-	if err := CheckExecutableRights("wgBinaryPath", wgBinaryPath); err != nil {
+	if err := checkFileAccessRigthsExecutable("wgBinaryPath", wgBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
 	}
-	if err := CheckExecutableRights("wgToolBinaryPath", wgToolBinaryPath); err != nil {
+	if err := checkFileAccessRigthsExecutable("wgToolBinaryPath", wgToolBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
 	}
 
@@ -121,61 +122,16 @@ func Init() (warnings []string, errors []error) {
 	return warnings, errors
 }
 
-// IsFileExists checking file avvailability. If file available - return nil
-// When expected file permissin defined (fileMode!=0) - returns error in case if file permission not equal to expected
-func IsFileExists(description string, file string, fileMode os.FileMode) (os.FileMode, error) {
-	if len(description) > 0 {
-		description = fmt.Sprintf("(%s)", description)
+func checkFileAccessRigthsStaticConfig(paramName string, file string) error {
+	if err := filerights.CheckFileAccessRigthsStaticConfig(file); err != nil {
+		return fmt.Errorf("(%s) %w", paramName, err)
 	}
-
-	if len(file) == 0 {
-		return 0, fmt.Errorf("parameter not initialized %s", description)
-	}
-
-	stat, err := os.Stat(file)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, fmt.Errorf("%w %s: '%s'", err, description, file)
-		}
-		return 0, fmt.Errorf("file existing check error %s '%s' : %w", description, file, err)
-	}
-	mode := stat.Mode()
-
-	if stat.IsDir() {
-		return mode, fmt.Errorf("'%s' is directory %s", file, description)
-	}
-
-	if fileMode != 0 {
-
-		if mode != fileMode {
-			return mode, fmt.Errorf(fmt.Sprintf("file '%s' %s has wrong permissions (%o but expected %o)", file, description, mode, fileMode))
-		}
-	}
-
-	return mode, nil
+	return nil
 }
 
-// CheckExecutableRights checks file has access permission to be writable
-// If file does not exist or it can be writable by someone alse except root - retun error
-func CheckExecutableRights(description string, file string) error {
-	if len(file) > 0 {
-		// 'file' can be presented as executable with arguments (e.g. 'dns.sh -up')
-		// Trying here to take only executable file path without arguments
-		file = strings.Split(file, " -")[0]
-		file = strings.Split(file, "\t-")[0]
-	}
-
-	mode, err := IsFileExists(description, file, 0)
-	if err != nil {
-		return err
-	}
-
-	if len(description) > 0 {
-		description = fmt.Sprintf("(%s)", description)
-	}
-
-	if (mode & WrongExecutableFilePermissionsMask) > 0 {
-		return fmt.Errorf("file '%s' %s has permissins to be modifyied by everyone %o", file, description, mode)
+func checkFileAccessRigthsExecutable(paramName string, file string) error {
+	if err := filerights.CheckFileAccessRigthsExecutable(file); err != nil {
+		return fmt.Errorf("(%s) %w", paramName, err)
 	}
 	return nil
 }

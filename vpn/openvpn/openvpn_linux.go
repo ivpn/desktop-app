@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/ivpn/desktop-app-daemon/service/dns"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
@@ -17,8 +17,8 @@ type platformSpecificProperties struct {
 func (o *OpenVPN) implInit() error {
 	o.psProps.isCanUseParamsV24 = true
 
-	if err := platform.CheckExecutableRights("OpenVPN binary", o.binaryPath); err != nil {
-		return err
+	if err := filerights.CheckFileAccessRigthsExecutable(o.binaryPath); err != nil {
+		return fmt.Errorf("error checking OpenVPN binary file: %w", err)
 	}
 
 	// Check OpenVPN minimum version

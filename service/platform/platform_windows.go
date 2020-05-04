@@ -6,16 +6,6 @@ import (
 	"path"
 )
 
-// !file permissins check is DISABLED FOR WINDOWS!
-const (
-	// WrongExecutableFilePermissionsMask - file permissions mask for executables which are not allowed. Executable files should not have write access for someone else except root
-	WrongExecutableFilePermissionsMask os.FileMode = 0
-	// DefaultFilePermissionForConfig - mutable config files should permissions
-	DefaultFilePermissionForConfig os.FileMode = 0
-	// DefaultFilePermissionForStaticConfig - unmutable config files permissions
-	DefaultFilePermissionForStaticConfig os.FileMode = 0
-)
-
 var (
 	wfpDllPath           string
 	nativeHelpersDllPath string

@@ -11,6 +11,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/api"
 	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
 )
 
 type serversUpdater struct {
@@ -108,7 +109,10 @@ func (s *serversUpdater) UpdateNotifierChannel() chan struct{} {
 }
 
 func readServersFromCache() (svrs *types.ServersInfoResponse, apiIPs []string, e error) {
-	stat, err := os.Stat(platform.ServersFile())
+
+	serversFile := platform.ServersFile()
+
+	_, err := os.Stat(serversFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil, fmt.Errorf("failed to read servers cache file: %w", err)
@@ -116,7 +120,7 @@ func readServersFromCache() (svrs *types.ServersInfoResponse, apiIPs []string, e
 		return nil, nil, fmt.Errorf("failed to info about servers cache file: %w", err)
 	}
 
-	data, err := ioutil.ReadFile(platform.ServersFile())
+	data, err := ioutil.ReadFile(serversFile)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read servers cache file: %w", err)
 	}
@@ -127,13 +131,12 @@ func readServersFromCache() (svrs *types.ServersInfoResponse, apiIPs []string, e
 	}
 
 	// check servers.json file has correct access rights (can we use it's data?)
-	mode := stat.Mode()
-	if platform.DefaultFilePermissionForConfig != 0 && mode != platform.DefaultFilePermissionForConfig {
-		os.Remove(platform.ServersFile())
+	if err := filerights.CheckFileAccessRigthsConfig(serversFile); err != nil {
+		os.Remove(serversFile)
 		// we can not use servers info from this file
 		// but we can try to get IP addresses of alternate IP's
 		// It is safe, because we are checking TLS server name for "api.ivpn.net" when accessing API (https)
-		return nil, servers.Config.API.IPAddresses, fmt.Errorf(fmt.Sprintf("skip reading servers cache file (wrong permissions: %o but expected %o)", mode, platform.DefaultFilePermissionForConfig))
+		return nil, servers.Config.API.IPAddresses, fmt.Errorf("skip reading servers cache file: %w", err)
 	}
 
 	return servers, servers.Config.API.IPAddresses, nil
@@ -153,8 +156,5 @@ func writeServersToCache(servers *types.ServersInfoResponse) error {
 		return errors.New("failed to serialize servers")
 	}
 
-	if platform.DefaultFilePermissionForConfig == 0 {
-		return ioutil.WriteFile(platform.ServersFile(), data, 0600)
-	}
-	return ioutil.WriteFile(platform.ServersFile(), data, platform.DefaultFilePermissionForConfig)
+	return ioutil.WriteFile(platform.ServersFile(), data, filerights.DefaultFilePermissionsForConfig())
 }

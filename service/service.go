@@ -17,6 +17,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
 	"github.com/ivpn/desktop-app-daemon/service/preferences"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
@@ -155,13 +156,20 @@ func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGaurd on Linux)
 func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
-	ovpnErr = platform.CheckExecutableRights("OpenVPN binary", platform.OpenVpnBinaryPath())
+	if err := filerights.CheckFileAccessRigthsExecutable(platform.OpenVpnBinaryPath()); err != nil {
+		ovpnErr = fmt.Errorf("OpenVPN binary: %w", err)
+	}
 
-	obfspErr = platform.CheckExecutableRights("obfsproxy binary", platform.ObfsproxyStartScript())
+	if err := filerights.CheckFileAccessRigthsExecutable(platform.ObfsproxyStartScript()); err != nil {
+		obfspErr = fmt.Errorf("obfsproxy binary: %w", err)
+	}
 
-	wgErr = platform.CheckExecutableRights("WireGuard binary", platform.WgBinaryPath())
-	if wgErr == nil {
-		wgErr = platform.CheckExecutableRights("WireGuard tools binary", platform.WgToolBinaryPath())
+	if err := filerights.CheckFileAccessRigthsExecutable(platform.WgBinaryPath()); err != nil {
+		wgErr = fmt.Errorf("WireGuard binary: %w", err)
+	} else {
+		if err := filerights.CheckFileAccessRigthsExecutable(platform.WgToolBinaryPath()); err != nil {
+			wgErr = fmt.Errorf("WireGuard tools binary: %w", err)
+		}
 	}
 
 	if errors.Is(ovpnErr, os.ErrNotExist) {

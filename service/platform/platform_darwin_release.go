@@ -8,6 +8,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
 )
 
 func doOsInitForBuild() (warnings []string, errors []error) {
@@ -74,7 +76,7 @@ func copyFile(src, dst string) (int64, error) {
 	defer source.Close()
 
 	destination, err := os.Create(dst)
-	destination.Chmod(DefaultFilePermissionForConfig)
+	destination.Chmod(filerights.DefaultFilePermissionsForConfig())
 	if err != nil {
 		return 0, err
 	}
