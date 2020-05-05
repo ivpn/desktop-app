@@ -47,6 +47,13 @@ type HelloResp struct {
 	//Account preferences.AccountStatus
 }
 
+// ConfigParamsResp return s configuration parameters
+type ConfigParamsResp struct {
+	CommandBase
+
+	UserDefinedOvpnFile string
+}
+
 // SessionResp information about session
 type SessionResp struct {
 	AccountID          string

@@ -15,6 +15,9 @@ type Hello struct {
 	// GetStatus == true - client requests current status (Vpn connection, Firewal... etc.)
 	GetStatus bool
 
+	// GetConfigParams == true - client requests config parameters (user-defined OpevVPN file location ... etc.)
+	GetConfigParams bool
+
 	//	KeepDaemonAlone == false (default) - VPN disconnects when client disconnects from a daemon
 	//	KeepDaemonAlone == true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
 	KeepDaemonAlone bool

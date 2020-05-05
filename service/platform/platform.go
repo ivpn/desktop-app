@@ -155,6 +155,10 @@ func createOpenVpnUserParamsFileExample() error {
 		os.Remove(openvpnUserParamsFile)
 	}
 
+	if err := makeDir("openvpnUserParamsFile", filepath.Dir(openvpnUserParamsFile)); err != nil {
+		return err
+	}
+
 	var builder strings.Builder
 	builder.WriteString("# This file contains additional user-defined parameters for OpenVPN configuration.\n")
 	builder.WriteString("# All parameters defined here will be added to default OpenVPN configuration used by IVPN Client.\n")

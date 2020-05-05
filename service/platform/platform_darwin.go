@@ -21,7 +21,7 @@ func doInitConstants() {
 	userCfgDir, err := os.UserConfigDir()
 	if err == nil {
 		// $HOME/Library/Application Support/IVPN/ovpn_extra_params.txt
-		openvpnUserParamsFile = path.Join(userCfgDir, "IVPN/ovpn_extra_params.txt")
+		openvpnUserParamsFile = path.Join(userCfgDir, "IVPN/OpenVPN/ovpn_extra_params.txt")
 	}
 }
 
