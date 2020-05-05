@@ -332,6 +332,26 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		log.Info(fmt.Sprintf("%sConnected client version: '%s' [set KeepDaemonAlone = %t]", p.connLogID(conn), req.Version, req.KeepDaemonAlone))
+
+		// When upgrading from old client version, it is necessary to copy current credentials from UI client
+		if len(req.SetRawCredentials.AccountID) > 0 && len(req.SetRawCredentials.Session) > 0 {
+			r := req.SetRawCredentials
+			if err := p._service.SetRawCredentials(r.AccountID,
+				r.Session,
+				r.OvpnUser,
+				r.OvpnPass,
+				r.WgPublicKey,
+				r.WgPrivateKey,
+				r.WgLocalIP,
+				r.WgKeyGenerated); err != nil {
+				// failed to save RAW credentials
+				err := fmt.Errorf("failed to register RAW credentials: %w", err)
+				log.Error(err)
+				p.sendErrorResponse(conn, reqCmd, err)
+				return
+			}
+		}
+
 		// send back Hello message with account session info
 		p.sendResponse(conn, p.createHelloResponse(), req.Idx)
 
@@ -558,28 +578,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
-		break
-
-	case "SetCredentials":
-		var r types.SetCredentials
-		if err := json.Unmarshal(messageData, &r); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			break
-		}
-
-		if err := p._service.SetRawCredentials(r.AccountID,
-			r.Session,
-			r.OvpnUser,
-			r.OvpnPass,
-			r.WgPublicKey,
-			r.WgPrivateKey,
-			r.WgLocalIP,
-			r.WgKeyGenerated); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-		} else {
-			p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
-		}
-
 		break
 
 	case "SessionNew":
