@@ -117,7 +117,7 @@ func (s *Service) init() error {
 	}
 
 	// Check session status (start as go-routine to do not block service initialisation)
-	go s.SessionStatus()
+	go s.RequestSessionStatus()
 	// Start session status checker
 	s.startSessionChecker()
 
@@ -304,7 +304,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	}
 
 	// check session status each disconnection (asynchronously, in separate goroutine)
-	defer func() { go s.SessionStatus() }()
+	defer func() { go s.RequestSessionStatus() }()
 
 	s._connectMutex.Lock()
 	defer s._connectMutex.Unlock()
@@ -986,16 +986,17 @@ func (s *Service) logOut(needToDeleteOnBackend bool) error {
 	return nil
 }
 
-// SessionStatus receives session status
-func (s *Service) SessionStatus() (
+// RequestSessionStatus receives session status
+func (s *Service) RequestSessionStatus() (
 	apiCode int,
 	apiErrorMsg string,
+	sessionToken string,
 	accountInfo preferences.AccountStatus,
 	err error) {
 
 	session := s.Preferences().Session
 	if session.IsLoggedIn() == false {
-		return apiCode, "", accountInfo, ErrorNotLoggedIn{}
+		return apiCode, "", "", accountInfo, ErrorNotLoggedIn{}
 	}
 
 	log.Info("Requesting session status...")
@@ -1007,7 +1008,7 @@ func (s *Service) SessionStatus() (
 		// It could happen that logout\login was performed during the session check
 		// Ignoring result if there is already a new session
 		log.Info("Ignoring requested session status result. Local session already changed.")
-		return apiCode, "", accountInfo, ErrorNotLoggedIn{}
+		return apiCode, "", "", accountInfo, ErrorNotLoggedIn{}
 	}
 
 	apiCode = 0
@@ -1025,22 +1026,24 @@ func (s *Service) SessionStatus() (
 	if err != nil {
 		// in case of other API error
 		if apiErr != nil {
-			return apiCode, apiErr.Message, accountInfo, err
+			return apiCode, apiErr.Message, "", accountInfo, err
 		}
 
 		// not API error
-		return apiCode, "", accountInfo, err
+		return apiCode, "", "", accountInfo, err
 	}
 
 	if stat == nil {
-		return apiCode, "", accountInfo, fmt.Errorf("unexpected error when creating requesting session status")
+		return apiCode, "", "", accountInfo, fmt.Errorf("unexpected error when creating requesting session status")
 	}
 
 	// get account status info
 	accountInfo = s.createAccountStatus(*stat)
+	// notify about account status
+	s._evtReceiver.OnAccountStatus(session.Session, accountInfo)
 
 	// success
-	return apiCode, "", accountInfo, nil
+	return apiCode, "", session.Session, accountInfo, nil
 }
 
 func (s *Service) createAccountStatus(apiResp types.ServiceStatusAPIResp) preferences.AccountStatus {
@@ -1084,7 +1087,7 @@ func (s *Service) startSessionChecker() {
 			}
 
 			// check status
-			s.SessionStatus()
+			s.RequestSessionStatus()
 
 			// if not logged-in - no sense to check status anymore
 			session := s.Preferences().Session

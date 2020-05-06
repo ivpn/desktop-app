@@ -167,8 +167,8 @@ type SessionDelete struct {
 	CommandBase
 }
 
-// SessionStatus get session status
-type SessionStatus struct {
+// AccountStatus get account status
+type AccountStatus struct {
 	CommandBase
 }
 

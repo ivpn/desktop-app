@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/api/types"
+	"github.com/ivpn/desktop-app-daemon/service/preferences"
 	"github.com/ivpn/desktop-app-daemon/service/wgkeys"
 )
 
@@ -34,6 +35,7 @@ type IWgKeysManager interface {
 // IServiceEventsReceiver is the receiver for service events (normally, it is protocol object)
 type IServiceEventsReceiver interface {
 	OnServiceSessionChanged()
+	OnAccountStatus(sessionToken string, account preferences.AccountStatus)
 	OnDNSChanged(dns net.IP)
 	OnKillSwitchStateChanged()
 }

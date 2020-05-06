@@ -79,9 +79,10 @@ type Service interface {
 		err error)
 
 	SessionDelete() error
-	SessionStatus() (
+	RequestSessionStatus() (
 		apiCode int,
 		apiErrorMsg string,
+		sessionToken string,
 		accountInfo preferences.AccountStatus,
 		err error)
 
@@ -616,7 +617,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// notify all clients about changed session status
 		p.notifyClients(p.createHelloResponse())
-
 		break
 
 	case "SessionDelete":
@@ -631,18 +631,19 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.notifyClients(p.createHelloResponse())
 		break
 
-	case "SessionStatus":
-		var resp types.SessionStatusResp
-		apiCode, apiErrMsg, accountInfo, err := p._service.SessionStatus()
+	case "AccountStatus":
+		var resp types.AccountStatusResp
+		apiCode, apiErrMsg, sessionToken, accountInfo, err := p._service.RequestSessionStatus()
 		if err != nil && apiCode == 0 {
 			// if apiCode == 0 - it is not API error. Sending error response
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 		// Sending session info
-		resp = types.SessionStatusResp{
+		resp = types.AccountStatusResp{
 			APIStatus:       apiCode,
 			APIErrorMessage: apiErrMsg,
+			SessionToken:    sessionToken,
 			Account:         accountInfo}
 
 		// send response
