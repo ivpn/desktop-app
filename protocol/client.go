@@ -129,13 +129,13 @@ func (c *Client) SessionDelete() error {
 }
 
 // SessionStatus get session status
-func (c *Client) SessionStatus() (ret types.SessionStatusResp, err error) {
+func (c *Client) SessionStatus() (ret types.AccountStatusResp, err error) {
 	if err := c.ensureConnected(); err != nil {
 		return ret, err
 	}
 
-	req := types.SessionStatus{}
-	var resp types.SessionStatusResp
+	req := types.AccountStatus{}
+	var resp types.AccountStatusResp
 
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return ret, err
