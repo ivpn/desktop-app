@@ -28,3 +28,4 @@ References/Windows/etc/openvpn.cfg
 /References/Linux/tmp/port.txt
 /References/Linux/etc/openvpn.cfg
 *.pyc
+References/Windows/mutable/ovpn_extra_params.txt

@@ -1,7 +1,6 @@
 package platform
 
 import (
-	"os"
 	"path"
 )
 
@@ -13,16 +12,11 @@ var (
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
 	servicePortFile = "/Library/Application Support/IVPN/port.txt"
+	openvpnUserParamsFile = "/Library/Application Support/IVPN/OpenVPN/ovpn_extra_params.txt"
 
 	logDir := "/Library/Logs/"
 	logFile = path.Join(logDir, "IVPN Agent.log")
 	openvpnLogFile = path.Join(logDir, "openvpn.log")
-
-	userCfgDir, err := os.UserConfigDir()
-	if err == nil {
-		// $HOME/Library/Application Support/IVPN/ovpn_extra_params.txt
-		openvpnUserParamsFile = path.Join(userCfgDir, "IVPN/OpenVPN/ovpn_extra_params.txt")
-	}
 }
 
 func doOsInit() (warnings []string, errors []error) {
