@@ -162,9 +162,9 @@ func readDaemonPort() (port int, secret uint64, err error) {
 
 	if _, err := os.Stat(file); err != nil {
 		if os.IsNotExist(err) {
-			return 0, 0, fmt.Errorf("connection-info file not exists '%s'", file)
+			return 0, 0, fmt.Errorf("please, ensure IVPN daemon is running (connection-info not exists)")
 		}
-		return 0, 0, fmt.Errorf("connection-info file existing check error '%s': %s", file, err)
+		return 0, 0, fmt.Errorf("connection-info check error: %s", err)
 	}
 
 	data, err := ioutil.ReadFile(file)
@@ -174,17 +174,17 @@ func readDaemonPort() (port int, secret uint64, err error) {
 
 	vars := strings.Split(string(data), ":")
 	if len(vars) != 2 {
-		return 0, 0, fmt.Errorf("failed to parse connection-info file")
+		return 0, 0, fmt.Errorf("failed to parse connection-info")
 	}
 
 	port, err = strconv.Atoi(strings.TrimSpace(vars[0]))
 	if err != nil {
-		return 0, 0, fmt.Errorf("failed to parse connection-info file: %w", err)
+		return 0, 0, fmt.Errorf("failed to parse connection-info: %w", err)
 	}
 
 	secret, err = strconv.ParseUint(strings.TrimSpace(vars[1]), 16, 64)
 	if err != nil {
-		return 0, 0, fmt.Errorf("failed to parse connection-info file: %w", err)
+		return 0, 0, fmt.Errorf("failed to parse connection-info: %w", err)
 	}
 
 	return port, secret, nil
