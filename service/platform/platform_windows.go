@@ -25,7 +25,7 @@ func doInitConstants() {
 	logFile = path.Join(installDir, "log/IVPN Agent.log")
 	openvpnLogFile = path.Join(installDir, "log/openvpn.log")
 
-	openvpnUserParamsFile = path.Join(installDir, "etc/ovpn_extra_params.txt")
+	openvpnUserParamsFile = path.Join(installDir, "mutable/ovpn_extra_params.txt")
 }
 
 func doOsInit() (warnings []string, errors []error) {
