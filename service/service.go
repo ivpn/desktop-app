@@ -1021,6 +1021,13 @@ func (s *Service) RequestSessionStatus() (
 			log.Info("Session not found. Logging out.")
 			s.logOut(false)
 		}
+
+		// notify clients that account not active
+		if apiCode == types.AccountNotActive {
+			// notify about account status
+			s._evtReceiver.OnAccountStatus(session.Session, accountInfo)
+			return apiCode, apiErr.Message, session.Session, preferences.AccountStatus{Active: false}, err
+		}
 	}
 
 	if err != nil {
