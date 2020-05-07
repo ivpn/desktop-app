@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
+	"github.com/ivpn/desktop-app-daemon/service/preferences"
 	"github.com/ivpn/desktop-app-daemon/version"
 )
 
@@ -20,6 +21,17 @@ func (p *Protocol) OnServiceSessionChanged() {
 		Session: types.CreateSessionResp(service.Preferences().Session)}
 
 	p.notifyClients(&helloResp)
+}
+
+// OnAccountStatus - handler of account status info. Notifying clients.
+func (p *Protocol) OnAccountStatus(sessionToken string, accountInfo preferences.AccountStatus) {
+	if len(sessionToken) == 0 {
+		return
+	}
+
+	p.notifyClients(&types.AccountStatusResp{
+		SessionToken: sessionToken,
+		Account:      accountInfo})
 }
 
 // OnDNSChanged - DNS changed handler

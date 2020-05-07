@@ -11,3 +11,6 @@ const SessionNotFound = 601
 
 // CodeSessionsLimitReached - You've reached the session limit, log out from other device
 const CodeSessionsLimitReached = 602
+
+// AccountNotActive - acount should be purchased
+const AccountNotActive = 702

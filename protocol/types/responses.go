@@ -84,11 +84,12 @@ type SessionNewResp struct {
 	Account         preferences.AccountStatus
 }
 
-// SessionStatusResp - information about created session (or error info)
-type SessionStatusResp struct {
+// AccountStatusResp - information about account status (or error info)
+type AccountStatusResp struct {
 	CommandBase
 	APIStatus       int
 	APIErrorMessage string
+	SessionToken    string
 	Account         preferences.AccountStatus
 }
 

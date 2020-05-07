@@ -21,6 +21,22 @@ type Hello struct {
 	//	KeepDaemonAlone == false (default) - VPN disconnects when client disconnects from a daemon
 	//	KeepDaemonAlone == true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
 	KeepDaemonAlone bool
+
+	// Register credentials (if not logged in)
+	// Used when updating from an old client version
+	SetRawCredentials RawCredentials
+}
+
+// RawCredentials - RAW credentials
+type RawCredentials struct {
+	AccountID      string
+	Session        string
+	OvpnUser       string
+	OvpnPass       string
+	WgPublicKey    string
+	WgPrivateKey   string
+	WgLocalIP      string
+	WgKeyGenerated int64 // Unix time
 }
 
 // GetServers request servers list
@@ -154,8 +170,8 @@ type SessionDelete struct {
 	CommandBase
 }
 
-// SessionStatus get session status
-type SessionStatus struct {
+// AccountStatus get account status
+type AccountStatus struct {
 	CommandBase
 }
 
@@ -169,17 +185,4 @@ type WireGuardGenerateNewKeys struct {
 type WireGuardSetKeysRotationInterval struct {
 	CommandBase
 	Interval int64
-}
-
-// SetCredentials - manually set RAW credentials
-type SetCredentials struct {
-	CommandBase
-	AccountID      string
-	Session        string
-	OvpnUser       string
-	OvpnPass       string
-	WgPublicKey    string
-	WgPrivateKey   string
-	WgLocalIP      string
-	WgKeyGenerated int64 // Unix time
 }
