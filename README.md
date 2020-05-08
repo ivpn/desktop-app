@@ -8,6 +8,7 @@ Can be compiled for different platforms: Windows, macOS, Linux
 
 IVPN CLI is distributed on the official site [https://www.ivpn.net](https://www.ivpn.net).  
 
+* [About this Repo](#about-repo)
 * [Installation](#installation)
 * [Versioning](#versioning)
 * [Contributing](#contributing)
@@ -15,6 +16,11 @@ IVPN CLI is distributed on the official site [https://www.ivpn.net](https://www.
 * [License](#license)
 * [Authors](#Authors)
 * [Acknowledgements](#acknowledgements)
+
+<a name="about-repo"></a>
+## About this Repo
+
+This is the official Git repo of the [IVPN command line interface](https://github.com/ivpn/desktop-app-cli).
 
 <a name="installation"></a>
 ## Installation
