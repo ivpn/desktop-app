@@ -1,12 +1,13 @@
-# IVPN Daemon for IVPN Client Desktop (Windows/macOS)
+# Daemon for IVPN Client Desktop (Windows/macOS/Linux)
 
-**IVPN Daemon for IVPN Client Desktop** is a core module of IVPN Client for Windows and macOS built mostly using Go language. It runs under privileged user as a system service/daemon.
+**Daemon for IVPN Client Desktop** is a core module of IVPN Client for Windows, macOS and Linux built mostly using Go language. It runs under privileged user as a system service/daemon.
 Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Custom DNS and more.
 
-This project is in use by **IVPN Client Desktop** project (*ivpn-desktop-ui*)
+This project is in use by [IVPN Client Desktop](https://github.com/ivpn/desktop-app-ui) and [IVPN command line interface](https://github.com/ivpn/desktop-app-cli) projects.
 
-IVPN Client Desktop app is distributed on the official site [www.ivpn.net](www.ivpn.net).  
+IVPN Client Desktop app is distributed on the official site [www.ivpn.net](https://www.ivpn.net).  
 
+* [About this Repo](#about-repo)
 * [Installation](#installation)
 * [Versioning](#versioning)
 * [Contributing](#contributing)
@@ -15,6 +16,13 @@ IVPN Client Desktop app is distributed on the official site [www.ivpn.net](www.i
 * [Authors](#Authors)
 * [Acknowledgements](#acknowledgements)
 
+<a name="about-repo"></a>
+## About this Repo
+
+This is the official Git repo of the [Daemon for IVPN Client Desktop](https://github.com/ivpn/desktop-app-daemon).
+
+
+<a name="installation"></a>
 ## Installation
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
@@ -61,6 +69,7 @@ Compiled binaries location:
 
 **Note!** In order to run application as macOS daemon, the binary must be signed by Apple Developer ID.
 
+<a name="versioning"></a>
 ## Versioning
 
 Project is using [Semantic Versioning (SemVer)](https://semver.org) for creating release versions.
@@ -73,22 +82,27 @@ SemVer is a 3-component system in the format of `x.y.z` where:
 
 So we have: `Major.Minor.Patch`
 
+<a name="contributing"></a>
 ## Contributing
 
 If you are interested in contributing to IVPN Daemon for IVPN Client Desktop project, please read our [Contributing Guidelines](/.github/CONTRIBUTING.md).
 
+<a name="security"></a>
 ## Security Policy
 
 If you want to report a security problem, please read our [Security Policy](/.github/SECURITY.md).
 
+<a name="license"></a>
 ## License
 
 This project is licensed under the GPLv3 - see the [License](/LICENSE.md) file for details.
 
+<a name="Authors"></a>
 ## Authors
 
 See the [Authors](/AUTHORS) file for the list of contributors who participated in this project.
 
+<a name="acknowledgements"></a>
 ## Acknowledgements
 
 See the [Acknowledgements](/ACKNOWLEDGEMENTS.md) file for the list of third party libraries used in this project.
