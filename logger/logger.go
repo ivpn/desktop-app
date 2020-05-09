@@ -35,8 +35,9 @@ import (
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
-var isCanPrintToConsole bool = true
-var isLoggingEnabled bool = true
+var isCanPrintToConsole bool
+var isLoggingEnabled bool
+var filePath string
 var writeMutex sync.Mutex
 var globalLogFile *os.File
 
@@ -48,15 +49,7 @@ func init() {
 
 // Init - initialize logfile
 func Init(logfile string) {
-	if _, err := os.Stat(logfile); err == nil {
-		os.Rename(logfile, logfile+".0")
-	}
-
-	var err error
-	globalLogFile, err = os.Create(logfile)
-	if err != nil {
-		log.Error(fmt.Errorf("Failed to create log-file: %w", err))
-	}
+	filePath = logfile
 }
 
 // GetLogText returns data from saved logs
@@ -102,16 +95,12 @@ func IsEnabled() bool {
 }
 
 // CanPrintToConsole define if logger can print to console
-func CanPrintToConsole(isCanPrint bool) {
-	isCanPrintToConsole = isCanPrint
-}
+//func CanPrintToConsole(isCanPrint bool) {
+//	isCanPrintToConsole = isCanPrint
+//}
 
 // Enable switching on\off logging
 func Enable(isEnabled bool) {
-	if globalLogFile == nil {
-		log.Error(fmt.Errorf("log-file not initialized. Please, call 'logger.Init(...)'"))
-	}
-
 	if isLoggingEnabled == isEnabled {
 		return
 	}
@@ -130,10 +119,13 @@ func Enable(isEnabled bool) {
 		log.Info(infoText)
 	}
 
+	isCanPrintToConsole = isEnabled
 	isLoggingEnabled = isEnabled
 
 	if isLoggingEnabled {
 		log.Info(infoText)
+	} else {
+		deleteLogFile()
 	}
 }
 
@@ -330,8 +322,52 @@ func write(fields ...interface{}) {
 		fmt.Println(fields...)
 	}
 
-	if isLoggingEnabled && globalLogFile != nil {
-		// writting into log-file
-		globalLogFile.WriteString(fmt.Sprintln(fields...))
+	if isLoggingEnabled {
+		if globalLogFile == nil {
+			createLogFile()
+		}
+
+		if globalLogFile != nil {
+			// writting into log-file
+			globalLogFile.WriteString(fmt.Sprintln(fields...))
+		}
 	}
+}
+
+func deleteLogFile() {
+	writeMutex.Lock()
+	defer writeMutex.Unlock()
+
+	if globalLogFile != nil {
+		globalLogFile.Close()
+		globalLogFile = nil
+	}
+
+	if len(filePath) > 0 {
+		os.Remove(filePath)
+		os.Remove(filePath + ".0")
+	}
+}
+
+func createLogFile() error {
+	if globalLogFile != nil {
+		globalLogFile.Close()
+		globalLogFile = nil
+	}
+
+	if len(filePath) > 0 {
+		if _, err := os.Stat(filePath); err == nil {
+			os.Rename(filePath, filePath+".0")
+		}
+
+		var err error
+		globalLogFile, err = os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+		if err != nil {
+			return fmt.Errorf("failed to create log-file: %w", err)
+		}
+	} else {
+		return fmt.Errorf("logfile name not initialised")
+	}
+
+	return nil
 }
