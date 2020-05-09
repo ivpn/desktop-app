@@ -35,7 +35,6 @@ import (
 	"github.com/ivpn/desktop-app-cli/commands"
 	"github.com/ivpn/desktop-app-cli/flags"
 	"github.com/ivpn/desktop-app-cli/protocol"
-	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/version"
 )
@@ -86,8 +85,6 @@ func printUsageAll(short bool) {
 }
 
 func main() {
-	logger.CanPrintToConsole(false)
-
 	// initialize all possible commands
 	stateCmd := commands.CmdState{}
 	addCommand(&stateCmd)
