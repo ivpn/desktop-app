@@ -57,19 +57,23 @@ func GetLogText(maxBytesSize int64) (log string, log0 string, err error) {
 	writeMutex.Lock()
 	defer writeMutex.Unlock()
 
-	logtext1, e1 := getLogText(platform.LogFile(), maxBytesSize)
-	logtext2, e2 := getLogText(platform.LogFile()+".0", maxBytesSize)
-	if e1 != nil && e2 != nil {
-		err = e1
-	}
-	return logtext1, logtext2, err
+	logtext1, _ := getLogText(platform.LogFile(), maxBytesSize)
+	logtext2, _ := getLogText(platform.LogFile()+".0", maxBytesSize)
+	return logtext1, logtext2, nil
 }
 
 func getLogText(fname string, maxBytesSize int64) (text string, err error) {
 
+	if _, err := os.Stat(filePath); err != nil {
+		if isLoggingEnabled {
+			return "<<< log-file not exists >>>", nil
+		}
+		return "<<< logging disabled >>>", nil
+	}
+
 	file, err := os.Open(fname)
 	if err != nil {
-		return "", err
+		return "<<< unable to open log-file >>>", nil
 	}
 	defer file.Close()
 
@@ -83,7 +87,7 @@ func getLogText(fname string, maxBytesSize int64) (text string, err error) {
 	start := stat.Size() - maxBytesSize
 	_, err = file.ReadAt(buf, start)
 	if err != nil {
-		return "", err
+		return fmt.Sprintf("<<< failed to read log-file: %s >>>", err), nil
 	}
 
 	return string(buf), nil
