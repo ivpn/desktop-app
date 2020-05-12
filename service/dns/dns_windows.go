@@ -1,9 +1,32 @@
+//
+//  Daemon for IVPN Client Desktop
+//  https://github.com/ivpn/desktop-app-daemon
+//
+//  Created by Stelnykovych Alexandr.
+//  Copyright (c) 2020 Privatus Limited.
+//
+//  This file is part of the Daemon for IVPN Client Desktop.
+//
+//  The Daemon for IVPN Client Desktop is free software: you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License as published by the Free
+//  Software Foundation, either version 3 of the License, or (at your option) any later version.
+//
+//  The Daemon for IVPN Client Desktop is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+//  details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
+//
+
 package dns
 
 import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"syscall"
 	"time"
@@ -14,10 +37,8 @@ import (
 )
 
 var (
-	_dll = syscall.NewLazyDLL(platform.WindowsNativeHelpersDllPath())
-	//_fSetDNSByIndex   = _dll.NewProc("SetDNSByIndex")   // DWORD _cdecl SetDNSByIndex(const WORD interfaceIdx, const char* dnsIP, byte operation)
-	_fSetDNSByMAC     = _dll.NewProc("SetDNSByMAC")     // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
-	_fSetDNSByLocalIP = _dll.NewProc("SetDNSByLocalIP") // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
+	_fSetDNSByMAC     *syscall.LazyProc // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
+	_fSetDNSByLocalIP *syscall.LazyProc // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
 )
 
 var dnsMutex sync.Mutex
@@ -31,6 +52,22 @@ const (
 	OperationAdd Operation = 1
 	OperationDel Operation = 2
 )
+
+// implInitialise doing initialisation stuff (called on application start)
+func implInitialise() error {
+	helpersDllPath := platform.WindowsNativeHelpersDllPath()
+	if len(helpersDllPath) == 0 {
+		return fmt.Errorf("unable to initialize DNS wrapper: helpers dll path not initialized")
+	}
+	if _, err := os.Stat(helpersDllPath); err != nil {
+		return fmt.Errorf("unable to initialize DNS wrapper (helpers dll not found) : '%s'", helpersDllPath)
+	}
+
+	dll := syscall.NewLazyDLL(helpersDllPath)
+	_fSetDNSByMAC = dll.NewProc("SetDNSByMAC")         // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
+	_fSetDNSByLocalIP = dll.NewProc("SetDNSByLocalIP") // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
+	return nil
+}
 
 func fSetDNSByMAC(interfaceMACAddr net.HardwareAddr, dns net.IP, op Operation) error {
 	dnsString := dns.String()
@@ -90,11 +127,6 @@ func catchPanic(err *error) {
 			*err = errors.New(fmt.Sprint(r))
 		}
 	}
-}
-
-// implInitialise doing initialisation stuff (called on application start)
-func implInitialise() error {
-	return nil
 }
 
 // Pause - (on vpn paused) temporary restore OS default DNS parameters

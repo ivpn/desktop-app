@@ -1,3 +1,25 @@
+//
+//  Daemon for IVPN Client Desktop
+//  https://github.com/ivpn/desktop-app-daemon
+//
+//  Created by Stelnykovych Alexandr.
+//  Copyright (c) 2020 Privatus Limited.
+//
+//  This file is part of the Daemon for IVPN Client Desktop.
+//
+//  The Daemon for IVPN Client Desktop is free software: you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License as published by the Free
+//  Software Foundation, either version 3 of the License, or (at your option) any later version.
+//
+//  The Daemon for IVPN Client Desktop is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+//  details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
+//
+
 package logger
 
 import (
@@ -13,8 +35,9 @@ import (
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 )
 
-var isCanPrintToConsole bool = true
-var isLoggingEnabled bool = true
+var isCanPrintToConsole bool
+var isLoggingEnabled bool
+var filePath string
 var writeMutex sync.Mutex
 var globalLogFile *os.File
 
@@ -26,15 +49,7 @@ func init() {
 
 // Init - initialize logfile
 func Init(logfile string) {
-	if _, err := os.Stat(logfile); err == nil {
-		os.Rename(logfile, logfile+".0")
-	}
-
-	var err error
-	globalLogFile, err = os.Create(logfile)
-	if err != nil {
-		log.Error(fmt.Errorf("Failed to create log-file: %w", err))
-	}
+	filePath = logfile
 }
 
 // GetLogText returns data from saved logs
@@ -42,19 +57,23 @@ func GetLogText(maxBytesSize int64) (log string, log0 string, err error) {
 	writeMutex.Lock()
 	defer writeMutex.Unlock()
 
-	logtext1, e1 := getLogText(platform.LogFile(), maxBytesSize)
-	logtext2, e2 := getLogText(platform.LogFile()+".0", maxBytesSize)
-	if e1 != nil && e2 != nil {
-		err = e1
-	}
-	return logtext1, logtext2, err
+	logtext1, _ := getLogText(platform.LogFile(), maxBytesSize)
+	logtext2, _ := getLogText(platform.LogFile()+".0", maxBytesSize)
+	return logtext1, logtext2, nil
 }
 
 func getLogText(fname string, maxBytesSize int64) (text string, err error) {
 
+	if _, err := os.Stat(filePath); err != nil {
+		if isLoggingEnabled {
+			return "<<< log-file not exists >>>", nil
+		}
+		return "<<< logging disabled >>>", nil
+	}
+
 	file, err := os.Open(fname)
 	if err != nil {
-		return "", err
+		return "<<< unable to open log-file >>>", nil
 	}
 	defer file.Close()
 
@@ -68,7 +87,7 @@ func getLogText(fname string, maxBytesSize int64) (text string, err error) {
 	start := stat.Size() - maxBytesSize
 	_, err = file.ReadAt(buf, start)
 	if err != nil {
-		return "", err
+		return fmt.Sprintf("<<< failed to read log-file: %s >>>", err), nil
 	}
 
 	return string(buf), nil
@@ -80,16 +99,12 @@ func IsEnabled() bool {
 }
 
 // CanPrintToConsole define if logger can print to console
-func CanPrintToConsole(isCanPrint bool) {
-	isCanPrintToConsole = isCanPrint
-}
+//func CanPrintToConsole(isCanPrint bool) {
+//	isCanPrintToConsole = isCanPrint
+//}
 
 // Enable switching on\off logging
 func Enable(isEnabled bool) {
-	if globalLogFile == nil {
-		log.Error(fmt.Errorf("log-file not initialized. Please, call 'logger.Init(...)'"))
-	}
-
 	if isLoggingEnabled == isEnabled {
 		return
 	}
@@ -108,10 +123,13 @@ func Enable(isEnabled bool) {
 		log.Info(infoText)
 	}
 
+	isCanPrintToConsole = isEnabled
 	isLoggingEnabled = isEnabled
 
 	if isLoggingEnabled {
 		log.Info(infoText)
+	} else {
+		deleteLogFile()
 	}
 }
 
@@ -308,8 +326,52 @@ func write(fields ...interface{}) {
 		fmt.Println(fields...)
 	}
 
-	if isLoggingEnabled && globalLogFile != nil {
-		// writting into log-file
-		globalLogFile.WriteString(fmt.Sprintln(fields...))
+	if isLoggingEnabled {
+		if globalLogFile == nil {
+			createLogFile()
+		}
+
+		if globalLogFile != nil {
+			// writting into log-file
+			globalLogFile.WriteString(fmt.Sprintln(fields...))
+		}
 	}
+}
+
+func deleteLogFile() {
+	writeMutex.Lock()
+	defer writeMutex.Unlock()
+
+	if globalLogFile != nil {
+		globalLogFile.Close()
+		globalLogFile = nil
+	}
+
+	if len(filePath) > 0 {
+		os.Remove(filePath)
+		os.Remove(filePath + ".0")
+	}
+}
+
+func createLogFile() error {
+	if globalLogFile != nil {
+		globalLogFile.Close()
+		globalLogFile = nil
+	}
+
+	if len(filePath) > 0 {
+		if _, err := os.Stat(filePath); err == nil {
+			os.Rename(filePath, filePath+".0")
+		}
+
+		var err error
+		globalLogFile, err = os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+		if err != nil {
+			return fmt.Errorf("failed to create log-file: %w", err)
+		}
+	} else {
+		return fmt.Errorf("logfile name not initialised")
+	}
+
+	return nil
 }

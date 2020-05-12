@@ -1,14 +1,38 @@
+//
+//  Daemon for IVPN Client Desktop
+//  https://github.com/ivpn/desktop-app-daemon
+//
+//  Created by Stelnykovych Alexandr.
+//  Copyright (c) 2020 Privatus Limited.
+//
+//  This file is part of the Daemon for IVPN Client Desktop.
+//
+//  The Daemon for IVPN Client Desktop is free software: you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License as published by the Free
+//  Software Foundation, either version 3 of the License, or (at your option) any later version.
+//
+//  The Daemon for IVPN Client Desktop is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+//  details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
+//
+
 package openvpn
 
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/obfsproxy"
@@ -21,6 +45,7 @@ var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("ovpn")
+	rand.Seed(time.Now().UnixNano())
 }
 
 // GetOpenVPNVersion trying to get openvpn binary version
@@ -179,6 +204,12 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		routinesWaiter.Wait()
 	}()
 
+	if o.isObfsProxy && len(o.connectParams.hostIPs) > 0 {
+		// in case of obfsproxy and multiple hostIPs - we are unable to determine which server we are connected for
+		// Therefore, we are using only one random serverIP to connect
+		o.connectParams.hostIPs = []net.IP{o.connectParams.hostIPs[rand.Intn(len(o.connectParams.hostIPs))]}
+	}
+
 	// analyse and forward state changes
 	routinesWaiter.Add(1)
 	go func() {
@@ -194,17 +225,27 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 				if o.state == vpn.CONNECTED {
 					// save exitServerID (in MultiHop)
 					stateInf.ExitServerID = o.connectParams.multihopExitSrvID
-				}
 
-				// forward state
-				stateChan <- stateInf
-
-				if o.state == vpn.CONNECTED {
+					// notify about correct local IP in VPN network
 					o.clientIP = stateInf.ClientIP
+
+					if o.isObfsProxy {
+						// in case of obfsproxy - 'stateInf.ServerIP' returns local IP (IP of obfsproxy 127.0.0.1)
+						// We must notify about real remote ServerIP, therefore we modifying this parameter before notifying about successful connection
+
+						// for obfsproxy, there should be only one hostIP, therefore we are taking first from the list
+						stateInf.ServerIP = o.connectParams.hostIPs[0]
+					}
+
 					o.implOnConnected() // process "on connected" event (if necessary)
 				} else {
 					o.clientIP = nil
 				}
+
+				// forward state
+				// Notifying about 'connected' state only after 'o.implOnConnected()'
+				// There could be additional stuff to do: e.g. change DNS (in implementation for Windows)
+				stateChan <- stateInf
 
 			case <-stopStateChan: // openvpn process stopped
 				return // stop goroutine

@@ -1,3 +1,25 @@
+//
+//  Daemon for IVPN Client Desktop
+//  https://github.com/ivpn/desktop-app-daemon
+//
+//  Created by Stelnykovych Alexandr.
+//  Copyright (c) 2020 Privatus Limited.
+//
+//  This file is part of the Daemon for IVPN Client Desktop.
+//
+//  The Daemon for IVPN Client Desktop is free software: you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License as published by the Free
+//  Software Foundation, either version 3 of the License, or (at your option) any later version.
+//
+//  The Daemon for IVPN Client Desktop is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+//  details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
+//
+
 package openvpn
 
 import (
@@ -171,7 +193,11 @@ func (i *ManagementInterface) miCommunication() {
 
 	mesRegexp := regexp.MustCompile("^>([a-zA-Z0-9-]+):(.*)")
 	mesNeedPassRegexp := regexp.MustCompile("Need '(.+)' username/password")
-	mesLogRouteAddCmdRegexp := regexp.MustCompile(".*route(.exe)?[ \t]+add[ \t]+")
+	// 'route add ...' commands detection RegExp
+	// expected: c:\windows\system32\route.exe add 128.0.0.0 mask 128.0.0.0 10.42.40.1
+	// expected: /sbin/ip route add 0.0.0.0/1 via 10.60.40.1
+	// ignored (example): linux route add commandfailed: external program exited with error status: 2
+	mesLogRouteAddCmdRegexp := regexp.MustCompile(".*route(.exe)?[ \t]+add[ \t]+.*([0-9]{1,3}[.]){3,3}[0-9]{1,3}.*([0-9]{1,3}[.]){3,3}[0-9]{1,3}.*")
 	mesLogPushReplyCmdRegexp := regexp.MustCompile(".*PUSH.*'PUSH_REPLY[ ,]*(.*)'")
 
 	if i.miConn == nil {

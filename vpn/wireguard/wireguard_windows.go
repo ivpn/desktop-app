@@ -1,3 +1,25 @@
+//
+//  Daemon for IVPN Client Desktop
+//  https://github.com/ivpn/desktop-app-daemon
+//
+//  Created by Stelnykovych Alexandr.
+//  Copyright (c) 2020 Privatus Limited.
+//
+//  This file is part of the Daemon for IVPN Client Desktop.
+//
+//  The Daemon for IVPN Client Desktop is free software: you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License as published by the Free
+//  Software Foundation, either version 3 of the License, or (at your option) any later version.
+//
+//  The Daemon for IVPN Client Desktop is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+//  details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
+//
+
 package wireguard
 
 import (
@@ -417,12 +439,10 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 		return fmt.Errorf("service not started (timeout)")
 	}
 
-	// CONNECTED
-	log.Info("Connection started")
-	stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP)
 	// WireGuard interface is configured to correct DNS.
 	// But we must to be sure if non-ivpn interfaces are configured to our DNS
 	// (it needed ONLY if DNS IP located in local network)
+	// Also, it is neded to inform 'dns' package about last DNS value (used by 'protocol' to ptovide dns status to clients)
 	manualDNS := wg.internals.manualDNS
 	if manualDNS != nil {
 		dns.SetManual(manualDNS, nil)
@@ -430,6 +450,11 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 		// delete manual DNS (if defined)
 		dns.DeleteManual(nil)
 	}
+
+	// CONNECTED
+	log.Info("Connection started")
+	// Send 'connected' notification only after 'dns' package informed about correct DNS value
+	stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP)
 
 	return nil
 }

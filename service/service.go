@@ -1,3 +1,25 @@
+//
+//  Daemon for IVPN Client Desktop
+//  https://github.com/ivpn/desktop-app-daemon
+//
+//  Created by Stelnykovych Alexandr.
+//  Copyright (c) 2020 Privatus Limited.
+//
+//  This file is part of the Daemon for IVPN Client Desktop.
+//
+//  The Daemon for IVPN Client Desktop is free software: you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License as published by the Free
+//  Software Foundation, either version 3 of the License, or (at your option) any later version.
+//
+//  The Daemon for IVPN Client Desktop is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+//  details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
+//
+
 package service
 
 import (
@@ -69,10 +91,6 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 		_netChangeDetector: netChDetector,
 		_wgKeysMgr:         wgKeysMgr}
 
-	if err := dns.Initialise(); err != nil {
-		log.Error("DNS initialisation failed: %s", err)
-	}
-
 	if err := serv.init(); err != nil {
 		return nil, fmt.Errorf("service initialisaton error : %w", err)
 	}
@@ -88,7 +106,15 @@ func (s *Service) init() error {
 		s._preferences.SavePreferences()
 	}
 
-	// Init logger
+	if err := dns.Initialise(); err != nil {
+		log.Error(fmt.Sprintf("failed to initialise DNS : %s", err))
+	}
+
+	if err := firewall.Initialise(); err != nil {
+		return fmt.Errorf("service initialisaton error : %w", err)
+	}
+
+	// Init logger (if not initialized before)
 	logger.Enable(s._preferences.IsLogging)
 
 	// Init firewall
@@ -113,7 +139,7 @@ func (s *Service) init() error {
 	}
 
 	// Check session status (start as go-routine to do not block service initialisation)
-	go s.SessionStatus()
+	go s.RequestSessionStatus()
 	// Start session status checker
 	s.startSessionChecker()
 
@@ -300,7 +326,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	}
 
 	// check session status each disconnection (asynchronously, in separate goroutine)
-	defer func() { go s.SessionStatus() }()
+	defer func() { go s.RequestSessionStatus() }()
 
 	s._connectMutex.Lock()
 	defer s._connectMutex.Unlock()
@@ -312,6 +338,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 		s._done = nil
 		if done != nil {
 			done <- struct{}{}
+			// Closing channel
+			// Note: reading from empty and closed channel will not lead to deadlock (immediately returns zero value)
+			close(done)
 		}
 	}()
 
@@ -344,7 +373,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 		// when we were requested to enable firewall for this connection
 		// And initial FW state was disabled - we have to disable it back
 		if firewallDuringConnection == true && fwInitState == false {
-			if err = firewall.SetEnabled(false); err != nil {
+			if err = s.SetKillSwitchState(false); err != nil {
 				log.Error("(stopping) failed to disable firewall:", err)
 			}
 		}
@@ -471,7 +500,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 		}
 		fwInitState = fw
 		if fwInitState == false {
-			if err := firewall.SetEnabled(true); err != nil {
+			if err := s.SetKillSwitchState(true); err != nil {
 				log.Error("Failed to enable firewall:", err.Error())
 				return err
 			}
@@ -580,7 +609,11 @@ func (s *Service) SetManualDNS(dns net.IP) error {
 		return fmt.Errorf("failed to set manual DNS: %w", err)
 	}
 
-	return vpn.SetManualDNS(dns)
+	err := vpn.SetManualDNS(dns)
+	if err == nil {
+		s._evtReceiver.OnDNSChanged(dns)
+	}
+	return err
 }
 
 // ResetManualDNS set dns to default
@@ -594,7 +627,11 @@ func (s *Service) ResetManualDNS() error {
 		return fmt.Errorf("failed to reset manual DNS: %w", err)
 	}
 
-	return vpn.ResetManualDNS()
+	err := vpn.ResetManualDNS()
+	if err == nil {
+		s._evtReceiver.OnDNSChanged(nil)
+	}
+	return err
 }
 
 // PingServers ping vpn servers
@@ -742,7 +779,11 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 
 // SetKillSwitchState enable\disable killswitch
 func (s *Service) SetKillSwitchState(isEnabled bool) error {
-	return firewall.SetEnabled(isEnabled)
+	err := firewall.SetEnabled(isEnabled)
+	if err == nil {
+		s._evtReceiver.OnKillSwitchStateChanged()
+	}
+	return err
 }
 
 // KillSwitchState returns killswitch state
@@ -758,7 +799,11 @@ func (s *Service) SetKillSwitchIsPersistent(isPersistant bool) error {
 	prefs.IsFwPersistant = isPersistant
 	s.setPreferences(prefs)
 
-	return firewall.SetPersistant(isPersistant)
+	err := firewall.SetPersistant(isPersistant)
+	if err == nil {
+		s._evtReceiver.OnKillSwitchStateChanged()
+	}
+	return err
 }
 
 // SetKillSwitchAllowLAN change kill-switch value
@@ -777,7 +822,11 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 	prefs.IsFwAllowLANMulticast = isAllowLanMulticast
 	s.setPreferences(prefs)
 
-	return firewall.AllowLAN(prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast)
+	err := firewall.AllowLAN(prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast)
+	if err == nil {
+		s._evtReceiver.OnKillSwitchStateChanged()
+	}
+	return err
 }
 
 // SetPreference set preference value
@@ -959,20 +1008,30 @@ func (s *Service) logOut(needToDeleteOnBackend bool) error {
 	return nil
 }
 
-// SessionStatus receives session status
-func (s *Service) SessionStatus() (
+// RequestSessionStatus receives session status
+func (s *Service) RequestSessionStatus() (
 	apiCode int,
 	apiErrorMsg string,
+	sessionToken string,
 	accountInfo preferences.AccountStatus,
 	err error) {
 
 	session := s.Preferences().Session
 	if session.IsLoggedIn() == false {
-		return apiCode, "", accountInfo, ErrorNotLoggedIn{}
+		return apiCode, "", "", accountInfo, ErrorNotLoggedIn{}
 	}
 
-	log.Info("Checking session status...")
+	log.Info("Requesting session status...")
 	stat, apiErr, err := s._api.SessionStatus(session.Session)
+	log.Info("Session status request: done")
+
+	currSession := s.Preferences().Session
+	if currSession.Session != session.Session {
+		// It could happen that logout\login was performed during the session check
+		// Ignoring result if there is already a new session
+		log.Info("Ignoring requested session status result. Local session already changed.")
+		return apiCode, "", "", accountInfo, ErrorNotLoggedIn{}
+	}
 
 	apiCode = 0
 	if apiErr != nil {
@@ -984,27 +1043,36 @@ func (s *Service) SessionStatus() (
 			log.Info("Session not found. Logging out.")
 			s.logOut(false)
 		}
+
+		// notify clients that account not active
+		if apiCode == types.AccountNotActive {
+			// notify about account status
+			s._evtReceiver.OnAccountStatus(session.Session, accountInfo)
+			return apiCode, apiErr.Message, session.Session, preferences.AccountStatus{Active: false}, err
+		}
 	}
 
 	if err != nil {
 		// in case of other API error
 		if apiErr != nil {
-			return apiCode, apiErr.Message, accountInfo, err
+			return apiCode, apiErr.Message, "", accountInfo, err
 		}
 
 		// not API error
-		return apiCode, "", accountInfo, err
+		return apiCode, "", "", accountInfo, err
 	}
 
 	if stat == nil {
-		return apiCode, "", accountInfo, fmt.Errorf("unexpected error when creating requesting session status")
+		return apiCode, "", "", accountInfo, fmt.Errorf("unexpected error when creating requesting session status")
 	}
 
 	// get account status info
 	accountInfo = s.createAccountStatus(*stat)
+	// notify about account status
+	s._evtReceiver.OnAccountStatus(session.Session, accountInfo)
 
 	// success
-	return apiCode, "", accountInfo, nil
+	return apiCode, "", session.Session, accountInfo, nil
 }
 
 func (s *Service) createAccountStatus(apiResp types.ServiceStatusAPIResp) preferences.AccountStatus {
@@ -1048,7 +1116,7 @@ func (s *Service) startSessionChecker() {
 			}
 
 			// check status
-			s.SessionStatus()
+			s.RequestSessionStatus()
 
 			// if not logged-in - no sense to check status anymore
 			session := s.Preferences().Session
@@ -1114,12 +1182,22 @@ func (s *Service) WireGuardSetKeysRotationInterval(interval int64) {
 // WireGuardGetKeys get WG keys
 func (s *Service) WireGuardGetKeys() (session, wgPublicKey, wgPrivateKey, wgLocalIP string, generatedTime time.Time, updateInterval time.Duration) {
 	p := s._preferences
+
+	interval := p.Session.WGKeysRegenInerval
+
+	//----------------------------------------------------------------
+	// ONLY FOR TESTS!
+	// Interval change 1 day => 1 minute
+	// interval = time.Minute * (interval / (time.Hour * 24))
+	// log.Debug(fmt.Sprintf("(TESTING) Changed WG keys rotation interval %v => %v", p.Session.WGKeysRegenInerval, interval))
+	//----------------------------------------------------------------
+
 	return p.Session.Session,
 		p.Session.WGPublicKey,
 		p.Session.WGPrivateKey,
 		p.Session.WGLocalIP,
 		p.Session.WGKeyGenerated,
-		p.Session.WGKeysRegenInerval
+		interval //p.Session.WGKeysRegenInerval
 }
 
 // WireGuardGenerateKeys - generate new wireguard keys
