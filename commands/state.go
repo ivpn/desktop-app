@@ -60,7 +60,8 @@ func showState() error {
 	if state == vpn.CONNECTED {
 		servers, err = _proto.GetServers()
 		if err == nil {
-			slist := serversList(servers)
+			slist := serversListByVpnType(servers, connected.VpnType)
+
 			serverInfo = getServerInfoByIP(slist, connected.ServerIP)
 			exitServerInfo = getServerInfoByID(slist, connected.ExitServerID)
 		}

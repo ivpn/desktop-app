@@ -144,20 +144,34 @@ func getVpnTypeByFlag(proto string) (t vpn.Type, err error) {
 }
 
 func serversList(servers apitypes.ServersInfoResponse) []serverDesc {
-	ret := make([]serverDesc, 0, len(servers.OpenvpnServers)+len(servers.WireguardServers))
-	for _, s := range servers.WireguardServers {
-		hosts := make(map[string]struct{}, len(s.Hosts))
-		for _, h := range s.Hosts {
-			hosts[strings.ToLower(strings.TrimSpace(h.Host))] = struct{}{}
+	svrs := serversListByVpnType(servers, vpn.WireGuard)
+	svrs = append(svrs, serversListByVpnType(servers, vpn.OpenVPN)...)
+	return svrs
+}
+
+func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []serverDesc {
+
+	var ret []serverDesc
+	if t == vpn.WireGuard {
+		ret = make([]serverDesc, 0, len(servers.WireguardServers))
+
+		for _, s := range servers.WireguardServers {
+			hosts := make(map[string]struct{}, len(s.Hosts))
+			for _, h := range s.Hosts {
+				hosts[strings.ToLower(strings.TrimSpace(h.Host))] = struct{}{}
+			}
+			ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 		}
-		ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
-	}
-	for _, s := range servers.OpenvpnServers {
-		hosts := make(map[string]struct{}, len(s.IPAddresses))
-		for _, h := range s.IPAddresses {
-			hosts[strings.ToLower(strings.TrimSpace(h))] = struct{}{}
+	} else {
+		ret = make([]serverDesc, 0, len(servers.OpenvpnServers))
+
+		for _, s := range servers.OpenvpnServers {
+			hosts := make(map[string]struct{}, len(s.IPAddresses))
+			for _, h := range s.IPAddresses {
+				hosts[strings.ToLower(strings.TrimSpace(h))] = struct{}{}
+			}
+			ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 		}
-		ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 	}
 	return ret
 }
