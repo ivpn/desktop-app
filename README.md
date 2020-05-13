@@ -1,9 +1,7 @@
 # IVPN command line interface (CLI)
 
 **IVPN command line interface** is an official IVPN command line client.  
-It divided on two parts:  
-  - IVPN CLI (this repository)  
-  - IVPN service/daemon (repository [ivpn-desktop-daemon](https://github.com/ivpn/desktop-app-daemon))  
+It is a client for  IVPN daemon ([ivpn-desktop-daemon](https://github.com/ivpn/desktop-app-daemon))   
 Can be compiled for different platforms: Windows, macOS, Linux
 
 IVPN CLI is distributed on the official site [https://www.ivpn.net](https://www.ivpn.net).  
@@ -33,17 +31,23 @@ These instructions will get you a copy of the project up and running on your loc
 
   - [Go 1.13+](https://golang.org/)
   - [FPM](https://fpm.readthedocs.io/en/latest/installing.html)
-  - rpm package to be able to compile RPM packages (use command `sudo apt-get install rpm` to install on Ubuntu)
+  - `rpm` package to be able to compile RPM packages (use command `sudo apt-get install rpm` to install on Ubuntu)
   - Git
-  - curl package (use command `sudo apt install curl` to install on Ubuntu)
+  - `curl` package (use command `sudo apt install curl` to install on Ubuntu)
 
 #### macOS
-
+  - [Go 1.13+](https://golang.org/)
+  - Git
+  
 #### Windows
-
+  - [Go 1.13+](https://golang.org/)
+  - Git
+      
 ### Compilation
 
 #### Linux
+  The CLI binary compiles together with [desktop-app-daemon](https://github.com/ivpn/desktop-app-daemon) project. It required to be able to compile into redistributable packages (ready for installation DEB\RPM).
+  Therefore, a few manipulations with GOPATH and folder structure necessary to perform.
 
   * Set `$GOPATH` variable to your projects folder  
       -  example: `export GOPATH=$HOME/Projects`  
@@ -56,13 +60,10 @@ These instructions will get you a copy of the project up and running on your loc
       -  `cd $GOPATH/src/github.com/ivpn`  
       -  `git clone https://github.com/ivpn/desktop-app-cli.git`  
 
-  *  There is a dependency from a [Daemon for IVPN Client Desktop](https://github.com/ivpn/desktop-app-daemon) project. So, it is necessary to clone it's sources:  
+  *  Clone [desktop-app-daemon](https://github.com/ivpn/desktop-app-daemon) project
       -  `cd $GOPATH/src/github.com/ivpn`  
       -  `git clone https://github.com/ivpn/desktop-app-daemon.git`  
-    An additional step required while the CLI project has beta status - switch to `feature/WC-903-Console-client` branch of daemon project:  
-      -  `cd desktop-app-daemon`  
-      -  `git checkout feature/WC-903-Console-client`  
-
+ 
   * To compile projects and to build `.DEB` and `.RPM` packages just run `build-packages.sh` script:  
       -  `cd $GOPATH/src/github.com/ivpn/desktop-app-cli`  
       -  `References/Linux/build-packages.sh -v 0.0.1`  
@@ -70,8 +71,28 @@ These instructions will get you a copy of the project up and running on your loc
 Compiled packages can be found at `$GOPATH/src/github.com/ivpn/desktop-app-cli/References/Linux/_out_bin`  
 
 #### macOS
-
+  ```
+  git clone https://github.com/ivpn/desktop-app-cli.git
+  cd desktop-app-cli/
+  ./References/macOS/build.sh 
+  ``` 
+  Comliled binariy can be found here:
+  ```
+  References/macOS/_out_bin/
+  ```
+  
 #### Windows
+  Ensure that GO111MODULE is enabled (`set GO111MODULE=on`)
+  ```
+  git clone https://github.com/ivpn/desktop-app-cli.git
+  cd desktop-app-cli
+  References\Windows\build.bat
+  ``` 
+  Comliled binaries can be found here:
+  ```
+  bin\x86\cli
+  bin\x86_64\cli
+  ```
 
 <a name="versioning"></a>
 ## Versioning
