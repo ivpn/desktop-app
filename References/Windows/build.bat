@@ -15,6 +15,12 @@ rem Getting info about commit
 cd %SCRIPTDIR%\..\..
 FOR /F "tokens=* USEBACKQ" %%F IN (`git rev-list -1 HEAD`) DO SET COMMIT=%%F
 
+if "%APPVER%" == "" set APPVER=unknown
+rem Removing spaces from input variables
+if NOT "%APPVER%" == "" set APPVER=%APPVER: =%
+if NOT "%COMMIT%" == "" set COMMIT=%COMMIT: =%
+if NOT "%DATE%" == "" set DATE=%DATE: =%
+
 echo APPVER: %APPVER%
 echo COMMIT: %COMMIT%
 echo DATE  : %DATE%
