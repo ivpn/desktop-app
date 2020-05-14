@@ -56,6 +56,6 @@ else
     go build -o "$OUT_FILE" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=$VERSION -X github.com/ivpn/desktop-app-daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app-daemon/version._time=$DATE"
 fi
 
-echo "Compiled CLI binary: '$OUT_FILE'"
+echo "Compiled binary: '$OUT_FILE'"
 
 set +e
