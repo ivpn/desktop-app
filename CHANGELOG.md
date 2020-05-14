@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.0 - 2020-05-14
+
+[NEW] Command line interface for IVPN service  
+[IMPROVED] Overall stability  
+
 ## Version 2.11.8 - 2020-04-05
 
 [FIXED] macOS client start issue after the clean install
