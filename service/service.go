@@ -95,14 +95,6 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 		_netChangeDetector: netChDetector,
 		_wgKeysMgr:         wgKeysMgr}
 
-	if err := dns.Initialise(); err != nil {
-		log.Error(fmt.Sprintf("failed to initialise DNS : %s", err))
-	}
-
-	if err := firewall.Initialise(); err != nil {
-		return nil, fmt.Errorf("service initialisaton error : %w", err)
-	}
-
 	if err := serv.init(); err != nil {
 		return nil, fmt.Errorf("service initialisaton error : %w", err)
 	}
@@ -118,7 +110,15 @@ func (s *Service) init() error {
 		s._preferences.SavePreferences()
 	}
 
-	// Init logger
+	if err := dns.Initialise(); err != nil {
+		log.Error(fmt.Sprintf("failed to initialise DNS : %s", err))
+	}
+
+	if err := firewall.Initialise(); err != nil {
+		return fmt.Errorf("service initialisaton error : %w", err)
+	}
+
+	// Init logger (if not initialized before)
 	logger.Enable(s._preferences.IsLogging)
 
 	// Init firewall

@@ -25,12 +25,14 @@ package openvpn
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/obfsproxy"
@@ -43,6 +45,7 @@ var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("ovpn")
+	rand.Seed(time.Now().UnixNano())
 }
 
 // GetOpenVPNVersion trying to get openvpn binary version
@@ -201,6 +204,12 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		routinesWaiter.Wait()
 	}()
 
+	if o.isObfsProxy && len(o.connectParams.hostIPs) > 0 {
+		// in case of obfsproxy and multiple hostIPs - we are unable to determine which server we are connected for
+		// Therefore, we are using only one random serverIP to connect
+		o.connectParams.hostIPs = []net.IP{o.connectParams.hostIPs[rand.Intn(len(o.connectParams.hostIPs))]}
+	}
+
 	// analyse and forward state changes
 	routinesWaiter.Add(1)
 	go func() {
@@ -216,10 +225,18 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 				if o.state == vpn.CONNECTED {
 					// save exitServerID (in MultiHop)
 					stateInf.ExitServerID = o.connectParams.multihopExitSrvID
-				}
 
-				if o.state == vpn.CONNECTED {
+					// notify about correct local IP in VPN network
 					o.clientIP = stateInf.ClientIP
+
+					if o.isObfsProxy {
+						// in case of obfsproxy - 'stateInf.ServerIP' returns local IP (IP of obfsproxy 127.0.0.1)
+						// We must notify about real remote ServerIP, therefore we modifying this parameter before notifying about successful connection
+
+						// for obfsproxy, there should be only one hostIP, therefore we are taking first from the list
+						stateInf.ServerIP = o.connectParams.hostIPs[0]
+					}
+
 					o.implOnConnected() // process "on connected" event (if necessary)
 				} else {
 					o.clientIP = nil

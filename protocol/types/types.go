@@ -58,11 +58,8 @@ func Send(conn net.Conn, cmd interface{}, idx int) (retErr error) {
 		return fmt.Errorf("data is nil")
 	}
 
+	bytesToSend = append(bytesToSend, byte('\n'))
 	if _, err := conn.Write(bytesToSend); err != nil {
-		return err
-	}
-
-	if _, err := conn.Write([]byte("\n")); err != nil {
 		return err
 	}
 

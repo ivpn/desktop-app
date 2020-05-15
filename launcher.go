@@ -36,6 +36,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/protocol"
 	"github.com/ivpn/desktop-app-daemon/service"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/service/preferences"
 	"github.com/ivpn/desktop-app-daemon/service/wgkeys"
 	"github.com/ivpn/desktop-app-daemon/version"
 )
@@ -65,6 +66,12 @@ func Launch() {
 
 	warnings, errors := platform.Init()
 	logger.Init(platform.LogFile())
+
+	// initialize logging according to service preferences
+	var prefs preferences.Preferences
+	if err := prefs.LoadPreferences(); err == nil {
+		logger.Enable(prefs.IsLogging)
+	}
 
 	if len(warnings) > 0 {
 		for _, w := range warnings {
