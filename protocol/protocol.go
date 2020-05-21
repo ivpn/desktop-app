@@ -149,10 +149,6 @@ func (p *Protocol) Stop() {
 		// do not accept new incoming connections
 		listener.Close()
 	}
-
-	// Notifying clients "service is going to stop" (client application (UI) will close)
-	// Closing and erasing all clients connections
-	p.notifyClientsDaemonExiting()
 }
 
 // Start - starts TCP interface to communicate with IVPN application (server to listen incoming connections)
@@ -164,10 +160,14 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 	p._secret = secret
 
 	defer func() {
-		log.Warning("Protocol stopped")
+		log.Info("Protocol stopped")
 
 		// Disconnect VPN (if connected)
 		p._service.Disconnect()
+
+		// Notifying clients "service is going to stop" (client application (UI) will close)
+		// Closing and erasing all clients connections
+		p.notifyClientsDaemonExiting()
 	}()
 
 	adrr := fmt.Sprintf("127.0.0.1:0")

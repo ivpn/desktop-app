@@ -92,7 +92,7 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 		defer p._connectionsMutex.RUnlock()
 		for conn := range p._connections {
 			// notifying client "service is going to stop" (client application (UI) will close)
-			p.sendResponse(conn, types.ServiceExitingResp{}, 0)
+			p.sendResponse(conn, &types.ServiceExitingResp{}, 0)
 			// closing current connection with a client
 			conn.Close()
 		}
@@ -106,7 +106,7 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 
 // -------------- sending responses ---------------
 func (p *Protocol) sendErrorResponse(conn net.Conn, request types.CommandBase, err error) {
-	log.Error("%sError processing request '%s': %s", p.connLogID(conn), request.Command, err)
+	log.Error(fmt.Sprintf("%sError processing request '%s': %s", p.connLogID(conn), request.Command, err))
 	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: err.Error()}, request.Idx)
 }
 
