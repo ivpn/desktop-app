@@ -472,6 +472,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 								log.Error("PANIC: ", r)
 							}
 						}()
+
+						s._vpnReconnectRequested = true
 						s.Disconnect() // use separate routine to disconnect
 					}()
 
