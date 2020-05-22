@@ -717,7 +717,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		stateChan := make(chan vpn.StateInfo, 1)
 		isExitChan := make(chan bool, 1)
 		disconnectAuthError := false
-		disconnectDescription := ""
+		var connectionError error
 
 		// disconnect active connection (if connected)
 		if err := p._service.Disconnect(); err != nil {
@@ -751,8 +751,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				disconnectionReason := types.Unknown
 				if disconnectAuthError == true {
 					disconnectionReason = types.AuthenticationError
-					if len(disconnectDescription) == 0 {
-						disconnectDescription = "authentication failure"
+					if connectionError == nil {
+						connectionError = fmt.Errorf("authentication failure")
 					}
 				}
 				if p._disconnectRequested {
@@ -761,7 +761,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 					disconnectionReason = types.DisconnectRequested
 				}
 
-				p.notifyClients(&types.DisconnectedResp{Failure: true, Reason: disconnectionReason, ReasonDescription: disconnectDescription})
+				errMsg := ""
+				if connectionError != nil {
+					errMsg = connectionError.Error()
+				}
+				p.notifyClients(&types.DisconnectedResp{Failure: connectionError != nil, Reason: disconnectionReason, ReasonDescription: errMsg})
 			}
 
 			// wait all routines to stop
@@ -816,9 +820,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}()
 
 		// SYNCHRONOUSLY start VPN connection process (wait until it finished)
-		if err := p.processConnectRequest(messageData, stateChan); err != nil {
-			disconnectDescription = err.Error()
-			log.ErrorTrace(err)
+		if connectionError = p.processConnectRequest(messageData, stateChan); connectionError != nil {
+			log.ErrorTrace(connectionError)
 		}
 
 		break

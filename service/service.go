@@ -58,15 +58,15 @@ const (
 
 // Service - IVPN service
 type Service struct {
-	_evtReceiver           IServiceEventsReceiver
-	_api                   *api.API
-	_serversUpdater        IServersUpdater
-	_netChangeDetector     INetChangeDetector
-	_wgKeysMgr             IWgKeysManager
-	_vpn                   vpn.Process
-	_vpnReconnectRequested bool
-	_preferences           preferences.Preferences
-	_connectMutex          sync.Mutex
+	_evtReceiver       IServiceEventsReceiver
+	_api               *api.API
+	_serversUpdater    IServersUpdater
+	_netChangeDetector INetChangeDetector
+	_wgKeysMgr         IWgKeysManager
+	_vpn               vpn.Process
+	_vpnKeepConnected  bool // when true - reconnects immediately after disconnection
+	_preferences       preferences.Preferences
+	_connectMutex      sync.Mutex
 
 	// Note: Disconnect() function will wait until VPN fully disconnects
 	_done chan struct{}
@@ -282,31 +282,63 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 }
 
 func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
-	defer func() { s._vpnReconnectRequested = false }()
+	defer func() { s._vpnKeepConnected = false }()
 
 	prefs := s.Preferences()
 	if prefs.Session.IsLoggedIn() == false {
 		return ErrorNotLoggedIn{}
 	}
 
+	// not necessary to keep connection until we are not connected
+	s._vpnKeepConnected = false
+
+	// no delay before first reconnection
+	delayBeforeReconnect := 0 * time.Second
+
 	for {
-		s._vpnReconnectRequested = false
 		// create new VPN object
 		vpnObj, err := createVpnObj()
 		if err != nil {
 			return fmt.Errorf("failed to create VPN object: %w", err)
 		}
 
+		lastConnectionTryTime := time.Now()
+
 		// start connection
 		err = s.connect(vpnObj, manualDNS, firewallDuringConnection, stateChan)
 		if err != nil {
-			return err
+			log.Error(fmt.Sprintf("Connection error: %s", err))
+			if s._vpnKeepConnected == false {
+				return err
+			}
 		}
 
 		// retry, if reconnection requested
-		if s._vpnReconnectRequested {
-			log.Info("Reconnecting...")
-			continue
+		if s._vpnKeepConnected {
+			// notifying clients about reconnection
+			stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "Reconnecting due to disconnection")
+
+			// no delay before reconnection (if last connection was long time ago)
+			if time.Now().After(lastConnectionTryTime.Add(time.Second * 30)) {
+				delayBeforeReconnect = 0
+			}
+
+			if delayBeforeReconnect > 0 {
+				log.Info(fmt.Sprintf("Reconnecting (pause %s)...", delayBeforeReconnect))
+				// do delay before next reconnection
+				pauseTill := time.Now().Add(delayBeforeReconnect)
+				for time.Now().Before(pauseTill) && s._vpnKeepConnected {
+					time.Sleep(time.Millisecond * 10)
+				}
+			} else {
+				log.Info("Reconnecting...")
+			}
+
+			if s._vpnKeepConnected {
+				// consecutive reconnections has delay 5 seconds
+				delayBeforeReconnect = time.Second * 5
+				continue
+			}
 		}
 
 		// stop loop
@@ -321,7 +353,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	var connectRoutinesWaiter sync.WaitGroup
 
 	// stop active connection (if exists)
-	if err := s.Disconnect(); err != nil {
+	if err := s.disconnect(s._vpnKeepConnected); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
 	}
 
@@ -400,9 +432,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	// goroutine: process + forward VPN state change
 	connectRoutinesWaiter.Add(1)
 	go func() {
-		log.Info("Vpn state forwarder started")
+		log.Info("VPN state forwarder started")
 		defer func() {
-			log.Info("Vpn state forwarder stopped")
+			log.Info("VPN state forwarder stopped")
 			connectRoutinesWaiter.Done()
 		}()
 
@@ -429,6 +461,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 					s._netChangeDetector.Stop()
 
 				case vpn.CONNECTED:
+					// since we are connected - keep connection (reconnect if unexpected disconnection)
+					s._vpnKeepConnected = true
+
 					// start routing chnage detection
 					if netInterface, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
 						log.Error(fmt.Sprintf("Unable to inialize routing change detection. Failed to get interface '%s'", state.ClientIP.String()))
@@ -464,8 +499,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 				if s._vpn.IsPaused() {
 					log.Info("Route change ignored due to Paused state.")
 				} else {
-					log.Info("Route change detected. Disconnecting...")
 					// Disconnect (client will request then reconnection, because of unexpected disconnection)
+					// reconnect in separate routine (do not block current thread)
 					go func() {
 						defer func() {
 							if r := recover(); r != nil {
@@ -473,8 +508,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 							}
 						}()
 
-						s._vpnReconnectRequested = true
-						s.Disconnect() // use separate routine to disconnect
+						log.Info("Route change detected. Reconnecting...")
+						s.reconnect()
 					}()
 
 					isRuning = false
@@ -541,16 +576,32 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	return nil
 }
 
+func (s *Service) reconnect() {
+	reconnect := true
+	s.disconnect(reconnect)
+}
+
 // Disconnect disconnect vpn
 func (s *Service) Disconnect() error {
+	reconnect := false
+	return s.disconnect(reconnect)
+}
+
+func (s *Service) disconnect(reconnect bool) error {
+	// it is important to set _vpnKeepConnected before VPN object availability check
+	s._vpnKeepConnected = reconnect
+
 	vpn := s._vpn
 	if vpn == nil {
 		return nil
 	}
 
 	done := s._done
-
-	log.Info("Disconnecting...")
+	if s._vpnKeepConnected {
+		log.Info("Disconnecting (going to reconnect)...")
+	} else {
+		log.Info("Disconnecting...")
+	}
 
 	// stop detections for routing changes
 	s._netChangeDetector.Stop()
@@ -1149,7 +1200,7 @@ func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, 
 	s._evtReceiver.OnServiceSessionChanged()
 
 	go func() {
-		// reconnect in separate routinr (do not block current thread)
+		// reconnect in separate routine (do not block current thread)
 		vpnObj := s._vpn
 		if vpnObj == nil {
 			return
@@ -1161,9 +1212,7 @@ func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, 
 			return
 		}
 		log.Info("Reconnecting WireGuard connection with new credentials...")
-		s._vpnReconnectRequested = true
-
-		s.Disconnect()
+		s.reconnect()
 	}()
 }
 
