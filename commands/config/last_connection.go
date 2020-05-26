@@ -47,7 +47,7 @@ type LastConnectionInfo struct {
 	Antitracker     bool
 	AntitrackerHard bool
 
-	MultiopExitSvr string
+	MultiopExitSvr string // variable name spelling error ->  'MultihopExitSvr' (keeped as is for compatibility with previous versions)
 }
 
 // LastConnectionExist - returns 'true' if available info about last successful connection

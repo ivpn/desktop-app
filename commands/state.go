@@ -88,9 +88,9 @@ func showState() error {
 	} else if fwstate.IsEnabled {
 		tips = append(tips, TipFirewallDisable)
 	}
-	tips = append(tips, TipHelp)
-	tips = append(tips, TipHelpFull)
-	PrintTips(tips)
+	if len(tips) > 0 {
+		PrintTips(tips)
+	}
 
 	if len(_proto.GetHelloResponse().Session.Session) == 0 {
 		return service.ErrorNotLoggedIn{}

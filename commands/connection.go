@@ -115,7 +115,7 @@ type CmdConnect struct {
 	filter_countryCode bool
 	filter_invert      bool
 
-	multiopExitSvr string
+	multihopExitSvr string
 
 	fastest bool
 }
@@ -133,7 +133,7 @@ func (c *CmdConnect) Init() {
 	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy")
 	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy")
 
-	c.StringVar(&c.multiopExitSvr, "exit_svr", "", "LOCATION", "OpenVPN only: Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
+	c.StringVar(&c.multihopExitSvr, "exit_svr", "", "LOCATION", "OpenVPN only: Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
 
 	c.BoolVar(&c.firewallOff, "fw_off", false, "Do not enable firewall for this connection\n(has effect only if Firewall not enabled before)")
 
@@ -164,6 +164,7 @@ func (c *CmdConnect) Init() {
 	c.BoolVar(&c.last, "last", false, "Connect with last successful connection parameters")
 }
 
+// Run executes command
 func (c *CmdConnect) Run() (retError error) {
 	if len(c.gateway) == 0 && c.fastest == false && c.last == false {
 		return flags.BadParameter{}
@@ -214,7 +215,7 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 	}
 
-	// do we need to connect with last succesfull connection parameters
+	// do we need to connect with last successful connection parameters
 	if c.last {
 		fmt.Println("Enabled '-last' parameter. Using parameters from last successful connection")
 		ci := config.RestoreLastConnectionInfo()
@@ -238,7 +239,7 @@ func (c *CmdConnect) Run() (retError error) {
 		c.dns = ci.DNS
 		c.antitracker = ci.Antitracker
 		c.antitrackerHard = ci.AntitrackerHard
-		c.multiopExitSvr = ci.MultiopExitSvr
+		c.multihopExitSvr = ci.MultiopExitSvr
 	}
 
 	if c.obfsproxy && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
@@ -246,7 +247,7 @@ func (c *CmdConnect) Run() (retError error) {
 	}
 
 	// MULTI\SINGLE -HOP
-	if len(c.multiopExitSvr) > 0 {
+	if len(c.multihopExitSvr) > 0 {
 		if isOpenVPNDisabled {
 			return fmt.Errorf(helloResp.DisabledFunctions.OpenVPNError)
 		}
@@ -271,7 +272,7 @@ func (c *CmdConnect) Run() (retError error) {
 			return flags.BadParameter{Message: "specify correct entry server ID for multi-hop connection"}
 		}
 
-		exitSvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multiopExitSvr, ProtoName_OpenVPN, false, false, false, false, false)
+		exitSvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multihopExitSvr, ProtoName_OpenVPN, false, false, false, false, false)
 		if len(exitSvrs) == 0 || len(exitSvrs) > 1 {
 			return flags.BadParameter{Message: "specify correct exit server ID for multi-hop connection"}
 		}
@@ -283,7 +284,7 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 
 		c.gateway = entrySvr.gateway
-		c.multiopExitSvr = exitSvr.gateway
+		c.multihopExitSvr = exitSvr.gateway
 	} else {
 		//SINGLE-HOP
 		svrs = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
@@ -344,10 +345,10 @@ func (c *CmdConnect) Run() (retError error) {
 		c.gateway = srvID
 	}
 
-	// FW for current connection
+	// Firewall for current connection
 	req.FirewallOnDuringConnection = true
 	if c.firewallOff {
-		// check current WF state
+		// check current FW state
 		state, err := _proto.FirewallStatus()
 		if err != nil {
 			return fmt.Errorf("unable to check Firewall state: %w", err)
@@ -374,7 +375,7 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 	}
 	if c.antitracker || c.antitrackerHard {
-		atDNS, err := GetAntitrackerIP(c.antitrackerHard, len(c.multiopExitSvr) > 0, &servers)
+		atDNS, err := GetAntitrackerIP(c.antitrackerHard, len(c.multihopExitSvr) > 0, &servers)
 		if err != nil {
 			return err
 		}
@@ -428,9 +429,9 @@ func (c *CmdConnect) Run() (retError error) {
 		var exitSvr *apitypes.OpenvpnServerInfo = nil
 
 		// exit server
-		if len(c.multiopExitSvr) > 0 {
+		if len(c.multihopExitSvr) > 0 {
 			for _, s := range servers.OpenvpnServers {
-				if s.Gateway == c.multiopExitSvr {
+				if s.Gateway == c.multihopExitSvr {
 					exitSvr = &s
 					break
 				}
@@ -459,13 +460,13 @@ func (c *CmdConnect) Run() (retError error) {
 				req.OpenVpnParameters.Port.Port = destPort.port
 				req.OpenVpnParameters.Port.Protocol = destPort.IsTCP()
 
-				if len(c.multiopExitSvr) > 0 {
+				if len(c.multihopExitSvr) > 0 {
 					// get Multi-Hop ID
-					req.OpenVpnParameters.MultihopExitSrvID = strings.Split(c.multiopExitSvr, ".")[0]
+					req.OpenVpnParameters.MultihopExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
 				}
 				break
 			}
-			if len(c.multiopExitSvr) == 0 {
+			if len(c.multihopExitSvr) == 0 {
 				if entrySvr != nil {
 					break
 				}
@@ -478,11 +479,11 @@ func (c *CmdConnect) Run() (retError error) {
 		if entrySvr == nil {
 			return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
 		}
-		if len(c.multiopExitSvr) > 0 && exitSvr == nil {
-			return fmt.Errorf("serverID not found in servers list (%s)", c.multiopExitSvr)
+		if len(c.multihopExitSvr) > 0 && exitSvr == nil {
+			return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
 		}
 
-		if len(c.multiopExitSvr) == 0 {
+		if len(c.multihopExitSvr) == 0 {
 			fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s %s...\n", entrySvr.City, entrySvr.CountryCode, entrySvr.Country, entrySvr.Gateway, destPort.String())
 		} else {
 			fmt.Printf("[OpenVPN] Connecting Multi-Hop...\n")
@@ -515,7 +516,7 @@ func (c *CmdConnect) Run() (retError error) {
 		DNS:             c.dns,
 		Antitracker:     c.antitracker,
 		AntitrackerHard: c.antitrackerHard,
-		MultiopExitSvr:  c.multiopExitSvr})
+		MultiopExitSvr:  c.multihopExitSvr})
 
 	return nil
 }
