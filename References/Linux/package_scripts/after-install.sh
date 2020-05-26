@@ -7,6 +7,7 @@ INSTRUCTIONS_FILE="$IVPN_TMP/service_install.txt"
 mkdir -p $IVPN_TMP
 [ -e $INSTRUCTIONS_FILE ] && rm $INSTRUCTIONS_FILE
 
+
 silent() {
   "$@" > /dev/null 2>&1
 }
@@ -63,4 +64,29 @@ fi
 if $NEED_TO_SAVE_INSTRUCTIONS == true ; then
     echo $INSTALL_OUTPUT > $INSTRUCTIONS_FILE
     echo "[!] Service start instructions saved into file: '$INSTRUCTIONS_FILE'"
-fi 
+fi
+
+FILE_ACCID_TO_UPGRADE="/opt/ivpn/mutable/toUpgradeID.tmp"
+if [ -f $FILE_ACCID_TO_UPGRADE ]; then
+  # It is an upgrade.
+  # We need to re-login after installation finished.
+  # Read account ID
+  ACCID=$(cat $FILE_ACCID_TO_UPGRADE) || echo "[-] Finishing installation: Failed to read accountID to re-login"
+
+  # do not forget to remove temporary file
+  silent rm $FILE_ACCID_TO_UPGRADE
+
+  if [ ! -z "$ACCID" ]; then
+    # giving a chance for a daemon to fully start
+    sleep 1
+    echo "[+] Logging in ..."
+    /usr/local/bin/ivpn login $ACCID #||  echo "[-] Finishing installation: Failed to to re-login (try#1)"
+    if [ ! $? -eq 0 ]; then
+      echo "[-] Finishing installation: Failed to to re-login (try#1)"
+      echo "[ ] Retry ..."
+      sleep 3
+      /usr/local/bin/ivpn login $ACCID ||  echo "[-] Finishing installation: Failed to to re-login (try#2)"
+    fi
+  fi
+
+fi
