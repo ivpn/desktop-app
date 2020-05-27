@@ -77,7 +77,7 @@ type WireGuard struct {
 	configFilePath string
 	connectParams  ConnectionParams
 
-	// Must be implemeted (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
+	// Must be implemented (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	internals internalVariables
 }
 
@@ -103,14 +103,14 @@ func (wg *WireGuard) DestinationIPs() []net.IP {
 // Type just returns VPN type
 func (wg *WireGuard) Type() vpn.Type { return vpn.WireGuard }
 
-// Init performs basic initialisations before connection
+// Init performs basic initializations before connection
 // It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
 // (currently, in use by WireGuard(Windows))
 func (wg *WireGuard) Init() error {
 	return wg.init()
 }
 
-// Connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
+// Connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 func (wg *WireGuard) Connect(stateChan chan<- vpn.StateInfo) error {
 
 	disconnectDescription := ""
@@ -139,7 +139,7 @@ func (wg *WireGuard) IsPaused() bool {
 	return wg.isPaused()
 }
 
-// Pause doing required operation for Pause (remporary restoring default DNS)
+// Pause doing required operation for Pause (temporary restoring default DNS)
 func (wg *WireGuard) Pause() error {
 	return wg.pause()
 }

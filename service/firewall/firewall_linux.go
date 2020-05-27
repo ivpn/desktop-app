@@ -46,7 +46,7 @@ func init() {
 	allowedHosts = make(map[string]bool)
 }
 
-func implInitialise() error { return nil }
+func implInitialize() error { return nil }
 
 func implGetEnabled() (bool, error) {
 	err := shell.Exec(nil, platform.FirewallScript(), "-status")
@@ -241,7 +241,7 @@ func removeHostsFromExceptions(IPs []string) error {
 	return err
 }
 
-// removeAllHostsFromExceptions - Remove hosts (which are releted to a current connection) from exceptions
+// removeAllHostsFromExceptions - Remove hosts (which are related to a current connection) from exceptions
 // Note: some exceptions should stay without changes, they are marked as 'persistant'
 //		(has 'true' value in allowedHosts; eg.: LAN and Multicast connectivity)
 func removeAllHostsFromExceptions() error {

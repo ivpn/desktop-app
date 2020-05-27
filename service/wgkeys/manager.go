@@ -56,7 +56,7 @@ func CreateKeysManager(apiObj *api.API, wgToolBinPath string) *KeysManager {
 		_apiObj:           apiObj}
 }
 
-// KeysManager WireGaurd keys manager
+// KeysManager WireGuard keys manager
 type KeysManager struct {
 	_mutex            sync.Mutex
 	_service          IWgKeysChangeReceiver
@@ -166,11 +166,11 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	}
 
 	// Check update configuration
-	// (not blocked by mutex bacause in order to return immediately if nothing to do)
+	// (not blocked by mutex because in order to return immediately if nothing to do)
 	session, activePublicKey, _, _, lastUpdate, interval := m._service.WireGuardGetKeys()
 
 	// function to check if update required
-	isNecessaryIpdate := func() (bool, error) {
+	isNecessaryUpdate := func() (bool, error) {
 		if onlyUpdateIfNecessary == false {
 			return true, nil
 		}
@@ -188,7 +188,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		return true, nil
 	}
 
-	if haveToUpdate, err := isNecessaryIpdate(); haveToUpdate == false || err != nil {
+	if haveToUpdate, err := isNecessaryUpdate(); haveToUpdate == false || err != nil {
 		return err
 	}
 
@@ -197,7 +197,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 
 	// Check update configuration second time (locked by mutex)
 	session, activePublicKey, _, _, lastUpdate, interval = m._service.WireGuardGetKeys()
-	if haveToUpdate, err := isNecessaryIpdate(); haveToUpdate == false || err != nil {
+	if haveToUpdate, err := isNecessaryUpdate(); haveToUpdate == false || err != nil {
 		return err
 	}
 

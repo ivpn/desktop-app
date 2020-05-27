@@ -60,7 +60,7 @@ func (wg *WireGuard) init() error {
 	return nil
 }
 
-// connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
+// connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 	wg.internals.isRunning = true

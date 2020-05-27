@@ -53,8 +53,8 @@ const (
 	OperationDel Operation = 2
 )
 
-// implInitialise doing initialisation stuff (called on application start)
-func implInitialise() error {
+// implInitialize doing initialization stuff (called on application start)
+func implInitialize() error {
 	helpersDllPath := platform.WindowsNativeHelpersDllPath()
 	if len(helpersDllPath) == 0 {
 		return fmt.Errorf("unable to initialize DNS wrapper: helpers dll path not initialized")
@@ -253,7 +253,7 @@ func getMACAddrByIPinNetwork(addr net.IP, localAddrToSkip net.IP) (ret []net.Har
 		return ret, nil
 	}
 
-	// get interfaces which must be midified by new DNS value
+	// get interfaces which must be modified by new DNS value
 	networks, err := netinfo.GetAllLocalV4Addresses()
 	if err != nil {
 		return nil, fmt.Errorf("error receiving local V4 addresses : %w", err)

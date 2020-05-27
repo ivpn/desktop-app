@@ -67,8 +67,8 @@ func CreateAPI() (*API, error) {
 	return &API{}, nil
 }
 
-// IsAlternateIPsInitialised - checks if the alternate IP initialised
-func (a *API) IsAlternateIPsInitialised() bool {
+// IsAlternateIPsInitialized - checks if the alternate IP initialized
+func (a *API) IsAlternateIPsInitialized() bool {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
@@ -129,7 +129,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) 
 	*types.APIErrorResponse,
 	error) {
 
-	var sucessResp types.SessionNewResponse
+	var successResp types.SessionNewResponse
 	var errorLimitResp types.SessionNewErrorLimitResponse
 	var apiErr types.APIErrorResponse
 
@@ -150,10 +150,10 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) 
 
 	// success
 	if apiErr.Status == types.CodeSuccess {
-		if err := json.Unmarshal(data, &sucessResp); err != nil {
+		if err := json.Unmarshal(data, &successResp); err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
-		return &sucessResp, nil, &apiErr, nil
+		return &successResp, nil, &apiErr, nil
 	}
 
 	// Session limit check
@@ -173,7 +173,6 @@ func (a *API) SessionStatus(session string) (
 	*types.APIErrorResponse,
 	error) {
 
-	//var sucessResp types.ServiceStatusAPIResp
 	var resp types.SessionStatusResponse
 	var apiErr types.APIErrorResponse
 

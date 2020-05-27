@@ -56,9 +56,9 @@ const (
 	filterDName   = "IVPN Kill Switch filter"
 )
 
-// implInitialise doing initialisation stuff (called on application start)
-func implInitialise() error {
-	if err := winlib.Initialise(platform.WindowsWFPDllPath()); err != nil {
+// implInitialize doing initialization stuff (called on application start)
+func implInitialize() error {
+	if err := winlib.Initialize(platform.WindowsWFPDllPath()); err != nil {
 		return err
 	}
 
@@ -267,7 +267,7 @@ func doEnable() (retErr error) {
 	// add provider
 	pinfo, err := manager.GetProviderInfo(providerKey)
 	if err != nil {
-		return fmt.Errorf("failed to get privuder info: %w", err)
+		return fmt.Errorf("failed to get provider info: %w", err)
 	}
 	if !pinfo.IsInstalled {
 		if err = manager.AddProvider(provider); err != nil {

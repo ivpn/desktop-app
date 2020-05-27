@@ -84,7 +84,7 @@ func Launch() {
 			logger.Error(e)
 		}
 
-		logger.Info("Daemon failed to start due to initialisation errors")
+		logger.Info("Daemon failed to start due to initialization errors")
 		os.Exit(1)
 		return
 	}
@@ -132,7 +132,7 @@ func Launch() {
 		}
 	}()
 
-	// perform OS-specific preparetions (if necessary)
+	// perform OS-specific preparations (if necessary)
 	if err := doPrepareToRun(); err != nil {
 		logger.Panic(err.Error())
 	}

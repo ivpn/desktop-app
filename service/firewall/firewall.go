@@ -42,10 +42,10 @@ var (
 	isClientPaused             bool
 )
 
-// Initialise is doing initialisation stuff
+// Initialize is doing initialization stuff
 // Must be called on application start
-func Initialise() error {
-	return implInitialise()
+func Initialize() error {
+	return implInitialize()
 }
 
 // SetEnabled - change firewall state
@@ -77,7 +77,7 @@ func SetEnabled(enable bool) error {
 	return nil
 }
 
-// SetPersistant - set persistant firewall state and anable it if necessary
+// SetPersistant - set persistant firewall state and enable it if necessary
 func SetPersistant(persistant bool) error {
 	mutex.Lock()
 	defer mutex.Unlock()

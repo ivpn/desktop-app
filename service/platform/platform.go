@@ -143,8 +143,8 @@ func Init() (warnings []string, errors []error) {
 	return warnings, errors
 }
 
-// IsFileExists checking file avvailability. If file available - return nil
-// When expected file permissin defined (fileMode!=0) - returns error in case if file permission not equal to expected
+// IsFileExists checking file availability. If file available - return nil
+// When expected file permission defined (fileMode!=0) - returns error in case if file permission not equal to expected
 func IsFileExists(description string, file string, fileMode os.FileMode) (os.FileMode, error) {
 	if len(description) > 0 {
 		description = fmt.Sprintf("(%s)", description)
@@ -178,7 +178,7 @@ func IsFileExists(description string, file string, fileMode os.FileMode) (os.Fil
 }
 
 // CheckExecutableRights checks file has access permission to be writable
-// If file does not exist or it can be writable by someone alse except root - retun error
+// If file does not exist or it can be writable by someone else except root - returns error
 func CheckExecutableRights(description string, file string) error {
 	if len(file) > 0 {
 		// 'file' can be presented as executable with arguments (e.g. 'dns.sh -up')
@@ -226,7 +226,7 @@ func SettingsFile() string {
 	return settingsFile
 }
 
-// ServicePortFile parh to service port file
+// ServicePortFile path to service port file
 func ServicePortFile() string {
 	return servicePortFile
 }

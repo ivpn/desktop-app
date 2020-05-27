@@ -72,9 +72,9 @@ func (s *serversUpdater) GetServers() (*types.ServersInfoResponse, error) {
 	if err != nil {
 		log.Warning(err)
 
-		if s.api.IsAlternateIPsInitialised() == false {
-			// Probably we can not use servers info because servers.json has wrong privilages (blocking potential vulnerability)
-			// Trying to initialise only API IP addresses
+		if s.api.IsAlternateIPsInitialized() == false {
+			// Probably we can not use servers info because servers.json has wrong privileges (blocking potential vulnerability)
+			// Trying to initialize only API IP addresses
 			// It is safe, because we are checking TLS server name for "api.ivpn.net" when accessing API (https)
 			if apiIPs != nil && len(apiIPs) > 0 {
 				s.api.SetAlternateIPs(apiIPs)
@@ -124,7 +124,7 @@ func (s *serversUpdater) updateServers() (*types.ServersInfoResponse, error) {
 	return servers, nil
 }
 
-// UpdateNotifierChannel returns channel which is nitifying when servers was updated
+// UpdateNotifierChannel returns channel which is notifying when servers was updated
 func (s *serversUpdater) UpdateNotifierChannel() chan struct{} {
 	return s.updatedNotifyChan
 }
@@ -145,7 +145,7 @@ func readServersFromCache() (svrs *types.ServersInfoResponse, apiIPs []string, e
 
 	servers := new(types.ServersInfoResponse)
 	if err := json.Unmarshal(data, servers); err != nil {
-		return nil, nil, fmt.Errorf("failed to unmsrshal servers cache file: %w", err)
+		return nil, nil, fmt.Errorf("failed to unmarshal servers cache file: %w", err)
 	}
 
 	// check servers.json file has correct access rights (can we use it's data?)

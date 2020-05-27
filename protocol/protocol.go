@@ -62,10 +62,10 @@ type Service interface {
 	// - err: error
 	OnControlConnectionClosed() (isServiceMustBeClosed bool, err error)
 
-	// GetDisabledFunctions returns info about funtions which are disabled
+	// GetDisabledFunctions returns info about functions which are disabled
 	// Some functionality can be not accessible
 	// It can happen, for example, if some external binaries not installed
-	// (e.g. obfsproxy or WireGaurd on Linux)
+	// (e.g. obfsproxy or WireGuard on Linux)
 	GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error)
 
 	ServersList() (*apitypes.ServersInfoResponse, error)
@@ -171,14 +171,14 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 		p._service.Disconnect()
 	}()
 
-	adrr := fmt.Sprintf("127.0.0.1:0")
+	addr := fmt.Sprintf("127.0.0.1:0")
 	// Initializing listener
-	tcpAddr, err := net.ResolveTCPAddr("tcp4", adrr)
+	tcpAddr, err := net.ResolveTCPAddr("tcp4", addr)
 	if err != nil {
 		return fmt.Errorf("failed to resolve TCP address: %w", err)
 	}
 
-	// strt listener
+	// start listener
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
 		return fmt.Errorf("failed to start TCP listener: %w", err)
@@ -201,7 +201,7 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 		log.Info("IVPN service stopped")
 	}()
 
-	// infinite loop of procesing IVPN client connection
+	// infinite loop of processing IVPN client connection
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -217,7 +217,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 	// 		false (default) - VPN disconnects when client disconnects from a daemon
 	// 		true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
 	keepAlone := false
-	// The first requiest from a client should be 'Hello' request with correct secret
+	// The first request from a client should be 'Hello' request with correct secret
 	// In case of wrong secret - the daemon drops connection
 	isAuthenticated := false
 
@@ -298,7 +298,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 
 			cmd, err := types.GetCommandBase(messageData)
 			if err != nil {
-				log.Error(fmt.Sprintf("%sFailed to parse initialisation request:", p.connLogID(conn)), err)
+				log.Error(fmt.Sprintf("%sFailed to parse initialization request:", p.connLogID(conn)), err)
 				return
 			}
 			// ensure if client use correct secret
@@ -320,7 +320,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 			isAuthenticated = true
 		}
 
-		// Processing requests from client (in seperate routine)
+		// Processing requests from client (in separate routine)
 		go p.processRequest(conn, message)
 	}
 }
@@ -743,7 +743,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			// stop all go-routines related to this connections
 			close(isExitChan)
 
-			// Do not send "Disconnected" notification if we are giong to establish new connection immediately
+			// Do not send "Disconnected" notification if we are going to establish new connection immediately
 			if cnt, _ := p.vpnConnectReqCounter(); cnt == 1 || p._disconnectRequested {
 				p._lastVPNState = vpn.NewStateInfo(vpn.DISCONNECTED, "")
 
@@ -795,7 +795,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 					switch state.State {
 					case vpn.CONNECTED:
-						// Do not send "Connected" notification if we are giong to establish new connection immediately
+						// Do not send "Connected" notification if we are going to establish new connection immediately
 						if cnt, _ := p.vpnConnectReqCounter(); cnt == 1 || p._disconnectRequested {
 							p.notifyClients(&types.ConnectedResp{
 								TimeSecFrom1970: state.Time,

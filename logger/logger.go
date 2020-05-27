@@ -370,7 +370,7 @@ func createLogFile() error {
 			return fmt.Errorf("failed to create log-file: %w", err)
 		}
 	} else {
-		return fmt.Errorf("logfile name not initialised")
+		return fmt.Errorf("logfile name not initialized")
 	}
 
 	return nil

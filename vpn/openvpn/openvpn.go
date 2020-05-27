@@ -145,7 +145,7 @@ func (o *OpenVPN) DestinationIPs() []net.IP {
 // Type just returns VPN type
 func (o *OpenVPN) Type() vpn.Type { return vpn.OpenVPN }
 
-// Init performs basic initialisations before connection
+// Init performs basic initializations before connection
 // It is usefull, for example:
 //	- for WireGuard(Windows) - to ensure that WG service is fully uninstalled
 //	- for OpenVPN(Linux) - to ensure that OpenVPN has correct version
@@ -153,7 +153,7 @@ func (o *OpenVPN) Init() error {
 	return o.implInit()
 }
 
-// Connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
+// Connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 
 	// Note: Disconnect() function will wait until VPN fully disconnects
@@ -170,7 +170,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 	// marker to stop state-forward routine
 	stopStateChan := make(chan struct{})
 	// channel will be analyzed for state change. States will be forwarded to channel above ( to 'stateChan')
-	intarnalStateChan := make(chan vpn.StateInfo, 1)
+	internalStateChan := make(chan vpn.StateInfo, 1)
 
 	// EXIT: stopping everything: Management interface, Obfsproxy
 	defer func() {
@@ -218,7 +218,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		var stateInf vpn.StateInfo
 		for {
 			select {
-			case stateInf = <-intarnalStateChan:
+			case stateInf = <-internalStateChan:
 				// save current state
 				o.state = stateInf.State
 
@@ -266,7 +266,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 			return errors.New("unable to initialize OpenVPN (obfsproxy not started): " + err.Error())
 		}
 
-		// detect opbfsproxy ptocess stop
+		// detect obfsproxy ptocess stop
 		routinesWaiter.Add(1)
 		go func() {
 			defer routinesWaiter.Done()
@@ -287,7 +287,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 	}
 
 	// start new management interface
-	mi, err := StartManagementInterface(o.connectParams.username, o.connectParams.password, intarnalStateChan)
+	mi, err := StartManagementInterface(o.connectParams.username, o.connectParams.password, internalStateChan)
 	if err != nil {
 		return fmt.Errorf("failed to start MI: %w", err)
 	}
@@ -339,7 +339,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		}
 	}
 
-	// SYNCHRONOUSLY execute openvpn process (wait untill it finished)
+	// SYNCHRONOUSLY execute openvpn process (wait until it finished)
 	if err = shell.ExecAndProcessOutput(log, outProcessFunc, "", o.binaryPath, "--config", o.configPath); err != nil {
 		if strOut.Len() > 0 {
 			log.Info(fmt.Sprintf("OpenVPN start ERROR. Output: %s...", strOut.String()))
@@ -360,8 +360,8 @@ func (o *OpenVPN) Disconnect() error {
 		return fmt.Errorf("disconnection error : %w", err)
 	}
 
-	// waiting untill process is running
-	// (ensure all disconnection operations performed (e.g. obgsproxy is stopped, etc. ...))
+	// waiting until process is running
+	// (ensure all disconnection operations performed (e.g. obfsproxy is stopped, etc. ...))
 	o.runningWG.Wait()
 
 	return nil
@@ -382,7 +382,7 @@ func (o *OpenVPN) doDisconnect() error {
 	return mi.SendDisconnect()
 }
 
-// Pause doing required operation for Pause (remporary restoring default DNS)
+// Pause doing required operation for Pause (temporary restoring default DNS)
 func (o *OpenVPN) Pause() error {
 	o.isPaused = true
 

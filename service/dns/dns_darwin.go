@@ -30,8 +30,8 @@ import (
 	"github.com/ivpn/desktop-app-daemon/shell"
 )
 
-// implInitialise doing initialisation stuff (called on application start)
-func implInitialise() error {
+// implInitialize doing initialization stuff (called on application start)
+func implInitialize() error {
 	return nil
 }
 

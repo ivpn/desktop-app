@@ -22,7 +22,7 @@
 
 package preferences
 
-// AccountStatus conatins information about current account
+// AccountStatus contains information about current account
 type AccountStatus struct {
 	Active         bool
 	ActiveUntil    int64
