@@ -28,6 +28,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/api"
@@ -67,10 +68,26 @@ func Launch() {
 	warnings, errors := platform.Init()
 	logger.Init(platform.LogFile())
 
-	// initialize logging according to service preferences
-	var prefs preferences.Preferences
-	if err := prefs.LoadPreferences(); err == nil {
-		logger.Enable(prefs.IsLogging)
+	// Enable logging (if necessary)
+	// Logging can be enabled from command lone (-logging)
+	// or from previously saved daemon references
+	isLoggingEnabledArgument := false
+	for _, arg := range os.Args {
+		arg = strings.ToLower(arg)
+		if arg == "-logging" || arg == "--logging" {
+			isLoggingEnabledArgument = true
+			break
+		}
+	}
+	if isLoggingEnabledArgument {
+		logger.Enable(true)
+		logger.Info("Loggin enabled (forced by command line argument)")
+	} else {
+		// initialize logging according to service preferences
+		var prefs preferences.Preferences
+		if err := prefs.LoadPreferences(); err == nil {
+			logger.Enable(prefs.IsLogging)
+		}
 	}
 
 	if len(warnings) > 0 {

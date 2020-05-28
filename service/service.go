@@ -118,8 +118,9 @@ func (s *Service) init() error {
 		return fmt.Errorf("service initialization error : %w", err)
 	}
 
+	// Logging mus be already initialised (by launcher). Do nothing here.
 	// Init logger (if not initialized before)
-	logger.Enable(s._preferences.IsLogging)
+	//logger.Enable(s._preferences.IsLogging)
 
 	// Init firewall
 	if err := firewall.AllowLAN(s._preferences.IsFwAllowLAN, s._preferences.IsFwAllowLANMulticast); err != nil {

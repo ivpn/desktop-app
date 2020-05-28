@@ -11,9 +11,9 @@
             "mode": "auto",
             "program": "${workspaceRoot}",
             "env": {},
-            "args": [],
-            "buildFlags": "-tags debug" // DEBUG MODE
-            //"buildFlags": ""          // RELEASE
+            "args": ["-logging"],
+            "buildFlags": "-tags debug"
+            //"buildFlags": ""
         }
     ]
 }
