@@ -56,21 +56,21 @@ func init() {
 }
 
 const (
-	// SessionCheckInterval - the interval for periodical ckeck session status
+	// SessionCheckInterval - the interval for periodical check session status
 	SessionCheckInterval time.Duration = time.Hour * 6
 )
 
 // Service - IVPN service
 type Service struct {
-	_evtReceiver           IServiceEventsReceiver
-	_api                   *api.API
-	_serversUpdater        IServersUpdater
-	_netChangeDetector     INetChangeDetector
-	_wgKeysMgr             IWgKeysManager
-	_vpn                   vpn.Process
-	_vpnReconnectRequested bool
-	_preferences           preferences.Preferences
-	_connectMutex          sync.Mutex
+	_evtReceiver       IServiceEventsReceiver
+	_api               *api.API
+	_serversUpdater    IServersUpdater
+	_netChangeDetector INetChangeDetector
+	_wgKeysMgr         IWgKeysManager
+	_vpn               vpn.Process
+	_vpnKeepConnected  bool // when true - reconnects immediately after disconnection
+	_preferences       preferences.Preferences
+	_connectMutex      sync.Mutex
 
 	// Note: Disconnect() function will wait until VPN fully disconnects
 	_done chan struct{}
@@ -96,7 +96,7 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 		_wgKeysMgr:         wgKeysMgr}
 
 	if err := serv.init(); err != nil {
-		return nil, fmt.Errorf("service initialisaton error : %w", err)
+		return nil, fmt.Errorf("service initialization error : %w", err)
 	}
 
 	return serv, nil
@@ -110,12 +110,12 @@ func (s *Service) init() error {
 		s._preferences.SavePreferences()
 	}
 
-	if err := dns.Initialise(); err != nil {
-		log.Error(fmt.Sprintf("failed to initialise DNS : %s", err))
+	if err := dns.Initialize(); err != nil {
+		log.Error(fmt.Sprintf("failed to initialize DNS : %s", err))
 	}
 
-	if err := firewall.Initialise(); err != nil {
-		return fmt.Errorf("service initialisaton error : %w", err)
+	if err := firewall.Initialize(); err != nil {
+		return fmt.Errorf("service initialization error : %w", err)
 	}
 
 	// Init logger (if not initialized before)
@@ -135,14 +135,14 @@ func (s *Service) init() error {
 
 	// start WireGuard keys rotation
 	if err := s._wgKeysMgr.Init(s); err != nil {
-		log.Error("Failed to intialize WG keys rotation:", err)
+		log.Error("Failed to initialize WG keys rotation:", err)
 	} else {
 		if err := s._wgKeysMgr.StartKeysRotation(); err != nil {
 			log.Error("Failed to start WG keys rotation:", err)
 		}
 	}
 
-	// Check session status (start as go-routine to do not block service initialisation)
+	// Check session status (start as go-routine to do not block service initialization)
 	go s.RequestSessionStatus()
 	// Start session status checker
 	s.startSessionChecker()
@@ -171,28 +171,28 @@ func (s *Service) ServersList() (*types.ServersInfoResponse, error) {
 	return s._serversUpdater.GetServers()
 }
 
-// ServersUpdateNotifierChannel returns channel which is nitifying when servers was updated
+// ServersUpdateNotifierChannel returns channel which is notifying when servers was updated
 func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 	return s._serversUpdater.UpdateNotifierChannel()
 }
 
-// GetDisabledFunctions returns info about funtions which are disabled
+// GetDisabledFunctions returns info about functions which are disabled
 // Some functionality can be not accessible
 // It can happen, for example, if some external binaries not installed
-// (e.g. obfsproxy or WireGaurd on Linux)
+// (e.g. obfsproxy or WireGuard on Linux)
 func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
-	if err := filerights.CheckFileAccessRigthsExecutable(platform.OpenVpnBinaryPath()); err != nil {
+	if err := filerights.CheckFileAccessRightsExecutable(platform.OpenVpnBinaryPath()); err != nil {
 		ovpnErr = fmt.Errorf("OpenVPN binary: %w", err)
 	}
 
-	if err := filerights.CheckFileAccessRigthsExecutable(platform.ObfsproxyStartScript()); err != nil {
+	if err := filerights.CheckFileAccessRightsExecutable(platform.ObfsproxyStartScript()); err != nil {
 		obfspErr = fmt.Errorf("obfsproxy binary: %w", err)
 	}
 
-	if err := filerights.CheckFileAccessRigthsExecutable(platform.WgBinaryPath()); err != nil {
+	if err := filerights.CheckFileAccessRightsExecutable(platform.WgBinaryPath()); err != nil {
 		wgErr = fmt.Errorf("WireGuard binary: %w", err)
 	} else {
-		if err := filerights.CheckFileAccessRigthsExecutable(platform.WgToolBinaryPath()); err != nil {
+		if err := filerights.CheckFileAccessRightsExecutable(platform.WgToolBinaryPath()); err != nil {
 			wgErr = fmt.Errorf("WireGuard tools binary: %w", err)
 		}
 	}
@@ -232,7 +232,7 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		extraParamsFile := platform.OpenvpnUserParamsFile()
 
 		if helpers.FileExists(extraParamsFile) {
-			if err := filerights.CheckFileAccessRigthsConfig(extraParamsFile); err != nil {
+			if err := filerights.CheckFileAccessRightsConfig(extraParamsFile); err != nil {
 				log.Info("NOTE! User-defined OpenVPN parameters are ignored! %w", err)
 				os.Remove(extraParamsFile)
 			} else {
@@ -343,31 +343,63 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 }
 
 func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
-	defer func() { s._vpnReconnectRequested = false }()
+	defer func() { s._vpnKeepConnected = false }()
 
 	prefs := s.Preferences()
 	if prefs.Session.IsLoggedIn() == false {
 		return ErrorNotLoggedIn{}
 	}
 
+	// not necessary to keep connection until we are not connected
+	s._vpnKeepConnected = false
+
+	// no delay before first reconnection
+	delayBeforeReconnect := 0 * time.Second
+
 	for {
-		s._vpnReconnectRequested = false
 		// create new VPN object
 		vpnObj, err := createVpnObj()
 		if err != nil {
 			return fmt.Errorf("failed to create VPN object: %w", err)
 		}
 
+		lastConnectionTryTime := time.Now()
+
 		// start connection
 		err = s.connect(vpnObj, manualDNS, firewallDuringConnection, stateChan)
 		if err != nil {
-			return err
+			log.Error(fmt.Sprintf("Connection error: %s", err))
+			if s._vpnKeepConnected == false {
+				return err
+			}
 		}
 
 		// retry, if reconnection requested
-		if s._vpnReconnectRequested {
-			log.Info("Reconnecting...")
-			continue
+		if s._vpnKeepConnected {
+			// notifying clients about reconnection
+			stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "Reconnecting due to disconnection")
+
+			// no delay before reconnection (if last connection was long time ago)
+			if time.Now().After(lastConnectionTryTime.Add(time.Second * 30)) {
+				delayBeforeReconnect = 0
+			}
+
+			if delayBeforeReconnect > 0 {
+				log.Info(fmt.Sprintf("Reconnecting (pause %s)...", delayBeforeReconnect))
+				// do delay before next reconnection
+				pauseTill := time.Now().Add(delayBeforeReconnect)
+				for time.Now().Before(pauseTill) && s._vpnKeepConnected {
+					time.Sleep(time.Millisecond * 10)
+				}
+			} else {
+				log.Info("Reconnecting...")
+			}
+
+			if s._vpnKeepConnected {
+				// consecutive reconnections has delay 5 seconds
+				delayBeforeReconnect = time.Second * 5
+				continue
+			}
 		}
 
 		// stop loop
@@ -382,7 +414,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	var connectRoutinesWaiter sync.WaitGroup
 
 	// stop active connection (if exists)
-	if err := s.Disconnect(); err != nil {
+	if err := s.disconnect(s._vpnKeepConnected); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
 	}
 
@@ -413,7 +445,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	stopChannel := make(chan bool, 1)
 
 	fwInitState := false
-	// finalyze everything
+	// finalize everything
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("Panic on VPN connection: ", r)
@@ -461,9 +493,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	// goroutine: process + forward VPN state change
 	connectRoutinesWaiter.Add(1)
 	go func() {
-		log.Info("Vpn state forwarder started")
+		log.Info("VPN state forwarder started")
 		defer func() {
-			log.Info("Vpn state forwarder stopped")
+			log.Info("VPN state forwarder stopped")
 			connectRoutinesWaiter.Done()
 		}()
 
@@ -490,9 +522,12 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 					s._netChangeDetector.Stop()
 
 				case vpn.CONNECTED:
-					// start routing chnage detection
+					// since we are connected - keep connection (reconnect if unexpected disconnection)
+					s._vpnKeepConnected = true
+
+					// start routing change detection
 					if netInterface, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
-						log.Error(fmt.Sprintf("Unable to inialize routing change detection. Failed to get interface '%s'", state.ClientIP.String()))
+						log.Error(fmt.Sprintf("Unable to initialize routing change detection. Failed to get interface '%s'", state.ClientIP.String()))
 					} else {
 
 						log.Info("Starting route change detection")
@@ -525,8 +560,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 				if s._vpn.IsPaused() {
 					log.Info("Route change ignored due to Paused state.")
 				} else {
-					log.Info("Route change detected. Disconnecting...")
 					// Disconnect (client will request then reconnection, because of unexpected disconnection)
+					// reconnect in separate routine (do not block current thread)
 					go func() {
 						defer func() {
 							if r := recover(); r != nil {
@@ -534,8 +569,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 							}
 						}()
 
-						s._vpnReconnectRequested = true
-						s.Disconnect() // use separate routine to disconnect
+						log.Info("Route change detected. Reconnecting...")
+						s.reconnect()
 					}()
 
 					isRuning = false
@@ -546,14 +581,14 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 		}
 	}()
 
-	log.Info("Initialising...")
+	log.Info("Initializing...")
 	if err := vpnProc.Init(); err != nil {
-		return fmt.Errorf("failed to initialise VPN object: %w", err)
+		return fmt.Errorf("failed to initialize VPN object: %w", err)
 	}
 
 	log.Info("Initializing firewall")
 	if firewallDuringConnection == true {
-		// in case to ebale FW for this connection parameter:
+		// in case to enable FW for this connection parameter:
 		// - check initial FW state
 		// - if it disabled - enable it (will be disabled on disconnect)
 		fw, err := firewall.GetEnabled()
@@ -591,7 +626,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	}
 
 	log.Info("Starting VPN process")
-	// connect: start VPN process and wait untill it finishes
+	// connect: start VPN process and wait until it finishes
 	err = vpnProc.Connect(internalStateChan)
 	if err != nil {
 		err = fmt.Errorf("connection error: %w", err)
@@ -602,16 +637,32 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	return nil
 }
 
+func (s *Service) reconnect() {
+	reconnect := true
+	s.disconnect(reconnect)
+}
+
 // Disconnect disconnect vpn
 func (s *Service) Disconnect() error {
+	reconnect := false
+	return s.disconnect(reconnect)
+}
+
+func (s *Service) disconnect(reconnect bool) error {
+	// it is important to set _vpnKeepConnected before VPN object availability check
+	s._vpnKeepConnected = reconnect
+
 	vpn := s._vpn
 	if vpn == nil {
 		return nil
 	}
 
 	done := s._done
-
-	log.Info("Disconnecting...")
+	if s._vpnKeepConnected {
+		log.Info("Disconnecting (going to reconnect)...")
+	} else {
+		log.Info("Disconnecting...")
+	}
 
 	// stop detections for routing changes
 	s._netChangeDetector.Stop()
@@ -700,7 +751,7 @@ func (s *Service) ResetManualDNS() error {
 // PingServers ping vpn servers
 func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, error) {
 
-	// do not allow multimple ping request simultaneously
+	// do not allow multiple ping request simultaneously
 	if s._isServersPingInProgress {
 		log.Info("Servers pinging skipped. Ping already in progress")
 		return nil, nil
@@ -762,9 +813,9 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 		stat := pinger.Statistics()
 
 		// Pings filtering ...
-		// there is a chance that one ping responce is much higher than the rest recived responses
+		// there is a chance that one ping responce is much higher than the rest received responses
 		// This, for example, observed on some virtual machines. The first ping result is catastrophically higher than the rest
-		// Hera we are ignoring such situations (ignoring higest pings when necessary)
+		// Hera we are ignoring such situations (ignoring highest pings when necessary)
 		var avgPing time.Duration = 0
 		maxAllowedTTL := float32(stat.AvgRtt) * 1.3
 		if stat.PacketLoss < 0 || float32(stat.MaxRtt) < maxAllowedTTL {
@@ -795,7 +846,7 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 		//resultChan <- pair{host: ip, ping: int(stat.AvgRtt / time.Millisecond)}
 	}
 
-	log.Info("Pingging servers...")
+	log.Info("Pinging servers...")
 
 	// ping each OpenVPN server
 	for _, s := range servers.OpenvpnServers {
@@ -951,7 +1002,7 @@ func (s *Service) setCredentials(accountID, session, vpnUser, vpnPass, wgPublicK
 		s._preferences.SavePreferences()
 	}
 
-	// notify clients about sesssion update
+	// notify clients about session update
 	s._evtReceiver.OnServiceSessionChanged()
 
 	// success
@@ -995,7 +1046,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 
 		}
 	}()
-	sucessResp, errorLimitResp, apiErr, err := s._api.SessionNew(accountID, publicKey, forceLogin)
+	successResp, errorLimitResp, apiErr, err := s._api.SessionNew(accountID, publicKey, forceLogin)
 
 	apiCode = 0
 	if apiErr != nil {
@@ -1018,20 +1069,20 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 		return apiCode, "", accountInfo, err
 	}
 
-	if sucessResp == nil {
+	if successResp == nil {
 		return apiCode, "", accountInfo, fmt.Errorf("unexpected error when creating a new session")
 	}
 
 	// get account status info
-	accountInfo = s.createAccountStatus(sucessResp.ServiceStatus)
+	accountInfo = s.createAccountStatus(successResp.ServiceStatus)
 
 	s.setCredentials(accountID,
-		sucessResp.Token,
-		sucessResp.VpnUsername,
-		sucessResp.VpnPassword,
+		successResp.Token,
+		successResp.VpnUsername,
+		successResp.VpnPassword,
 		publicKey,
 		privateKey,
-		sucessResp.WireGuard.IPAddress, 0)
+		successResp.WireGuard.IPAddress, 0)
 
 	return apiCode, "", accountInfo, nil
 }
@@ -1062,7 +1113,7 @@ func (s *Service) logOut(needToDeleteOnBackend bool) error {
 
 	s._preferences.SetSession("", "", "", "", "", "", "")
 
-	// notify clients about sesssion update
+	// notify clients about session update
 	s._evtReceiver.OnServiceSessionChanged()
 
 	return nil
@@ -1152,7 +1203,7 @@ func (s *Service) createAccountStatus(apiResp types.ServiceStatusAPIResp) prefer
 }
 
 func (s *Service) startSessionChecker() {
-	// ensure that session achecker is not running
+	// ensure that session checker is not running
 	s.stopSessionChecker()
 
 	session := s.Preferences().Session
@@ -1203,11 +1254,11 @@ func (s *Service) stopSessionChecker() {
 func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP net.IP) {
 	s._preferences.UpdateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP.String())
 
-	// notify clients about sesssion (wg keys) update
+	// notify clients about session (wg keys) update
 	s._evtReceiver.OnServiceSessionChanged()
 
 	go func() {
-		// reconnect in separate routinr (do not block current thread)
+		// reconnect in separate routine (do not block current thread)
 		vpnObj := s._vpn
 		if vpnObj == nil {
 			return
@@ -1219,9 +1270,7 @@ func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, 
 			return
 		}
 		log.Info("Reconnecting WireGuard connection with new credentials...")
-		s._vpnReconnectRequested = true
-
-		s.Disconnect()
+		s.reconnect()
 	}()
 }
 
@@ -1235,7 +1284,7 @@ func (s *Service) WireGuardSetKeysRotationInterval(interval int64) {
 		log.Error(err)
 	}
 
-	// notify clients about sesssion (wg keys) update
+	// notify clients about session (wg keys) update
 	s._evtReceiver.OnServiceSessionChanged()
 }
 

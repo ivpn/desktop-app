@@ -62,7 +62,7 @@ func doStopped() {
 	logger.Debug("Unloaded libivpn")
 }
 
-// checkIsAdmin - check is application running with root privilages
+// checkIsAdmin - check is application running with root privileges
 func doCheckIsAdmin() bool {
 	uid := os.Geteuid()
 	if uid != 0 {

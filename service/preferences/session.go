@@ -28,7 +28,7 @@ import (
 	"time"
 )
 
-// SessionStatus conatins information about current session
+// SessionStatus contains information about current session
 type SessionStatus struct {
 	AccountID          string
 	Session            string `json:",omitempty"`
@@ -38,7 +38,7 @@ type SessionStatus struct {
 	WGPrivateKey       string `json:",omitempty"`
 	WGLocalIP          string
 	WGKeyGenerated     time.Time
-	WGKeysRegenInerval time.Duration
+	WGKeysRegenInerval time.Duration // syntax error in variable name. Keeping it as is for compatibility with previous versions
 }
 
 // IsLoggedIn returns 'true' when user logged-in

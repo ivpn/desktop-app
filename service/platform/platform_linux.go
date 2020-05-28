@@ -54,7 +54,7 @@ func doOsInit() (warnings []string, errors []error) {
 		errors = make([]error, 0)
 	}
 
-	if err := checkFileAccessRigthsExecutable("firewallScript", firewallScript); err != nil {
+	if err := checkFileAccessRightsExecutable("firewallScript", firewallScript); err != nil {
 		errors = append(errors, err)
 	}
 

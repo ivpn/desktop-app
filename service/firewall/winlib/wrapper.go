@@ -92,8 +92,8 @@ var (
 	fWfpFiltersDeleteByProviderKey    *syscall.LazyProc
 )
 
-// Initialise doing initialisation stuff (called on application start)
-func Initialise(wfpDllPath string) error {
+// Initialize doing initialization stuff (called on application start)
+func Initialize(wfpDllPath string) error {
 	if len(wfpDllPath) == 0 {
 		return fmt.Errorf("unable to initialize firewall wrapper: firewall dll path not initialized")
 	}

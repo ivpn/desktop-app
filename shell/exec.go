@@ -33,7 +33,7 @@ import (
 )
 
 // Exec - execute external process
-// Synchronous operation. Waits untill proces finished
+// Synchronous operation. Waits until process finished
 func Exec(logger *logger.Logger, name string, args ...string) error {
 	if logger != nil {
 		logger.Info("Shell exec: ", append([]string{name}, args...))
@@ -79,7 +79,7 @@ func GetCmdExitCode(err error) (retCode int, retErr error) {
 }
 
 // ExecAndProcessOutput - execute external process
-// Synchronous operation. Waits untill proces finished
+// Synchronous operation. Waits until process finished
 func ExecAndProcessOutput(logger *logger.Logger, outProcessFunc func(text string, isError bool), textToHideInLog string, name string, args ...string) error {
 	outChan := make(chan string, 1)
 	errChan := make(chan string, 1)
@@ -126,7 +126,7 @@ func ExecAndProcessOutput(logger *logger.Logger, outProcessFunc func(text string
 }
 
 // ExecEx - execute external process
-// Synchronous operation. Waits untill proces finished
+// Synchronous operation. Waits until process finished
 func ExecEx(logger *logger.Logger, outChan chan<- string, errChan chan<- string, textToHideInLog string, name string, args ...string) error {
 	if logger != nil {
 		logtext := strings.Join(append([]string{name}, args...), " ")

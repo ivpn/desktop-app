@@ -82,7 +82,7 @@ func (wg *WireGuard) init() error {
 	return wg.uninstallService()
 }
 
-// connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
+// connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	if wg.internals.isDisconnectRequested {
 		return fmt.Errorf("disconnection already requested for this object. To make a new connection, please, initialize new one")
@@ -126,7 +126,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 	wg.internals.pauseRequireChan = make(chan operation, 1)
 
-	// this method is synchronous. Waiting untill service stop
+	// this method is synchronous. Waiting until service stop
 	// (periodically checking of service status)
 	// TODO: Probably we should avoid checking the service state in a loop (with constant delay). Think about it.
 	for ; ; time.Sleep(time.Millisecond * 50) {
@@ -255,7 +255,7 @@ func (wg *WireGuard) setManualDNS(addr net.IP) error {
 
 	wg.internals.manualDNS = addr
 
-	if runnig, err := wg.isServiceRunning(); err != nil || runnig == false {
+	if running, err := wg.isServiceRunning(); err != nil || running == false {
 		return err
 	}
 
@@ -273,7 +273,7 @@ func (wg *WireGuard) resetManualDNS() error {
 
 	wg.internals.manualDNS = nil
 
-	if runnig, err := wg.isServiceRunning(); err != nil || runnig == false {
+	if running, err := wg.isServiceRunning(); err != nil || running == false {
 		return err
 	}
 
@@ -306,7 +306,7 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 	// TODO: check if we need it for this platform
 	// Same as "0.0.0.0/0" but such type of configuration is disabling internal WireGuard-s Firewall
 	// It blocks everything except WireGuard traffic.
-	// We need to disable WireGurd-s firewall because we have our own implementation of firewall.
+	// We need to disable WireGuard-s firewall because we have our own implementation of firewall.
 	//  For details, refer to WireGuard-windows sources: tunnel\ifaceconfig.go (enableFirewall(...) method)
 	peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1")
 
@@ -400,7 +400,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	}
 	defer m.Disconnect()
 
-	// waiting for untill service installed
+	// waiting for until service installed
 	log.Info("Waiting for service install...")
 	serviceName := wg.getServiceName()
 	for started := time.Now(); time.Since(started) < _waitServiceInstallTimeout; time.Sleep(time.Millisecond * 10) {
@@ -442,7 +442,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	// WireGuard interface is configured to correct DNS.
 	// But we must to be sure if non-ivpn interfaces are configured to our DNS
 	// (it needed ONLY if DNS IP located in local network)
-	// Also, it is neded to inform 'dns' package about last DNS value (used by 'protocol' to ptovide dns status to clients)
+	// Also, it is needed to inform 'dns' package about last DNS value (used by 'protocol' to ptovide dns status to clients)
 	manualDNS := wg.internals.manualDNS
 	if manualDNS != nil {
 		dns.SetManual(manualDNS, nil)
@@ -521,7 +521,7 @@ func (wg *WireGuard) uninstallService() error {
 		}
 
 		// Sometimes a call "/uninstalltunnelservice" has no result
-		// Here we are retrying to perfoem uninstall request (retry interval is increasing each time)
+		// Here we are retrying to perform uninstall request (retry interval is increasing each time)
 		if isServFound && state == svc.Running && time.Since(lastUninstallRetryTime) > nextUninstallRetryTime {
 			log.Info("Retry: uninstalling service...")
 			err = shell.Exec(nil, wg.binaryPath, "/uninstalltunnelservice", wg.getTunnelName())

@@ -134,7 +134,7 @@ func (p *Preferences) LoadPreferences() error {
 
 	if p.Session.WGKeysRegenInerval <= 0 {
 		p.Session.WGKeysRegenInerval = DefaultWGKeysInterval
-		log.Info(fmt.Sprintf("default value for preferences: WgKeysRegenInervalDays=%v", p.Session.WGKeysRegenInerval))
+		log.Info(fmt.Sprintf("default value for preferences: WgKeysRegenIntervalDays=%v", p.Session.WGKeysRegenInerval))
 		p.SavePreferences()
 	}
 
@@ -154,7 +154,7 @@ func (p *Preferences) setSession(accountID string,
 		Session:            strings.TrimSpace(session),
 		OpenVPNUser:        strings.TrimSpace(vpnUser),
 		OpenVPNPass:        strings.TrimSpace(vpnPass),
-		WGKeysRegenInerval: p.Session.WGKeysRegenInerval} // keep 'WGKeysRegenInerval' from previus Session object
+		WGKeysRegenInerval: p.Session.WGKeysRegenInerval} // keep 'WGKeysRegenInerval' from previous Session object
 
 	if p.Session.WGKeysRegenInerval <= 0 {
 		p.Session.WGKeysRegenInerval = DefaultWGKeysInterval

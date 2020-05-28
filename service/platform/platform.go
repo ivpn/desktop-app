@@ -102,38 +102,38 @@ func Init() (warnings []string, errors []error) {
 	}
 
 	// checking file permissions
-	if err := checkFileAccessRigthsStaticConfig("openvpnCaKeyFile", openvpnCaKeyFile); err != nil {
+	if err := checkFileAccessRightsStaticConfig("openvpnCaKeyFile", openvpnCaKeyFile); err != nil {
 		errors = append(errors, err)
 	}
-	if err := checkFileAccessRigthsStaticConfig("openvpnTaKeyFile", openvpnTaKeyFile); err != nil {
+	if err := checkFileAccessRightsStaticConfig("openvpnTaKeyFile", openvpnTaKeyFile); err != nil {
 		errors = append(errors, err)
 	}
 
 	if len(openvpnUpScript) > 0 {
-		if err := checkFileAccessRigthsExecutable("openvpnUpScript", openvpnUpScript); err != nil {
+		if err := checkFileAccessRightsExecutable("openvpnUpScript", openvpnUpScript); err != nil {
 			errors = append(errors, err)
 		}
 	}
 
 	if len(openvpnDownScript) > 0 {
-		if err := checkFileAccessRigthsExecutable("openvpnDownScript", openvpnDownScript); err != nil {
+		if err := checkFileAccessRightsExecutable("openvpnDownScript", openvpnDownScript); err != nil {
 			errors = append(errors, err)
 		}
 	}
 
 	// checking availability of OpenVPN binaries
-	if err := checkFileAccessRigthsExecutable("openVpnBinaryPath", openVpnBinaryPath); err != nil {
+	if err := checkFileAccessRightsExecutable("openVpnBinaryPath", openVpnBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("OpenVPN functionality not accessible: %w", err).Error())
 	}
 	// checking availability of obfsproxy binaries
-	if err := checkFileAccessRigthsExecutable("obfsproxyStartScript", obfsproxyStartScript); err != nil {
+	if err := checkFileAccessRightsExecutable("obfsproxyStartScript", obfsproxyStartScript); err != nil {
 		warnings = append(warnings, fmt.Errorf("obfsproxy functionality not accessible: %w", err).Error())
 	}
 	// checling availability of WireGuard binaries
-	if err := checkFileAccessRigthsExecutable("wgBinaryPath", wgBinaryPath); err != nil {
+	if err := checkFileAccessRightsExecutable("wgBinaryPath", wgBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
 	}
-	if err := checkFileAccessRigthsExecutable("wgToolBinaryPath", wgToolBinaryPath); err != nil {
+	if err := checkFileAccessRightsExecutable("wgToolBinaryPath", wgToolBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
 	}
 
@@ -150,15 +150,15 @@ func Init() (warnings []string, errors []error) {
 	return warnings, errors
 }
 
-func checkFileAccessRigthsStaticConfig(paramName string, file string) error {
-	if err := filerights.CheckFileAccessRigthsStaticConfig(file); err != nil {
+func checkFileAccessRightsStaticConfig(paramName string, file string) error {
+	if err := filerights.CheckFileAccessRightsStaticConfig(file); err != nil {
 		return fmt.Errorf("(%s) %w", paramName, err)
 	}
 	return nil
 }
 
-func checkFileAccessRigthsExecutable(paramName string, file string) error {
-	if err := filerights.CheckFileAccessRigthsExecutable(file); err != nil {
+func checkFileAccessRightsExecutable(paramName string, file string) error {
+	if err := filerights.CheckFileAccessRightsExecutable(file); err != nil {
 		return fmt.Errorf("(%s) %w", paramName, err)
 	}
 	return nil
@@ -170,7 +170,7 @@ func createOpenVpnUserParamsFileExample() error {
 	}
 
 	if helpers.FileExists(openvpnUserParamsFile) {
-		if err := filerights.CheckFileAccessRigthsConfig(openvpnUserParamsFile); err == nil {
+		if err := filerights.CheckFileAccessRightsConfig(openvpnUserParamsFile); err == nil {
 			return nil // file is exists with correct permissions
 		}
 		// 'openvpnUserParamsFile' has wrong permissions. Removing it.
@@ -218,7 +218,7 @@ func SettingsFile() string {
 	return settingsFile
 }
 
-// ServicePortFile parh to service port file
+// ServicePortFile path to service port file
 func ServicePortFile() string {
 	return servicePortFile
 }

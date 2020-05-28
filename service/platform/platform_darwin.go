@@ -48,10 +48,10 @@ func doOsInit() (warnings []string, errors []error) {
 		errors = make([]error, 0)
 	}
 
-	if err := checkFileAccessRigthsExecutable("firewallScript", firewallScript); err != nil {
+	if err := checkFileAccessRightsExecutable("firewallScript", firewallScript); err != nil {
 		errors = append(errors, err)
 	}
-	if err := checkFileAccessRigthsExecutable("dnsScript", dnsScript); err != nil {
+	if err := checkFileAccessRightsExecutable("dnsScript", dnsScript); err != nil {
 		errors = append(errors, err)
 	}
 

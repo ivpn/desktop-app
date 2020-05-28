@@ -43,9 +43,9 @@ import (
 
 //TODO: BE CAREFUL! Constant string! (can be changed after WireGuard update)
 const (
-	strTriggerSuccessInit     string = "UAPI listener started"
-	strTriggerInterfaceDown   string = "Interface set down"
-	strTriggerAddrAlredyInUse string = "Address already in use"
+	strTriggerSuccessInit      string = "UAPI listener started"
+	strTriggerInterfaceDown    string = "Interface set down"
+	strTriggerAddrAlreadyInUse string = "Address already in use"
 )
 
 const subnetMask string = "255.0.0.0"
@@ -68,7 +68,7 @@ func (wg *WireGuard) init() error {
 	return nil // do nothing for macOS
 }
 
-// connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
+// connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	var routineStopWaiter sync.WaitGroup
 
@@ -154,7 +154,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 		select {
 		case <-isStartedChannel:
-			// Process started. Perform initialisation...
+			// Process started. Perform initialization...
 			if err := wg.initialize(utunName); err != nil {
 				// TODO: REWORK - return initialization error as a result of connect
 				log.ErrorTrace(err)
@@ -310,7 +310,7 @@ func (wg *WireGuard) setWgConfiguration(utunName string) error {
 			} else {
 				log.Debug("[wgconf out] ", text)
 			}
-			if strings.Contains(text, strTriggerAddrAlredyInUse) {
+			if strings.Contains(text, strTriggerAddrAlreadyInUse) {
 				isPortInUse = true
 			}
 		}
@@ -410,7 +410,7 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 	// TODO: check if we need it for this platform
 	// Same as "0.0.0.0/0" but such type of configuration is disabling internal WireGuard-s Firewall
 	// It blocks everything except WireGuard traffic.
-	// We need to disable WireGurd-s firewall because we have our own implementation of firewall.
+	// We need to disable WireGuard-s firewall because we have our own implementation of firewall.
 	//  For details, refer to WireGuard-windows sources: tunnel\ifaceconfig.go (enableFirewall(...) method)
 	peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1")
 

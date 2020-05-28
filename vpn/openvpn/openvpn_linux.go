@@ -39,7 +39,7 @@ type platformSpecificProperties struct {
 func (o *OpenVPN) implInit() error {
 	o.psProps.isCanUseParamsV24 = true
 
-	if err := filerights.CheckFileAccessRigthsExecutable(o.binaryPath); err != nil {
+	if err := filerights.CheckFileAccessRightsExecutable(o.binaryPath); err != nil {
 		return fmt.Errorf("error checking OpenVPN binary file: %w", err)
 	}
 

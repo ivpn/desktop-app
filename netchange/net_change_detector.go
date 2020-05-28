@@ -46,7 +46,7 @@ type Detector struct {
 	routingChangeNotifyChan chan<- struct{}
 	interfaceToProtect      *net.Interface
 
-	// Must be implemeted (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
+	// Must be implemented (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	props osSpecificProperties
 }
 
@@ -60,7 +60,7 @@ func Create() *Detector {
 	timer := time.AfterFunc(0, func() {
 		detector.notifyRoutingChange()
 	})
-	// ensure timer is stopped (no chnages detected for now)
+	// ensure timer is stopped (no changes detected for now)
 	timer.Stop()
 
 	// save timer

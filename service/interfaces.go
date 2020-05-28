@@ -34,7 +34,7 @@ import (
 // IServersUpdater - interface for updating server info mechanism
 type IServersUpdater interface {
 	GetServers() (*types.ServersInfoResponse, error)
-	// UpdateNotifierChannel returns channel which is nitifying when servers was updated
+	// UpdateNotifierChannel returns channel which is notifying when servers was updated
 	UpdateNotifierChannel() chan struct{}
 }
 

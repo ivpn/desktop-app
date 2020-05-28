@@ -182,16 +182,16 @@ func (p *Obfsproxy) start(localPort int) (command *startedCmd, err error) {
 		return nil, err
 	}
 
-	// Start obfsxproxy process
+	// Start obfsproxy process
 	if err := cmd.Start(); err != nil {
 		log.Error("Failed to start obfsproxy: ", err.Error())
 		return nil, err
 	}
 
 	stoppedChan := make(chan struct{}, 1)
-	var porocStoppedError error
+	var procStoppedError error
 	go func() {
-		porocStoppedError = cmd.Wait()
+		procStoppedError = cmd.Wait()
 		log.Info("Obfsproxy stopped")
 		stoppedChan <- struct{}{}
 		close(stoppedChan)
@@ -210,7 +210,7 @@ func (p *Obfsproxy) start(localPort int) (command *startedCmd, err error) {
 		}
 	}
 
-	// wait some to ensure process succesfully started
+	// wait some to ensure process successfully started
 	// TODO: necessary to think how to avoid using hardcoded 'Sleep()'
 	time.Sleep(time.Millisecond * 10)
 
@@ -219,7 +219,7 @@ func (p *Obfsproxy) start(localPort int) (command *startedCmd, err error) {
 	}
 
 	log.Info(fmt.Sprintf("Started on port %d", localPort))
-	return &startedCmd{command: cmd, stopped: stoppedChan, exitError: porocStoppedError}, nil
+	return &startedCmd{command: cmd, stopped: stoppedChan, exitError: procStoppedError}, nil
 }
 
 func getRandPort() int {

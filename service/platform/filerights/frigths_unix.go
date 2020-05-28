@@ -26,19 +26,19 @@ const (
 // DefaultFilePermissionsForConfig - returns default file permissions to save config files
 func DefaultFilePermissionsForConfig() os.FileMode { return defaultFilePermissionForConfig }
 
-// CheckFileAccessRigthsConfig ensures if given file has correct rights for mutable config file
-func CheckFileAccessRigthsConfig(file string) error {
-	return ensureFileAccessRigths(file, defaultFilePermissionForConfig)
+// CheckFileAccessRightsConfig ensures if given file has correct rights for mutable config file
+func CheckFileAccessRightsConfig(file string) error {
+	return ensureFileAccessRights(file, defaultFilePermissionForConfig)
 }
 
-// CheckFileAccessRigthsStaticConfig ensures if given file has correct rights for unmutable config file
-func CheckFileAccessRigthsStaticConfig(file string) error {
-	return ensureFileAccessRigths(file, defaultFilePermissionForStaticConfig)
+// CheckFileAccessRightsStaticConfig ensures if given file has correct rights for unmutable config file
+func CheckFileAccessRightsStaticConfig(file string) error {
+	return ensureFileAccessRights(file, defaultFilePermissionForStaticConfig)
 }
 
-// CheckFileAccessRigthsExecutable checks if file has correct access-permission for executable
-// If file does not exist or it can be writable by someone alse except root - retun error
-func CheckFileAccessRigthsExecutable(file string) error {
+// CheckFileAccessRightsExecutable checks if file has correct access-permission for executable
+// If file does not exist or it can be writable by someone else except root - return error
+func CheckFileAccessRightsExecutable(file string) error {
 	if len(file) > 0 {
 		// 'file' can be presented as executable with arguments (e.g. 'dns.sh -up')
 		// Trying here to take only executable file path without arguments
@@ -70,7 +70,7 @@ func CheckFileAccessRigthsExecutable(file string) error {
 	return nil
 }
 
-func ensureFileAccessRigths(file string, fmode os.FileMode) error {
+func ensureFileAccessRights(file string, fmode os.FileMode) error {
 	// check is file exists
 	stat, err := getFileStat(file)
 	if err != nil {

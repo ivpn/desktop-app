@@ -54,7 +54,7 @@ func doPrepareToRun() error {
 	}
 	log.Info("Starting as a service (InteractiveSession=false)")
 
-	// run a service handler (service is active untill 'Execute(...)' method is running)
+	// run a service handler (service is active until 'Execute(...)' method is running)
 	go runWindowsService()
 
 	// continue starting other stuff
@@ -75,7 +75,7 @@ func doStopped() {
 	}
 }
 
-// doCheckIsAdmin - check is application running with root privilages
+// doCheckIsAdmin - check is application running with root privileges
 func doCheckIsAdmin() bool {
 	var sid *windows.SID
 
@@ -140,10 +140,10 @@ func runWindowsService() {
 }
 
 func (m *ivpnservice) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
-	log.Info("Sevice handler started")
+	log.Info("Service handler started")
 	defer func() {
 		changes <- svc.Status{State: svc.StopPending}
-		log.Info("Sevice handler stopped")
+		log.Info("Service handler stopped")
 
 		changes <- svc.Status{State: svc.Stopped}
 
@@ -160,7 +160,7 @@ loop:
 	for {
 		select {
 		case <-_stopped:
-			log.Info("Sevice stopped")
+			log.Info("Service stopped")
 			break loop
 
 		case c := <-r:
@@ -172,7 +172,7 @@ loop:
 				// Notifies a service that it should report its current status information to the service control manager. The hService handle must have the SERVICE_INTERROGATE access right.
 				// Note that this control is not generally useful as the SCM is aware of the current state of the service.
 
-				log.Info("Service sontrol request: ", "Interrogate", c.Cmd)
+				log.Info("Service control request: ", "Interrogate", c.Cmd)
 
 				changes <- c.CurrentStatus
 
@@ -181,8 +181,8 @@ loop:
 				//changes <- c.CurrentStatus
 
 			case svc.Stop, svc.Shutdown:
-				log.Info("Service sontrol request: ", "Stop|Shutdown", c.Cmd)
-				_evtlog.Info(1, fmt.Sprintf("Service sontrol request: Stop|Shutdown %d", c.Cmd))
+				log.Info("Service control request: ", "Stop|Shutdown", c.Cmd)
+				_evtlog.Info(1, fmt.Sprintf("Service control request: Stop|Shutdown %d", c.Cmd))
 				break loop
 
 			default:

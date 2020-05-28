@@ -44,8 +44,8 @@ func init() {
 	done = make(chan struct{})
 }
 
-// implInitialise doing initialisation stuff (called on application start)
-func implInitialise() error {
+// implInitialize doing initialization stuff (called on application start)
+func implInitialize() error {
 	// check if backup DNS file exists
 	if _, err := os.Stat(resolvBackupFile); err != nil {
 		// nothing to restore
