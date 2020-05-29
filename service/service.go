@@ -1091,14 +1091,14 @@ func (s *Service) RequestSessionStatus() (
 		apiCode = apiErr.Status
 
 		// Session not found - can happens when user forced to logout from another device
-		if apiCode == int(types.SessionNotFound) {
+		if apiCode == types.SessionNotFound {
 			// Logging out now
 			log.Info("Session not found. Logging out.")
 			s.logOut(false)
 		}
 
 		// notify clients that account not active
-		if apiCode == int(types.AccountNotActive) {
+		if apiCode == types.AccountNotActive {
 			// notify about account status
 			s._evtReceiver.OnAccountStatus(session.Session, accountInfo)
 			return apiCode, apiErr.Message, session.Session, preferences.AccountStatus{Active: false}, err

@@ -149,7 +149,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) 
 	}
 
 	// success
-	if apiErr.Status == int(types.CodeSuccess) {
+	if apiErr.Status == types.CodeSuccess {
 		if err := json.Unmarshal(data, &sucessResp); err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
@@ -157,7 +157,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) 
 	}
 
 	// Session limit check
-	if apiErr.Status == int(types.CodeSessionsLimitReached) {
+	if apiErr.Status == types.CodeSessionsLimitReached {
 		if err := json.Unmarshal(data, &errorLimitResp); err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
@@ -190,7 +190,7 @@ func (a *API) SessionStatus(session string) (
 	}
 
 	// success
-	if apiErr.Status == int(types.CodeSuccess) {
+	if apiErr.Status == types.CodeSuccess {
 		if err := json.Unmarshal(data, &resp); err != nil {
 			return nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
@@ -207,7 +207,7 @@ func (a *API) SessionDelete(session string) error {
 	if err := a.request(_sessionDeletePath, "POST", "application/json", request, resp); err != nil {
 		return err
 	}
-	if resp.Status != int(types.CodeSuccess) {
+	if resp.Status != types.CodeSuccess {
 		return types.CreateAPIError(resp.Status, resp.Message)
 	}
 	return nil
@@ -226,7 +226,7 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 		return nil, err
 	}
 
-	if resp.Status != int(types.CodeSuccess) {
+	if resp.Status != types.CodeSuccess {
 		return nil, types.CreateAPIError(resp.Status, resp.Message)
 	}
 

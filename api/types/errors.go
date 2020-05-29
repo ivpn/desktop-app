@@ -24,27 +24,24 @@ package types
 
 import "fmt"
 
-// APIErrorCode API error code
-type APIErrorCode int
-
 const (
 	// CodeSuccess - success
-	CodeSuccess APIErrorCode = 200
+	CodeSuccess int = 200
 
 	// Unauthorized - Invalid Credentials	(Username or Password is not valid)
-	Unauthorized APIErrorCode = 401
+	Unauthorized int = 401
 
 	// WGPublicKeyNotFound - WireGuard Public Key not found
-	WGPublicKeyNotFound APIErrorCode = 424
+	WGPublicKeyNotFound int = 424
 
 	// SessionNotFound - Session not found Session not found
-	SessionNotFound APIErrorCode = 601
+	SessionNotFound int = 601
 
 	// CodeSessionsLimitReached - You've reached the session limit, log out from other device
-	CodeSessionsLimitReached APIErrorCode = 602
+	CodeSessionsLimitReached int = 602
 
 	// AccountNotActive - account should be purchased
-	AccountNotActive APIErrorCode = 702
+	AccountNotActive int = 702
 )
 
 // APIError - error, user not logged in into account
