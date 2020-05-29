@@ -1,5 +1,7 @@
 #!/bin/sh
 
+echo "[*] After install (<%= pkg %>)"
+
 NEED_TO_SAVE_INSTRUCTIONS=true
 IVPN_ETC="/opt/ivpn/etc"
 IVPN_TMP="/opt/ivpn/mutable"
@@ -88,5 +90,4 @@ if [ -f $FILE_ACCID_TO_UPGRADE ]; then
       /usr/local/bin/ivpn login $ACCID ||  echo "[-] Finishing installation: Failed to to re-login (try#2)"
     fi
   fi
-
 fi

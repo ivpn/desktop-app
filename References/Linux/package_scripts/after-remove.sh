@@ -1,5 +1,16 @@
 #!/bin/sh
 
+echo "[*] After remove (<%= pkg %>)"
+
+PKG_TYPE=<%= pkg %>
+if [ "$PKG_TYPE" = "rpm" ]; then
+    if [ -f /opt/ivpn/mutable/rpm_upgrade.lock ]; then
+        echo "[ ] Upgrade detected. Remove operations skipped"
+        rm /opt/ivpn/mutable/rpm_upgrade.lock || echo "[-] Failed to remove rpm_upgrade.lock"
+        exit 0
+    fi
+fi
+
 silent() {
   "$@" > /dev/null 2>&1
 }
@@ -42,6 +53,7 @@ fi
 IVPN_DIR="/opt/ivpn"
 IVPN_TMP="/opt/ivpn/mutable"
 IVPN_LOG="/opt/ivpn/log"
+IVPN_ETC="/opt/ivpn/etc"
 if [ -d $IVPN_TMP ] ; then
   echo "[+] Removing other files ..."
   # Normally, all files which were installed, deleted automatically
@@ -49,7 +61,9 @@ if [ -d $IVPN_TMP ] ; then
   # Therefore, we are completely removing all content of '/opt/ivpn/mutable'
   rm -rf $IVPN_TMP|| echo "[-] Removing '$IVPN_TMP' folder failed"
   rm -rf $IVPN_LOG|| echo "[-] Removing '$IVPN_LOG' folder failed"
-  #remove 'ivpn' folder (if empyt)
+  #rm -rf $IVPN_ETC|| echo "[-] Removing '$IVPN_ETC' folder failed"
+  #rm -rf $IVPN_DIR|| echo "[-] Removing '$IVPN_DIR' folder failed"
+  #remove 'ivpn' folder (if empy)
   silent sudo rmdir $IVPN_DIR
 fi 
 

@@ -1,8 +1,18 @@
 #!/bin/sh
 
+echo "[*] Before remove (<%= pkg %>)"
+
+PKG_TYPE=<%= pkg %>
+if [ "$PKG_TYPE" = "rpm" ]; then
+    if [ -f /opt/ivpn/mutable/rpm_upgrade.lock ]; then
+        echo "[ ] Upgrade detected. Remove operations skipped"
+        exit 0
+    fi
+fi
+
 if [ -f /opt/ivpn/mutable/settings.json ]; then
     # In case of installing new version, we have to login back with current logged-in accountID after installation finished.
-    # Therefore we are saving accountID into temporary file (will be deleted after 'after_remove' script execution)
+    # Therefore we are saving accountID into temporary file (will be deleted after 'after_install' script execution)
     echo "[+] Preparing upgrade data ..."
     ACCID=$(cat /opt/ivpn/mutable/settings.json | grep -o \"AccountID\":\"[a-zA-Z0-9]*\" | cut -d '"' -f 4) || echo "[-] Failed to read accountID"
     if [ ! -z "$ACCID" ]; then

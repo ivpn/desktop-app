@@ -114,8 +114,34 @@ CreatePackage()
 
   cd $TMPDIR
   
+  # Scripts order is different for different types of packages
+  # DEB Install:
+  #   Clean             Upgrade
+  #                     before_remove
+  #   before_install    before_upgrade\before_install
+  #                     after_remove
+  #   after_install     after_upgrade\after_install
+  #
+  # DEB remove
+  #   before_remove
+  #   after_remove
+  #
+  # RPM Install:
+  #   Clean             Upgrade
+  #   before_install    before_upgrade\before_install 
+  #   after_install     after_upgrade\after_install
+  #                     before_remove
+  #                     after_remove
+  #
+  # RPM remove
+  #   before_remove
+  #   after_remove
+  #
+  # NOTE! 'remove' scripts from old version!
+
   fpm -d openvpn $EXTRA_ARGS \
     --deb-no-default-config-files -s dir -t $PKG_TYPE -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
+    --template-scripts --template-value pkg=$PKG_TYPE \
     --vendor "Privatus Limited" --maintainer "Privatus Limited" \
     --description "$(printf "Client for IVPN service (https://www.ivpn.net)\nCommand line interface v$VERSION. Try 'ivpn' from command line.")" \
     --before-install "$SCRIPT_DIR/package_scripts/before-install.sh" \
