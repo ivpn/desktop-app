@@ -149,7 +149,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) 
 	}
 
 	// success
-	if apiErr.Status == types.CodeSuccess {
+	if apiErr.Status == int(types.CodeSuccess) {
 		if err := json.Unmarshal(data, &sucessResp); err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
@@ -157,14 +157,14 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) 
 	}
 
 	// Session limit check
-	if apiErr.Status == types.CodeSessionsLimitReached {
+	if apiErr.Status == int(types.CodeSessionsLimitReached) {
 		if err := json.Unmarshal(data, &errorLimitResp); err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
-		return nil, &errorLimitResp, &apiErr, fmt.Errorf("API error: [%d] %s", apiErr.Status, apiErr.Message)
+		return nil, &errorLimitResp, &apiErr, types.CreateAPIError(apiErr.Status, apiErr.Message)
 	}
 
-	return nil, nil, &apiErr, fmt.Errorf("API error: [%d] %s", apiErr.Status, apiErr.Message)
+	return nil, nil, &apiErr, types.CreateAPIError(apiErr.Status, apiErr.Message)
 }
 
 // SessionStatus - get session status
@@ -190,14 +190,14 @@ func (a *API) SessionStatus(session string) (
 	}
 
 	// success
-	if apiErr.Status == types.CodeSuccess {
+	if apiErr.Status == int(types.CodeSuccess) {
 		if err := json.Unmarshal(data, &resp); err != nil {
 			return nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
 		return &resp.ServiceStatus, &apiErr, nil
 	}
 
-	return nil, &apiErr, fmt.Errorf("API error: [%d] %s", apiErr.Status, apiErr.Message)
+	return nil, &apiErr, types.CreateAPIError(apiErr.Status, apiErr.Message)
 }
 
 // SessionDelete - remove session
@@ -207,15 +207,14 @@ func (a *API) SessionDelete(session string) error {
 	if err := a.request(_sessionDeletePath, "POST", "application/json", request, resp); err != nil {
 		return err
 	}
-	if resp.Status != types.CodeSuccess {
-		return fmt.Errorf("API error: [%d] %s", resp.Status, resp.Message)
+	if resp.Status != int(types.CodeSuccess) {
+		return types.CreateAPIError(resp.Status, resp.Message)
 	}
 	return nil
 }
 
 // WireGuardKeySet - update WG key
 func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePublicWgKey string) (localIP net.IP, err error) {
-
 	request := &types.SessionWireGuardKeySetRequest{
 		Session:            session,
 		PublicKey:          newPublicWgKey,
@@ -227,8 +226,8 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 		return nil, err
 	}
 
-	if resp.Status != types.CodeSuccess {
-		return nil, fmt.Errorf("API error: [%d] %s", resp.Status, resp.Message)
+	if resp.Status != int(types.CodeSuccess) {
+		return nil, types.CreateAPIError(resp.Status, resp.Message)
 	}
 
 	localIP = net.ParseIP(resp.IPAddress)

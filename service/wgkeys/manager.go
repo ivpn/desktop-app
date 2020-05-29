@@ -24,11 +24,11 @@ package wgkeys
 
 import (
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/api"
+	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
 )
@@ -43,7 +43,7 @@ func init() {
 
 // IWgKeysChangeReceiver WG key update handler
 type IWgKeysChangeReceiver interface {
-	WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP net.IP)
+	WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string)
 	WireGuardGetKeys() (session, wgPublicKey, wgPrivateKey, wgLocalIP string, generatedTime time.Time, updateInterval time.Duration)
 	Connected() bool
 }
@@ -83,6 +83,7 @@ func (m *KeysManager) StartKeysRotation() error {
 	m.StopKeysRotation()
 
 	_, activePublicKey, _, _, lastUpdate, interval := m._service.WireGuardGetKeys()
+
 	if interval <= 0 {
 		return fmt.Errorf("unable to start WG keys rotation (update interval not defined)")
 	}
@@ -208,28 +209,40 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		return err
 	}
 
-	activeKeyToUpdate := activePublicKey
-	// When VPN is not connected - no sense to use 'update',
-	// just set new WG key for this session.
-	// This can avoid any potential issues regarding 'WgPublicKeyNotFound' error.
-	if m._service.Connected() == false {
-		activeKeyToUpdate = ""
-	}
-
-	localIP, err := m._apiObj.WireGuardKeySet(session, pub, activeKeyToUpdate)
+	// trying to update WG keys with notifying API about current active public key (if it exists)
+	localIP, err := m._apiObj.WireGuardKeySet(session, pub, activePublicKey)
 	if err != nil {
-		return err
+		// In case of API error - we have to check respone code
+		// It could be that server did not find activePublicKey
+		// In this case, we have to try to set new key (not update; do not use activePublicKey)
+		//
+		// IMPORTANT! As soon as server receive request with empty 'activePublicKey' - it clears all keys
+		// Therefore, we have to ensure that local keys are not using anymore (we have to clear them independently from we received response or not)
+
+		if m._service.Connected() == false && len(activePublicKey) > 0 { // set new key can be done ONLY in disconnected VPN state
+			if apiErr, ok := err.(types.APIError); ok && apiErr.ErrorCode == int(types.WGPublicKeyNotFound) {
+				// active WG key not found
+				log.Info(fmt.Sprintf("Failed to update current WG keys (%s). Trying to set new ...", apiErr))
+				localIP, err = m._apiObj.WireGuardKeySet(session, pub, "")
+
+				// ensure that we deleted keys in case of error
+				if localIP == nil {
+					// notify service about deleted keys
+					m._service.WireGuardSaveNewKeys("", "", "")
+				}
+			}
+		}
 	}
 
-	log.Info(fmt.Sprintf("WG keys updated (%s:%s) ", localIP.String(), pub))
+	if err == nil && localIP != nil {
+		log.Info(fmt.Sprintf("WG keys updated (%s:%s) ", localIP.String(), pub))
 
-	// notify service about new keys
-	m._service.WireGuardSaveNewKeys(pub, priv, localIP)
-
-	// If no active WG keys defined - new keys will be generated + key rotation will be started
-	if len(activePublicKey) == 0 {
-		m.StartKeysRotation()
+		// notify service about new keys
+		m._service.WireGuardSaveNewKeys(pub, priv, localIP.String())
 	}
 
-	return nil
+	// Restart keys rotation
+	m.StartKeysRotation()
+
+	return err
 }

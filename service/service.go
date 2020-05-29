@@ -1091,14 +1091,14 @@ func (s *Service) RequestSessionStatus() (
 		apiCode = apiErr.Status
 
 		// Session not found - can happens when user forced to logout from another device
-		if apiCode == types.SessionNotFound {
+		if apiCode == int(types.SessionNotFound) {
 			// Logging out now
 			log.Info("Session not found. Logging out.")
 			s.logOut(false)
 		}
 
 		// notify clients that account not active
-		if apiCode == types.AccountNotActive {
+		if apiCode == int(types.AccountNotActive) {
 			// notify about account status
 			s._evtReceiver.OnAccountStatus(session.Session, accountInfo)
 			return apiCode, apiErr.Message, session.Session, preferences.AccountStatus{Active: false}, err
@@ -1193,8 +1193,8 @@ func (s *Service) stopSessionChecker() {
 //////////////////////////////////////////////////////////
 
 // WireGuardSaveNewKeys saves WG keys
-func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP net.IP) {
-	s._preferences.UpdateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP.String())
+func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string) {
+	s._preferences.UpdateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP)
 
 	// notify clients about sesssion (wg keys) update
 	s._evtReceiver.OnServiceSessionChanged()

@@ -22,17 +22,44 @@
 
 package types
 
-// CodeSuccess - success
-const CodeSuccess = 200
+import "fmt"
 
-// Unauthorized - Invalid Credentials	(Username or Password is not valid)
-const Unauthorized = 401
+// APIErrorCode API error code
+type APIErrorCode int
 
-// SessionNotFound - Session not found Session not found
-const SessionNotFound = 601
+const (
+	// CodeSuccess - success
+	CodeSuccess APIErrorCode = 200
 
-// CodeSessionsLimitReached - You've reached the session limit, log out from other device
-const CodeSessionsLimitReached = 602
+	// Unauthorized - Invalid Credentials	(Username or Password is not valid)
+	Unauthorized APIErrorCode = 401
 
-// AccountNotActive - acount should be purchased
-const AccountNotActive = 702
+	// WGPublicKeyNotFound - WireGuard Public Key not found
+	WGPublicKeyNotFound APIErrorCode = 424
+
+	// SessionNotFound - Session not found Session not found
+	SessionNotFound APIErrorCode = 601
+
+	// CodeSessionsLimitReached - You've reached the session limit, log out from other device
+	CodeSessionsLimitReached APIErrorCode = 602
+
+	// AccountNotActive - account should be purchased
+	AccountNotActive APIErrorCode = 702
+)
+
+// APIError - error, user not logged in into account
+type APIError struct {
+	ErrorCode int
+	Message   string
+}
+
+// CreateAPIError creates new API error object
+func CreateAPIError(errorCode int, message string) APIError {
+	return APIError{
+		ErrorCode: errorCode,
+		Message:   message}
+}
+
+func (e APIError) Error() string {
+	return fmt.Sprintf("API error: [%d] %s", e.ErrorCode, e.Message)
+}
