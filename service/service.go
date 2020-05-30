@@ -1252,8 +1252,8 @@ func (s *Service) stopSessionChecker() {
 //////////////////////////////////////////////////////////
 
 // WireGuardSaveNewKeys saves WG keys
-func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP net.IP) {
-	s._preferences.UpdateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP.String())
+func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string) {
+	s._preferences.UpdateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP)
 
 	// notify clients about session (wg keys) update
 	s._evtReceiver.OnServiceSessionChanged()

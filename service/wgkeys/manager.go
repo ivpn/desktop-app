@@ -24,11 +24,11 @@ package wgkeys
 
 import (
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/api"
+	"github.com/ivpn/desktop-app-daemon/api/types"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
 )
@@ -43,7 +43,7 @@ func init() {
 
 // IWgKeysChangeReceiver WG key update handler
 type IWgKeysChangeReceiver interface {
-	WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP net.IP)
+	WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string)
 	WireGuardGetKeys() (session, wgPublicKey, wgPrivateKey, wgLocalIP string, generatedTime time.Time, updateInterval time.Duration)
 	Connected() bool
 }
@@ -51,38 +51,39 @@ type IWgKeysChangeReceiver interface {
 // CreateKeysManager create WireGuard keys manager
 func CreateKeysManager(apiObj *api.API, wgToolBinPath string) *KeysManager {
 	return &KeysManager{
-		_stopKeysRotation: make(chan struct{}),
-		_wgToolBinPath:    wgToolBinPath,
-		_apiObj:           apiObj}
+		stopKeysRotation: make(chan struct{}),
+		wgToolBinPath:    wgToolBinPath,
+		api:              apiObj}
 }
 
 // KeysManager WireGuard keys manager
 type KeysManager struct {
-	_mutex            sync.Mutex
-	_service          IWgKeysChangeReceiver
-	_apiObj           *api.API
-	_wgToolBinPath    string
-	_stopKeysRotation chan struct{}
+	mutex            sync.Mutex
+	service          IWgKeysChangeReceiver
+	api              *api.API
+	wgToolBinPath    string
+	stopKeysRotation chan struct{}
 }
 
 // Init - initialize master service
 func (m *KeysManager) Init(receiver IWgKeysChangeReceiver) error {
-	if receiver == nil || m._service != nil {
+	if receiver == nil || m.service != nil {
 		return fmt.Errorf("failed to initialize WG KeysManager")
 	}
-	m._service = receiver
+	m.service = receiver
 	return nil
 }
 
 // StartKeysRotation start keys rotation
 func (m *KeysManager) StartKeysRotation() error {
-	if m._service == nil {
+	if m.service == nil {
 		return fmt.Errorf("unable to start WG keys rotation (KeysManager not initialized)")
 	}
 
 	m.StopKeysRotation()
 
-	_, activePublicKey, _, _, lastUpdate, interval := m._service.WireGuardGetKeys()
+	_, activePublicKey, _, _, lastUpdate, interval := m.service.WireGuardGetKeys()
+
 	if interval <= 0 {
 		return fmt.Errorf("unable to start WG keys rotation (update interval not defined)")
 	}
@@ -100,7 +101,7 @@ func (m *KeysManager) StartKeysRotation() error {
 		isLastUpdateFailed := false
 
 		for needStop == false {
-			_, _, _, _, lastUpdate, interval = m._service.WireGuardGetKeys()
+			_, _, _, _, lastUpdate, interval = m.service.WireGuardGetKeys()
 			waitInterval := time.Until(lastUpdate.Add(interval))
 			if isLastUpdateFailed {
 				waitInterval = time.Hour
@@ -124,7 +125,7 @@ func (m *KeysManager) StartKeysRotation() error {
 
 				break
 
-			case <-m._stopKeysRotation:
+			case <-m.stopKeysRotation:
 				needStop = true
 				break
 			}
@@ -137,7 +138,7 @@ func (m *KeysManager) StartKeysRotation() error {
 // StopKeysRotation stop keys rotation
 func (m *KeysManager) StopKeysRotation() {
 	select {
-	case m._stopKeysRotation <- struct{}{}:
+	case m.stopKeysRotation <- struct{}{}:
 	default:
 	}
 }
@@ -161,13 +162,13 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		}
 	}()
 
-	if m._service == nil {
+	if m.service == nil {
 		return fmt.Errorf("WG KeysManager not initialized")
 	}
 
 	// Check update configuration
 	// (not blocked by mutex because in order to return immediately if nothing to do)
-	session, activePublicKey, _, _, lastUpdate, interval := m._service.WireGuardGetKeys()
+	session, activePublicKey, _, _, lastUpdate, interval := m.service.WireGuardGetKeys()
 
 	// function to check if update required
 	isNecessaryUpdate := func() (bool, error) {
@@ -192,44 +193,55 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		return err
 	}
 
-	m._mutex.Lock()
-	defer m._mutex.Unlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	// Check update configuration second time (locked by mutex)
-	session, activePublicKey, _, _, lastUpdate, interval = m._service.WireGuardGetKeys()
+	session, activePublicKey, _, _, lastUpdate, interval = m.service.WireGuardGetKeys()
 	if haveToUpdate, err := isNecessaryUpdate(); haveToUpdate == false || err != nil {
 		return err
 	}
 
 	log.Info("Updating WG keys...")
 
-	pub, priv, err := wireguard.GenerateKeys(m._wgToolBinPath)
+	pub, priv, err := wireguard.GenerateKeys(m.wgToolBinPath)
 	if err != nil {
 		return err
 	}
 
-	activeKeyToUpdate := activePublicKey
-	// When VPN is not connected - no sense to use 'update',
-	// just set new WG key for this session.
-	// This can avoid any potential issues regarding 'WgPublicKeyNotFound' error.
-	if m._service.Connected() == false {
-		activeKeyToUpdate = ""
-	}
-
-	localIP, err := m._apiObj.WireGuardKeySet(session, pub, activeKeyToUpdate)
+	// trying to update WG keys with notifying API about current active public key (if it exists)
+	localIP, err := m.api.WireGuardKeySet(session, pub, activePublicKey)
 	if err != nil {
-		return err
+		// In case of API error - we have to check respone code
+		// It could be that server did not find activePublicKey
+		// In this case, we have to try to set new key (not update; do not use activePublicKey)
+		//
+		// IMPORTANT! As soon as server receive request with empty 'activePublicKey' - it clears all keys
+		// Therefore, we have to ensure that local keys are not using anymore (we have to clear them independently from we received response or not)
+
+		if m.service.Connected() == false && len(activePublicKey) > 0 { // set new key can be done ONLY in disconnected VPN state
+			if apiErr, ok := err.(types.APIError); ok && apiErr.ErrorCode == types.WGPublicKeyNotFound {
+				// active WG key not found
+				log.Info(fmt.Sprintf("Active WG key was not found on server (%s). Trying to set new ...", apiErr))
+				localIP, err = m.api.WireGuardKeySet(session, pub, "")
+
+				if err != nil {
+					// notify service about deleted keys
+					m.service.WireGuardSaveNewKeys("", "", "")
+				}
+			}
+		}
 	}
 
-	log.Info(fmt.Sprintf("WG keys updated (%s:%s) ", localIP.String(), pub))
+	if err == nil {
+		log.Info(fmt.Sprintf("WG keys updated (%s:%s) ", localIP.String(), pub))
 
-	// notify service about new keys
-	m._service.WireGuardSaveNewKeys(pub, priv, localIP)
-
-	// If no active WG keys defined - new keys will be generated + key rotation will be started
-	if len(activePublicKey) == 0 {
-		m.StartKeysRotation()
+		// notify service about new keys
+		m.service.WireGuardSaveNewKeys(pub, priv, localIP.String())
 	}
 
-	return nil
+	// Restart keys rotation
+	m.StartKeysRotation()
+
+	return err
 }
