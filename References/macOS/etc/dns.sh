@@ -37,15 +37,29 @@ if [ "$1" = "-update" ] ; then
   done
 fi
 
-if [[ "${PRI_IFACE}" == "" ]]; then
-    echo "Error: Primary interface not found"
-    exit 1
+if [[ "${PSID}" == "" ]]; then
+    echo "Warning: Primary interface not found"
 else
-    echo "Primary interface: '${PRI_IFACE}' PSID: '${PSID}"
+    echo "Primary interface: '${PRI_IFACE}' PSID: '${PSID}'"
 fi
+
+function isPrimaryInterfaceDetected {
+    if [[ "${PSID}" == "" ]]; then
+        return 1
+    fi
+    return 0
+}
+
+function ensurePrimaryInterfaceDetected {
+    if ! isPrimaryInterfaceDetected; then
+        echo "Error: Primary interface not found"
+        exit 1
+    fi
+}
 
 function print_state {
 
+    ensurePrimaryInterfaceDetected
 
     S_STATE=`echo "show State:/Network/Service/${PSID}/DNS" | scutil`
     S_SETUP=`echo "show Setup:/Network/Service/${PSID}/DNS" | scutil`
@@ -67,6 +81,8 @@ function is_dns_changed {
     PREFIX=$1
     update_IVPN_DNS_SOURCE_PATH;
 
+    ensurePrimaryInterfaceDetected
+
     DNS_STATE=`echo "show ${PREFIX}:/Network/Service/${PSID}/DNS" | scutil`
     VPN_STATE=`echo "show ${IVPN_DNS_SOURCE_PATH}" | scutil`
 
@@ -83,6 +99,8 @@ function is_vpn_dns_set {
 
 function is_dns_set_by_ivpn {
     PREFIX=$1
+
+    ensurePrimaryInterfaceDetected
     echo "show ${PREFIX}:/Network/Service/${PSID}/DNS" | scutil | grep SetByIVPN >/dev/null
     return $?
 }
@@ -95,6 +113,8 @@ function store_user_setting {
         return 1
     fi
 
+    ensurePrimaryInterfaceDetected
+    
     echo "Storing ${PREFIX}:/ dns settings"
 
     scutil <<_EOF
@@ -106,6 +126,8 @@ _EOF
 
 function restore_user_setting {
     PREFIX=$1
+
+    ensurePrimaryInterfaceDetected
 
     echo "Restoring ${PREFIX}:/ dns settings"
 
@@ -119,6 +141,8 @@ _EOF
 function update_setting {
     PREFIX=$1
     update_IVPN_DNS_SOURCE_PATH;
+
+    ensurePrimaryInterfaceDetected
 
     scutil <<_EOF
     d.init
@@ -252,10 +276,12 @@ elif [ "$1" = "-set_alternate_dns" ] ; then
   define_alternate_ivpn_dns $DOMAIN_NAME $VPN_DNS
 
   # update DNS only if it was already updated by us (-up or -up_set_dns)
-  if is_dns_set_by_ivpn "Setup"; then
-      store_and_update "Setup"
-      store_and_update "State"
-  fi
+  if isPrimaryInterfaceDetected; then
+    if is_dns_set_by_ivpn "Setup"; then
+        store_and_update "Setup"
+        store_and_update "State"
+    fi
+  fi 
 
 elif [ "$1" = "-delete_alternate_dns" ] ; then
 
@@ -270,9 +296,11 @@ elif [ "$1" = "-delete_alternate_dns" ] ; then
 _EOF
 
 # update DNS only if it was already updated by us (-up or -up_set_dns)
-if is_dns_set_by_ivpn "Setup"; then
-    store_and_update "Setup"
-    store_and_update "State"
+if isPrimaryInterfaceDetected; then
+    if is_dns_set_by_ivpn "Setup"; then
+        store_and_update "Setup"
+        store_and_update "State"
+    fi
 fi
 
 elif [ "$1" = "-down" ] ; then
