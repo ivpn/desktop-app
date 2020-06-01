@@ -145,10 +145,11 @@ func (o *OpenVPN) DestinationIPs() []net.IP {
 // Type just returns VPN type
 func (o *OpenVPN) Type() vpn.Type { return vpn.OpenVPN }
 
-// Init performs basic initialisations before connection
-// It is usefull, for example:
-//	- for WireGuard(Windows) - to ensure that WG service is fully uninstalled
-//	- for OpenVPN(Linux) - to ensure that OpenVPN has correct version
+// Init performs basic initializations before connection
+// It is useful, for example:
+// 		for WireGuard(Windows) 	- to ensure that WG service is fully uninstalled
+//		for WireGuard(macOS) 	- to initialize default gateway IP
+//		for OpenVPN(Linux) 		- to ensure that OpenVPN has correct version
 func (o *OpenVPN) Init() error {
 	return o.implInit()
 }
