@@ -60,17 +60,34 @@ type internalVariables struct {
 }
 
 func (wg *WireGuard) init() error {
-	defaultGwIP, err := netinfo.DefaultGatewayIP()
-	if err != nil {
-		return fmt.Errorf("unable to determine default gateway IP: %w", err)
-	}
-	wg.internals.defGateway = defaultGwIP
 	return nil // do nothing for macOS
 }
 
 // connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	var routineStopWaiter sync.WaitGroup
+
+	// if we are trying to connect when no connectivity (WiFi off?) -
+	// waiting until network appears (when default gateway defined)
+	// Retry to check default gateway each 5 seconds (sending RECONNECTING event)
+	for wg.internals.isGoingToStop == false {
+		defaultGwIP, err := netinfo.DefaultGatewayIP()
+		if err == nil {
+			wg.internals.defGateway = defaultGwIP
+			break
+		}
+		log.Info(fmt.Sprintf("No connectivity. Waiting 5 sec to retry... (%s)", err))
+
+		stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "No connectivity")
+		pauseEnd := time.Now().Add(time.Second * 5)
+		for time.Now().Before(pauseEnd) && wg.internals.isGoingToStop == false {
+			time.Sleep(time.Millisecond * 50)
+		}
+	}
+
+	if wg.internals.isGoingToStop {
+		return nil
+	}
 
 	defer func() {
 		wg.removeRoutes()
@@ -81,10 +98,6 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 		log.Info("Stopped")
 	}()
-
-	if wg.internals.isGoingToStop {
-		return fmt.Errorf("disconnection already requested for this object. To make a new connection, please, initialize new one")
-	}
 
 	utunName, err := getFreeTunInterfaceName()
 	if err != nil {
