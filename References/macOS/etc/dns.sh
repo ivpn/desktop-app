@@ -359,6 +359,9 @@ elif [ "$1" = "-resume" ] ; then
       store_and_update "State"
   fi;
 
+elif [ "$1" = "-is_main_interface_detected" ] ; then
+    ensurePrimaryInterfaceDetected
+
 else
     print_state
     exit 1

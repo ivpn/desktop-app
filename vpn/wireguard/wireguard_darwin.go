@@ -68,15 +68,13 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	var routineStopWaiter sync.WaitGroup
 
 	// if we are trying to connect when no connectivity (WiFi off?) -
-	// waiting until network appears (when default gateway defined)
-	// Retry to check default gateway each 5 seconds (sending RECONNECTING event)
+	// waiting until network appears
+	// Retry to check each 5 seconds (sending RECONNECTING event)
 	for wg.internals.isGoingToStop == false {
-		defaultGwIP, err := netinfo.DefaultGatewayIP()
-		if err == nil {
-			wg.internals.defGateway = defaultGwIP
+		if dns.IsPrimaryInterfaceFound() == true {
 			break
 		}
-		log.Info(fmt.Sprintf("No connectivity. Waiting 5 sec to retry... (%s)", err))
+		log.Info(fmt.Sprintf("No connectivity. Waiting 5 sec to retry..."))
 
 		stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "No connectivity")
 		pauseEnd := time.Now().Add(time.Second * 5)
@@ -84,6 +82,14 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 			time.Sleep(time.Millisecond * 50)
 		}
 	}
+
+	// get default Gateway IP
+	defaultGwIP, err := netinfo.DefaultGatewayIP()
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to detect default getway: %s", err))
+		return err
+	}
+	wg.internals.defGateway = defaultGwIP
 
 	if wg.internals.isGoingToStop {
 		return nil
