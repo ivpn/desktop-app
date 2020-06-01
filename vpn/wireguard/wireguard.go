@@ -104,8 +104,9 @@ func (wg *WireGuard) DestinationIPs() []net.IP {
 func (wg *WireGuard) Type() vpn.Type { return vpn.WireGuard }
 
 // Init performs basic initializations before connection
-// It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
-// (currently, in use by WireGuard(Windows))
+// It is useful, for example:
+//	- for WireGuard(Windows) - to ensure that WG service is fully uninstalled
+//	- for OpenVPN(Linux) - to ensure that OpenVPN has correct version
 func (wg *WireGuard) Init() error {
 	return wg.init()
 }
