@@ -74,3 +74,14 @@ func implDeleteManual(localInterfaceIP net.IP) error {
 
 	return nil
 }
+
+// IsPrimaryInterfaceFound (macOS specific implementation) returns 'true' when networking is available (primary interface is available)
+// When no networking available (WiFi off ?) - returns 'false'
+// <this method in use by macOS:WireGuard implementation>
+func IsPrimaryInterfaceFound() bool {
+	err := shell.Exec(log, platform.DNSScript(), "-is_main_interface_detected")
+	if err != nil {
+		return false
+	}
+	return true
+}
