@@ -238,10 +238,14 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 
 		// notify service about new keys
 		m.service.WireGuardSaveNewKeys(pub, priv, localIP.String())
-	}
 
-	// Restart keys rotation
-	m.StartKeysRotation()
+		if len(activePublicKey) == 0 {
+			// If there was no public key defined - start keys rotation
+			m.StartKeysRotation()
+		}
+	} else {
+		log.Info(fmt.Sprintf("WG keys not updated"))
+	}
 
 	return err
 }
