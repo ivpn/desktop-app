@@ -45,6 +45,7 @@ func init() {
 type IWgKeysChangeReceiver interface {
 	WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string)
 	WireGuardGetKeys() (session, wgPublicKey, wgPrivateKey, wgLocalIP string, generatedTime time.Time, updateInterval time.Duration)
+	FirewallEnabled() (bool, error)
 	Connected() bool
 }
 
@@ -207,6 +208,15 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	pub, priv, err := wireguard.GenerateKeys(m.wgToolBinPath)
 	if err != nil {
 		return err
+	}
+
+	isVPNConnected := m.service.Connected()
+	if isVPNConnected == false {
+		if fw, _ := m.service.FirewallEnabled(); fw == true {
+			// VPN is disconnected and Firewall enabled -> all communications blocked by Firewall
+			// No sense to make API requests
+			return fmt.Errorf("unable to update WireGuard keys (API calls are blocked by Firewall)")
+		}
 	}
 
 	// trying to update WG keys with notifying API about current active public key (if it exists)

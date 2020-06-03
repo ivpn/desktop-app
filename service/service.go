@@ -702,6 +702,12 @@ func (s *Service) Connected() bool {
 	return true
 }
 
+// FirewallEnabled returns firewall state (enabled\disabled)
+// (in use, for example, by WireGuard keys manager, to know is it have sense to make API requests.)
+func (s *Service) FirewallEnabled() (bool, error) {
+	return firewall.GetEnabled()
+}
+
 // Pause pause vpn connection
 func (s *Service) Pause() error {
 	vpn := s._vpn
