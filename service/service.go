@@ -81,6 +81,9 @@ type Service struct {
 	_preferences       preferences.Preferences
 	_connectMutex      sync.Mutex
 
+	// manual DNS value (if not defined - nil)
+	_manualDNS net.IP
+
 	// Required VPN state which service is going to reach (disconnect->keep connection->connect)
 	// When KeepConnection - reconnects immediately after disconnection
 	_requiredVpnState RequiredState
@@ -362,6 +365,8 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		return ErrorNotLoggedIn{}
 	}
 
+	s._manualDNS = manualDNS
+
 	// Not necessary to keep connection until we are not connected
 	// So just 'Connect' required for now
 	s._requiredVpnState = Connect
@@ -379,7 +384,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		lastConnectionTryTime := time.Now()
 
 		// start connection
-		err = s.connect(vpnObj, manualDNS, firewallDuringConnection, stateChan)
+		err = s.connect(vpnObj, s._manualDNS, firewallDuringConnection, stateChan)
 		if err != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", err))
 			if s._requiredVpnState == Connect {
@@ -741,6 +746,7 @@ func (s *Service) SetManualDNS(dns net.IP) error {
 		return nil
 	}
 
+	s._manualDNS = dns
 	if err := firewall.SetManualDNS(dns); err != nil {
 		return fmt.Errorf("failed to set manual DNS: %w", err)
 	}
@@ -759,6 +765,7 @@ func (s *Service) ResetManualDNS() error {
 		return nil
 	}
 
+	s._manualDNS = nil
 	if err := firewall.SetManualDNS(nil); err != nil {
 		return fmt.Errorf("failed to reset manual DNS: %w", err)
 	}
