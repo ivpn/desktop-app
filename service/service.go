@@ -655,7 +655,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 }
 
 func (s *Service) reconnect() {
-	s._requiredVpnState = KeepConnection
+	// Just call disconnect
+	// The reconnection will be performed automatically in method 'keepConnection(...)'
+	// (according to s._requiredVpnState value == KeepConnection)
 	s.disconnect()
 }
 
