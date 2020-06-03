@@ -55,6 +55,16 @@ func init() {
 	log = logger.NewLogger("servc")
 }
 
+// RequiredState VPN state which service is going to reach
+type RequiredState int
+
+// Requested VPN states
+const (
+	Disconnect     RequiredState = 0
+	Connect        RequiredState = 1
+	KeepConnection RequiredState = 2
+)
+
 const (
 	// SessionCheckInterval - the interval for periodical check session status
 	SessionCheckInterval time.Duration = time.Hour * 6
@@ -68,9 +78,12 @@ type Service struct {
 	_netChangeDetector INetChangeDetector
 	_wgKeysMgr         IWgKeysManager
 	_vpn               vpn.Process
-	_vpnKeepConnected  bool // when true - reconnects immediately after disconnection
 	_preferences       preferences.Preferences
 	_connectMutex      sync.Mutex
+
+	// Required VPN state which service is going to reach (disconnect->keep connection->connect)
+	// When KeepConnection - reconnects immediately after disconnection
+	_requiredVpnState RequiredState
 
 	// Note: Disconnect() function will wait until VPN fully disconnects
 	_done chan struct{}
@@ -118,7 +131,7 @@ func (s *Service) init() error {
 		return fmt.Errorf("service initialization error : %w", err)
 	}
 
-	// Logging mus be already initialised (by launcher). Do nothing here.
+	// Logging mus be already initialized (by launcher). Do nothing here.
 	// Init logger (if not initialized before)
 	//logger.Enable(s._preferences.IsLogging)
 
@@ -344,15 +357,14 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 }
 
 func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
-	defer func() { s._vpnKeepConnected = false }()
-
 	prefs := s.Preferences()
 	if prefs.Session.IsLoggedIn() == false {
 		return ErrorNotLoggedIn{}
 	}
 
-	// not necessary to keep connection until we are not connected
-	s._vpnKeepConnected = false
+	// Not necessary to keep connection until we are not connected
+	// So just 'Connect' required for now
+	s._requiredVpnState = Connect
 
 	// no delay before first reconnection
 	delayBeforeReconnect := 0 * time.Second
@@ -370,13 +382,15 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		err = s.connect(vpnObj, manualDNS, firewallDuringConnection, stateChan)
 		if err != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", err))
-			if s._vpnKeepConnected == false {
+			if s._requiredVpnState == Connect {
+				// throw error only on first try to connect
+				// if we were already connected (_requiredVpnState==KeepConnection) - ignore error and try to reconnect
 				return err
 			}
 		}
 
 		// retry, if reconnection requested
-		if s._vpnKeepConnected {
+		if s._requiredVpnState == KeepConnection {
 			// notifying clients about reconnection
 			stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "Reconnecting due to disconnection")
 
@@ -389,14 +403,14 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 				log.Info(fmt.Sprintf("Reconnecting (pause %s)...", delayBeforeReconnect))
 				// do delay before next reconnection
 				pauseTill := time.Now().Add(delayBeforeReconnect)
-				for time.Now().Before(pauseTill) && s._vpnKeepConnected {
+				for time.Now().Before(pauseTill) && s._requiredVpnState != Disconnect {
 					time.Sleep(time.Millisecond * 10)
 				}
 			} else {
 				log.Info("Reconnecting...")
 			}
 
-			if s._vpnKeepConnected {
+			if s._requiredVpnState == KeepConnection {
 				// consecutive reconnections has delay 5 seconds
 				delayBeforeReconnect = time.Second * 5
 				continue
@@ -415,7 +429,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	var connectRoutinesWaiter sync.WaitGroup
 
 	// stop active connection (if exists)
-	if err := s.disconnect(s._vpnKeepConnected); err != nil {
+	if err := s.disconnect(); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
 	}
 
@@ -524,7 +538,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 
 				case vpn.CONNECTED:
 					// since we are connected - keep connection (reconnect if unexpected disconnection)
-					s._vpnKeepConnected = true
+					if s._requiredVpnState == Connect {
+						s._requiredVpnState = KeepConnection
+					}
 
 					// start routing change detection
 					if netInterface, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
@@ -639,27 +655,24 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 }
 
 func (s *Service) reconnect() {
-	reconnect := true
-	s.disconnect(reconnect)
+	s._requiredVpnState = KeepConnection
+	s.disconnect()
 }
 
 // Disconnect disconnect vpn
 func (s *Service) Disconnect() error {
-	reconnect := false
-	return s.disconnect(reconnect)
+	s._requiredVpnState = Disconnect
+	return s.disconnect()
 }
 
-func (s *Service) disconnect(reconnect bool) error {
-	// it is important to set _vpnKeepConnected before VPN object availability check
-	s._vpnKeepConnected = reconnect
-
+func (s *Service) disconnect() error {
 	vpn := s._vpn
 	if vpn == nil {
 		return nil
 	}
 
 	done := s._done
-	if s._vpnKeepConnected {
+	if s._requiredVpnState == KeepConnection {
 		log.Info("Disconnecting (going to reconnect)...")
 	} else {
 		log.Info("Disconnecting...")
