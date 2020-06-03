@@ -29,3 +29,7 @@ References/Windows/etc/openvpn.cfg
 /References/Linux/etc/openvpn.cfg
 *.pyc
 References/Windows/mutable/ovpn_extra_params.txt
+References/Windows/Native Projects/.vs/
+desktop-app-daemon.exe
+References/Windows/Native Projects/IVPN Firewall Native/IVPN Firewall Native.vcxproj.user
+References/Windows/Native Projects/IVPN Helpers Native/IVPN Helpers Native.vcxproj.user

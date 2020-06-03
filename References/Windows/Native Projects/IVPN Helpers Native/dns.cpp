@@ -36,12 +36,37 @@ extern "C"
 	}
 }
 
+class CoValuesInitializer
+{
+private:
+	IWbemLocator** _locator;
+	IWbemServices** _nmspace;
+	bool __initialized;
+public:
+	~CoValuesInitializer()
+	{
+		if (__initialized)
+			unInitializeCoValues(_locator, _nmspace);
+	}
+
+	HRESULT Initialize(IWbemLocator** locator, IWbemServices** nmspace) {
+		_locator = locator;
+		_nmspace = nmspace;
+		__initialized = true;
+
+		return initializeCoValues(_locator, _nmspace);
+	}
+};
+
 HRESULT wmiSetDNS(const int destInterfaceIndex, const std::string destInterfaceMAC, const std::string destInterfaceLocalAddr, std::string dnsIP, Operation operation)
 {
 	// initialize 
 	IWbemLocator* pLocator = NULL;
 	IWbemServices* pNamespace = NULL;
-	HRESULT hr = initializeCoValues(&pLocator, &pNamespace);
+
+	// Initialize CoValues. They will be uninitialize automatically (on exiting this funtion) 
+	CoValuesInitializer initializer;
+	HRESULT hr = initializer.Initialize(&pLocator, &pNamespace);
 	if (hr != WBEM_S_NO_ERROR)
 		return hr;
 
@@ -77,9 +102,6 @@ HRESULT wmiSetDNS(const int destInterfaceIndex, const std::string destInterfaceM
 
 	HRESULT ret = wmiSetDNSServerSearchOrder(index, newDnsSearchOrder, pLocator, pNamespace);
 
-	// uninitialize 
-	unInitializeCoValues(&pLocator, &pNamespace);
-
 	return ret;
 }
 
@@ -87,13 +109,13 @@ HRESULT wmiSetDNSServerSearchOrder(const WORD interfaceIdx, std::vector<std::str
 {
 	HRESULT hr;
 
-	bool mustUninitialize = false;
+	CoValuesInitializer initializer;
 	if (pLocator == NULL || pNamespace == NULL)
 	{	// initialization required
-		hr = initializeCoValues(&pLocator, &pNamespace);
+		// Initialize CoValues. They will be uninitialize automatically (on exiting this funtion) 
+		hr = initializer.Initialize(&pLocator, &pNamespace);
 		if (hr != WBEM_S_NO_ERROR)
 			return hr;
-		mustUninitialize = true;
 	}
 
 	// Get class object of Win32_NetworkAdapterConfiguration
@@ -177,9 +199,6 @@ HRESULT wmiSetDNSServerSearchOrder(const WORD interfaceIdx, std::vector<std::str
 	if (pClass)
 		pClass->Release();
 
-	if (mustUninitialize)
-		unInitializeCoValues(&pLocator, &pNamespace);
-
 	return hr;
 }
 
@@ -194,13 +213,13 @@ int wmiGetInterfaceInfo(const int interfaceIdx, std::string mac, std::string ipA
 	toLowerStr(&ipAddr);
 
 	HRESULT hr;
-	bool mustUninitialize = false;
+	CoValuesInitializer initializer;
 	if (pLocator == NULL || pNamespace == NULL)
 	{	// initialization required
-		hr = initializeCoValues(&pLocator, &pNamespace);
+		// Initialize CoValues. They will be uninitialize automatically (on exiting this funtion) 
+		hr = initializer.Initialize(&pLocator, &pNamespace);
 		if (hr != WBEM_S_NO_ERROR)
 			return hr;
-		mustUninitialize = true;
 	}
 
 	// we're going to use CComPtr<>s, whose lifetime must end BEFORE CoUnitialize is called
@@ -303,9 +322,6 @@ int wmiGetInterfaceInfo(const int interfaceIdx, std::string mac, std::string ipA
 		}
 	}
 
-	if (mustUninitialize)
-		unInitializeCoValues(&pLocator, &pNamespace);
-
 	return result;
 }
 
@@ -354,10 +370,10 @@ void unInitializeCoValues(IWbemLocator** pLocator, IWbemServices** pNamespace)
 	if (*pNamespace)
 		(*pNamespace)->Release();
 	*pNamespace = NULL;
-
+	
 	if (*pLocator)
 		(*pLocator)->Release();
 	*pLocator = NULL;
-
+	
 	CoUninitialize();
 }
