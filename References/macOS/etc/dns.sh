@@ -321,7 +321,6 @@ elif [ "$1" = "-down" ] ; then
     fi
 
     scutil <<_EOF
-        remove State:/Network/IVPN/DNSAlternate
         remove State:/Network/IVPN/Original/DNS/Setup
         remove State:/Network/IVPN/Original/DNS/State
         remove State:/Network/IVPN/DNSBase

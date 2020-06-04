@@ -222,7 +222,6 @@ func (p *Protocol) processClient(conn net.Conn) {
 	// In case of wrong secret - the daemon drops connection
 	isAuthenticated := false
 
-	p.clientConnected(conn)
 	log.Info("Client connected: ", conn.RemoteAddr())
 
 	stopChannel := make(chan struct{}, 1)
@@ -240,7 +239,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 		p.clientDisconnected(conn)
 		log.Info("Client disconnected: ", conn.RemoteAddr())
 
-		if keepAlone == false {
+		if isAuthenticated && keepAlone == false {
 			stopService, err := p._service.OnControlConnectionClosed()
 			if err != nil {
 				log.Error(err)
@@ -261,7 +260,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 	}()
 
 	// service changes notifier
-	go func() {
+	startChangesNotifier := func() {
 		if r := recover(); r != nil {
 			log.Error("PANIC in client notifier!: ", r)
 			if err, ok := r.(error); ok {
@@ -279,7 +278,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 				return // stop loop
 			}
 		}
-	}()
+	}
 
 	reader := bufio.NewReader(conn)
 	// run loop forever (or until ctrl-c)
@@ -317,8 +316,12 @@ func (p *Protocol) processClient(conn net.Conn) {
 				p.sendErrorResponse(conn, cmd, fmt.Errorf("secret verification error"))
 				return
 			}
+
+			// AUTHENTICATED
 			keepAlone = hello.KeepDaemonAlone
 			isAuthenticated = true
+			p.clientConnected(conn)
+			go startChangesNotifier()
 		}
 
 		// Processing requests from client (in separate routine)
