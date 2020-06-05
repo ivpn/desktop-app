@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.3 - 2020-06-05
+
+[IMPROVED] User-defined extra configuration parameters for OpenVPN moved to separate file with access rights only for privileged account  
+[FIXED] Random disconnections on waking-up from sleep  
+[FIXED] (Linux) High CPU use with WireGuard connection  
+[FIXED] (macOS) Always-on Firewall is blocking traffic on system boot  
+[FIXED] (macOS) WireGuard connection error when a network interface not initialized  
+
+## Version 2.12.2 - 2020-05-23
+
+[IMPROVED] Overall stability  
+[FIXED] Potential disconnection when network changes  
+
+## Version 2.12.1 - 2020-05-21
+
+[FIXED] Potential disconnection when network changes  
+
 ## Version 2.12.0 - 2020-05-14
 
 [NEW] Command line interface for IVPN service  
