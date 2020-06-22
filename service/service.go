@@ -374,6 +374,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 	// no delay before first reconnection
 	delayBeforeReconnect := 0 * time.Second
 
+	stateChan <- vpn.NewStateInfo(vpn.CONNECTING, "Connecting")
 	for {
 		// create new VPN object
 		vpnObj, err := createVpnObj()
