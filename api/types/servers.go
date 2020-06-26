@@ -37,15 +37,22 @@ type WireGuardServerInfo struct {
 	Country     string `json:"country"`
 	City        string `json:"city"`
 
+	Latitude  float32 `json:"latitude"`
+	Longitude float32 `json:"longitude"`
+
 	Hosts []WireGuardServerHostInfo `json:"hosts"`
 }
 
 // OpenvpnServerInfo contains all info about OpenVPN server
 type OpenvpnServerInfo struct {
-	Gateway     string   `json:"gateway"`
-	CountryCode string   `json:"country_code"`
-	Country     string   `json:"country"`
-	City        string   `json:"city"`
+	Gateway     string `json:"gateway"`
+	CountryCode string `json:"country_code"`
+	Country     string `json:"country"`
+	City        string `json:"city"`
+
+	Latitude  float32 `json:"latitude"`
+	Longitude float32 `json:"longitude"`
+
 	IPAddresses []string `json:"ip_addresses"`
 }
 
