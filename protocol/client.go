@@ -102,14 +102,14 @@ func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
 
 	if err := c.sendRecvTimeOut(&helloReq, &c._helloResponse, time.Second*5); err != nil {
 		if _, ok := errors.Unwrap(err).(ResponseTimeout); ok {
-			return helloResponse, fmt.Errorf("Failed to send 'Hello' request (does another instance of IVPN Client running?): %w", err)
+			return helloResponse, fmt.Errorf("Failed to send 'Hello' request: %w", err)
 		}
 		return helloResponse, fmt.Errorf("Failed to send 'Hello' request: %w", err)
 	}
 	return c._helloResponse, nil
 }
 
-// GetHelloResponse returns initialisation response from daemon
+// GetHelloResponse returns initialization response from daemon
 func (c *Client) GetHelloResponse() types.HelloResp {
 	return c._helloResponse
 }
