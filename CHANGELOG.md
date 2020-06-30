@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.4 - 2020-06-30
+
+[IMPROVED] Minor improvements  
+
 ## Version 2.12.3 - 2020-06-05
 
 [IMPROVED] New option to stay logged-in after an upgrade (for future upgrades from DEB or RPM)  
