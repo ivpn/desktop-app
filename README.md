@@ -76,7 +76,7 @@ Compiled packages can be found at `$GOPATH/src/github.com/ivpn/desktop-app-cli/R
   cd desktop-app-cli/
   ./References/macOS/build.sh 
   ``` 
-  Comliled binariy can be found here:
+  Compiled binary can be found here:
   ```
   References/macOS/_out_bin/
   ```
@@ -88,7 +88,7 @@ Compiled packages can be found at `$GOPATH/src/github.com/ivpn/desktop-app-cli/R
   cd desktop-app-cli
   References\Windows\build.bat
   ``` 
-  Comliled binaries can be found here:
+  Compiled binaries can be found here:
   ```
   bin\x86\cli
   bin\x86_64\cli
