@@ -800,7 +800,18 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		state_forward_loop:
 			for {
 				select {
+				case <-isExitChan:
+					break state_forward_loop
+
 				case state := <-stateChan:
+
+					select {
+					case <-isExitChan:
+						// channel closed in defer function (vpn disconnected)
+						break state_forward_loop
+					default:
+					}
+
 					p._lastVPNState = state
 
 					switch state.State {
@@ -823,8 +834,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 					default:
 						p.notifyClients(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo})
 					}
-				case <-isExitChan:
-					break state_forward_loop
 				}
 			}
 		}()
