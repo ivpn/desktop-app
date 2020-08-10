@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.5 - 2020-08-10
+
+[FIXED] UI notification about the connection state  
+
 ## Version 2.12.4 - 2020-06-30
 
 [IMPROVED] Minor improvements  
