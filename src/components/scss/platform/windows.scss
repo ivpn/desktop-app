@@ -1,0 +1,80 @@
+@import "base.scss";
+@import "windows-servers.scss";
+@import "windows-settings.scss";
+
+.windowContentPaddingTop {
+    padding-top: 0px;
+}
+
+// === HOP BUTTONS ===
+div.hopButtons {
+    @extend .hopButtonsBase;
+    min-height: 36px;
+}
+div.hopButtonsSeparator {
+    @extend .hopButtonsSeparatorBase;
+    margin-left: 20px;
+    margin-right: 20px;
+}
+button.hopButton {
+    @extend .hopButtonBase;
+    text-transform: lowercase;
+    font-size: 14px;
+    line-height: 18px;
+    text-align: center;
+    letter-spacing: -0.375px;
+    color: #26394D;
+
+    opacity: 1;
+    font-weight: 400;
+}
+button.hopButtonActive {
+    @extend .hopButtonActiveBase;
+    color: #178FE6;
+    opacity: 1;
+    font-weight: 400;
+}
+// === INPUT ===
+input.styled {
+    @extend .styledBase;
+    height: 32px;
+    
+    border: 2px solid rgba(139, 154, 171, 0.3);
+    box-sizing: border-box;
+    
+    border-radius: 0px;
+    background: white;
+}
+input.styled::placeholder {
+    font-size: 14px;
+    line-height: 20px;
+    color: #8B9AAB;
+  }
+input.styledBig { 
+    @extend .styled;
+  }
+
+// === BUTTONS ===
+button.master {
+    width: 100%;
+    height: 32px;
+    background: #0078D7;
+
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    color: #FFFFFF;
+
+    border: 0px;
+    cursor: pointer;
+  }
+  
+button.slave {
+    @extend .master;
+    background: rgba(0, 0, 0, 0.2);
+
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    color: #000000;
+  }

@@ -1,0 +1,58 @@
+
+// buttons on\off state
+div.serversButtonsHeader {
+    margin-top: 8px;
+    margin-left: 20px;
+    margin-right: 20px;
+    margin-bottom: 6px;
+}
+
+div.serversButtonsSpace {
+    width: 9px;
+    margin: 0px;
+    padding: 0px;
+}
+
+img.serversButtonsBack {
+    vertical-align: middle;
+}
+
+button.stateButtonOff {
+    outline: none;
+
+    text-transform: capitalize;
+    height: 28px;
+    background: linear-gradient(0deg, #EFEEED 0%, #FFFFFF 100%), #FFFFFF;
+    border: 1px solid #CACACA;
+    box-sizing: border-box;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 20px;
+
+    color: #000000;
+}
+
+button.stateButtonOn {
+    outline: none;
+
+    height: 28px;
+    background: linear-gradient(0deg, #F49572 0%, #FAAE91 100%), #FFFFFF;
+    border: 1px solid #CACACA;
+    box-sizing: border-box;
+
+
+    font-size: 14px;
+    line-height: 20px;
+
+    color: #FFFFFF;
+}
+
+button.stateButtonLeft{
+    border-radius: 4px 0px 0px 4px;
+    border-right: 0px;
+}
+
+button.stateButtonRight{
+    border-radius: 0px 4px 4px 0px;
+
+}

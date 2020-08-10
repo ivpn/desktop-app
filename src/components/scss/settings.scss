@@ -1,0 +1,68 @@
+.settingsTitle {
+    margin-bottom: 46px;
+    font-weight: 500;
+    font-size: 11px;
+    line-height: 13px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  
+  .settingsDefaultText {
+    font-size: 13px;
+    line-height: 16px;
+    letter-spacing: -0.078px;
+  }
+
+  .settingsDefaultTextColor {
+    color: rgba(42, 57, 75, 0.85);
+  }
+
+  .settingsGrayDescriptionFont {
+    font-size: 12px;
+    line-height: 14px;
+    color: #8494A5;
+  }
+
+  .settingsGrayLongDescriptionFont {
+    font-size: 12px;
+    line-height: 17px;
+    letter-spacing: -0.0850909px;
+    color: rgba(132, 148, 165, 0.85);
+  }
+
+  .settingsBoldFont {
+    font-weight: 500;
+    font-size: 13px;
+    line-height: 18px;
+    letter-spacing: -0.08px;
+    margin-bottom: 8px;
+    margin-top: 30px;
+  }
+
+  .settingsBigBoldFont {
+    font-weight: 800;
+    font-size: 24px;
+    line-height: 29px;
+    letter-spacing: -0.3px;
+  }
+  
+  div.settingsRadioBtn {
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+
+  input.settingsTextInput {
+    background: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
+    border: 0.5px solid rgba(0, 0, 0, 0.2);
+    border-radius: 3.5px;
+  
+    margin-top: 4px;
+    width: 186px;
+  }
+
+  .settingsLinkText {
+    font-size: 13px;
+    line-height: 20px;
+    letter-spacing: -0.4px;
+    color: #398FE6;
+  }

@@ -1,0 +1,22 @@
+  //		regular - 400
+  //		medium  - 500
+  //		bold    - 600
+  // 		heavy   - 800
+  
+  @font-face {
+    font-family: "MainIVPNFont";
+    src: url("Ubuntu-Bold.woff");
+    font-weight: 600;
+  }
+  
+  @font-face {
+    font-family: "MainIVPNFont";
+    src: url("Ubuntu-Medium.woff");
+    font-weight: 500;
+  }
+  
+  @font-face {
+    font-family: "MainIVPNFont";
+    src: url("Ubuntu-Regular.woff");
+    font-weight: 400;
+  }

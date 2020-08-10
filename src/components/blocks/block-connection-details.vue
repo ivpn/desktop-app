@@ -1,0 +1,146 @@
+<template>
+  <div>
+    <div>
+      <div class="horizontalLine" />
+      <div id="connection_header">
+        <div style="height: 24px;"></div>
+
+        <span class="block datails_text">
+          CONNECTION DETAILS
+        </span>
+      </div>
+      <div class="horizontalLine" />
+    </div>
+
+    <!-- FIREWALL -->
+
+    <OnOffButtonControl
+      text="Firewall"
+      description="Ensure that all traffic is routed through VPN"
+      :onChecked="firewallOnChecked"
+      :isChecked="this.$store.state.vpnState.firewallState.IsEnabled"
+      :isProgress="firewallIsProgress"
+    />
+
+    <!-- ANTITRACKER -->
+    <div class="horizontalLine" />
+
+    <OnOffButtonControl
+      text="AntiTracker"
+      description="AntiTracker block all
+    trackers on web pages"
+      :onChecked="antitrackerOnChecked"
+      :isChecked="this.$store.state.settings.isAntitracker"
+      :checkedColor="
+        this.$store.state.settings.isAntitrackerHardcore ? '#00008B99' : null
+      "
+      :isProgress="antitrackerIsProgress"
+    />
+
+    <!-- PROTOCOL -->
+    <div class="horizontalLine" />
+
+    <SelectButtonControl
+      class="leftPanelBlock"
+      :click="onShowPorts"
+      v-bind:text="portProtocolText"
+      description="Protocol/Port"
+    />
+  </div>
+</template>
+
+<script>
+const { dialog, getCurrentWindow } = require("electron").remote;
+import OnOffButtonControl from "@/components/controls/control-config-on-off-button.vue";
+import SelectButtonControl from "@/components/controls/control-config-to-select-button.vue";
+import sender from "@/ipc/renderer-sender";
+import { enumValueName } from "@/helpers/helpers";
+import { VpnTypeEnum, PortTypeEnum } from "@/store/types";
+
+function processError(e) {
+  console.error(e);
+  dialog.showMessageBoxSync(getCurrentWindow(), {
+    type: "error",
+    buttons: ["OK"],
+    message: e
+  });
+}
+
+export default {
+  components: {
+    OnOffButtonControl,
+    SelectButtonControl
+  },
+  props: ["onShowPorts"],
+  data: function() {
+    return {
+      antitrackerIsProgress: false,
+      firewallIsProgress: false
+    };
+  },
+
+  computed: {
+    portProtocolText: function() {
+      let port = this.$store.getters["settings/getPort"];
+      let protocol = this.$store.getters["settings/vpnType"];
+      return `${enumValueName(VpnTypeEnum, protocol)}/${enumValueName(
+        PortTypeEnum,
+        port.type
+      )} ${port.port}`;
+    }
+  },
+
+  methods: {
+    async antitrackerOnChecked(antitrackerIsEnabled) {
+      try {
+        this.antitrackerIsProgress = true;
+        await sender.SetDNS(antitrackerIsEnabled);
+      } catch (e) {
+        processError(e);
+      } finally {
+        this.antitrackerIsProgress = false;
+      }
+    },
+    async firewallOnChecked(isEnabled) {
+      try {
+        this.firewallIsProgress = true;
+        await sender.EnableFirewall(isEnabled);
+      } catch (e) {
+        processError(e);
+      } finally {
+        this.firewallIsProgress = false;
+      }
+    }
+  }
+};
+</script>
+
+<!-- Add "scoped" attribute to limit CSS to this component only -->
+<style scoped lang="scss">
+@import "@/components/scss/constants";
+
+.block {
+  @extend .left_panel_block;
+}
+
+.datails_text {
+  color: $base-text-color-details;
+  font-size: 13px;
+  line-height: 18px;
+
+  letter-spacing: -0.08px;
+  text-transform: uppercase;
+}
+
+#connection_header {
+  min-height: 51px;
+  background: #f2f3f6;
+}
+
+.leftPanelBlock {
+  @extend .left_panel_block;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+</style>

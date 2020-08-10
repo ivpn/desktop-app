@@ -1,0 +1,47 @@
+@import "@/components/scss/settings";
+
+$base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
+
+$base-text-color: #2A394B;
+$base-text-color-details: rgba($base-text-color, 0.5);// #8494A5;
+
+.left_panel_block {
+    min-height: 72px;
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+.flexRow {
+    display: flex;
+    align-items: center;
+}
+
+.flexRowAlignTop {
+    display: flex;
+    align-items: normal;
+}
+
+.flexRowSpace {
+    @extend .flexRow;
+    justify-content: space-between;
+}
+
+button.noBordersBtn {
+    border: none;
+    background-color: inherit;
+    outline-width: 0;
+    cursor: pointer;
+}
+
+button.noBordersTextBtn {
+    border: none;
+    background-color: inherit;
+    outline-width: 0;
+    cursor: pointer;
+    padding: 0px;
+}
+
+button.link {
+    @extend .noBordersTextBtn;
+    color: #398FE6;
+  }

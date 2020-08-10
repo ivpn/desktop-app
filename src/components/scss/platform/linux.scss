@@ -1,0 +1,65 @@
+@import "base.scss";
+@import "linux-servers.scss";
+@import "linux-settings.scss";
+
+.windowContentPaddingTop {
+    padding-top: 15px;
+}
+
+// === HOP BUTTONS ===
+div.hopButtons {
+    @extend .hopButtonsBase;
+}
+button.hopButton {
+    @extend .hopButtonBase;
+}
+button.hopButtonActive {
+    @extend .hopButtonActiveBase;
+}
+div.hopButtonsSeparator {
+    @extend .hopButtonActiveBase;
+}
+
+// === INPUT ===
+input.styled {
+    @extend .styledBase;
+    height: 27px;
+    background: rgba(211, 223, 230, 0.33);
+
+    background: #FBFBFB;
+    border: 1px solid #8B9AAB;
+    box-sizing: border-box;
+  
+    border-radius: 4px;
+}
+input.styled::placeholder {
+    font-size: 13px;
+    line-height: 17px;
+    letter-spacing: -0.208px;
+    color: #98A5B3;
+  }
+input.styledBig { 
+    @extend .styled;
+  }
+
+// === BUTTONS ===
+button.master {
+    width: 100%;
+    height: 28px;
+
+    background: linear-gradient(0deg, #F49572 0%, #FAAE91 100%), #FFFFFF;
+    border: 1px solid #CACACA;
+    box-sizing: border-box;
+    border-radius: 4px;
+
+    font-size: 15px;
+    line-height: 17px;
+    color: #FFFFFF;
+
+    cursor: pointer;
+  }
+button.slave {
+    @extend .master;
+    background: linear-gradient(0deg, #EFEEED 0%, #FFFFFF 100%), #FFFFFF;
+    color: #4C4C4C;
+  }
