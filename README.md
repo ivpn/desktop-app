@@ -11,7 +11,6 @@ IVPN Client app is distributed on the official site [www.ivpn.net](https://www.i
 * [Security Policy](#security)
 * [License](#license)
 * [Authors](#Authors)
-* [Acknowledgements](#acknowledgements)
 
 <a name="about-repo"></a>
 ## About this Repo
@@ -81,8 +80,3 @@ This project is licensed under the GPLv3 - see the [License](/LICENSE.md) file f
 ## Authors
 
 See the [Authors](/AUTHORS) file for the list of contributors who participated in this project.
-
-<a name="acknowledgements"></a>
-## Acknowledgements
-
-See the [Acknowledgements](/ACKNOWLEDGEMENTS.md) file for the list of third party libraries used in this project.
