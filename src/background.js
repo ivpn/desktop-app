@@ -122,6 +122,8 @@ function createWindow() {
 
     center: true,
     title: "IVPN",
+    // eslint-disable-next-line no-undef
+    icon: __static + "/icon.png", // required to specify task-bar icon for Linux
 
     fullscreenable: false,
     titleBarStyle: titleBarStyle,
@@ -288,20 +290,17 @@ store.subscribe(mutation => {
 
 // show\hide app from system dock
 function updateAppDockVisibility() {
-  if (store.state.settings.showAppInSystemDock){ 
+  if (store.state.settings.showAppInSystemDock) {
     // macOS
-    if (app != null && app.dock != null)
-      app.dock.show();
+    if (app != null && app.dock != null) app.dock.show();
 
     // Windows
     if (win != null) {
-      win.setSkipTaskbar(false)
+      win.setSkipTaskbar(false);
     }
-  }
-  else {
+  } else {
     // macOS
-    if (app != null && app.dock != null)
-      app.dock.hide(); // remove from dock
+    if (app != null && app.dock != null) app.dock.hide(); // remove from dock
 
     // Windows
     if (win != null) {
@@ -309,6 +308,6 @@ function updateAppDockVisibility() {
     }
 
     // ensure window is still visible
-    if (win != null) win.show(); 
+    if (win != null) win.show();
   }
 }
