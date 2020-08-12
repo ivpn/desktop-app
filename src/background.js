@@ -288,9 +288,27 @@ store.subscribe(mutation => {
 
 // show\hide app from system dock
 function updateAppDockVisibility() {
-  if (store.state.settings.showAppInSystemDock) app.dock.show();
+  if (store.state.settings.showAppInSystemDock){ 
+    // macOS
+    if (app != null && app.dock != null)
+      app.dock.show();
+
+    // Windows
+    if (win != null) {
+      win.setSkipTaskbar(false)
+    }
+  }
   else {
-    app.dock.hide(); // remove from dock
-    if (win != null) win.show(); // ensure window is still visible
+    // macOS
+    if (app != null && app.dock != null)
+      app.dock.hide(); // remove from dock
+
+    // Windows
+    if (win != null) {
+      win.setSkipTaskbar(true);
+    }
+
+    // ensure window is still visible
+    if (win != null) win.show(); 
   }
 }
