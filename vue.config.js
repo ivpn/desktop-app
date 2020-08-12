@@ -5,5 +5,17 @@ module.exports = {
 
     /* possibility to debug from VS code */
     config.devtool = "source-map";
+  },
+
+  pluginOptions: {
+    electronBuilder: {
+      builderOptions: {
+        mac: {
+          extendInfo: {
+            LSUIElement: 1 // ability to hide app icon from macOS dock
+          }
+        }
+      }
+    }
   }
 };

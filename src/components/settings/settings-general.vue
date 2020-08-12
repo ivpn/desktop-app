@@ -14,6 +14,20 @@
     </div>
 
     <div class="settingsBoldFont">
+      On launch:
+    </div>
+    <div class="param">
+      <input
+        type="checkbox"
+        id="showAppInSystemDock"
+        v-model="showAppInSystemDock"
+      />
+      <label class="defColor" for="showAppInSystemDock"
+        >Show application icon in system dock</label
+      >
+    </div>
+
+    <div class="settingsBoldFont">
       On exit:
     </div>
     <div class="param">
@@ -63,6 +77,14 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/autoConnectOnLaunch", value);
+      }
+    },
+    showAppInSystemDock: {
+      get() {
+        return this.$store.state.settings.showAppInSystemDock;
+      },
+      set(value) {
+        this.$store.dispatch("settings/showAppInSystemDock", value);
       }
     },
     disconnectOnQuit: {

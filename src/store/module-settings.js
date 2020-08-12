@@ -64,7 +64,10 @@ export default {
 
     // dns
     dnsIsCustom: false,
-    dnsCustom: ""
+    dnsCustom: "",
+
+    // UI
+    showAppInSystemDock: false
   },
 
   mutations: {
@@ -157,6 +160,11 @@ export default {
     },
     dnsCustom(state, val) {
       state.dnsCustom = val;
+    },
+
+    //UI
+    showAppInSystemDock(state, val) {
+      state.showAppInSystemDock = val;
     }
   },
 
@@ -255,6 +263,11 @@ export default {
     },
     dnsCustom(context, val) {
       context.commit("dnsCustom", val);
+    },
+
+    //UI
+    showAppInSystemDock(context, val) {
+      context.commit("showAppInSystemDock", val);
     },
 
     // HELPERS

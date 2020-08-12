@@ -146,6 +146,9 @@ function createWindow() {
     win.loadURL("app://./index.html");
   }
 
+  // show\hide app from system dock
+  updateAppDockVisibility();
+
   win.on("closed", () => {
     win = null;
   });
@@ -269,5 +272,25 @@ if (isDevelopment) {
     process.on("SIGTERM", () => {
       app.quit();
     });
+  }
+}
+
+// subscribe to any changes in a tore
+store.subscribe(mutation => {
+  try {
+    if (mutation.type === "settings/showAppInSystemDock") {
+      updateAppDockVisibility();
+    }
+  } catch (e) {
+    console.error("Error in store subscriber:", e);
+  }
+});
+
+// show\hide app from system dock
+function updateAppDockVisibility() {
+  if (store.state.settings.showAppInSystemDock) app.dock.show();
+  else {
+    app.dock.hide(); // remove from dock
+    if (win != null) win.show(); // ensure window is still visible
   }
 }
