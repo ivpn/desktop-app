@@ -11,9 +11,10 @@ module.exports = {
     electronBuilder: {
       builderOptions: {
         mac: {
+          /*
           extendInfo: {
             LSUIElement: 1 // ability to hide app icon from macOS dock
-          }
+          }*/
         }
       }
     }

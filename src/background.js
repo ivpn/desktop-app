@@ -149,7 +149,7 @@ function createWindow() {
   }
 
   // show\hide app from system dock
-  updateAppDockVisibility();
+  // updateAppDockVisibility();
 
   win.on("closed", () => {
     win = null;
@@ -277,6 +277,11 @@ if (isDevelopment) {
   }
 }
 
+/*
+// TODO: uncomment to enable 'showAppInSystemDock' functionality 
+// TODO: (do not forget to ensure that 'settings.showAppInSystemDock' value can be changed from settings UI)
+// TODO: (do not forget to ensure 'LSUIElement: 1' enabled on 'mac' section of 'vue.config.js')
+
 // subscribe to any changes in a tore
 store.subscribe(mutation => {
   try {
@@ -310,4 +315,4 @@ function updateAppDockVisibility() {
     // ensure window is still visible
     if (win != null) win.show();
   }
-}
+}*/
