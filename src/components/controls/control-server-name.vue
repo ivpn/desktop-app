@@ -9,6 +9,12 @@
       {{ serverName }}
     </div>
 
+    <img
+      :src="selectedImg"
+      style="margin-left:10px"
+      v-if="isShowSelected === true"
+    />
+
     <div
       class="flexRow"
       v-bind:class="{ marginLeft: isHideFlag == null || isHideName == null }"
@@ -33,6 +39,7 @@ export default {
     "isFullName",
     "isShowPingPicture",
     "isShowPingTime",
+    "isShowSelected",
     "isHideName",
     "isHideFlag"
   ],
@@ -51,6 +58,9 @@ export default {
         console.log(e);
         return require(`@/assets/flags/24/_no_flag.png`);
       }
+    },
+    selectedImg: function() {
+      return require("@/assets/check.svg");
     },
     pingStatusImg: function() {
       if (this.server == null) return null;
@@ -81,6 +91,7 @@ export default {
 .text {
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 
   font-size: 14px;
   line-height: 20px;

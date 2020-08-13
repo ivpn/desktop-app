@@ -51,7 +51,11 @@
           v-on:click="onServerSelected(server)"
           v-bind:class="{ disabledButton: isInaccessibleServer(server) }"
         >
-          <serverNameControl :server="server" class="serverName" />
+          <serverNameControl
+            :server="server"
+            class="serverName"
+            :isShowSelected="isSelectedServer(server)"
+          />
           <serverNameControl
             class="pingInfo"
             :server="server"
@@ -170,6 +174,12 @@ export default {
       else ccSkip = this.$store.state.settings.serverEntry.country_code;
       if (server.country_code === ccSkip) return true;
       return false;
+    },
+    isSelectedServer: function(server) {
+      if (server == null) return false;
+      if (this.isExitServer)
+        return this.$store.state.settings.serverExit.gateway === server.gateway;
+      return this.$store.state.settings.serverEntry.gateway === server.gateway;
     },
     favoriteClicked: function(evt, server) {
       evt.stopPropagation();
