@@ -2,7 +2,12 @@
   <div>
     <transition mode="out-in">
       <div v-if="uiView === 'serversEntry'" key="entryServers">
-        <Servers :onBack="backToMainView" :onServerChanged="onServerChanged" />
+        <Servers
+          :onBack="backToMainView"
+          :onServerChanged="onServerChanged"
+          :onFastestServer="onFastestServer"
+          :onRandomServer="onRandomServer"
+        />
       </div>
 
       <div v-else-if="uiView === 'serversExit'" key="exitServers">
@@ -208,7 +213,15 @@ export default {
         if (server === this.$store.state.settings.serverExit) return;
         this.$store.dispatch("settings/serverExit", server);
       }
+      this.$store.dispatch("settings/isFastestServer", false);
+      this.$store.dispatch("settings/isRandomServer", false);
       if (connected(this)) connect(this, true);
+    },
+    onFastestServer() {
+      this.$store.dispatch("settings/isFastestServer", true);
+    },
+    onRandomServer() {
+      this.$store.dispatch("settings/isRandomServer", true);
     }
   }
 };

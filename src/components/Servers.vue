@@ -1,40 +1,67 @@
 <template>
   <div>
+    <!-- HEADER -->
     <div class="flexRow serversButtonsHeader">
       <div>
-        <button v-on:click="onBack" class="stateButtonOff">
+        <button v-on:click="goBack" class="stateButtonOff">
           <img :src="arrowLeftImagePath" class="serversButtonsBack" />
         </button>
       </div>
 
       <div class="serversButtonsSpace" />
 
-      <div class="flexRow" style="flex-grow: 1">
-        <div style="flex-grow: 1">
-          <button
-            style="width: 100%"
-            v-on:click="showAll"
-            class="stateButtonOff stateButtonLeft"
-            v-bind:class="{ stateButtonOn: !isFavoritesView }"
-          >
-            all servers
-          </button>
-        </div>
+      <div style="width: 100%" v-if="isFastestServerConfig === false">
+        <div class="flexRow" style="flex-grow: 1">
+          <div style="flex-grow: 1">
+            <button
+              style="width: 100%"
+              v-on:click="showAll"
+              class="stateButtonOff stateButtonLeft"
+              v-bind:class="{ stateButtonOn: !isFavoritesView }"
+            >
+              all servers
+            </button>
+          </div>
 
-        <div style="flex-grow: 1">
-          <button
-            style="width: 100%"
-            v-on:click="showFavorites"
-            class="stateButtonOff stateButtonRight"
-            v-bind:class="{ stateButtonOn: isFavoritesView }"
-          >
-            favorites
-          </button>
+          <div style="flex-grow: 1">
+            <button
+              style="width: 100%"
+              v-on:click="showFavorites"
+              class="stateButtonOff stateButtonRight"
+              v-bind:class="{ stateButtonOn: isFavoritesView }"
+            >
+              favorites
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style="width: 100%" v-if="isFastestServerConfig">
+        <div class="flexRow" style="flex-grow: 1">
+          <div style="flex-grow: 1">
+            <button
+              style="width: 100%"
+              v-on:click="showAll"
+              class="stateButtonOff stateButtonLeft"
+              v-bind:class="{ stateButtonOn: !isFavoritesView }"
+            >
+              fastest server settings
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="flexRow">
+    <!-- EMPTY FAVORITE SERVERS DESCRIPTION BLOCK -->
+    <div v-if="isShowFavoriteDescriptionBlock">
+      <div class="text">
+        Your favorite (<img :src="favoriteImageActive()" />) servers will be
+        displayed here
+      </div>
+    </div>
+
+    <!-- FILTER -->
+    <div class="flexRow" v-if="!isShowFavoriteDescriptionBlock">
       <input
         id="filter"
         class="styled"
@@ -44,8 +71,53 @@
       />
     </div>
 
+    <div v-if="isFastestServerConfig" class="small_text">
+      Disable servers you do not want to be choosen as the fastest server
+    </div>
+
+    <!-- SERVERS LIST BLOCK -->
     <div id="list">
-      <div v-for="server of filteredServers" v-bind:key="server.gateway">
+      <!-- FASTEST & RANDOMM SERVER -->
+      <div
+        v-if="
+          !isMultihop &&
+            isFavoritesView == false &&
+            isFastestServerConfig === false
+        "
+      >
+        <div class="flexRow">
+          <button
+            class="serverSelectBtn flexRow"
+            v-on:click="onFastestServerClicked()"
+          >
+            <serverNameControl
+              class="serverName"
+              :isFastestServer="true"
+              :isShowSelected="$store.getters['settings/isFastestServer']"
+            />
+          </button>
+          <button class="noBordersBtn" v-on:click="onFastestServerConfig()">
+            <img :src="settingsImage" />
+          </button>
+        </div>
+        <button
+          class="serverSelectBtn flexRow"
+          v-on:click="onRandomServerClicked()"
+        >
+          <serverNameControl
+            class="serverName"
+            :isRandomServer="true"
+            :isShowSelected="$store.getters['settings/isRandomServer']"
+          />
+        </button>
+      </div>
+
+      <!-- SERVERS LIST -->
+      <div
+        class="flexRow"
+        v-for="server of filteredServers"
+        v-bind:key="server.gateway"
+      >
         <button
           class="serverSelectBtn flexRow"
           v-on:click="onServerSelected(server)"
@@ -54,22 +126,40 @@
           <serverNameControl
             :server="server"
             class="serverName"
-            :isShowSelected="isSelectedServer(server)"
-          />
-          <serverNameControl
-            class="pingInfo"
-            :server="server"
-            isHideName="true"
-            isHideFlag="true"
-            isShowPingPicture="true"
-            isShowPingTime="true"
+            :isShowSelected="
+              isFastestServerConfig === false && isSelectedServer(server)
+            "
           />
 
-          <img
-            :src="favoriteImage(server)"
-            v-on:click="favoriteClicked($event, server)"
-          />
+          <div class="flexRow" v-if="isFastestServerConfig === false">
+            <!-- NO CONFIG -->
+            <serverNameControl
+              class="pingInfo"
+              :server="server"
+              isHideName="true"
+              isHideFlag="true"
+              isShowPingPicture="true"
+              isShowPingTime="true"
+            />
+
+            <img
+              :src="favoriteImage(server)"
+              v-on:click="favoriteClicked($event, server)"
+            />
+          </div>
         </button>
+
+        <div class="flexRow" v-if="isFastestServerConfig">
+          <!-- CONFIG -->
+          <SwitchProgress
+            :onChecked="
+              () => {
+                configFastestSvrClicked(server);
+              }
+            "
+            :isChecked="!isSvrExcludedFomFastest(server)"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -79,23 +169,40 @@
 const { dialog, getCurrentWindow } = require("electron").remote;
 
 import serverNameControl from "@/components/controls/control-server-name.vue";
+import SwitchProgress from "@/components/controls/control-switch-small.vue";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
 
 export default {
-  props: ["onBack", "onServerChanged", "isExitServer"],
+  props: [
+    "onBack",
+    "onServerChanged",
+    "isExitServer",
+    "onFastestServer",
+    "onRandomServer"
+  ],
   components: {
-    serverNameControl
+    serverNameControl,
+    SwitchProgress
   },
   data: function() {
     return {
-      filter: ""
+      filter: "",
+      isFastestServerConfig: false
     };
   },
 
   computed: {
     isFavoritesView: function() {
       return this.$store.state.uiState.serversFavoriteView;
+    },
+    isMultihop: function() {
+      return this.$store.state.settings.isMultiHop;
+    },
+    isShowFavoriteDescriptionBlock: function() {
+      if (!this.isFavoritesView) return false;
+      let favSvrs = this.$store.state.settings.serversFavoriteList;
+      return favSvrs == null || favSvrs.length == 0;
     },
     servers: function() {
       return this.$store.getters["vpnState/activeServers"];
@@ -104,6 +211,7 @@ export default {
       let favorites = this.$store.state.settings.serversFavoriteList;
       return this.servers.filter(s => favorites.includes(s.gateway));
     },
+
     filteredServers: function() {
       let servers = this.servers;
       if (this.isFavoritesView) servers = this.favoriteServers;
@@ -138,12 +246,28 @@ export default {
         default:
           return require("@/assets/search-linux.svg");
       }
+    },
+    settingsImage: function() {
+      switch (Platform()) {
+        case PlatformEnum.Windows:
+          return require("@/assets/settings-windows.svg");
+        case PlatformEnum.macOS:
+          return require("@/assets/settings-macos.svg");
+        default:
+          return require("@/assets/settings-linux.svg");
+      }
     }
   },
 
-  watch: {},
-
   methods: {
+    goBack: function() {
+      if (this.isFastestServerConfig) {
+        this.filter = "";
+        this.isFastestServerConfig = false;
+        return;
+      }
+      if (this.onBack != null) this.onBack();
+    },
     onServerSelected: function(server) {
       if (this.isInaccessibleServer(server)) {
         dialog.showMessageBoxSync(getCurrentWindow(), {
@@ -159,12 +283,32 @@ export default {
       this.onServerChanged(server, this.isExitServer != null);
       this.onBack();
     },
+    onFastestServerClicked() {
+      if (this.onFastestServer != null) this.onFastestServer();
+      this.onBack();
+    },
+    onRandomServerClicked() {
+      if (this.onRandomServer != null) this.onRandomServer();
+      this.onBack();
+    },
+    isSvrExcludedFomFastest: function(server) {
+      return this.$store.state.settings.serversFastestExcludeList.includes(
+        server.gateway
+      );
+    },
     favoriteImage: function(server) {
       if (
         this.$store.state.settings.serversFavoriteList.includes(server.gateway)
       )
         return require("@/assets/star-active.png");
       return require("@/assets/star-inactive.png");
+    },
+    favoriteImageActive: function() {
+      return require("@/assets/star-active.png");
+    },
+    onFastestServerConfig() {
+      this.isFastestServerConfig = true;
+      this.filter = "";
     },
     isInaccessibleServer: function(server) {
       if (this.$store.state.settings.isMultiHop === false) return false;
@@ -177,6 +321,11 @@ export default {
     },
     isSelectedServer: function(server) {
       if (server == null) return false;
+      if (
+        this.$store.state.settings.isFastestServer === true ||
+        this.$store.state.settings.isRandomServer === true
+      )
+        return false;
       if (this.isExitServer)
         return this.$store.state.settings.serverExit.gateway === server.gateway;
       return this.$store.state.settings.serverEntry.gateway === server.gateway;
@@ -184,7 +333,7 @@ export default {
     favoriteClicked: function(evt, server) {
       evt.stopPropagation();
 
-      let favorites = this.$store.state.settings.serversFavoriteList;
+      let favorites = this.$store.state.settings.serversFavoriteList.slice();
       let serversHashed = this.$store.state.vpnState.serversHashed;
       let gateway = server.gateway;
 
@@ -201,6 +350,19 @@ export default {
 
       this.$store.dispatch("settings/serversFavoriteList", favorites);
     },
+    configFastestSvrClicked(server) {
+      console.log("configFastestSvrClicked", server);
+      if (server == null || server.gateway == null) return;
+      let excludeSvrs = this.$store.state.settings.serversFastestExcludeList.slice();
+
+      if (excludeSvrs.includes(server.gateway)) {
+        excludeSvrs = excludeSvrs.filter(gw => gw != server.gateway);
+      } else {
+        excludeSvrs.push(server.gateway);
+      }
+      this.$store.dispatch("settings/serversFastestExcludeList", excludeSvrs);
+    },
+
     showFavorites: function() {
       this.$store.dispatch("uiState/serversFavoriteView", true);
       this.filter = "";
@@ -215,16 +377,19 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
+@import "@/components/scss/constants";
+$paddingLeftRight: 20px;
+
 #list {
   overflow: auto;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding-left: $paddingLeftRight;
+  padding-right: $paddingLeftRight;
 }
 
 input#filter {
   background-position: 97% 50%; //right
   background-repeat: no-repeat;
-  margin: 20px;
+  margin: $paddingLeftRight;
 }
 
 .disabledButton {
@@ -266,5 +431,19 @@ input#filter {
 
 .pingtext {
   margin-left: 8px;
+}
+
+.text {
+  margin: $paddingLeftRight;
+  margin-top: 60px;
+  text-align: center;
+}
+
+.small_text {
+  margin-left: $paddingLeftRight;
+  margin-right: $paddingLeftRight;
+  font-size: 11px;
+  line-height: 13px;
+  color: $base-text-color-details;
 }
 </style>

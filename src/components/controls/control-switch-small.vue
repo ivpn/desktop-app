@@ -12,9 +12,6 @@
 </template>
 
 <script>
-// https://freefrontend.com/jquery-toggle-switches/
-// https://codepen.io/aaroniker/pen/BVMxVp
-
 export default {
   props: ["onChecked", "isChecked", "isProgress", "checkedColor"],
   computed: {

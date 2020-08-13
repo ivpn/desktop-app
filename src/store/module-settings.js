@@ -30,9 +30,13 @@ export default {
     isMultiHop: false,
     serverEntry: null,
     serverExit: null,
+    isFastestServer: true,
+    isRandomServer: false,
 
     // Favorite gateway's list (strings)
     serversFavoriteList: [],
+    // List of servers to exclude from fastest servers list (gateway, strings)
+    serversFastestExcludeList: [],
 
     // general
     autoConnectOnLaunch: false,
@@ -94,10 +98,20 @@ export default {
         throw new Error("Unable to change server. Wrong server object.");
       state.serverExit = srv;
     },
-
+    isFastestServer(state, val) {
+      state.isFastestServer = val;
+      state.isRandomServer = false;
+    },
+    isRandomServer(state, val) {
+      state.isRandomServer = val;
+      state.isFastestServer = false;
+    },
     // Favorite gateway's list (strings)
     serversFavoriteList(state, val) {
       state.serversFavoriteList = val;
+    },
+    serversFastestExcludeList(state, val) {
+      state.serversFastestExcludeList = val;
     },
 
     // general
@@ -172,6 +186,14 @@ export default {
     vpnType: state => {
       return state.vpnType;
     },
+    isFastestServer: state => {
+      if (state.isMultiHop) return false;
+      return state.isFastestServer;
+    },
+    isRandomServer: state => {
+      if (state.isMultiHop) return false;
+      return state.isRandomServer;
+    },
     getPort: state => {
       return state.port[enumValueName(VpnTypeEnum, state.vpnType)];
     }
@@ -197,10 +219,19 @@ export default {
       context.commit("serverExit", srv);
       updateSelectedServers(context); // just to be sure entry-  and exit- servers are from different countries
     },
+    isFastestServer(context, val) {
+      context.commit("isFastestServer", val);
+    },
+    isRandomServer(context, val) {
+      context.commit("isRandomServer", val);
+    },
 
     // Favorite gateway's list (strings)
     serversFavoriteList(context, val) {
       context.commit("serversFavoriteList", val);
+    },
+    serversFastestExcludeList(context, val) {
+      context.commit("serversFastestExcludeList", val);
     },
 
     // general

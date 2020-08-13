@@ -148,6 +148,21 @@ export default {
     isDisconnected: state => {
       return state.connectionState === VpnStateEnum.DISCONNECTED;
     },
+    isConnecting: state => {
+      switch (state.connectionState) {
+        case VpnStateEnum.CONNECTING:
+        case VpnStateEnum.WAIT:
+        case VpnStateEnum.AUTH:
+        case VpnStateEnum.GETCONFIG:
+        case VpnStateEnum.ASSIGNIP:
+        case VpnStateEnum.ADDROUTES:
+        case VpnStateEnum.RECONNECTING:
+        case VpnStateEnum.TCP_CONNECT:
+          return true;
+        default:
+          return false;
+      }
+    },
     vpnStateText: state => {
       return enumValueName(VpnStateEnum, state.connectionState);
     },
@@ -168,6 +183,25 @@ export default {
     },
     isAntitrackerHardcoreEnabled: state => {
       return isAntitrackerHardcoreActive(state);
+    },
+    fastestServer(state, getters, rootState) {
+      let servers = getActiveServers(state, rootState.settings.vpnType);
+      if (servers == null || servers.length <= 0) return null;
+
+      let skipSvrs = rootState.settings.serversFastestExcludeList;
+      let retSvr = null;
+      for (let i = 0; i < servers.length; i++) {
+        let curSvr = servers[i];
+
+        if (skipSvrs != null && skipSvrs.includes(curSvr.gateway)) continue;
+        if (
+          curSvr != null &&
+          curSvr.ping != null &&
+          (retSvr == null || retSvr.ping > curSvr.ping)
+        )
+          retSvr = curSvr;
+      }
+      return retSvr;
     }
   },
 

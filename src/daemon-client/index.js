@@ -31,6 +31,7 @@ import { API_SUCCESS } from "@/api/statuscode";
 import { VpnTypeEnum, VpnStateEnum, PauseStateEnum } from "@/store/types";
 import store from "@/store";
 
+const PingServersTimeoutMs = 3000;
 const DefaultResponseTimeoutMs = 15 * 1000;
 
 // Socket to connect to a daemon
@@ -494,27 +495,54 @@ async function AccountStatus() {
 }
 
 async function PingServers() {
-  send({ Command: daemonRequests.PingServers, RetryCount: 3, TimeOutMs: 3000 });
+  return await sendRecv(
+    {
+      Command: daemonRequests.PingServers,
+      RetryCount: 3,
+      TimeOutMs: PingServersTimeoutMs
+    },
+    [daemonResponses.PingServersResp]
+  );
 }
 
 async function Connect(entryServer, exitServer) {
   let vpnParamsPropName = "";
   let vpnParamsObj = {};
 
-  if (store.state.settings.firewallOnOffOnConnect === true) {
-    await EnableFirewall(true);
-  }
-
   // we are not in paused state anymore
   store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
 
-  // if entryServer or exitServer is null -> will be used current selected servers
-  // otherwise -> current selected servers will be replaced by a new values before connect
-  if (entryServer != null) {
-    store.dispatch("settings/serverEntry", entryServer);
+  store.commit("vpnState/connectionState", VpnStateEnum.CONNECTING);
+
+  if (entryServer != null || exitServer != null) {
+    // if entryServer or exitServer is null -> will be used current selected servers
+    // otherwise -> current selected servers will be replaced by a new values before connect
+    if (entryServer != null)
+      store.dispatch("settings/serverEntry", entryServer);
+    if (exitServer != null) store.dispatch("settings/serverExit", exitServer);
+  } else {
+    if (store.getters["settings/isFastestServer"]) {
+      // looking for fastest server
+      let fastest = store.getters["vpnState/fastestServer"];
+      if (fastest == null) {
+        // request servers ping
+        console.log(
+          "Connect to fastest server (fastest server not defined). Pinging servers..."
+        );
+        await PingServers();
+        fastest = store.getters["vpnState/fastestServer"];
+      }
+      if (fastest != null) store.dispatch("settings/serverEntry", fastest);
+    } else if (store.getters["settings/isRandomServer"]) {
+      // random server
+      let servers = store.getters["vpnState/activeServers"];
+      let randomIdx = Math.floor(Math.random() * Math.floor(servers.length));
+      store.dispatch("settings/serverEntry", servers[randomIdx]);
+    }
   }
-  if (exitServer != null) {
-    store.dispatch("settings/serverExit", exitServer);
+
+  if (store.state.settings.firewallOnOffOnConnect === true) {
+    await EnableFirewall(true);
   }
 
   let settings = store.state.settings;
@@ -571,7 +599,6 @@ async function Connect(entryServer, exitServer) {
     currentDNS = store.getters["vpnState/antitrackerIp"];
   }
 
-  store.commit("vpnState/connectionState", VpnStateEnum.CONNECTING);
   send({
     Command: daemonRequests.Connect,
     VpnType: settings.vpnType,

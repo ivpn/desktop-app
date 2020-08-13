@@ -8,6 +8,8 @@
               ? "Exit server"
               : isConnected
               ? "Connected to"
+              : isConnecting
+              ? "Connecting to ..."
               : "Connect to"
           }}
         </div>
@@ -16,7 +18,20 @@
           class="serverName"
           size="large"
           :server="this.server"
-          isShowPingPicture="true"
+          :isFastestServer="
+            isDisconnected && $store.getters['settings/isFastestServer']
+          "
+          :isRandomServer="
+            isDisconnected && $store.getters['settings/isRandomServer']
+          "
+          :isShowPingPicture="
+            !isDisconnected ||
+              (isDisconnected &&
+                !(
+                  $store.getters['settings/isFastestServer'] ||
+                  $store.getters['settings/isRandomServer']
+                ))
+          "
         />
       </div>
 
@@ -43,6 +58,14 @@ export default {
     isConnected: function() {
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.CONNECTED
+      );
+    },
+    isConnecting: function() {
+      return this.$store.getters["vpnState/isConnecting"];
+    },
+    isDisconnected: function() {
+      return (
+        this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
       );
     }
   },

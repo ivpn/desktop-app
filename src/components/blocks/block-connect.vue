@@ -1,7 +1,7 @@
 <template>
   <div class="main">
     <div align="left">
-      <div class="small_text">Your connection is</div>
+      <div class="small_text">Your status is</div>
       <div class="large_text">{{ protectedText }}</div>
     </div>
 
@@ -105,8 +105,8 @@ export default {
   },
   computed: {
     protectedText: function() {
-      if (this.isChecked !== true || this.isCanResume) return "unprotected";
-      return "protected";
+      if (this.isChecked !== true || this.isCanResume) return "disconnected";
+      return "connected";
     },
     isCanPause: function() {
       if (process.platform === "linux") return false;

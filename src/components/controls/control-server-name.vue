@@ -19,7 +19,7 @@
       class="flexRow"
       v-bind:class="{ marginLeft: isHideFlag == null || isHideName == null }"
     >
-      <img :src="pingStatusImg" v-if="isShowPingPicture != null" />
+      <img :src="pingStatusImg" v-if="isShowPingPicture" />
 
       <div class="pingtext marginLeft" v-if="isShowPingTime != null">
         {{ server.ping }}ms
@@ -41,17 +41,28 @@ export default {
     "isShowPingTime",
     "isShowSelected",
     "isHideName",
-    "isHideFlag"
+    "isHideFlag",
+    "isFastestServer",
+    "isRandomServer",
+    "manualName",
+    "manualImage"
   ],
   computed: {
     serverName: function() {
+      if (this.isFastestServer === true) return "Fastest server";
+      if (this.isRandomServer === true) return "Random server";
+      if (this.manualName != null) return this.manualName;
       if (this.server == null) return "";
       if (this.isFullName === "true")
         return `${this.server.city}, ${this.server.country}`;
       return `${this.server.city}, ${this.server.country_code}`;
     },
     serverImage: function() {
-      if (this.server == null) return null;
+      if (this.isFastestServer === true)
+        return require("@/assets/speedometer.svg");
+      if (this.isRandomServer === true) return require("@/assets/shuffle.svg");
+      if (this.manualImage != null) return this.manualImage;
+      if (this.server == null) return require(`@/assets/flags/24/_no_flag.png`);
       try {
         return require(`@/assets/flags/24/${this.server.country_code.toLowerCase()}.png`);
       } catch (e) {
