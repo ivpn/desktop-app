@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>es</title>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="20" height="15" rx="2"></rect>
+    </defs>
+    <g id="Assets" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Windows-Assets" transform="translate(-186.000000, -171.000000)">
+            <g id="icon_countryflag_spain" transform="translate(188.000000, 176.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <g id="Rectangle"></g>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="0" y="0" width="20" height="4"></rect>
+                <rect id="Flag-color" fill="#FFD34C" mask="url(#mask-2)" x="0" y="4" width="20" height="7"></rect>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="0" y="11" width="20" height="4"></rect>
+                <g id="Symbol" mask="url(#mask-2)">
+                    <g transform="translate(3.000000, 5.000000)">
+                        <path d="M3.50370993,0.33855536 L3.61171651,3.64553703 C3.58820771,3.92764258 3.45040009,4.18187916 3.24924895,4.3662989 C3.04799725,4.55081084 2.78196301,4.66666667 2.49674567,4.66666667 L2.49674567,4.66666667 L1.83658767,4.66666667 C1.55198254,4.66666667 1.28571978,4.55059447 1.08416197,4.36580188 C0.883180208,4.18153743 0.745123646,3.9276189 0.721616825,3.64553703 L0.721616825,3.64553703 L0.471708773,0.646640421 L3.50370993,0.33855536 Z" id="Rectangle-137" stroke="#A41517" stroke-width="0.666666667" fill="none"></path>
+                        <polygon id="Rectangle-139" stroke="none" fill="#A41517" fill-rule="evenodd" points="0.5 1.66666667 3.83333333 1.66666667 3.83333333 2.5 3 2.5 2.16666667 4.16666667 1.33333333 2.5 0.5 2.5"></polygon>
+                    </g>
+                </g>
+                <rect id="Rectangle" stroke-opacity="0.2" stroke="#000000" stroke-width="0.5" opacity="0.699999988" mask="url(#mask-2)" x="0.25" y="0.25" width="19.5" height="14.5" rx="2"></rect>
+            </g>
+        </g>
+    </g>
+</svg>

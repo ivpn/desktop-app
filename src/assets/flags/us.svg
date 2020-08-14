@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>us</title>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="20" height="13" rx="2"></rect>
+    </defs>
+    <g id="Assets" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Windows-Assets" transform="translate(-124.000000, -201.000000)">
+            <g id="icon_countryflag_unitedstates" transform="translate(126.000000, 207.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <use id="Rectangle" fill="#FFFFFF" xlink:href="#path-1"></use>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="9" y="0" width="11" height="1"></rect>
+                <rect id="Rectangle-2" fill="#47467F" mask="url(#mask-2)" x="0" y="0" width="9" height="7"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="1" y="1" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="3" y="1" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="5" y="1" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="7" y="1" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="6" y="2" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="4" y="2" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="2" y="2" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="1" y="3" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="3" y="3" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="5" y="3" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="7" y="3" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="6" y="4" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="4" y="4" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="2" y="4" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="1" y="5" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="3" y="5" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="5" y="5" width="1" height="1" rx="0.5"></rect>
+                <rect id="Rectangle-3" fill="#FFFFFF" mask="url(#mask-2)" x="7" y="5" width="1" height="1" rx="0.5"></rect>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="9" y="2" width="11" height="1"></rect>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="9" y="4" width="11" height="1"></rect>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="9" y="6" width="11" height="1"></rect>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="0" y="8" width="20" height="1"></rect>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="0" y="10" width="20" height="1"></rect>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="0" y="12" width="20" height="1"></rect>
+                <rect id="Rectangle" stroke-opacity="0.2" stroke="#000000" stroke-width="0.5" opacity="0.699999988" mask="url(#mask-2)" x="0.25" y="0.25" width="19.5" height="12.5" rx="2"></rect>
+            </g>
+        </g>
+    </g>
+</svg>

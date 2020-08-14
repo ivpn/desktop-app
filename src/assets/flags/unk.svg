@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>sk copy</title>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="20" height="15" rx="2"></rect>
+    </defs>
+    <g id="Assets" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Windows-Assets" transform="translate(-155.000000, -288.000000)">
+            <g id="icon_countryflag_slovakia" transform="translate(157.000000, 292.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <g id="Rectangle"></g>
+                <g id="Group-8" mask="url(#mask-2)" fill="#DBDBDB" fill-opacity="0.235494974">
+                    <g transform="translate(10.000000, 7.500000) rotate(-180.000000) translate(-10.000000, -7.500000) " id="Flag-color">
+                        <rect x="0" y="0" width="20" height="5"></rect>
+                        <rect x="0" y="10" width="20" height="5"></rect>
+                        <rect x="0" y="5" width="20" height="5"></rect>
+                    </g>
+                </g>
+                <rect id="Rectangle" stroke-opacity="0.2" stroke="#000000" stroke-width="0.5" opacity="0.699999988" mask="url(#mask-2)" x="0.25" y="0.25" width="19.5" height="14.5" rx="2"></rect>
+            </g>
+            <g id="question" transform="translate(164.000000, 294.000000)" fill="#000000" fill-rule="nonzero">
+                <circle id="Oval" cx="2.88571429" cy="8.77142857" r="1"></circle>
+                <path d="M3,0.885714286 C1.61362286,0.885714286 0.485714286,2.01850558 0.485714286,3.41088435 C0.485714286,3.75954721 0.767125714,4.04217687 1.11428571,4.04217687 C1.46144571,4.04217687 1.74285714,3.75954721 1.74285714,3.41088435 C1.74285714,2.71469497 2.30681143,2.14829932 3,2.14829932 C3.69318857,2.14829932 4.25714286,2.71469497 4.25714286,3.41088435 C4.25714286,4.10707374 3.69318857,4.67346939 3,4.67346939 C2.65284,4.67346939 2.37142857,4.95609905 2.37142857,5.3047619 L2.37142857,6.8829932 C2.37142857,7.23165605 2.65284,7.51428571 3,7.51428571 C3.34716,7.51428571 3.62857143,7.23165605 3.62857143,6.8829932 L3.62857143,5.85616435 C4.71178857,5.57514449 5.51428571,4.58537252 5.51428571,3.41088435 C5.51428571,2.01850558 4.38637714,0.885714286 3,0.885714286 Z" id="Path"></path>
+            </g>
+        </g>
+    </g>
+</svg>

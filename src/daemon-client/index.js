@@ -31,7 +31,9 @@ import { API_SUCCESS } from "@/api/statuscode";
 import { VpnTypeEnum, VpnStateEnum, PauseStateEnum } from "@/store/types";
 import store from "@/store";
 
-const PingServersTimeoutMs = 3000;
+const PingServersTimeoutMs = 4000;
+const PingServersRetriesCnt = 4;
+
 const DefaultResponseTimeoutMs = 15 * 1000;
 
 // Socket to connect to a daemon
@@ -498,7 +500,7 @@ async function PingServers() {
   return await sendRecv(
     {
       Command: daemonRequests.PingServers,
-      RetryCount: 3,
+      RetryCount: PingServersRetriesCnt,
       TimeOutMs: PingServersTimeoutMs
     },
     [daemonResponses.PingServersResp]

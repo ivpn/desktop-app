@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>ca</title>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="20" height="14" rx="2"></rect>
+    </defs>
+    <g id="Assets" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Windows-Assets" transform="translate(-92.000000, -171.000000)">
+            <g id="icon_countryflag_hongkong" transform="translate(63.000000, 176.000000)"></g>
+            <g id="icon_countryflag_canada" transform="translate(94.000000, 176.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <g id="Rectangle"></g>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="0" y="0" width="20" height="14"></rect>
+                <rect id="Flag-color" fill="#FFFFFF" mask="url(#mask-2)" x="5" y="0" width="10" height="14"></rect>
+                <path d="M11.2801197,6.76749938 C11.1517131,6.89590593 11.0757813,6.85918862 11.1118484,6.67885335 L11.5714286,4.38095238 L10.5238095,4.9047619 L10,3.33333333 L9.47619048,4.9047619 L8.42857143,4.38095238 L8.88815162,6.67885335 C8.9236245,6.85621775 8.84026736,6.88788641 8.71988033,6.76749938 L8.13726253,6.18488157 C8.00885598,6.05647503 7.80376616,6.0533767 7.66737874,6.18976411 L7.38095238,6.47619048 L6.33333333,5.95238095 L6.85714286,7 L6.57071649,7.28642636 C6.43961339,7.41752946 6.43643915,7.62691534 6.56520303,7.75567922 L7.9047619,9.0952381 L9.47619048,9.0952381 L9.73809524,10.6666667 L10.2619048,10.6666667 L10.5238095,9.0952381 L12.0952381,9.0952381 L13.434797,7.75567922 C13.5628551,7.62762112 13.5656709,7.42281378 13.4292835,7.28642636 L13.1428571,7 L13.6666667,5.95238095 L12.6190476,6.47619048 L12.3326213,6.18976411 C12.2015182,6.05866101 11.9831245,6.06449454 11.8627375,6.18488157 L11.2801197,6.76749938 Z" id="Rectangle-66" fill="#E64552" mask="url(#mask-2)"></path>
+                <rect id="Rectangle" stroke-opacity="0.2" stroke="#000000" stroke-width="0.5" opacity="0.699999988" mask="url(#mask-2)" x="0.25" y="0.25" width="19.5" height="13.5" rx="2"></rect>
+            </g>
+        </g>
+    </g>
+</svg>

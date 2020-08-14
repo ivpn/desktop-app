@@ -13,7 +13,6 @@
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
 
-    <!--
     <div class="settingsBoldFont">
       On launch:
     </div>
@@ -27,7 +26,6 @@
         >Show application icon in system dock</label
       >
     </div>
-    -->
 
     <div class="settingsBoldFont">
       On exit:

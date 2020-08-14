@@ -219,9 +219,11 @@ export default {
     },
     onFastestServer() {
       this.$store.dispatch("settings/isFastestServer", true);
+      if (connected(this)) connect(this, true);
     },
     onRandomServer() {
       this.$store.dispatch("settings/isRandomServer", true);
+      if (connected(this)) connect(this, true);
     }
   }
 };

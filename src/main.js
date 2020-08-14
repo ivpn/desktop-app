@@ -55,7 +55,6 @@ function changeUIStyle(platform) {
   }
 }
 
-// TODO: just for testing
 const electron = window.require("electron");
 const { ipcRenderer } = electron;
 ipcRenderer.on("change-view-request", (event, arg) => {

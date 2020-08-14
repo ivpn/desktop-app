@@ -33,6 +33,7 @@ import "./ipc/main-listener";
 
 import store from "@/store";
 import daemonClient from "./daemon-client";
+import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
 import { InitConnectionResumer } from "./connection-resumer";
 import { IsWindowHasTitle } from "@/platform/platform";
@@ -107,7 +108,7 @@ if (process.env.IS_DEBUG) {
 }
 
 let titleBarStyle = "default";
-if (!IsWindowHasTitle()) titleBarStyle = "hiddenInset"; //"hidden";
+if (!IsWindowHasTitle()) titleBarStyle = "hidden"; //"hiddenInset";
 
 // CREATE WINDOW
 function createWindow() {
@@ -129,6 +130,8 @@ function createWindow() {
     titleBarStyle: titleBarStyle,
     autoHideMenuBar: true,
 
+    skipTaskbar: true,
+
     webPreferences: {
       enableRemoteModule: true,
       // Use pluginOptions.nodeIntegration, leave this alone
@@ -149,7 +152,7 @@ function createWindow() {
   }
 
   // show\hide app from system dock
-  // updateAppDockVisibility();
+  updateAppDockVisibility();
 
   win.on("closed", () => {
     win = null;
@@ -189,6 +192,12 @@ app.on("activate", () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on("ready", async () => {
+  try {
+    InitTray(menuOnShow, menuOnPreferences, menuOnAccount);
+  } catch (e) {
+    console.error(e);
+  }
+
   // request geolocation
   // (asynchronously, to do not block application start)
   setTimeout(() => {
@@ -277,12 +286,34 @@ if (isDevelopment) {
   }
 }
 
-/*
-// TODO: uncomment to enable 'showAppInSystemDock' functionality 
-// TODO: (do not forget to ensure that 'settings.showAppInSystemDock' value can be changed from settings UI)
-// TODO: (do not forget to ensure 'LSUIElement: 1' enabled on 'mac' section of 'vue.config.js')
+// MENU ITEMS
+function menuOnShow() {
+  if (win == null) createWindow();
 
-// subscribe to any changes in a tore
+  if (win != null) {
+    win.restore();
+    win.show();
+    win.focus();
+  }
+}
+function menuOnAccount() {
+  menuOnShow();
+  if (win !== null)
+    win.webContents.send("change-view-request", {
+      name: "settings",
+      params: { view: "account" }
+    });
+}
+function menuOnPreferences() {
+  menuOnShow();
+  if (win !== null)
+    win.webContents.send("change-view-request", {
+      name: "settings",
+      params: { view: "connection" }
+    });
+}
+
+// subscribe to any changes in a store
 store.subscribe(mutation => {
   try {
     if (mutation.type === "settings/showAppInSystemDock") {
@@ -315,4 +346,4 @@ function updateAppDockVisibility() {
     // ensure window is still visible
     if (win != null) win.show();
   }
-}*/
+}

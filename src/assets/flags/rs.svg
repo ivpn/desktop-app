@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>rs</title>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="20" height="15" rx="2"></rect>
+        <path d="M0.5,2.5 C0.5,1.82617791 0.873828888,0.484626524 0.873828888,0.484626524 C0.943511269,0.216974685 1.2157526,0 1.49538898,0 L3.50461102,0 C3.7782068,0 4.05735636,0.214117162 4.12617111,0.481138541 C4.12617111,0.481138541 4.5,1.81010532 4.5,2.5 C4.5,3.1449728 4.12359554,4.51947242 4.12359554,4.51947242 C4.05533561,4.78486047 3.85530376,5.17418671 3.66748512,5.37236309 C3.66748512,5.37236309 3.25,6 2.5,6 C1.75,6 1.33251488,5.37236309 1.33251488,5.37236309 C1.14887198,5.16671263 0.942643642,4.78284423 0.873828888,4.51260075 C0.873828888,4.51260075 0.5,3.16104539 0.5,2.5 Z" id="path-3"></path>
+    </defs>
+    <g id="Assets" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Windows-Assets" transform="translate(-93.000000, -288.000000)">
+            <g id="icon_countryflag_serbia" transform="translate(95.000000, 292.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <g id="Rectangle"></g>
+                <rect id="Flag-color" fill="#E64552" mask="url(#mask-2)" x="0" y="0" width="20" height="5"></rect>
+                <rect id="Flag-color" fill="#FFFFFF" mask="url(#mask-2)" x="0" y="10" width="20" height="5"></rect>
+                <rect id="Flag-color" fill="#316CBC" mask="url(#mask-2)" x="0" y="5" width="20" height="5"></rect>
+                <g id="Group-7" mask="url(#mask-2)">
+                    <g transform="translate(3.332814, 4.666667)">
+                        <mask id="mask-4" fill="white">
+                            <use xlink:href="#path-3"></use>
+                        </mask>
+                        <use id="Mask" stroke="none" fill="#FFFFFF" fill-rule="evenodd" xlink:href="#path-3"></use>
+                        <line x1="4.5" y1="0.5" x2="0.5" y2="5.5" id="Line" stroke="#E64552" stroke-width="1" fill="none" stroke-linecap="square" mask="url(#mask-4)"></line>
+                        <line x1="4.5" y1="0.5" x2="0.5" y2="5.5" id="Line" stroke="#E64552" stroke-width="1" fill="none" stroke-linecap="square" mask="url(#mask-4)" transform="translate(2.500000, 3.000000) scale(-1, 1) translate(-2.500000, -3.000000) "></line>
+                    </g>
+                </g>
+                <rect id="Rectangle" stroke-opacity="0.2" stroke="#000000" stroke-width="0.5" opacity="0.699999988" mask="url(#mask-2)" x="0.25" y="0.25" width="19.5" height="14.5" rx="2"></rect>
+            </g>
+        </g>
+    </g>
+</svg>

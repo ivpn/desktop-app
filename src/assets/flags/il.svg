@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>il</title>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="20" height="15" rx="2"></rect>
+    </defs>
+    <g id="Assets" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Windows-Assets" transform="translate(-30.000000, -288.000000)">
+            <g id="icon_countryflag_israel" transform="translate(32.000000, 292.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <g id="Rectangle"></g>
+                <rect id="Flag-color" fill="#316CBC" mask="url(#mask-2)" x="0" y="0" width="20" height="3"></rect>
+                <rect id="Flag-color" fill="#FFFFFF" mask="url(#mask-2)" x="0" y="3" width="20" height="9"></rect>
+                <rect id="Flag-color" fill="#316CBC" mask="url(#mask-2)" x="0" y="12" width="20" height="3"></rect>
+                <g id="Group-6" mask="url(#mask-2)">
+                    <g transform="translate(4.000000, 2.000000)" id="Group-9">
+                        <g transform="translate(0.500000, 0.000000)">
+                            <path d="M3.42980302,5.75716619 L5.99716339,7.23943236 L6.04752279,4.187675 L3.42980302,5.75716619 Z M7.07708581,2.40441958 L6.96898608,8.95521497 L1.45798028,5.77343435 L7.07708581,2.40441958 Z" id="Star-25" fill="#447AC2" fill-rule="nonzero" transform="translate(4.267533, 5.679817) rotate(-30.000000) translate(-4.267533, -5.679817) "></path>
+                            <path d="M5.99716335,6.61905484 L6.04752265,3.56729734 L3.429803,5.13678853 L5.99716335,6.61905484 Z M7.0770856,1.78404192 L6.9689861,8.33483758 L1.45798038,5.15305667 L7.0770856,1.78404192 Z" id="Star-25-Copy" fill="#447AC2" fill-rule="nonzero" transform="translate(4.267533, 5.059440) scale(1, -1) rotate(-30.000000) translate(-4.267533, -5.059440) "></path>
+                        </g>
+                    </g>
+                </g>
+                <rect id="Rectangle" stroke-opacity="0.2" stroke="#000000" stroke-width="0.5" opacity="0.699999988" mask="url(#mask-2)" x="0.25" y="0.25" width="19.5" height="14.5" rx="2"></rect>
+            </g>
+        </g>
+    </g>
+</svg>

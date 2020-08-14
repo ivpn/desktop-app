@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>br</title>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="20" height="15" rx="2"></rect>
+        <circle id="path-3" cx="3.12239244" cy="3.12239244" r="3.12239244"></circle>
+    </defs>
+    <g id="Assets" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Windows-Assets" transform="translate(-186.000000, -232.000000)">
+            <g id="icon_countryflag_brazil" transform="translate(188.000000, 236.000000)">
+                <mask id="mask-2" fill="white">
+                    <use xlink:href="#path-1"></use>
+                </mask>
+                <use id="Rectangle" fill="#5DB55F" xlink:href="#path-1"></use>
+                <g id="Group-5" mask="url(#mask-2)">
+                    <g transform="translate(1.970991, 2.647327)">
+                        <path d="M1.00364871,5.713468 C0.695698794,5.51420629 0.698354482,5.18942084 1.00364871,4.99187752 L7.47141649,0.806851304 C7.77936641,0.607589595 8.28130755,0.609307981 8.58660178,0.806851304 L15.0543696,4.99187752 C15.3623195,5.19113923 15.3596638,5.51592468 15.0543696,5.713468 L8.58660178,9.89849421 C8.27865187,10.0977559 7.77671072,10.0960375 7.47141649,9.89849421 L1.00364871,5.713468 Z" id="Rectangle-60" fill="#FDD216"></path>
+                        <g id="Oval-2" stroke-width="1" fill="none" transform="translate(4.906617, 2.230280)">
+                            <mask id="mask-4" fill="white">
+                                <use xlink:href="#path-3"></use>
+                            </mask>
+                            <use id="Mask" fill="#053087" xlink:href="#path-3"></use>
+                            <path d="M-0.130646803,2.99174565 L-0.446056077,3.30715491 L-1.0768746,2.67633636 L-0.761465323,2.3609271 C-0.222832558,1.82229436 0.833032004,1.86481657 3.19167975,2.23569449 C4.70562027,2.47374916 6.45488107,3.14772624 7.00625019,3.69909528 L7.32165948,4.01450452 L6.69084099,4.6453231 L6.3754317,4.32991386 C5.98580835,3.94029056 4.39770188,3.32840503 3.05310514,3.11697828 C1.16354976,2.81986127 0.0846860274,2.77641283 -0.130646803,2.99174565 Z" id="Line" fill="#FFFFFF" fill-rule="nonzero" mask="url(#mask-4)" transform="translate(3.122392, 3.300930) rotate(6.000000) translate(-3.122392, -3.300930) "></path>
+                        </g>
+                    </g>
+                </g>
+                <rect id="Rectangle" stroke-opacity="0.2" stroke="#000000" stroke-width="0.5" opacity="0.699999988" mask="url(#mask-2)" x="0.25" y="0.25" width="19.5" height="14.5" rx="2"></rect>
+            </g>
+        </g>
+    </g>
+</svg>

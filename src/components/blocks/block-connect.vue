@@ -105,6 +105,8 @@ export default {
   },
   computed: {
     protectedText: function() {
+      if (this.$store.state.vpnState.pauseState === PauseStateEnum.Paused)
+        return "paused";
       if (this.isChecked !== true || this.isCanResume) return "disconnected";
       return "connected";
     },

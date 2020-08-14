@@ -1,6 +1,11 @@
 <template>
   <div class="main">
-    <img class="flag" v-if="isHideFlag == null" :src="serverImage" />
+    <img
+      class="flag"
+      v-if="isHideFlag == null"
+      v-bind:class="{ flagBigger: isFlagBigger != null }"
+      :src="serverImage"
+    />
     <div
       class="text"
       v-if="isHideName == null"
@@ -21,7 +26,10 @@
     >
       <img :src="pingStatusImg" v-if="isShowPingPicture" />
 
-      <div class="pingtext marginLeft" v-if="isShowPingTime != null">
+      <div
+        class="pingtext marginLeft"
+        v-if="isShowPingTime != null && pingStatusImg != null"
+      >
         {{ server.ping }}ms
       </div>
     </div>
@@ -44,6 +52,7 @@ export default {
     "isHideFlag",
     "isFastestServer",
     "isRandomServer",
+    "isFlagBigger",
     "manualName",
     "manualImage"
   ],
@@ -62,12 +71,13 @@ export default {
         return require("@/assets/speedometer.svg");
       if (this.isRandomServer === true) return require("@/assets/shuffle.svg");
       if (this.manualImage != null) return this.manualImage;
-      if (this.server == null) return require(`@/assets/flags/24/_no_flag.png`);
+      if (this.server == null) return require(`@/assets/flags/unk.svg`);
       try {
-        return require(`@/assets/flags/24/${this.server.country_code.toLowerCase()}.png`);
+        const ccode = this.server.country_code.toLowerCase();
+        return require(`@/assets/flags/${ccode}.svg`);
       } catch (e) {
         console.log(e);
-        return require(`@/assets/flags/24/_no_flag.png`);
+        return require(`@/assets/flags/unk.svg`);
       }
     },
     selectedImg: function() {
@@ -97,6 +107,10 @@ export default {
 .main {
   display: flex;
   align-items: center;
+}
+
+.flagBigger {
+  width: 26px;
 }
 
 .text {
