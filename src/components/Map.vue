@@ -442,6 +442,16 @@ export default {
     },
 
     locationClicked(location) {
+      if (
+        location != null &&
+        location.gateway != null &&
+        this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
+      ) {
+        this.$store.dispatch("settings/serverEntry", location);
+        this.$store.dispatch("settings/isFastestServer", false);
+        this.$store.dispatch("settings/isRandomServer", false);
+      }
+
       const isPopupRequired = true;
       const noAnimation = false;
       this.centerServer(location, noAnimation, isPopupRequired);

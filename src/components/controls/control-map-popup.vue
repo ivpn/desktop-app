@@ -26,7 +26,7 @@
     </button>
 
     <div v-if="isPaused">
-      <div style="height: 20px" />
+      <div style="height: 20px" v-if="isCanConnect || isCanDisconnect" />
       <div class="popup_description_text">
         Connection will resume automatically in
       </div>
@@ -86,7 +86,7 @@ export default {
     },
 
     isExitServerCountrySameAsEntry: function() {
-      if (this.location == null) return false;
+      if (this.location == null || this.location.gateway == null) return false;
       return (
         this.$store.state.settings.isMultiHop &&
         this.location.country_code ===
@@ -97,7 +97,7 @@ export default {
     isCanDisconnect() {
       if (this.$store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED)
         return false;
-      if (this.location == null) return false;
+      if (this.location == null || this.location.gateway == null) return false;
 
       if (
         (this.$store.state.settings.isMultiHop &&
