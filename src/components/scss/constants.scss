@@ -63,6 +63,6 @@ button.link {
     overflow: scroll;
   }
 
-//div.scrollableColumnContainer::-webkit-scrollbar {
-//    display: none; // do not show scroll-bars
-//}
+div.scrollableColumnContainer::-webkit-scrollbar {
+    display: none; // do not show scroll-bars
+}

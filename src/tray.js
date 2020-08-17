@@ -37,6 +37,8 @@ function updateTrayMenu() {
   if (tray == null) {
     // eslint-disable-next-line no-undef
     tray = new Tray(__static + "/icon-disconnected.png");
+
+    tray.on("double-click", () => { if (menuHandlerShow!=null) menuHandlerShow();})
   }
 
   // FAVORITE SERVERS MENU
