@@ -604,8 +604,8 @@ export default {
       this.isPopupVisible = false;
       if (this.timerScaling != null) clearTimeout(this.timerScaling);
       if (e.deltaY > 0)
-        this.timerScaling = setTimeout(() => this.zoomOut(e), 10);
-      else this.timerScaling = setTimeout(() => this.zoomIn(e), 10);
+        this.timerScaling = setTimeout(() => this.zoomIn(e), 10);
+      else this.timerScaling = setTimeout(() => this.zoomOut(e), 10);
     },
     zoomIn(e) {
       if (this.scale <= 0.3) return;
