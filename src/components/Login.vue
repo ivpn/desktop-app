@@ -1,7 +1,7 @@
 <template>
   <div class="login">
     <spinner :loading="isProcessing" />
-    <div class="flexColumn" style="margin-top: -50px">
+    <div class="column">
       <div>
         <div class="centered">
           <div class="large_text">Log in to your IVPN account</div>
@@ -132,7 +132,7 @@ export default {
   align-items: center;
 }
 
-.flexColumn {
+.column {
   width: 100%;
   margin-left: 20px;
   margin-right: 20px;

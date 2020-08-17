@@ -17,7 +17,18 @@ img.serversButtonsBack {
     vertical-align: middle;
 }
 
+button.sortBtnPlatform {
+    background: linear-gradient(0deg, #EFEEED 0%, #FFFFFF 100%), #FFFFFF;
+    border: 1px solid #CACACA !important;
+    box-sizing: border-box;
+    padding-left: 3px;
+    padding-right: 3px;
+    border-radius: 4px;
+    
+}
+
 button.stateButtonOff {
+    cursor: pointer;
     outline: none;
 
     text-transform: capitalize;
@@ -33,6 +44,7 @@ button.stateButtonOff {
 }
 
 button.stateButtonOn {
+    cursor: pointer;
     outline: none;
 
     height: 28px;

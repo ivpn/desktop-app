@@ -61,7 +61,7 @@
     </div>
 
     <!-- FILTER -->
-    <div class="flexRow" v-if="!isShowFavoriteDescriptionBlock">
+    <div class="commonMargins flexRow" v-if="!isShowFavoriteDescriptionBlock">
       <input
         id="filter"
         class="styled"
@@ -69,18 +69,24 @@
         v-model="filter"
         v-bind:style="{ backgroundImage: 'url(' + searchImage + ')' }"
       />
+
+      <!--
+      <button class="noBordersBtn sortBtn sortBtnPlatform">
+        <img :src="sortImage" />
+      </button>
+      -->
     </div>
 
     <div
       v-if="isFastestServerConfig"
       class="small_text"
-      style="margin-bottom: 5px"
+      style="margin-bottom: 5px;"
     >
       Disable servers you do not want to be choosen as the fastest server
     </div>
 
     <!-- SERVERS LIST BLOCK -->
-    <div id="list" class="flexColumn scrollableColumnContainer">
+    <div class="commonMargins flexColumn scrollableColumnContainer">
       <!-- FASTEST & RANDOMM SERVER -->
       <div
         v-if="
@@ -260,6 +266,16 @@ export default {
         default:
           return require("@/assets/settings-linux.svg");
       }
+    },
+    sortImage: function() {
+      switch (Platform()) {
+        case PlatformEnum.Windows:
+          return require("@/assets/sort-windows.svg");
+        case PlatformEnum.macOS:
+          return require("@/assets/sort-macos.svg");
+        default:
+          return require("@/assets/sort-linux.svg");
+      }
     }
   },
 
@@ -384,15 +400,16 @@ export default {
 @import "@/components/scss/constants";
 $paddingLeftRight: 20px;
 
-#list {
-  padding-left: $paddingLeftRight;
-  padding-right: $paddingLeftRight;
+.commonMargins {
+  margin-left: $paddingLeftRight;
+  margin-right: $paddingLeftRight;
 }
 
 input#filter {
   background-position: 97% 50%; //right
   background-repeat: no-repeat;
-  margin: $paddingLeftRight;
+  margin-top: $paddingLeftRight;
+  margin-bottom: $paddingLeftRight;
 }
 
 .disabledButton {
@@ -437,5 +454,9 @@ input#filter {
   font-size: 11px;
   line-height: 13px;
   color: $base-text-color-details;
+}
+
+button.sortBtn {
+  margin-left: 5px;
 }
 </style>

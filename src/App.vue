@@ -14,6 +14,7 @@
 <script>
 import sender from "@/ipc/renderer-sender";
 import { IsWindowHasTitle } from "@/platform/platform";
+import { Platform, PlatformEnum } from "@/platform/platform";
 
 export default {
   mounted() {
@@ -36,6 +37,27 @@ export default {
     }
   }
 };
+
+// Ability to get working Copy\Paste to 'input' elements
+// without modification application menu (which is required for macOS)
+if (Platform() === PlatformEnum.macOS) {
+  const { clipboard } = require("electron");
+  const keyCodes = {
+    V: 86
+  };
+  document.onkeydown = function(event) {
+    let toReturn = true;
+    if (event.ctrlKey || event.metaKey) {
+      // detect ctrl or cmd
+      if (event.which == keyCodes.V) {
+        document.activeElement.value += clipboard.readText();
+        document.activeElement.dispatchEvent(new Event("input"));
+        toReturn = false;
+      }
+    }
+    return toReturn;
+  };
+}
 </script>
 
 <style lang="scss">

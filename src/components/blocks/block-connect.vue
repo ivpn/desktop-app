@@ -211,7 +211,7 @@ $shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
 }
 
 // ============== POPUP =================
-$popup-background: white; //green; //white; // #ffffff; // #f1f1f1;
+$popup-background: white;
 
 .popup {
   position: absolute;
