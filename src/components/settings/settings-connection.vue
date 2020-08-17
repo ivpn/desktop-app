@@ -151,7 +151,7 @@
         </select>
       </div>
 
-      <div class="paramBlockDetailedConfig">
+      <div class="paramBlockDetailedConfig" v-if="IsAccountActive">
         <input
           type="checkbox"
           id="wgConfigDetailed"
@@ -162,7 +162,10 @@
         >
       </div>
 
-      <div class="detailedConfigBlock" v-if="wgConfigDetailed">
+      <div
+        class="detailedConfigBlock"
+        v-if="wgConfigDetailed && IsAccountActive"
+      >
         <spinner :loading="isProcessing" />
         <div class="flexRow detailedConfigParamBlock">
           <div class="defColor paramName">Local IP:</div>
@@ -293,6 +296,9 @@ export default {
     }
   },
   computed: {
+    IsAccountActive: function() {
+      return this.$store.state.account.accountStatus.Active;
+    },
     port: {
       get() {
         return this.$store.getters["settings/getPort"];
