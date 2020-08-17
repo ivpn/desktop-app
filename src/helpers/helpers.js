@@ -45,9 +45,6 @@ export function isValidURL(str, isIgnoreProtocol) {
 
 export function notLinear(k) {
   return easeOutQuart(k);
-  //return easeInOutQuart(k);
-  //return simpleSin(k);
-  //return easeOutBounce(k);
 }
 
 export function simpleSin(k) {

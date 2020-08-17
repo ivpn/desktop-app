@@ -181,7 +181,7 @@ div.row {
 }
 
 #main {
-  height: 100vh;
+  height: 100%;
 
   font-size: 13px;
   line-height: 16px;
@@ -197,7 +197,6 @@ div.row {
 }
 #tabsTitle {
   width: 100%;
-  height: 100vh;
 
   display: flex;
   flex-flow: column;

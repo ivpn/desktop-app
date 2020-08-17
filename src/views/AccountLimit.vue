@@ -31,7 +31,7 @@
         <div style="height: 16px"></div>
         <div class="centered">
           <button class="link linkFont" v-on:click="onTryAgain">
-            Try again
+            Go back
           </button>
         </div>
       </div>

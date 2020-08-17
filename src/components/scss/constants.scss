@@ -7,8 +7,19 @@ $base-text-color-details: rgba($base-text-color, 0.5);// #8494A5;
 
 .left_panel_block {
     min-height: 72px;
+    max-height: 72px;
     margin-left: 20px;
     margin-right: 20px;
+}
+
+.flexColumn {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+}
+
+.flexRowRestSpace {
+    flex-grow: 1;
 }
 
 .flexRow {
@@ -45,3 +56,13 @@ button.link {
     @extend .noBordersTextBtn;
     color: #398FE6;
   }
+
+  div.scrollableColumnContainer {
+    display: flex;
+    flex-flow: column;
+    overflow: scroll;
+  }
+
+//div.scrollableColumnContainer::-webkit-scrollbar {
+//    display: none; // do not show scroll-bars
+//}

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="flexColumn">
     <!-- HEADER -->
     <div class="flexRow serversButtonsHeader">
       <div>
@@ -71,12 +71,16 @@
       />
     </div>
 
-    <div v-if="isFastestServerConfig" class="small_text">
+    <div
+      v-if="isFastestServerConfig"
+      class="small_text"
+      style="margin-bottom: 5px"
+    >
       Disable servers you do not want to be choosen as the fastest server
     </div>
 
     <!-- SERVERS LIST BLOCK -->
-    <div id="list">
+    <div id="list" class="flexColumn scrollableColumnContainer">
       <!-- FASTEST & RANDOMM SERVER -->
       <div
         v-if="
@@ -381,7 +385,6 @@ export default {
 $paddingLeftRight: 20px;
 
 #list {
-  overflow: auto;
   padding-left: $paddingLeftRight;
   padding-right: $paddingLeftRight;
 }
@@ -394,17 +397,6 @@ input#filter {
 
 .disabledButton {
   opacity: 0.5;
-}
-
-.flexRow {
-  display: flex;
-  align-items: center;
-}
-
-.flexRowSpace {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .serverSelectBtn {

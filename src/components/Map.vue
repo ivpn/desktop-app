@@ -1,5 +1,5 @@
 <template>
-  <div class="main">
+  <div id="main">
     <!-- Popup -->
     <div class="popup">
       <div
@@ -69,7 +69,7 @@
         <div
           ref="hiddenTestTextMeter"
           class="mapLocationName"
-          style="opacity: 0, pointer-events: none"
+          style="opacity: 0, pointer-events: none; z-index: -1;"
         ></div>
 
         <div class="mapLocationsContainer" ref="mapLocationsContainer">
@@ -1032,8 +1032,9 @@ $shadow: 0px 4px 24px rgba(37, 51, 72, 0.25);
 $popup-background: white;
 
 @import "@/components/scss/constants";
+$mapBackground: #cbd2d3;
 
-.main {
+#main {
   position: relative;
   width: 100%;
   height: 100%;
@@ -1046,6 +1047,8 @@ $popup-background: white;
   display: block;
   overflow-x: hidden;
   overflow-y: hidden;
+
+  background: $mapBackground;
 }
 
 .canvas {
@@ -1071,7 +1074,7 @@ $popup-background: white;
   z-index: 1;
 
   user-select: none;
-  background: #cbd2d3;
+  background: $mapBackground;
 }
 
 .buttonsPanel {
@@ -1176,8 +1179,6 @@ $popup-background: white;
 // ========== LOCATIONS ===========
 .mapLocationsContainer {
   position: absolute;
-  height: 100vh;
-  width: 100hw;
   z-index: 3;
   pointer-events: none;
 }

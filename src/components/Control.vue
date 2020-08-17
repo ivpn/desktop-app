@@ -1,7 +1,11 @@
 <template>
-  <div>
+  <div class="flexColumn">
     <transition mode="out-in">
-      <div v-if="uiView === 'serversEntry'" key="entryServers">
+      <div
+        class="flexColumn"
+        v-if="uiView === 'serversEntry'"
+        key="entryServers"
+      >
         <Servers
           :onBack="backToMainView"
           :onServerChanged="onServerChanged"
@@ -10,7 +14,11 @@
         />
       </div>
 
-      <div v-else-if="uiView === 'serversExit'" key="exitServers">
+      <div
+        class="flexColumn"
+        v-else-if="uiView === 'serversExit'"
+        key="exitServers"
+      >
         <Servers
           :onBack="backToMainView"
           isExitServer="true"
@@ -18,37 +26,36 @@
         />
       </div>
 
-      <div v-else-if="uiView === 'ports'" key="ports">
-        <Ports :onBack="backToMainView" />
-      </div>
-
-      <div v-else key="main">
-        <ConnectBlock
-          :onChecked="switchChecked"
-          :isChecked="isConnected"
-          :isProgress="isInProgress"
-          :onPauseResume="onPauseResume"
-          :pauseState="this.$store.state.vpnState.pauseState"
-        />
-        <div class="horizontalLine" v-if="!isMultihopAllowed" />
-
-        <div v-if="isMultihopAllowed">
-          <div class="horizontalLine hopButtonsSeparator" />
-          <HopButtonsBlock />
-          <div class="horizontalLine hopButtonsSeparator" />
-        </div>
-
-        <SelectedServerBlock :onShowServersPressed="onShowServersPressed" />
-
-        <div v-if="this.$store.state.settings.isMultiHop">
-          <div class="horizontalLine" />
-          <SelectedServerBlock
-            :onShowServersPressed="onShowServersPressed"
-            isExitServer="true"
+      <div v-else class="flexColumn">
+        <div>
+          <ConnectBlock
+            :onChecked="switchChecked"
+            :isChecked="isConnected"
+            :isProgress="isInProgress"
+            :onPauseResume="onPauseResume"
+            :pauseState="this.$store.state.vpnState.pauseState"
           />
+          <div class="horizontalLine hopButtonsSeparator" />
         </div>
 
-        <ConnectionDetailsBlock :onShowPorts="onShowPorts" />
+        <div class="scrollableColumnContainer">
+          <div v-if="isMultihopAllowed">
+            <HopButtonsBlock />
+            <div class="horizontalLine hopButtonsSeparator" />
+          </div>
+
+          <SelectedServerBlock :onShowServersPressed="onShowServersPressed" />
+
+          <div v-if="this.$store.state.settings.isMultiHop">
+            <div class="horizontalLine" />
+            <SelectedServerBlock
+              :onShowServersPressed="onShowServersPressed"
+              isExitServer="true"
+            />
+          </div>
+
+          <ConnectionDetailsBlock :onShowPorts="onShowPorts" />
+        </div>
       </div>
     </transition>
   </div>
@@ -58,7 +65,6 @@
 const { dialog, getCurrentWindow } = require("electron").remote;
 
 import Servers from "./Servers.vue";
-import Ports from "./Ports.vue";
 import ConnectBlock from "./blocks/block-connect.vue";
 import ConnectionDetailsBlock from "./blocks/block-connection-details.vue";
 import SelectedServerBlock from "@/components/blocks/block-selected-server.vue";
@@ -71,8 +77,7 @@ import { isStrNullOrEmpty } from "@/helpers/helpers";
 const viewTypeEnum = Object.freeze({
   default: "default",
   serversEntry: "serversEntry",
-  serversExit: "serversExit",
-  ports: "ports"
+  serversExit: "serversExit"
 });
 
 async function connect(me, isConnect) {
@@ -100,7 +105,6 @@ export default {
   components: {
     HopButtonsBlock,
     Servers,
-    Ports,
     ConnectBlock,
     SelectedServerBlock,
     ConnectionDetailsBlock

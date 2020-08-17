@@ -1,9 +1,11 @@
 <template>
-  <div class="main" id="flexview">
-    <div class="leftPanel windowContentPaddingTop">
-      <transition name="component-fade" mode="out-in">
-        <component v-bind:is="currentViewComponent" id="left"></component>
-      </transition>
+  <div id="flexview">
+    <div class="flexColumn">
+      <div class="flexColumn windowContentPaddingTop" style="min-height: 0px">
+        <transition name="component-fade" mode="out-in">
+          <component v-bind:is="currentViewComponent" id="left"></component>
+        </transition>
+      </div>
     </div>
     <div id="right">
       <Map
@@ -54,22 +56,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.leftPanel {
-  display: flex;
-  flex-flow: column;
-  height: 100%;
-  color: #2a394b;
-  overflow: auto;
-}
-
-.leftPanel::-webkit-scrollbar { 
-    display: none;  // do not show scrollbars
-}
-
 #flexview {
   display: flex;
   flex-direction: row;
-  height: 100vh;
+  height: 100%;
 }
 
 #left {
