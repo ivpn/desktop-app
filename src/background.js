@@ -22,7 +22,14 @@
 
 "use strict";
 
-import { app, protocol, BrowserWindow, Menu, dialog } from "electron";
+import {
+  app,
+  protocol,
+  BrowserWindow,
+  Menu,
+  dialog,
+  nativeImage
+} from "electron";
 import {
   createProtocol,
   installVueDevtools
@@ -37,6 +44,7 @@ import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
 import { InitConnectionResumer } from "./connection-resumer";
 import { IsWindowHasTitle } from "@/platform/platform";
+import { Platform, PlatformEnum } from "@/platform/platform";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -48,6 +56,17 @@ connectToDaemon();
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
 
+let icon = null;
+try {
+  // loading window icon only for Linux.
+  // The reest platforms will use icon from application binary
+  if (Platform() === PlatformEnum.Linux) {
+    // eslint-disable-next-line no-undef
+    icon = nativeImage.nativeImage.createFromPath(__static + "/icon64.png");
+  }
+} catch (e) {
+  console.error(e);
+}
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { secure: true, standard: true } }
@@ -113,7 +132,8 @@ if (!IsWindowHasTitle()) titleBarStyle = "hidden"; //"hiddenInset";
 // CREATE WINDOW
 function createWindow() {
   // Create the browser window.
-  win = new BrowserWindow({
+
+  let windowConfig = {
     width: 800,
     height: 600,
     minWidth: 700,
@@ -123,8 +143,6 @@ function createWindow() {
 
     center: true,
     title: "IVPN",
-    // eslint-disable-next-line no-undef
-    icon: __static + "/icon.png", // required to specify task-bar icon for Linux
 
     fullscreenable: false,
     titleBarStyle: titleBarStyle,
@@ -139,7 +157,10 @@ function createWindow() {
       // nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
       nodeIntegration: true
     }
-  });
+  };
+  if (icon != null) windowConfig.icon = icon; // required to specify task-bar icon for Linux
+
+  win = new BrowserWindow(windowConfig);
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
