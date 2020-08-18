@@ -173,7 +173,6 @@ export default {
     animConnectedWaves: null,
 
     scale: 0.41,
-    timerScaling: null,
 
     scrollTo: {
       left: -1,
@@ -602,24 +601,22 @@ export default {
     // ================= ZOOMING ====================
     wheel(e) {
       this.isPopupVisible = false;
-      if (this.timerScaling != null) clearTimeout(this.timerScaling);
-      if (e.deltaY > 0)
-        this.timerScaling = setTimeout(() => this.zoomIn(e), 10);
-      else this.timerScaling = setTimeout(() => this.zoomOut(e), 10);
+      if (e.deltaY > 0) this.zoomIn(e);
+      else this.zoomOut(e);
     },
     zoomIn(e) {
       if (this.scale <= 0.3) return;
-      this.updateScale(this.scale - 0.01, e);
+      this.updateScale(this.scale - 0.025, e);
     },
     zoomOut(e) {
       if (this.scale >= 1) return;
-      this.updateScale(this.scale + 0.01, e);
+      this.updateScale(this.scale + 0.025, e);
     },
 
     updateScale(newScale, zoomPoint) {
       const scaleDiff = newScale - this.scale;
 
-      if (Math.abs(scaleDiff) < 0.005) return;
+      if (Math.abs(scaleDiff) < 0.001) return;
       const l = this.combinedDiv.scrollLeft;
       const t = this.combinedDiv.scrollTop;
 
