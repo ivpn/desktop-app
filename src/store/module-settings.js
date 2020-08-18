@@ -20,7 +20,7 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import { VpnTypeEnum, Ports } from "@/store/types";
+import { VpnTypeEnum, Ports, ServersSortTypeEnum } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 export default {
   namespaced: true,
@@ -71,7 +71,8 @@ export default {
     dnsCustom: "",
 
     // UI
-    showAppInSystemDock: false
+    showAppInSystemDock: false,
+    serversSortType: ServersSortTypeEnum.AZ
   },
 
   mutations: {
@@ -179,6 +180,9 @@ export default {
     //UI
     showAppInSystemDock(state, val) {
       state.showAppInSystemDock = val;
+    },
+    serversSortType(state, val) {
+      state.serversSortType = val;
     }
   },
 
@@ -299,6 +303,9 @@ export default {
     //UI
     showAppInSystemDock(context, val) {
       context.commit("showAppInSystemDock", val);
+    },
+    serversSortType(context, val) {
+      context.commit("serversSortType", val);
     },
 
     // HELPERS

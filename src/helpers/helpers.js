@@ -64,3 +64,53 @@ export function easeInOutQuart(x) {
 export function easeOutQuart(x) {
   return 1 - Math.pow(1 - x, 4);
 }
+
+// MAP COORDINATES
+// fit coordinates to map image
+function toRadian(value) {
+  return (value * Math.PI) / 180.0;
+}
+export function getCoordinatesBy(
+  longitude,
+  latitude,
+  bitmapWidth,
+  bitmapHeight
+) {
+  if (bitmapWidth == null) bitmapWidth = 11300;
+  if (bitmapHeight == null) bitmapHeight = 8249;
+
+  let x = toRadian(longitude) - 0.18;
+  let y = toRadian(latitude);
+
+  let yStrech = 0.542;
+  let yOffset = 0.053;
+  y = yStrech * Math.log(Math.tan(0.25 * Math.PI + 0.4 * y)) + yOffset;
+
+  x = bitmapWidth / 2 + (bitmapWidth / (2 * Math.PI)) * x;
+  y = bitmapHeight / 2 - (bitmapHeight / 2) * y;
+
+  return { x, y };
+}
+
+function fromRadian(r) {
+  return (r * 180.0) / Math.PI;
+}
+
+export function getPosFromCoordinates(x, y, bitmapWidth, bitmapHeight) {
+  if (bitmapWidth == null) bitmapWidth = 11300;
+  if (bitmapHeight == null) bitmapHeight = 8249;
+
+  y = (y - bitmapHeight / 2) / (-bitmapHeight / 2);
+  x = (x - bitmapWidth / 2) / (bitmapWidth / (2 * Math.PI));
+
+  let yStrech = 0.542;
+  let yOffset = 0.053;
+  y =
+    (Math.atan(Math.pow(Math.E, (y - yOffset) / yStrech)) - 0.25 * Math.PI) /
+    0.4;
+
+  let latitude = fromRadian(y);
+  let longitude = fromRadian(x + 0.18);
+
+  return { longitude, latitude };
+}

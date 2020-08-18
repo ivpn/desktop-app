@@ -67,3 +67,10 @@ export const Ports = Object.freeze({
     { port: 58237, type: PortTypeEnum.UDP }
   ]
 });
+
+export const ServersSortTypeEnum = Object.freeze({
+  AZ: 0,
+  ZA: 1,
+  Speed: 2,
+  Distance: 3
+});

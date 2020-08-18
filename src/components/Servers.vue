@@ -70,11 +70,54 @@
         v-bind:style="{ backgroundImage: 'url(' + searchImage + ')' }"
       />
 
-      <!--
-      <button class="noBordersBtn sortBtn sortBtnPlatform">
-        <img :src="sortImage" />
-      </button>
-      -->
+      <div class="buttonWithPopup">
+        <button
+          class="noBordersBtn sortBtn sortBtnPlatform"
+          v-on:click="onSortMenuClicked()"
+        >
+          <img :src="sortImage" />
+        </button>
+
+        <!-- Popup -->
+        <div class="popup">
+          <div
+            ref="pausePopup"
+            class="popuptext"
+            v-bind:class="{
+              show: isSortMenu
+            }"
+          >
+            <div class="popup_menu_block">
+              <button v-on:click="onSortType('Speed')">
+                <img :src="selectedImage" v-if="sortTypeStr === 'Speed'" />
+                Speed (high to low)
+              </button>
+            </div>
+            <div class="popup_dividing_line" />
+            <div class="popup_menu_block">
+              <button v-on:click="onSortType('Distance')">
+                <img :src="selectedImage" v-if="sortTypeStr === 'Distance'" />
+                Proximity (close to far)
+              </button>
+            </div>
+            <div class="popup_dividing_line" />
+            <div class="popup_menu_block">
+              <button v-on:click="onSortType('AZ')">
+                <img :src="selectedImage" v-if="sortTypeStr === 'AZ'" />
+                A to Z
+              </button>
+            </div>
+
+            <div class="popup_dividing_line" />
+            <div class="popup_menu_block">
+              <button v-on:click="onSortType('ZA')">
+                <img :src="selectedImage" v-if="sortTypeStr === 'ZA'" />
+                Z to A
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div
@@ -182,6 +225,8 @@ import serverNameControl from "@/components/controls/control-server-name.vue";
 import SwitchProgress from "@/components/controls/control-switch-small.vue";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
+import { enumValueName, getCoordinatesBy } from "@/helpers/helpers";
+import { ServersSortTypeEnum } from "@/store/types";
 
 export default {
   props: [
@@ -198,10 +243,19 @@ export default {
   data: function() {
     return {
       filter: "",
-      isFastestServerConfig: false
+      isFastestServerConfig: false,
+      isSortMenu: false
     };
   },
-
+  created: function() {
+    let self = this;
+    window.addEventListener("click", function(e) {
+      // close dropdown when clicked outside
+      if (!self.$el.contains(e.target)) {
+        self.isSortMenu = false;
+      }
+    });
+  },
   computed: {
     isFavoritesView: function() {
       return this.$store.state.uiState.serversFavoriteView;
@@ -217,24 +271,81 @@ export default {
     servers: function() {
       return this.$store.getters["vpnState/activeServers"];
     },
+
+    sortTypeStr: function() {
+      return enumValueName(
+        ServersSortTypeEnum,
+        this.$store.state.settings.serversSortType
+      );
+    },
+
     favoriteServers: function() {
       let favorites = this.$store.state.settings.serversFavoriteList;
       return this.servers.filter(s => favorites.includes(s.gateway));
     },
 
     filteredServers: function() {
+      let store = this.$store;
+      let sType = store.state.settings.serversSortType;
+      function compare(a, b) {
+        let ret = 0;
+        switch (sType) {
+          case ServersSortTypeEnum.AZ:
+            ret = a.country_code.localeCompare(b.country_code);
+            if (ret != 0) return ret;
+            return a.city.localeCompare(b.city);
+
+          case ServersSortTypeEnum.ZA:
+            ret = b.country_code.localeCompare(a.country_code);
+            if (ret != 0) return ret;
+            return b.city.localeCompare(a.city);
+
+          case ServersSortTypeEnum.Speed:
+            if (a.ping === b.ping) return 0;
+            if (a.ping < b.ping) return -1;
+            return 1;
+
+          case ServersSortTypeEnum.Distance: {
+            let l = store.state.location;
+            if (l == null) return 0;
+
+            let pL = getCoordinatesBy(l.longitude, l.latitude);
+            let pA = getCoordinatesBy(a.longitude, a.latitude);
+            let pB = getCoordinatesBy(b.longitude, b.latitude);
+
+            let distA = Math.pow(
+              Math.pow(pL.x - pA.x, 2) + Math.pow(pL.y - pA.y, 2),
+              0.5
+            );
+            let distB = Math.pow(
+              Math.pow(pL.x - pB.x, 2) + Math.pow(pL.y - pB.y, 2),
+              0.5
+            );
+
+            if (distA === distB) return 0;
+            if (distA < distB) return -1;
+
+            return 1;
+          }
+        }
+      }
+
       let servers = this.servers;
       if (this.isFavoritesView) servers = this.favoriteServers;
 
-      if (this.filter == null || this.filter.length == 0) return servers;
+      if (this.filter == null || this.filter.length == 0)
+        return servers.slice().sort(compare);
       let filter = this.filter.toLowerCase();
-      return servers.filter(
+      let filtered = servers.filter(
         s =>
           s.city.toLowerCase().includes(filter) ||
           //s.country.toLowerCase().includes(filter) ||
           s.country_code.toLowerCase().includes(filter)
       );
+
+      return filtered.slice().sort(compare);
     },
+
     arrowLeftImagePath: function() {
       switch (Platform()) {
         case PlatformEnum.Windows:
@@ -268,14 +379,10 @@ export default {
       }
     },
     sortImage: function() {
-      switch (Platform()) {
-        case PlatformEnum.Windows:
-          return require("@/assets/sort-windows.svg");
-        case PlatformEnum.macOS:
-          return require("@/assets/sort-macos.svg");
-        default:
-          return require("@/assets/sort-linux.svg");
-      }
+      return require("@/assets/sort.svg");
+    },
+    selectedImage: function() {
+      return require("@/assets/check-thin.svg");
     }
   },
 
@@ -302,6 +409,16 @@ export default {
 
       this.onServerChanged(server, this.isExitServer != null);
       this.onBack();
+    },
+    onSortMenuClicked: function() {
+      this.isSortMenu = !this.isSortMenu;
+    },
+    onSortType: function(sortTypeStr) {
+      this.$store.dispatch(
+        "settings/serversSortType",
+        ServersSortTypeEnum[sortTypeStr]
+      );
+      this.isSortMenu = false;
     },
     onFastestServerClicked() {
       if (this.onFastestServer != null) this.onFastestServer();
@@ -398,6 +515,8 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 @import "@/components/scss/constants";
+@import "@/components/scss/popup";
+
 $paddingLeftRight: 20px;
 
 .commonMargins {

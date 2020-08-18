@@ -6,11 +6,10 @@
     </div>
 
     <div class="buttons">
-      <div>
+      <div class="buttonWithPopup" style="margin-right:17px;">
         <transition name="fade">
           <button
             class="settingsBtn"
-            style="margin-right:17px;"
             v-if="isCanPause"
             v-on:click="onPauseMenu"
           >
@@ -21,7 +20,6 @@
         <transition name="fade">
           <button
             class="settingsBtnResume"
-            style="margin-right:17px;"
             v-if="isCanResume"
             v-on:click="onPauseResume"
           >
@@ -30,7 +28,7 @@
         </transition>
 
         <!-- Popup -->
-        <div class="popup" style="margin-top: 38px; margin-left: 16px;">
+        <div class="popup">
           <div
             ref="pausePopup"
             class="popuptext"
@@ -145,6 +143,7 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 @import "@/components/scss/constants";
+@import "@/components/scss/popup";
 $shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
 
 .main {
@@ -154,6 +153,7 @@ $shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
   align-items: center;
   min-height: 97px;
 }
+
 .buttons {
   display: flex;
   justify-content: space-between;
@@ -208,86 +208,5 @@ $shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
 
 .settingsBtnResume:hover {
   background-color: #3377ff;
-}
-
-// ============== POPUP =================
-$popup-background: white;
-
-.popup {
-  position: absolute;
-  z-index: 4;
-  user-select: none;
-}
-
-// The actual popup
-
-.popup .popuptext {
-  visibility: hidden;
-  background-color: $popup-background;
-  text-align: center;
-  border-radius: 14px;
-  position: absolute;
-
-  min-width: 216px;
-  max-width: 216px;
-
-  margin-left: -108px; // 216/2
-  margin-top: 18px;
-
-  box-shadow: 0px 0px 34px rgba(37, 51, 72, 0.15);
-}
-
-// Popup arrow
-.popup .popuptext::after {
-  content: "";
-  position: absolute;
-  top: -24px;
-  margin-left: -12px;
-  margin-top: 12px;
-  border-width: 12px;
-  border-style: solid;
-  border-color: $popup-background transparent transparent $popup-background;
-  transform: rotate(45deg);
-}
-
-// Toggle this class - hide and show the popup
-.popup .show {
-  visibility: visible;
-  animation: fadeIn 0.5s;
-}
-
-.popup_menu_block {
-  min-height: 41px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.popup_menu_block > * {
-  // font
-  font-size: 13px;
-  line-height: 16px;
-  text-align: center;
-  letter-spacing: -0.078px;
-  color: rgba(42, 57, 75, 0.85);
-}
-
-.popup_menu_block > button {
-  @extend .noBordersBtn;
-}
-
-.popup_dividing_line {
-  background: #e9e9e9;
-  height: 1px;
-  border: 0px;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 </style>
