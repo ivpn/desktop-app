@@ -88,30 +88,43 @@
             }"
           >
             <div class="popup_menu_block">
-              <button v-on:click="onSortType('Speed')">
+              <div class="sortSelectedImg">
                 <img :src="selectedImage" v-if="sortTypeStr === 'Speed'" />
+              </div>
+              <button class="flexRowRestSpace" v-on:click="onSortType('Speed')">
                 Speed (high to low)
               </button>
             </div>
+
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
-              <button v-on:click="onSortType('Distance')">
+              <div class="sortSelectedImg">
                 <img :src="selectedImage" v-if="sortTypeStr === 'Distance'" />
+              </div>
+              <button
+                class="flexRowRestSpace"
+                v-on:click="onSortType('Distance')"
+              >
                 Proximity (close to far)
               </button>
             </div>
+
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
-              <button v-on:click="onSortType('AZ')">
+              <div class="sortSelectedImg">
                 <img :src="selectedImage" v-if="sortTypeStr === 'AZ'" />
+              </div>
+              <button class="flexRowRestSpace" v-on:click="onSortType('AZ')">
                 A to Z
               </button>
             </div>
 
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
-              <button v-on:click="onSortType('ZA')">
+              <div class="sortSelectedImg">
                 <img :src="selectedImage" v-if="sortTypeStr === 'ZA'" />
+              </div>
+              <button class="flexRowRestSpace" v-on:click="onSortType('ZA')">
                 Z to A
               </button>
             </div>
@@ -577,5 +590,10 @@ input#filter {
 
 button.sortBtn {
   margin-left: 5px;
+}
+
+div.sortSelectedImg {
+  margin-left: 11px;
+  min-width: 13px;
 }
 </style>
