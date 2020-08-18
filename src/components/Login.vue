@@ -69,6 +69,14 @@ export default {
   methods: {
     async Login(isForceLogout) {
       try {
+        // check accoundID
+        var pattern = new RegExp("^(i-....-....-....)|(ivpn........)$"); // fragment locator
+        if (pattern.test(this.$data.accountID) !== true) {
+          throw new Error(
+            "Your account ID has to be in 'i-XXXX-XXXX-XXXX' or 'ivpnXXXXXXXX' format. You can find it on other devices where you are logged in and in the client area of the IVPN website."
+          );
+        }
+
         this.isProcessing = true;
         const resp = await sender.Login(
           this.$data.accountID,
