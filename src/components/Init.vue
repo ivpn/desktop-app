@@ -1,13 +1,15 @@
 <template>
-  <div class="main">
-    <spinner :loading="isProcessing" />
-    <div class="large_text">Error connecting to IVPN daemon</div>
-    <div class="small_text">
-      Not connected to daemon. Please, ensure IVPN daemon is running and try to
-      reconnect.
-    </div>
+  <div style="height: 100%">
+    <div class="main">
+      <spinner :loading="isProcessing" />
+      <div class="large_text">Error connecting to IVPN daemon</div>
+      <div class="small_text">
+        Not connected to daemon. Please, ensure IVPN daemon is running and try
+        to reconnect.
+      </div>
 
-    <button class="btn" v-on:click="ConnectToDaemon">Retry ...</button>
+      <button class="btn" v-on:click="ConnectToDaemon">Retry ...</button>
+    </div>
   </div>
 </template>
 
@@ -46,7 +48,7 @@ export default {
 @import "@/components/scss/constants";
 
 .main {
-  margin: 15px;
+  padding: 15px;
   margin-top: -100px;
   height: 100%;
 
