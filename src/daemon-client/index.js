@@ -372,30 +372,29 @@ function onDataReceived(received) {
 /// PUBLIC METHODS
 //////////////////////////////////////////////////////////////////////////////////////////
 async function ConnectToDaemon() {
-  await new Promise((resolve, reject) => {
+  if (socket != null) {
+    socket.destroy();
+    socket = null;
+  }
+
+  let promise = new Promise((resolve, reject) => {
     // initialize current default state
     store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED);
     store.commit("isDaemonConnected", false);
-
-    if (socket != null) socket.destroy();
 
     socket = new net.Socket();
     const portInfo = getDaemonConnectionParams();
     socket.setNoDelay(true);
 
-    let connTimeoutTimer;
-
     socket
       .on("connect", async () => {
-        clearTimeout(connTimeoutTimer);
-
         // SEND HELLO
         // eslint-disable-next-line no-undef
         const secretBInt = BigInt(`0x${portInfo.secret}`);
 
         const helloReq = {
           Command: daemonRequests.Hello,
-          Version: "0.1 UI2",
+          Version: "3.0.1 UI2 (beta)",
           Secret: secretBInt,
           GetServersList: true,
           GetStatus: true,
@@ -439,8 +438,7 @@ async function ConnectToDaemon() {
           resolve(); // RESOLVE
         } catch (e) {
           log.error(`Error receiving Hello response: ${e}`);
-          reject(); // REJECT
-          throw e;
+          reject(e); // REJECT
         }
       })
       .on("data", onDataReceived);
@@ -448,23 +446,22 @@ async function ConnectToDaemon() {
     socket.on("close", () => {
       // Save 'disconnected' state
       store.commit("isDaemonConnected", false);
-      socket.destroy();
       log.debug("Connection closed");
-      reject(); // REJECT
     });
 
     socket.on("error", e => {
       log.error(`Connection error: ${e}`);
     });
 
-    connTimeoutTimer = setTimeout(() => {
-      socket.end();
-      reject(); // REJECT
-    }, 3000);
-
     log.debug("Connecting to daemon...");
-    socket.connect(parseInt(portInfo.port, 10), "127.0.0.1");
+    try {
+      socket.connect(parseInt(portInfo.port, 10), "127.0.0.1");
+    } catch(e) {
+      console.error(e);
+    }
   });
+
+  return await promise;
 }
 
 async function Login(accountID, force) {

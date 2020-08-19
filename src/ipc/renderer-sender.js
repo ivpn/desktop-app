@@ -28,21 +28,19 @@ async function invoke(channel, ...args) {
     return await ipcRenderer.invoke(channel, ...args);
   } catch (e) {
     console.error(e);
-
     // remove prefix error text
     // (like: Error occurred in handler for 'renderer-request-login': Error: ...)
     const regexp = new RegExp(`^.+ '${channel}': (Error:)*`);
     const errStr = `${e}`;
     const corrected = errStr.replace(regexp, "");
     if (errStr === corrected) throw e;
-
     throw new Error(corrected);
   }
 }
 
 export default {
   ConnectToDaemon: async () => {
-    return invoke("renderer-request-connect-to-daemon");
+    return await invoke("renderer-request-connect-to-daemon");
   },
   RefreshStorage: () => {
     // function using to re-apply all mutations

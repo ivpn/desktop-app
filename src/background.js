@@ -55,6 +55,18 @@ connectToDaemon();
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
+let isTrayInitialized = false;
+
+// Only one instance of application can be started
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    menuOnShow();
+  })
+}
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
@@ -87,28 +99,7 @@ if (process.env.IS_DEBUG) {
           click() {
             if (win !== null) win.webContents.send("change-view-request", "/");
           }
-        } /*,
-        {
-          label: "UI macOS",
-          click() {
-            if (win !== null)
-              win.webContents.send("change-ui-style", PlatformEnum.macOS);
-          }
-        },
-        {
-          label: "UI Linux",
-          click() {
-            if (win !== null)
-              win.webContents.send("change-ui-style", PlatformEnum.Linux);
-          }
-        },
-        {
-          label: "UI Windows",
-          click() {
-            if (win !== null)
-              win.webContents.send("change-ui-style", PlatformEnum.Windows);
-          }
-        }*/
+        } 
       ]
     }
   ]);
@@ -193,11 +184,9 @@ app.on("window-all-closed", () => {
   // if we are waiting to save settings - save it immediately
   SaveSettings();
 
-  // On macOS it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  //if (process.platform !== "darwin") {
-  //  app.quit();
-  //}
+  // if Tray initialized - just to keep app in tray
+  if (isTrayInitialized !== true || store.state.settings.minimizeToTray !== true)
+    app.quit();
 });
 
 app.on("activate", () => {
@@ -214,6 +203,7 @@ app.on("activate", () => {
 app.on("ready", async () => {
   try {
     InitTray(menuOnShow, menuOnPreferences, menuOnAccount);
+    isTrayInitialized = true;
   } catch (e) {
     console.error(e);
   }
@@ -259,6 +249,7 @@ app.on("before-quit", async event => {
   if (store.state.settings.quitWithoutConfirmation) {
     actionNo = store.state.settings.disconnectOnQuit ? 0 : 1;
   } else {
+    menuOnShow();
     actionNo = dialog.showMessageBoxSync({
       type: "question",
       message: "Are you sure want to quit?",

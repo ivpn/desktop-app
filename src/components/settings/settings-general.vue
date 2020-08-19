@@ -1,6 +1,30 @@
 <template>
   <div>
     <div class="settingsTitle">GENERAL SETTINGS</div>
+
+    <div class="param">
+      <input
+        type="checkbox"
+        id="minimizeToTray"
+        v-model="minimizeToTray"
+      />
+      <label class="defColor" for="minimizeToTray"
+        >Minimize to tray</label
+      >
+    </div>
+
+    <div class="param">
+      <input
+        type="checkbox"
+        id="showAppInSystemDock"
+        v-model="showAppInSystemDock"
+        :disabled="minimizeToTray !== true"
+      />
+      <label class="defColor" for="showAppInSystemDock"
+        >Show application icon in system dock</label
+      >
+    </div>
+
     <div class="settingsBoldFont">
       Autoconnect:
     </div>
@@ -11,20 +35,6 @@
         v-model="autoConnectOnLaunch"
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
-    </div>
-
-    <div class="settingsBoldFont">
-      On launch:
-    </div>
-    <div class="param">
-      <input
-        type="checkbox"
-        id="showAppInSystemDock"
-        v-model="showAppInSystemDock"
-      />
-      <label class="defColor" for="showAppInSystemDock"
-        >Show application icon in system dock</label
-      >
     </div>
 
     <div class="settingsBoldFont">
@@ -77,6 +87,14 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/autoConnectOnLaunch", value);
+      }
+    },
+    minimizeToTray: {
+      get() {
+        return this.$store.state.settings.minimizeToTray;
+      },
+      set(value) {
+        this.$store.dispatch("settings/minimizeToTray", value);
       }
     },
     showAppInSystemDock: {

@@ -71,6 +71,7 @@ export default {
     dnsCustom: "",
 
     // UI
+    minimizeToTray: true,
     showAppInSystemDock: false,
     serversSortType: ServersSortTypeEnum.AZ
   },
@@ -178,6 +179,9 @@ export default {
     },
 
     //UI
+    minimizeToTray(state, val) {
+      state.minimizeToTray = val;
+    },
     showAppInSystemDock(state, val) {
       state.showAppInSystemDock = val;
     },
@@ -301,6 +305,9 @@ export default {
     },
 
     //UI
+    minimizeToTray(context, val) {
+      context.commit("minimizeToTray", val);
+    },
     showAppInSystemDock(context, val) {
       context.commit("showAppInSystemDock", val);
     },

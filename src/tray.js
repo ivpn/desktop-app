@@ -105,8 +105,8 @@ export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
         case "vpnState/connectionState":
         case "vpnState/connectionInfo":
         case "vpnState/disconnected": {
-          updateTrayIcon();
           updateTrayMenu();
+          updateTrayIcon();
           break;
         }
         case "settings/serverEntry":
@@ -123,6 +123,9 @@ export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
       console.error("Error in store subscriber:", e);
     }
   });
+
+  updateTrayMenu();
+  updateTrayIcon();
 }
 
 function updateTrayIcon() {
