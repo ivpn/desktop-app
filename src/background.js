@@ -56,17 +56,6 @@ connectToDaemon();
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
 
-let icon = null;
-try {
-  // loading window icon only for Linux.
-  // The reest platforms will use icon from application binary
-  if (Platform() === PlatformEnum.Linux) {
-    // eslint-disable-next-line no-undef
-    icon = nativeImage.nativeImage.createFromPath(__static + "/icon64.png");
-  }
-} catch (e) {
-  console.error(e);
-}
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { secure: true, standard: true } }
@@ -158,7 +147,17 @@ function createWindow() {
       nodeIntegration: true
     }
   };
-  if (icon != null) windowConfig.icon = icon; // required to specify task-bar icon for Linux
+
+  try {
+    // loading window icon only for Linux.
+    // The reest platforms will use icon from application binary
+    if (Platform() === PlatformEnum.Linux) {
+      // eslint-disable-next-line no-undef
+      windowConfig.icon = nativeImage.createFromPath(__static + "/icon64.png");
+    }
+  } catch (e) {
+    console.error(e);
+  }
 
   win = new BrowserWindow(windowConfig);
 
