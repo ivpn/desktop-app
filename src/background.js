@@ -48,70 +48,233 @@ import { Platform, PlatformEnum } from "@/platform/platform";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-InitPersistentSettings();
-InitConnectionResumer();
-connectToDaemon();
-
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
 let isTrayInitialized = false;
 
 // Only one instance of application can be started
-const gotTheLock = app.requestSingleInstanceLock()
+const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
-  app.quit()
+  console.log("Another instance of application is running.");
+  app.quit();
 } else {
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on("second-instance", () => {
     // Someone tried to run a second instance, we should focus our window.
     menuOnShow();
-  })
+  });
 }
 
-// Scheme must be registered before the app is ready
-protocol.registerSchemesAsPrivileged([
-  { scheme: "app", privileges: { secure: true, standard: true } }
-]);
+if (gotTheLock) {
+  InitPersistentSettings();
+  InitConnectionResumer();
+  connectToDaemon();
 
-// suppress the default menu
-Menu.setApplicationMenu(null);
-if (process.env.IS_DEBUG) {
-  // DEBUG: TESTING MENU
-  const dockMenu = Menu.buildFromTemplate([
-    {
-      label: "TEST (development menu)",
-      submenu: [
-        {
-          label: "Open development tools",
-          click() {
-            if (win !== null) win.webContents.openDevTools();
-          }
-        },
-        {
-          label: "Switch to test view",
-          click() {
-            if (win !== null)
-              win.webContents.send("change-view-request", "/test");
-          }
-        },
-        {
-          label: "Switch to main view",
-          click() {
-            if (win !== null) win.webContents.send("change-view-request", "/");
-          }
-        } 
-      ]
-    }
+  // Scheme must be registered before the app is ready
+  protocol.registerSchemesAsPrivileged([
+    { scheme: "app", privileges: { secure: true, standard: true } }
   ]);
-  Menu.setApplicationMenu(dockMenu);
+
+  // suppress the default menu
+  Menu.setApplicationMenu(null);
+  if (process.env.IS_DEBUG) {
+    // DEBUG: TESTING MENU
+    const dockMenu = Menu.buildFromTemplate([
+      {
+        label: "TEST (development menu)",
+        submenu: [
+          {
+            label: "Open development tools",
+            click() {
+              if (win !== null) win.webContents.openDevTools();
+            }
+          },
+          {
+            label: "Switch to test view",
+            click() {
+              if (win !== null)
+                win.webContents.send("change-view-request", "/test");
+            }
+          },
+          {
+            label: "Switch to main view",
+            click() {
+              if (win !== null)
+                win.webContents.send("change-view-request", "/");
+            }
+          }
+        ]
+      }
+    ]);
+    Menu.setApplicationMenu(dockMenu);
+  }
+
+  // Quit when all windows are closed.
+  app.on("window-all-closed", () => {
+    // if we are waiting to save settings - save it immediately
+    SaveSettings();
+    win = null;
+
+    // if Tray initialized - just to keep app in tray
+    if (
+      isTrayInitialized !== true ||
+      store.state.settings.minimizeToTray !== true
+    )
+      app.quit();
+  });
+
+  app.on("activate", () => {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (win === null) {
+      createWindow();
+    }
+  });
+
+  // This method will be called when Electron has finished
+  // initialization and is ready to create browser windows.
+  // Some APIs can only be used after this event occurs.
+  app.on("ready", async () => {
+    try {
+      InitTray(menuOnShow, menuOnPreferences, menuOnAccount);
+      isTrayInitialized = true;
+    } catch (e) {
+      console.error(e);
+    }
+
+    // request geolocation
+    // (asynchronously, to do not block application start)
+    setTimeout(() => {
+      const api = require("./api");
+      try {
+        // the successful result will be saved in store
+        api.default.GeoLookup();
+      } catch (e) {
+        console.error(`Failed to determine geolocation: ${e}`);
+      }
+    }, 0);
+
+    if (isDevelopment && !process.env.IS_TEST) {
+      // Install Vue Devtools
+      // Devtools extensions are broken in Electron 6.0.0 and greater
+      // See https://github.com/nklayman/vue-cli-plugin-electron-builder/issues/378 for more info
+      // Electron will not launch with Devtools extensions installed on Windows 10 with dark mode
+      // If you are not using Windows 10 dark mode, you may uncomment these lines
+      // In addition, if the linked issue is closed, you can upgrade electron and uncomment these lines
+      try {
+        await installVueDevtools();
+      } catch (e) {
+        console.error("Vue Devtools failed to install:", e.toString());
+      }
+    }
+
+    createWindow();
+  });
+
+  app.on("before-quit", async event => {
+    // if disconnected -> close application immediately
+    if (store.getters["vpnState/isDisconnected"]) {
+      if (store.state.settings.firewallOffOnExit) {
+        await daemonClient.EnableFirewall(false);
+      }
+      return;
+    }
+
+    let actionNo = 0;
+    if (store.state.settings.quitWithoutConfirmation) {
+      actionNo = store.state.settings.disconnectOnQuit ? 0 : 1;
+    } else {
+      let msgBoxConfig = {
+        type: "question",
+        message: "Are you sure want to quit?",
+        detail: "You are connected to the VPN.",
+        buttons: [
+          "Disconnect VPN & Quit",
+          "Keep VPN connected & Quit",
+          "Cancel"
+        ]
+      };
+
+      if (win == null) actionNo = dialog.showMessageBoxSync(msgBoxConfig);
+      else actionNo = dialog.showMessageBoxSync(win, msgBoxConfig);
+    }
+    switch (actionNo) {
+      case 2: // Cancel
+        event.preventDefault();
+        break;
+
+      case 1: // Exit & Keep VPN connection
+        // just close application
+        break;
+
+      case 0: // Exit & Disconnect VPN
+        // Quit application only after connection closed
+        event.preventDefault();
+        setTimeout(async () => {
+          try {
+            if (
+              store.state.settings.firewallOnOffOnConnect ||
+              store.state.settings.disconnectOnQuit
+            )
+              await daemonClient.EnableFirewall(false);
+
+            await daemonClient.Disconnect();
+          } catch (e) {
+            console.log(e);
+          } finally {
+            app.quit(); // QUIT anyway
+          }
+        }, 0);
+        break;
+    }
+  });
+
+  // Exit cleanly on request from parent process in development mode.
+  if (isDevelopment) {
+    if (process.platform === "win32") {
+      process.on("message", data => {
+        if (data === "graceful-exit") {
+          app.quit();
+        }
+      });
+    } else {
+      process.on("SIGTERM", () => {
+        app.quit();
+      });
+    }
+  }
+
+  // subscribe to any changes in a store
+  store.subscribe(mutation => {
+    try {
+      if (mutation.type === "settings/showAppInSystemDock") {
+        updateAppDockVisibility();
+      }
+    } catch (e) {
+      console.error("Error in store subscriber:", e);
+    }
+  });
 }
 
-let titleBarStyle = "default";
-if (!IsWindowHasTitle()) titleBarStyle = "hidden"; //"hiddenInset";
+function getWindowIcon() {
+  try {
+    // loading window icon only for Linux.
+    // The reest platforms will use icon from application binary
+    if (Platform() !== PlatformEnum.Linux) return null;
+    // eslint-disable-next-line no-undef
+    return nativeImage.createFromPath(__static + "/icon64.png");
+  } catch (e) {
+    console.error(e);
+  }
+  return null;
+}
 
 // CREATE WINDOW
 function createWindow() {
   // Create the browser window.
+
+  let titleBarStyle = "default";
+  if (!IsWindowHasTitle()) titleBarStyle = "hidden"; //"hiddenInset";
 
   let windowConfig = {
     width: 800,
@@ -139,16 +302,8 @@ function createWindow() {
     }
   };
 
-  try {
-    // loading window icon only for Linux.
-    // The reest platforms will use icon from application binary
-    if (Platform() === PlatformEnum.Linux) {
-      // eslint-disable-next-line no-undef
-      windowConfig.icon = nativeImage.createFromPath(__static + "/icon64.png");
-    }
-  } catch (e) {
-    console.error(e);
-  }
+  let icon = getWindowIcon();
+  if (icon != null) windowConfig.icon = icon;
 
   win = new BrowserWindow(windowConfig);
 
@@ -179,161 +334,44 @@ function connectToDaemon() {
   }
 }
 
-// Quit when all windows are closed.
-app.on("window-all-closed", () => {
-  // if we are waiting to save settings - save it immediately
-  SaveSettings();
-
-  // if Tray initialized - just to keep app in tray
-  if (isTrayInitialized !== true || store.state.settings.minimizeToTray !== true)
-    app.quit();
-});
-
-app.on("activate", () => {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (win === null) {
-    createWindow();
-  }
-});
-
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on("ready", async () => {
-  try {
-    InitTray(menuOnShow, menuOnPreferences, menuOnAccount);
-    isTrayInitialized = true;
-  } catch (e) {
-    console.error(e);
-  }
-
-  // request geolocation
-  // (asynchronously, to do not block application start)
-  setTimeout(() => {
-    const api = require("./api");
-    try {
-      // the successful result will be saved in store
-      api.default.GeoLookup();
-    } catch (e) {
-      console.error(`Failed to determine geolocation: ${e}`);
-    }
-  }, 0);
-
-  if (isDevelopment && !process.env.IS_TEST) {
-    // Install Vue Devtools
-    // Devtools extensions are broken in Electron 6.0.0 and greater
-    // See https://github.com/nklayman/vue-cli-plugin-electron-builder/issues/378 for more info
-    // Electron will not launch with Devtools extensions installed on Windows 10 with dark mode
-    // If you are not using Windows 10 dark mode, you may uncomment these lines
-    // In addition, if the linked issue is closed, you can upgrade electron and uncomment these lines
-    try {
-      await installVueDevtools();
-    } catch (e) {
-      console.error("Vue Devtools failed to install:", e.toString());
-    }
-  }
-  createWindow();
-});
-
-app.on("before-quit", async event => {
-  // if disconnected -> close application immediately
-  if (store.getters["vpnState/isDisconnected"]) {
-    if (store.state.settings.firewallOffOnExit) {
-      await daemonClient.EnableFirewall(false);
-    }
-    return;
-  }
-
-  let actionNo = 0;
-  if (store.state.settings.quitWithoutConfirmation) {
-    actionNo = store.state.settings.disconnectOnQuit ? 0 : 1;
-  } else {
-    menuOnShow();
-    actionNo = dialog.showMessageBoxSync({
-      type: "question",
-      message: "Are you sure want to quit?",
-      detail: "You are connected to the VPN.",
-      buttons: ["Disconnect VPN & Quit", "Keep VPN connected & Quit", "Cancel"]
-    });
-  }
-  switch (actionNo) {
-    case 2: // Cancel
-      event.preventDefault();
-      break;
-
-    case 1: // Exit & Keep VPN connection
-      // just close application
-      break;
-
-    case 0: // Exit & Disconnect VPN
-      try {
-        if (
-          store.state.settings.firewallOnOffOnConnect ||
-          store.state.settings.disconnectOnQuit
-        )
-          daemonClient.EnableFirewall(false);
-
-        daemonClient.Disconnect();
-      } catch (e) {
-        console.log(e);
-      }
-      break;
-  }
-});
-
-// Exit cleanly on request from parent process in development mode.
-if (isDevelopment) {
-  if (process.platform === "win32") {
-    process.on("message", data => {
-      if (data === "graceful-exit") {
-        app.quit();
-      }
-    });
-  } else {
-    process.on("SIGTERM", () => {
-      app.quit();
-    });
-  }
-}
-
 // MENU ITEMS
 function menuOnShow() {
-  if (win == null) createWindow();
+  try {
+    if (win == null) createWindow();
 
-  if (win != null) {
-    win.restore();
-    win.show();
-    win.focus();
+    if (win != null) {
+      win.restore();
+      win.show();
+      win.focus();
+    }
+  } catch (e) {
+    console.log(e);
   }
 }
 function menuOnAccount() {
-  menuOnShow();
-  if (win !== null)
-    win.webContents.send("change-view-request", {
-      name: "settings",
-      params: { view: "account" }
-    });
+  try {
+    menuOnShow();
+    if (win !== null)
+      win.webContents.send("change-view-request", {
+        name: "settings",
+        params: { view: "account" }
+      });
+  } catch (e) {
+    console.log(e);
+  }
 }
 function menuOnPreferences() {
-  menuOnShow();
-  if (win !== null)
-    win.webContents.send("change-view-request", {
-      name: "settings",
-      params: { view: "connection" }
-    });
-}
-
-// subscribe to any changes in a store
-store.subscribe(mutation => {
   try {
-    if (mutation.type === "settings/showAppInSystemDock") {
-      updateAppDockVisibility();
-    }
+    menuOnShow();
+    if (win !== null)
+      win.webContents.send("change-view-request", {
+        name: "settings",
+        params: { view: "connection" }
+      });
   } catch (e) {
-    console.error("Error in store subscriber:", e);
+    console.log(e);
   }
-});
+}
 
 // show\hide app from system dock
 function updateAppDockVisibility() {

@@ -192,9 +192,8 @@ async function sendRecv(request, waitRespCommandsList, timeoutMs) {
           }
         }
       },
-      typeof (timeoutMs !== "undefined") && timeoutMs > 0
-        ? timeoutMs
-        : DefaultResponseTimeoutMs
+
+      timeoutMs != null && timeoutMs > 0 ? timeoutMs : DefaultResponseTimeoutMs
     );
   });
 
@@ -342,10 +341,7 @@ async function processResponse(response) {
     } else {
       // check response command
       let waitingCommands = waiters[i].waitForCommandsList;
-      if (
-        typeof waitingCommands !== "undefined" &&
-        waitingCommands.length > 0
-      ) {
+      if (waitingCommands != null && waitingCommands.length > 0) {
         for (let c = 0; c < waitingCommands.length; c++) {
           if (waitingCommands[c] === obj.Command) {
             waiters[i].promiseResolve(obj);
@@ -456,7 +452,7 @@ async function ConnectToDaemon() {
     log.debug("Connecting to daemon...");
     try {
       socket.connect(parseInt(portInfo.port, 10), "127.0.0.1");
-    } catch(e) {
+    } catch (e) {
       console.error(e);
     }
   });
