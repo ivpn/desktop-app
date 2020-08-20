@@ -43,15 +43,20 @@ export default {
 if (Platform() === PlatformEnum.macOS) {
   const { clipboard } = require("electron");
   const keyCodes = {
-    V: 86
+    V: 86,
+    C: 67
   };
   document.onkeydown = function(event) {
     let toReturn = true;
     if (event.ctrlKey || event.metaKey) {
       // detect ctrl or cmd
       if (event.which == keyCodes.V) {
-        document.activeElement.value += clipboard.readText();
-        document.activeElement.dispatchEvent(new Event("input"));
+        document.activeElement.value = clipboard.readText();
+        //document.activeElement.dispatchEvent(new Event("input"));
+        toReturn = false;
+      }
+      if (event.which == keyCodes.C) {
+        clipboard.writeText(getSelection().toString());
         toReturn = false;
       }
     }
