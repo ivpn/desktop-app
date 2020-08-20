@@ -132,7 +132,7 @@ export default {
 
     qr.addData(accId);
     qr.make();
-    this.$refs.qrcode.innerHTML = qr.createImgTag(3, 0);
+    this.$refs.qrcode.innerHTML = qr.createSvgTag(3, 0);
 
     // request account status (if not exists)
     if (this.$store.getters["account/isAccountStateExists"] !== true)
