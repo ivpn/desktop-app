@@ -450,11 +450,11 @@ export default {
       if (
         this.$store.state.settings.serversFavoriteList.includes(server.gateway)
       )
-        return require("@/assets/star-active.png");
-      return require("@/assets/star-inactive.png");
+        return require("@/assets/star-active.svg");
+      return require("@/assets/star-inactive.svg");
     },
     favoriteImageActive: function() {
-      return require("@/assets/star-active.png");
+      return require("@/assets/star-active.svg");
     },
     onFastestServerConfig() {
       this.isFastestServerConfig = true;

@@ -87,11 +87,11 @@ export default {
       if (this.server == null) return null;
       switch (this.server.pingQuality) {
         case PingQuality.Good:
-          return require("@/assets/iconStatusGood.png");
+          return require("@/assets/iconStatusGood.svg");
         case PingQuality.Moderate:
-          return require("@/assets/iconStatusModerate.png");
+          return require("@/assets/iconStatusModerate.svg");
         case PingQuality.Bad:
-          return require("@/assets/iconStatusBad.png");
+          return require("@/assets/iconStatusBad.svg");
       }
       return null;
     }
