@@ -28,7 +28,8 @@ import {
   BrowserWindow,
   Menu,
   dialog,
-  nativeImage
+  nativeImage,
+  ipcMain
 } from "electron";
 import {
   createProtocol,
@@ -52,6 +53,7 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
 let isTrayInitialized = false;
+let lastRouteArgs = null; // last route arguments (requested by renderer process when window initialized)
 
 // Only one instance of application can be started
 const gotTheLock = app.requestSingleInstanceLock();
@@ -64,6 +66,11 @@ if (!gotTheLock) {
     menuOnShow();
   });
 }
+
+// main process requesting information about 'initial route' after window created
+ipcMain.handle("renderer-request-ui-initial-route-args", () => {
+  return lastRouteArgs;
+});
 
 if (gotTheLock) {
   InitPersistentSettings();
@@ -114,6 +121,7 @@ if (gotTheLock) {
     // if we are waiting to save settings - save it immediately
     SaveSettings();
     win = null;
+    lastRouteArgs = null;
 
     // if Tray initialized - just to keep app in tray
     if (
@@ -351,11 +359,17 @@ function menuOnShow() {
 function menuOnAccount() {
   try {
     menuOnShow();
-    if (win !== null)
-      win.webContents.send("change-view-request", {
+    if (win !== null) {
+      lastRouteArgs = {
         name: "settings",
         params: { view: "account" }
-      });
+      };
+
+      // Temporary navigate to '\'. This is required only if we already showing 'settings' view
+      // (to be able to re-init 'settings' view with new parameters)
+      win.webContents.send("change-view-request", "/");
+      win.webContents.send("change-view-request", lastRouteArgs);
+    }
   } catch (e) {
     console.log(e);
   }
@@ -363,11 +377,16 @@ function menuOnAccount() {
 function menuOnPreferences() {
   try {
     menuOnShow();
-    if (win !== null)
-      win.webContents.send("change-view-request", {
-        name: "settings",
-        params: { view: "connection" }
-      });
+    if (win !== null) {
+      lastRouteArgs = {
+        name: "settings"
+      };
+
+      // Temporary navigate to '\'. This is required only if we already showing 'settings' view
+      // (to be able to re-init 'settings' view with new parameters)
+      win.webContents.send("change-view-request", "/");
+      win.webContents.send("change-view-request", lastRouteArgs);
+    }
   } catch (e) {
     console.log(e);
   }

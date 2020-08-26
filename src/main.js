@@ -60,6 +60,16 @@ const { ipcRenderer } = electron;
 ipcRenderer.on("change-view-request", (event, arg) => {
   router.push(arg);
 });
+
+// After initialized, ask main thread about initial route
+async function getInitRouteArgs() {
+  return await ipcRenderer.invoke("renderer-request-ui-initial-route-args");
+}
+setTimeout(async () => {
+  let initRouteArgs = await getInitRouteArgs();
+  if (initRouteArgs != null) router.push(initRouteArgs);
+}, 0);
+
 /*
 ipcRenderer.on("change-ui-style", (event, platform) => {
   changeUIStyle(platform);

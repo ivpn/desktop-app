@@ -616,7 +616,8 @@ async function Disconnect() {
 }
 
 let isFirewallEnabledBeforePause = true;
-async function PauseConnection() {
+async function PauseConnection(pauseSeconds) {
+  if (pauseSeconds == null) return;
   if (store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
   if (store.state.vpnState.pauseState === PauseStateEnum.Paused) return;
 
@@ -624,6 +625,10 @@ async function PauseConnection() {
   await sendRecv({
     Command: daemonRequests.PauseConnection
   });
+
+  var pauseTill = new Date();
+  pauseTill.setSeconds(pauseTill.getSeconds() + pauseSeconds);
+  store.dispatch("uiState/pauseConnectionTill", pauseTill);
 
   try {
     // disable kill-switch (if not in firewall-persistent mode)
@@ -638,8 +643,9 @@ async function PauseConnection() {
 }
 
 async function ResumeConnection() {
-  if (store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
+  store.dispatch("uiState/pauseConnectionTill", null);
 
+  if (store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
   if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) return;
 
   store.dispatch("vpnState/pauseState", PauseStateEnum.Resuming);

@@ -22,6 +22,8 @@
 
 const { Menu, Tray, app, nativeImage } = require("electron");
 import store from "@/store";
+import { PauseStateEnum } from "@/store/types";
+
 import { VpnStateEnum } from "@/store/types";
 import daemonClient from "@/daemon-client";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -115,6 +117,7 @@ export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
         case "settings/isRandomServer":
         case "settings/serversFavoriteList":
         case "account/session":
+        case "vpnState/pauseState":
           updateTrayMenu();
           break;
         default:
@@ -218,7 +221,48 @@ function updateTrayMenu() {
         label: `Connect to ${connectToName}`,
         click: () => menuItemConnect()
       });
-    } else mainMenu.push({ label: `Disconnect`, click: menuItemDisconnect });
+    } else {
+      // PAUSE\RESUME
+      if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED) {
+        if (store.state.vpnState.pauseState === PauseStateEnum.Paused)
+          mainMenu.push({ label: "Resume", click: menuItemResume });
+        else if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) {
+          const pauseSubMenuTemplate = [
+            {
+              label: "Pause for 5 min",
+              click: () => {
+                menuItemPause(5 * 60);
+              }
+            },
+            {
+              label: "Pause for 30 min",
+              click: () => {
+                menuItemPause(30 * 60);
+              }
+            },
+            {
+              label: "Pause for 1 hour",
+              click: () => {
+                menuItemPause(1 * 60 * 60);
+              }
+            },
+            {
+              label: "Pause for 3 hours",
+              click: () => {
+                menuItemPause(3 * 60 * 60);
+              }
+            }
+          ];
+          mainMenu.push({
+            label: "Pause",
+            type: "submenu",
+            submenu: Menu.buildFromTemplate(pauseSubMenuTemplate)
+          });
+        }
+      }
+      mainMenu.push({ label: `Disconnect`, click: menuItemDisconnect });
+    }
+
     mainMenu.push({
       label: "Favorite servers",
       type: "submenu",
@@ -255,6 +299,22 @@ function menuItemConnect(entrySvr) {
 function menuItemDisconnect() {
   try {
     daemonClient.Disconnect();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function menuItemPause(PauseConnection) {
+  try {
+    daemonClient.PauseConnection(PauseConnection);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function menuItemResume() {
+  try {
+    daemonClient.ResumeConnection();
   } catch (e) {
     console.error(e);
   }

@@ -59,9 +59,12 @@ ipcMain.handle("renderer-request-disconnect", async () => {
   return await client.Disconnect();
 });
 
-ipcMain.handle("renderer-request-pause-connection", async () => {
-  return await client.PauseConnection();
-});
+ipcMain.handle(
+  "renderer-request-pause-connection",
+  async (event, pauseSeconds) => {
+    return await client.PauseConnection(pauseSeconds);
+  }
+);
 ipcMain.handle("renderer-request-resume-connection", async () => {
   return await client.ResumeConnection();
 });

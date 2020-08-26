@@ -49,7 +49,7 @@ export default {
       this.$router.push({ name: "settings", params: { view: "account" } });
     },
     onSettings: function() {
-      this.$router.push("settings");
+      this.$router.push({ name: "settings" });
     }
   }
 };

@@ -175,14 +175,10 @@ export default {
     async onPauseResume(seconds) {
       if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Resumed) {
         // RESUME
-        this.$store.dispatch("uiState/pauseConnectionTill", null);
         await sender.ResumeConnection();
       } else if (seconds != null) {
         // PAUSE
-        await sender.PauseConnection();
-        var t = new Date();
-        t.setSeconds(t.getSeconds() + seconds);
-        this.$store.dispatch("uiState/pauseConnectionTill", t);
+        await sender.PauseConnection(seconds);
       }
     },
     onShowServersPressed(isExitServers) {

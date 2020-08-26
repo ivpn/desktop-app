@@ -41,10 +41,6 @@ const routes = [
   },
   {
     path: "/settings/:view",
-    component: Settings
-  },
-  {
-    path: "/settings*",
     name: "settings",
     component: Settings
   },

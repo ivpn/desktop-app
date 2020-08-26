@@ -69,8 +69,11 @@ export default {
     return await invoke("renderer-request-disconnect");
   },
 
-  PauseConnection: async () => {
-    return await invoke("renderer-request-pause-connection");
+  PauseConnection: async pauseSeconds => {
+    if (pauseSeconds == null) return;
+    //var pauseTill = new Date();
+    //pauseTill.setSeconds(pauseTill.getSeconds() + pauseSeconds);
+    return await invoke("renderer-request-pause-connection", pauseSeconds);
   },
   ResumeConnection: async () => {
     return await invoke("renderer-request-resume-connection");
