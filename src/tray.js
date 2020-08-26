@@ -207,8 +207,9 @@ function updateTrayMenu() {
   const isLoggedIn = store.getters["account/isLoggedIn"];
 
   var mainMenu = [
+    { label: `IVPN v${app.getVersion()}`, enabled: false },
+    { type: "separator" },
     { label: "Show IVPN", click: menuHandlerShow },
-    { label: "About", click: menuItemAbout },
     { type: "separator" }
   ];
   if (isLoggedIn) {
@@ -225,7 +226,7 @@ function updateTrayMenu() {
     });
     mainMenu.push({ type: "separator" });
     mainMenu.push({ label: "Account", click: menuHandlerAccount });
-    mainMenu.push({ label: "Preferences", click: menuHandlerPreferences });
+    mainMenu.push({ label: "Settings", click: menuHandlerPreferences });
     mainMenu.push({ type: "separator" });
   }
   mainMenu.push({ label: "Quit", click: menuItemQuit });
@@ -257,14 +258,6 @@ function menuItemDisconnect() {
   } catch (e) {
     console.error(e);
   }
-}
-
-function menuItemAbout() {
-  app.setAboutPanelOptions({
-    copyright: null,
-    website: "https://www.ivpn.net"
-  });
-  app.showAboutPanel();
 }
 
 function menuItemQuit() {

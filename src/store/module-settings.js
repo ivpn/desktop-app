@@ -73,7 +73,7 @@ export default {
     // UI
     minimizeToTray: true,
     showAppInSystemDock: false,
-    serversSortType: ServersSortTypeEnum.AZ
+    serversSortType: ServersSortTypeEnum.City
   },
 
   mutations: {

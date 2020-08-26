@@ -435,8 +435,18 @@ export default {
       if (this.moving) {
         if (this.map != null) {
           // MOVING
+          // scroll horisontally
           this.combinedDiv.scrollLeft -= e.offsetX - this.lastMoveX;
-          this.combinedDiv.scrollTop -= e.offsetY - this.lastMoveY;
+
+          // scroll vertically
+          let newScrollTop = this.combinedDiv.scrollTop;
+          newScrollTop -= e.offsetY - this.lastMoveY;
+          // set vertical scroll limit 6000 pixels (not necessary to show empty map area on the buttom)
+          if (
+            this.lastMoveY - e.offsetY <= 0 ||
+            (newScrollTop + this.canvas.height) / this.scale < 6000
+          )
+            this.combinedDiv.scrollTop = newScrollTop;
 
           this.lastMoveX = e.offsetX;
           this.lastMoveY = e.offsetY;

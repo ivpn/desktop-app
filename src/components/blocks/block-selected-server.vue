@@ -35,7 +35,7 @@
         />
       </div>
 
-      <div class="serverSelectArrow"></div>
+      <div class="arrowRightSimple"></div>
     </button>
   </div>
 </template>
@@ -91,16 +91,6 @@ export default {
   line-height: 17px;
   letter-spacing: -0.3px;
   color: $base-text-color-details;
-}
-
-.serverSelectArrow {
-  border: solid #8b9aab;
-  border-width: 0 1px 1px 0;
-  display: inline-block;
-
-  padding: 4px;
-  transform: rotate(-45deg);
-  -webkit-transform: rotate(-45deg);
 }
 
 .serverSelectBtn {

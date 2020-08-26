@@ -3,14 +3,8 @@
     <div class="settingsTitle">GENERAL SETTINGS</div>
 
     <div class="param">
-      <input
-        type="checkbox"
-        id="minimizeToTray"
-        v-model="minimizeToTray"
-      />
-      <label class="defColor" for="minimizeToTray"
-        >Minimize to tray</label
-      >
+      <input type="checkbox" id="minimizeToTray" v-model="minimizeToTray" />
+      <label class="defColor" for="minimizeToTray">Minimize to tray</label>
     </div>
 
     <div class="param">
@@ -95,6 +89,8 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/minimizeToTray", value);
+        if (value !== true)
+          this.$store.dispatch("settings/showAppInSystemDock", true);
       }
     },
     showAppInSystemDock: {

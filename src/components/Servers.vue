@@ -89,43 +89,49 @@
           >
             <div class="popup_menu_block">
               <div class="sortSelectedImg">
-                <img :src="selectedImage" v-if="sortTypeStr === 'Speed'" />
+                <img :src="selectedImage" v-if="sortTypeStr === 'City'" />
               </div>
-              <button class="flexRowRestSpace" v-on:click="onSortType('Speed')">
-                Speed (high to low)
+              <button class="flexRowRestSpace" v-on:click="onSortType('City')">
+                City
               </button>
             </div>
 
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
               <div class="sortSelectedImg">
-                <img :src="selectedImage" v-if="sortTypeStr === 'Distance'" />
+                <img :src="selectedImage" v-if="sortTypeStr === 'Country'" />
               </div>
               <button
                 class="flexRowRestSpace"
-                v-on:click="onSortType('Distance')"
+                v-on:click="onSortType('Country')"
               >
-                Proximity (close to far)
+                Country
               </button>
             </div>
 
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
               <div class="sortSelectedImg">
-                <img :src="selectedImage" v-if="sortTypeStr === 'AZ'" />
+                <img :src="selectedImage" v-if="sortTypeStr === 'Latency'" />
               </div>
-              <button class="flexRowRestSpace" v-on:click="onSortType('AZ')">
-                A to Z
+              <button
+                class="flexRowRestSpace"
+                v-on:click="onSortType('Latency')"
+              >
+                Latency
               </button>
             </div>
 
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
               <div class="sortSelectedImg">
-                <img :src="selectedImage" v-if="sortTypeStr === 'ZA'" />
+                <img :src="selectedImage" v-if="sortTypeStr === 'Proximity'" />
               </div>
-              <button class="flexRowRestSpace" v-on:click="onSortType('ZA')">
-                Z to A
+              <button
+                class="flexRowRestSpace"
+                v-on:click="onSortType('Proximity')"
+              >
+                Proximity
               </button>
             </div>
           </div>
@@ -303,22 +309,20 @@ export default {
       function compare(a, b) {
         let ret = 0;
         switch (sType) {
-          case ServersSortTypeEnum.AZ:
+          case ServersSortTypeEnum.City:
+            return a.city.localeCompare(b.city);
+
+          case ServersSortTypeEnum.Country:
             ret = a.country_code.localeCompare(b.country_code);
             if (ret != 0) return ret;
             return a.city.localeCompare(b.city);
 
-          case ServersSortTypeEnum.ZA:
-            ret = b.country_code.localeCompare(a.country_code);
-            if (ret != 0) return ret;
-            return b.city.localeCompare(a.city);
-
-          case ServersSortTypeEnum.Speed:
+          case ServersSortTypeEnum.Latency:
             if (a.ping === b.ping) return 0;
             if (a.ping < b.ping) return -1;
             return 1;
 
-          case ServersSortTypeEnum.Distance: {
+          case ServersSortTypeEnum.Proximity: {
             let l = store.state.location;
             if (l == null) return 0;
 

@@ -69,8 +69,8 @@ export const Ports = Object.freeze({
 });
 
 export const ServersSortTypeEnum = Object.freeze({
-  AZ: 0,
-  ZA: 1,
-  Speed: 2,
-  Distance: 3
+  City: 0,
+  Country: 1,
+  Latency: 2,
+  Proximity: 3
 });

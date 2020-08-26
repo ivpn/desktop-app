@@ -6,7 +6,7 @@
         <div style="height: 5px" />
         <div class="large_text">{{ text }}</div>
       </div>
-      <div class="selectArrow"></div>
+      <div class="arrowRightSimple"></div>
     </button>
   </div>
 </template>
@@ -45,14 +45,5 @@ export default {
   align-items: center;
 
   width: 100%;
-}
-
-.selectArrow {
-  border: solid #8b9aab;
-  border-width: 0 2px 2px 0;
-  display: inline-block;
-  padding: 4px;
-  transform: rotate(-45deg);
-  -webkit-transform: rotate(-45deg);
 }
 </style>

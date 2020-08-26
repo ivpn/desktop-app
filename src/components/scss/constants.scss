@@ -66,3 +66,13 @@ button.link {
 div.scrollableColumnContainer::-webkit-scrollbar {
     display: none; // do not show scroll-bars
 }
+
+div.arrowRightSimple {
+    border: solid #8b9aab;
+    border-width: 0 1px 1px 0;
+    display: inline-block;
+  
+    padding: 4px;
+    transform: rotate(-45deg);
+    -webkit-transform: rotate(-45deg);
+}
