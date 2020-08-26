@@ -450,7 +450,14 @@ export default {
         location.gateway != null &&
         this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
       ) {
-        this.$store.dispatch("settings/serverEntry", location);
+        if (this.$store.state.settings.isMultiHop) {
+          if (
+            location.country_code !==
+            this.$store.state.settings.serverEntry.country_code
+          )
+            this.$store.dispatch("settings/serverExit", location);
+        } else this.$store.dispatch("settings/serverEntry", location);
+
         this.$store.dispatch("settings/isFastestServer", false);
         this.$store.dispatch("settings/isRandomServer", false);
       }
