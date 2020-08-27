@@ -30,57 +30,91 @@ import (
 	"strings"
 )
 
-// DefaultRoutingInterface - Get active routing interface
-func DefaultRoutingInterface() (*net.Interface, error) {
-	_, interfaceName, err := doGetDefaultGateway()
-	if err != nil {
-		return nil, err
+// IsDefaultRoutingInterface - Get active routing interface
+func IsDefaultRoutingInterface(interfaceName string) (bool, error) {
+	routes, e := doGetDefaultRoutes(true)
+	if e != nil {
+		return false, e
 	}
-	return net.InterfaceByName(interfaceName)
+
+	for _, r := range routes {
+		if strings.Compare(r.interfaceName, interfaceName) == 0 {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // doDefaultGatewayIP - returns: default gateway
 func doDefaultGatewayIP() (defGatewayIP net.IP, err error) {
-	defGatewayIP, _, err = doGetDefaultGateway()
-	return defGatewayIP, err
+	routes, e := doGetDefaultRoutes(false)
+	if e != nil {
+		return nil, e
+	}
+
+	return routes[0].gatewayIP, nil
 }
 
-func doGetDefaultGateway() (defGatewayIP net.IP, interfaceName string, err error) {
-	defGatewayIP = nil
+type route struct {
+	gatewayIP     net.IP
+	interfaceName string
+}
+
+func doGetDefaultRoutes(getAllDefRoutes bool) (routes []route, err error) {
 	// Expected output of "netstat -nr" command:
 	//	Routing tables
 	//	Internet:
 	//	Destination        Gateway            Flags        Netif Expire
+	//  0/1                10.56.40.1         UGSc         	 utun
 	//	default            192.168.1.1        UGSc           en0
 	//	127                127.0.0.1          UCS            lo0
 	// ...
+
+	routes = make([]route, 0, 3)
 
 	log.Info("Checking default getaway info ...")
 	cmd := exec.Command("/usr/sbin/netstat", "-nr")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return defGatewayIP, "", fmt.Errorf("unable to obtain default gateway IP: %w", err)
+		return nil, fmt.Errorf("unable to obtain default gateway IP: %w", err)
 	}
 	if len(out) == 0 {
-		return defGatewayIP, "", fmt.Errorf("unable to obtain default gateway IP (netstat returns no data)")
+		return nil, fmt.Errorf("unable to obtain default gateway IP (netstat returns no data)")
 	}
 
 	//default            192.168.1.1        UGSc           en0
-	outRegexp := regexp.MustCompile("default[\t ]+([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})[\t ]*[A-Za-z]*[\t ]+([A-Za-z0-9]*)")
-	columns := outRegexp.FindStringSubmatch(string(out))
-	if len(columns) < 3 {
-		return nil, "", fmt.Errorf("unable to obtain default gateway IP")
+	regExpString := "default[\t ]+([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})[\t ]*[A-Za-z]*[\t ]+([A-Za-z0-9]*)"
+	columnsOffsetIdx := 0
+	if getAllDefRoutes {
+		regExpString = "((0/1)|(default))[\t ]+([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})[\t ]*[A-Za-z]*[\t ]+([A-Za-z0-9]*)"
+		columnsOffsetIdx = 3
 	}
 
-	defGatewayIP = net.ParseIP(strings.Trim(columns[1], " \n\r\t"))
-	interfaceName = strings.Trim(columns[2], " \n\r\t")
+	outRegexp := regexp.MustCompile(regExpString)
 
-	if defGatewayIP == nil {
-		return nil, "", fmt.Errorf("unable to obtain default gateway IP")
-	}
-	if len(interfaceName) == 0 {
-		return nil, "", fmt.Errorf("unable to obtain default interface name")
+	maches := outRegexp.FindAllStringSubmatch(string(out), -1)
+	for _, m := range maches {
+		if len(m) < 3+columnsOffsetIdx {
+			continue
+		}
+
+		gatewayIP := net.ParseIP(strings.Trim(m[1+columnsOffsetIdx], " \n\r\t"))
+		interfaceName := strings.Trim(m[2+columnsOffsetIdx], " \n\r\t")
+
+		if gatewayIP == nil {
+			continue
+		}
+		if len(interfaceName) == 0 {
+			continue
+		}
+
+		routes = append(routes, route{gatewayIP: gatewayIP, interfaceName: interfaceName})
 	}
 
-	return defGatewayIP, interfaceName, nil
+	if len(routes) <= 0 {
+		return nil, fmt.Errorf("unable to obtain default gateway IP")
+	}
+
+	return routes, nil
 }

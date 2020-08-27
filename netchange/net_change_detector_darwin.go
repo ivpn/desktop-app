@@ -24,7 +24,6 @@ package netchange
 
 import (
 	"os"
-	"strings"
 	"syscall"
 
 	"github.com/ivpn/desktop-app-daemon/netinfo"
@@ -43,18 +42,14 @@ func (d *Detector) isRoutingChanged() (bool, error) {
 		return false, nil
 	}
 
-	ifc, err := netinfo.DefaultRoutingInterface()
+	isDefaultRoute, err := netinfo.IsDefaultRoutingInterface(d.interfaceToProtect.Name)
 
 	if err != nil {
 		log.Error("Failed to check route change:", err)
 		return false, err
 	}
 
-	if strings.Compare(ifc.Name, d.interfaceToProtect.Name) != 0 {
-		return true, nil
-	}
-
-	return false, nil
+	return !isDefaultRoute, nil
 }
 
 func (d *Detector) doStart() {
