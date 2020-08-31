@@ -244,7 +244,7 @@ import serverNameControl from "@/components/controls/control-server-name.vue";
 import SwitchProgress from "@/components/controls/control-switch-small.vue";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
-import { enumValueName, getCoordinatesBy } from "@/helpers/helpers";
+import { enumValueName, getDistanceFromLatLonInKm } from "@/helpers/helpers";
 import { ServersSortTypeEnum } from "@/store/types";
 
 export default {
@@ -326,17 +326,17 @@ export default {
             let l = store.state.location;
             if (l == null) return 0;
 
-            let pL = getCoordinatesBy(l.longitude, l.latitude);
-            let pA = getCoordinatesBy(a.longitude, a.latitude);
-            let pB = getCoordinatesBy(b.longitude, b.latitude);
-
-            let distA = Math.pow(
-              Math.pow(pL.x - pA.x, 2) + Math.pow(pL.y - pA.y, 2),
-              0.5
+            var distA = getDistanceFromLatLonInKm(
+              l.latitude,
+              l.longitude,
+              a.latitude,
+              a.longitude
             );
-            let distB = Math.pow(
-              Math.pow(pL.x - pB.x, 2) + Math.pow(pL.y - pB.y, 2),
-              0.5
+            var distB = getDistanceFromLatLonInKm(
+              l.latitude,
+              l.longitude,
+              b.latitude,
+              b.longitude
             );
 
             if (distA === distB) return 0;
