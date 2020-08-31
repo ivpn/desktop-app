@@ -23,6 +23,7 @@
           :onBack="backToMainView"
           isExitServer="true"
           :onServerChanged="onServerChanged"
+          :onRandomServer="() => onRandomServer(true)"
         />
       </div>
 
@@ -208,21 +209,25 @@ export default {
       if (server == null || isExitServer == null) return;
       if (!isExitServer) {
         if (server === this.$store.state.settings.serverEntry) return;
+        this.$store.dispatch("settings/isRandomServer", false);
         this.$store.dispatch("settings/serverEntry", server);
       } else {
         if (server === this.$store.state.settings.serverExit) return;
+        this.$store.dispatch("settings/isRandomExitServer", false);
         this.$store.dispatch("settings/serverExit", server);
       }
       this.$store.dispatch("settings/isFastestServer", false);
-      this.$store.dispatch("settings/isRandomServer", false);
+
       if (connected(this)) connect(this, true);
     },
     onFastestServer() {
       this.$store.dispatch("settings/isFastestServer", true);
       if (connected(this)) connect(this, true);
     },
-    onRandomServer() {
-      this.$store.dispatch("settings/isRandomServer", true);
+    onRandomServer(isExitServer) {
+      if (isExitServer === true)
+        this.$store.dispatch("settings/isRandomExitServer", true);
+      else this.$store.dispatch("settings/isRandomServer", true);
       if (connected(this)) connect(this, true);
     }
   }

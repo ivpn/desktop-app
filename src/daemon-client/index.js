@@ -503,12 +503,14 @@ async function PingServers() {
 async function Connect(entryServer, exitServer) {
   let vpnParamsPropName = "";
   let vpnParamsObj = {};
+  let settings = store.state.settings;
 
   // we are not in paused state anymore
   store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
 
   store.commit("vpnState/connectionState", VpnStateEnum.CONNECTING);
 
+  const isRandomExitSvr = store.getters["settings/isRandomExitServer"];
   if (entryServer != null || exitServer != null) {
     // if entryServer or exitServer is null -> will be used current selected servers
     // otherwise -> current selected servers will be replaced by a new values before connect
@@ -531,8 +533,24 @@ async function Connect(entryServer, exitServer) {
     } else if (store.getters["settings/isRandomServer"]) {
       // random server
       let servers = store.getters["vpnState/activeServers"];
+      if (!isRandomExitSvr) {
+        servers = servers.filter(
+          s => s.country_code !== settings.serverExit.country_code
+        );
+      }
       let randomIdx = Math.floor(Math.random() * Math.floor(servers.length));
       store.dispatch("settings/serverEntry", servers[randomIdx]);
+    }
+
+    if (isRandomExitSvr) {
+      const servers = store.getters["vpnState/activeServers"];
+      const exitServers = servers.filter(
+        s => s.country_code !== settings.serverEntry.country_code
+      );
+      const randomIdx = Math.floor(
+        Math.random() * Math.floor(exitServers.length)
+      );
+      store.dispatch("settings/serverExit", exitServers[randomIdx]);
     }
   }
 
@@ -540,7 +558,6 @@ async function Connect(entryServer, exitServer) {
     await EnableFirewall(true);
   }
 
-  let settings = store.state.settings;
   let port = store.getters["settings/getPort"];
 
   if (settings.vpnType === VpnTypeEnum.OpenVPN) {

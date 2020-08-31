@@ -150,14 +150,8 @@
     <!-- SERVERS LIST BLOCK -->
     <div class="commonMargins flexColumn scrollableColumnContainer">
       <!-- FASTEST & RANDOMM SERVER -->
-      <div
-        v-if="
-          !isMultihop &&
-            isFavoritesView == false &&
-            isFastestServerConfig === false
-        "
-      >
-        <div class="flexRow">
+      <div v-if="isFavoritesView == false && isFastestServerConfig === false">
+        <div class="flexRow" v-if="!isMultihop">
           <button
             class="serverSelectBtn flexRow"
             v-on:click="onFastestServerClicked()"
@@ -172,6 +166,7 @@
             <img :src="settingsImage" />
           </button>
         </div>
+        <!-- RANDOM -->
         <button
           class="serverSelectBtn flexRow"
           v-on:click="onRandomServerClicked()"
@@ -179,7 +174,11 @@
           <serverNameControl
             class="serverName"
             :isRandomServer="true"
-            :isShowSelected="$store.getters['settings/isRandomServer']"
+            :isShowSelected="
+              isMultihop && isExitServer
+                ? $store.getters['settings/isRandomExitServer']
+                : $store.getters['settings/isRandomServer']
+            "
           />
         </button>
       </div>
@@ -475,13 +474,14 @@ export default {
     },
     isSelectedServer: function(server) {
       if (server == null) return false;
-      if (
-        this.$store.state.settings.isFastestServer === true ||
-        this.$store.state.settings.isRandomServer === true
-      )
-        return false;
-      if (this.isExitServer)
+      if (this.$store.state.settings.isFastestServer === true) return false;
+
+      if (this.isExitServer) {
+        if (this.$store.state.settings.isRandomExitServer === true)
+          return false;
         return this.$store.state.settings.serverExit.gateway === server.gateway;
+      }
+      if (this.$store.state.settings.isRandomServer === true) return false;
       return this.$store.state.settings.serverEntry.gateway === server.gateway;
     },
     favoriteClicked: function(evt, server) {

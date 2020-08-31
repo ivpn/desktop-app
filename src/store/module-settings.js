@@ -32,6 +32,7 @@ export default {
     serverExit: null,
     isFastestServer: true,
     isRandomServer: false,
+    isRandomExitServer: false,
 
     // Favorite gateway's list (strings)
     serversFavoriteList: [],
@@ -102,12 +103,16 @@ export default {
     },
     isFastestServer(state, val) {
       state.isFastestServer = val;
-      state.isRandomServer = false;
+      if (val === true) state.isRandomServer = false;
     },
     isRandomServer(state, val) {
       state.isRandomServer = val;
-      state.isFastestServer = false;
+      if (val === true) state.isFastestServer = false;
     },
+    isRandomExitServer(state, val) {
+      state.isRandomExitServer = val;
+    },
+
     // Favorite gateway's list (strings)
     serversFavoriteList(state, val) {
       state.serversFavoriteList = val;
@@ -199,8 +204,11 @@ export default {
       return state.isFastestServer;
     },
     isRandomServer: state => {
-      if (state.isMultiHop) return false;
       return state.isRandomServer;
+    },
+    isRandomExitServer: state => {
+      if (!state.isMultiHop) return false;
+      return state.isRandomExitServer;
     },
     getPort: state => {
       return state.port[enumValueName(VpnTypeEnum, state.vpnType)];
@@ -232,6 +240,9 @@ export default {
     },
     isRandomServer(context, val) {
       context.commit("isRandomServer", val);
+    },
+    isRandomExitServer(context, val) {
+      context.commit("isRandomExitServer", val);
     },
 
     // Favorite gateway's list (strings)

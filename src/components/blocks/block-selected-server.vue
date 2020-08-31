@@ -21,16 +21,11 @@
           :isFastestServer="
             isDisconnected && $store.getters['settings/isFastestServer']
           "
-          :isRandomServer="
-            isDisconnected && $store.getters['settings/isRandomServer']
-          "
+          :isRandomServer="isRandomServer"
           :isShowPingPicture="
             !isDisconnected ||
               (isDisconnected &&
-                !(
-                  $store.getters['settings/isFastestServer'] ||
-                  $store.getters['settings/isRandomServer']
-                ))
+                !($store.getters['settings/isFastestServer'] || isRandomServer))
           "
         />
       </div>
@@ -67,6 +62,12 @@ export default {
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
       );
+    },
+    isRandomServer: function() {
+      if (!this.isDisconnected) return false;
+      return this.isExitServer
+        ? this.$store.getters["settings/isRandomExitServer"]
+        : this.$store.getters["settings/isRandomServer"];
     }
   },
   methods: {
