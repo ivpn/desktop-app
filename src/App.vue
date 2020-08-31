@@ -38,25 +38,108 @@ export default {
   }
 };
 
-// Ability to get working Copy\Paste to 'input' elements
-// without modification application menu (which is required for macOS)
 if (Platform() === PlatformEnum.macOS) {
+  const electron = require("electron");
+  const remote = electron.remote;
+  const Menu = remote.Menu;
+
+  // Default COPY/PASTE contect menu for all imput elements (macOS only)
+  const InputMenu = Menu.buildFromTemplate([
+    {
+      label: "Undo",
+      role: "undo"
+    },
+    {
+      label: "Redo",
+      role: "redo"
+    },
+    {
+      type: "separator"
+    },
+    {
+      label: "Cut",
+      role: "cut"
+    },
+    {
+      label: "Copy",
+      role: "copy"
+    },
+    {
+      label: "Paste",
+      role: "paste"
+    },
+    {
+      type: "separator"
+    },
+    {
+      label: "Select all",
+      role: "selectall"
+    }
+  ]);
+
+  document.body.addEventListener("contextmenu", e => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    let node = e.target;
+
+    while (node) {
+      if (
+        node.nodeName.match(/^(input|textarea)$/i) ||
+        node.isContentEditable
+      ) {
+        InputMenu.popup(remote.getCurrentWindow());
+        break;
+      }
+      node = node.parentNode;
+    }
+  });
+
+  // Ability to get working Copy\Paste to 'input' elements
+  // without modification application menu (which is required for macOS)
   const { clipboard } = require("electron");
   const keyCodes = {
     V: 86,
-    C: 67
+    C: 67,
+    X: 88,
+    A: 65
   };
   document.onkeydown = function(event) {
     let toReturn = true;
     if (event.ctrlKey || event.metaKey) {
+      console.log(event);
       // detect ctrl or cmd
-      if (event.which == keyCodes.V) {
-        document.activeElement.value = clipboard.readText();
-        //document.activeElement.dispatchEvent(new Event("input"));
+      if (event.which == keyCodes.A) {
+        const field = document.activeElement;
+        if (field != null) field.select();
         toReturn = false;
-      }
-      if (event.which == keyCodes.C) {
+      } else if (event.which == keyCodes.V) {
+        const field = document.activeElement;
+        if (document.activeElement != null) {
+          const startPos = field.selectionStart;
+          const endPos = field.selectionEnd;
+
+          const text = clipboard.readText();
+          field.value =
+            field.value.substring(0, startPos) +
+            text +
+            field.value.substring(endPos, field.value.length);
+
+          field.focus();
+          field.setSelectionRange(
+            startPos + text.length,
+            startPos + text.length
+          );
+
+          toReturn = false;
+        }
+      } else if (event.which == keyCodes.C) {
         clipboard.writeText(getSelection().toString());
+        toReturn = false;
+      } else if (event.which == keyCodes.X) {
+        let selection = getSelection();
+        clipboard.writeText(selection.toString());
+        selection.deleteFromDocument();
         toReturn = false;
       }
     }
