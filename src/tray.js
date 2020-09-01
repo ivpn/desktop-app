@@ -56,6 +56,10 @@ export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
         // eslint-disable-next-line no-undef
         __static + "/tray/windows/disconnected.ico"
       );
+      iconPaused = nativeImage.createFromPath(
+        // eslint-disable-next-line no-undef
+        __static + "/tray/windows/paused.ico"
+      );
       iconsConnecting.push(
         nativeImage.createFromPath(
           // eslint-disable-next-line no-undef
@@ -71,6 +75,10 @@ export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
       iconDisconnected = nativeImage.createFromPath(
         // eslint-disable-next-line no-undef
         __static + "/tray/linux/disconnected.png"
+      );
+      iconPaused = nativeImage.createFromPath(
+        // eslint-disable-next-line no-undef
+        __static + "/tray/linux/paused.png"
       );
       iconsConnecting.push(
         nativeImage.createFromPath(
