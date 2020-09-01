@@ -270,7 +270,7 @@ function getWindowIcon() {
     // The reest platforms will use icon from application binary
     if (Platform() !== PlatformEnum.Linux) return null;
     // eslint-disable-next-line no-undef
-    return nativeImage.createFromPath(__static + "/icon64.png");
+    return nativeImage.createFromPath(__static + "/64x64.png");
   } catch (e) {
     console.error(e);
   }
