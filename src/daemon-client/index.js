@@ -501,6 +501,9 @@ async function PingServers() {
 }
 
 async function Connect(entryServer, exitServer) {
+  // if entryServer or exitServer is null -> will be used current selected servers
+  // otherwise -> current selected servers will be replaced by a new values before connect
+
   let vpnParamsPropName = "";
   let vpnParamsObj = {};
   let settings = store.state.settings;
@@ -511,13 +514,10 @@ async function Connect(entryServer, exitServer) {
   store.commit("vpnState/connectionState", VpnStateEnum.CONNECTING);
 
   const isRandomExitSvr = store.getters["settings/isRandomExitServer"];
-  if (entryServer != null || exitServer != null) {
-    // if entryServer or exitServer is null -> will be used current selected servers
-    // otherwise -> current selected servers will be replaced by a new values before connect
-    if (entryServer != null)
-      store.dispatch("settings/serverEntry", entryServer);
-    if (exitServer != null) store.dispatch("settings/serverExit", exitServer);
-  } else {
+
+  // ENTRY SERVER
+  if (entryServer != null) store.dispatch("settings/serverEntry", entryServer);
+  else {
     if (store.getters["settings/isFastestServer"]) {
       // looking for fastest server
       let fastest = store.getters["vpnState/fastestServer"];
@@ -542,7 +542,9 @@ async function Connect(entryServer, exitServer) {
       store.dispatch("settings/serverEntry", servers[randomIdx]);
     }
 
-    if (isRandomExitSvr) {
+    // EXIT SERVER
+    if (exitServer != null) store.dispatch("settings/serverExit", exitServer);
+    else if (isRandomExitSvr) {
       const servers = store.getters["vpnState/activeServers"];
       const exitServers = servers.filter(
         s => s.country_code !== settings.serverEntry.country_code

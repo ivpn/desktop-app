@@ -114,9 +114,11 @@ export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
           break;
         }
         case "settings/serverEntry":
+        case "settings/serverExit":
         case "settings/isMultiHop":
         case "settings/isFastestServer":
         case "settings/isRandomServer":
+        case "settings/isRandomExitServer":
         case "settings/serversFavoriteList":
         case "account/session":
           updateTrayMenu();
@@ -187,17 +189,24 @@ function updateTrayMenu() {
       const s = serversHashed[gw];
       if (s == null) return;
 
-      var options = {
-        label: serverName(
-          s,
-          store.state.settings.isMultiHop
-            ? store.state.settings.serverExit
-            : null
-        ),
-        click: () => {
-          menuItemConnect(s);
-        }
-      };
+      var options = {};
+
+      if (store.state.settings.isMultiHop) {
+        options = {
+          label: serverName(null, s),
+          click: () => {
+            menuItemConnect(null, s);
+          }
+        };
+      } else {
+        options = {
+          label: serverName(s),
+          click: () => {
+            menuItemConnect(s);
+          }
+        };
+      }
+
       favoriteSvrsTemplate.push(options);
     });
   }
@@ -205,13 +214,12 @@ function updateTrayMenu() {
 
   // MAIN MENU
   var connectToName = "";
-  if (store.state.settings.isFastestServer) connectToName = "Fastest Server";
-  else if (store.state.settings.isRandomServer) connectToName = "Random Server";
-  else
-    connectToName = serverName(
-      store.state.settings.serverEntry,
-      store.state.settings.isMultiHop ? store.state.settings.serverExit : null
-    );
+  if (
+    store.state.settings.isFastestServer ||
+    store.state.settings.isRandomServer
+  )
+    connectToName = serverName();
+  else connectToName = serverName(store.state.settings.serverEntry);
 
   const isLoggedIn = store.getters["account/isLoggedIn"];
 
@@ -289,17 +297,32 @@ function updateTrayMenu() {
   tray.setContextMenu(contextMenu);
 }
 
-function serverName(server, exitSvr) {
-  if (server == null) return "";
-  var ret = `${server.city}, ${server.country_code}`;
-  if (exitSvr != null)
-    ret = `${ret} -> ${exitSvr.city}, ${exitSvr.country_code}`;
+function serverName(entryServer, exitServer) {
+  function text(svr) {
+    if (svr == null) return "";
+    if (typeof svr === "string") return svr;
+    return `${svr.city}, ${svr.country_code}`;
+  }
+
+  if (entryServer == null) {
+    if (store.state.settings.isFastestServer) entryServer = "Fastest Server";
+    else if (store.state.settings.isRandomServer) entryServer = "Random Server";
+    else entryServer = store.state.settings.serverEntry;
+  }
+
+  if (exitServer == null && store.state.settings.isMultiHop) {
+    if (store.state.settings.isRandomExitServer) exitServer = "Random Server";
+    else exitServer = store.state.settings.serverExit;
+  }
+
+  var ret = text(entryServer);
+  if (exitServer != null) ret = `${ret} -> ${text(exitServer)}`;
   return ret;
 }
 
-function menuItemConnect(entrySvr) {
+function menuItemConnect(entrySvr, exitSvr) {
   try {
-    daemonClient.Connect(entrySvr);
+    daemonClient.Connect(entrySvr, exitSvr);
   } catch (e) {
     console.error(e);
   }
