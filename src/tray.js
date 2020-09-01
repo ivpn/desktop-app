@@ -35,6 +35,7 @@ let menuHandlerAccount = null;
 
 let iconConnected = null;
 let iconDisconnected = null;
+let iconPaused = null;
 let iconsConnecting = [];
 let iconConnectingIdx = 0;
 let iconConnectingIdxChanged = new Date().getTime();
@@ -87,16 +88,16 @@ export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
         // eslint-disable-next-line no-undef
         __static + "/tray/mac/icon-disconnectedTemplate.png"
       );
-
-      iconsConnecting.push(iconDisconnected);
-      for (let i = 1; i <= 4; i++)
-        iconsConnecting.push(
-          nativeImage.createFromPath(
-            // eslint-disable-next-line no-undef
-            __static + `/tray/mac/icon-${i}Template.png`
-          )
-        );
-      for (let i = 4; i > 1; i--) iconsConnecting.push(iconsConnecting[i]);
+      iconPaused = nativeImage.createFromPath(
+        // eslint-disable-next-line no-undef
+        __static + "/tray/mac/icon-pausedTemplate.png"
+      );
+      iconsConnecting.push(
+        nativeImage.createFromPath(
+          // eslint-disable-next-line no-undef
+          __static + "/tray/mac/icon-connectingTemplate.png"
+        )
+      );
       break;
   }
 
@@ -106,7 +107,8 @@ export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
       switch (mutation.type) {
         case "vpnState/connectionState":
         case "vpnState/connectionInfo":
-        case "vpnState/disconnected": {
+        case "vpnState/disconnected":
+        case "vpnState/pauseState": {
           updateTrayMenu();
           updateTrayIcon();
           break;
@@ -117,7 +119,6 @@ export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
         case "settings/isRandomServer":
         case "settings/serversFavoriteList":
         case "account/session":
-        case "vpnState/pauseState":
           updateTrayMenu();
           break;
         default:
@@ -149,7 +150,12 @@ function updateTrayIcon() {
   }
 
   iconConnectingIdx = 0;
-  if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED) {
+  if (
+    store.state.vpnState.pauseState === PauseStateEnum.Paused &&
+    iconPaused != null
+  )
+    tray.setImage(iconPaused);
+  else if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED) {
     tray.setImage(iconConnected);
   } else {
     tray.setImage(iconDisconnected);
