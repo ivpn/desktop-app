@@ -115,11 +115,12 @@ if (Platform() === PlatformEnum.macOS) {
         toReturn = false;
       } else if (event.which == keyCodes.V) {
         const field = document.activeElement;
-        if (document.activeElement != null) {
+        if (field != null) {
           const startPos = field.selectionStart;
           const endPos = field.selectionEnd;
 
           const text = clipboard.readText();
+
           field.value =
             field.value.substring(0, startPos) +
             text +
@@ -137,10 +138,22 @@ if (Platform() === PlatformEnum.macOS) {
         clipboard.writeText(getSelection().toString());
         toReturn = false;
       } else if (event.which == keyCodes.X) {
-        let selection = getSelection();
-        clipboard.writeText(selection.toString());
-        selection.deleteFromDocument();
-        toReturn = false;
+        const field = document.activeElement;
+        if (field != null) {
+          let selection = getSelection();
+          clipboard.writeText(selection.toString());
+
+          const startPos = field.selectionStart;
+          const endPos = field.selectionEnd;
+
+          field.value =
+            field.value.slice(0, startPos) + field.value.slice(endPos);
+
+          field.focus();
+          field.setSelectionRange(startPos, startPos);
+
+          toReturn = false;
+        }
       }
     }
     return toReturn;
