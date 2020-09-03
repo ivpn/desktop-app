@@ -178,8 +178,9 @@ html * {
   width: 100vw;
   height: 100vh;
 
-  // disable scroolbars (Windows)
+  // disable scroolbars
   overflow-y: hidden;
+  overflow-x: hidden;
 }
 
 .title {
