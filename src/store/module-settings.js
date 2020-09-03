@@ -72,6 +72,7 @@ export default {
     dnsCustom: "",
 
     // UI
+    minimizedUI: false,
     minimizeToTray: true,
     showAppInSystemDock: false,
     serversSortType: ServersSortTypeEnum.City
@@ -184,6 +185,9 @@ export default {
     },
 
     //UI
+    minimizedUI(state, val) {
+      state.minimizedUI = val;
+    },
     minimizeToTray(state, val) {
       state.minimizeToTray = val;
     },
@@ -316,6 +320,9 @@ export default {
     },
 
     //UI
+    minimizedUI(context, val) {
+      context.commit("minimizedUI", val);
+    },
     minimizeToTray(context, val) {
       context.commit("minimizeToTray", val);
     },

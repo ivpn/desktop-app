@@ -1,27 +1,50 @@
 <template>
   <div id="flexview">
     <div class="flexColumn">
-      <div class="flexColumn windowContentPaddingTop" style="min-height: 0px">
+      <div class="leftPanelTopSpace">
+        <div
+          v-if="isMinimizedButtonsVisible"
+          class="minimizedButtonsPanel leftPanelTopMinimizedButtonsPanel"
+        >
+          <button v-on:click="onAccountSettings()">
+            <img src="@/assets/user.svg" />
+          </button>
+
+          <button v-on:click="onSettings()">
+            <img src="@/assets/settings.svg" />
+          </button>
+
+          <button v-on:click="onMaximize(true)">
+            <img src="@/assets/maximize.svg" />
+          </button>
+        </div>
+      </div>
+      <div class="flexColumn" style="min-height: 0px">
         <transition name="component-fade" mode="out-in">
           <component v-bind:is="currentViewComponent" id="left"></component>
         </transition>
       </div>
     </div>
-    <div id="right">
+    <div id="right" v-if="!isMinimizedUI">
       <Map
         :isBlured="isMapBlured"
         :onAccountSettings="onAccountSettings"
         :onSettings="onSettings"
+        :onMinimize="() => onMaximize(false)"
       />
     </div>
   </div>
 </template>
 
 <script>
+const { remote, ipcRenderer } = require("electron");
+
 import Init from "@/components/Init.vue";
 import Login from "@/components/Login.vue";
 import Control from "@/components/Control.vue";
 import Map from "@/components/Map.vue";
+
+import common from "@/common";
 
 export default {
   components: {
@@ -42,20 +65,50 @@ export default {
     isMapBlured: function() {
       if (this.currentViewComponent !== Control) return "true";
       return "false";
+    },
+    isMinimizedButtonsVisible: function() {
+      if (this.currentViewComponent !== Control) return false;
+      if (this.$store.state.uiState.isDefaultControlView !== true) return false;
+      return this.isMinimizedUI;
+    },
+    isMinimizedUI: function() {
+      return this.$store.state.settings.minimizedUI;
+    }
+  },
+  watch: {
+    isMinimizedUI() {
+      this.updateUIState();
     }
   },
   methods: {
     onAccountSettings: function() {
-      this.$router.push({ name: "settings", params: { view: "account" } });
+      //if (this.$store.state.settings.minimizedUI)
+      ipcRenderer.send("renderer-request-show-settings-account");
+      //else this.$router.push({ name: "settings", params: { view: "account" } });
     },
     onSettings: function() {
-      this.$router.push({ name: "settings" });
+      //if (this.$store.state.settings.minimizedUI)
+      ipcRenderer.send("renderer-request-show-settings-general");
+      //else this.$router.push({ name: "settings" });
+    },
+    onMaximize: function(isMaximize) {
+      this.$store.dispatch("settings/minimizedUI", !isMaximize);
+      this.updateUIState();
+    },
+    updateUIState: function() {
+      const win = remote.getCurrentWindow();
+      const animate = false;
+      if (this.isMinimizedUI)
+        win.setBounds({ width: common.MinimizedUIWidth }, animate);
+      else win.setBounds({ width: common.MaximizedUIWidth }, animate);
     }
   }
 };
 </script>
 
 <style scoped lang="scss">
+@import "@/components/scss/constants";
+
 #flexview {
   display: flex;
   flex-direction: row;
@@ -70,5 +123,27 @@ export default {
 #right {
   width: 0%; // ???
   flex-grow: 1;
+}
+
+div.minimizedButtonsPanel {
+  display: flex;
+  justify-content: flex-end;
+
+  margin-right: 10px;
+  margin-top: 10px;
+}
+
+div.minimizedButtonsPanel button {
+  @extend .noBordersBtn;
+  padding-top: 0px;
+  padding-bottom: 0px;
+
+  z-index: 1;
+  cursor: auto;
+  //cursor: pointer;
+}
+
+div.minimizedButtonsPanel img {
+  height: 18px;
 }
 </style>

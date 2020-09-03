@@ -46,12 +46,14 @@ import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
 import { InitConnectionResumer } from "./connection-resumer";
 import { IsWindowHasTitle } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
+import common from "@/common";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
+let settingsWindow;
 let isTrayInitialized = false;
 let lastRouteArgs = null; // last route arguments (requested by renderer process when window initialized)
 
@@ -70,6 +72,13 @@ if (!gotTheLock) {
 // main process requesting information about 'initial route' after window created
 ipcMain.handle("renderer-request-ui-initial-route-args", () => {
   return lastRouteArgs;
+});
+
+ipcMain.on("renderer-request-show-settings-general", () => {
+  menuOnPreferences();
+});
+ipcMain.on("renderer-request-show-settings-account", () => {
+  menuOnAccount();
 });
 
 if (gotTheLock) {
@@ -255,8 +264,19 @@ if (gotTheLock) {
   // subscribe to any changes in a store
   store.subscribe(mutation => {
     try {
-      if (mutation.type === "settings/showAppInSystemDock") {
-        updateAppDockVisibility();
+      switch (mutation.type) {
+        case "settings/showAppInSystemDock":
+          updateAppDockVisibility();
+          break;
+        case "account/session":
+        case "settings/minimizedUI":
+          if (
+            !store.state.settings.minimizedUI ||
+            !store.getters["account/isLoggedIn"]
+          )
+            closeSettingsWindow();
+          break;
+        default:
       }
     } catch (e) {
       console.error("Error in store subscriber:", e);
@@ -285,12 +305,11 @@ function createWindow() {
   if (!IsWindowHasTitle()) titleBarStyle = "hidden"; //"hiddenInset";
 
   let windowConfig = {
-    width: 800,
+    width: store.state.settings.minimizedUI
+      ? common.MinimizedUIWidth
+      : common.MaximizedUIWidth,
     height: 600,
-    minWidth: 700,
-    minHeight: 550,
-    maxWidth: 1600,
-    maxHeight: 1200,
+    resizable: false,
 
     center: true,
     title: "IVPN",
@@ -333,6 +352,59 @@ function createWindow() {
   });
 }
 
+function createSettingsWindow(viewName) {
+  if (win == null) createWindow();
+
+  if (settingsWindow != null) {
+    closeSettingsWindow();
+  }
+  if (viewName == null) viewName = "general";
+
+  let windowConfig = {
+    width: 800,
+    height: 600,
+    resizable: true,
+
+    parent: win,
+
+    center: true,
+    title: "Settings",
+
+    webPreferences: {
+      enableRemoteModule: true,
+      nodeIntegration: true
+    }
+  };
+
+  let icon = getWindowIcon();
+  if (icon != null) windowConfig.icon = icon;
+
+  settingsWindow = new BrowserWindow(windowConfig);
+
+  if (process.env.WEBPACK_DEV_SERVER_URL) {
+    // Load the url of the dev server if in development mode
+    settingsWindow.loadURL(
+      process.env.WEBPACK_DEV_SERVER_URL + `/#/settings/${viewName}`
+    );
+  } else {
+    createProtocol("app");
+    // Load the index.html when not in development
+    settingsWindow.loadURL("app://./index.html" + `/#/settings/${viewName}`);
+  }
+
+  // show\hide app from system dock
+  updateAppDockVisibility();
+
+  settingsWindow.on("closed", () => {
+    settingsWindow = null;
+  });
+}
+
+function closeSettingsWindow() {
+  if (settingsWindow == null) return;
+  settingsWindow.destroy(); // close();
+}
+
 // INITIALIZE CONNECTION TO A DAEMON
 function connectToDaemon() {
   try {
@@ -357,12 +429,18 @@ function menuOnShow() {
   }
 }
 function menuOnAccount() {
+  const viewName = "account";
   try {
+    if (store.state.settings.minimizedUI) {
+      createSettingsWindow(viewName);
+      return;
+    }
+
     menuOnShow();
     if (win !== null) {
       lastRouteArgs = {
         name: "settings",
-        params: { view: "account" }
+        params: { view: viewName }
       };
 
       // Temporary navigate to '\'. This is required only if we already showing 'settings' view
@@ -375,11 +453,18 @@ function menuOnAccount() {
   }
 }
 function menuOnPreferences() {
+  const viewName = "general";
   try {
-    menuOnShow();
+    if (store.state.settings.minimizedUI) {
+      createSettingsWindow(viewName);
+      return;
+    }
+
+    //menuOnShow();
     if (win !== null) {
       lastRouteArgs = {
-        name: "settings"
+        name: "settings",
+        params: { view: viewName }
       };
 
       // Temporary navigate to '\'. This is required only if we already showing 'settings' view

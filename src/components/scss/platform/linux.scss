@@ -2,10 +2,6 @@
 @import "linux-servers.scss";
 @import "linux-settings.scss";
 
-.windowContentPaddingTop {
-    padding-top: 15px;
-}
-
 // === HOP BUTTONS ===
 div.hopButtons {
     @extend .hopButtonsBase;

@@ -283,7 +283,7 @@ export default {
     },
     isShowFavoriteDescriptionBlock: function() {
       if (!this.isFavoritesView) return false;
-      let favSvrs = this.$store.state.settings.serversFavoriteList;
+      let favSvrs = this.favoriteServers;
       return favSvrs == null || favSvrs.length == 0;
     },
     servers: function() {

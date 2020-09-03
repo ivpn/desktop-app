@@ -2,10 +2,6 @@
 @import "windows-servers.scss";
 @import "windows-settings.scss";
 
-.windowContentPaddingTop {
-    padding-top: 0px;
-}
-
 // === HOP BUTTONS ===
 div.hopButtons {
     @extend .hopButtonsBase;

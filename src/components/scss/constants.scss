@@ -5,11 +5,15 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
 $base-text-color: #2A394B;
 $base-text-color-details: rgba($base-text-color, 0.5);// #8494A5;
 
-.left_panel_block {
-    min-height: 72px;
-    max-height: 72px;
+.left_panel_element {
     margin-left: 20px;
     margin-right: 20px;
+}
+
+.left_panel_block {
+    @extend .left_panel_element;
+    min-height: 72px;
+    max-height: 72px;
 }
 
 .flexColumn {

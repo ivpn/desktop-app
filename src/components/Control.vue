@@ -186,6 +186,7 @@ export default {
       this.uiView = isExitServers
         ? viewTypeEnum.serversExit
         : viewTypeEnum.serversEntry;
+      this.$store.dispatch("uiState/isDefaultControlView", false);
 
       // request servers ping not more often than once per 30 seconds
       if (
@@ -204,6 +205,7 @@ export default {
     },
     backToMainView() {
       this.uiView = viewTypeEnum.default;
+      this.$store.dispatch("uiState/isDefaultControlView", true);
     },
     onServerChanged(server, isExitServer) {
       if (server == null || isExitServer == null) return;

@@ -119,6 +119,7 @@
 </template>
 
 <script>
+const remote = require("electron").remote;
 import { Platform, PlatformEnum } from "@/platform/platform";
 
 import connectionView from "@/components/settings/settings-connection.vue";
@@ -159,7 +160,10 @@ export default {
   },
   methods: {
     goBack: function() {
-      this.$router.push("/");
+      if (this.$store.state.settings.minimizedUI) {
+        var window = remote.getCurrentWindow();
+        window.close();
+      } else this.$router.push("/");
     },
     onView: function(viewName) {
       this.view = viewName;

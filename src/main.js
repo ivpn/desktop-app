@@ -65,6 +65,7 @@ ipcRenderer.on("change-view-request", (event, arg) => {
 async function getInitRouteArgs() {
   return await ipcRenderer.invoke("renderer-request-ui-initial-route-args");
 }
+
 setTimeout(async () => {
   let initRouteArgs = await getInitRouteArgs();
   if (initRouteArgs != null) router.push(initRouteArgs);

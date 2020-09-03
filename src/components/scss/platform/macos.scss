@@ -1,8 +1,8 @@
 @import "base.scss";
 @import "macos-servers.scss";
 
-.windowContentPaddingTop {
-    padding-top: 29px;
+.leftPanelTopSpace {
+  min-height: 29px;
 }
 
 // === HOP BUTTONS ===

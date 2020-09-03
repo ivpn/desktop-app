@@ -1,12 +1,8 @@
 <template>
   <div id="app">
-    <div class="title" v-if="isShowDragableTitle">
-      <!--
-      <img
-        src="@/assets/logo_grey.svg"
-        style="margin-top: 12px; margin-left:78px"
-      /> -->
-    </div>
+    <!-- ability to move by mouse when no title for window (macOS) -->
+    <div class="title" v-if="isShowDragableTitle"></div>
+
     <router-view />
   </div>
 </template>
@@ -107,7 +103,6 @@ if (Platform() === PlatformEnum.macOS) {
   document.onkeydown = function(event) {
     let toReturn = true;
     if (event.ctrlKey || event.metaKey) {
-      console.log(event);
       // detect ctrl or cmd
       if (event.which == keyCodes.A) {
         const field = document.activeElement;
@@ -195,6 +190,8 @@ html * {
   width: 100%;
 
   position: absolute;
-  z-index: 5;
+  //z-index: 1;
+  //z-index: -1;
+  //background: lightsalmon;
 }
 </style>

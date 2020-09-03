@@ -19,24 +19,39 @@
       </div>
     </div>
 
-    <!-- Buttons panel -->
-    <div class="buttonsPanel" v-if="isBlured !== 'true'">
+    <!-- Buttons panel LEFT-->
+    <div class="buttonsPanelTopLeft" v-if="isBlured !== 'true'">
+      <button class="settingsBtn" v-on:click="onMinimize">
+        <img src="@/assets/minimize.svg" />
+      </button>
+    </div>
+
+    <!-- Buttons panel RIGHT-->
+    <div class="buttonsPanelTopRight" v-if="isBlured !== 'true'">
       <button class="settingsBtn settingsBtnMarginLeft" v-on:click="onSettings">
         <img src="@/assets/settings.svg" />
       </button>
 
-      <button class="settingsBtn" v-on:click="onAccountSettings">
+      <button
+        class="settingsBtn settingsBtnMarginLeft"
+        v-on:click="onAccountSettings"
+      >
         <img src="@/assets/user.svg" />
       </button>
-    </div>
 
-    <!-- Bottom panel -->
-    <div class="bottomButtonsPanel" v-if="isBlured !== 'true'">
       <button class="settingsBtn" v-on:click="centerCurrentLocation(false)">
         <img src="@/assets/crosshair.svg" />
       </button>
     </div>
 
+    <!-- Bottom panel -->
+    <!--
+    <div class="bottomButtonsPanel" v-if="isBlured !== 'true'">
+      <button class="settingsBtn" v-on:click="centerCurrentLocation(false)">
+        <img src="@/assets/crosshair.svg" />
+      </button>
+    </div>
+    -->
     <!-- Map -->
     <div class="mapcontainer" ref="combined">
       <canvas
@@ -155,7 +170,8 @@ export default {
   props: {
     isBlured: String,
     onAccountSettings: Function,
-    onSettings: Function
+    onSettings: Function,
+    onMinimize: Function
   },
 
   data: () => ({
@@ -279,6 +295,9 @@ export default {
     },
     isInProgress: function() {
       return !this.isConnected && !this.isDisconnected;
+    },
+    isMinimizedUI: function() {
+      return this.$store.state.settings.minimizedUI;
     }
   },
 
@@ -309,6 +328,9 @@ export default {
       this.updateCities();
       this.updateAnimations();
       if (oldVal !== newVal) this.centerServer(this.selectedServer);
+    },
+    isMinimizedUI() {
+      if (!this.isMinimizedUI) this.centerCurrentLocation();
     },
     location() {
       this.updateCities();
@@ -485,6 +507,7 @@ export default {
     },
     centerServer(server, noAnimation, isPopupRequired) {
       if (server == null) return;
+      this.windowResizing(); // update canvas size
       let point = getCoordinatesBy(
         server.longitude,
         server.latitude,
@@ -1059,24 +1082,34 @@ $mapBackground: #cbd2d3;
   background: $mapBackground;
 }
 
-.buttonsPanel {
-  left: 100%;
-  margin-left: -110px;
-
+.buttonsPanelBase {
   position: absolute;
   z-index: 4;
+}
 
+.buttonsPanelTopBase {
+  @extend .buttonsPanelBase;
   margin-top: 18px;
 }
+
+.buttonsPanelTopRight {
+  @extend .buttonsPanelTopBase;
+  left: 100%;
+  margin-left: -166px;
+}
+
+.buttonsPanelTopLeft {
+  @extend .buttonsPanelTopBase;
+  left: 28px;
+}
+
 .bottomButtonsPanel {
+  @extend .buttonsPanelBase;
   left: 100%;
   margin-left: -54px;
 
   top: 100%;
   margin-top: -60px;
-
-  position: absolute;
-  z-index: 4;
 }
 
 .settingsBtnMarginLeft {
