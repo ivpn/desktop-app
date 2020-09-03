@@ -86,7 +86,7 @@
           Turn on <strong>Port forwarding</strong>
         </div>
         <p>
-          Go to your client area to change subscription plan
+          Login to the website to change subscription plan
         </p>
       </div>
       <div class="flexRow">

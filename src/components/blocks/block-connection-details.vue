@@ -27,8 +27,7 @@
 
     <OnOffButtonControl
       text="AntiTracker"
-      description="AntiTracker block all
-    trackers on web pages"
+      description="AntiTracker blocks all known data trackers"
       :onChecked="antitrackerOnChecked"
       :isChecked="this.$store.state.settings.isAntitracker"
       :checkedColor="
