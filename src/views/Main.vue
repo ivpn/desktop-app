@@ -21,7 +21,11 @@
       </div>
       <div class="flexColumn" style="min-height: 0px">
         <transition name="component-fade" mode="out-in">
-          <component v-bind:is="currentViewComponent" id="left"></component>
+          <component
+            v-bind:is="currentViewComponent"
+            :onConnectionSettings="onConnectionSettings"
+            id="left"
+          ></component>
         </transition>
       </div>
     </div>
@@ -87,9 +91,10 @@ export default {
       //else this.$router.push({ name: "settings", params: { view: "account" } });
     },
     onSettings: function() {
-      //if (this.$store.state.settings.minimizedUI)
       ipcRenderer.send("renderer-request-show-settings-general");
-      //else this.$router.push({ name: "settings" });
+    },
+    onConnectionSettings: function() {
+      ipcRenderer.send("renderer-request-show-settings-connection");
     },
     onMaximize: function(isMaximize) {
       this.$store.dispatch("settings/minimizedUI", !isMaximize);

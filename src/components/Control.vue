@@ -103,6 +103,10 @@ function connected(me) {
 }
 
 export default {
+  props: {
+    onConnectionSettings: Function
+  },
+
   components: {
     HopButtonsBlock,
     Servers,
@@ -200,8 +204,7 @@ export default {
       }
     },
     onShowPorts() {
-      this.$router.push({ name: "settings", params: { view: "connection" } });
-      //this.uiView = viewTypeEnum.ports;
+      if (this.onConnectionSettings != null) this.onConnectionSettings();
     },
     backToMainView() {
       this.uiView = viewTypeEnum.default;

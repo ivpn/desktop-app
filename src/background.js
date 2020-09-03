@@ -80,6 +80,9 @@ ipcMain.on("renderer-request-show-settings-general", () => {
 ipcMain.on("renderer-request-show-settings-account", () => {
   menuOnAccount();
 });
+ipcMain.on("renderer-request-show-settings-connection", () => {
+  showSettings("connection");
+});
 
 if (gotTheLock) {
   InitPersistentSettings();
@@ -414,6 +417,29 @@ function connectToDaemon() {
   }
 }
 
+function showSettings(settingsViewName) {
+  try {
+    if (store.state.settings.minimizedUI) {
+      createSettingsWindow(settingsViewName);
+      return;
+    }
+
+    //menuOnShow();
+    if (win !== null) {
+      lastRouteArgs = {
+        name: "settings",
+        params: { view: settingsViewName }
+      };
+
+      // Temporary navigate to '\'. This is required only if we already showing 'settings' view
+      // (to be able to re-init 'settings' view with new parameters)
+      win.webContents.send("change-view-request", "/");
+      win.webContents.send("change-view-request", lastRouteArgs);
+    }
+  } catch (e) {
+    console.log(e);
+  }
+}
 // MENU ITEMS
 function menuOnShow() {
   try {
@@ -429,52 +455,10 @@ function menuOnShow() {
   }
 }
 function menuOnAccount() {
-  const viewName = "account";
-  try {
-    if (store.state.settings.minimizedUI) {
-      createSettingsWindow(viewName);
-      return;
-    }
-
-    menuOnShow();
-    if (win !== null) {
-      lastRouteArgs = {
-        name: "settings",
-        params: { view: viewName }
-      };
-
-      // Temporary navigate to '\'. This is required only if we already showing 'settings' view
-      // (to be able to re-init 'settings' view with new parameters)
-      win.webContents.send("change-view-request", "/");
-      win.webContents.send("change-view-request", lastRouteArgs);
-    }
-  } catch (e) {
-    console.log(e);
-  }
+  showSettings("account");
 }
 function menuOnPreferences() {
-  const viewName = "general";
-  try {
-    if (store.state.settings.minimizedUI) {
-      createSettingsWindow(viewName);
-      return;
-    }
-
-    //menuOnShow();
-    if (win !== null) {
-      lastRouteArgs = {
-        name: "settings",
-        params: { view: viewName }
-      };
-
-      // Temporary navigate to '\'. This is required only if we already showing 'settings' view
-      // (to be able to re-init 'settings' view with new parameters)
-      win.webContents.send("change-view-request", "/");
-      win.webContents.send("change-view-request", lastRouteArgs);
-    }
-  } catch (e) {
-    console.log(e);
-  }
+  showSettings("general");
 }
 
 // show\hide app from system dock
