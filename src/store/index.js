@@ -48,7 +48,9 @@ export default new Vuex.Store({
     },
 
     // Current location
-    location: null
+    location: null,
+    // true when we are requesting geo-lookup info on current moment
+    isRequestingLocation: false
   },
 
   getters: {
@@ -73,6 +75,9 @@ export default new Vuex.Store({
     },
     location(state, geoLocation) {
       state.location = geoLocation;
+    },
+    isRequestingLocation(state, value) {
+      state.isRequestingLocation = value;
     }
   },
 

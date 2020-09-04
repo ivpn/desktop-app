@@ -220,6 +220,16 @@ function commitSession(sessionRespObj) {
   return session;
 }
 
+function requestGeoLookupAsync() {
+  setTimeout(async () => {
+    try {
+      await api.default.GeoLookup();
+    } catch (e) {
+      console.log(e);
+    }
+  }, 0);
+}
+
 async function processResponse(response) {
   const obj = JSON.parse(response);
 
@@ -260,9 +270,6 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.ConnectedResp:
-      // forget about current location
-      store.commit("location", null);
-
       store.dispatch(`vpnState/connectionInfo`, {
         VpnType: obj.VpnType,
         ConnectedSince: new Date(obj.TimeSecFrom1970 * 1000),
@@ -271,6 +278,8 @@ async function processResponse(response) {
         ExitServerID: obj.ExitServerID,
         ManualDNS: obj.ManualDNS
       });
+
+      requestGeoLookupAsync();
       break;
 
     case daemonResponses.DisconnectedResp:
@@ -279,6 +288,7 @@ async function processResponse(response) {
       if (store.state.settings.firewallOnOffOnConnect === true) {
         await EnableFirewall(false);
       }
+      requestGeoLookupAsync();
       break;
 
     case daemonResponses.ServerListResp:
@@ -303,13 +313,7 @@ async function processResponse(response) {
         store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
       ) {
         // if FW disabled and no geolocation info - request geolocation
-        setTimeout(async () => {
-          try {
-            await api.default.GeoLookup();
-          } catch (e) {
-            console.log(e);
-          }
-        }, 0);
+        requestGeoLookupAsync();
       }
 
       break;
@@ -658,6 +662,7 @@ async function PauseConnection(pauseSeconds) {
     }
   } finally {
     store.dispatch("vpnState/pauseState", PauseStateEnum.Paused);
+    requestGeoLookupAsync();
   }
 }
 
@@ -677,6 +682,7 @@ async function ResumeConnection() {
     if (isFirewallEnabledBeforePause) await EnableFirewall(true);
   } finally {
     store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
+    requestGeoLookupAsync();
   }
 }
 

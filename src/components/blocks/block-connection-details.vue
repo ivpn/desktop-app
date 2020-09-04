@@ -45,6 +45,13 @@
       v-bind:text="portProtocolText"
       description="Protocol/Port"
     />
+
+    <!-- GEOLOCATOIN INFO -->
+    <div v-if="$store.state.settings.minimizedUI">
+      <div class="horizontalLine" />
+
+      <GeolocationInfoControl class="blockWithMrgings" />
+    </div>
   </div>
 </template>
 
@@ -52,6 +59,7 @@
 const { dialog, getCurrentWindow } = require("electron").remote;
 import OnOffButtonControl from "@/components/controls/control-config-on-off-button.vue";
 import SelectButtonControl from "@/components/controls/control-config-to-select-button.vue";
+import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
 import sender from "@/ipc/renderer-sender";
 import { enumValueName } from "@/helpers/helpers";
 import { VpnTypeEnum, PortTypeEnum } from "@/store/types";
@@ -68,7 +76,8 @@ function processError(e) {
 export default {
   components: {
     OnOffButtonControl,
-    SelectButtonControl
+    SelectButtonControl,
+    GeolocationInfoControl
   },
   props: ["onShowPorts"],
   data: function() {
@@ -141,5 +150,11 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+div.blockWithMrgings {
+  @extend .left_panel_element;
+  margin-top: 18px;
+  margin-bottom: 18px;
 }
 </style>

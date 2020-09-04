@@ -52,6 +52,10 @@
       </button>
     </div>
     -->
+
+    <div class="geolocationInfoPanel">
+      <GeolocationInfoControl style="display: flex; align-items: center;" />
+    </div>
     <!-- Map -->
     <div class="mapcontainer" ref="combined">
       <canvas
@@ -157,6 +161,8 @@ import { VpnStateEnum, PauseStateEnum } from "@/store/types";
 
 import sender from "@/ipc/renderer-sender";
 import popupControl from "@/components/controls/control-map-popup.vue";
+import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
+
 import {
   notLinear,
   getPosFromCoordinates,
@@ -165,7 +171,8 @@ import {
 
 export default {
   components: {
-    popupControl
+    popupControl,
+    GeolocationInfoControl
   },
   props: {
     isBlured: String,
@@ -239,6 +246,11 @@ export default {
     },
 
     location: function() {
+      if (
+        this.$store.state.location == null ||
+        this.$store.state.location.isRealLocation !== true
+      )
+        return null;
       return this.$store.state.location;
     },
 
@@ -361,14 +373,6 @@ export default {
         setTimeout(() => {
           this.centerCurrentLocation();
         }, 300);
-      }
-    },
-    async isDisconnected() {
-      try {
-        // AR-APP-12 - When VPN status is changed to disconnected, app should call the geolocation API to get user's location, and the location on the map should be updated.
-        if (this.isDisconnected) await sender.GeoLookup();
-      } catch (e) {
-        console.error(e);
       }
     }
   },
@@ -1112,6 +1116,27 @@ $mapBackground: #cbd2d3;
   margin-top: -60px;
 }
 
+.geolocationInfoPanel {
+  @extend .buttonsPanelBase;
+
+  position: absolute;
+  bottom: 0;
+  margin-bottom: 32px;
+
+  padding: 10px;
+  margin-left: 32px;
+
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+  border-radius: 4px;
+
+  min-height: 76px;
+  min-width: 176px;
+
+  display: flex;
+  align-items: center;
+}
+
 .settingsBtnMarginLeft {
   margin-left: 24px;
 }
@@ -1144,7 +1169,7 @@ $mapBackground: #cbd2d3;
 // Popup container - can be anything you want
 .popup {
   position: absolute;
-  z-index: 4;
+  z-index: 5;
   user-select: none;
 }
 

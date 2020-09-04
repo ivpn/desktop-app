@@ -30,15 +30,12 @@ import { VpnStateEnum, PauseStateEnum } from "@/store/types";
 export default {
   GeoLookup: async function() {
     const retPromise = new Promise((resolve, reject) => {
-      if (
-        store.state.vpnState.connectionState !== VpnStateEnum.DISCONNECTED &&
-        store.state.vpnState.pauseState !== PauseStateEnum.Paused
-      ) {
-        reject(new Error("Unable to request geo-lookup in connected state"));
-        return;
-      }
+      let isRealLocation = isRealGeoLocation();
+
       const request = net.request("https://api.ivpn.net/v4/geo-lookup");
       log.debug("API: 'geo-lookup' ...");
+      store.commit("isRequestingLocation", true);
+
       request.on("response", response => {
         if (response.statusCode != API_SUCCESS) {
           // save result in store
@@ -47,38 +44,51 @@ export default {
             `API 'geo-lookup' error (code:${response.statusCode})`
           );
           log.error(`API ERROR: 'geo-lookup' ${error}`);
+          store.commit("isRequestingLocation", false);
           reject(error);
         }
+
         response.on("data", chunk => {
           const location = JSON.parse(`${chunk}`);
 
-          if (
-            store.state.vpnState.connectionState !==
-              VpnStateEnum.DISCONNECTED &&
-            store.state.vpnState.pauseState !== PauseStateEnum.Paused
-          ) {
+          if (isRealLocation != isRealGeoLocation()) {
             const error = new Error(
-              "Unable to save geo-lookup result in connected state"
+              "Unable to save geo-lookup result (connected state changed)"
             );
             log.error(`API ERROR: 'geo-lookup' ${error}`);
+            store.commit("isRequestingLocation", false);
             reject(error);
             return;
           }
+
+          location.isRealLocation = isRealLocation;
+
           // save result in store
           store.commit("location", location);
           log.debug("API: 'geo-lookup' success.");
+          store.commit("isRequestingLocation", false);
           resolve(location);
         });
       });
+
       request.on("error", error => {
         // save result in store
         store.commit("location", null);
         log.error(`API ERROR: 'geo-lookup' ${error}`);
+        store.commit("isRequestingLocation", false);
         reject(new Error(error));
       });
+
       request.end();
     });
 
     return retPromise;
   }
 };
+
+function isRealGeoLocation() {
+  return (
+    store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED ||
+    store.state.vpnState.pauseState === PauseStateEnum.Paused
+  );
+}

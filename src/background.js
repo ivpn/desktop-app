@@ -162,18 +162,6 @@ if (gotTheLock) {
       console.error(e);
     }
 
-    // request geolocation
-    // (asynchronously, to do not block application start)
-    setTimeout(() => {
-      const api = require("./api");
-      try {
-        // the successful result will be saved in store
-        api.default.GeoLookup();
-      } catch (e) {
-        console.error(`Failed to determine geolocation: ${e}`);
-      }
-    }, 0);
-
     if (isDevelopment && !process.env.IS_TEST) {
       // Install Vue Devtools
       // Devtools extensions are broken in Electron 6.0.0 and greater
