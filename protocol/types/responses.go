@@ -202,3 +202,21 @@ type PingServersResp struct {
 	CommandBase
 	PingResults []PingResultType
 }
+
+// WiFiNetworkInfo - information about WIFI network
+type WiFiNetworkInfo struct {
+	SSID string
+}
+
+// WiFiAvailableNetworksResp - contains information about available WIFI networks
+type WiFiAvailableNetworksResp struct {
+	CommandBase
+	Networks []WiFiNetworkInfo
+}
+
+// WiFiCurrentNetworkResp contains the information about currently connected WIFI
+type WiFiCurrentNetworkResp struct {
+	CommandBase
+	SSID              string
+	IsInsecureNetwork bool
+}

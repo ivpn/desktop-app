@@ -54,7 +54,6 @@ type Preferences struct {
 	IsObfsproxy              bool
 
 	// last known account status
-	//Account AccountStatus
 	Session SessionStatus
 }
 

@@ -111,6 +111,9 @@ type Service interface {
 
 	WireGuardGenerateKeys(updateIfNecessary bool) error
 	WireGuardSetKeysRotationInterval(interval int64)
+
+	GetWiFiCurrentState() (ssid string, isInsecureNetwork bool)
+	GetWiFiAvailableNetworks() []string
 }
 
 // CreateProtocol - Create new protocol object
@@ -408,6 +411,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				&types.ConfigParamsResp{UserDefinedOvpnFile: platform.OpenvpnUserParamsFile()},
 				reqCmd.Idx)
 		}
+
+		// sending WIFI info
+		p.OnWiFiChanged(p._service.GetWiFiCurrentState())
 		break
 
 	case "GetVPNState":
@@ -462,6 +468,17 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p.sendResponse(conn, &types.PingServersResp{PingResults: results}, req.Idx)
+		break
+
+	case "WiFiAvailableNetworks":
+		networks := p._service.GetWiFiAvailableNetworks()
+		nets := make([]types.WiFiNetworkInfo, 0, len(networks))
+		for _, ssid := range networks {
+			nets = append(nets, types.WiFiNetworkInfo{SSID: ssid})
+		}
+
+		p.notifyClients(&types.WiFiAvailableNetworksResp{
+			Networks: nets})
 		break
 
 	case "KillSwitchGetStatus":

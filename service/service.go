@@ -159,6 +159,8 @@ func (s *Service) init() error {
 		}
 	}
 
+	s.initWiFiFunctionality()
+
 	// Check session status (start as go-routine to do not block service initialization)
 	go s.RequestSessionStatus()
 	// Start session status checker

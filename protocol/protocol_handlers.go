@@ -75,3 +75,10 @@ func (p *Protocol) OnKillSwitchStateChanged() {
 		p.notifyClients(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast})
 	}
 }
+
+// OnWiFiChanged - handler of WiFi status change. Notifying clients.
+func (p *Protocol) OnWiFiChanged(ssid string, isInsecureNetwork bool) {
+	p.notifyClients(&types.WiFiCurrentNetworkResp{
+		SSID:              ssid,
+		IsInsecureNetwork: isInsecureNetwork})
+}

@@ -208,3 +208,13 @@ type WireGuardSetKeysRotationInterval struct {
 	CommandBase
 	Interval int64
 }
+
+// WiFiAvailableNetworks - get list of available WIFI networks
+type WiFiAvailableNetworks struct {
+	CommandBase
+}
+
+// WiFiCurrentNetwork - request info about connected WIFI
+type WiFiCurrentNetwork struct {
+	CommandBase
+}

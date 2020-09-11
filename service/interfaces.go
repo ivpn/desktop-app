@@ -60,4 +60,5 @@ type IServiceEventsReceiver interface {
 	OnAccountStatus(sessionToken string, account preferences.AccountStatus)
 	OnDNSChanged(dns net.IP)
 	OnKillSwitchStateChanged()
+	OnWiFiChanged(ssid string, isInsecureNetwork bool)
 }
