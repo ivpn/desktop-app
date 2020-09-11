@@ -30,6 +30,16 @@
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
+    <div class="param">
+      <input
+        type="checkbox"
+        id="connectVPNOnInsecureNetwork"
+        v-model="connectVPNOnInsecureNetwork"
+      />
+      <label class="defColor" for="connectVPNOnInsecureNetwork"
+        >When joining insecure WiFi networks</label
+      >
+    </div>
 
     <div class="settingsBoldFont">
       On exit:
@@ -83,6 +93,17 @@ export default {
         this.$store.dispatch("settings/autoConnectOnLaunch", value);
       }
     },
+    connectVPNOnInsecureNetwork: {
+      get() {
+        return this.$store.state.settings.wifi?.connectVPNOnInsecureNetwork;
+      },
+      set(value) {
+        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        wifi.connectVPNOnInsecureNetwork = value;
+        this.$store.dispatch("settings/wifi", wifi);
+      }
+    },
+
     minimizeToTray: {
       get() {
         return this.$store.state.settings.minimizeToTray;

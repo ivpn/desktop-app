@@ -58,6 +58,9 @@ export default {
 
     dns: "",
 
+    currentWiFiInfo: null, //{ SSID: "", IsInsecureNetwork: false },
+    availableWiFiNetworks: null, // []{SSID: ""}
+
     // Servers hash object: serversHashed[gateway] = server
     serversHashed: {},
     servers: { wireguard: [], openvpn: [], config: {} }
@@ -141,6 +144,15 @@ export default {
     },
     dns(state, dns) {
       state.dns = dns;
+    },
+
+    currentWiFiInfo(state, currentWiFiInfo) {
+      if (currentWiFiInfo != null && currentWiFiInfo.SSID == "")
+        state.currentWiFiInfo = null;
+      else state.currentWiFiInfo = currentWiFiInfo;
+    },
+    availableWiFiNetworks(state, availableWiFiNetworks) {
+      state.availableWiFiNetworks = availableWiFiNetworks;
     }
   },
 

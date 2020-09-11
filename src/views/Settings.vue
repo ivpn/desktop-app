@@ -48,7 +48,6 @@
           >
             IVPN Firewall
           </button>
-          <!--
           <button
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('networks')"
@@ -58,7 +57,7 @@
           >
             Networks
           </button>
-          -->
+
           <button
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('antitracker')"
@@ -105,6 +104,9 @@
       <div v-else-if="view === 'firewall'">
         <firewallView />
       </div>
+      <div v-else-if="view === 'networks'">
+        <networksView />
+      </div>
       <div v-else-if="view === 'antitracker'">
         <antitrackerView />
       </div>
@@ -126,6 +128,7 @@ import connectionView from "@/components/settings/settings-connection.vue";
 import accountView from "@/components/settings/settings-account.vue";
 import generalView from "@/components/settings/settings-general.vue";
 import firewallView from "@/components/settings/settings-firewall.vue";
+import networksView from "@/components/settings/settings-networks.vue";
 import antitrackerView from "@/components/settings/settings-antitracker.vue";
 import dnsView from "@/components/settings/settings-dns.vue";
 
@@ -135,6 +138,7 @@ export default {
     accountView,
     generalView,
     firewallView,
+    networksView,
     antitrackerView,
     dnsView
   },

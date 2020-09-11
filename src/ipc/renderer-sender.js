@@ -117,5 +117,9 @@ export default {
       "renderer-request-wg-set-keys-rotation-interval",
       intervalSec
     );
+  },
+
+  GetWiFiAvailableNetworks: async () => {
+    return await invoke("renderer-request-wifi-get-available-networks");
   }
 };

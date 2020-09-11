@@ -83,6 +83,9 @@ ipcMain.on("renderer-request-show-settings-account", () => {
 ipcMain.on("renderer-request-show-settings-connection", () => {
   showSettings("connection");
 });
+ipcMain.on("renderer-request-show-settings-networks", () => {
+  showSettings("networks");
+});
 
 if (gotTheLock) {
   InitPersistentSettings();

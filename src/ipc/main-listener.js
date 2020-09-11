@@ -121,4 +121,6 @@ ipcMain.handle(
   }
 );
 
-// renderer-request-wg-set-keys-rotation-interval
+ipcMain.handle("renderer-request-wifi-get-available-networks", async () => {
+  return await client.GetWiFiAvailableNetworks();
+});

@@ -46,6 +46,22 @@
       description="Protocol/Port"
     />
 
+    <!-- WIFI -->
+    <div class="horizontalLine" />
+
+    <SelectButtonControl
+      class="leftPanelBlock"
+      :click="onShowWifiConfig"
+      v-bind:text="$store.state.vpnState.currentWiFiInfo.SSID"
+      :description="
+        $store.state.vpnState.currentWiFiInfo.SSID == ''
+          ? 'No WiFi connection'
+          : 'WiFi network'
+      "
+      :markerText="WiFiMarkerText"
+      :markerColor="WiFiMarkerColor"
+    />
+
     <!-- GEOLOCATOIN INFO -->
     <div v-if="$store.state.settings.minimizedUI">
       <div class="horizontalLine" />
@@ -79,7 +95,7 @@ export default {
     SelectButtonControl,
     GeolocationInfoControl
   },
-  props: ["onShowPorts"],
+  props: ["onShowPorts", "onShowWifiConfig"],
   data: function() {
     return {
       antitrackerIsProgress: false,
@@ -95,6 +111,23 @@ export default {
         PortTypeEnum,
         port.type
       )} ${port.port}`;
+    },
+    WiFiMarkerText: function() {
+      let currentNetworkConfig = this.getCurrentWiFiConfig();
+      if (currentNetworkConfig != null)
+        return currentNetworkConfig.isTrusted ? "TRUSTED" : "UNTRUSTED";
+      else {
+        let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;
+        if (curWifiInfo != null && curWifiInfo.IsInsecureNetwork)
+          return "INSECURE";
+      }
+      return null;
+    },
+    WiFiMarkerColor: function() {
+      let currentNetworkConfig = this.getCurrentWiFiConfig();
+      if (currentNetworkConfig != null)
+        return currentNetworkConfig.isTrusted ? "#64ad07" : "#FF6258";
+      return null;
     }
   },
 
@@ -117,6 +150,17 @@ export default {
         processError(e);
       } finally {
         this.firewallIsProgress = false;
+      }
+    },
+    getCurrentWiFiConfig() {
+      let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;
+      if (curWifiInfo == null || curWifiInfo.SSID == "") return null;
+
+      let wifiSettings = this.$store.state.settings.wifi;
+      if (wifiSettings == null || wifiSettings.networks == null) return null;
+
+      for (let w of wifiSettings.networks) {
+        if (w.ssid == curWifiInfo.SSID) return w;
       }
     }
   }
