@@ -173,6 +173,9 @@ export default {
     },
     isMinimizedUI: function() {
       return this.$store.state.settings.minimizedUI;
+    },
+    isMultiHop: function() {
+      return this.$store.state.settings.isMultiHop;
     }
   },
 
@@ -199,6 +202,9 @@ export default {
       connect(this, true);
     },
     isMinimizedUI() {
+      setTimeout(() => this.recalcScrollButtonVisiblity(), 0);
+    },
+    isMultiHop() {
       setTimeout(() => this.recalcScrollButtonVisiblity(), 0);
     }
   },
