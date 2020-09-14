@@ -52,12 +52,8 @@
     <SelectButtonControl
       class="leftPanelBlock"
       :click="onShowWifiConfig"
-      v-bind:text="$store.state.vpnState.currentWiFiInfo.SSID"
-      :description="
-        $store.state.vpnState.currentWiFiInfo.SSID == ''
-          ? 'No WiFi connection'
-          : 'WiFi network'
-      "
+      v-bind:text="wifiSSID"
+      :description="wifiSSID == '' ? 'No WiFi connection' : 'WiFi network'"
       :markerText="WiFiMarkerText"
       :markerColor="WiFiMarkerColor"
     />
@@ -122,25 +118,34 @@ export default {
       if (wifiSettings == null) return null;
       return wifiSettings.defaultTrustStatusTrusted;
     },
+    wifiSSID() {
+      const currWifi = this.$store.state.vpnState.currentWiFiInfo;
+      if (currWifi == null || currWifi.SSID == null) return "";
+      return currWifi.SSID;
+    },
     WiFiMarkerText: function() {
+      if (this.wifiSSID == "") return null;
       const TRUSTED = "TRUSTED";
       const UNTRUSTED = "UNTRUSTED";
       const INSECURE = "INSECURE";
+      const NOTRUSTSTATUS = "NO TRUST STATUS";
       const trustState = this.getTrustInfoForCurrentWifi();
       if (trustState.isTrusted == true) return TRUSTED;
       else if (trustState.isTrusted == false) return UNTRUSTED;
       else if (trustState.isInsecure == true) return INSECURE;
-      return null;
+      return NOTRUSTSTATUS;
     },
     WiFiMarkerColor: function() {
+      if (this.wifiSSID == "") return null;
       const TRUSTED = "#64ad07";
       const UNTRUSTED = "#FF6258";
       const INSECURE = "orange";
+      const NOTRUSTSTATUS = "#BBBBBB";
       const trustState = this.getTrustInfoForCurrentWifi();
       if (trustState.isTrusted == true) return TRUSTED;
       else if (trustState.isTrusted == false) return UNTRUSTED;
       else if (trustState.isInsecure == true) return INSECURE;
-      return null;
+      return NOTRUSTSTATUS;
     }
   },
 
