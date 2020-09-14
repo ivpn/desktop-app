@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="flexColumn">
     <div class="settingsTitle">NETWORKS</div>
 
     <div class="param">
@@ -37,9 +37,9 @@
         class="selectableButtonSeparator"
       ></button>
     </div>
-    <div>
+    <div class="flexColumn" style="min-height: 0px">
       <!-- ACTIONS -->
-      <div v-if="isActionsView">
+      <div v-if="isActionsView" style="flex-grow: 1;">
         <div class="settingsBoldFont">Actions for Untrusted WiFi</div>
         <div class="param">
           <input
@@ -86,24 +86,65 @@
       </div>
 
       <!-- NETWORKS -->
-      <div v-if="!isActionsView">
-        <div style="margin-top: 12px; margin-bottom:12px">
-          Default trust status for undefined networks:
+      <div v-if="!isActionsView" class="flexColumn">
+        <div class="flexRow" style="margin-top: 12px; margin-bottom:12px">
+          <div class="flexRowRestSpace">
+            Default trust status for undefined networks:
+          </div>
+          <div>
+            <select
+              v-model="defaultTrustStatusIsTrusted"
+              class="trustedConfigBase"
+              v-bind:class="{
+                trustedConfigUntrusted: defaultTrustStatusIsTrusted == false,
+                trustedConfigTrusted: defaultTrustStatusIsTrusted == true
+              }"
+            >
+              <option :value="false">Untrusted</option>
+              <option :value="true">Trusted</option>
+              <option :value="null">No status</option>
+            </select>
+          </div>
         </div>
-        <div class="horizontalLine" style="margin-bottom: 8px" />
 
-        <div v-for="wifi of networks" v-bind:key="wifi.SSID">
-          <trustedNetConfigControl
-            :wifiInfo="wifi"
-            :onChange="onNetworkTrustChanged"
-          />
+        <div class="horizontalLine" />
+
+        <div
+          class="scrollableColumnContainer"
+          style="margin-top: 8px; margin-bottom:8px; min-height: 50px; height:100%"
+        >
+          <div v-for="wifi of networks" v-bind:key="wifi.SSID">
+            <trustedNetConfigControl
+              :wifiInfo="wifi"
+              :onChange="onNetworkTrustChanged"
+            />
+          </div>
         </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="horizontalLine" />
+
+      <div class="flexRow" style="margin-top: 12px">
+        <div class="param" v-if="isActionsView == false">
+          <input type="checkbox" id="showAllWifi" v-model="showAllNetworks" />
+          <label class="defColor" for="showAllWifi">
+            Show all WiFi networks</label
+          >
+        </div>
+
+        <div class="flexRowRestSpace" />
+
+        <button class="btn" v-on:click="onResetToDefaultSettings">
+          Reset to default settings
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+const { dialog, getCurrentWindow } = require("electron").remote;
 import trustedNetConfigControl from "@/components/controls/control-trusted-network-config.vue";
 import sender from "@/ipc/renderer-sender";
 
@@ -116,7 +157,8 @@ export default {
   },
   data: function() {
     return {
-      isActionsView: false
+      isActionsView: false,
+      showAllNetworks: false
     };
   },
   methods: {
@@ -146,7 +188,27 @@ export default {
       }
       wifi.networks = nets;
 
-      console.log(nets, wifi, ssid, isTrusted);
+      this.$store.dispatch("settings/wifi", wifi);
+    },
+    onResetToDefaultSettings() {
+      let actionNo = dialog.showMessageBoxSync(getCurrentWindow(), {
+        type: "error",
+        buttons: ["Yes", "Cancel"],
+        message: "Reset all settings to default values",
+        detail: `Are you sure you want to reset the trust status for all networks and actions to default settings?`
+      });
+      if (actionNo == 1) return;
+
+      let wifi = Object.assign({}, this.$store.state.settings.wifi);
+      wifi.actions = {
+        unTrustedConnectVpn: true,
+        unTrustedEnableFirewall: true,
+
+        trustedDisconnectVpn: true,
+        trustedDisableFirewall: true
+      };
+      wifi.networks = null;
+      wifi.defaultTrustStatusTrusted = null;
       this.$store.dispatch("settings/wifi", wifi);
     }
   },
@@ -164,16 +226,28 @@ export default {
         if (alreadyExists == null || alreadyExists.length == 0)
           nets.unshift({ ssid: currWiFi.SSID, isTrusted: null });
 
-        // add rest of available networks
-        let restNetworks = this.$store.state.vpnState.availableWiFiNetworks;
-        if (restNetworks != null) {
-          for (let w of restNetworks) {
-            if (w.SSID != "" && nets.findIndex(t => t.ssid === w.SSID) == -1)
-              nets.push({ ssid: w.SSID, isTrusted: null });
+        if (this.showAllNetworks) {
+          // add rest of available networks
+          let restNetworks = this.$store.state.vpnState.availableWiFiNetworks;
+          if (restNetworks != null) {
+            for (let w of restNetworks) {
+              if (w.SSID != "" && nets.findIndex(t => t.ssid === w.SSID) == -1)
+                nets.push({ ssid: w.SSID, isTrusted: null });
+            }
           }
         }
       }
       return nets;
+    },
+    defaultTrustStatusIsTrusted: {
+      get() {
+        return this.$store.state.settings.wifi?.defaultTrustStatusTrusted;
+      },
+      set(value) {
+        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        wifi.defaultTrustStatusTrusted = value;
+        this.$store.dispatch("settings/wifi", wifi);
+      }
     },
     trustedNetworksControl: {
       get() {
@@ -236,6 +310,7 @@ export default {
 
 <style scoped lang="scss">
 @import "@/components/scss/constants";
+@import "@/components/scss/platform/base";
 
 .defColor {
   @extend .settingsDefaultTextColor;
@@ -279,5 +354,27 @@ button.selectableButtonOn {
 button.selectableButtonSeparator {
   @extend .selectableButtonOff;
   cursor: auto;
+}
+
+button.btn {
+  background: transparent;
+  border: 0.5px solid #c8c8c8;
+  box-sizing: border-box;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+select.trustedConfigBase {
+  min-width: 90px;
+  border-width: 0px;
+}
+
+select.trustedConfigUntrusted {
+  @extend .trustedConfigBase;
+  color: red;
+}
+select.trustedConfigTrusted {
+  @extend .trustedConfigBase;
+  color: #3b99fc;
 }
 </style>

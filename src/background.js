@@ -359,6 +359,9 @@ function createSettingsWindow(viewName) {
   let windowConfig = {
     width: 800,
     height: 600,
+    minWidth: 800,
+    minHeight: 600,
+
     resizable: true,
 
     parent: win,

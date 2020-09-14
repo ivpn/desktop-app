@@ -15,9 +15,9 @@
       }"
       v-model="isTrusted"
     >
-      <option value="false">Untrusted</option>
-      <option value="true">Trusted</option>
-      <option value="null">No status</option>
+      <option :value="false">Untrusted</option>
+      <option :value="true">Trusted</option>
+      <option :value="null">No status</option>
     </select>
   </div>
 </template>
@@ -31,16 +31,7 @@ export default {
         return this.wifiInfo.isTrusted;
       },
       set(value) {
-        let v = null;
-        switch (value) {
-          case "false":
-            v = false;
-            break;
-          case "true":
-            v = true;
-            break;
-        }
-        if (this.onChange != null) this.onChange(this.wifiInfo.ssid, v);
+        if (this.onChange != null) this.onChange(this.wifiInfo.ssid, value);
       }
     }
   },
