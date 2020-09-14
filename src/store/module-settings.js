@@ -74,7 +74,7 @@ export default {
     // wifi
     wifi: {
       trustedNetworksControl: false,
-      defaultTrustStatusTrusted: null,
+      defaultTrustStatusTrusted: null, // null/true/false
       networks: null, // []{ ssid: "" isTrusted: false }
 
       connectVPNOnInsecureNetwork: false,
@@ -216,7 +216,6 @@ export default {
             n.ssid != null &&
             (n.isTrusted == true || n.isTrusted == false)
         );
-        console.log("FILTERED", val.networks);
       }
 
       state.wifi = val;

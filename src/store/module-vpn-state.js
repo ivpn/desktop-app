@@ -175,6 +175,9 @@ export default {
           return false;
       }
     },
+    isConnected: state => {
+      return state.connectionState === VpnStateEnum.CONNECTED;
+    },
     vpnStateText: state => {
       return enumValueName(VpnStateEnum, state.connectionState);
     },

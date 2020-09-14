@@ -430,9 +430,6 @@ async function ConnectToDaemon() {
           SetObfsproxy();
 
           setTimeout(async () => {
-            // request kill-switch status
-            await KillSwitchGetStatus();
-
             // Till this time we already must receive 'connected' info (if we are connected)
             // If we are in disconnected state and 'settings.autoConnectOnLaunch' enabled => start connection
             if (

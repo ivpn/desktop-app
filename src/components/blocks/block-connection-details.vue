@@ -112,9 +112,14 @@ export default {
         port.type
       )} ${port.port}`;
     },
+    isTrustedNetworksControlActive() {
+      let wifiSettings = this.$store.state.settings.wifi;
+      if (wifiSettings == null || wifiSettings.networks == null) return false;
+      return wifiSettings.trustedNetworksControl;
+    },
     WiFiMarkerText: function() {
       let currentNetworkConfig = this.getCurrentWiFiConfig();
-      if (currentNetworkConfig != null)
+      if (currentNetworkConfig != null && this.isTrustedNetworksControlActive)
         return currentNetworkConfig.isTrusted ? "TRUSTED" : "UNTRUSTED";
       else {
         let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;
@@ -125,8 +130,13 @@ export default {
     },
     WiFiMarkerColor: function() {
       let currentNetworkConfig = this.getCurrentWiFiConfig();
-      if (currentNetworkConfig != null)
+      if (currentNetworkConfig != null && this.isTrustedNetworksControlActive)
         return currentNetworkConfig.isTrusted ? "#64ad07" : "#FF6258";
+      else {
+        let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;
+        if (curWifiInfo != null && curWifiInfo.IsInsecureNetwork)
+          return "#FF6258";
+      }
       return null;
     }
   },
