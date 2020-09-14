@@ -404,6 +404,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 					ManualDNS:       dns.GetLastManualDNS()},
 					req.Idx)
 			}
+			// send Firewall state
+			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err == nil {
+				p.sendResponse(conn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast}, reqCmd.Idx)
+			}
 		}
 
 		if req.GetConfigParams {
