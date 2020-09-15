@@ -37,7 +37,7 @@
         class="selectableButtonSeparator"
       ></button>
     </div>
-    <div class="flexColumn" style="min-height: 0px">
+    <div class="flexColumn" style="min-height: 0px;">
       <!-- ACTIONS -->
       <div v-if="isActionsView" style="flex-grow: 1;">
         <div class="settingsBoldFont">Actions for Untrusted WiFi</div>
@@ -111,7 +111,7 @@
 
         <div
           class="scrollableColumnContainer"
-          style="margin-top: 8px; margin-bottom:8px; min-height: 50px; height:100%"
+          style="padding:1px; margin-top: 8px; margin-bottom:8px; max-height: 235px;  height: 235px;"
         >
           <div v-for="wifi of networks" v-bind:key="wifi.SSID">
             <trustedNetConfigControl
@@ -123,21 +123,28 @@
       </div>
 
       <!-- FOOTER -->
-      <div class="horizontalLine" />
+      <div style="position: sticky; bottom: 20px;">
+        <div class="horizontalLine" />
 
-      <div class="flexRow" style="margin-top: 12px">
-        <div class="param" v-if="isActionsView == false">
-          <input type="checkbox" id="showAllWifi" v-model="showAllNetworks" />
-          <label class="defColor" for="showAllWifi">
-            Show all WiFi networks</label
-          >
+        <div class="flexRow" style="margin-top: 15px;">
+          <div class="param" v-if="isActionsView == false">
+            <input
+              type="checkbox"
+              id="showAllWifi"
+              v-model="showAllNetworks"
+              style="margin:0px 5px 0px 0px"
+            />
+            <label class="defColor" for="showAllWifi">
+              Show all WiFi networks</label
+            >
+          </div>
+
+          <div class="flexRowRestSpace" />
+
+          <button class="btn" v-on:click="onResetToDefaultSettings">
+            Reset to default settings
+          </button>
         </div>
-
-        <div class="flexRowRestSpace" />
-
-        <button class="btn" v-on:click="onResetToDefaultSettings">
-          Reset to default settings
-        </button>
       </div>
     </div>
   </div>
@@ -367,6 +374,7 @@ button.btn {
 select.trustedConfigBase {
   min-width: 90px;
   border-width: 0px;
+  background: inherit;
 }
 
 select.trustedConfigUntrusted {

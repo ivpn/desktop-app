@@ -217,7 +217,7 @@ div.row {
   margin-top: 58px;
   margin-left: 34px;
   margin-right: 51px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 
   width: 100vw;
 }

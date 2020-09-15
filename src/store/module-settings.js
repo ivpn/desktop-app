@@ -73,7 +73,7 @@ export default {
 
     // wifi
     wifi: {
-      trustedNetworksControl: false,
+      trustedNetworksControl: true,
       defaultTrustStatusTrusted: null, // null/true/false
       networks: null, // []{ ssid: "" isTrusted: false }
 

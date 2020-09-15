@@ -110,7 +110,7 @@ export default {
     },
     isTrustedNetworksControlActive() {
       let wifiSettings = this.$store.state.settings.wifi;
-      if (wifiSettings == null || wifiSettings.networks == null) return false;
+      if (wifiSettings == null) return false;
       return wifiSettings.trustedNetworksControl;
     },
     defaultTrustForUndefinedNetworks() {
@@ -133,7 +133,8 @@ export default {
       if (trustState.isTrusted == true) return TRUSTED;
       else if (trustState.isTrusted == false) return UNTRUSTED;
       else if (trustState.isInsecure == true) return INSECURE;
-      return NOTRUSTSTATUS;
+      if (this.isTrustedNetworksControlActive == true) return NOTRUSTSTATUS;
+      return null;
     },
     WiFiMarkerColor: function() {
       if (this.wifiSSID == "") return null;
@@ -142,9 +143,11 @@ export default {
       const INSECURE = "orange";
       const NOTRUSTSTATUS = "#BBBBBB";
       const trustState = this.getTrustInfoForCurrentWifi();
+
       if (trustState.isTrusted == true) return TRUSTED;
       else if (trustState.isTrusted == false) return UNTRUSTED;
       else if (trustState.isInsecure == true) return INSECURE;
+      if (this.isTrustedNetworksControlActive == true) return NOTRUSTSTATUS;
       return NOTRUSTSTATUS;
     }
   },

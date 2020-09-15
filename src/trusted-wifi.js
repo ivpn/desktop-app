@@ -23,6 +23,8 @@
 import store from "@/store";
 import daemonClient from "./daemon-client";
 
+let lastProcessedRule = null; //{ SSID: null, isTrusted: null}
+
 export function InitTrustedNetworks() {
   store.subscribe(mutation => {
     try {
@@ -63,58 +65,77 @@ async function processWifiChange() {
     currSSID = currentWiFiInfo.SSID;
   }
 
-  let isProcessed = false;
   // if trusted network control is enabled
   if (trustedNetworksControl == true) {
-    // try to apply configured network
-    isProcessed = await applyTrustRuleForConfiguredNetwork(
+    // get configuration for current network
+    let trustRule = getTrustRuleForConfiguredNetwork(
       currSSID,
       networks,
       actions
     );
+    // if network not configured - get default trust operation for not configured networks
+    if (trustRule == null) trustRule = wifi.defaultTrustStatusTrusted;
 
-    if (!isProcessed) {
-      // if network not configured - apply default trust operation for not configured networks
-      let defaultTrustStatusTrusted = wifi.defaultTrustStatusTrusted;
-      if (defaultTrustStatusTrusted != null) {
-        await applyTrustRule(defaultTrustStatusTrusted, actions);
-        isProcessed = true;
-      }
-    }
-  }
-
-  // insecure network (if network still not processed by 'trusted networks' functionality)
-  if (!isProcessed) {
-    if (
-      isInsecureNetwork == true &&
-      wifi.connectVPNOnInsecureNetwork == true &&
-      !(
-        store.getters["vpnState/isConnected"] ||
-        store.getters["vpnState/isConnecting"]
+    if (trustRule != null) {
+      // skip applying same rule if we did it already (for same network with the same actions)
+      if (
+        lastProcessedRule != null &&
+        lastProcessedRule.SSID != null &&
+        lastProcessedRule.SSID == currSSID &&
+        lastProcessedRule.isTrusted == trustRule
       )
-    ) {
-      console.log(
-        "Joined insecure network. Connecting (according to preferences) ..."
-      );
-      await daemonClient.Connect();
+        return;
+
+      // apply rule
+      await applyTrustRule(trustRule, actions);
+      lastProcessedRule = {
+        SSID: currSSID,
+        isTrusted: trustRule
+      };
+      return;
     }
   }
+
+  // check is it insecure network (if network still not processed by 'trusted networks' configuration)
+  if (
+    isInsecureNetwork == true &&
+    wifi.connectVPNOnInsecureNetwork == true &&
+    !(
+      store.getters["vpnState/isConnected"] ||
+      store.getters["vpnState/isConnecting"]
+    )
+  ) {
+    // skip applying same rule if we did it already (for same network)
+    if (
+      lastProcessedRule != null &&
+      lastProcessedRule.SSID != null &&
+      lastProcessedRule.SSID == currSSID
+    )
+      return;
+
+    console.log(
+      "Joined insecure network. Connecting (according to preferences) ..."
+    );
+    await daemonClient.Connect();
+    lastProcessedRule = {
+      SSID: currSSID,
+      isTrusted: null
+    };
+    return;
+  }
+
+  lastProcessedRule = null;
 }
 
-async function applyTrustRuleForConfiguredNetwork(currSSID, networks, actions) {
-  if (!currSSID || networks == null || actions == null) return false;
+function getTrustRuleForConfiguredNetwork(currSSID, networks, actions) {
+  if (!currSSID || networks == null || actions == null) return null;
 
   // check configuration for current network
   let networkConfigArr = networks.filter(wifi => wifi.ssid == currSSID);
-  if (networkConfigArr == null || networkConfigArr.length == 0) return false;
+  if (networkConfigArr == null || networkConfigArr.length == 0) return null;
   let networkConfig = networkConfigArr[0];
 
-  if (networkConfig.isTrusted == null) return false;
-
-  // apply trust operations for configured network
-  await applyTrustRule(networkConfig.isTrusted, actions);
-
-  return true;
+  return networkConfig.isTrusted;
 }
 
 async function applyTrustRule(isTrusted, actions) {

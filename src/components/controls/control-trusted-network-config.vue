@@ -63,6 +63,7 @@ export default {
 select.trustedConfigBase {
   min-width: 90px;
   border-width: 0px;
+  background: inherit;
 }
 
 select.trustedConfigUntrusted {
