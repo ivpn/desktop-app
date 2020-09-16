@@ -30,7 +30,7 @@
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
-    <div class="param">
+    <div class="param" v-if="isCanAutoconnectOnInsecureWIFI">
       <input
         type="checkbox"
         id="connectVPNOnInsecureNetwork"
@@ -77,6 +77,7 @@
 </template>
 
 <script>
+import { Platform, PlatformEnum } from "@/platform/platform";
 import sender from "@/ipc/renderer-sender";
 
 export default {
@@ -85,6 +86,9 @@ export default {
   },
   methods: {},
   computed: {
+    isCanAutoconnectOnInsecureWIFI() {
+      return Platform()!=PlatformEnum.Linux;
+    },
     autoConnectOnLaunch: {
       get() {
         return this.$store.state.settings.autoConnectOnLaunch;

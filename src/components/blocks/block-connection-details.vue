@@ -192,7 +192,9 @@ export default {
           ret.isTrusted = currentNetworkConfig.isTrusted;
         else if (this.defaultTrustForUndefinedNetworks != null)
           ret.isTrusted = this.defaultTrustForUndefinedNetworks;
-      } else {
+      } 
+
+      if (ret.isTrusted == null) {
         let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;
         if (curWifiInfo != null && curWifiInfo.IsInsecureNetwork)
           ret.isInsecure = true;

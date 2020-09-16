@@ -359,15 +359,15 @@ function createSettingsWindow(viewName) {
   let windowConfig = {
     width: 800,
     height: 600,
-    minWidth: 800,
-    minHeight: 600,
 
-    resizable: true,
+    resizable: false,
 
     parent: win,
 
     center: true,
     title: "Settings",
+
+    autoHideMenuBar: true,
 
     webPreferences: {
       enableRemoteModule: true,
