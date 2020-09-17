@@ -39,7 +39,7 @@
           <div class="horizontalLine hopButtonsSeparator" />
         </div>
 
-        <div class="scrollableColumnContainer">
+        <div ref="scrollArea" class="scrollableColumnContainer">
           <div v-if="isMultihopAllowed">
             <HopButtonsBlock />
             <div class="horizontalLine hopButtonsSeparator" />
@@ -55,7 +55,20 @@
             />
           </div>
 
-          <ConnectionDetailsBlock :onShowPorts="onShowPorts" />
+          <ConnectionDetailsBlock
+            :onShowPorts="onShowPorts"
+            :onShowWifiConfig="onShowWifiConfig"
+          />
+
+          <transition name="fade">
+            <button
+              class="btnScrollDown"
+              v-if="isShowScrollButton"
+              v-on:click="onScrollDown()"
+            >
+              <img src="@/assets/arrow-bottom.svg" />
+            </button>
+          </transition>
         </div>
       </div>
     </transition>
@@ -104,7 +117,8 @@ function connected(me) {
 
 export default {
   props: {
-    onConnectionSettings: Function
+    onConnectionSettings: Function,
+    onWifiSettings: Function
   },
 
   components: {
@@ -114,8 +128,18 @@ export default {
     SelectedServerBlock,
     ConnectionDetailsBlock
   },
+  mounted() {
+    this.scrollArea = this.$refs.scrollArea;
+    this.scrollArea.addEventListener(
+      "scroll",
+      this.recalcScrollButtonVisiblity
+    );
+    this.recalcScrollButtonVisiblity();
+  },
   data: function() {
     return {
+      scrollArea: null,
+      isShowScrollButton: false,
       isConnectProgress: false,
       uiView: viewTypeEnum.default,
       lastServersPingRequestTime: null
@@ -146,6 +170,12 @@ export default {
     // needed for watcher
     connectionFailureInfo: function() {
       return this.$store.state.vpnState.disconnectedInfo;
+    },
+    isMinimizedUI: function() {
+      return this.$store.state.settings.minimizedUI;
+    },
+    isMultiHop: function() {
+      return this.$store.state.settings.isMultiHop;
     }
   },
 
@@ -170,6 +200,12 @@ export default {
       if (newValue.port === oldValue.port && newValue.type === oldValue.type)
         return;
       connect(this, true);
+    },
+    isMinimizedUI() {
+      setTimeout(() => this.recalcScrollButtonVisiblity(), 0);
+    },
+    isMultiHop() {
+      setTimeout(() => this.recalcScrollButtonVisiblity(), 0);
     }
   },
 
@@ -206,6 +242,9 @@ export default {
     onShowPorts() {
       if (this.onConnectionSettings != null) this.onConnectionSettings();
     },
+    onShowWifiConfig() {
+      if (this.onWifiSettings != null) this.onWifiSettings();
+    },
     backToMainView() {
       this.uiView = viewTypeEnum.default;
       this.$store.dispatch("uiState/isDefaultControlView", true);
@@ -234,6 +273,22 @@ export default {
         this.$store.dispatch("settings/isRandomExitServer", true);
       else this.$store.dispatch("settings/isRandomServer", true);
       if (connected(this)) connect(this, true);
+    },
+    recalcScrollButtonVisiblity() {
+      if (this.scrollArea == null) {
+        this.isShowScrollButton = false;
+        return;
+      }
+      this.isShowScrollButton =
+        this.scrollArea.scrollHeight >
+        this.scrollArea.clientHeight + this.scrollArea.scrollTop;
+    },
+    onScrollDown() {
+      if (this.scrollArea == null) return;
+      this.scrollArea.scrollTo({
+        top: this.scrollArea.scrollHeight,
+        behavior: "smooth"
+      });
     }
   }
 };
@@ -242,4 +297,37 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 @import "@/components/scss/constants";
+$shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
+
+button.btnScrollDown {
+  position: fixed;
+
+  z-index: 7;
+
+  bottom: 0;
+  margin-bottom: 8px;
+
+  left: calc(320px / 2 - 12px);
+  //margin-left: calc(50% - 12px);
+
+  width: 24px;
+  height: 24px;
+
+  padding: 0px;
+  border: none;
+  border-radius: 50%;
+  background-color: #ffffff;
+  outline-width: 0;
+  cursor: pointer;
+
+  box-shadow: $shadow;
+
+  // centering content
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+button.btnScrollDown:hover {
+  background-color: #f0f0f0;
+}
 </style>

@@ -30,6 +30,16 @@
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
+    <div class="param" v-if="isCanAutoconnectOnInsecureWIFI">
+      <input
+        type="checkbox"
+        id="connectVPNOnInsecureNetwork"
+        v-model="connectVPNOnInsecureNetwork"
+      />
+      <label class="defColor" for="connectVPNOnInsecureNetwork"
+        >When joining insecure WiFi networks</label
+      >
+    </div>
 
     <div class="settingsBoldFont">
       On exit:
@@ -67,6 +77,7 @@
 </template>
 
 <script>
+import { Platform, PlatformEnum } from "@/platform/platform";
 import sender from "@/ipc/renderer-sender";
 
 export default {
@@ -75,6 +86,9 @@ export default {
   },
   methods: {},
   computed: {
+    isCanAutoconnectOnInsecureWIFI() {
+      return Platform()!=PlatformEnum.Linux;
+    },
     autoConnectOnLaunch: {
       get() {
         return this.$store.state.settings.autoConnectOnLaunch;
@@ -83,6 +97,17 @@ export default {
         this.$store.dispatch("settings/autoConnectOnLaunch", value);
       }
     },
+    connectVPNOnInsecureNetwork: {
+      get() {
+        return this.$store.state.settings.wifi?.connectVPNOnInsecureNetwork;
+      },
+      set(value) {
+        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        wifi.connectVPNOnInsecureNetwork = value;
+        this.$store.dispatch("settings/wifi", wifi);
+      }
+    },
+
     minimizeToTray: {
       get() {
         return this.$store.state.settings.minimizeToTray;

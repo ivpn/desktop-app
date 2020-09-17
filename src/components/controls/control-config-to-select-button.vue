@@ -1,10 +1,16 @@
 <template>
   <div>
-    <button id="selectBtn" v-on:click="click">
-      <div align="left">
+    <button id="selectBtn" class="flexRow" v-on:click="click">
+      <div align="left" class="flexRowRestSpace">
         <div class="small_text">{{ description }}</div>
         <div style="height: 5px" />
         <div class="large_text">{{ text }}</div>
+      </div>
+
+      <div v-if="isShowMarker" style="margin-right: 12px">
+        <div :style="markerStyle">
+          {{ this.markerText }}
+        </div>
       </div>
       <div class="arrowRightSimple"></div>
     </button>
@@ -13,7 +19,15 @@
 
 <script>
 export default {
-  props: ["click", "text", "description"]
+  props: ["click", "text", "description", "markerText", "markerColor"],
+  computed: {
+    isShowMarker: function() {
+      return this.markerText != null && this.markerColor != null;
+    },
+    markerStyle: function() {
+      return `background: ${this.markerColor}; border-radius: 4px; padding: 4px; font-size: 10px; line-height: 10px; letter-spacing: 1px; color: #FFFFFF;`;
+    }
+  }
 };
 </script>
 

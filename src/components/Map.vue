@@ -289,9 +289,7 @@ export default {
       return this.$store.state.vpnState.connectionState;
     },
     isConnecting: function() {
-      return (
-        this.$store.state.vpnState.connectionState === VpnStateEnum.CONNECTING
-      );
+      return this.$store.getters["vpnState/isConnecting"];
     },
     isConnected: function() {
       if (this.isPaused) return false;

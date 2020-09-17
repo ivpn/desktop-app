@@ -48,7 +48,6 @@
           >
             IVPN Firewall
           </button>
-          <!--
           <button
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('networks')"
@@ -58,7 +57,7 @@
           >
             Networks
           </button>
-          -->
+
           <button
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('antitracker')"
@@ -92,26 +91,29 @@
       </div>
     </div>
 
-    <div class="rightPanel">
-      <div v-if="view === 'connection'">
+    <div class="rightPanel ">
+      <div class="flexColumn" v-if="view === 'connection'">
         <connectionView />
       </div>
-      <div v-else-if="view === 'account'">
+      <div class="flexColumn" v-else-if="view === 'account'">
         <accountView />
       </div>
-      <div v-else-if="view === 'general'">
+      <div class="flexColumn" v-else-if="view === 'general'">
         <generalView />
       </div>
-      <div v-else-if="view === 'firewall'">
+      <div class="flexColumn" v-else-if="view === 'firewall'">
         <firewallView />
       </div>
-      <div v-else-if="view === 'antitracker'">
+      <div class="flexColumn" v-else-if="view === 'networks'">
+        <networksView />
+      </div>
+      <div class="flexColumn" v-else-if="view === 'antitracker'">
         <antitrackerView />
       </div>
-      <div v-else-if="view === 'dns'">
+      <div class="flexColumn" v-else-if="view === 'dns'">
         <dnsView />
       </div>
-      <div v-else>
+      <div class="flexColumn" v-else>
         <img src="@/assets/temp/under-construction.jpg" />
       </div>
     </div>
@@ -126,6 +128,7 @@ import connectionView from "@/components/settings/settings-connection.vue";
 import accountView from "@/components/settings/settings-account.vue";
 import generalView from "@/components/settings/settings-general.vue";
 import firewallView from "@/components/settings/settings-firewall.vue";
+import networksView from "@/components/settings/settings-networks.vue";
 import antitrackerView from "@/components/settings/settings-antitracker.vue";
 import dnsView from "@/components/settings/settings-dns.vue";
 
@@ -135,6 +138,7 @@ export default {
     accountView,
     generalView,
     firewallView,
+    networksView,
     antitrackerView,
     dnsView
   },
@@ -195,6 +199,7 @@ div.row {
   padding-top: 50px;
   background: #f2f3f6;
   min-width: 232px;
+  height: 100vh;
 }
 #leftPanelHeader {
   padding-bottom: 38px;
@@ -209,10 +214,10 @@ div.row {
   margin-left: $back-btn-width;
 }
 .rightPanel {
-  padding-top: 58px;
-  padding-left: 34px;
-  padding-right: 51px;
-  padding-bottom: 30px;
+  margin-top: 58px;
+  margin-left: 34px;
+  margin-right: 51px;
+  margin-bottom: 20px;
 
   width: 100vw;
 }

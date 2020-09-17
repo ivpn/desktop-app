@@ -24,6 +24,7 @@
           <component
             v-bind:is="currentViewComponent"
             :onConnectionSettings="onConnectionSettings"
+            :onWifiSettings="onWifiSettings"
             id="left"
           ></component>
         </transition>
@@ -95,6 +96,9 @@ export default {
     },
     onConnectionSettings: function() {
       ipcRenderer.send("renderer-request-show-settings-connection");
+    },
+    onWifiSettings: function() {
+      ipcRenderer.send("renderer-request-show-settings-networks");
     },
     onMaximize: function(isMaximize) {
       this.$store.dispatch("settings/minimizedUI", !isMaximize);

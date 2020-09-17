@@ -1,5 +1,5 @@
 <template>
-  <div class="main">
+  <div class="flexColumn">
     <div class="settingsTitle">ACCOUNT SETTINGS</div>
 
     <div class="flexColumn">
@@ -89,9 +89,10 @@
           Login to the website to change subscription plan
         </p>
       </div>
-      <div class="flexRow">
-        <button id="logoutButton" v-on:click="logOut()">LOG OUT</button>
-      </div>
+    </div>
+
+    <div class="flexRow">
+      <button id="logoutButton" v-on:click="logOut()">LOG OUT</button>
     </div>
   </div>
 </template>
@@ -234,7 +235,6 @@ export default {
 }
 
 .subscriptionDetails {
-  margin-top: 36px;
   margin-bottom: 40px;
 }
 
@@ -277,9 +277,9 @@ export default {
   margin-bottom: 7px;
   -webkit-user-select: text;
 }
+
 #logoutButton {
   @extend .noBordersBtn;
-  margin: 30px;
   padding: 5px;
   margin-right: auto;
   margin-left: auto;

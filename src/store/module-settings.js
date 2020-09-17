@@ -71,6 +71,22 @@ export default {
     dnsIsCustom: false,
     dnsCustom: "",
 
+    // wifi
+    wifi: {
+      trustedNetworksControl: true,
+      defaultTrustStatusTrusted: null, // null/true/false
+      networks: null, // []{ ssid: "" isTrusted: false }
+
+      connectVPNOnInsecureNetwork: false,
+      actions: {
+        unTrustedConnectVpn: true,
+        unTrustedEnableFirewall: true,
+
+        trustedDisconnectVpn: true,
+        trustedDisableFirewall: true
+      }
+    },
+
     // UI
     minimizedUI: false,
     minimizeToTray: true,
@@ -182,6 +198,27 @@ export default {
     },
     dnsCustom(state, val) {
       state.dnsCustom = val;
+    },
+
+    // WIFI
+    wifi(state, val) {
+      if (val != null && val.networks != null) {
+        // remove trusted wifi config duplicates (only one record for SSID)
+        val.networks = val.networks.filter(
+          (wifi, index, self) =>
+            index === self.findIndex(t => t.ssid === wifi.ssid)
+        );
+
+        // remove networks with not defined trust level or empty ssid
+        val.networks = val.networks.filter(
+          n =>
+            n.ssid != "" &&
+            n.ssid != null &&
+            (n.isTrusted == true || n.isTrusted == false)
+        );
+      }
+
+      state.wifi = val;
     },
 
     //UI
@@ -317,6 +354,11 @@ export default {
     },
     dnsCustom(context, val) {
       context.commit("dnsCustom", val);
+    },
+
+    // WIFI
+    wifi(context, val) {
+      context.commit("wifi", val);
     },
 
     //UI

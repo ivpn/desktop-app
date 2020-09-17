@@ -44,6 +44,7 @@ import daemonClient from "./daemon-client";
 import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
 import { InitConnectionResumer } from "./connection-resumer";
+import { InitTrustedNetworks } from "./trusted-wifi";
 import { IsWindowHasTitle } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import common from "@/common";
@@ -83,10 +84,14 @@ ipcMain.on("renderer-request-show-settings-account", () => {
 ipcMain.on("renderer-request-show-settings-connection", () => {
   showSettings("connection");
 });
+ipcMain.on("renderer-request-show-settings-networks", () => {
+  showSettings("networks");
+});
 
 if (gotTheLock) {
   InitPersistentSettings();
   InitConnectionResumer();
+  InitTrustedNetworks();
   connectToDaemon();
 
   // Scheme must be registered before the app is ready
@@ -354,12 +359,15 @@ function createSettingsWindow(viewName) {
   let windowConfig = {
     width: 800,
     height: 600,
-    resizable: true,
+
+    resizable: false,
 
     parent: win,
 
     center: true,
     title: "Settings",
+
+    autoHideMenuBar: true,
 
     webPreferences: {
       enableRemoteModule: true,

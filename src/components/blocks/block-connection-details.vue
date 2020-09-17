@@ -46,6 +46,18 @@
       description="Protocol/Port"
     />
 
+    <!-- WIFI -->
+    <div class="horizontalLine" />
+
+    <SelectButtonControl
+      class="leftPanelBlock"
+      :click="onShowWifiConfig"
+      v-bind:text="wifiSSID"
+      :description="wifiSSID == '' ? 'No WiFi connection' : 'WiFi network'"
+      :markerText="WiFiMarkerText"
+      :markerColor="WiFiMarkerColor"
+    />
+
     <!-- GEOLOCATOIN INFO -->
     <div v-if="$store.state.settings.minimizedUI">
       <div class="horizontalLine" />
@@ -79,7 +91,7 @@ export default {
     SelectButtonControl,
     GeolocationInfoControl
   },
-  props: ["onShowPorts"],
+  props: ["onShowPorts", "onShowWifiConfig"],
   data: function() {
     return {
       antitrackerIsProgress: false,
@@ -95,6 +107,48 @@ export default {
         PortTypeEnum,
         port.type
       )} ${port.port}`;
+    },
+    isTrustedNetworksControlActive() {
+      let wifiSettings = this.$store.state.settings.wifi;
+      if (wifiSettings == null) return false;
+      return wifiSettings.trustedNetworksControl;
+    },
+    defaultTrustForUndefinedNetworks() {
+      let wifiSettings = this.$store.state.settings.wifi;
+      if (wifiSettings == null) return null;
+      return wifiSettings.defaultTrustStatusTrusted;
+    },
+    wifiSSID() {
+      const currWifi = this.$store.state.vpnState.currentWiFiInfo;
+      if (currWifi == null || currWifi.SSID == null) return "";
+      return currWifi.SSID;
+    },
+    WiFiMarkerText: function() {
+      if (this.wifiSSID == "") return null;
+      const TRUSTED = "TRUSTED";
+      const UNTRUSTED = "UNTRUSTED";
+      const INSECURE = "INSECURE";
+      const NOTRUSTSTATUS = "NO TRUST STATUS";
+      const trustState = this.getTrustInfoForCurrentWifi();
+      if (trustState.isTrusted == true) return TRUSTED;
+      else if (trustState.isTrusted == false) return UNTRUSTED;
+      else if (trustState.isInsecure == true) return INSECURE;
+      if (this.isTrustedNetworksControlActive == true) return NOTRUSTSTATUS;
+      return null;
+    },
+    WiFiMarkerColor: function() {
+      if (this.wifiSSID == "") return null;
+      const TRUSTED = "#64ad07";
+      const UNTRUSTED = "#FF6258";
+      const INSECURE = "orange";
+      const NOTRUSTSTATUS = "#BBBBBB";
+      const trustState = this.getTrustInfoForCurrentWifi();
+
+      if (trustState.isTrusted == true) return TRUSTED;
+      else if (trustState.isTrusted == false) return UNTRUSTED;
+      else if (trustState.isInsecure == true) return INSECURE;
+      if (this.isTrustedNetworksControlActive == true) return NOTRUSTSTATUS;
+      return NOTRUSTSTATUS;
     }
   },
 
@@ -118,6 +172,34 @@ export default {
       } finally {
         this.firewallIsProgress = false;
       }
+    },
+    getCurrentWiFiConfig() {
+      let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;
+      if (curWifiInfo == null || curWifiInfo.SSID == "") return null;
+
+      let wifiSettings = this.$store.state.settings.wifi;
+      if (wifiSettings == null || wifiSettings.networks == null) return null;
+
+      for (let w of wifiSettings.networks) {
+        if (w.ssid == curWifiInfo.SSID) return w;
+      }
+    },
+    getTrustInfoForCurrentWifi() {
+      let ret = { isTrusted: null, isInsecure: null };
+      if (this.isTrustedNetworksControlActive) {
+        let currentNetworkConfig = this.getCurrentWiFiConfig();
+        if (currentNetworkConfig != null)
+          ret.isTrusted = currentNetworkConfig.isTrusted;
+        else if (this.defaultTrustForUndefinedNetworks != null)
+          ret.isTrusted = this.defaultTrustForUndefinedNetworks;
+      } 
+
+      if (ret.isTrusted == null) {
+        let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;
+        if (curWifiInfo != null && curWifiInfo.IsInsecureNetwork)
+          ret.isInsecure = true;
+      }
+      return ret;
     }
   }
 };

@@ -63,8 +63,12 @@ const daemonRequests = Object.freeze({
   SetAlternateDns: "SetAlternateDns",
   WireGuardGenerateNewKeys: "WireGuardGenerateNewKeys",
   SetPreference: "SetPreference",
-  WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval"
+  WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval",
+
+  WiFiAvailableNetworks: "WiFiAvailableNetworks",
+  WiFiCurrentNetwork: "WiFiCurrentNetwork"
 });
+
 const daemonResponses = Object.freeze({
   HelloResp: "HelloResp",
   VpnStateResp: "VpnStateResp",
@@ -75,6 +79,10 @@ const daemonResponses = Object.freeze({
   SetAlternateDNSResp: "SetAlternateDNSResp",
   KillSwitchStatusResp: "KillSwitchStatusResp",
   AccountStatusResp: "AccountStatusResp",
+
+  WiFiAvailableNetworksResp: "WiFiAvailableNetworksResp",
+  WiFiCurrentNetworkResp: "WiFiCurrentNetworkResp",
+
   ErrorResp: "ErrorResp"
 });
 
@@ -315,8 +323,17 @@ async function processResponse(response) {
         // if FW disabled and no geolocation info - request geolocation
         requestGeoLookupAsync();
       }
-
       break;
+    case daemonResponses.WiFiCurrentNetworkResp:
+      store.commit(`vpnState/currentWiFiInfo`, {
+        SSID: obj.SSID,
+        IsInsecureNetwork: obj.IsInsecureNetwork
+      });
+      break;
+    case daemonResponses.WiFiAvailableNetworksResp:
+      store.commit(`vpnState/availableWiFiNetworks`, obj.Networks);
+      break;
+
     case daemonResponses.ErrorResp:
       console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
       console.log("!!!!!!!!!!!!!!!!!!!!!! ERROR RESP !!!!!!!!!!!!!!!!!!!!");
@@ -413,9 +430,6 @@ async function ConnectToDaemon() {
           SetObfsproxy();
 
           setTimeout(async () => {
-            // request kill-switch status
-            await KillSwitchGetStatus();
-
             // Till this time we already must receive 'connected' info (if we are connected)
             // If we are in disconnected state and 'settings.autoConnectOnLaunch' enabled => start connection
             if (
@@ -792,6 +806,12 @@ async function WgSetKeysRotationInterval(intervalSec) {
   });
 }
 
+async function GetWiFiAvailableNetworks() {
+  await send({
+    Command: daemonRequests.WiFiAvailableNetworks
+  });
+}
+
 export default {
   ConnectToDaemon,
   Login,
@@ -813,5 +833,7 @@ export default {
   SetLogging,
   SetObfsproxy,
   WgRegenerateKeys,
-  WgSetKeysRotationInterval
+  WgSetKeysRotationInterval,
+
+  GetWiFiAvailableNetworks
 };
