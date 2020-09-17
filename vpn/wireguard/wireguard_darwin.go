@@ -254,7 +254,7 @@ func (wg *WireGuard) resume() error {
 		return fmt.Errorf("failed to set routes: %w", err)
 	}
 
-	if err := dns.Resume(); err != nil {
+	if err := dns.Resume(nil); err != nil {
 		return fmt.Errorf("failed to set DNS: %w", err)
 	}
 	return nil

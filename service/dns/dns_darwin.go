@@ -43,7 +43,8 @@ func implPause() error {
 	return nil
 }
 
-func implResume() error {
+// defaultDNS - not in use for darwin platfrom
+func implResume(defaultDNS net.IP) error {
 	err := shell.Exec(log, platform.DNSScript(), "-resume")
 	if err != nil {
 		return fmt.Errorf("DNS resume: Failed to change DNS: %w", err)

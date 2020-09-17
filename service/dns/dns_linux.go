@@ -29,12 +29,15 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/ivpn/desktop-app-daemon/helpers"
 )
 
 var (
-	resolvFile       string = "/etc/resolv.conf"
-	resolvBackupFile string = "/etc/resolv.conf.ivpnsave"
+	resolvFile             string      = "/etc/resolv.conf"
+	resolvBackupFile       string      = "/etc/resolv.conf.ivpnsave"
+	defaultFilePermissions os.FileMode = 0644
 
+	isPaused  bool   = false
 	manualDNS net.IP = nil
 
 	done chan struct{}
@@ -57,25 +60,55 @@ func implInitialize() error {
 	if err := implDeleteManual(nil); err != nil {
 		return fmt.Errorf("failed to restore DNS to default: %w", err)
 	}
+
 	return nil
 }
 
 func implPause() error {
-	return implDeleteManual(nil)
-}
-
-func implResume() error {
-	if manualDNS == nil {
-		return implDeleteManual(nil)
+	if isBackupExists(resolvBackupFile) == false {
+		// The backup for the OS-defined configuration not exists.
+		// It seems, we are not connected. Nothing to pause.
+		return nil
 	}
 
-	return implSetManual(manualDNS, nil)
+	// stop file change monitoring
+	stopDNSChangeMonitoring()
+
+	// restore original OS-default DNS configuration
+	// (the backup file will not be deleted)
+	isDeleteBackup := false // do not delete backup file
+	ret := restoreBackup(resolvBackupFile, isDeleteBackup)
+
+	isPaused = true
+	return ret
+}
+
+func implResume(defaultDNS net.IP) error {
+	isPaused = false
+
+	if manualDNS != nil {
+		// set manual DNS (if defined)
+		return implSetManual(manualDNS, nil)
+	}
+
+	if defaultDNS != nil {
+		return implSetManual(defaultDNS, nil)
+	}
+
+	return nil
 }
 
 // Set manual DNS.
 // 'addr' parameter - DNS IP value
-// 'localInterfaceIP' - not in use for macOS implementation
+// 'localInterfaceIP' - not in use for Linux implementation
 func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
+	if isPaused {
+		// in case of PAUSED state -> just save manualDNS config
+		// it will be applied on RESUME
+		manualDNS = addr
+		return nil
+	}
+
 	stopDNSChangeMonitoring()
 
 	if addr == nil {
@@ -83,24 +116,15 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 	}
 
 	createBackupIfNotExists := func() (created bool, er error) {
-		if _, err := os.Stat(resolvBackupFile); err != nil {
-			// if no backup exists - create backup of DNS configuration
-			if _, err := os.Stat(resolvFile); err == nil {
-				// if DNS-config exists
-				if err := os.Rename(resolvFile, resolvBackupFile); err != nil {
-					return false, fmt.Errorf("failed to backup DNS configuration: %w", err)
-				}
-				return true, nil
-			}
-		}
-		return false, nil
+		isOwerwriteIfExists := false
+		return createBackup(resolvBackupFile, isOwerwriteIfExists)
 	}
 
 	saveNewConfig := func() error {
 		createBackupIfNotExists()
 
 		// create new configuration
-		out, err := os.OpenFile(resolvFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		out, err := os.OpenFile(resolvFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, defaultFilePermissions)
 		if err != nil {
 			return fmt.Errorf("failed to update DNS configuration (%w)", err)
 		}
@@ -186,20 +210,16 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
 // DeleteManual - reset manual DNS configuration to default
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
-	// stop file change monitoring
-	stopDNSChangeMonitoring()
-
-	if _, err := os.Stat(resolvBackupFile); err != nil {
-		// nothing to restore
+	if isPaused {
+		// in case of PAUSED state -> just save manualDNS config
+		// it will be applied on RESUME
+		manualDNS = nil
 		return nil
 	}
-
-	// restore original configuration
-	if err := os.Rename(resolvBackupFile, resolvFile); err != nil {
-		return fmt.Errorf("failed to restore DNS configuration: %w", err)
-	}
-
-	return nil
+	// stop file change monitoring
+	stopDNSChangeMonitoring()
+	isDeleteBackup := true // delete backup file
+	return restoreBackup(resolvBackupFile, isDeleteBackup)
 }
 
 func stopDNSChangeMonitoring() {
@@ -210,4 +230,55 @@ func stopDNSChangeMonitoring() {
 	default:
 		break
 	}
+}
+
+func isBackupExists(backupFName string) bool {
+	_, err := os.Stat(backupFName)
+	return err == nil
+}
+
+func createBackup(backupFName string, isOwerwriteIfExists bool) (created bool, er error) {
+	if _, err := os.Stat(resolvFile); err != nil {
+		// source file not exists
+		return false, fmt.Errorf("failed to backup DNS configuration (file availability check failed): %w", err)
+	}
+
+	if _, err := os.Stat(backupFName); err == nil {
+		// backup file already exists
+		if isOwerwriteIfExists == false {
+			return false, nil
+		}
+	}
+
+	if err := os.Rename(resolvFile, backupFName); err != nil {
+		return false, fmt.Errorf("failed to backup DNS configuration: %w", err)
+	}
+	return true, nil
+}
+
+func restoreBackup(backupFName string, isDeleteBackup bool) error {
+	if _, err := os.Stat(backupFName); err != nil {
+		// nothing to restore
+		return nil
+	}
+
+	// restore original configuration
+	if isDeleteBackup {
+		if err := os.Rename(backupFName, resolvFile); err != nil {
+			return fmt.Errorf("failed to restore DNS configuration: %w", err)
+		}
+	} else {
+		tmpFName := resolvFile + ".tmp"
+		if err := helpers.CopyFile(backupFName, tmpFName); err != nil {
+			return fmt.Errorf("failed to restore DNS configuration: %w", err)
+		}
+		if err := os.Chmod(tmpFName, defaultFilePermissions); err != nil {
+			return fmt.Errorf("failed to restore DNS configuration: %w", err)
+		}
+		if err := os.Rename(tmpFName, resolvFile); err != nil {
+			return fmt.Errorf("failed to restore DNS configuration: %w", err)
+		}
+	}
+
+	return nil
 }

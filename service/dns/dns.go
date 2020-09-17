@@ -47,8 +47,8 @@ func Pause() error {
 }
 
 // Resume resuming DNS (set DNS back which was before Pause)
-func Resume() error {
-	return implResume()
+func Resume(defaultDNS net.IP) error {
+	return implResume(defaultDNS)
 }
 
 // SetManual - set manual DNS.

@@ -50,7 +50,7 @@ func (o *OpenVPN) implOnPause() error {
 }
 
 func (o *OpenVPN) implOnResume() error {
-	return dns.Resume()
+	return dns.Resume(nil)
 }
 
 func (o *OpenVPN) implOnSetManualDNS(addr net.IP) error {

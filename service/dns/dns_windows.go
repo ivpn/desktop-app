@@ -140,7 +140,7 @@ func implPause() error {
 }
 
 // Resume - (on vpn resumed) set VPN-defined DNS parameters
-func implResume() error {
+func implResume(defaultDNS net.IP) error {
 	// Not in use for Windows implementation
 	// In paused state we are simply switching to the main network interface (to default routes)
 

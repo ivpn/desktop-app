@@ -76,13 +76,11 @@ func (o *OpenVPN) implOnDisconnected() error {
 }
 
 func (o *OpenVPN) implOnPause() error {
-	// TODO: not implemented
-	return nil
+	return dns.Pause()
 }
 
 func (o *OpenVPN) implOnResume() error {
-	// TODO: not implemented
-	return nil
+	return dns.Resume(o.getDefaultDNS())
 }
 
 func (o *OpenVPN) implOnSetManualDNS(addr net.IP) error {
@@ -90,14 +88,22 @@ func (o *OpenVPN) implOnSetManualDNS(addr net.IP) error {
 }
 
 func (o *OpenVPN) implOnResetManualDNS() error {
-	mi := o.managementInterface
-	if mi != nil && mi.isConnected && o.state != vpn.DISCONNECTED && o.state != vpn.EXITING && o.IsPaused() == false {
-		// restore default dns pushed by OpenVPN server
-		defaultDNS := mi.pushReplyDNS
+	if o.IsPaused() == false {
+		// restore default DNS pushed by OpenVPN server
+		defaultDNS := o.getDefaultDNS()
 		if defaultDNS != nil {
 			return dns.SetManual(defaultDNS, nil)
 		}
 	}
 
 	return dns.DeleteManual(nil)
+}
+
+// getDefaultDNS returns default DNS pushed by OpenVPN server
+func (o *OpenVPN) getDefaultDNS() net.IP {
+	mi := o.managementInterface
+	if mi != nil && mi.isConnected && o.state != vpn.DISCONNECTED && o.state != vpn.EXITING {
+		return mi.pushReplyDNS
+	}
+	return nil
 }
