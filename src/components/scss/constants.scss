@@ -80,3 +80,7 @@ div.arrowRightSimple {
     transform: rotate(-45deg);
     -webkit-transform: rotate(-45deg);
 }
+
+label.selectable {
+    -webkit-user-select: text
+}

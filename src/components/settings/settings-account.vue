@@ -12,7 +12,11 @@
           </div>
 
           <div class="settingsBigBoldFont" id="accountID">
-            {{ this.$store.state.account.session.AccountID }}
+
+            <label class="settingsBigBoldFont selectable">
+              {{ this.$store.state.account.session.AccountID }}
+            </label>
+            
           </div>
           <div
             class="statusButtonActive"
@@ -275,7 +279,6 @@ export default {
 #accountID {
   margin-top: 3px;
   margin-bottom: 7px;
-  -webkit-user-select: text;
 }
 
 #logoutButton {
