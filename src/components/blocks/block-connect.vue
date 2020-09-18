@@ -28,12 +28,18 @@
         </transition>
 
         <!-- Popup -->
-        <div class="popup">
+        <div
+          class="popup"
+          v-bind:class="{
+            popupMin: isMinimizedUI
+          }"
+        >
           <div
             ref="pausePopup"
             class="popuptext"
             v-bind:class="{
-              show: isCanShowPauseMenu
+              show: isCanShowPauseMenu,
+              popuptextMin: isMinimizedUI
             }"
           >
             <div class="popup_menu_block">
@@ -102,6 +108,9 @@ export default {
     });
   },
   computed: {
+    isMinimizedUI: function() {
+      return this.$store.state.settings.minimizedUI;
+    },
     protectedText: function() {
       if (this.$store.state.vpnState.pauseState === PauseStateEnum.Paused)
         return "paused";

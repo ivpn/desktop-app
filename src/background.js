@@ -202,9 +202,9 @@ if (gotTheLock) {
         message: "Are you sure want to quit?",
         detail: "You are connected to the VPN.",
         buttons: [
-          "Disconnect VPN & Quit",
-          "Keep VPN connected & Quit",
-          "Cancel"
+          "Cancel",
+          "Disconnect VPN & Quit"
+          //"Keep VPN connected & Quit"
         ]
       };
 
@@ -212,15 +212,11 @@ if (gotTheLock) {
       else actionNo = dialog.showMessageBoxSync(win, msgBoxConfig);
     }
     switch (actionNo) {
-      case 2: // Cancel
+      case 0: // Cancel
         event.preventDefault();
         break;
 
-      case 1: // Exit & Keep VPN connection
-        // just close application
-        break;
-
-      case 0: // Exit & Disconnect VPN
+      case 1: // Exit & Disconnect VPN
         // Quit application only after connection closed
         event.preventDefault();
         setTimeout(async () => {
@@ -239,6 +235,10 @@ if (gotTheLock) {
           }
         }, 0);
         break;
+
+      //case 2: // Exit & Keep VPN connection
+      //  // just close application
+      //  break;
     }
   });
 

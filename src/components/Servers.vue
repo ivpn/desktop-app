@@ -79,12 +79,18 @@
         </button>
 
         <!-- Popup -->
-        <div class="popup">
+        <div
+          class="popup popupMinShifted"
+          v-bind:class="{
+            popupMinShifted: isMinimizedUI
+          }"
+        >
           <div
             ref="pausePopup"
             class="popuptext"
             v-bind:class="{
-              show: isSortMenu
+              show: isSortMenu,
+              popuptextMinShifted: isMinimizedUI
             }"
           >
             <div class="popup_menu_block">
@@ -275,6 +281,9 @@ export default {
     });
   },
   computed: {
+    isMinimizedUI: function() {
+      return this.$store.state.settings.minimizedUI;
+    },
     isFavoritesView: function() {
       return this.$store.state.uiState.serversFavoriteView;
     },
@@ -598,6 +607,8 @@ button.sortBtn {
 
 div.sortSelectedImg {
   margin-left: 11px;
+  position: absolute;
+  left: 0px;
   min-width: 13px;
 }
 </style>
