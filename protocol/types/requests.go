@@ -218,3 +218,12 @@ type WiFiAvailableNetworks struct {
 type WiFiCurrentNetwork struct {
 	CommandBase
 }
+
+// APIRequest do custom request to API
+type APIRequest struct {
+	CommandBase
+	APIPath         string
+	HTTPMethod      string
+	HTTPContentType string
+	RequestData     string
+}

@@ -195,6 +195,11 @@ func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 	return s._serversUpdater.UpdateNotifierChannel()
 }
 
+// APIRequest do custom request to API
+func (s *Service) APIRequest(apiPath string, method string, contentType string, requestObject interface{}) (responseData []byte, err error) {
+	return s._api.DoRequestRaw(apiPath, method, contentType, requestObject)
+}
+
 // GetDisabledFunctions returns info about functions which are disabled
 // Some functionality can be not accessible
 // It can happen, for example, if some external binaries not installed

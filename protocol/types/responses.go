@@ -220,3 +220,11 @@ type WiFiCurrentNetworkResp struct {
 	SSID              string
 	IsInsecureNetwork bool
 }
+
+// APIResponse contains the raw data of response to custom API request
+type APIResponse struct {
+	CommandBase
+	APIPath      string
+	ResponseData string
+	Error        string
+}

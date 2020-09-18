@@ -26,6 +26,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,11 +39,12 @@ import (
 const (
 	_defaultRequestTimeout = time.Second * 15
 	_apiHost               = "api.ivpn.net"
-	_serversPath           = "v4/servers.json"
-	_sessionNewPath        = "v4/session/new"
-	_sessionStatusPath     = "v4/session/status"
-	_sessionDeletePath     = "v4/session/delete"
-	_wgKeySetPath          = "v4/session/wg/set"
+	_apiPathPrefix         = "v4"
+	_serversPath           = _apiPathPrefix + "/servers.json"
+	_sessionNewPath        = _apiPathPrefix + "/session/new"
+	_sessionStatusPath     = _apiPathPrefix + "/session/status"
+	_sessionDeletePath     = _apiPathPrefix + "/session/delete"
+	_wgKeySetPath          = _apiPathPrefix + "/session/wg/set"
 )
 
 var log *logger.Logger
@@ -120,6 +123,14 @@ func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 	// save info about alternate API hosts
 	a.SetAlternateIPs(servers.Config.API.IPAddresses)
 	return servers, nil
+}
+
+// DoRequestRaw do request to API request. Returns raw data of response
+func (a *API) DoRequestRaw(urlPath string, method string, contentType string, requestObject interface{}) (responseData []byte, err error) {
+	if !strings.HasPrefix(urlPath, _apiPathPrefix) {
+		urlPath = path.Join(_apiPathPrefix, urlPath)
+	}
+	return a.requestRaw(urlPath, method, contentType, requestObject)
 }
 
 // SessionNew - try to register new session
