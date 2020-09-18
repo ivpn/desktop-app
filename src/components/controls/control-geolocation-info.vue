@@ -52,6 +52,7 @@ export default {
     },
     isp: function() {
       if (this.$store.state.location == null) return null;
+      if (this.$store.state.location.isIvpnServer == true) return "IVPN";
       return this.$store.state.location.isp;
     }
   }
