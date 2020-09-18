@@ -106,8 +106,7 @@ ipcMain.handle(
 );
 
 ipcMain.handle("renderer-request-geolookup", async () => {
-  const api = require("@/api");
-  return await api.default.GeoLookup();
+  return await client.GeoLookup();
 });
 
 ipcMain.handle("renderer-request-wg-regenerate-keys", async () => {

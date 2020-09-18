@@ -261,6 +261,14 @@ if (gotTheLock) {
   store.subscribe(mutation => {
     try {
       switch (mutation.type) {
+        case "vpnState/currentWiFiInfo":
+          // if wifi
+          if (
+            store.state.vpnState.currentWiFiInfo != null &&
+            store.state.location == null
+          )
+            daemonClient.GeoLookup();
+          break;
         case "settings/showAppInSystemDock":
           updateAppDockVisibility();
           break;

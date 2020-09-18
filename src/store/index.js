@@ -48,7 +48,7 @@ export default new Vuex.Store({
     },
 
     // Current location
-    location: null,
+    location: null, // {"ip_address":"","isp":"","organization":"","country":"","country_code":"","city":"","latitude": 0.0,"longitude":0.0,"isIvpnServer":false}
     // true when we are requesting geo-lookup info on current moment
     isRequestingLocation: false
   },

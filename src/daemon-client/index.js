@@ -25,7 +25,6 @@ const fs = require("fs");
 const net = require("net");
 const os = require("os");
 
-const api = require("@/api");
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { API_SUCCESS } from "@/api/statuscode";
 import { VpnTypeEnum, VpnStateEnum, PauseStateEnum } from "@/store/types";
@@ -45,6 +44,8 @@ const waiters = [];
 
 const daemonRequests = Object.freeze({
   Hello: "Hello",
+  APIRequest: "APIRequest",
+
   PingServers: "PingServers",
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
@@ -71,6 +72,7 @@ const daemonRequests = Object.freeze({
 
 const daemonResponses = Object.freeze({
   HelloResp: "HelloResp",
+  APIResponse: "APIResponse",
   VpnStateResp: "VpnStateResp",
   ConnectedResp: "ConnectedResp",
   DisconnectedResp: "DisconnectedResp",
@@ -231,7 +233,7 @@ function commitSession(sessionRespObj) {
 function requestGeoLookupAsync() {
   setTimeout(async () => {
     try {
-      await api.default.GeoLookup();
+      await GeoLookup();
     } catch (e) {
       console.log(e);
     }
@@ -505,6 +507,45 @@ async function AccountStatus() {
   return await sendRecv({ Command: daemonRequests.AccountStatus }, [
     daemonResponses.AccountStatusResp
   ]);
+}
+
+async function GeoLookup() {
+  let isRealGeoLocationCheck = function() {
+    return (
+      store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED ||
+      store.state.vpnState.pauseState === PauseStateEnum.Paused
+    );
+  };
+
+  let retLocation = null;
+  let isRealGeoLocationOnStart = isRealGeoLocationCheck();
+
+  if (store.state.isRequestingLocation == true) return null;
+  store.commit("isRequestingLocation", true); // mark 'Checking geolookup...'
+  let resp = await sendRecv(
+    { Command: daemonRequests.APIRequest, APIPath: "geo-lookup" },
+    [daemonResponses.APIResponse]
+  );
+
+  if (resp.Error !== "") console.error("API 'geo-lookup' error: " + resp.Error);
+  else {
+    if (isRealGeoLocationOnStart != isRealGeoLocationCheck()) {
+      log.error(
+        `API ERROR: Unable to save geo-lookup result (connection state changed)`
+      );
+    } else {
+      retLocation = JSON.parse(`${resp.ResponseData}`);
+      if (retLocation == null || retLocation.ip_address === undefined) {
+        log.error(`API ERROR:bad geo-lookup response`);
+      } else {
+        retLocation.isRealLocation = isRealGeoLocationOnStart;
+        log.debug("API: 'geo-lookup' success.");
+      }
+    }
+  }
+  store.commit("location", retLocation);
+  store.commit("isRequestingLocation", false); // un-mark 'Checking geolookup...'
+  return retLocation;
 }
 
 async function PingServers() {
@@ -817,6 +858,7 @@ export default {
   Login,
   Logout,
   AccountStatus,
+  GeoLookup,
   PingServers,
   KillSwitchGetStatus,
   Connect,
