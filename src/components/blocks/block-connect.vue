@@ -109,14 +109,12 @@ export default {
       return "connected";
     },
     isCanPause: function() {
-      if (process.platform === "linux") return false;
       if (this.isChecked === false || this.isProgress === true) return false;
       if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Resumed)
         return false;
       return true;
     },
     isCanResume: function() {
-      if (process.platform === "linux") return false;
       if (this.isCanPause) return false;
       if (this.isChecked === false || this.isProgress === true) return false;
       if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Paused)
