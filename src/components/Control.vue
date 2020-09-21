@@ -39,7 +39,11 @@
           <div class="horizontalLine hopButtonsSeparator" />
         </div>
 
-        <div ref="scrollArea" class="scrollableColumnContainer">
+        <div
+          ref="scrollArea"
+          class="scrollableColumnContainer"
+          @scroll="recalcScrollButtonVisiblity()"
+        >
           <div v-if="isMultihopAllowed">
             <HopButtonsBlock />
             <div class="horizontalLine hopButtonsSeparator" />
@@ -129,16 +133,10 @@ export default {
     ConnectionDetailsBlock
   },
   mounted() {
-    this.scrollArea = this.$refs.scrollArea;
-    this.scrollArea.addEventListener(
-      "scroll",
-      this.recalcScrollButtonVisiblity
-    );
     this.recalcScrollButtonVisiblity();
   },
   data: function() {
     return {
-      scrollArea: null,
       isShowScrollButton: false,
       isConnectProgress: false,
       uiView: viewTypeEnum.default,
@@ -248,6 +246,7 @@ export default {
     backToMainView() {
       this.uiView = viewTypeEnum.default;
       this.$store.dispatch("uiState/isDefaultControlView", true);
+      setTimeout(this.recalcScrollButtonVisiblity, 1000);
     },
     onServerChanged(server, isExitServer) {
       if (server == null || isExitServer == null) return;
@@ -275,18 +274,19 @@ export default {
       if (connected(this)) connect(this, true);
     },
     recalcScrollButtonVisiblity() {
-      if (this.scrollArea == null) {
+      let sa = this.$refs.scrollArea;
+      if (sa == null) {
         this.isShowScrollButton = false;
         return;
       }
       this.isShowScrollButton =
-        this.scrollArea.scrollHeight >
-        this.scrollArea.clientHeight + this.scrollArea.scrollTop;
+        sa.scrollHeight > sa.clientHeight + sa.scrollTop;
     },
     onScrollDown() {
-      if (this.scrollArea == null) return;
-      this.scrollArea.scrollTo({
-        top: this.scrollArea.scrollHeight,
+      let sa = this.$refs.scrollArea;
+      if (sa == null) return;
+      sa.scrollTo({
+        top: sa.scrollHeight,
         behavior: "smooth"
       });
     }
