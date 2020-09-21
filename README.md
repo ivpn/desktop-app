@@ -45,6 +45,31 @@ These instructions will get you a copy of the project up and running on your loc
       
 ### Compilation
 
+
+#### macOS
+  ```
+  git clone https://github.com/ivpn/desktop-app-cli.git
+  cd desktop-app-cli/
+  ./References/macOS/build.sh 
+  ``` 
+  Compiled binary can be found here:
+  ```
+  References/macOS/_out_bin/
+  ```
+  
+#### Windows
+  Ensure that GO111MODULE is enabled (`set GO111MODULE=on`)
+  ```
+  git clone https://github.com/ivpn/desktop-app-cli.git
+  cd desktop-app-cli
+  References\Windows\build.bat
+  ``` 
+  Compiled binaries can be found here:
+  ```
+  bin\x86\cli
+  bin\x86_64\cli
+  ```  
+  
 #### Linux
   The CLI binary compiles together with [desktop-app-daemon](https://github.com/ivpn/desktop-app-daemon) project. It required to be able to compile into redistributable packages (ready for installation DEB\RPM).
   Therefore, a few manipulations with GOPATH and folder structure necessary to perform.
@@ -70,29 +95,31 @@ These instructions will get you a copy of the project up and running on your loc
 
 Compiled packages can be found at `$GOPATH/src/github.com/ivpn/desktop-app-cli/References/Linux/_out_bin`  
 
-#### macOS
-  ```
-  git clone https://github.com/ivpn/desktop-app-cli.git
-  cd desktop-app-cli/
-  ./References/macOS/build.sh 
-  ``` 
-  Compiled binary can be found here:
-  ```
-  References/macOS/_out_bin/
-  ```
-  
-#### Windows
-  Ensure that GO111MODULE is enabled (`set GO111MODULE=on`)
-  ```
-  git clone https://github.com/ivpn/desktop-app-cli.git
-  cd desktop-app-cli
-  References\Windows\build.bat
-  ``` 
-  Compiled binaries can be found here:
-  ```
-  bin\x86\cli
-  bin\x86_64\cli
-  ```
+##### Manual installation on Linux
+Sometimes it is required to have the possibility to install IVPN binaries manually.  
+It's easy to do it by following the rules described below.
+
+The ivpn-service is checking the existing of some required files (all files can be found in the repository)
+```
+VirtualBox:/opt/ivpn/etc$ ls -l
+total 52
+-r-------- 1 root root  2358 May 25 16:50 ca.crt
+-rwx------ 1 root root   113 May 25 16:50 client.down
+-rwx------ 1 root root  1927 May 25 16:50 client.up
+-rwx------ 1 root root  5224 May 25 16:50 firewall.sh
+-rw------- 1 root root 21524 May 26 20:52 servers.json
+-r-------- 1 root root   451 May 25 16:50 signing.pub
+-r-------- 1 root root   636 May 25 16:50 ta.key
+```
+1. Build the current project to get 'ivpn service' and 'ivpn cli' binaries.
+2. Create folder `/opt/ivpn/etc`
+3. Copy all required files (see above).  
+    **Note!** Files owner and access rights are important!
+4. Now you can start compiled service binary from the command line (just to check if it works).  
+    **Note!** The service must be started under a privileged user!  
+    **Info!** You can use the command line parameter `--logging` to enable logging for service.  
+    4.1. Simply run compiled ivpn-cli binary to check if it successfully connects to the service (use separate terminal).
+5. If everything works - you can configure your environment to start ivpn-service automatically with the system boot (we are using systemd for such purposes)
 
 <a name="versioning"></a>
 ## Versioning
