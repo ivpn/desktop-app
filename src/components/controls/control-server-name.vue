@@ -62,6 +62,8 @@ export default {
       if (this.isRandomServer === true) return "Random server";
       if (this.manualName != null) return this.manualName;
       if (this.server == null) return "";
+      if (this.server.city == "" && this.server.country == "") return "";
+      if (this.server.city == "") return this.server.country;
       if (this.isFullName === "true")
         return `${this.server.city}, ${this.server.country}`;
       return `${this.server.city}, ${this.server.country_code}`;

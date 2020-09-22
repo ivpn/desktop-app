@@ -48,6 +48,14 @@ export default {
     },
     locationName: function() {
       if (this.$store.state.location == null) return null;
+      if (
+        this.$store.state.location.city == "" &&
+        this.$store.state.location.country == "" &&
+        this.$store.state.location.country_code == ""
+      )
+        return "";
+      if (this.$store.state.location.city == "")
+        return `${this.$store.state.location.country}`;
       return `${this.$store.state.location.city}, ${this.$store.state.location.country_code}`;
     },
     isp: function() {
