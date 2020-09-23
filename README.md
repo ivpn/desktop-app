@@ -33,7 +33,7 @@ Please, look into file `src/main.js` (function `changeUIStyle`)
 
 Update all project  dependencies:
 ```
-npm update
+npm install
 ```
 
 Compile binary for current platform:
