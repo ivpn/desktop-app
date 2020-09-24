@@ -55,7 +55,7 @@ export default {
     diagDataText: function() {
       if (this.diagnosticDataObj == null) return null;
       let text = JSON.stringify(this.diagnosticDataObj, null, 2);
-      return text;
+      return text.replace(/\\n/g, "\n");
     }
   },
   methods: {
