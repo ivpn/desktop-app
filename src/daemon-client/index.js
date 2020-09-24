@@ -549,7 +549,6 @@ async function GeoLookup() {
   let retLocation = null;
   let isRealGeoLocationOnStart = isRealGeoLocationCheck();
 
-  if (store.state.isRequestingLocation == true) return null;
   store.commit("isRequestingLocation", true); // mark 'Checking geolookup...'
   let resp = await sendRecv(
     { Command: daemonRequests.APIRequest, APIPath: "geo-lookup" },
