@@ -66,28 +66,56 @@
       >
     </div>
 
+    <!-- DIAGNOSTIC LOGS-->
     <div class="settingsBoldFont">
       Diagnostics:
     </div>
-    <div class="param">
-      <input type="checkbox" id="logging" v-model="logging" />
-      <label class="defColor" for="logging">Create log files</label>
+    <div class="flexRow">
+      <div class="param">
+        <input type="checkbox" id="logging" v-model="logging" />
+        <label class="defColor" for="logging">Allow logging</label>
+      </div>
+      <div class="flexRowRestSpace"></div>
+
+      <button class="btn" v-on:click="onLogs">
+        Diagnostic logs ...
+      </button>
+    </div>
+    <div id="diagnosticLogs" v-if="diagnosticLogsShown">
+      <ComponentDiagnosticLogs
+        :onClose="
+          evtId => {
+            diagnosticLogsShown = false;
+          }
+        "
+      />
     </div>
   </div>
 </template>
 
 <script>
+import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
+
 import { Platform, PlatformEnum } from "@/platform/platform";
 import sender from "@/ipc/renderer-sender";
 
 export default {
-  data: function() {
-    return {};
+  components: {
+    ComponentDiagnosticLogs
   },
-  methods: {},
+  data: function() {
+    return {
+      diagnosticLogsShown: false
+    };
+  },
+  methods: {
+    async onLogs() {
+      this.diagnosticLogsShown = true;
+    }
+  },
   computed: {
     isCanAutoconnectOnInsecureWIFI() {
-      return Platform()!=PlatformEnum.Linux;
+      return Platform() != PlatformEnum.Linux;
     },
     autoConnectOnLaunch: {
       get() {
@@ -176,5 +204,22 @@ input:disabled + label {
 
 label {
   margin-left: 1px;
+}
+
+button.btn {
+  background: transparent;
+  border: 0.5px solid #c8c8c8;
+  box-sizing: border-box;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#diagnosticLogs {
+  background: white;
+  z-index: 99;
+  position: absolute;
+  left: 0%;
+  top: 0%;
+  width: 100%;
+  height: 100%;
 }
 </style>

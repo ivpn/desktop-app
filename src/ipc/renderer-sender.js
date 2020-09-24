@@ -121,5 +121,12 @@ export default {
 
   GetWiFiAvailableNetworks: async () => {
     return await invoke("renderer-request-wifi-get-available-networks");
+  },
+
+  GetDiagnosticLogs: async () => {
+    return await invoke("renderer-request-get-diagnostic-logs");
+  },
+  SubmitDiagnosticLogs: async (comment, data) => {
+    return invoke("renderer-request-submit-diagnostic-logs", comment, data);
   }
 };

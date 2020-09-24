@@ -20,6 +20,8 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+import { SentrySendDiagnosticReport } from "@/sentry/sentry.js";
+
 import client from "../daemon-client";
 const { ipcMain } = require("electron");
 import store from "@/store";
@@ -123,3 +125,22 @@ ipcMain.handle(
 ipcMain.handle("renderer-request-wifi-get-available-networks", async () => {
   return await client.GetWiFiAvailableNetworks();
 });
+
+ipcMain.handle("renderer-request-get-diagnostic-logs", async () => {
+  let data = await client.GetDiagnosticLogs();
+  if (data != null) {
+    if (store.state.account.session != null)
+      data[" IVPN User"] = store.state.account.session.AccountID;
+    data[" Settings"] = JSON.stringify(store.state.settings, null, 2);
+  }
+  return data;
+});
+ipcMain.handle(
+  "renderer-request-submit-diagnostic-logs",
+  async (event, comment, dataObj) => {
+    let accountID = "";
+    if (store.state.account.session != null)
+      accountID = store.state.account.session.AccountID;
+    return SentrySendDiagnosticReport(accountID, comment, dataObj);
+  }
+);

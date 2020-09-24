@@ -36,6 +36,9 @@ import {
   installVueDevtools
 } from "vue-cli-plugin-electron-builder/lib";
 
+import { SentryInit } from "./sentry/sentry.js";
+SentryInit();
+
 // start waiting for events from Renderer processes
 import "./ipc/main-listener";
 
@@ -444,28 +447,8 @@ function showSettings(settingsViewName) {
     console.log(e);
   }
 }
-// MENU ITEMS
-function menuOnShow() {
-  try {
-    if (win == null) createWindow();
 
-    if (win != null) {
-      win.restore();
-      win.show();
-      win.focus();
-    }
-  } catch (e) {
-    console.log(e);
-  }
-}
-function menuOnAccount() {
-  showSettings("account");
-}
-function menuOnPreferences() {
-  showSettings("general");
-}
-
-// show\hide app from system dock
+// show\hide app from SYSTEM DOCK
 function updateAppDockVisibility() {
   if (store.state.settings.showAppInSystemDock) {
     // macOS
@@ -487,4 +470,25 @@ function updateAppDockVisibility() {
     // ensure window is still visible
     if (win != null) win.show();
   }
+}
+
+// MENU ITEMS
+function menuOnShow() {
+  try {
+    if (win == null) createWindow();
+
+    if (win != null) {
+      win.restore();
+      win.show();
+      win.focus();
+    }
+  } catch (e) {
+    console.log(e);
+  }
+}
+function menuOnAccount() {
+  showSettings("account");
+}
+function menuOnPreferences() {
+  showSettings("general");
 }

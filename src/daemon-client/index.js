@@ -46,6 +46,8 @@ const daemonRequests = Object.freeze({
   Hello: "Hello",
   APIRequest: "APIRequest",
 
+  GenerateDiagnostics: "GenerateDiagnostics",
+
   PingServers: "PingServers",
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
@@ -73,6 +75,9 @@ const daemonRequests = Object.freeze({
 const daemonResponses = Object.freeze({
   HelloResp: "HelloResp",
   APIResponse: "APIResponse",
+
+  DiagnosticsGeneratedResp: "DiagnosticsGeneratedResp",
+
   VpnStateResp: "VpnStateResp",
   ConnectedResp: "ConnectedResp",
   DisconnectedResp: "DisconnectedResp",
@@ -378,13 +383,37 @@ async function processResponse(response) {
   }
 }
 
+let receivedBuffer = "";
 function onDataReceived(received) {
+  if (received == "") return;
   const responses = received.toString().split("\n");
-  responses.forEach(j => {
-    if (j.length > 0) {
-      processResponse(j);
+
+  const cnt = responses.length;
+  if (cnt <= 0) return;
+
+  // Each daemon response ends by new line ('\n') symbol
+  // Therefore, the last response in 'responses' array have to be empty (because of .split("\n"))
+  // If last response is not empty - this response is not fully received. He have to wait for the rest data.
+  for (let i = 0; i < cnt - 1; i++) {
+    let resp = receivedBuffer + responses[i];
+    receivedBuffer = "";
+
+    if (resp.length > 0) {
+      try {
+        processResponse(resp);
+      } catch (e) {
+        log.error("Error processing daemon response: ", e);
+      }
     }
-  });
+  }
+
+  if (responses[cnt - 1].length > 0) {
+    // Each daemon response ends by new line ('\n') symbol
+    // Therefore, the last response in 'responses' array have to be empty (because of .split("\n"))
+    // If last response is not empty - this response is not fully received. He have to wait for the rest data.
+    if (receivedBuffer != "") receivedBuffer += responses[cnt - 1];
+    else receivedBuffer = responses[cnt - 1];
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -557,6 +586,18 @@ async function PingServers() {
     },
     [daemonResponses.PingServersResp]
   );
+}
+
+async function GetDiagnosticLogs() {
+  let logs = await sendRecv({ Command: daemonRequests.GenerateDiagnostics }, [
+    daemonResponses.DiagnosticsGeneratedResp
+  ]);
+
+  // remove internal protocol variables
+  delete logs.Command;
+  delete logs.Idx;
+
+  return logs;
 }
 
 async function Connect(entryServer, exitServer) {
@@ -855,6 +896,9 @@ async function GetWiFiAvailableNetworks() {
 
 export default {
   ConnectToDaemon,
+
+  GetDiagnosticLogs,
+
   Login,
   Logout,
   AccountStatus,
