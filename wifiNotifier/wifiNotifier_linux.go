@@ -3,7 +3,14 @@
 package wifiNotifier
 
 /*
-#cgo LDFLAGS: -liw
+// Trying to avoid using dynamic linking, therefore disabled 'iwlib'
+// (wireless-tools library, which is requires to have installed correspond package).
+// If you want to use original iwlib package (and do not use custom 'linux_iwlib_2.c'):
+// 1) uncomment '#cgo LDFLAGS: -liw'
+// 2) comment '#include "linux_iwlib_2.c"'
+// 3) remove  suffix '_2' from function names (in this file): iw_get_range_info_2, iw_init_event_stream_2, iw_extract_event_stream_2
+// #cgo LDFLAGS: -liw
+#include "linux_iwlib_2.c"
 
 #include <stdio.h>  // printf
 #include <string.h> // strdup prototype
@@ -60,7 +67,7 @@ static inline char*  scanSSIDList(const char* interfaceName, int *retIsInsecure,
 
     struct iw_range range;
 
-    if ((iw_get_range_info(sockfd, interfaceName, &range) < 0) ||
+    if ((iw_get_range_info_2(sockfd, interfaceName, &range) < 0) ||
         (range.we_version_compiled < 14))
     {
         close(sockfd);
@@ -130,7 +137,7 @@ static inline char*  scanSSIDList(const char* interfaceName, int *retIsInsecure,
         struct iw_event iwe;
         struct stream_descr stream;
 
-        iw_init_event_stream(&stream,
+        iw_init_event_stream_2(&stream,
                              scanBuffer,
                              request.u.data.length);
 
@@ -138,7 +145,7 @@ static inline char*  scanSSIDList(const char* interfaceName, int *retIsInsecure,
 
         char essid[IW_ESSID_MAX_SIZE+1];
         unsigned short encodeFlags = -1;
-        while (iw_extract_event_stream(&stream, &iwe, wev) > 0)
+        while (iw_extract_event_stream_2(&stream, &iwe, wev) > 0)
         {
             switch (iwe.cmd)
             {
