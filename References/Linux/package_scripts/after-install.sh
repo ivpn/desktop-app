@@ -1,6 +1,11 @@
 #!/bin/sh
 
 echo "[*] After install (<%= pkg %>)"
-echo "[ ] Installing .desktop file..."
-DESKTOP_FILE="/usr/share/applications/IVPN.desktop"
-ln -fs /opt/ivpn/ui/IVPN.desktop $DESKTOP_FILE
+DIR=/usr/share/applications
+DESKTOP_FILE=$DIR/IVPN.desktop
+if [ -d "$DIR" ]; then
+    echo "[ ] Installing .desktop file..."
+    ln -fs /opt/ivpn/ui/IVPN.desktop $DESKTOP_FILE
+else
+    echo "[!] Unable to install .desktop file. Folder '$DIR' not exists"
+fi
