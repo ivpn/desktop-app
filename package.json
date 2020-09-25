@@ -1,8 +1,8 @@
 {
   "name": "ivpn-ui",
   "version": "3.0.7",
-  "description": "IVPN Client",
-  "author": "Alexandr Stelnykovych <alexandr.stelnykovych@ivpn.net>",
+  "description": "UI interface for IVPN Client",
+  "author": "Alexandr Stelnykovych",
   "license": "GPL-3.0",
   "private": true,
   "scripts": {
