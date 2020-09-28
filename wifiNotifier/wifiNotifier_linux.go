@@ -7,10 +7,10 @@ package wifiNotifier
 // (wireless-tools library, which is requires to have installed correspond package).
 // If you want to use original iwlib package (and do not use custom 'linux_iwlib_2.c'):
 // 1) uncomment '#cgo LDFLAGS: -liw'
-// 2) comment '#include "linux_iwlib_2.c"'
+// 2) comment '#include "iwlib_2_linux.c"'
 // 3) remove  suffix '_2' from function names (in this file): iw_get_range_info_2, iw_init_event_stream_2, iw_extract_event_stream_2
 // #cgo LDFLAGS: -liw
-#include "linux_iwlib_2.c"
+#include "iwlib_2_linux.c"
 
 #include <stdio.h>  // printf
 #include <string.h> // strdup prototype
