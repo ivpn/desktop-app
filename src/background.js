@@ -187,9 +187,6 @@ if (gotTheLock) {
     }
 
     createWindow();
-
-    // initialize app updater
-    StartUpdateChecker(OnAppUpdateAvailable);
   });
 
   app.on("before-quit", async event => {
@@ -446,7 +443,11 @@ function closeSettingsWindow() {
 // INITIALIZE CONNECTION TO A DAEMON
 function connectToDaemon() {
   try {
-    daemonClient.ConnectToDaemon();
+    (async function() {
+      await daemonClient.ConnectToDaemon();
+      // initialize app updater
+      StartUpdateChecker(OnAppUpdateAvailable);
+    })();
   } catch (e) {
     console.error(e);
   }
