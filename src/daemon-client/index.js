@@ -559,26 +559,31 @@ async function GeoLookup() {
   let isRealGeoLocationOnStart = isRealGeoLocationCheck();
 
   store.commit("isRequestingLocation", true); // mark 'Checking geolookup...'
-  let resp = await sendRecv(
-    { Command: daemonRequests.APIRequest, APIPath: "geo-lookup" },
-    [daemonResponses.APIResponse]
-  );
+  try {
+    let resp = await sendRecv(
+      { Command: daemonRequests.APIRequest, APIPath: "geo-lookup" },
+      [daemonResponses.APIResponse]
+    );
 
-  if (resp.Error !== "") console.error("API 'geo-lookup' error: " + resp.Error);
-  else {
-    if (isRealGeoLocationOnStart != isRealGeoLocationCheck()) {
-      log.error(
-        `API ERROR: Unable to save geo-lookup result (connection state changed)`
-      );
-    } else {
-      retLocation = JSON.parse(`${resp.ResponseData}`);
-      if (retLocation == null || retLocation.ip_address === undefined) {
-        log.error(`API ERROR:bad geo-lookup response`);
+    if (resp.Error !== "")
+      console.error("API 'geo-lookup' error: " + resp.Error);
+    else {
+      if (isRealGeoLocationOnStart != isRealGeoLocationCheck()) {
+        log.error(
+          `API ERROR: Unable to save geo-lookup result (connection state changed)`
+        );
       } else {
-        retLocation.isRealLocation = isRealGeoLocationOnStart;
-        log.debug("API: 'geo-lookup' success.");
+        retLocation = JSON.parse(`${resp.ResponseData}`);
+        if (retLocation == null || retLocation.ip_address === undefined) {
+          log.error(`API ERROR:bad geo-lookup response`);
+        } else {
+          retLocation.isRealLocation = isRealGeoLocationOnStart;
+          log.debug("API: 'geo-lookup' success.");
+        }
       }
     }
+  } catch (e) {
+    console.error("geo-lookup error", e);
   }
   store.commit("location", retLocation);
   store.commit("isRequestingLocation", false); // un-mark 'Checking geolookup...'
