@@ -31,8 +31,8 @@ export default {
     DoSwitch(e) {
       if (!this.isConnected) e.preventDefault();
       if (this.onChecked) {
-        if (this.isProgress) this.onChecked(false);
-        else this.onChecked(!this.isConnected);
+        if (this.isProgress) this.onChecked(false, e);
+        else this.onChecked(!this.isConnected, e);
       }
     }
   }

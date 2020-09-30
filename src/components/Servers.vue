@@ -230,8 +230,8 @@
           <!-- CONFIG -->
           <SwitchProgress
             :onChecked="
-              () => {
-                configFastestSvrClicked(server);
+              (value, event) => {
+                configFastestSvrClicked(server, event);
               }
             "
             :isChecked="!isSvrExcludedFomFastest(server)"
@@ -513,17 +513,30 @@ export default {
 
       this.$store.dispatch("settings/serversFavoriteList", favorites);
     },
-    configFastestSvrClicked(server) {
-      console.log("configFastestSvrClicked", server);
+    configFastestSvrClicked(server, event) {
       if (server == null || server.gateway == null) return;
       let excludeSvrs = this.$store.state.settings.serversFastestExcludeList.slice();
 
-      if (excludeSvrs.includes(server.gateway)) {
+      if (excludeSvrs.includes(server.gateway))
         excludeSvrs = excludeSvrs.filter(gw => gw != server.gateway);
-      } else {
-        excludeSvrs.push(server.gateway);
-      }
-      this.$store.dispatch("settings/serversFastestExcludeList", excludeSvrs);
+      else excludeSvrs.push(server.gateway);
+
+      const activeServers = this.servers.slice();
+      const notExcludedActiveServers = activeServers.filter(
+        s => !excludeSvrs.includes(s.gateway)
+      );
+
+      if (notExcludedActiveServers.length < 1) {
+        dialog.showMessageBoxSync(getCurrentWindow(), {
+          type: "info",
+          buttons: ["OK"],
+          message: "Please, keep at least one server",
+          detail: "Not allowed to exclude all servers."
+        });
+        event.preventDefault();
+        return;
+      } else
+        this.$store.dispatch("settings/serversFastestExcludeList", excludeSvrs);
     },
 
     showFavorites: function() {
