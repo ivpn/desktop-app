@@ -19,13 +19,11 @@
 //  You should have received a copy of the GNU General Public License
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
-
 import { VpnTypeEnum, Ports, ServersSortTypeEnum } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
-export default {
-  namespaced: true,
 
-  state: {
+const getDefaultState = () => {
+  return {
     vpnType: VpnTypeEnum.OpenVPN,
     isMultiHop: false,
     serverEntry: null,
@@ -98,11 +96,24 @@ export default {
       daemonVersion: null,
       uiVersion: null
     }
-  },
+  };
+};
+
+// initial state
+const initialState = getDefaultState();
+
+export default {
+  namespaced: true,
+
+  state: initialState,
 
   mutations: {
     replaceState(state, val) {
       Object.assign(state, val);
+    },
+
+    resetToDefaults(state) {
+      Object.assign(state, getDefaultState());
     },
 
     vpnType(state, val) {

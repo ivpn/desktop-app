@@ -281,12 +281,30 @@ if (gotTheLock) {
           updateAppDockVisibility();
           break;
         case "account/session":
-        case "settings/minimizedUI":
-          if (
-            !store.state.settings.minimizedUI ||
-            !store.getters["account/isLoggedIn"]
-          )
+          if (store.getters["account/isLoggedIn"] !== true) {
             closeSettingsWindow();
+
+            // in case of logged-out - ERASE SETTINGS TO DEFAULT STATE
+            // Save parameters values which should not me erased
+            console.log(
+              "Account is not logged-in: Erasing settings to default value"
+            );
+            const vpnType = store.state.settings.vpnType;
+            const showAppInSystemDock =
+              store.state.settings.showAppInSystemDock;
+
+            // erase settings
+            store.commit("settings/resetToDefaults");
+            // set default obfsproxy value on daemon's side
+            daemonClient.SetObfsproxy();
+
+            // restore some parameters
+            store.commit("settings/vpnType", vpnType);
+            store.commit("settings/showAppInSystemDock", showAppInSystemDock);
+          }
+          break;
+        case "settings/minimizedUI":
+          if (!store.state.settings.minimizedUI) closeSettingsWindow();
           break;
         default:
       }
