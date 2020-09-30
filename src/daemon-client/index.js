@@ -259,6 +259,8 @@ async function processResponse(response) {
 
   switch (obj.Command) {
     case daemonResponses.HelloResp:
+      store.commit("daemonVersion", obj.Version);
+
       commitSession(obj.Session);
 
       // if no info about account status - request it
@@ -271,6 +273,7 @@ async function processResponse(response) {
 
       if (obj.DisabledFunctions != null)
         store.commit("disabledFunctions", obj.DisabledFunctions);
+
       break;
 
     case daemonResponses.AccountStatusResp:
@@ -440,9 +443,15 @@ async function ConnectToDaemon() {
         // eslint-disable-next-line no-undef
         const secretBInt = BigInt(`0x${portInfo.secret}`);
 
+        let appVersion = "";
+        try {
+          appVersion = `${require("electron").app.getVersion()} (Electron UI)`;
+        } catch (e) {
+          console.error(e);
+        }
         const helloReq = {
           Command: daemonRequests.Hello,
-          Version: "3.0.1 UI2 (beta)",
+          Version: appVersion,
           Secret: secretBInt,
           GetServersList: true,
           GetStatus: true,

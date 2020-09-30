@@ -23,8 +23,9 @@
 import { SentrySendDiagnosticReport } from "@/sentry/sentry.js";
 
 import client from "../daemon-client";
-const { ipcMain } = require("electron");
+import { CheckUpdates, Upgrade, IsAbleToCheckUpdate } from "@/app-updater";
 import store from "@/store";
+const { ipcMain } = require("electron");
 
 ipcMain.handle("renderer-request-connect-to-daemon", async () => {
   return await client.ConnectToDaemon();
@@ -144,3 +145,17 @@ ipcMain.handle(
     return SentrySendDiagnosticReport(accountID, comment, dataObj);
   }
 );
+
+ipcMain.on("renderer-request-app-updates-is-able-to-update", event => {
+  try {
+    event.returnValue = IsAbleToCheckUpdate();
+  } catch {
+    event.returnValue = false;
+  }
+});
+ipcMain.handle("renderer-request-app-updates-check", async () => {
+  return await CheckUpdates();
+});
+ipcMain.handle("renderer-request-app-updates-upgrade", async () => {
+  return await Upgrade();
+});

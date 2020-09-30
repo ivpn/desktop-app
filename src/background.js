@@ -52,6 +52,8 @@ import { IsWindowHasTitle } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import common from "@/common";
 
+import { StartUpdateChecker } from "@/app-updater";
+
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -185,6 +187,9 @@ if (gotTheLock) {
     }
 
     createWindow();
+
+    // initialize app updater
+    StartUpdateChecker(OnAppUpdateAvailable);
   });
 
   app.on("before-quit", async event => {
@@ -317,11 +322,12 @@ function createWindow() {
       : common.MaximizedUIWidth,
     height: 600,
     resizable: false,
+    fullscreenable: false,
+    maximizable: false,
 
     center: true,
     title: "IVPN",
 
-    fullscreenable: false,
     titleBarStyle: titleBarStyle,
     autoHideMenuBar: true,
 
@@ -372,6 +378,8 @@ function createSettingsWindow(viewName) {
     height: 600,
 
     resizable: false,
+    fullscreenable: false,
+    maximizable: false,
 
     parent: win,
 
@@ -483,7 +491,7 @@ function menuOnShow() {
       win.focus();
     }
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
 }
 function menuOnAccount() {
@@ -491,4 +499,49 @@ function menuOnAccount() {
 }
 function menuOnPreferences() {
   showSettings("general");
+}
+
+// UPDATE
+function OnAppUpdateAvailable(newDaemonVer, newUiVer) {
+  // Arguments: updatesInfo.daemon.version, updatesInfo.uiClient.version, currDaemonVer, currUiVer
+  try {
+    // check if we should skip user notification for this version
+    newDaemonVer = newDaemonVer.trim();
+    newUiVer = newUiVer.trim();
+    if (
+      store.state.settings.skipAppUpdate &&
+      store.state.settings.skipAppUpdate.daemonVersion &&
+      store.state.settings.skipAppUpdate.uiVersion &&
+      newDaemonVer === store.state.settings.skipAppUpdate.daemonVersion &&
+      newUiVer === store.state.settings.skipAppUpdate.uiVersion
+    ) {
+      return;
+    }
+
+    // notify user
+    if (win == null) createWindow();
+
+    let msgBoxConfig = {
+      type: "info",
+      message: "A new version of IVPN Client is available!",
+      buttons: ["Details ...", "Skip This Version", "Remind Me Later"]
+    };
+
+    const actionNo = dialog.showMessageBoxSync(win, msgBoxConfig);
+    switch (actionNo) {
+      case 0: // Details
+        showSettings("version");
+        break;
+      case 1: // Skip This Version
+        store.commit("settings/skipAppUpdate", {
+          daemonVersion: newDaemonVer,
+          uiVersion: newUiVer
+        });
+        break;
+      case 3: // Remind Me Later
+        break;
+    }
+  } catch (e) {
+    console.error(e);
+  }
 }

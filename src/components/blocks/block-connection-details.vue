@@ -47,9 +47,10 @@
     />
 
     <!-- WIFI -->
-    <div class="horizontalLine" />
+    <div class="horizontalLine" v-if="wifiSSID" />
 
     <SelectButtonControl
+      v-if="wifiSSID"
       class="leftPanelBlock"
       :click="onShowWifiConfig"
       v-bind:text="wifiSSID"
@@ -192,7 +193,7 @@ export default {
           ret.isTrusted = currentNetworkConfig.isTrusted;
         else if (this.defaultTrustForUndefinedNetworks != null)
           ret.isTrusted = this.defaultTrustForUndefinedNetworks;
-      } 
+      }
 
       if (ret.isTrusted == null) {
         let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;

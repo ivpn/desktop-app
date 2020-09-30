@@ -245,10 +245,7 @@ function updateTrayMenu() {
       });
     } else {
       // PAUSE\RESUME
-      if (
-        process.platform !== "linux" &&
-        store.state.vpnState.connectionState === VpnStateEnum.CONNECTED
-      ) {
+      if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED) {
         if (store.state.vpnState.pauseState === PauseStateEnum.Paused)
           mainMenu.push({ label: "Resume", click: menuItemResume });
         else if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) {

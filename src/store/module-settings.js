@@ -91,7 +91,13 @@ export default {
     minimizedUI: false,
     minimizeToTray: true,
     showAppInSystemDock: false,
-    serversSortType: ServersSortTypeEnum.City
+    serversSortType: ServersSortTypeEnum.City,
+
+    // updates
+    skipAppUpdate: {
+      daemonVersion: null,
+      uiVersion: null
+    }
   },
 
   mutations: {
@@ -233,6 +239,11 @@ export default {
     },
     serversSortType(state, val) {
       state.serversSortType = val;
+    },
+
+    // updates
+    skipAppUpdate(state, val) {
+      state.skipAppUpdate = val;
     }
   },
 

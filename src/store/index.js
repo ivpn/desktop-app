@@ -40,6 +40,7 @@ export default new Vuex.Store({
   strict: true,
   state: {
     isDaemonConnected: false,
+    daemonVersion: "",
 
     disabledFunctions: {
       WireGuardError: "",
@@ -50,7 +51,37 @@ export default new Vuex.Store({
     // Current location
     location: null, // {"ip_address":"","isp":"","organization":"","country":"","country_code":"","city":"","latitude": 0.0,"longitude":0.0,"isIvpnServer":false}
     // true when we are requesting geo-lookup info on current moment
-    isRequestingLocation: false
+    isRequestingLocation: false,
+
+    // Updates info example:
+    /*
+    {
+      "daemon": {
+        "version": "2.12.7",
+        "releaseNotes": [
+          {
+            "type": "new",
+            "description": "New feature description"
+          },
+          {
+            "type": "improved",
+            "description": "Improvement description"
+          }
+        ]
+      },
+      "uiClient": {
+        "version": "3.0.8",
+        "releaseNotes": [
+          {
+            "type": "fix",
+            "description": "UI Bugfix description"
+          }
+        ]
+      },
+      "downloadPageLink": "https://www.ivpn.net/...",
+      "changelogLink": "https://www.ivpn.net/setup/..."
+    }*/
+    latestVersionInfo: null
   },
 
   getters: {
@@ -69,6 +100,12 @@ export default new Vuex.Store({
     },
     isDaemonConnected(state, isConnected) {
       state.isDaemonConnected = isConnected;
+    },
+    daemonVersion(state, value) {
+      state.daemonVersion = value;
+    },
+    latestVersionInfo(state, value) {
+      state.latestVersionInfo = value;
     },
     disabledFunctions(state, disabledFuncs) {
       state.disabledFunctions = disabledFuncs;

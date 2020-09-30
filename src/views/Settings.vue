@@ -87,6 +87,15 @@
             OpenVPN
           </button>
           -->
+          <button
+            class="noBordersBtn tabTitleBtn"
+            v-on:click="onView('version')"
+            v-bind:class="{
+              activeBtn: view === 'version'
+            }"
+          >
+            Version
+          </button>
         </div>
       </div>
     </div>
@@ -113,6 +122,9 @@
       <div class="flexColumn" v-else-if="view === 'dns'">
         <dnsView />
       </div>
+      <div class="flexColumn" v-else-if="view === 'version'">
+        <versionView />
+      </div>
       <div class="flexColumn" v-else>
         <img src="@/assets/temp/under-construction.jpg" />
       </div>
@@ -131,6 +143,7 @@ import firewallView from "@/components/settings/settings-firewall.vue";
 import networksView from "@/components/settings/settings-networks.vue";
 import antitrackerView from "@/components/settings/settings-antitracker.vue";
 import dnsView from "@/components/settings/settings-dns.vue";
+import versionView from "@/components/settings/settings-version.vue";
 
 export default {
   components: {
@@ -140,7 +153,8 @@ export default {
     firewallView,
     networksView,
     antitrackerView,
-    dnsView
+    dnsView,
+    versionView
   },
   mounted() {
     if (this.$route.params.view != null) this.view = this.$route.params.view;

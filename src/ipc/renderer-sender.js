@@ -128,5 +128,18 @@ export default {
   },
   SubmitDiagnosticLogs: async (comment, data) => {
     return invoke("renderer-request-submit-diagnostic-logs", comment, data);
+  },
+
+  AppUpdatesIsAbleToUpdate: () => {
+    return ipcRenderer.sendSync(
+      "renderer-request-app-updates-is-able-to-update",
+      0
+    );
+  },
+  AppUpdatesCheck: async () => {
+    return invoke("renderer-request-app-updates-check");
+  },
+  AppUpdatesUpgrade: async () => {
+    return invoke("renderer-request-app-updates-upgrade");
   }
 };
