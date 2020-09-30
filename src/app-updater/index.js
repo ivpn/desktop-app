@@ -6,8 +6,8 @@ function getUpdater() {
     case PlatformEnum.Windows:
       break;
     case PlatformEnum.macOS:
-      //  break;
-      //default:
+      break;
+    default:
       return require("./linux");
   }
   return null;

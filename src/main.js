@@ -58,6 +58,13 @@ function changeUIStyle(platform) {
 const electron = window.require("electron");
 const { ipcRenderer } = electron;
 ipcRenderer.on("change-view-request", (event, arg) => {
+  try {
+    // Avoid error:'Avoided redundant navigation to current location: ...'
+    // That error can happen when navigating to a current route
+    if (arg === router.history.current.path) return;
+  } catch (e) {
+    console.error(e);
+  }
   router.push(arg);
 });
 

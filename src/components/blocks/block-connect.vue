@@ -7,22 +7,14 @@
 
     <div class="buttons">
       <div class="buttonWithPopup" style="margin-right:17px;">
-        <transition name="fade">
-          <button
-            class="settingsBtn"
-            v-if="isCanPause"
-            v-on:click="onPauseMenu"
-          >
+        <transition name="fade" v-if="isCanPause">
+          <button class="settingsBtn" v-on:click="onPauseMenu">
             <img src="@/assets/pause.svg" />
           </button>
         </transition>
 
-        <transition name="fade">
-          <button
-            class="settingsBtnResume"
-            v-if="isCanResume"
-            v-on:click="onPauseResume"
-          >
+        <transition name="fade" v-else-if="isCanResume">
+          <button class="settingsBtnResume" v-on:click="onPauseResume">
             <img src="@/assets/resume.svg" style="margin-left: 2px" />
           </button>
         </transition>
@@ -117,18 +109,23 @@ export default {
       if (this.isChecked !== true || this.isCanResume) return "disconnected";
       return "connected";
     },
+    isConnected: function() {
+      return this.$store.getters["vpnState/isConnected"];
+    },
     isCanPause: function() {
-      if (this.isChecked === false || this.isProgress === true) return false;
-      if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Resumed)
-        return false;
-      return true;
+      if (!this.isConnected) return false;
+      if (this.isProgress === true) return false;
+      if (this.$store.state.vpnState.pauseState === PauseStateEnum.Resumed)
+        return true;
+      return false;
     },
     isCanResume: function() {
       if (this.isCanPause) return false;
-      if (this.isChecked === false || this.isProgress === true) return false;
-      if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Paused)
-        return false;
-      return true;
+      if (!this.isConnected) return false;
+      if (this.isProgress === true) return false;
+      if (this.$store.state.vpnState.pauseState === PauseStateEnum.Paused)
+        return true;
+      return false;
     },
     isCanShowPauseMenu: function() {
       return this.isCanPause && this.isPauseMenuAllowed;

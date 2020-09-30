@@ -131,7 +131,7 @@
             <input
               type="checkbox"
               id="showAllWifi"
-              v-model="showAllNetworks"
+              v-on:click="onShowAllNetworks"
               style="margin:0px 5px 0px 0px"
             />
             <label class="defColor" for="showAllWifi">
@@ -169,6 +169,14 @@ export default {
     };
   },
   methods: {
+    onShowAllNetworks() {
+      this.showAllNetworks = !this.showAllNetworks;
+      if (
+        (this.showAllNetworks == true && !this.networks) ||
+        this.availableWiFiNetworks.length == 0
+      )
+        sender.GetWiFiAvailableNetworks();
+    },
     onActions() {
       this.isActionsView = true;
     },
@@ -220,29 +228,47 @@ export default {
     }
   },
   computed: {
+    availableWiFiNetworks: function() {
+      var nets = [];
+      try {
+        nets = this.$store.state.vpnState.availableWiFiNetworks.filter(
+          w => w.SSID
+        );
+      } catch (e) {
+        console.error(e);
+      }
+      return nets;
+    },
     networks: function() {
       var nets = [];
-      if (this.$store.state.settings.wifi?.networks != null)
-        nets = [...this.$store.state.settings.wifi.networks];
+      try {
+        if (this.$store.state.settings.wifi?.networks != null)
+          nets = [...this.$store.state.settings.wifi.networks];
 
-      let currWiFi = this.$store.state.vpnState.currentWiFiInfo;
-      if (currWiFi != null && currWiFi.SSID != "") {
-        let alreadyExists = nets.filter(wifi => wifi.ssid == currWiFi.SSID);
+        let currWiFi = this.$store.state.vpnState.currentWiFiInfo;
+        if (currWiFi != null && currWiFi.SSID != "") {
+          let alreadyExists = nets.filter(wifi => wifi.ssid == currWiFi.SSID);
 
-        // check is curent wifi already exists
-        if (alreadyExists == null || alreadyExists.length == 0)
-          nets.unshift({ ssid: currWiFi.SSID, isTrusted: null });
+          // check is curent wifi already exists
+          if (alreadyExists == null || alreadyExists.length == 0)
+            nets.unshift({ ssid: currWiFi.SSID, isTrusted: null });
 
-        if (this.showAllNetworks) {
-          // add rest of available networks
-          let restNetworks = this.$store.state.vpnState.availableWiFiNetworks;
-          if (restNetworks != null) {
-            for (let w of restNetworks) {
-              if (w.SSID != "" && nets.findIndex(t => t.ssid === w.SSID) == -1)
-                nets.push({ ssid: w.SSID, isTrusted: null });
+          if (this.showAllNetworks) {
+            // add rest of available networks
+            let restNetworks = this.availableWiFiNetworks;
+            if (restNetworks != null) {
+              for (let w of restNetworks) {
+                if (
+                  w.SSID != "" &&
+                  nets.findIndex(t => t.ssid === w.SSID) == -1
+                )
+                  nets.push({ ssid: w.SSID, isTrusted: null });
+              }
             }
           }
         }
+      } catch (e) {
+        console.error(e);
       }
       return nets;
     },
