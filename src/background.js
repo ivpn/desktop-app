@@ -516,12 +516,15 @@ function menuOnShow() {
   }
 }
 function menuOnAccount() {
+  menuOnShow();
   showSettings("account");
 }
 function menuOnPreferences() {
+  menuOnShow();
   showSettings("general");
 }
 function menuOnVersion() {
+  menuOnShow();
   showSettings("version");
 }
 
