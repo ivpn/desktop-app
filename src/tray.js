@@ -32,6 +32,7 @@ let tray = null;
 let menuHandlerShow = null;
 let menuHandlerPreferences = null;
 let menuHandlerAccount = null;
+let menuHandlerVersion = null;
 
 let iconConnected = null;
 let iconDisconnected = null;
@@ -40,10 +41,16 @@ let iconsConnecting = [];
 let iconConnectingIdx = 0;
 let iconConnectingIdxChanged = new Date().getTime();
 
-export function InitTray(menuItemShow, menuItemPreferences, menuItemAccount) {
+export function InitTray(
+  menuItemShow,
+  menuItemPreferences,
+  menuItemAccount,
+  menuItemVersion
+) {
   menuHandlerShow = menuItemShow;
   menuHandlerPreferences = menuItemPreferences;
   menuHandlerAccount = menuItemAccount;
+  menuHandlerVersion = menuItemVersion;
 
   // load icons
   switch (Platform()) {
@@ -230,9 +237,13 @@ function updateTrayMenu() {
   else connectToName = serverName(store.state.settings.serverEntry);
 
   const isLoggedIn = store.getters["account/isLoggedIn"];
-
+  // menuHandlerVersion
   var mainMenu = [
-    { label: `IVPN v${app.getVersion()}`, enabled: false },
+    {
+      label: `IVPN v${app.getVersion()}`,
+      enabled: menuHandlerVersion == null ? false : true,
+      click: menuHandlerVersion == null ? () => {} : () => menuHandlerVersion()
+    },
     { type: "separator" },
     { label: "Show IVPN", click: menuHandlerShow },
     { type: "separator" }

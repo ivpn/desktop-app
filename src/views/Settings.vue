@@ -11,6 +11,7 @@
       <div class="row">
         <div id="tabsTitle">
           <button
+            v-if="isLoggedIn"
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('account')"
             v-bind:class="{
@@ -21,6 +22,7 @@
           </button>
 
           <button
+            v-if="isLoggedIn"
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('general')"
             v-bind:class="{
@@ -31,6 +33,7 @@
           </button>
 
           <button
+            v-if="isLoggedIn"
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('connection')"
             v-bind:class="{
@@ -40,6 +43,7 @@
             Connection
           </button>
           <button
+            v-if="isLoggedIn"
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('firewall')"
             v-bind:class="{
@@ -49,6 +53,7 @@
             IVPN Firewall
           </button>
           <button
+            v-if="isLoggedIn"
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('networks')"
             v-bind:class="{
@@ -59,6 +64,7 @@
           </button>
 
           <button
+            v-if="isLoggedIn"
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('antitracker')"
             v-bind:class="{
@@ -68,6 +74,7 @@
             AntiTracker
           </button>
           <button
+            v-if="isLoggedIn"
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('dns')"
             v-bind:class="{
@@ -165,6 +172,9 @@ export default {
     };
   },
   computed: {
+    isLoggedIn: function() {
+      return this.$store.getters["account/isLoggedIn"];
+    },
     arrowLeftImagePath: function() {
       switch (Platform()) {
         case PlatformEnum.Windows:

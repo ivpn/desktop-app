@@ -166,7 +166,7 @@ if (gotTheLock) {
   // Some APIs can only be used after this event occurs.
   app.on("ready", async () => {
     try {
-      InitTray(menuOnShow, menuOnPreferences, menuOnAccount);
+      InitTray(menuOnShow, menuOnPreferences, menuOnAccount, menuOnVersion);
       isTrayInitialized = true;
     } catch (e) {
       console.error(e);
@@ -521,6 +521,9 @@ function menuOnAccount() {
 function menuOnPreferences() {
   showSettings("general");
 }
+function menuOnVersion() {
+  showSettings("version");
+}
 
 // UPDATE
 function OnAppUpdateAvailable(newDaemonVer, newUiVer) {
@@ -551,7 +554,7 @@ function OnAppUpdateAvailable(newDaemonVer, newUiVer) {
     const actionNo = dialog.showMessageBoxSync(win, msgBoxConfig);
     switch (actionNo) {
       case 0: // Details
-        showSettings("version");
+        menuOnVersion();
         break;
       case 1: // Skip This Version
         store.commit("settings/skipAppUpdate", {

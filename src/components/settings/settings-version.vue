@@ -150,7 +150,6 @@ export default {
     },
     isAbleToCheckUpdate: function() {
       let ret = sender.AppUpdatesIsAbleToUpdate();
-      console.log("isAbleToCheckUpdate: ", ret);
       return ret;
     },
 
