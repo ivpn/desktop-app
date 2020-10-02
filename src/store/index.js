@@ -48,8 +48,11 @@ export default new Vuex.Store({
       ObfsproxyError: ""
     },
 
-    // Current location
+    // Current location (be careful, in 'connected' state this object will contain info about 'VPN location')
     location: null, // {"ip_address":"","isp":"","organization":"","country":"","country_code":"","city":"","latitude": 0.0,"longitude":0.0,"isIvpnServer":false}
+    // Contains current user (real) location OR (if connected) the last real user location
+    lastRealLocation: null,
+
     // true when we are requesting geo-lookup info on current moment
     isRequestingLocation: false,
 
@@ -85,6 +88,7 @@ export default new Vuex.Store({
   },
 
   getters: {
+    getLastRealLocation: state => state.lastRealLocation,
     isWireGuardEnabled: state =>
       isStrNullOrEmpty(state.disabledFunctions.WireGuardError),
     isOpenVPNEnabled: state =>
@@ -112,6 +116,11 @@ export default new Vuex.Store({
     },
     location(state, geoLocation) {
       state.location = geoLocation;
+
+      if (!this.getters["vpnState/isConnected"]) {
+        // save only real user location
+        state.lastRealLocation = state.location;
+      }
     },
     isRequestingLocation(state, value) {
       state.isRequestingLocation = value;

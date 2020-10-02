@@ -331,7 +331,7 @@ export default {
             return 1;
 
           case ServersSortTypeEnum.Proximity: {
-            let l = store.state.location;
+            const l = store.getters["getLastRealLocation"];
             if (l == null) return 0;
 
             var distA = getDistanceFromLatLonInKm(

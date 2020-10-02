@@ -419,6 +419,9 @@ export default {
     async connect(location) {
       this.isPopupVisible = false;
       try {
+        this.$store.dispatch("settings/isFastestServer", false);
+        this.$store.dispatch("settings/isRandomServer", false);
+
         if (this.$store.state.settings.isMultiHop)
           await sender.Connect(null, location);
         else await sender.Connect(location, null);
