@@ -21,9 +21,10 @@
 //
 import { VpnTypeEnum, Ports, ServersSortTypeEnum } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
+import { Platform, PlatformEnum } from "@/platform/platform";
 
 const getDefaultState = () => {
-  return {
+  let defState = {
     vpnType: VpnTypeEnum.OpenVPN,
     isMultiHop: false,
     serverEntry: null,
@@ -97,6 +98,15 @@ const getDefaultState = () => {
       uiVersion: null
     }
   };
+
+  if (Platform()===PlatformEnum.Linux) {
+    // Not all Linux distro support tray icons.
+    // Therefore, we have to change default config for Linux.
+    defState.minimizeToTray = false;
+    defState.showAppInSystemDock = true;
+  }
+
+  return defState;
 };
 
 // initial state
