@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "[*] Before remove (<%= pkg %>)"
+echo "[*] Before remove (<%= version %> : <%= pkg %> : $1)"
 
 DESKTOP_FILE=/usr/share/applications/IVPN.desktop
 if [ -f $DESKTOP_FILE ]; then

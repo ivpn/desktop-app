@@ -65,7 +65,7 @@
       <input
         id="filter"
         class="styled"
-        placeholder="Serach for a server"
+        placeholder="Search for a server"
         v-model="filter"
         v-bind:style="{ backgroundImage: 'url(' + searchImage + ')' }"
       />

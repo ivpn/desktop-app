@@ -5,7 +5,7 @@
 #
 #   NOTE! The correspond version of application already should be compiled (the file must be available: dist_electron/ivpn-ui-XXX.AppImage)
 
-# To be able to build packages the 'fpm' tool shall be installed 
+# To be able to build packages the 'fpm' tool shall be installed
 # (https://fpm.readthedocs.io/en/latest/installing.html)
 
 # Useful commands (Ubuntu):
@@ -73,7 +73,7 @@ then
   echo "    $0 -v <version>"
   echo ""
   echo "    NOTE! The correspond version of application already should be compiled (the file must be available: dist_electron/ivpn-ui-XXX.AppImage)"
-  exit 1 
+  exit 1
 fi
 
 APP_BINARY="$SCRIPT_DIR/../../dist_electron/ivpn-ui-$VERSION.AppImage"
@@ -81,8 +81,8 @@ if [ -f $APP_BINARY ]; then
     echo "[ ] Integrating binary: $APP_BINARY"
 else
   echo "[!] File not exists: '$APP_BINARY'"
-  echo "    Plerase build IVPN UI project (do not forget to set correct version for it in 'package.json')"
-  exit 1 
+  echo "    Build IVPN UI project (do not forget to set correct version for it in 'package.json')"
+  exit 1
 fi
 
 echo "======================================================"
@@ -101,10 +101,10 @@ CreatePackage()
   EXTRA_ARGS=$2
 
   cd $TMPDIR
-  
+
   # Scripts order is different for different types of packages
   # DEB Install:
-  #   Clean             Upgrade
+  #   (On Install)      (On Upgrade)
   #                     before_remove
   #   before_install    before_upgrade\before_install
   #                     after_remove
@@ -115,8 +115,8 @@ CreatePackage()
   #   after_remove
   #
   # RPM Install:
-  #   Clean             Upgrade
-  #   before_install    before_upgrade\before_install 
+  #   (On Install)      (On Upgrade)
+  #   before_install    before_upgrade\before_install
   #   after_install     after_upgrade\after_install
   #                     before_remove
   #                     after_remove
@@ -125,11 +125,11 @@ CreatePackage()
   #   before_remove
   #   after_remove
   #
-  # NOTE! 'remove' scripts from old version!
+  # NOTE! 'remove' scripts is using from old version!
 
   fpm $EXTRA_ARGS \
     --deb-no-default-config-files -s dir -t $PKG_TYPE -n ivpn-ui -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
-    --template-scripts --template-value pkg=$PKG_TYPE \
+    --template-scripts --template-value pkg=$PKG_TYPE --template-value version=$VERSION \
     --vendor "Privatus Limited" --maintainer "Privatus Limited" \
     --description "$(printf "UI client for IVPN service (https://www.ivpn.net)\nGraphical interface v$VERSION.")" \
     --before-install "$SCRIPT_DIR/package_scripts/before-install.sh" \
@@ -143,7 +143,7 @@ CreatePackage()
 
 echo '---------------------------'
 echo "DEB package..."
-# to add dependency from another packet add extra arg "-d", example: "-d obfsproxy" 
+# to add dependency from another packet add extra arg "-d", example: "-d obfsproxy"
 CreatePackage "deb"
 
 echo '---------------------------'
