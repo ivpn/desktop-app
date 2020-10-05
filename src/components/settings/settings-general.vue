@@ -3,16 +3,14 @@
     <div class="settingsTitle">GENERAL SETTINGS</div>
 
     <div class="param">
-      <input type="checkbox" id="minimizeToTray" v-model="minimizeToTray" />
-      <label class="defColor" for="minimizeToTray">Minimize to tray</label>
-    </div>
-    <div v-if="canShowMinimizeToTrayDescription">
-      <div class="description">
-      By enabling this parameter, the application will stay in memory after closing the window and it will be accessible only via the tray icon.
-      </div>
-      <div class="description">
-      Caution: Not all Linux desktop environments support displaying the application icon in the system tray.
-      </div>
+      <input
+        type="checkbox"
+        id="launchAtLogin"
+        v-model="isLaunchAtLogin"
+        v-on:click="onLaunchAtLogin"
+        :disabled="isLaunchAtLogin == null"
+      />
+      <label class="defColor" for="launchAtLogin">Launch at login</label>
     </div>
 
     <div class="param">
@@ -25,6 +23,21 @@
       <label class="defColor" for="showAppInSystemDock"
         >Show application icon in system dock</label
       >
+    </div>
+
+    <div class="param">
+      <input type="checkbox" id="minimizeToTray" v-model="minimizeToTray" />
+      <label class="defColor" for="minimizeToTray">Minimize to tray</label>
+    </div>
+    <div v-if="canShowMinimizeToTrayDescription">
+      <div class="description">
+        By enabling this parameter, the application will stay in memory after
+        closing the window and it will be accessible only via the tray icon.
+      </div>
+      <div class="description">
+        Caution: Not all Linux desktop environments support displaying the
+        application icon in the system tray.
+      </div>
     </div>
 
     <div class="settingsBoldFont">
@@ -103,22 +116,63 @@
 
 <script>
 import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
-
 import { Platform, PlatformEnum } from "@/platform/platform";
 import sender from "@/ipc/renderer-sender";
+const fs = require("fs");
 
+// initialise applucation auto-launcher
+var AutoLaunch = require("auto-launch");
+let launcherOptions = { name: "IVPN" };
+var autoLauncher = null;
+if (Platform() === PlatformEnum.Linux) {
+  const binaryPath = "/opt/ivpn/ui/ivpn-ui.AppImage";
+  if (fs.existsSync(binaryPath)) launcherOptions.path = binaryPath;
+  else launcherOptions = null;
+}
+if (launcherOptions != null) autoLauncher = new AutoLaunch(launcherOptions);
+
+// VUE component
 export default {
   components: {
     ComponentDiagnosticLogs
   },
   data: function() {
     return {
-      diagnosticLogsShown: false
+      diagnosticLogsShown: false,
+      isLaunchAtLogin: false
     };
+  },
+  mounted() {
+    this.updateIsLaunchAtLogin();
   },
   methods: {
     async onLogs() {
       this.diagnosticLogsShown = true;
+    },
+    onLaunchAtLogin() {
+      if (this.isLaunchAtLogin == null || autoLauncher == null) return;
+      this.isLaunchAtLogin = !this.isLaunchAtLogin;
+      try {
+        if (this.isLaunchAtLogin) autoLauncher.enable();
+        else autoLauncher.disable();
+      } catch (err) {
+        console.error("Error changing 'LaunchAtLogin' value: ", err);
+        this.isLaunchAtLogin = null;
+      }
+    },
+    updateIsLaunchAtLogin() {
+      let theThis = this;
+      (async function() {
+        autoLauncher
+          .isEnabled()
+          .then(function(isEnabled) {
+            theThis.isLaunchAtLogin = isEnabled;
+          })
+          .catch(function(err) {
+            console.error("Error obtaining 'LaunchAtLogin' value: ", err);
+            theThis.isLaunchAtLogin = null;
+          });
+      })();
     }
   },
   computed: {
@@ -126,7 +180,7 @@ export default {
       return Platform() != PlatformEnum.Linux;
     },
     canShowMinimizeToTrayDescription() {
-      return Platform()===PlatformEnum.Linux
+      return Platform() === PlatformEnum.Linux;
     },
     autoConnectOnLaunch: {
       get() {

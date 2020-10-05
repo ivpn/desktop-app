@@ -1,6 +1,6 @@
 {
   "name": "ivpn-ui",
-  "version": "3.0.9",
+  "version": "3.0.11",
   "description": "UI interface for IVPN Client",
   "author": "Alexandr Stelnykovych",
   "license": "GPL-3.0",
@@ -17,6 +17,7 @@
   "main": "background.js",
   "dependencies": {
     "@sentry/electron": "^1.3.1",
+    "auto-launch": "^5.0.5",
     "core-js": "^3.6.5",
     "electron-fetch": "^1.7.1",
     "electron-log": "^4.2.2",
