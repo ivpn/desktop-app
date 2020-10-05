@@ -101,7 +101,7 @@ export default {
     },
     onUpgrade: function() {
       if (isValidURL(this.UpgradeToURL)) shell.openExternal(this.UpgradeToURL);
-      else shell.openExternal(`https://www.ivpn.net/clientarea`);
+      else shell.openExternal(`https://www.ivpn.net/account`);
     },
     onContactSupport: function() {
       shell.openExternal(`https://www.ivpn.net/contactus`);

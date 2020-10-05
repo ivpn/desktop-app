@@ -12,11 +12,9 @@
           </div>
 
           <div class="settingsBigBoldFont" id="accountID">
-
             <label class="settingsBigBoldFont selectable">
               {{ this.$store.state.account.session.AccountID }}
             </label>
-            
           </div>
           <div
             class="statusButtonActive"
@@ -165,10 +163,10 @@ export default {
       await sender.AccountStatus();
     },
     upgrade() {
-      shell.openExternal(`https://www.ivpn.net/clientarea`);
+      shell.openExternal(`https://www.ivpn.net/account`);
     },
     addMoreTime() {
-      shell.openExternal(`https://www.ivpn.net/clientarea`);
+      shell.openExternal(`https://www.ivpn.net/account`);
     }
   },
   computed: {
