@@ -118,18 +118,6 @@
 import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import sender from "@/ipc/renderer-sender";
-const fs = require("fs");
-
-// initialise applucation auto-launcher
-var AutoLaunch = require("auto-launch");
-let launcherOptions = { name: "IVPN" };
-var autoLauncher = null;
-if (Platform() === PlatformEnum.Linux) {
-  const binaryPath = "/opt/ivpn/ui/ivpn-ui.AppImage";
-  if (fs.existsSync(binaryPath)) launcherOptions.path = binaryPath;
-  else launcherOptions = null;
-}
-if (launcherOptions != null) autoLauncher = new AutoLaunch(launcherOptions);
 
 // VUE component
 export default {
@@ -150,11 +138,10 @@ export default {
       this.diagnosticLogsShown = true;
     },
     onLaunchAtLogin() {
-      if (this.isLaunchAtLogin == null || autoLauncher == null) return;
+      if (this.isLaunchAtLogin == null) return;
       this.isLaunchAtLogin = !this.isLaunchAtLogin;
       try {
-        if (this.isLaunchAtLogin) autoLauncher.enable();
-        else autoLauncher.disable();
+        sender.AutoLaunchSet(this.isLaunchAtLogin);
       } catch (err) {
         console.error("Error changing 'LaunchAtLogin' value: ", err);
         this.isLaunchAtLogin = null;
@@ -163,8 +150,8 @@ export default {
     updateIsLaunchAtLogin() {
       let theThis = this;
       (async function() {
-        autoLauncher
-          .isEnabled()
+        sender
+          .AutoLaunchIsEnabled()
           .then(function(isEnabled) {
             theThis.isLaunchAtLogin = isEnabled;
           })

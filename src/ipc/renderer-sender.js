@@ -141,5 +141,12 @@ export default {
   },
   AppUpdatesUpgrade: async () => {
     return invoke("renderer-request-app-updates-upgrade");
+  },
+
+  AutoLaunchIsEnabled: async () => {
+    return invoke("renderer-request-auto-launch-is-enabled");
+  },
+  AutoLaunchSet: async isEnabled => {
+    return invoke("renderer-request-auto-launch-set", isEnabled);
   }
 };

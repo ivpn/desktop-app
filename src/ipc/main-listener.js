@@ -24,7 +24,9 @@ import { SentrySendDiagnosticReport } from "@/sentry/sentry.js";
 
 import client from "../daemon-client";
 import { CheckUpdates, Upgrade, IsAbleToCheckUpdate } from "@/app-updater";
+import { AutoLaunchIsEnabled, AutoLaunchSet } from "@/auto-launch";
 import store from "@/store";
+
 const { ipcMain } = require("electron");
 
 ipcMain.handle("renderer-request-connect-to-daemon", async () => {
@@ -158,4 +160,11 @@ ipcMain.handle("renderer-request-app-updates-check", async () => {
 });
 ipcMain.handle("renderer-request-app-updates-upgrade", async () => {
   return await Upgrade();
+});
+
+ipcMain.handle("renderer-request-auto-launch-is-enabled", async () => {
+  return await AutoLaunchIsEnabled();
+});
+ipcMain.handle("renderer-request-auto-launch-set", async (event, isEnabled) => {
+  return await AutoLaunchSet(isEnabled);
 });
