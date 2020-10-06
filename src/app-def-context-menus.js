@@ -24,7 +24,6 @@ const electron = require("electron");
 const remote = electron.remote;
 const Menu = remote.Menu;
 
-const { clipboard } = require("electron");
 const keyCodes = {
   V: 86,
   C: 67,
@@ -32,51 +31,51 @@ const keyCodes = {
   A: 65
 };
 
- // Default COPY/PASTE context menu for all input elements 
+// Default COPY/PASTE context menu for all input elements
 const InputMenuInput = Menu.buildFromTemplate([
-    {
-      label: "Undo",
-      role: "undo"
-    },
-    {
-      label: "Redo",
-      role: "redo"
-    },
-    {
-      type: "separator"
-    },
-    {
-      label: "Cut",
-      role: "cut"
-    },
-    {
-      label: "Copy",
-      role: "copy"
-    },
-    {
-      label: "Paste",
-      role: "paste"
-    },
-    {
-      type: "separator"
-    },
-    {
-      label: "Select all",
-      role: "selectall"
-    }
-  ]);
-  
-  // Default COPY context menu for all label elements 
+  {
+    label: "Undo",
+    role: "undo"
+  },
+  {
+    label: "Redo",
+    role: "redo"
+  },
+  {
+    type: "separator"
+  },
+  {
+    label: "Cut",
+    role: "cut"
+  },
+  {
+    label: "Copy",
+    role: "copy"
+  },
+  {
+    label: "Paste",
+    role: "paste"
+  },
+  {
+    type: "separator"
+  },
+  {
+    label: "Select all",
+    role: "selectall"
+  }
+]);
+
+// Default COPY context menu for all label elements
 const InputMenuLabel = Menu.buildFromTemplate([
-    {
-      label: "Copy",
-      role: "copy"
-    },
-    {
-      label: "Select all",
-      role: "selectall"
-    }
-  ]);
+  {
+    label: "Copy",
+    role: "copy"
+  },
+  {
+    label: "Select all",
+    role: "selectall"
+  }
+]);
 
 export function InitDefaultCopyMenus() {
   document.body.addEventListener("contextmenu", e => {
@@ -92,72 +91,36 @@ export function InitDefaultCopyMenus() {
       ) {
         InputMenuInput.popup(remote.getCurrentWindow());
         break;
-      }
-      else if (
-        node.nodeName.match(/^(label)$/i)
-      ) {
+      } else if (node.nodeName.match(/^(label)$/i)) {
         if (getSelection().toString()) {
           InputMenuLabel.popup(remote.getCurrentWindow());
         }
         break;
       }
       node = node.parentNode;
-    } 
+    }
   });
 
   // Ability to get working Copy\Paste to 'input' elements
   // without modification application menu (which is required for macOS)
   document.onkeydown = function(event) {
-    let toReturn = true;
     if (event.ctrlKey || event.metaKey) {
       // detect ctrl or cmd
-      if (event.which == keyCodes.A) {
-        const field = document.activeElement;
-        if (field != null) field.select();
-        toReturn = false;
-      } else if (event.which == keyCodes.V) {
-        const field = document.activeElement;
-        if (field != null) {
-          const startPos = field.selectionStart;
-          const endPos = field.selectionEnd;
-
-          const text = clipboard.readText();
-
-          field.value =
-            field.value.substring(0, startPos) +
-            text +
-            field.value.substring(endPos, field.value.length);
-
-          field.focus();
-          field.setSelectionRange(
-            startPos + text.length,
-            startPos + text.length
-          );
-
-          toReturn = false;
-        }
-      } else if (event.which == keyCodes.C) {
-        clipboard.writeText(getSelection().toString());
-        toReturn = false;
-      } else if (event.which == keyCodes.X) {
-        const field = document.activeElement;
-        if (field != null) {
-          let selection = getSelection();
-          clipboard.writeText(selection.toString());
-
-          const startPos = field.selectionStart;
-          const endPos = field.selectionEnd;
-
-          field.value =
-            field.value.slice(0, startPos) + field.value.slice(endPos);
-
-          field.focus();
-          field.setSelectionRange(startPos, startPos);
-
-          toReturn = false;
-        }
+      const field = document.activeElement;
+      switch (event.which) {
+        case keyCodes.A:
+          document.execCommand("selectall");
+          break;
+        case keyCodes.V:
+          if (field != null) document.execCommand("paste");
+          break;
+        case keyCodes.C:
+          document.execCommand("copy");
+          break;
+        case keyCodes.X:
+          if (field != null) document.execCommand("cut");
+          break;
       }
     }
-    return toReturn;
   };
 }
