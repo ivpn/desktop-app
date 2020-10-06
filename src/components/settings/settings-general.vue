@@ -118,18 +118,6 @@ import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import sender from "@/ipc/renderer-sender";
 
-// initial valie for 'launch at login'
-var IsLaunchAtLogin = null;
-async function doUpdateIsLaunchAtLogin() {
-  try {
-    IsLaunchAtLogin = await sender.AutoLaunchIsEnabled();
-  } catch (err) {
-    console.error("Error obtaining 'LaunchAtLogin' value: ", err);
-    IsLaunchAtLogin = null;
-  }
-}
-doUpdateIsLaunchAtLogin();
-
 // VUE component
 export default {
   components: {
@@ -137,18 +125,24 @@ export default {
   },
   data: function() {
     return {
-      diagnosticLogsShown: false
+      diagnosticLogsShown: false,
+      isLaunchAtLoginValue: null
     };
   },
   mounted() {
-    //doUpdateIsLaunchAtLogin();
+    this.doUpdateIsLaunchAtLogin();
   },
   methods: {
     async onLogs() {
       this.diagnosticLogsShown = true;
     },
-    updateIsLaunchAtLogin() {
-      doUpdateIsLaunchAtLogin();
+    async doUpdateIsLaunchAtLogin() {
+      try {
+        this.isLaunchAtLoginValue = await sender.AutoLaunchIsEnabled();
+      } catch (err) {
+        console.error("Error obtaining 'LaunchAtLogin' value: ", err);
+        this.isLaunchAtLoginValue = null;
+      }
     }
   },
   computed: {
@@ -161,16 +155,17 @@ export default {
 
     isLaunchAtLogin: {
       get() {
-        return IsLaunchAtLogin;
+        return this.isLaunchAtLoginValue;
       },
       set(value) {
-        IsLaunchAtLogin = value;
+        this.isLaunchAtLoginValue = value;
+        let theThis = this;
         (async function() {
           try {
-            await sender.AutoLaunchSet(IsLaunchAtLogin);
+            await sender.AutoLaunchSet(theThis.isLaunchAtLoginValue);
           } catch (err) {
             console.error("Error changing 'LaunchAtLogin' value: ", err);
-            IsLaunchAtLogin = null;
+            theThis.isLaunchAtLoginValue = null;
           }
         })();
       }
