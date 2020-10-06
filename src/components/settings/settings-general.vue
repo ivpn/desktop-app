@@ -7,7 +7,6 @@
         type="checkbox"
         id="launchAtLogin"
         v-model="isLaunchAtLogin"
-        v-on:click="onLaunchAtLogin"
         :disabled="isLaunchAtLogin == null"
       />
       <label class="defColor" for="launchAtLogin">Launch at login</label>
@@ -119,6 +118,18 @@ import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import sender from "@/ipc/renderer-sender";
 
+// initial valie for 'launch at login'
+var IsLaunchAtLogin = null;
+async function doUpdateIsLaunchAtLogin() {
+  try {
+    IsLaunchAtLogin = await sender.AutoLaunchIsEnabled();
+  } catch (err) {
+    console.error("Error obtaining 'LaunchAtLogin' value: ", err);
+    IsLaunchAtLogin = null;
+  }
+}
+doUpdateIsLaunchAtLogin();
+
 // VUE component
 export default {
   components: {
@@ -126,40 +137,18 @@ export default {
   },
   data: function() {
     return {
-      diagnosticLogsShown: false,
-      isLaunchAtLogin: false
+      diagnosticLogsShown: false
     };
   },
   mounted() {
-    this.updateIsLaunchAtLogin();
+    //doUpdateIsLaunchAtLogin();
   },
   methods: {
     async onLogs() {
       this.diagnosticLogsShown = true;
     },
-    onLaunchAtLogin() {
-      if (this.isLaunchAtLogin == null) return;
-      this.isLaunchAtLogin = !this.isLaunchAtLogin;
-      try {
-        sender.AutoLaunchSet(this.isLaunchAtLogin);
-      } catch (err) {
-        console.error("Error changing 'LaunchAtLogin' value: ", err);
-        this.isLaunchAtLogin = null;
-      }
-    },
     updateIsLaunchAtLogin() {
-      let theThis = this;
-      (async function() {
-        sender
-          .AutoLaunchIsEnabled()
-          .then(function(isEnabled) {
-            theThis.isLaunchAtLogin = isEnabled;
-          })
-          .catch(function(err) {
-            console.error("Error obtaining 'LaunchAtLogin' value: ", err);
-            theThis.isLaunchAtLogin = null;
-          });
-      })();
+      doUpdateIsLaunchAtLogin();
     }
   },
   computed: {
@@ -168,6 +157,23 @@ export default {
     },
     canShowMinimizeToTrayDescription() {
       return Platform() === PlatformEnum.Linux;
+    },
+
+    isLaunchAtLogin: {
+      get() {
+        return IsLaunchAtLogin;
+      },
+      set(value) {
+        IsLaunchAtLogin = value;
+        (async function() {
+          try {
+            await sender.AutoLaunchSet(IsLaunchAtLogin);
+          } catch (err) {
+            console.error("Error changing 'LaunchAtLogin' value: ", err);
+            IsLaunchAtLogin = null;
+          }
+        })();
+      }
     },
     autoConnectOnLaunch: {
       get() {
