@@ -217,6 +217,7 @@ import spinner from "@/components/controls/control-spinner.vue";
 import { VpnTypeEnum, VpnStateEnum, PortTypeEnum, Ports } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import sender from "@/ipc/renderer-sender";
+import { dateYyyyMmDd } from "@/helpers/helpers";
 
 export default {
   components: {
@@ -288,11 +289,7 @@ export default {
     },
     formatDate: function(d) {
       if (d == null) return null;
-      return d.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric"
-      });
+      return dateYyyyMmDd(d);
     }
   },
   computed: {

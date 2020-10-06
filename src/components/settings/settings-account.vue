@@ -101,6 +101,7 @@
 
 <script>
 import spinner from "@/components/controls/control-spinner.vue";
+import { dateYyyyMmDd } from "@/helpers/helpers";
 
 const { shell } = require("electron");
 const { dialog, getCurrentWindow } = require("electron").remote;
@@ -177,14 +178,9 @@ export default {
       return this.$store.state.account.accountStatus.CurrentPlan;
     },
     ActiveUntil: function() {
-      var options = {
-        year: "numeric",
-        month: "short",
-        day: "numeric"
-      };
-      return new Date(
-        this.$store.state.account.accountStatus.ActiveUntil * 1000
-      ).toLocaleDateString("en-US", options);
+      return dateYyyyMmDd(
+        new Date(this.$store.state.account.accountStatus.ActiveUntil * 1000)
+      );
     },
     IsActive: function() {
       return this.$store.state.account.accountStatus.Active;

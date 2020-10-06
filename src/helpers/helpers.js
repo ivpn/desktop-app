@@ -43,6 +43,17 @@ export function isValidURL(str, isIgnoreProtocol) {
   return !!pattern.test(str);
 }
 
+export function dateYyyyMmDd(date) {
+  var mm = date.getMonth() + 1; // getMonth() is zero-based
+  var dd = date.getDate();
+
+  return [
+    date.getFullYear(),
+    (mm > 9 ? "" : "0") + mm,
+    (dd > 9 ? "" : "0") + dd
+  ].join("-");
+}
+
 export function notLinear(k) {
   return easeOutQuart(k);
 }
