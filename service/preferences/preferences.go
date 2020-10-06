@@ -41,7 +41,7 @@ func init() {
 
 const (
 	// DefaultWGKeysInterval - Default WireGuard keys rotation interval
-	DefaultWGKeysInterval = time.Hour * 24 * 7
+	DefaultWGKeysInterval = time.Hour * 24 * 1
 )
 
 // Preferences - IVPN service preferences
