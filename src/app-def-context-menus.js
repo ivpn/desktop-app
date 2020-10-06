@@ -110,16 +110,16 @@ export function InitDefaultCopyMenus() {
       switch (event.which) {
         case keyCodes.A:
           document.execCommand("selectall");
-          break;
+          return false;
         case keyCodes.V:
           if (field != null) document.execCommand("paste");
-          break;
+          return false;
         case keyCodes.C:
           document.execCommand("copy");
-          break;
+          return false;
         case keyCodes.X:
           if (field != null) document.execCommand("cut");
-          break;
+          return false;
       }
     }
   };
