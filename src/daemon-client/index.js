@@ -547,7 +547,7 @@ async function AccountStatus() {
   ]);
 }
 
-async function GeoLookup() {
+async function GeoLookup(isRetryTry) {
   let isRealGeoLocationCheck = function() {
     return (
       store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED ||
@@ -587,6 +587,12 @@ async function GeoLookup() {
   }
   store.commit("location", retLocation);
   store.commit("isRequestingLocation", false); // un-mark 'Checking geolookup...'
+
+  if (retLocation == null && isRetryTry == null) {
+    console.log("First attempt of geo-lookup request failed. Retrying ...");
+    retLocation = GeoLookup(true);
+  }
+
   return retLocation;
 }
 
