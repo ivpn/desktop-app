@@ -101,7 +101,7 @@
 
 <script>
 import spinner from "@/components/controls/control-spinner.vue";
-import { dateYyyyMmDd } from "@/helpers/helpers";
+import { dateDefaultFormat } from "@/helpers/helpers";
 
 const { shell } = require("electron");
 const { dialog, getCurrentWindow } = require("electron").remote;
@@ -178,7 +178,7 @@ export default {
       return this.$store.state.account.accountStatus.CurrentPlan;
     },
     ActiveUntil: function() {
-      return dateYyyyMmDd(
+      return dateDefaultFormat(
         new Date(this.$store.state.account.accountStatus.ActiveUntil * 1000)
       );
     },

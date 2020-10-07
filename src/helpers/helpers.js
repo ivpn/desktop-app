@@ -43,6 +43,34 @@ export function isValidURL(str, isIgnoreProtocol) {
   return !!pattern.test(str);
 }
 
+export function dateDefaultFormat(date) {
+  return dateYyyyMonDd(date);
+}
+
+export function dateYyyyMonDd(date) {
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  ];
+
+  var mm = date.getMonth();
+  var dd = date.getDate();
+
+  return [date.getFullYear(), monthNames[mm], (dd > 9 ? "" : "0") + dd].join(
+    "-"
+  );
+}
+
 export function dateYyyyMmDd(date) {
   var mm = date.getMonth() + 1; // getMonth() is zero-based
   var dd = date.getDate();
