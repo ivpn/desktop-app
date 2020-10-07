@@ -97,7 +97,7 @@
       </div>
       <div class="flexRowRestSpace"></div>
 
-      <button class="btn" v-on:click="onLogs">
+      <button class="btn" v-on:click="onLogs" v-if="isCanSendDiagLogs">
         Diagnostic logs ...
       </button>
     </div>
@@ -231,6 +231,10 @@ export default {
         this.$store.dispatch("settings/logging", value);
         sender.SetLogging();
       }
+    },
+
+    isCanSendDiagLogs() {
+      return sender.IsAbleToSendDiagnosticReport();
     }
   }
 };

@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/electron";
 
+import { DSN } from "./dsn";
+
 function beforeSendFunc(event) {
   if (event._isAllowedToSend === true) {
     // breadcrumbs is not informative for diagnostic report
@@ -12,16 +14,32 @@ function beforeSendFunc(event) {
   return null;
 }
 
+export function SentryIsAbleToUse() {
+  if (!DSN) return false;
+  return true;
+}
+
 export function SentryInit() {
-  Sentry.init({
-    dsn: "https://bdf33f76e775412c8a57388556a8338e@crashes.ivpn.net/6",
+  if (!DSN) {
+    console.error(
+      "Sentry DSN is not defined. Sending diagnostic reports functionality will not work"
+    );
+    return;
+  }
 
-    beforeSend: beforeSendFunc, // allow us to control when data can be sent on server
+  try {
+    Sentry.init({
+      dsn: DSN,
 
-    enableJavaScript: false, // Enables crash reporting for JavaScript errors in this process.
-    enableUnresponsive: false, // Enables event reporting for BrowserWindow 'unresponsive' events
-    useSentryMinidumpUploader: false // Enables the Sentry internal uploader for minidumps.
-  });
+      beforeSend: beforeSendFunc, // allow us to control when data can be sent on server
+
+      enableJavaScript: false, // Enables crash reporting for JavaScript errors in this process.
+      enableUnresponsive: false, // Enables event reporting for BrowserWindow 'unresponsive' events
+      useSentryMinidumpUploader: false // Enables the Sentry internal uploader for minidumps.
+    });
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 export function SentrySendDiagnosticReport(
@@ -29,7 +47,7 @@ export function SentrySendDiagnosticReport(
   comment,
   eventAdditionalDataObject
 ) {
-  if (comment == "" || eventAdditionalDataObject == null) return;
+  if (!DSN || comment == "" || eventAdditionalDataObject == null) return;
 
   // Sentry can not accept very long fields (>16KB)
   // therefore, here we are dividing fields on smaller

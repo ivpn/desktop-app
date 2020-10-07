@@ -20,7 +20,10 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import { SentrySendDiagnosticReport } from "@/sentry/sentry.js";
+import {
+  SentrySendDiagnosticReport,
+  SentryIsAbleToUse
+} from "@/sentry/sentry.js";
 
 import client from "../daemon-client";
 import { CheckUpdates, Upgrade, IsAbleToCheckUpdate } from "@/app-updater";
@@ -129,6 +132,10 @@ ipcMain.handle("renderer-request-wifi-get-available-networks", async () => {
   return await client.GetWiFiAvailableNetworks();
 });
 
+// Diagnostic reports
+ipcMain.on("renderer-request-is-can-send-diagnostic-logs", event => {
+  event.returnValue = SentryIsAbleToUse();
+});
 ipcMain.handle("renderer-request-get-diagnostic-logs", async () => {
   let data = await client.GetDiagnosticLogs();
   if (data != null) {

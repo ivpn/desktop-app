@@ -123,6 +123,10 @@ export default {
     return await invoke("renderer-request-wifi-get-available-networks");
   },
 
+  // Diagnostic reports
+  IsAbleToSendDiagnosticReport: () => {
+    return ipcRenderer.sendSync("renderer-request-is-can-send-diagnostic-logs");
+  },
   GetDiagnosticLogs: async () => {
     return await invoke("renderer-request-get-diagnostic-logs");
   },
