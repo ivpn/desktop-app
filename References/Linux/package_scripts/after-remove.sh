@@ -2,6 +2,11 @@
 
 echo "[*] After remove (<%= version %> : <%= pkg %> : $1)"
 
+# Obtaining information about user running the script
+# (script can be executed with 'sudo', but we should get real user)
+USER="${SUDO_USER:-$USER}"
+UI_APP_USER_DIR="/home/${USER}/.config/ivpn-ui"
+AUTOSTART_FILE="/home/${USER}/.config/autostart/ivpn-ui.AppImage.desktop"
 DESKTOP_FILE=/usr/share/applications/IVPN.desktop
 
 silent() {
@@ -9,13 +14,9 @@ silent() {
 }
 
 # try to kill application if it already started
-echo "[ ] Killing all 'ivpn-ui' processes"
+echo "[ ] Killing all 'ivpn-ui' processes (if running)"
 silent kill $(ps aux | grep /opt/ivpn/ui/ivpn-ui.AppImage | awk '{print $2}')
 silent kill $(ps aux | grep ivpn-ui | grep /tmp/.mount_ivpn | awk '{print $2}')
-# Obtaining information about user running the script
-# (script can be executed with 'sudo', but we should get real user)
-USER="${SUDO_USER:-$USER}"
-UI_APP_USER_DIR="/home/${USER}/.config/ivpn-ui"
 
 # DEB argument on upgrade - 'upgrade'; RPM - '1'
 if [ "$1" = "upgrade" ] || [ "$1" = "1" ] ; then
@@ -28,15 +29,19 @@ if [ "$1" = "upgrade" ] || [ "$1" = "1" ] ; then
 else
   # REMOVE
   if [ -f $DESKTOP_FILE ]; then
-    echo "[ ] Uninstalling .desktop file"
-    rm $DESKTOP_FILE || echo "[-] Failed to remove file: '$DESKTOP_FILE'"
+    echo "[ ] Uninstalling .desktop file: '$DESKTOP_FILE'"
+    rm $DESKTOP_FILE || echo "[-] Failed"
   fi
 
   if [ -d $UI_APP_USER_DIR ] ; then
-    echo "[ ] Removing application cache data"
-    rm -rf $UI_APP_USER_DIR || echo "[-] Failed to erase cache data in: '$UI_APP_USER_DIR'"
+    echo "[ ] Removing application cache data: '$UI_APP_USER_DIR'"
+    rm -rf $UI_APP_USER_DIR || echo "[-] Failed"
   fi
 
-  silent rm "/home/${USER}/.config/autostart/ivpn-ui.AppImage.desktop"
+  if [ -f $AUTOSTART_FILE ]; then
+    echo "[ ] Removing application autostart file: '$AUTOSTART_FILE'"
+    rm $AUTOSTART_FILE || echo "[-] Failed"
+  fi
+
 fi
 
