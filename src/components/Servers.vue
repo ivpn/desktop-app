@@ -321,6 +321,9 @@ export default {
             return a.city.localeCompare(b.city);
 
           case ServersSortTypeEnum.Country:
+            if (!a.country_code && b.country_code) return 0;
+            if (!a.country_code) return 1;
+
             ret = a.country_code.localeCompare(b.country_code);
             if (ret != 0) return ret;
             return a.city.localeCompare(b.city);
@@ -360,12 +363,13 @@ export default {
 
       if (this.filter == null || this.filter.length == 0)
         return servers.slice().sort(compare);
+
       let filter = this.filter.toLowerCase();
       let filtered = servers.filter(
         s =>
           s.city.toLowerCase().includes(filter) ||
           //s.country.toLowerCase().includes(filter) ||
-          s.country_code.toLowerCase().includes(filter)
+          (s.country_code && s.country_code.toLowerCase().includes(filter))
       );
 
       return filtered.slice().sort(compare);
@@ -475,9 +479,10 @@ export default {
     isInaccessibleServer: function(server) {
       if (this.$store.state.settings.isMultiHop === false) return false;
       let ccSkip = "";
-      if (!this.isExitServer)
+      if (!this.isExitServer && this.$store.state.settings.serverExit)
         ccSkip = this.$store.state.settings.serverExit.country_code;
-      else ccSkip = this.$store.state.settings.serverEntry.country_code;
+      else if (this.$store.state.settings.serverEntry)
+        ccSkip = this.$store.state.settings.serverEntry.country_code;
       if (server.country_code === ccSkip) return true;
       return false;
     },

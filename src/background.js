@@ -298,6 +298,10 @@ if (gotTheLock) {
 
               // erase settings
               store.commit("settings/resetToDefaults");
+
+              // Necessary to initialize selected VPN servers
+              store.dispatch("settings/updateSelectedServers");
+
               // set default obfsproxy value on daemon's side
               daemonClient.SetObfsproxy();
 

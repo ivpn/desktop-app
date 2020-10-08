@@ -99,7 +99,7 @@ const getDefaultState = () => {
     }
   };
 
-  if (Platform()===PlatformEnum.Linux) {
+  if (Platform() === PlatformEnum.Linux) {
     // Not all Linux distro support tray icons.
     // Therefore, we have to change default config for Linux.
     defState.minimizeToTray = false;
