@@ -13,35 +13,50 @@ silent() {
   "$@" > /dev/null 2>&1
 }
 
-# try to kill application if it already started
-echo "[ ] Killing all 'ivpn-ui' processes (if running)"
-silent kill $(ps aux | grep /opt/ivpn/ui/ivpn-ui.AppImage | awk '{print $2}')
-silent kill $(ps aux | grep ivpn-ui | grep /tmp/.mount_ivpn | awk '{print $2}')
+echo "[+] Checking for 'ivpn-ui' running processes ..."
+ps aux | grep /opt/ivpn/ui/ivpn-ui.AppImage | grep -v grep
+if [ $? -eq 0 ]; then
+  echo "[!] Detected: IVPN app is running"
+
+  echo "[+] Disconnecting (if connected) ..."
+  /usr/local/bin/ivpn disconnect || echo "[-] Failed to disconnect"
+
+  echo "[+] Disabling firewall (if enabled) ..."
+  /usr/local/bin/ivpn firewall -off || echo "[-] Failed to disable firewall"
+
+  echo "[+] Killing all 'ivpn-ui' processes ..."
+  # We should be careful here: WE SHOULD NOT KILL THIS SCRIPT :)
+  # (which also can have 'ivpn-ui' in process description)
+  silent kill -TERM $(ps aux | grep /opt/ivpn/ui/ivpn-ui.AppImage | grep -v grep | awk '{print $2}')
+  silent kill -TERM $(ps aux | grep ivpn-ui | grep /tmp/.mount_ivpn | grep -v grep | awk '{print $2}')
+  silent sleep 2
+  silent kill -KILL $(ps aux | grep /opt/ivpn/ui/ivpn-ui.AppImage | grep -v grep | awk '{print $2}')
+  silent kill -KILL $(ps aux | grep ivpn-ui | grep /tmp/.mount_ivpn | grep -v grep | awk '{print $2}')
+fi
 
 # DEB argument on upgrade - 'upgrade'; RPM - '1'
 if [ "$1" = "upgrade" ] || [ "$1" = "1" ] ; then
   # UPGRADE
   if [ -d $UI_APP_USER_DIR ] ; then
-    echo "[ ] Upgrade detected"
+    echo "[!] Upgrade detected"
     echo "    Keeping application cache data from the previous version:"
     echo "    '$UI_APP_USER_DIR'"
   fi
 else
   # REMOVE
   if [ -f $DESKTOP_FILE ]; then
-    echo "[ ] Uninstalling .desktop file: '$DESKTOP_FILE'"
+    echo "[+] Uninstalling .desktop file: '$DESKTOP_FILE' ..."
     rm $DESKTOP_FILE || echo "[-] Failed"
   fi
 
   if [ -d $UI_APP_USER_DIR ] ; then
-    echo "[ ] Removing application cache data: '$UI_APP_USER_DIR'"
+    echo "[+] Removing application cache data: '$UI_APP_USER_DIR' ..."
     rm -rf $UI_APP_USER_DIR || echo "[-] Failed"
   fi
 
   if [ -f $AUTOSTART_FILE ]; then
-    echo "[ ] Removing application autostart file: '$AUTOSTART_FILE'"
+    echo "[+] Removing application autostart file: '$AUTOSTART_FILE' ..."
     rm $AUTOSTART_FILE || echo "[-] Failed"
   fi
 
 fi
-
