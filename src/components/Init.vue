@@ -4,8 +4,36 @@
       <div class="main">
         <spinner :loading="isProcessing" />
         <div class="large_text">Error connecting to IVPN daemon</div>
-        <div class="small_text">
-          {{ message }}
+
+        <div v-if="daemonIsOldVersionError">
+          <div class="small_text">
+            Unsupported IVPN daemon version v{{ currDaemonVer }} (minimum
+            required v{{ minRequiredVer }}).
+          </div>
+          <div class="small_text">
+            Please update daemon by downloading latest version from
+            <button
+              class="noBordersTextBtn settingsLinkText"
+              v-on:click="visitWebsite"
+            >
+              IVPN website</button
+            >.
+          </div>
+        </div>
+        <div v-else>
+          <div class="small_text">
+            Not connected to daemon. Please, ensure IVPN daemon is running and
+            try to reconnect.
+          </div>
+          <div class="small_text">
+            The latest daemon version can be downloaded from
+            <button
+              class="noBordersTextBtn settingsLinkText"
+              v-on:click="visitWebsite"
+            >
+              IVPN website</button
+            >.
+          </div>
         </div>
 
         <button class="btn" v-on:click="ConnectToDaemon">Retry ...</button>
@@ -61,10 +89,14 @@ export default {
       const connState = this.$store.state.daemonConnectionState;
       return connState == null || connState === DaemonConnectionType.Connecting;
     },
-    message: function() {
-      if (this.$store.state.daemonIsOldVersionError)
-        return `Unsupported IVPN daemon version v${this.$store.state.daemonVersion} (minimum required v${config.MinRequiredDaemonVer}). Please, update IVPN daemon.`;
-      return "Not connected to daemon. Please, ensure IVPN daemon is running and try to reconnect.";
+    minRequiredVer: function() {
+      return config.MinRequiredDaemonVer;
+    },
+    currDaemonVer: function() {
+      return this.$store.state.daemonVersion;
+    },
+    daemonIsOldVersionError: function() {
+      return this.$store.state.daemonIsOldVersionError;
     }
   }
 };
