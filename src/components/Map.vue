@@ -6,7 +6,11 @@
         ref="popup"
         class="popuptext"
         v-bind:class="{
-          show: isPopupVisible && isInProgress == false && isBlured !== 'true'
+          show:
+            isPopupVisible &&
+            isMapLoaded &&
+            isInProgress == false &&
+            isBlured !== 'true'
         }"
       >
         <popupControl
@@ -128,20 +132,24 @@
 
           <!-- Animation elements -->
           <div
+            v-show="isMapLoaded"
             ref="animationCurrLoactionCirecle"
             class="mapLocationCircleCurrLocation"
           ></div>
 
           <div
+            v-show="isMapLoaded"
             ref="animationSelectedCirecle1"
             class="mapLocationCircleSelectedSvr"
           ></div>
           <div
+            v-show="isMapLoaded"
             ref="animationSelectedCirecle2"
             class="mapLocationCircleSelectedSvr"
           ></div>
 
           <div
+            v-show="isMapLoaded"
             ref="animationConnectedWaves"
             class="mapLocationCircleConnectedWaves"
             v-bind:class="{
@@ -183,6 +191,7 @@ export default {
 
   data: () => ({
     selectedPopupLocation: null,
+    isMapLoaded: false,
     isPopupVisible: false,
 
     canvas: null,
@@ -389,6 +398,8 @@ export default {
       this.updateCities();
       this.centerCurrentLocation(true);
       this.updateAnimations();
+
+      this.isMapLoaded = true;
     },
     windowResizing() {
       let c = this.canvas;

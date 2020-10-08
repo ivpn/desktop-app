@@ -343,10 +343,13 @@ function createWindow() {
   if (!IsWindowHasTitle()) titleBarStyle = "hidden"; //"hiddenInset";
 
   let windowConfig = {
+    show: false,
+
     width: store.state.settings.minimizedUI
       ? config.MinimizedUIWidth
       : config.MaximizedUIWidth,
     height: 600,
+
     resizable: false,
     fullscreenable: false,
     maximizable: false,
@@ -386,6 +389,9 @@ function createWindow() {
   // show\hide app from system dock
   updateAppDockVisibility();
 
+  win.once("ready-to-show", () => {
+    win.show();
+  });
   win.on("closed", () => {
     win = null;
   });
@@ -400,6 +406,8 @@ function createSettingsWindow(viewName) {
   if (viewName == null) viewName = "general";
 
   let windowConfig = {
+    show: false,
+
     width: 800,
     height: 600,
 
@@ -439,6 +447,9 @@ function createSettingsWindow(viewName) {
   // show\hide app from system dock
   updateAppDockVisibility();
 
+  settingsWindow.once("ready-to-show", () => {
+    settingsWindow.show();
+  });
   settingsWindow.on("closed", () => {
     settingsWindow = null;
   });
