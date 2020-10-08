@@ -210,7 +210,9 @@ async function sendRecv(request, waitRespCommandsList, timeoutMs) {
         for (let i = 0; i < waiters.length; i += 1) {
           if (waiters[i] === waiter) {
             waiters.splice(i, 1);
-            reject(new Error("[daemon-client sendRecv()] Response timeout"));
+            reject(
+              new Error("Response timeout (no response from the daemon).")
+            );
             break;
           }
         }
@@ -550,11 +552,15 @@ function ConnectToDaemon() {
 }
 
 async function Login(accountID, force) {
-  let resp = await sendRecv({
-    Command: daemonRequests.SessionNew,
-    AccountID: accountID,
-    ForceLogin: force
-  });
+  let resp = await sendRecv(
+    {
+      Command: daemonRequests.SessionNew,
+      AccountID: accountID,
+      ForceLogin: force
+    },
+    null,
+    30000
+  );
 
   if (resp.APIStatus === API_SUCCESS) commitSession(resp.Session);
 
