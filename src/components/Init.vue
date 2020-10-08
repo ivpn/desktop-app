@@ -1,21 +1,34 @@
 <template>
-  <div style="height: 100%">
-    <div class="main">
-      <spinner :loading="isProcessing" />
-      <div class="large_text">Error connecting to IVPN daemon</div>
-      <div class="small_text">
-        Not connected to daemon. Please, ensure IVPN daemon is running and try
-        to reconnect.
-      </div>
+  <div class="flexColumn">
+    <div class="flexColumn" v-if="!(isConnecting && !isProcessing)">
+      <div class="main">
+        <spinner :loading="isProcessing" />
+        <div class="large_text">Error connecting to IVPN daemon</div>
+        <div class="small_text">
+          {{ message }}
+        </div>
 
-      <button class="btn" v-on:click="ConnectToDaemon">Retry ...</button>
+        <button class="btn" v-on:click="ConnectToDaemon">Retry ...</button>
+      </div>
+      <button
+        class="noBordersTextBtn settingsLinkText"
+        v-on:click="visitWebsite"
+      >
+        www.ivpn.net
+      </button>
+    </div>
+    <div v-else class="main small_text">
+      Connecting ...
     </div>
   </div>
 </template>
 
 <script>
+const { shell } = require("electron");
 import spinner from "@/components/controls/control-spinner.vue";
+import { DaemonConnectionType } from "@/store/types";
 import sender from "./../ipc/renderer-sender";
+import config from "@/config";
 
 export default {
   components: {
@@ -38,6 +51,20 @@ export default {
           this.isProcessing = false;
         }
       }, 1500);
+    },
+    visitWebsite() {
+      shell.openExternal(`https://www.ivpn.net`);
+    }
+  },
+  computed: {
+    isConnecting: function() {
+      const connState = this.$store.state.daemonConnectionState;
+      return connState == null || connState === DaemonConnectionType.Connecting;
+    },
+    message: function() {
+      if (this.$store.state.daemonIsOldVersionError)
+        return `Unsupported IVPN daemon version v${this.$store.state.daemonVersion} (minimum required v${config.MinRequiredDaemonVer}). Please, update IVPN daemon.`;
+      return "Not connected to daemon. Please, ensure IVPN daemon is running and try to reconnect.";
     }
   }
 };

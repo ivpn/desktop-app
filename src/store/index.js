@@ -39,8 +39,9 @@ export default new Vuex.Store({
   modules: { account, vpnState, uiState, settings },
   strict: true,
   state: {
-    isDaemonConnected: false,
+    daemonConnectionState: null, // DaemonConnectionType from "./types";
     daemonVersion: "",
+    daemonIsOldVersionError: false,
 
     disabledFunctions: {
       WireGuardError: "",
@@ -102,8 +103,11 @@ export default new Vuex.Store({
     replaceState(state, val) {
       Object.assign(state, val);
     },
-    isDaemonConnected(state, isConnected) {
-      state.isDaemonConnected = isConnected;
+    daemonConnectionState(state, value) {
+      state.daemonConnectionState = value;
+    },
+    daemonIsOldVersionError(state, value) {
+      state.daemonIsOldVersionError = value;
     },
     daemonVersion(state, value) {
       state.daemonVersion = value;

@@ -43,13 +43,14 @@
 
 <script>
 const { remote, ipcRenderer } = require("electron");
+import { DaemonConnectionType } from "@/store/types";
 
 import Init from "@/components/Init.vue";
 import Login from "@/components/Login.vue";
 import Control from "@/components/Control.vue";
 import Map from "@/components/Map.vue";
 
-import common from "@/common";
+import config from "@/config";
 
 export default {
   components: {
@@ -63,7 +64,13 @@ export default {
       return this.$store.getters["account/isLoggedIn"];
     },
     currentViewComponent: function() {
-      if (this.$store.state.isDaemonConnected === false) return Init;
+      const daemonConnection = this.$store.state.daemonConnectionState;
+      if (
+        daemonConnection == null ||
+        daemonConnection === DaemonConnectionType.NotConnected ||
+        daemonConnection === DaemonConnectionType.Connecting
+      )
+        return Init;
       if (!this.isLoggedIn) return Login;
       return Control;
     },
@@ -108,8 +115,8 @@ export default {
       const win = remote.getCurrentWindow();
       const animate = false;
       if (this.isMinimizedUI)
-        win.setBounds({ width: common.MinimizedUIWidth }, animate);
-      else win.setBounds({ width: common.MaximizedUIWidth }, animate);
+        win.setBounds({ width: config.MinimizedUIWidth }, animate);
+      else win.setBounds({ width: config.MaximizedUIWidth }, animate);
     }
   }
 };

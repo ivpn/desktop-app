@@ -27,7 +27,15 @@ const os = require("os");
 
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { API_SUCCESS } from "@/api/statuscode";
-import { VpnTypeEnum, VpnStateEnum, PauseStateEnum } from "@/store/types";
+import { IsNewerVersion } from "@/app-updater";
+import config from "@/config";
+
+import {
+  VpnTypeEnum,
+  VpnStateEnum,
+  PauseStateEnum,
+  DaemonConnectionType
+} from "@/store/types";
 import store from "@/store";
 
 const PingServersTimeoutMs = 4000;
@@ -202,7 +210,7 @@ async function sendRecv(request, waitRespCommandsList, timeoutMs) {
         for (let i = 0; i < waiters.length; i += 1) {
           if (waiters[i] === waiter) {
             waiters.splice(i, 1);
-            reject(new Error("Response timeout"));
+            reject(new Error("[daemon-client sendRecv()] Response timeout"));
             break;
           }
         }
@@ -422,16 +430,16 @@ function onDataReceived(received) {
 //////////////////////////////////////////////////////////////////////////////////////////
 /// PUBLIC METHODS
 //////////////////////////////////////////////////////////////////////////////////////////
-async function ConnectToDaemon() {
+function ConnectToDaemon() {
   if (socket != null) {
     socket.destroy();
     socket = null;
   }
 
-  let promise = new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     // initialize current default state
     store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED);
-    store.commit("isDaemonConnected", false);
+    store.commit("daemonConnectionState", DaemonConnectionType.Connecting);
 
     socket = new net.Socket();
     const portInfo = getDaemonConnectionParams();
@@ -445,7 +453,7 @@ async function ConnectToDaemon() {
 
         let appVersion = "";
         try {
-          appVersion = `${require("electron").app.getVersion()} (Electron UI)`;
+          appVersion = `${require("electron").app.getVersion()}:Electron UI`;
         } catch (e) {
           console.error(e);
         }
@@ -462,8 +470,33 @@ async function ConnectToDaemon() {
         try {
           await sendRecv(helloReq, null, 10000);
 
+          if (
+            // the 'store.state.daemonVersion' must be already initialized
+            IsNewerVersion(
+              store.state.daemonVersion,
+              config.MinRequiredDaemonVer
+            )
+          ) {
+            store.commit("daemonIsOldVersionError", true);
+            store.commit(
+              "daemonConnectionState",
+              DaemonConnectionType.NotConnected
+            );
+
+            socket.destroy();
+            socket = null;
+
+            const err = new Error(
+              `Unsupported IVPN Daemon version: v${store.state.daemonVersion} (minimum required v${config.MinRequiredDaemonVer})`
+            );
+            log.error(err);
+            reject(err); // REJECT
+            return;
+          }
+
           // Saving 'connected' state to a daemon
-          store.commit("isDaemonConnected", true);
+          store.commit("daemonIsOldVersionError", false);
+          store.commit("daemonConnectionState", DaemonConnectionType.Connected);
 
           // send logging + obfsproxy configuration
           SetLogging();
@@ -499,7 +532,7 @@ async function ConnectToDaemon() {
 
     socket.on("close", () => {
       // Save 'disconnected' state
-      store.commit("isDaemonConnected", false);
+      store.commit("daemonConnectionState", DaemonConnectionType.NotConnected);
       log.debug("Connection closed");
     });
 
@@ -511,11 +544,9 @@ async function ConnectToDaemon() {
     try {
       socket.connect(parseInt(portInfo.port, 10), "127.0.0.1");
     } catch (e) {
-      console.error(e);
+      console.error("Daemon connection error: ", e);
     }
   });
-
-  return await promise;
 }
 
 async function Login(accountID, force) {

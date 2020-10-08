@@ -20,6 +20,12 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+export const DaemonConnectionType = Object.freeze({
+  NotConnected: 0,
+  Connecting: 1,
+  Connected: 2
+});
+
 export const VpnTypeEnum = Object.freeze({ OpenVPN: 0, WireGuard: 1 });
 export const PauseStateEnum = Object.freeze({
   Resumed: 0,

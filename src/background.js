@@ -43,6 +43,8 @@ SentryInit();
 import "./ipc/main-listener";
 
 import store from "@/store";
+import { DaemonConnectionType } from "@/store/types";
+
 import daemonClient from "./daemon-client";
 import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
@@ -50,7 +52,7 @@ import { InitConnectionResumer } from "./connection-resumer";
 import { InitTrustedNetworks } from "./trusted-wifi";
 import { IsWindowHasTitle } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
-import common from "@/common";
+import config from "@/config";
 
 import { StartUpdateChecker } from "@/app-updater";
 
@@ -281,7 +283,10 @@ if (gotTheLock) {
           if (store.getters["account/isLoggedIn"] !== true) {
             closeSettingsWindow();
 
-            if (store.state.isDaemonConnected) {
+            if (
+              store.state.daemonConnectionState ===
+              DaemonConnectionType.Connected
+            ) {
               // in case of logged-out - ERASE SETTINGS TO DEFAULT STATE
               // Save parameters values which should not me erased
               console.log(
@@ -335,8 +340,8 @@ function createWindow() {
 
   let windowConfig = {
     width: store.state.settings.minimizedUI
-      ? common.MinimizedUIWidth
-      : common.MaximizedUIWidth,
+      ? config.MinimizedUIWidth
+      : config.MaximizedUIWidth,
     height: 600,
     resizable: false,
     fullscreenable: false,
@@ -441,15 +446,13 @@ function closeSettingsWindow() {
 }
 
 // INITIALIZE CONNECTION TO A DAEMON
-function connectToDaemon() {
+async function connectToDaemon() {
   try {
-    (async function() {
-      await daemonClient.ConnectToDaemon();
-      // initialize app updater
-      StartUpdateChecker(OnAppUpdateAvailable);
-    })();
+    await daemonClient.ConnectToDaemon();
+    // initialize app updater
+    StartUpdateChecker(OnAppUpdateAvailable);
   } catch (e) {
-    console.error(e);
+    console.error("Failed to connect to IVPN Daemon: ", e);
   }
 }
 
