@@ -84,6 +84,7 @@ const daemonResponses = Object.freeze({
   HelloResp: "HelloResp",
   APIResponse: "APIResponse",
 
+  ConfigParamsResp: "ConfigParamsResp",
   DiagnosticsGeneratedResp: "DiagnosticsGeneratedResp",
 
   VpnStateResp: "VpnStateResp",
@@ -284,6 +285,10 @@ async function processResponse(response) {
       if (obj.DisabledFunctions != null)
         store.commit("disabledFunctions", obj.DisabledFunctions);
 
+      break;
+
+    case daemonResponses.ConfigParamsResp:
+      store.commit("configParams", obj);
       break;
 
     case daemonResponses.AccountStatusResp:

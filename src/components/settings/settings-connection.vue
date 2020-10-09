@@ -121,6 +121,37 @@
           >Use obfsproxy</label
         >
       </div>
+
+      <div class="param" v-if="userDefinedOvpnFile">
+        <input
+          type="checkbox"
+          id="openvpnManualConfig"
+          v-model="openvpnManualConfig"
+        />
+        <label class="defColor" for="openvpnManualConfig"
+          >Show manual configuration parameters info</label
+        >
+      </div>
+      <div v-if="openvpnManualConfig && userDefinedOvpnFile">
+        <div class="description">
+          Please be aware that adding parameters may affect the proper
+          functioning of the VPN tunnel. Only add parameters if you understand
+          what you are doing.
+          <button
+            class="btn settingsGrayLongDescriptionFont"
+            v-on:click="onVPNConfigFileLocation"
+          >
+            Open configuration file location ...
+          </button>
+          <div
+            align="right"
+            style="margin-top:5px; font-size: 10px;"
+            class="settingsGrayLongDescriptionFont"
+          >
+            {{ userDefinedOvpnFile }}
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Wireguard -->
@@ -211,7 +242,7 @@
 </template>
 
 <script>
-const { dialog, getCurrentWindow } = require("electron").remote;
+const { dialog, getCurrentWindow, shell } = require("electron").remote;
 
 import spinner from "@/components/controls/control-spinner.vue";
 import { VpnTypeEnum, VpnStateEnum, PortTypeEnum, Ports } from "@/store/types";
@@ -226,7 +257,8 @@ export default {
   data: function() {
     return {
       isProcessing: false,
-      wgConfigDetailed: false
+      wgConfigDetailed: false,
+      openvpnManualConfig: false
     };
   },
   methods: {
@@ -248,6 +280,10 @@ export default {
       if (e.target.value === "wireguard") type = VpnTypeEnum.WireGuard;
       else type = VpnTypeEnum.OpenVPN;
       this.$store.dispatch("settings/vpnType", type);
+    },
+    onVPNConfigFileLocation: function() {
+      const file = this.userDefinedOvpnFile;
+      if (file) shell.showItemInFolder(file);
     },
     onWgKeyRegenerate: async function() {
       if (
@@ -303,6 +339,10 @@ export default {
       set(value) {
         this.$store.dispatch("settings/setPort", value);
       }
+    },
+    userDefinedOvpnFile: function() {
+      if (!this.$store.state.configParams) return null;
+      return this.$store.state.configParams.UserDefinedOvpnFile;
     },
     wgKeyRegenerationInterval: {
       get() {
@@ -410,6 +450,7 @@ export default {
 
 <style scoped lang="scss">
 @import "@/components/scss/constants";
+@import "@/components/scss/platform/base";
 
 .defColor {
   @extend .settingsDefaultTextColor;
@@ -496,17 +537,21 @@ select {
 }
 
 .btn {
-  cursor: pointer;
   margin-top: 10px;
   width: 100%;
   height: 24px;
-  background: #398fe6;
-  border-radius: 5px;
-  border: 0;
 
-  font-size: 15px;
-  text-align: center;
-  letter-spacing: -0.4px;
-  color: #ffffff;
+  background: transparent;
+  border: 0.5px solid #c8c8c8;
+  box-sizing: border-box;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+div.description {
+  @extend .settingsGrayLongDescriptionFont;
+  margin-top: 9px;
+  margin-bottom: 17px;
+  margin-left: 22px;
 }
 </style>
