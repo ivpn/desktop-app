@@ -143,12 +143,14 @@
           >
             Open configuration file location ...
           </button>
-          <div
-            align="right"
-            style="margin-top:5px; font-size: 10px;"
-            class="settingsGrayLongDescriptionFont"
-          >
-            {{ userDefinedOvpnFile }}
+          <div align="right">
+            <label
+              class="settingsGrayLongDescriptionFont selectable"
+              align="right"
+              style="margin-top:5px; font-size: 10px;"
+            >
+              {{ userDefinedOvpnFile }}
+            </label>
           </div>
         </div>
       </div>
