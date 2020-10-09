@@ -134,8 +134,11 @@ export default {
   },
   mounted() {
     this.recalcScrollButtonVisiblity();
-    const resizeObserver = new ResizeObserver(this.recalcScrollButtonVisiblity);
-    resizeObserver.observe(this.$refs.scrollArea);
+
+    // ResizeObserver sometimes is stopping to work for unknown reason. So, We do not use it for now
+    // Instead, watchers are in use: isMinimizedUI, isMultiHop
+    //const resizeObserver = new ResizeObserver(this.recalcScrollButtonVisiblity);
+    //resizeObserver.observe(this.$refs.scrollArea);
   },
   data: function() {
     return {
@@ -200,6 +203,12 @@ export default {
       if (newValue.port === oldValue.port && newValue.type === oldValue.type)
         return;
       connect(this, true);
+    },
+    isMinimizedUI() {
+      setTimeout(() => this.recalcScrollButtonVisiblity(), 1000);
+    },
+    isMultiHop() {
+      setTimeout(() => this.recalcScrollButtonVisiblity(), 1000);
     }
   },
 
