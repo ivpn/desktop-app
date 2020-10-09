@@ -85,3 +85,37 @@ div.arrowRightSimple {
 label.selectable {
     -webkit-user-select: text
 }
+
+// btnScrollDown
+$shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
+button.btnScrollDown {
+    position: fixed;
+  
+    z-index: 7;
+  
+    bottom: 0;
+    margin-bottom: 8px;
+  
+    left: calc(320px / 2 - 12px);
+    //margin-left: calc(50% - 12px);
+  
+    width: 24px;
+    height: 24px;
+  
+    padding: 0px;
+    border: none;
+    border-radius: 50%;
+    background-color: #ffffff;
+    outline-width: 0;
+    cursor: pointer;
+  
+    box-shadow: $shadow;
+  
+    // centering content
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  button.btnScrollDown:hover {
+    background-color: #f0f0f0;
+  }

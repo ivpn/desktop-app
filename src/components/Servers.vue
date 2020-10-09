@@ -154,7 +154,11 @@
     </div>
 
     <!-- SERVERS LIST BLOCK -->
-    <div class="commonMargins flexColumn scrollableColumnContainer">
+    <div
+      ref="scrollArea"
+      @scroll="recalcScrollButtonVisiblity()"
+      class="commonMargins flexColumn scrollableColumnContainer"
+    >
       <!-- FASTEST & RANDOMM SERVER -->
       <div v-if="isFavoritesView == false && isFastestServerConfig === false">
         <div class="flexRow" v-if="!isMultihop">
@@ -238,6 +242,17 @@
           />
         </div>
       </div>
+
+      <!-- SCROOL DOWN BUTTON -->
+      <transition name="fade">
+        <button
+          class="btnScrollDown"
+          v-if="isShowScrollButton"
+          v-on:click="onScrollDown()"
+        >
+          <img src="@/assets/arrow-bottom.svg" />
+        </button>
+      </transition>
     </div>
   </div>
 </template>
@@ -268,7 +283,8 @@ export default {
     return {
       filter: "",
       isFastestServerConfig: false,
-      isSortMenu: false
+      isSortMenu: false,
+      isShowScrollButton: false
     };
   },
   created: function() {
@@ -279,6 +295,11 @@ export default {
         self.isSortMenu = false;
       }
     });
+  },
+  mounted() {
+    this.recalcScrollButtonVisiblity();
+    const resizeObserver = new ResizeObserver(this.recalcScrollButtonVisiblity);
+    resizeObserver.observe(this.$refs.scrollArea);
   },
   computed: {
     isMinimizedUI: function() {
@@ -551,6 +572,32 @@ export default {
     showAll: function() {
       this.$store.dispatch("uiState/serversFavoriteView", false);
       this.filter = "";
+    },
+    recalcScrollButtonVisiblity() {
+      let sa = this.$refs.scrollArea;
+      if (sa == null) {
+        this.isShowScrollButton = false;
+        return;
+      }
+
+      const show = sa.scrollHeight > sa.clientHeight + sa.scrollTop;
+
+      // hide - imadiately; show - with 1sec delay
+      if (!show) this.isShowScrollButton = false;
+      else {
+        setTimeout(() => {
+          this.isShowScrollButton =
+            sa.scrollHeight > sa.clientHeight + sa.scrollTop;
+        }, 1000);
+      }
+    },
+    onScrollDown() {
+      let sa = this.$refs.scrollArea;
+      if (sa == null) return;
+      sa.scrollTo({
+        top: sa.clientHeight * 0.9 + sa.scrollTop, //sa.scrollHeight,
+        behavior: "smooth"
+      });
     }
   }
 };

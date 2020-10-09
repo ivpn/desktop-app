@@ -134,6 +134,8 @@ export default {
   },
   mounted() {
     this.recalcScrollButtonVisiblity();
+    const resizeObserver = new ResizeObserver(this.recalcScrollButtonVisiblity);
+    resizeObserver.observe(this.$refs.scrollArea);
   },
   data: function() {
     return {
@@ -198,12 +200,6 @@ export default {
       if (newValue.port === oldValue.port && newValue.type === oldValue.type)
         return;
       connect(this, true);
-    },
-    isMinimizedUI() {
-      setTimeout(() => this.recalcScrollButtonVisiblity(), 0);
-    },
-    isMultiHop() {
-      setTimeout(() => this.recalcScrollButtonVisiblity(), 0);
     }
   },
 
@@ -279,8 +275,17 @@ export default {
         this.isShowScrollButton = false;
         return;
       }
-      this.isShowScrollButton =
-        sa.scrollHeight > sa.clientHeight + sa.scrollTop;
+
+      const show = sa.scrollHeight > sa.clientHeight + sa.scrollTop;
+
+      // hide - imadiately; show - with 1sec delay
+      if (!show) this.isShowScrollButton = false;
+      else {
+        setTimeout(() => {
+          this.isShowScrollButton =
+            sa.scrollHeight > sa.clientHeight + sa.scrollTop;
+        }, 1000);
+      }
     },
     onScrollDown() {
       let sa = this.$refs.scrollArea;
@@ -297,37 +302,4 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 @import "@/components/scss/constants";
-$shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
-
-button.btnScrollDown {
-  position: fixed;
-
-  z-index: 7;
-
-  bottom: 0;
-  margin-bottom: 8px;
-
-  left: calc(320px / 2 - 12px);
-  //margin-left: calc(50% - 12px);
-
-  width: 24px;
-  height: 24px;
-
-  padding: 0px;
-  border: none;
-  border-radius: 50%;
-  background-color: #ffffff;
-  outline-width: 0;
-  cursor: pointer;
-
-  box-shadow: $shadow;
-
-  // centering content
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-button.btnScrollDown:hover {
-  background-color: #f0f0f0;
-}
 </style>
