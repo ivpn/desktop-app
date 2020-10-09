@@ -78,7 +78,15 @@ func implSetEnabled(isEnabled bool) error {
 }
 
 func implSetPersistant(persistant bool) error {
-	// nothing todo here
+	if persistant {
+		// The persistence is based on such facts:
+		// 	- daemon is starting as on system boot
+		// 	- SetPersistant() called by service object on daemon start
+		// This means we just have to ensure that firewall enabled.
+
+		// Just ensure that firewall is enabled
+		return implSetEnabled(true)
+	}
 	return nil
 }
 
