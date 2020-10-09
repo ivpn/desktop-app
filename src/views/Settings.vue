@@ -1,89 +1,90 @@
 <template>
-  <div id="main" class="row">
-    <div id="leftPanel" class="settingsLeftPanel">
-      <div class="row settingsLeftPanelHeader" id="leftPanelHeader">
-        <button id="backBtn" class="noBordersBtn" v-on:click="goBack">
-          <img :src="arrowLeftImagePath" />
-        </button>
-        <div class="Header settingsHeader">Settings</div>
-      </div>
+  <transition name="fade-quick" appear>
+    <div id="main" class="row">
+      <div id="leftPanel" class="settingsLeftPanel">
+        <div class="row settingsLeftPanelHeader" id="leftPanelHeader">
+          <button id="backBtn" class="noBordersBtn" v-on:click="goBack">
+            <img :src="arrowLeftImagePath" />
+          </button>
+          <div class="Header settingsHeader">Settings</div>
+        </div>
 
-      <div class="row">
-        <div id="tabsTitle">
-          <button
-            v-if="isLoggedIn"
-            class="noBordersBtn tabTitleBtn"
-            v-on:click="onView('account')"
-            v-bind:class="{
-              activeBtn: view === 'account'
-            }"
-          >
-            Account
-          </button>
+        <div class="row">
+          <div id="tabsTitle">
+            <button
+              v-if="isLoggedIn"
+              class="noBordersBtn tabTitleBtn"
+              v-on:click="onView('account')"
+              v-bind:class="{
+                activeBtn: view === 'account'
+              }"
+            >
+              Account
+            </button>
 
-          <button
-            v-if="isLoggedIn"
-            class="noBordersBtn tabTitleBtn"
-            v-on:click="onView('general')"
-            v-bind:class="{
-              activeBtn: view === 'general'
-            }"
-          >
-            General
-          </button>
+            <button
+              v-if="isLoggedIn"
+              class="noBordersBtn tabTitleBtn"
+              v-on:click="onView('general')"
+              v-bind:class="{
+                activeBtn: view === 'general'
+              }"
+            >
+              General
+            </button>
 
-          <button
-            v-if="isLoggedIn"
-            class="noBordersBtn tabTitleBtn"
-            v-on:click="onView('connection')"
-            v-bind:class="{
-              activeBtn: view === 'connection'
-            }"
-          >
-            Connection
-          </button>
-          <button
-            v-if="isLoggedIn"
-            class="noBordersBtn tabTitleBtn"
-            v-on:click="onView('firewall')"
-            v-bind:class="{
-              activeBtn: view === 'firewall'
-            }"
-          >
-            IVPN Firewall
-          </button>
-          <button
-            v-if="isLoggedIn"
-            class="noBordersBtn tabTitleBtn"
-            v-on:click="onView('networks')"
-            v-bind:class="{
-              activeBtn: view === 'networks'
-            }"
-          >
-            Networks
-          </button>
+            <button
+              v-if="isLoggedIn"
+              class="noBordersBtn tabTitleBtn"
+              v-on:click="onView('connection')"
+              v-bind:class="{
+                activeBtn: view === 'connection'
+              }"
+            >
+              Connection
+            </button>
+            <button
+              v-if="isLoggedIn"
+              class="noBordersBtn tabTitleBtn"
+              v-on:click="onView('firewall')"
+              v-bind:class="{
+                activeBtn: view === 'firewall'
+              }"
+            >
+              IVPN Firewall
+            </button>
+            <button
+              v-if="isLoggedIn"
+              class="noBordersBtn tabTitleBtn"
+              v-on:click="onView('networks')"
+              v-bind:class="{
+                activeBtn: view === 'networks'
+              }"
+            >
+              Networks
+            </button>
 
-          <button
-            v-if="isLoggedIn"
-            class="noBordersBtn tabTitleBtn"
-            v-on:click="onView('antitracker')"
-            v-bind:class="{
-              activeBtn: view === 'antitracker'
-            }"
-          >
-            AntiTracker
-          </button>
-          <button
-            v-if="isLoggedIn"
-            class="noBordersBtn tabTitleBtn"
-            v-on:click="onView('dns')"
-            v-bind:class="{
-              activeBtn: view === 'dns'
-            }"
-          >
-            DNS
-          </button>
-          <!--
+            <button
+              v-if="isLoggedIn"
+              class="noBordersBtn tabTitleBtn"
+              v-on:click="onView('antitracker')"
+              v-bind:class="{
+                activeBtn: view === 'antitracker'
+              }"
+            >
+              AntiTracker
+            </button>
+            <button
+              v-if="isLoggedIn"
+              class="noBordersBtn tabTitleBtn"
+              v-on:click="onView('dns')"
+              v-bind:class="{
+                activeBtn: view === 'dns'
+              }"
+            >
+              DNS
+            </button>
+            <!--
           <button
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('openvpn')"
@@ -94,49 +95,50 @@
             OpenVPN
           </button>
           -->
-          <button
-            class="noBordersBtn tabTitleBtn"
-            v-on:click="onView('version')"
-            v-bind:class="{
-              activeBtn: view === 'version'
-            }"
-          >
-            Version
-          </button>
+            <button
+              class="noBordersBtn tabTitleBtn"
+              v-on:click="onView('version')"
+              v-bind:class="{
+                activeBtn: view === 'version'
+              }"
+            >
+              Version
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rightPanel ">
+        <div class="flexColumn" v-if="view === 'connection'">
+          <connectionView />
+        </div>
+        <div class="flexColumn" v-else-if="view === 'account'">
+          <accountView />
+        </div>
+        <div class="flexColumn" v-else-if="view === 'general'">
+          <generalView />
+        </div>
+        <div class="flexColumn" v-else-if="view === 'firewall'">
+          <firewallView />
+        </div>
+        <div class="flexColumn" v-else-if="view === 'networks'">
+          <networksView />
+        </div>
+        <div class="flexColumn" v-else-if="view === 'antitracker'">
+          <antitrackerView />
+        </div>
+        <div class="flexColumn" v-else-if="view === 'dns'">
+          <dnsView />
+        </div>
+        <div class="flexColumn" v-else-if="view === 'version'">
+          <versionView />
+        </div>
+        <div class="flexColumn" v-else>
+          <img src="@/assets/temp/under-construction.jpg" />
         </div>
       </div>
     </div>
-
-    <div class="rightPanel ">
-      <div class="flexColumn" v-if="view === 'connection'">
-        <connectionView />
-      </div>
-      <div class="flexColumn" v-else-if="view === 'account'">
-        <accountView />
-      </div>
-      <div class="flexColumn" v-else-if="view === 'general'">
-        <generalView />
-      </div>
-      <div class="flexColumn" v-else-if="view === 'firewall'">
-        <firewallView />
-      </div>
-      <div class="flexColumn" v-else-if="view === 'networks'">
-        <networksView />
-      </div>
-      <div class="flexColumn" v-else-if="view === 'antitracker'">
-        <antitrackerView />
-      </div>
-      <div class="flexColumn" v-else-if="view === 'dns'">
-        <dnsView />
-      </div>
-      <div class="flexColumn" v-else-if="view === 'version'">
-        <versionView />
-      </div>
-      <div class="flexColumn" v-else>
-        <img src="@/assets/temp/under-construction.jpg" />
-      </div>
-    </div>
-  </div>
+  </transition>
 </template>
 
 <script>

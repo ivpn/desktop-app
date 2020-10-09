@@ -47,24 +47,29 @@
     />
 
     <!-- WIFI -->
-    <div class="horizontalLine" v-if="wifiSSID" />
+    <transition name="fade">
+      <div v-if="wifiSSID">
+        <div class="horizontalLine" />
 
-    <SelectButtonControl
-      v-if="wifiSSID"
-      class="leftPanelBlock"
-      :click="onShowWifiConfig"
-      v-bind:text="wifiSSID"
-      :description="wifiSSID == '' ? 'No WiFi connection' : 'WiFi network'"
-      :markerText="WiFiMarkerText"
-      :markerColor="WiFiMarkerColor"
-    />
+        <SelectButtonControl
+          class="leftPanelBlock"
+          :click="onShowWifiConfig"
+          v-bind:text="wifiSSID"
+          :description="wifiSSID == '' ? 'No WiFi connection' : 'WiFi network'"
+          :markerText="WiFiMarkerText"
+          :markerColor="WiFiMarkerColor"
+        />
+      </div>
+    </transition>
 
     <!-- GEOLOCATOIN INFO -->
-    <div v-if="$store.state.settings.minimizedUI">
-      <div class="horizontalLine" />
+    <transition name="fade">
+      <div v-if="$store.state.settings.minimizedUI">
+        <div class="horizontalLine" />
 
-      <GeolocationInfoControl class="blockWithMrgings" />
-    </div>
+        <GeolocationInfoControl class="blockWithMrgings" />
+      </div>
+    </transition>
   </div>
 </template>
 

@@ -1,55 +1,59 @@
 <template>
-  <div id="main">
-    <!-- Popup -->
-    <div class="popup">
-      <div
-        ref="popup"
-        class="popuptext"
-        v-bind:class="{
-          show:
-            isPopupVisible &&
-            isMapLoaded &&
-            isInProgress == false &&
-            isBlured !== 'true'
-        }"
-      >
-        <popupControl
-          :location="selectedPopupLocation"
-          :onConnect="connect"
-          :onDisconnect="disconnect"
-          :onMouseClick="onPopupMouseClick"
-          :onResume="resume"
-        />
+  <transition name="fade-quick" appear>
+    <div id="main">
+      <!-- Popup -->
+      <div class="popup">
+        <div
+          ref="popup"
+          class="popuptext"
+          v-bind:class="{
+            show:
+              isPopupVisible &&
+              isMapLoaded &&
+              isInProgress == false &&
+              isBlured !== 'true'
+          }"
+        >
+          <popupControl
+            :location="selectedPopupLocation"
+            :onConnect="connect"
+            :onDisconnect="disconnect"
+            :onMouseClick="onPopupMouseClick"
+            :onResume="resume"
+          />
+        </div>
       </div>
-    </div>
 
-    <!-- Buttons panel LEFT-->
-    <div class="buttonsPanelTopLeft" v-if="isBlured !== 'true'">
-      <button class="settingsBtn" v-on:click="onMinimize">
-        <img src="@/assets/minimize.svg" />
-      </button>
-    </div>
+      <!-- Buttons panel LEFT-->
+      <div class="buttonsPanelTopLeft" v-if="isBlured !== 'true'">
+        <button class="settingsBtn" v-on:click="onMinimize">
+          <img src="@/assets/minimize.svg" />
+        </button>
+      </div>
 
-    <!-- Buttons panel RIGHT-->
-    <div class="buttonsPanelTopRight" v-if="isBlured !== 'true'">
-      <button class="settingsBtn settingsBtnMarginLeft" v-on:click="onSettings">
-        <img src="@/assets/settings.svg" />
-      </button>
+      <!-- Buttons panel RIGHT-->
+      <div class="buttonsPanelTopRight" v-if="isBlured !== 'true'">
+        <button
+          class="settingsBtn settingsBtnMarginLeft"
+          v-on:click="onSettings"
+        >
+          <img src="@/assets/settings.svg" />
+        </button>
 
-      <button
-        class="settingsBtn settingsBtnMarginLeft"
-        v-on:click="onAccountSettings"
-      >
-        <img src="@/assets/user.svg" />
-      </button>
+        <button
+          class="settingsBtn settingsBtnMarginLeft"
+          v-on:click="onAccountSettings"
+        >
+          <img src="@/assets/user.svg" />
+        </button>
 
-      <button class="settingsBtn" v-on:click="centerCurrentLocation(false)">
-        <img src="@/assets/crosshair.svg" />
-      </button>
-    </div>
+        <button class="settingsBtn" v-on:click="centerCurrentLocation(false)">
+          <img src="@/assets/crosshair.svg" />
+        </button>
+      </div>
 
-    <!-- Bottom panel -->
-    <!--
+      <!-- Bottom panel -->
+      <!--
     <div class="bottomButtonsPanel" v-if="isBlured !== 'true'">
       <button class="settingsBtn" v-on:click="centerCurrentLocation(false)">
         <img src="@/assets/crosshair.svg" />
@@ -57,109 +61,110 @@
     </div>
     -->
 
-    <div class="geolocationInfoPanel">
-      <GeolocationInfoControl style="display: flex; align-items: center;" />
-    </div>
-    <!-- Map -->
-    <div class="mapcontainer" ref="combined">
-      <canvas
-        class="canvas"
-        ref="canvas"
-        v-bind:class="{ blured: isBlured === 'true' }"
-        @mousedown="mouseDown"
-        @mouseup="mouseUp"
-        @mouseleave="mouseUp"
-        @mousemove="mouseMove"
-        @wheel="wheel"
-      >
-      </canvas>
+      <div class="geolocationInfoPanel">
+        <GeolocationInfoControl style="display: flex; align-items: center;" />
+      </div>
+      <!-- Map -->
+      <div class="mapcontainer" ref="combined">
+        <canvas
+          class="canvas"
+          ref="canvas"
+          v-bind:class="{ blured: isBlured === 'true' }"
+          @mousedown="mouseDown"
+          @mouseup="mouseUp"
+          @mouseleave="mouseUp"
+          @mousemove="mouseMove"
+          @wheel="wheel"
+        >
+        </canvas>
 
-      <!-- Top-located canvas to be able to blure map -->
-      <canvas
-        class="canvasTop"
-        v-bind:class="{ blured: isBlured === 'true' }"
-      ></canvas>
+        <!-- Top-located canvas to be able to blure map -->
+        <canvas
+          class="canvasTop"
+          v-bind:class="{ blured: isBlured === 'true' }"
+        ></canvas>
 
-      <div style="position: relative ">
-        <img
-          ref="map"
-          class="map"
-          src="@/assets/world_map_light.svg"
-          @load="mapLoaded"
-        />
+        <div style="position: relative ">
+          <img
+            ref="map"
+            class="map"
+            src="@/assets/world_map_light.svg"
+            @load="mapLoaded"
+          />
 
-        <!-- Hidden element to calculate styled text size-->
-        <div
-          ref="hiddenTestTextMeter"
-          class="mapLocationName"
-          style="opacity: 0, pointer-events: none; z-index: -1;"
-        ></div>
-
-        <div class="mapLocationsContainer" ref="mapLocationsContainer">
-          <!-- Location point -->
+          <!-- Hidden element to calculate styled text size-->
           <div
-            class="mapLocationPoint"
-            v-for="l of locationsToDisplay"
-            v-on:click="locationClicked(l.location)"
-            v-bind:key="'point_' + l.location.city"
-            v-bind:class="{
-              mapLocationPointCurrent: l.location === location,
-              mapLocationPointConnected:
-                l.location === selectedServer && isConnected
-            }"
-            :style="{
-              left: l.x - l.pointRadius + 'px',
-              top: l.y - l.pointRadius + 'px',
-              height: l.pointRadius * 2 + 'px',
-              width: l.pointRadius * 2 + 'px'
-            }"
-          ></div>
-          <!-- Location name -->
-          <div
+            ref="hiddenTestTextMeter"
             class="mapLocationName"
-            v-for="l of locationsToDisplay"
-            v-on:click="locationClicked(l.location)"
-            v-bind:key="'name_' + l.location.city"
-            v-bind:class="{
-              mapLocationNameCurrent: l.location === location,
-              mapLocationNameConnected:
-                l.location === selectedServer && isConnected
-            }"
-            :style="{ left: l.left + 'px', top: l.top + 'px' }"
-          >
-            {{ l.width > 0 ? l.location.city : "" }}
+            style="opacity: 0, pointer-events: none; z-index: -1;"
+          ></div>
+
+          <div class="mapLocationsContainer" ref="mapLocationsContainer">
+            <!-- Location point -->
+            <div
+              class="mapLocationPoint"
+              v-for="l of locationsToDisplay"
+              v-on:click="locationClicked(l.location)"
+              v-bind:key="'point_' + l.location.city"
+              v-bind:class="{
+                mapLocationPointCurrent: l.location === location,
+                mapLocationPointConnected:
+                  l.location === selectedServer && isConnected
+              }"
+              :style="{
+                left: l.x - l.pointRadius + 'px',
+                top: l.y - l.pointRadius + 'px',
+                height: l.pointRadius * 2 + 'px',
+                width: l.pointRadius * 2 + 'px'
+              }"
+            ></div>
+            <!-- Location name -->
+            <div
+              class="mapLocationName"
+              v-for="l of locationsToDisplay"
+              v-on:click="locationClicked(l.location)"
+              v-bind:key="'name_' + l.location.city"
+              v-bind:class="{
+                mapLocationNameCurrent: l.location === location,
+                mapLocationNameConnected:
+                  l.location === selectedServer && isConnected
+              }"
+              :style="{ left: l.left + 'px', top: l.top + 'px' }"
+            >
+              {{ l.width > 0 ? l.location.city : "" }}
+            </div>
+
+            <!-- Animation elements -->
+            <div
+              v-show="isMapLoaded"
+              ref="animationCurrLoactionCirecle"
+              class="mapLocationCircleCurrLocation"
+            ></div>
+
+            <div
+              v-show="isMapLoaded"
+              ref="animationSelectedCirecle1"
+              class="mapLocationCircleSelectedSvr"
+            ></div>
+            <div
+              v-show="isMapLoaded"
+              ref="animationSelectedCirecle2"
+              class="mapLocationCircleSelectedSvr"
+            ></div>
+
+            <div
+              v-show="isMapLoaded"
+              ref="animationConnectedWaves"
+              class="mapLocationCircleConnectedWaves"
+              v-bind:class="{
+                mapLocationCircleConnectedWavesRunning: isConnected
+              }"
+            ></div>
           </div>
-
-          <!-- Animation elements -->
-          <div
-            v-show="isMapLoaded"
-            ref="animationCurrLoactionCirecle"
-            class="mapLocationCircleCurrLocation"
-          ></div>
-
-          <div
-            v-show="isMapLoaded"
-            ref="animationSelectedCirecle1"
-            class="mapLocationCircleSelectedSvr"
-          ></div>
-          <div
-            v-show="isMapLoaded"
-            ref="animationSelectedCirecle2"
-            class="mapLocationCircleSelectedSvr"
-          ></div>
-
-          <div
-            v-show="isMapLoaded"
-            ref="animationConnectedWaves"
-            class="mapLocationCircleConnectedWaves"
-            v-bind:class="{
-              mapLocationCircleConnectedWavesRunning: isConnected
-            }"
-          ></div>
         </div>
       </div>
     </div>
-  </div>
+  </transition>
 </template>
 
 <script>

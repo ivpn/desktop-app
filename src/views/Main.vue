@@ -2,25 +2,27 @@
   <div id="flexview">
     <div class="flexColumn">
       <div class="leftPanelTopSpace">
-        <div
-          v-if="isMinimizedButtonsVisible"
-          class="minimizedButtonsPanel leftPanelTopMinimizedButtonsPanel"
-        >
-          <button v-on:click="onAccountSettings()">
-            <img src="@/assets/user.svg" />
-          </button>
+        <transition name="fade">
+          <div
+            v-if="isMinimizedButtonsVisible"
+            class="minimizedButtonsPanel leftPanelTopMinimizedButtonsPanel"
+          >
+            <button v-on:click="onAccountSettings()">
+              <img src="@/assets/user.svg" />
+            </button>
 
-          <button v-on:click="onSettings()">
-            <img src="@/assets/settings.svg" />
-          </button>
+            <button v-on:click="onSettings()">
+              <img src="@/assets/settings.svg" />
+            </button>
 
-          <button v-on:click="onMaximize(true)">
-            <img src="@/assets/maximize.svg" />
-          </button>
-        </div>
+            <button v-on:click="onMaximize(true)">
+              <img src="@/assets/maximize.svg" />
+            </button>
+          </div>
+        </transition>
       </div>
       <div class="flexColumn" style="min-height: 0px">
-        <transition name="component-fade" mode="out-in">
+        <transition name="fade" mode="out-in">
           <component
             v-bind:is="currentViewComponent"
             :onConnectionSettings="onConnectionSettings"

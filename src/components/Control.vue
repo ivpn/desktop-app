@@ -1,6 +1,6 @@
 <template>
   <div class="flexColumn">
-    <transition mode="out-in">
+    <transition name="fade-super-quick" mode="out-in">
       <div
         class="flexColumn"
         v-if="uiView === 'serversEntry'"
