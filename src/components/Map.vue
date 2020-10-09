@@ -102,6 +102,7 @@
           <div class="mapLocationsContainer" ref="mapLocationsContainer">
             <!-- Location point -->
             <div
+              v-show="isMapLoaded"
               class="mapLocationPoint"
               v-for="l of locationsToDisplay"
               v-on:click="locationClicked(l.location)"
@@ -120,6 +121,7 @@
             ></div>
             <!-- Location name -->
             <div
+              v-show="isMapLoaded"
               class="mapLocationName"
               v-for="l of locationsToDisplay"
               v-on:click="locationClicked(l.location)"
