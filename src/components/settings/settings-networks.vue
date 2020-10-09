@@ -160,7 +160,7 @@ export default {
     trustedNetConfigControl
   },
   mounted() {
-    sender.GetWiFiAvailableNetworks();
+    //if (this.trustedNetworksControl === true) sender.GetWiFiAvailableNetworks();
   },
   data: function() {
     return {
