@@ -7,14 +7,20 @@
 
     <div class="buttons">
       <div class="buttonWithPopup" style="margin-right:17px;">
-        <transition name="fade" v-if="isCanPause">
-          <button class="settingsBtn" v-on:click="onPauseMenu">
+        <transition name="fade">
+          <button
+            class="settingsBtn"
+            v-if="isCanPause"
+            v-on:click="onPauseMenu"
+          >
             <img src="@/assets/pause.svg" />
           </button>
-        </transition>
 
-        <transition name="fade" v-else-if="isCanResume">
-          <button class="settingsBtnResume" v-on:click="onPauseResume">
+          <button
+            class="settingsBtnResume"
+            v-else-if="isCanResume"
+            v-on:click="onPauseResume"
+          >
             <img src="@/assets/resume.svg" style="margin-left: 2px" />
           </button>
         </transition>

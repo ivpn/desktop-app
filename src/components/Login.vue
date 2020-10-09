@@ -60,7 +60,7 @@ export default {
     this.$refs.accountid.focus();
 
     if (this.$route.params.forceLoginAccount != null) {
-      this.$data.accountID = this.$route.params.forceLoginAccount;
+      this.accountID = this.$route.params.forceLoginAccount;
 
       const force = true;
       this.Login(force);
@@ -71,17 +71,15 @@ export default {
       try {
         // check accoundID
         var pattern = new RegExp("^(i-....-....-....)|(ivpn........)$"); // fragment locator
-        if (pattern.test(this.$data.accountID) !== true) {
+        if (this.accountID) this.accountID = this.accountID.trim();
+        if (pattern.test(this.accountID) !== true) {
           throw new Error(
             "Your account ID has to be in 'i-XXXX-XXXX-XXXX' or 'ivpnXXXXXXXX' format. You can find it on other devices where you are logged in and in the client area of the IVPN website."
           );
         }
 
         this.isProcessing = true;
-        const resp = await sender.Login(
-          this.$data.accountID,
-          isForceLogout === true
-        );
+        const resp = await sender.Login(this.accountID, isForceLogout === true);
 
         if (resp.APIStatus !== API_SUCCESS) {
           if (resp.APIStatus === API_SESSION_LIMIT && resp.Account != null) {
