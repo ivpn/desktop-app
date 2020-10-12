@@ -31,3 +31,15 @@
   .fade-super-quick-leave-to {
     opacity: 0;
   }
+
+// smooth-display
+.smooth-display-enter-active {
+  transition: opacity 0.5s;
+}
+.smooth-display-leave-active {
+  transition: opacity 0s;
+}
+.smooth-display-enter,
+.smooth-display-leave-to {
+  opacity: 0;
+}

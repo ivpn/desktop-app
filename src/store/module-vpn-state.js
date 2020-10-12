@@ -207,11 +207,12 @@ export default {
       let retSvr = null;
       for (let i = 0; i < servers.length; i++) {
         let curSvr = servers[i];
-
+        if (!curSvr) continue;
         if (skipSvrs != null && skipSvrs.includes(curSvr.gateway)) continue;
         if (
           curSvr != null &&
-          curSvr.ping != null &&
+          curSvr.ping &&
+          curSvr.ping > 0 &&
           (retSvr == null || retSvr.ping > curSvr.ping)
         )
           retSvr = curSvr;
