@@ -29,6 +29,27 @@
 
       <div v-else class="flexColumn">
         <div>
+          <transition name="smoothDisplay">
+            <div
+              v-if="isMinimizedUI && uiView === 'default'"
+              class="minimizedButtonsPanel leftPanelTopMinimizedButtonsPanel"
+            >
+              <button v-on:click="onAccountSettings()">
+                <img src="@/assets/user.svg" />
+              </button>
+
+              <button v-on:click="onSettings()">
+                <img src="@/assets/settings.svg" />
+              </button>
+
+              <button v-on:click="onMaximize(true)">
+                <img src="@/assets/maximize.svg" />
+              </button>
+            </div>
+          </transition>
+        </div>
+
+        <div>
           <ConnectBlock
             :onChecked="switchChecked"
             :isChecked="isConnected"
@@ -122,7 +143,10 @@ function connected(me) {
 export default {
   props: {
     onConnectionSettings: Function,
-    onWifiSettings: Function
+    onWifiSettings: Function,
+    onSettings: Function,
+    onAccountSettings: Function,
+    onMaximize: Function
   },
 
   components: {
@@ -311,4 +335,27 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 @import "@/components/scss/constants";
+
+div.minimizedButtonsPanel {
+  display: flex;
+  justify-content: flex-end;
+
+  margin-right: 10px;
+  margin-top: 10px;
+}
+
+div.minimizedButtonsPanel button {
+  @extend .noBordersBtn;
+
+  z-index: 1;
+  cursor: pointer;
+
+  padding: 0px;
+  margin-left: 6px;
+  margin-right: 6px;
+}
+
+div.minimizedButtonsPanel img {
+  height: 18px;
+}
 </style>

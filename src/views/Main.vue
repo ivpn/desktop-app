@@ -1,32 +1,17 @@
 <template>
   <div id="flexview">
     <div class="flexColumn">
-      <div class="leftPanelTopSpace">
-        <transition name="fade">
-          <div
-            v-if="isMinimizedButtonsVisible"
-            class="minimizedButtonsPanel leftPanelTopMinimizedButtonsPanel"
-          >
-            <button v-on:click="onAccountSettings()">
-              <img src="@/assets/user.svg" />
-            </button>
+      <div class="leftPanelTopSpace"></div>
 
-            <button v-on:click="onSettings()">
-              <img src="@/assets/settings.svg" />
-            </button>
-
-            <button v-on:click="onMaximize(true)">
-              <img src="@/assets/maximize.svg" />
-            </button>
-          </div>
-        </transition>
-      </div>
       <div class="flexColumn" style="min-height: 0px">
         <transition name="fade" mode="out-in">
           <component
             v-bind:is="currentViewComponent"
             :onConnectionSettings="onConnectionSettings"
             :onWifiSettings="onWifiSettings"
+            :onSettings="onSettings"
+            :onAccountSettings="onAccountSettings"
+            :onMaximize="onMaximize"
             id="left"
           ></component>
         </transition>
@@ -141,28 +126,5 @@ export default {
 #right {
   width: 0%; // ???
   flex-grow: 1;
-}
-
-div.minimizedButtonsPanel {
-  display: flex;
-  justify-content: flex-end;
-
-  margin-right: 10px;
-  margin-top: 10px;
-}
-
-div.minimizedButtonsPanel button {
-  @extend .noBordersBtn;
-
-  z-index: 1;
-  cursor: pointer;
-
-  padding: 0px;
-  margin-left: 6px;
-  margin-right: 6px;
-}
-
-div.minimizedButtonsPanel img {
-  height: 18px;
 }
 </style>
