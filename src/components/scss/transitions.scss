@@ -31,16 +31,3 @@
   .fade-super-quick-leave-to {
     opacity: 0;
   }
-
-  // smoothly display
-  .smoothDisplay-enter-active {
-    transition: opacity 1s;  
-  }
-  .smoothDisplay-leave-active {
-    transition: opacity 0s;
-  }
-  .smoothDisplay-enter, 
-  .smoothDisplay-leave-to {
-    opacity: 0;
-  }
-  
