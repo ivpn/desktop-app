@@ -104,30 +104,35 @@ const daemonResponses = Object.freeze({
 
 // Read information about connection parameters from a file
 function getDaemonConnectionParams() {
-  let fpath = "";
-  switch (os.platform()) {
-    case "win32":
-      // TODO: READ CORRECT PATH FROM REGISTRY
-      fpath = "C:/Program Files/IVPN Client/etc/port.txt";
-      break;
-    case "darwin":
-      fpath = "/Library/Application Support/IVPN/port.txt";
-      break;
-    case "linux":
-      fpath = "/opt/ivpn/mutable/port.txt";
-      break;
-    default:
-      throw new Error(`Not supported platform: '${os.platform()}'`);
+  try {
+    let fpath = "";
+    switch (os.platform()) {
+      case "win32":
+        // TODO: READ CORRECT PATH FROM REGISTRY
+        fpath = "C:/Program Files/IVPN Client/etc/port.txt";
+        break;
+      case "darwin":
+        fpath = "/Library/Application Support/IVPN/port.txt";
+        break;
+      case "linux":
+        fpath = "/opt/ivpn/mutable/port.txt";
+        break;
+      default:
+        throw new Error(`Not supported platform: '${os.platform()}'`);
+    }
+
+    const connData = fs.readFileSync(fpath).toString();
+
+    const parsed = connData.split(":");
+    if (parsed.length !== 2) {
+      throw new Error("Failed to parse port-info file");
+    }
+
+    return { port: parsed[0], secret: parsed[1] };
+  } catch (e) {
+    console.error("Unable to obtain IVPN daemon connection parameters: ", e);
   }
-
-  const connData = fs.readFileSync(fpath).toString();
-
-  const parsed = connData.split(":");
-  if (parsed.length !== 2) {
-    throw new Error("Failed to parse port-info file");
-  }
-
-  return { port: parsed[0], secret: parsed[1] };
+  return null;
 }
 
 // JavaScript does not support int64 (and do not know how to serialize it)
@@ -444,12 +449,25 @@ function ConnectToDaemon() {
   }
 
   return new Promise((resolve, reject) => {
+    let portInfo = null;
+
+    try {
+      portInfo = getDaemonConnectionParams();
+    } catch (e) {
+      store.commit("daemonConnectionState", DaemonConnectionType.NotConnected);
+      reject(e);
+      return;
+    }
+    if (!portInfo) {
+      store.commit("daemonConnectionState", DaemonConnectionType.NotConnected);
+      reject("IVPN daemon connection info is unknown.");
+      return;
+    }
+
     // initialize current default state
     store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED);
-    store.commit("daemonConnectionState", DaemonConnectionType.Connecting);
 
     socket = new net.Socket();
-    const portInfo = getDaemonConnectionParams();
     socket.setNoDelay(true);
 
     socket
@@ -475,6 +493,10 @@ function ConnectToDaemon() {
         };
 
         try {
+          store.commit(
+            "daemonConnectionState",
+            DaemonConnectionType.Connecting
+          );
           await sendRecv(helloReq, null, 10000);
 
           if (

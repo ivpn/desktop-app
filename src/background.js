@@ -220,7 +220,12 @@ if (gotTheLock) {
     }
     switch (actionNo) {
       case 0: // Cancel
+        // discard exiting
         event.preventDefault();
+
+        // show app window back (if not minimizing to tray)
+        if (store.state.settings.minimizeToTray !== true)
+          setTimeout(menuOnShow, 0);
         break;
 
       case 1: // Exit & Disconnect VPN
@@ -522,9 +527,9 @@ function updateAppDockVisibility() {
 // MENU ITEMS
 function menuOnShow() {
   try {
-    if (win == null) createWindow();
+    if (!win) createWindow();
 
-    if (win != null) {
+    if (win) {
       win.restore();
       win.show();
       win.focus();

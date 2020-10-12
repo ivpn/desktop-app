@@ -153,12 +153,13 @@ div.minimizedButtonsPanel {
 
 div.minimizedButtonsPanel button {
   @extend .noBordersBtn;
-  padding-top: 0px;
-  padding-bottom: 0px;
 
   z-index: 1;
-  cursor: auto;
-  //cursor: pointer;
+  cursor: pointer;
+
+  padding: 0px;
+  margin-left: 6px;
+  margin-right: 6px;
 }
 
 div.minimizedButtonsPanel img {
