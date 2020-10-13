@@ -38,11 +38,11 @@ These instructions will get you a copy of the project up and running on your loc
 #### macOS
   - [Go 1.13+](https://golang.org/)
   - Git
-  
+
 #### Windows
   - [Go 1.13+](https://golang.org/)
   - Git
-      
+
 ### Compilation
 
 
@@ -50,26 +50,26 @@ These instructions will get you a copy of the project up and running on your loc
   ```
   git clone https://github.com/ivpn/desktop-app-cli.git
   cd desktop-app-cli/
-  ./References/macOS/build.sh 
-  ``` 
+  ./References/macOS/build.sh
+  ```
   Compiled binary can be found here:
   ```
   References/macOS/_out_bin/
   ```
-  
+
 #### Windows
   Ensure that GO111MODULE is enabled (`set GO111MODULE=on`)
   ```
   git clone https://github.com/ivpn/desktop-app-cli.git
   cd desktop-app-cli
   References\Windows\build.bat
-  ``` 
+  ```
   Compiled binaries can be found here:
   ```
   bin\x86\cli
   bin\x86_64\cli
   ```  
-  
+
 #### Linux
   The CLI binary compiles together with [desktop-app-daemon](https://github.com/ivpn/desktop-app-daemon) project. It required to be able to compile into redistributable packages (ready for installation DEB\RPM).
   Therefore, a few manipulations with GOPATH and folder structure necessary to perform.
@@ -88,10 +88,10 @@ These instructions will get you a copy of the project up and running on your loc
   *  Clone [desktop-app-daemon](https://github.com/ivpn/desktop-app-daemon) project
       -  `cd $GOPATH/src/github.com/ivpn`  
       -  `git clone https://github.com/ivpn/desktop-app-daemon.git`  
- 
+
   * To compile projects and to build `.DEB` and `.RPM` packages just run `build-packages.sh` script:  
       -  `cd $GOPATH/src/github.com/ivpn/desktop-app-cli`  
-      -  `References/Linux/build-packages.sh -v 3.1.0`  
+      -  `References/Linux/build-packages.sh -v 2.12.7`  
 
 Compiled packages can be found at `$GOPATH/src/github.com/ivpn/desktop-app-cli/References/Linux/_out_bin`  
 
