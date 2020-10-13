@@ -1,5 +1,5 @@
 export default {
-  MinRequiredDaemonVer: "2.12.6.8",
+  MinRequiredDaemonVer: "2.12.7",
 
   MinimizedUIWidth: 320,
   MaximizedUIWidth: 800
