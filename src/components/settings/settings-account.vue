@@ -54,7 +54,7 @@
           </div>
 
           <div v-if="IsActive">
-            <div class="settingsGrayDescriptionFont">Active untill</div>
+            <div class="settingsGrayDescriptionFont">Active until</div>
             <div class="defColor" style="margin-top: 5px; margin-bottom:4px;">
               {{ ActiveUntil }}
             </div>
