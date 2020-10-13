@@ -36,7 +36,7 @@
       <div class="configTitle">OpenVPN configuration</div>
 
       <div class="flexRow paramBlock">
-        <div class="defColor paramName">Preffered port:</div>
+        <div class="defColor paramName">Prefered port:</div>
         <select v-model="port">
           <option
             v-for="item in prefferedPorts"
