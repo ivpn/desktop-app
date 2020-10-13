@@ -266,9 +266,9 @@ async function processResponse(response) {
 
   if (obj != null && obj.Command != null) {
     // TODO: Full logging is only for debug. Must be removed from production!
-    log.log(`<== ${obj.Command} ${response.length > 512 ? " ..." : response}`);
-    // log.log(`<== ${response}`);
-    //log.debug(`<== ${obj.Command}`);
+    //log.log(`<== ${obj.Command} ${response.length > 512 ? " ..." : response}`);
+    //log.log(`<== ${response}`);
+    log.debug(`<== ${obj.Command}`);
   } else log.error(`<== ${response}`);
 
   if (obj == null || obj.Command == null || obj.Command.length <= 0) return;

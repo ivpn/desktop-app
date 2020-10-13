@@ -58,26 +58,30 @@ export default {
 
       // erase account state
       if (
-        state.accountStatus == null ||
-        state.session == null ||
-        state.accountStatus.SessionToken !== state.session.Session
+        !state.accountStatus ||
+        !state.session ||
+        state.accountStatus.SessionTokenLastPart !==
+          getLastPartOfSessionToken(state.session.Session)
       )
         state.accountStatus = null;
     },
     accountStatus(state, accState) {
       if (
-        state.session == null ||
         accState == null ||
         accState.Account == null ||
-        accState.SessionToken == null ||
-        accState.SessionToken !== state.session.Session
+        (state.session &&
+          state.session.Session &&
+          accState.SessionToken !== state.session.Session)
       )
         return;
       state.accountStatus = accState.Account;
 
       // save session for account status object
       // (to be sure that account info belongs to correct session)
-      state.accountStatus.SessionToken = accState.SessionToken;
+      if (accState.SessionToken)
+        state.accountStatus.SessionTokenLastPart = getLastPartOfSessionToken(
+          accState.SessionToken
+        );
 
       // convert capabilities to lower case
       if (state.accountStatus.Capabilities != null)
@@ -114,3 +118,8 @@ export default {
 
   modules: {}
 };
+
+function getLastPartOfSessionToken(sessionToken) {
+  if (!sessionToken || sessionToken.length < 6) return "";
+  return sessionToken.substr(sessionToken.length - 6);
+}

@@ -156,6 +156,14 @@ export default {
       try {
         this.isProcessing = true;
         await sender.Logout();
+      } catch (e) {
+        this.isProcessing = false;
+        console.error(e);
+        dialog.showMessageBoxSync(getCurrentWindow(), {
+          type: "error",
+          message: "Failed to log out. Please check connectivity.",
+          buttons: ["OK"]
+        });
       } finally {
         this.isProcessing = false;
       }
