@@ -3,7 +3,7 @@
 # Usage example:
 #   build-packages.sh -v 0.0.1
 
-# To be able to build packages the 'fpm' tool shall be installed 
+# To be able to build packages the 'fpm' tool shall be installed
 # (https://fpm.readthedocs.io/en/latest/installing.html)
 
 # Useful commands (Ubuntu):
@@ -74,7 +74,7 @@ if [ -z "$VERSION" ]
 then
   echo "Usage:"
   echo "    $0 -v <version>"
-  exit 1 
+  exit 1
 fi
 
 echo '---------------------------'
@@ -113,10 +113,10 @@ CreatePackage()
   EXTRA_ARGS=$2
 
   cd $TMPDIR
-  
+
   # Scripts order is different for different types of packages
   # DEB Install:
-  #   Clean             Upgrade
+  #   (On Install)      (On Upgrade)
   #                     before_remove
   #   before_install    before_upgrade\before_install
   #                     after_remove
@@ -127,8 +127,8 @@ CreatePackage()
   #   after_remove
   #
   # RPM Install:
-  #   Clean             Upgrade
-  #   before_install    before_upgrade\before_install 
+  #   (On Install)      (On Upgrade)
+  #   before_install    before_upgrade\before_install
   #   after_install     after_upgrade\after_install
   #                     before_remove
   #                     after_remove
@@ -137,7 +137,7 @@ CreatePackage()
   #   before_remove
   #   after_remove
   #
-  # NOTE! 'remove' scripts from old version!
+  # NOTE! 'remove' scripts is using from old version!
 
   fpm -d openvpn $EXTRA_ARGS \
     --deb-no-default-config-files -s dir -t $PKG_TYPE -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
@@ -156,7 +156,7 @@ CreatePackage()
 
 echo '---------------------------'
 echo "DEB package..."
-# to add dependency from another packet add extra arg "-d", example: "-d obfsproxy" 
+# to add dependency from another packet add extra arg "-d", example: "-d obfsproxy"
 CreatePackage "deb"
 
 echo '---------------------------'
