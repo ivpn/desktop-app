@@ -48,19 +48,23 @@ function enable_firewall {
 
     set -e
 
-    ### IPv6 ###
-    # IPv6: block everything by default
-    ${IPv6BIN} -P INPUT DROP
-    ${IPv6BIN} -P OUTPUT DROP
-    # IPv6: define chains
-    create_chain ${IPv6BIN} ${IN_IVPN}
-    create_chain ${IPv6BIN} ${OUT_IVPN}
-    # IPv6: allow  local (lo) interface
-    ${IPv6BIN} -A ${OUT_IVPN} -o lo -j ACCEPT
-    ${IPv6BIN} -A ${IN_IVPN} -i lo -j ACCEPT
-    # IPv6: assign our chains to global (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
-    ${IPv6BIN} -A OUTPUT -j ${OUT_IVPN}
-    ${IPv6BIN} -A INPUT -j ${IN_IVPN}
+    if [ -f /proc/net/if_inet6 ]; then
+      ### IPv6 ###
+      # IPv6: block everything by default
+      ${IPv6BIN} -P INPUT DROP
+      ${IPv6BIN} -P OUTPUT DROP
+      # IPv6: define chains
+      create_chain ${IPv6BIN} ${IN_IVPN}
+      create_chain ${IPv6BIN} ${OUT_IVPN}
+      # IPv6: allow  local (lo) interface
+      ${IPv6BIN} -A ${OUT_IVPN} -o lo -j ACCEPT
+      ${IPv6BIN} -A ${IN_IVPN} -i lo -j ACCEPT
+      # IPv6: assign our chains to global (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
+      ${IPv6BIN} -A OUTPUT -j ${OUT_IVPN}
+      ${IPv6BIN} -A INPUT -j ${IN_IVPN}
+    else
+      echo "IPv6 disabled: skipping IPv6 rules"
+    fi
 
     ### IPv4 ###
     # block everything by default
