@@ -52,6 +52,8 @@ CheckLastResult()
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 OUT_DIR="$SCRIPT_DIR/_out_bin"
+APP_UNPACKED_DIR="$SCRIPT_DIR/../../dist_electron/linux-unpacked"
+APP_BIN_DIR="$SCRIPT_DIR/../../dist_electron/bin"
 
 # ---------------------------------------------------------
 # version info variables
@@ -75,15 +77,51 @@ then
   echo "    NOTE! The correspond version of application already should be compiled (the file must be available: dist_electron/ivpn-ui-XXX.AppImage)"
   exit 1
 fi
+echo "======================================================"
+echo "============== Preparing ============================="
+echo "======================================================"
+if [ -d $APP_UNPACKED_DIR ]; then
+  echo "[+] Removing: $APP_UNPACKED_DIR"
+  rm -fr "$APP_UNPACKED_DIR"
+fi
+if [ -d $APP_BIN_DIR ]; then
+  echo "[+] Removing: $APP_BIN_DIR"
+  rm -fr "$APP_BIN_DIR"
+fi
+
+echo "======================================================"
+echo "============== Building binary ======================="
+echo "======================================================"
+$SCRIPT_DIR/build.sh -v $VERSION
+CheckLastResult
 
 APP_BINARY="$SCRIPT_DIR/../../dist_electron/ivpn-ui-$VERSION.AppImage"
 if [ -f $APP_BINARY ]; then
-    echo "[ ] Integrating binary: $APP_BINARY"
+    echo "[ ] Exist: $APP_BINARY"
 else
   echo "[!] File not exists: '$APP_BINARY'"
   echo "    Build IVPN UI project (do not forget to set correct version for it in 'package.json')"
   exit 1
 fi
+
+if [ -d $APP_UNPACKED_DIR ]; then
+    echo "[ ] Exist: $APP_UNPACKED_DIR"
+else
+  echo "[!] Folder not exists: '$APP_UNPACKED_DIR'"
+  echo "    Build IVPN UI project (do not forget to set correct version for it in 'package.json')"
+  exit 1
+fi
+if [ -f "$APP_UNPACKED_DIR/ivpn-ui" ]; then
+    echo "[ ] Exist: $APP_UNPACKED_DIR/ivpn-ui"
+else
+  echo "[!] File not exists: '$APP_UNPACKED_DIR/ivpn-ui'"
+  echo "    Build IVPN UI project (do not forget to set correct version for it in 'package.json')"
+  exit 1
+fi
+
+echo "[ ] Renaming: '$APP_UNPACKED_DIR' -> '$APP_BIN_DIR'"
+mv $APP_UNPACKED_DIR $APP_BIN_DIR
+CheckLastResult
 
 echo "======================================================"
 echo "============== Building packages ====================="
@@ -138,7 +176,7 @@ CreatePackage()
     --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
     $SCRIPT_DIR/ui/IVPN.desktop=/opt/ivpn/ui/IVPN.desktop \
     $SCRIPT_DIR/ui/ivpnicon.svg=/opt/ivpn/ui/ivpnicon.svg \
-    $APP_BINARY=/opt/ivpn/ui/ivpn-ui.AppImage
+    $APP_BIN_DIR=/opt/ivpn/ui/
 }
 
 echo '---------------------------'

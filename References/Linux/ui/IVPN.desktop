@@ -2,7 +2,7 @@
 Name=IVPN
 Comment=UI interface for IVPN 
 GenericName=VPN client
-Exec=/opt/ivpn/ui/ivpn-ui.AppImage
+Exec=/opt/ivpn/ui/bin/ivpn-ui
 Icon=/opt/ivpn/ui/ivpnicon.svg
 Type=Application
 StartupNotify=true

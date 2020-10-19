@@ -10,3 +10,5 @@ if [ -d "$DIR" ]; then
 else
     echo "[!] Unable to install .desktop file. Folder '$DIR' not exists"
 fi
+
+sudo chmod 4755 /opt/ivpn/ui/bin/chrome-sandbox || echo "[!] Failed to 'chmod' for '/opt/ivpn/ui/bin/chrome-sandbox'"

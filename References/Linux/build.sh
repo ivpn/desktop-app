@@ -5,4 +5,6 @@
 
 cd "$(dirname "$0")"
 cd ../..
+
+echo "[+] Building..."
 npm run electron:build
