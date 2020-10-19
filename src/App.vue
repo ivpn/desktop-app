@@ -34,7 +34,7 @@ export default {
   }
 };
 
-  InitDefaultCopyMenus();
+InitDefaultCopyMenus();
 </script>
 
 <style lang="scss">
@@ -44,13 +44,14 @@ html * {
   // disable elements\text selelection
   -webkit-user-select: none;
 
-  // Window can be dragable by mouse from any place
-  //-webkit-app-region: drag;
-
   // assign default properties globally for all elements
-  color: $base-text-color;
+  color: var(--text-color);
 
   font-family: $base-font-family; // !important;
+}
+
+body {
+  background: var(--background-color);
 }
 
 #app {
@@ -73,8 +74,5 @@ html * {
   width: 100%;
 
   position: absolute;
-  //z-index: 1;
-  //z-index: -1;
-  //background: lightsalmon;
 }
 </style>

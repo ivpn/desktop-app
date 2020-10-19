@@ -183,7 +183,7 @@ $shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
   font-size: 14px;
   line-height: 17px;
   letter-spacing: -0.3px;
-  color: $base-text-color-details;
+  color: var(--text-color-details);
 }
 
 .settingsBtn {

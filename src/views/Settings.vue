@@ -223,7 +223,7 @@ div.row {
 }
 #leftPanel {
   padding-top: 50px;
-  background: #f2f3f6;
+  background: var(--background-color-alternate);
   min-width: 232px;
   height: 100vh;
 }
@@ -286,6 +286,8 @@ button.tabTitleBtn {
 
   font-size: 14px;
   line-height: 17px;
+
+  color: var(--text-color-settings-menu);
 }
 button.activeBtn {
   font-weight: 500;

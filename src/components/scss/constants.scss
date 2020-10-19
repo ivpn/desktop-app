@@ -3,8 +3,26 @@
 
 $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
 
-$base-text-color: #2A394B;
-$base-text-color-details: rgba($base-text-color, 0.5);// #8494A5;
+:root {
+    --text-color: #2A394B;
+    --text-color-details: #2A394B7f; //rgba(#2A394B, 0.5);
+    --text-color-settings: #2A394Bda;//rgba(#2A394B, 0.85);
+    --text-color-settings-menu: #2A394B;
+
+
+    --background-color: #ffffff;
+    --background-color-alternate: #f2f3f6;
+
+    @media (prefers-color-scheme: dark){
+         --text-color: #ffffff; 
+         --text-color-details: #ffffff7f;   //rgba(#ffffff, 0.5); 
+         --text-color-settings:  #ffffffda;   //rgba(#ffffff, 0.85); 
+         --text-color-settings-menu:  #ffffff7f;    //rgba(#ffffff, 0.5);
+
+         --background-color: #1c1c1e;
+         --background-color-alternate: #000000;
+    }
+}
 
 .left_panel_element {
     margin-left: 20px;

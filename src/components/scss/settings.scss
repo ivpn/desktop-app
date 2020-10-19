@@ -5,6 +5,7 @@
     line-height: 13px;
     letter-spacing: 0.5px;
     text-transform: uppercase;
+    color: var(--text-color-settings-menu);
   }
   
   .settingsDefaultText {
@@ -14,7 +15,7 @@
   }
 
   .settingsDefaultTextColor {
-    color: rgba(42, 57, 75, 0.85);
+    color: var(--text-color-settings);
   }
 
   .settingsGrayDescriptionFont {

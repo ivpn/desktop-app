@@ -144,8 +144,6 @@ export default {
   line-height: 120%;
 
   text-align: center;
-
-  color: $base-text-color;
 }
 
 .small_text {
@@ -154,7 +152,7 @@ export default {
   text-align: center;
   letter-spacing: -0.3px;
 
-  color: $base-text-color-details;
+  color: var(--text-color-details);
 }
 
 .small_text2 {
@@ -163,7 +161,7 @@ export default {
   text-align: center;
   letter-spacing: -0.3px;
 
-  color: $base-text-color-details;
+  color: var(--text-color-details);
 }
 
 .verticalSpace {

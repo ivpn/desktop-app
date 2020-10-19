@@ -83,9 +83,5 @@ div.row {
 div.descriptipn {
   min-width: 100px;
   opacity: 0.5;
-  text-shadow: 0px 1px 0px #ffffff;
-}
-div.value {
-  text-shadow: 0px 1px 0px #ffffff;
 }
 </style>

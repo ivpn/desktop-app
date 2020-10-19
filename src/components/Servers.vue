@@ -663,7 +663,7 @@ input#filter {
   margin-right: $paddingLeftRight;
   font-size: 11px;
   line-height: 13px;
-  color: $base-text-color-details;
+  color: var(--text-color-details);
 }
 
 button.sortBtn {

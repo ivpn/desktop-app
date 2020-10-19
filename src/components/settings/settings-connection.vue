@@ -33,11 +33,11 @@
 
     <!-- OpenVPN -->
     <div v-if="isOpenVPN">
-      <div class="configTitle">OpenVPN configuration</div>
+      <div class="settingsBoldFont">OpenVPN configuration</div>
 
       <div class="flexRow paramBlock">
         <div class="defColor paramName">Prefered port:</div>
-        <select v-model="port">
+        <select v-model="port" style="background: var(--background-color);">
           <option
             v-for="item in prefferedPorts"
             :value="item.port"
@@ -110,7 +110,7 @@
         </div>
       </div>
 
-      <div class="configTitle">Additional</div>
+      <div class="settingsBoldFont">Additional</div>
       <div class="param">
         <input
           type="checkbox"
@@ -120,6 +120,9 @@
         <label class="defColor" for="connectionUseObfsproxy"
           >Use obfsproxy</label
         >
+      </div>
+      <div class="description">
+        Only enable if you have trouble connecting
       </div>
 
       <div class="param" v-if="userDefinedOvpnFile">
@@ -136,7 +139,7 @@
         <div class="description">
           Please be aware that adding parameters may affect the proper
           functioning of the VPN tunnel. Only add parameters if you understand
-          what you are doing.
+          what you are doing
           <button
             class="btn settingsGrayLongDescriptionFont"
             v-on:click="onVPNConfigFileLocation"
@@ -158,11 +161,11 @@
 
     <!-- Wireguard -->
     <div v-if="!isOpenVPN">
-      <div class="configTitle">Wireguard configuration</div>
+      <div class="settingsBoldFont">Wireguard configuration</div>
 
       <div class="flexRow paramBlock">
         <div class="defColor paramName">Preffered port:</div>
-        <select v-model="port">
+        <select v-model="port" style="background: var(--background-color);">
           <option
             v-for="item in prefferedPorts"
             :value="item.port"
@@ -174,7 +177,10 @@
 
       <div class="flexRow paramBlock">
         <div class="defColor paramName">Regenerate key every:</div>
-        <select v-model="wgKeyRegenerationInterval">
+        <select
+          v-model="wgKeyRegenerationInterval"
+          style="background: var(--background-color);"
+        >
           <option
             v-for="item in wgRegenerationIntervals"
             :value="item.seconds"
@@ -527,17 +533,6 @@ select {
   width: 186px;
 }
 
-.configTitle {
-  font-weight: 500;
-  font-size: 13px;
-  line-height: 18px;
-  letter-spacing: -0.08px;
-  color: #2a394b;
-  opacity: 0.5;
-  margin-top: 42px;
-  margin-bottom: 12px;
-}
-
 .btn {
   margin-top: 10px;
   width: 100%;
@@ -552,8 +547,6 @@ select {
 
 div.description {
   @extend .settingsGrayLongDescriptionFont;
-  margin-top: 9px;
-  margin-bottom: 17px;
   margin-left: 22px;
 }
 </style>
