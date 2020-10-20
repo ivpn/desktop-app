@@ -374,8 +374,6 @@ button.selectableButtonOff {
   font-size: 11px;
   line-height: 13px;
 
-  color: #2a394b;
-
   border-bottom: 2px solid #d9e0e5;
 }
 

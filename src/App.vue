@@ -50,6 +50,13 @@ html * {
   font-family: $base-font-family; // !important;
 }
 
+input {
+  background: var(--input-background);
+}
+textarea {
+  background: var(--input-background);
+}
+
 body {
   background: var(--background-color);
 }

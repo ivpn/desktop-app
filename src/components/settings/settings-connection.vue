@@ -88,24 +88,31 @@
           <div class="paramBlockText">
             <div>Server:</div>
             <input
-              class="settingsTextInput"
+              class="settingsTextInput proxyParam"
               placeholder="0.0.0.0"
               v-model="ovpnProxyServer"
             />
           </div>
           <div class="paramBlockText">
             <div>Port:</div>
-            <input class="settingsTextInput" v-model="ovpnProxyPort" />
+            <input
+              class="settingsTextInput proxyParam"
+              v-model="ovpnProxyPort"
+            />
           </div>
-        </div>
-        <div class="flexRow">
           <div class="paramBlockText">
             <div>Login:</div>
-            <input class="settingsTextInput" v-model="ovpnProxyUser" />
+            <input
+              class="settingsTextInput proxyParam"
+              v-model="ovpnProxyUser"
+            />
           </div>
           <div class="paramBlockText">
             <div>Password:</div>
-            <input class="settingsTextInput" v-model="ovpnProxyPass" />
+            <input
+              class="settingsTextInput proxyParam"
+              v-model="ovpnProxyPass"
+            />
           </div>
         </div>
       </div>
@@ -548,5 +555,9 @@ select {
 div.description {
   @extend .settingsGrayLongDescriptionFont;
   margin-left: 22px;
+}
+
+input.proxyParam {
+  width: 100px;
 }
 </style>

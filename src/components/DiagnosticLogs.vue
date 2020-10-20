@@ -1,5 +1,5 @@
 <template>
-  <div id="main">
+  <body id="main">
     <div id="innerColumn">
       <h2 style="text-align: center;">Diagnostic logs</h2>
       <div style="margin-bottom: 5px;">
@@ -28,7 +28,7 @@
         </button>
       </div>
     </div>
-  </div>
+  </body>
 </template>
 
 <script>
@@ -93,6 +93,7 @@ export default {
 #main {
   @extend .flexColumn;
   height: 100%;
+  margin: 0px;
 }
 #innerColumn {
   @extend .flexColumn;
@@ -106,6 +107,7 @@ export default {
   overflow: auto;
   resize: none;
   background: lightgrey;
+  color: grey;
 }
 #commentBlock {
   height: 70px;

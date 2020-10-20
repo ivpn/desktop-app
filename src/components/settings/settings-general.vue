@@ -28,14 +28,14 @@
       <input type="checkbox" id="minimizeToTray" v-model="minimizeToTray" />
       <label class="defColor" for="minimizeToTray">Minimize to tray</label>
     </div>
-    <div v-if="canShowMinimizeToTrayDescription">
+    <div v-if="isLinux">
       <div class="description">
         By enabling this parameter, the application will stay in memory after
         closing the window and it will be accessible only via the tray icon.
       </div>
       <div class="description">
-        Caution: Not all Linux desktop environments support displaying the
-        application icon in the system tray.
+        <b>Caution:</b> Not all Linux desktop environments support displaying
+        the application icon in the system tray.
       </div>
     </div>
 
@@ -60,6 +60,14 @@
       </select>
     </div>
 
+    <!--
+    <div v-if="isLinux && colorScheme === colorThemeEnum.system">
+      <div class="description" style="margin-left: 0px;">
+        When changing the system color theme, the new application color theme
+        will be updated after reopening the application window.
+      </div>
+    </div> -->
+
     <div class="settingsBoldFont">
       Autoconnect:
     </div>
@@ -71,7 +79,7 @@
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
-    <div class="param" v-if="isCanAutoconnectOnInsecureWIFI">
+    <div class="param" v-if="!isLinux">
       <input
         type="checkbox"
         id="connectVPNOnInsecureNetwork"
@@ -148,10 +156,12 @@ export default {
   data: function() {
     return {
       diagnosticLogsShown: false,
-      isLaunchAtLoginValue: null
+      isLaunchAtLoginValue: null,
+      colorScheme: null
     };
   },
   mounted() {
+    this.colorScheme = sender.ColorScheme();
     this.doUpdateIsLaunchAtLogin();
   },
   methods: {
@@ -168,13 +178,9 @@ export default {
     }
   },
   computed: {
-    isCanAutoconnectOnInsecureWIFI() {
-      return Platform() != PlatformEnum.Linux;
-    },
-    canShowMinimizeToTrayDescription() {
+    isLinux() {
       return Platform() === PlatformEnum.Linux;
     },
-
     isLaunchAtLogin: {
       get() {
         return this.isLaunchAtLoginValue;
@@ -264,10 +270,11 @@ export default {
     },
     colorTheme: {
       get() {
-        return sender.ColorScheme();
+        return this.colorScheme;
       },
       set(value) {
         sender.ColorSchemeSet(value);
+        this.colorScheme = value;
       }
     }
   }
@@ -300,7 +307,7 @@ label {
 div.description {
   @extend .settingsGrayLongDescriptionFont;
   margin-left: 22px;
-  max-width: 425px;
+  max-width: 490px;
 }
 
 button.btn {

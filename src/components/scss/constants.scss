@@ -4,7 +4,8 @@
 $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
 
 :root {
-    --text-color: #2A394B;
+    --text-color-rgb: 42, 57, 75;
+    --text-color: rgba(var(--text-color-rgb));
     --text-color-details: #2A394B7f; //rgba(#2A394B, 0.5);
     --text-color-settings: #2A394Bda;   //rgba(#2A394B, 0.85);
     --text-color-settings-menu: #2A394B;
@@ -14,13 +15,18 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
     --background-color-alternate: #f2f3f6;
 
     --shadow-opacity-koef: 0.15;
+    --separator-line-color: #e9e9e9;
+
+    --input-border-color: #8B9AAB;
+    --input-background: #FBFBFB;
 
     --map-background-color: #cbd2d3;
     --map-text-color: #6b6b6b;
     --map-point-color: #6b6b6b;
 
     @media (prefers-color-scheme: dark){
-         --text-color: #ffffff; 
+         --text-color-rgb: 255, 255, 255;
+         --text-color:rgba(var(--text-color-rgb));
          --text-color-details: #ffffff7f;   //rgba(#ffffff, 0.5); 
          --text-color-settings:  #ffffffda;   //rgba(#ffffff, 0.85); 
          --text-color-settings-menu:  #ffffff7f;    //rgba(#ffffff, 0.5);
@@ -30,6 +36,10 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
          --background-color-alternate: #000000;
 
          --shadow-opacity-koef: 0.9;
+         --separator-line-color: #333333;
+
+         --input-border-color: #000000;
+         --input-background:rgba(211, 223, 230, 0.33);
 
          --map-background-color: #292929;
          --map-text-color: #a2a2a2;

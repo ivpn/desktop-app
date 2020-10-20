@@ -2,6 +2,14 @@
 @import "linux-servers.scss";
 @import "linux-settings.scss";
 
+
+:root {
+  --button-border-color: #CACACA;
+  @media (prefers-color-scheme: dark){
+    --button-border-color:  #000000;
+  }
+}
+
 // === HOP BUTTONS ===
 div.hopButtons {
     @extend .hopButtonsBase;
@@ -20,10 +28,8 @@ div.hopButtonsSeparator {
 input.styled {
     @extend .styledBase;
     height: 27px;
-    background: rgba(211, 223, 230, 0.33);
 
-    background: #FBFBFB;
-    border: 1px solid #8B9AAB;
+    border: 1px solid var(--input-border-color);
     box-sizing: border-box;
   
     border-radius: 4px;
@@ -32,7 +38,8 @@ input.styled::placeholder {
     font-size: 13px;
     line-height: 17px;
     letter-spacing: -0.208px;
-    color: #98A5B3;
+
+    color: #6d849a;
   }
 input.styledBig { 
     @extend .styled;
@@ -44,7 +51,7 @@ button.master {
     height: 28px;
 
     background: linear-gradient(0deg, #F49572 0%, #FAAE91 100%), #FFFFFF;
-    border: 1px solid #CACACA;
+    border: 1px solid var(--button-border-color);
     box-sizing: border-box;
     border-radius: 4px;
 
