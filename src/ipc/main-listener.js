@@ -30,7 +30,7 @@ import { CheckUpdates, Upgrade, IsAbleToCheckUpdate } from "@/app-updater";
 import { AutoLaunchIsEnabled, AutoLaunchSet } from "@/auto-launch";
 import store from "@/store";
 
-const { ipcMain } = require("electron");
+const { ipcMain, nativeTheme } = require("electron");
 
 ipcMain.handle("renderer-request-connect-to-daemon", async () => {
   return await client.ConnectToDaemon();
@@ -174,4 +174,13 @@ ipcMain.handle("renderer-request-auto-launch-is-enabled", async () => {
 });
 ipcMain.handle("renderer-request-auto-launch-set", async (event, isEnabled) => {
   return await AutoLaunchSet(isEnabled);
+});
+
+// COLOR SCHEME
+ipcMain.on("renderer-request-ui-color-scheme-get", event => {
+  event.returnValue = nativeTheme.themeSource;
+});
+ipcMain.handle("renderer-request-ui-color-scheme-set", (event, theme) => {
+  store.dispatch("settings/colorTheme", theme);
+  nativeTheme.themeSource = theme;
 });

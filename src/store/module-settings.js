@@ -19,7 +19,12 @@
 //  You should have received a copy of the GNU General Public License
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
-import { VpnTypeEnum, Ports, ServersSortTypeEnum } from "@/store/types";
+import {
+  VpnTypeEnum,
+  Ports,
+  ServersSortTypeEnum,
+  ColorTheme
+} from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
 
@@ -91,6 +96,7 @@ const getDefaultState = () => {
     minimizeToTray: true,
     showAppInSystemDock: false,
     serversSortType: ServersSortTypeEnum.City,
+    colorTheme: ColorTheme.default,
 
     // updates
     skipAppUpdate: {
@@ -261,6 +267,9 @@ export default {
     serversSortType(state, val) {
       state.serversSortType = val;
     },
+    colorTheme(state, val) {
+      state.colorTheme = val;
+    },
 
     // updates
     skipAppUpdate(state, val) {
@@ -405,6 +414,9 @@ export default {
     },
     serversSortType(context, val) {
       context.commit("serversSortType", val);
+    },
+    colorTheme(context, val) {
+      context.commit("colorTheme", val);
     },
 
     // HELPERS

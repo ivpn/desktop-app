@@ -40,6 +40,27 @@
     </div>
 
     <div class="settingsBoldFont">
+      View:
+    </div>
+    <div class="flexRow paramBlock">
+      <div class="defColor paramName">Color theme:</div>
+      <select
+        v-model="colorTheme"
+        style="margin-left:30px; background: var(--background-color);"
+      >
+        <option :value="colorThemeEnum.system" :key="colorThemeEnum.system"
+          >System default</option
+        >
+        <option :value="colorThemeEnum.light" :key="colorThemeEnum.light"
+          >Light</option
+        >
+        <option :value="colorThemeEnum.dark" :key="colorThemeEnum.dark"
+          >Dark</option
+        >
+      </select>
+    </div>
+
+    <div class="settingsBoldFont">
       Autoconnect:
     </div>
     <div class="param">
@@ -114,6 +135,7 @@
 </template>
 
 <script>
+import { ColorTheme } from "@/store/types";
 import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import sender from "@/ipc/renderer-sender";
@@ -235,6 +257,18 @@ export default {
 
     isCanSendDiagLogs() {
       return sender.IsAbleToSendDiagnosticReport();
+    },
+
+    colorThemeEnum() {
+      return ColorTheme;
+    },
+    colorTheme: {
+      get() {
+        return sender.ColorScheme();
+      },
+      set(value) {
+        sender.ColorSchemeSet(value);
+      }
     }
   }
 };
@@ -284,5 +318,12 @@ button.btn {
   top: 0%;
   width: 100%;
   height: 100%;
+}
+
+select {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  border-radius: 3.5px;
+  width: 186px;
 }
 </style>

@@ -85,12 +85,7 @@
         ></canvas>
 
         <div style="position: relative ">
-          <img
-            ref="map"
-            class="map"
-            src="@/assets/world_map_light.svg"
-            @load="mapLoaded"
-          />
+          <img ref="map" class="map" :src="mapImage" @load="mapLoaded" />
 
           <!-- Hidden element to calculate styled text size-->
           <div
@@ -172,7 +167,8 @@
 <script>
 const { dialog, getCurrentWindow } = require("electron").remote;
 
-import { VpnStateEnum, PauseStateEnum } from "@/store/types";
+import { VpnStateEnum, PauseStateEnum, ColorTheme } from "@/store/types";
+import { IsOsDarkColorScheme } from "@/helpers/renderer";
 
 import sender from "@/ipc/renderer-sender";
 import popupControl from "@/components/controls/control-map-popup.vue";
@@ -197,6 +193,8 @@ export default {
   },
 
   data: () => ({
+    isDarkTheme: false,
+
     selectedPopupLocation: null,
     isMapLoaded: false,
     isPopupVisible: false,
@@ -249,6 +247,10 @@ export default {
   }),
 
   computed: {
+    mapImage: function() {
+      if (this.isDarkTheme) return require("@/assets/world_map_dark.svg");
+      return require("@/assets/world_map_light.svg");
+    },
     servers: function() {
       return this.$store.getters["vpnState/activeServers"];
     },
@@ -328,6 +330,12 @@ export default {
   },
 
   mounted() {
+    // COLOR SCHEME
+    window.matchMedia("(prefers-color-scheme: dark)").addListener(() => {
+      this.updateColorScheme();
+    });
+    this.updateColorScheme();
+
     this.canvas = this.$refs.canvas;
 
     this.popup = this.$refs.popup;
@@ -418,6 +426,12 @@ export default {
       // update canvas size
       c.width = c.clientWidth;
       c.height = c.clientHeight;
+    },
+    updateColorScheme() {
+      let scheme = sender.ColorScheme();
+      if (scheme === ColorTheme.system) {
+        this.isDarkTheme = IsOsDarkColorScheme();
+      } else this.isDarkTheme = scheme === ColorTheme.dark;
     },
     // ================= CONNECTION ====================
     async disconnect() {
@@ -1057,10 +1071,9 @@ function isUse(drawedCities, x, y, pointRadius, left, top, width, height) {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 $shadow: 0px 4px 24px rgba(37, 51, 72, 0.25);
-$popup-background: white;
+$popup-background: var(--background-color);
 
 @import "@/components/scss/constants";
-$mapBackground: #cbd2d3;
 
 #main {
   position: relative;
@@ -1075,8 +1088,6 @@ $mapBackground: #cbd2d3;
   display: block;
   overflow-x: hidden;
   overflow-y: hidden;
-
-  background: $mapBackground;
 }
 
 .canvas {
@@ -1102,7 +1113,7 @@ $mapBackground: #cbd2d3;
   z-index: 1;
 
   user-select: none;
-  background: $mapBackground;
+  background: var(--map-background-color);
 }
 
 .buttonsPanelBase {
@@ -1145,7 +1156,8 @@ $mapBackground: #cbd2d3;
   padding: 10px;
   margin-left: 32px;
 
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(var(--background-color-rgb), 0.6);
+
   backdrop-filter: blur(4px);
   border-radius: 4px;
 
@@ -1168,7 +1180,7 @@ $mapBackground: #cbd2d3;
   padding: 0px;
   border: none;
   border-radius: 50%;
-  background-color: #ffffff;
+  background-color: var(--background-color);
   outline-width: 0;
   cursor: pointer;
 
@@ -1181,7 +1193,7 @@ $mapBackground: #cbd2d3;
 }
 
 .settingsBtn:hover {
-  background-color: #f0f0f0;
+  background-color: var(--background-color-alternate);
 }
 
 // ============== POPUP =================
@@ -1255,9 +1267,11 @@ $mapBackground: #cbd2d3;
   line-height: 12px;
   display: inline-block;
   letter-spacing: -0.3px;
-  color: #6b6b6b;
-  text-shadow: -1px 1px 0 #ffffff, 1px 1px 0 #ffffff, 1px -1px 0 #ffffff,
-    -1px -1px 0 #ffffff;
+
+  color: var(--map-text-color);
+  text-shadow: -1px 1px 0 var(--background-color),
+    1px 1px 0 var(--background-color), 1px -1px 0 var(--background-color),
+    -1px -1px 0 var(--background-color);
 }
 
 .mapLocationNameCurrent {
@@ -1270,7 +1284,7 @@ $mapBackground: #cbd2d3;
 
 .mapLocationPoint {
   @extend .mapLocationElement;
-  background-color: #6b6b6b;
+  background-color: var(--map-point-color);
   border-radius: 100%;
   display: inline-block;
 }
