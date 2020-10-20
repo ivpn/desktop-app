@@ -136,8 +136,7 @@ export default {
 
   AppUpdatesIsAbleToUpdate: () => {
     return ipcRenderer.sendSync(
-      "renderer-request-app-updates-is-able-to-update",
-      0
+      "renderer-request-app-updates-is-able-to-update"
     );
   },
   AppUpdatesCheck: async () => {
@@ -152,5 +151,12 @@ export default {
   },
   AutoLaunchSet: async isEnabled => {
     return invoke("renderer-request-auto-launch-set", isEnabled);
+  },
+
+  ColorScheme: () => {
+    return ipcRenderer.sendSync("renderer-request-ui-color-scheme-get");
+  },
+  ColorSchemeSet: scheme => {
+    return invoke("renderer-request-ui-color-scheme-set", scheme);
   }
 };

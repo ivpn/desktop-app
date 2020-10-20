@@ -6,12 +6,18 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
 :root {
     --text-color: #2A394B;
     --text-color-details: #2A394B7f; //rgba(#2A394B, 0.5);
-    --text-color-settings: #2A394Bda;//rgba(#2A394B, 0.85);
+    --text-color-settings: #2A394Bda;   //rgba(#2A394B, 0.85);
     --text-color-settings-menu: #2A394B;
 
-
-    --background-color: #ffffff;
+    --background-color-rgb:255,255,255; // #ffffff;
+    --background-color: rgba(var(--background-color-rgb)); 
     --background-color-alternate: #f2f3f6;
+
+    --shadow-opacity-koef: 0.15;
+
+    --map-background-color: #cbd2d3;
+    --map-text-color: #6b6b6b;
+    --map-point-color: #6b6b6b;
 
     @media (prefers-color-scheme: dark){
          --text-color: #ffffff; 
@@ -19,8 +25,15 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
          --text-color-settings:  #ffffffda;   //rgba(#ffffff, 0.85); 
          --text-color-settings-menu:  #ffffff7f;    //rgba(#ffffff, 0.5);
 
-         --background-color: #1c1c1e;
+         --background-color-rgb:28,28,30; // #1c1c1e;
+         --background-color: rgba(var(--background-color-rgb)); 
          --background-color-alternate: #000000;
+
+         --shadow-opacity-koef: 0.9;
+
+         --map-background-color: #292929;
+         --map-text-color: #a2a2a2;
+         --map-point-color: #d4d4d4;
     }
 }
 
@@ -105,7 +118,6 @@ label.selectable {
 }
 
 // btnScrollDown
-$shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
 button.btnScrollDown {
     position: fixed;
   
@@ -123,11 +135,12 @@ button.btnScrollDown {
     padding: 0px;
     border: none;
     border-radius: 50%;
-    background-color: #ffffff;
+    
+    background-color: var(--background-color);
     outline-width: 0;
     cursor: pointer;
   
-    box-shadow: $shadow;
+    box-shadow: 0px 3px 1px rgba(0,0,0, 0.06), 0px 3px 8px rgba(0,0,0, var(--shadow-opacity-koef));
   
     // centering content
     display: flex;
@@ -135,5 +148,5 @@ button.btnScrollDown {
     align-items: center;
   }
   button.btnScrollDown:hover {
-    background-color: #f0f0f0;
+    background-color: var(--background-color-alternate);
   }

@@ -80,3 +80,9 @@ export const ServersSortTypeEnum = Object.freeze({
   Latency: 2,
   Proximity: 3
 });
+
+export const ColorTheme = Object.freeze({
+  system: "system",
+  light: "light",
+  dark: "dark"
+});
