@@ -10,10 +10,11 @@
         <transition name="fade">
           <button
             class="settingsBtn"
+            style="background: var(--background-color);"
             v-if="isCanPause"
             v-on:click="onPauseMenu"
           >
-            <img src="@/assets/pause.svg" />
+            <imgPause />
           </button>
 
           <button
@@ -80,11 +81,13 @@
 
 <script>
 import SwitchProgress from "@/components/controls/control-switch.vue";
+import imgPause from "@/components/images/pause.vue";
 import { PauseStateEnum } from "@/store/types";
 
 export default {
   components: {
-    SwitchProgress
+    SwitchProgress,
+    imgPause
   },
   props: [
     "onChecked",
@@ -154,7 +157,8 @@ export default {
 <style scoped lang="scss">
 @import "@/components/scss/constants";
 @import "@/components/scss/popup";
-$shadow: 0px 3px 1px rgba(0, 0, 0, 0.06), 0px 3px 8px rgba(0, 0, 0, 0.15);
+$shadow: 0px 3px 1px rgba(0, 0, 0, 0.06),
+  0px 3px 8px rgba(0, 0, 0, var(--shadow-opacity-koef));
 
 .main {
   @extend .left_panel_block;
