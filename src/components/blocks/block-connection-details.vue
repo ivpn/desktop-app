@@ -58,6 +58,7 @@
           :description="wifiSSID == '' ? 'No WiFi connection' : 'WiFi network'"
           :markerText="WiFiMarkerText"
           :markerColor="WiFiMarkerColor"
+          :markerTextColor="'var(--text-color-details)'"
         />
       </div>
     </transition>
@@ -147,7 +148,7 @@ export default {
       const TRUSTED = "#64ad07";
       const UNTRUSTED = "#FF6258";
       const INSECURE = "orange";
-      const NOTRUSTSTATUS = "#BBBBBB";
+      const NOTRUSTSTATUS = "var(--background-color-alternate)"; //"#BBBBBB";
       const trustState = this.getTrustInfoForCurrentWifi();
 
       if (trustState.isTrusted == true) return TRUSTED;
@@ -220,7 +221,7 @@ export default {
 }
 
 .datails_text {
-  color: $base-text-color-details;
+  color: var(--text-color-details);
   font-size: 13px;
   line-height: 18px;
 
@@ -230,7 +231,7 @@ export default {
 
 #connection_header {
   min-height: 51px;
-  background: #f2f3f6;
+  background: var(--background-color-alternate);
 }
 
 .leftPanelBlock {

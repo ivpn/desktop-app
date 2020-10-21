@@ -2,6 +2,14 @@
 @import "windows-servers.scss";
 @import "windows-settings.scss";
 
+
+:root {
+  --button-slave-background: rgba(0, 0, 0, 0.2);
+  @media (prefers-color-scheme: dark){
+    --button-slave-background: #777777;
+  }
+}
+
 // === HOP BUTTONS ===
 div.hopButtons {
     @extend .hopButtonsBase;
@@ -19,7 +27,7 @@ button.hopButton {
     line-height: 18px;
     text-align: center;
     letter-spacing: -0.375px;
-    color: #26394D;
+    color: #36495D;
 
     opacity: 1;
     font-weight: 400;
@@ -35,11 +43,10 @@ input.styled {
     @extend .styledBase;
     height: 32px;
     
-    border: 2px solid rgba(139, 154, 171, 0.3);
+    border: 2px solid rgba(var(--input-border-color-rgb), 0.3);
     box-sizing: border-box;
     
     border-radius: 0px;
-    background: white;
 }
 input.styled::placeholder {
     font-size: 14px;
@@ -67,7 +74,7 @@ button.master {
   
 button.slave {
     @extend .master;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--button-slave-background);
 
     font-size: 14px;
     line-height: 20px;

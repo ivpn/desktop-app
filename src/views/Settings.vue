@@ -4,7 +4,8 @@
       <div id="leftPanel" class="settingsLeftPanel">
         <div class="row settingsLeftPanelHeader" id="leftPanelHeader">
           <button id="backBtn" class="noBordersBtn" v-on:click="goBack">
-            <img :src="arrowLeftImagePath" />
+            <!-- ARROW LEFT -->
+            <imgArrowLeft />
           </button>
           <div class="Header settingsHeader">Settings</div>
         </div>
@@ -153,6 +154,7 @@ import networksView from "@/components/settings/settings-networks.vue";
 import antitrackerView from "@/components/settings/settings-antitracker.vue";
 import dnsView from "@/components/settings/settings-dns.vue";
 import versionView from "@/components/settings/settings-version.vue";
+import imgArrowLeft from "@/components/images/arrow-left.vue";
 
 export default {
   components: {
@@ -163,7 +165,8 @@ export default {
     networksView,
     antitrackerView,
     dnsView,
-    versionView
+    versionView,
+    imgArrowLeft
   },
   mounted() {
     if (this.$route.params.view != null) this.view = this.$route.params.view;
@@ -177,15 +180,11 @@ export default {
     isLoggedIn: function() {
       return this.$store.getters["account/isLoggedIn"];
     },
-    arrowLeftImagePath: function() {
-      switch (Platform()) {
-        case PlatformEnum.Windows:
-          return require("@/assets/arrow-left-windows.svg");
-        case PlatformEnum.macOS:
-          return require("@/assets/arrow-left-macos.svg");
-        default:
-          return require("@/assets/arrow-left-linux.svg");
-      }
+    PlatformEnum: function() {
+      return PlatformEnum;
+    },
+    platform: function() {
+      return Platform();
     }
   },
   methods: {
@@ -223,7 +222,7 @@ div.row {
 }
 #leftPanel {
   padding-top: 50px;
-  background: #f2f3f6;
+  background: var(--background-color-alternate);
   min-width: 232px;
   height: 100vh;
 }
@@ -286,6 +285,8 @@ button.tabTitleBtn {
 
   font-size: 14px;
   line-height: 17px;
+
+  color: var(--text-color-settings-menu);
 }
 button.activeBtn {
   font-weight: 500;

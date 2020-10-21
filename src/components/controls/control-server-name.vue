@@ -141,6 +141,6 @@ export default {
 }
 
 .pingtext {
-  color: $base-text-color-details;
+  color: var(--text-color-details);
 }
 </style>

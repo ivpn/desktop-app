@@ -43,10 +43,10 @@ export default {
 <style scoped lang="scss">
 $switchSize: 31px;
 $wToHproportion: 2;
-$switchBorder: #d1d7e3;
+$switchBorder: transparent; //#d1d7e3;
 $switchBackground: #ff6258; //#d1d7e3;
 // $switchBackground: #d1d7e3; //#d1d7e3;
-$switchDot: #fff;
+$switchDot: var(--background-color); // #fff;
 $switchActive: #9ec4ff;
 // $switchActive: #449cf8;
 $switchBorderActive: #5d9bfb;

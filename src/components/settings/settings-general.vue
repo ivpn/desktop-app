@@ -28,16 +28,45 @@
       <input type="checkbox" id="minimizeToTray" v-model="minimizeToTray" />
       <label class="defColor" for="minimizeToTray">Minimize to tray</label>
     </div>
-    <div v-if="canShowMinimizeToTrayDescription">
+    <div v-if="isLinux">
       <div class="description">
         By enabling this parameter, the application will stay in memory after
         closing the window and it will be accessible only via the tray icon.
       </div>
       <div class="description">
-        Caution: Not all Linux desktop environments support displaying the
-        application icon in the system tray.
+        <b>Caution:</b> Not all Linux desktop environments support displaying
+        the application icon in the system tray.
       </div>
     </div>
+
+    <div class="settingsBoldFont">
+      View:
+    </div>
+    <div class="flexRow paramBlock">
+      <div class="defColor paramName">Color theme:</div>
+      <select
+        v-model="colorTheme"
+        style="margin-left:30px; background: var(--background-color);"
+      >
+        <option :value="colorThemeEnum.system" :key="colorThemeEnum.system"
+          >System default</option
+        >
+        <option :value="colorThemeEnum.light" :key="colorThemeEnum.light"
+          >Light</option
+        >
+        <option :value="colorThemeEnum.dark" :key="colorThemeEnum.dark"
+          >Dark</option
+        >
+      </select>
+    </div>
+
+    <!--
+    <div v-if="isLinux && colorScheme === colorThemeEnum.system">
+      <div class="description" style="margin-left: 0px;">
+        When changing the system color theme, the new application color theme
+        will be updated after reopening the application window.
+      </div>
+    </div> -->
 
     <div class="settingsBoldFont">
       Autoconnect:
@@ -50,7 +79,7 @@
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
-    <div class="param" v-if="isCanAutoconnectOnInsecureWIFI">
+    <div class="param" v-if="!isLinux">
       <input
         type="checkbox"
         id="connectVPNOnInsecureNetwork"
@@ -114,6 +143,7 @@
 </template>
 
 <script>
+import { ColorTheme } from "@/store/types";
 import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import sender from "@/ipc/renderer-sender";
@@ -126,10 +156,12 @@ export default {
   data: function() {
     return {
       diagnosticLogsShown: false,
-      isLaunchAtLoginValue: null
+      isLaunchAtLoginValue: null,
+      colorScheme: null
     };
   },
   mounted() {
+    this.colorScheme = sender.ColorScheme();
     this.doUpdateIsLaunchAtLogin();
   },
   methods: {
@@ -146,13 +178,9 @@ export default {
     }
   },
   computed: {
-    isCanAutoconnectOnInsecureWIFI() {
-      return Platform() != PlatformEnum.Linux;
-    },
-    canShowMinimizeToTrayDescription() {
+    isLinux() {
       return Platform() === PlatformEnum.Linux;
     },
-
     isLaunchAtLogin: {
       get() {
         return this.isLaunchAtLoginValue;
@@ -235,6 +263,19 @@ export default {
 
     isCanSendDiagLogs() {
       return sender.IsAbleToSendDiagnosticReport();
+    },
+
+    colorThemeEnum() {
+      return ColorTheme;
+    },
+    colorTheme: {
+      get() {
+        return this.colorScheme;
+      },
+      set(value) {
+        sender.ColorSchemeSet(value);
+        this.colorScheme = value;
+      }
     }
   }
 };
@@ -266,7 +307,7 @@ label {
 div.description {
   @extend .settingsGrayLongDescriptionFont;
   margin-left: 22px;
-  max-width: 425px;
+  max-width: 490px;
 }
 
 button.btn {
@@ -284,5 +325,12 @@ button.btn {
   top: 0%;
   width: 100%;
   height: 100%;
+}
+
+select {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  border-radius: 3.5px;
+  width: 186px;
 }
 </style>

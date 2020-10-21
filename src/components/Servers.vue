@@ -4,7 +4,7 @@
     <div class="flexRow serversButtonsHeader">
       <div>
         <button v-on:click="goBack" class="stateButtonOff">
-          <img :src="arrowLeftImagePath" class="serversButtonsBack" />
+          <imgArrowLeft class="serversButtonsBack" />
         </button>
       </div>
 
@@ -42,7 +42,7 @@
             <button
               style="width: 100%"
               v-on:click="showAll"
-              class="stateButtonOff stateButtonLeft"
+              class="stateButtonOff"
               v-bind:class="{ stateButtonOn: !isFavoritesView }"
             >
               fastest server settings
@@ -262,6 +262,7 @@ const { dialog, getCurrentWindow } = require("electron").remote;
 
 import serverNameControl from "@/components/controls/control-server-name.vue";
 import SwitchProgress from "@/components/controls/control-switch-small.vue";
+import imgArrowLeft from "@/components/images/arrow-left.vue";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import { enumValueName, getDistanceFromLatLonInKm } from "@/helpers/helpers";
@@ -277,7 +278,8 @@ export default {
   ],
   components: {
     serverNameControl,
-    SwitchProgress
+    SwitchProgress,
+    imgArrowLeft
   },
   data: function() {
     return {
@@ -663,7 +665,7 @@ input#filter {
   margin-right: $paddingLeftRight;
   font-size: 11px;
   line-height: 13px;
-  color: $base-text-color-details;
+  color: var(--text-color-details);
 }
 
 button.sortBtn {

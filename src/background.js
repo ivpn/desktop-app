@@ -29,7 +29,8 @@ import {
   Menu,
   dialog,
   nativeImage,
-  ipcMain
+  ipcMain,
+  nativeTheme
 } from "electron";
 import {
   createProtocol,
@@ -81,7 +82,6 @@ if (!gotTheLock) {
 ipcMain.handle("renderer-request-ui-initial-route-args", () => {
   return lastRouteArgs;
 });
-
 ipcMain.on("renderer-request-show-settings-general", () => {
   menuOnPreferences();
 });
@@ -101,6 +101,12 @@ if (gotTheLock) {
   InitTrustedNetworks();
   connectToDaemon();
 
+  // INIT COLOR SCHEME
+  try {
+    nativeTheme.themeSource = store.state.settings.colorTheme;
+  } catch (e) {
+    console.error("Failed to set color scheme: ", e);
+  }
   // Scheme must be registered before the app is ready
   protocol.registerSchemesAsPrivileged([
     { scheme: "app", privileges: { secure: true, standard: true } }

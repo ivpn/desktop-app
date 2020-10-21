@@ -19,13 +19,22 @@
 
 <script>
 export default {
-  props: ["click", "text", "description", "markerText", "markerColor"],
+  props: [
+    "click",
+    "text",
+    "description",
+    "markerText",
+    "markerColor",
+    "markerTextColor"
+  ],
   computed: {
     isShowMarker: function() {
       return this.markerText != null && this.markerColor != null;
     },
     markerStyle: function() {
-      return `background: ${this.markerColor}; border-radius: 4px; padding: 4px; font-size: 10px; line-height: 10px; letter-spacing: 1px; color: #FFFFFF;`;
+      let ret = `background: ${this.markerColor};  border-radius: 4px; padding: 4px; font-size: 10px; line-height: 10px; letter-spacing: 1px; `;
+      if (this.markerTextColor) ret += `color: ${this.markerTextColor}`;
+      return ret;
     }
   }
 };
@@ -43,7 +52,7 @@ export default {
 .small_text {
   font-size: 11px;
   line-height: 13px;
-  color: $base-text-color-details;
+  color: var(--text-color-details);
 }
 
 #selectBtn {

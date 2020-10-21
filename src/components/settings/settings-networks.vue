@@ -95,6 +95,7 @@
             <select
               v-model="defaultTrustStatusIsTrusted"
               class="trustedConfigBase"
+              style="background: var(--background-color);"
               v-bind:class="{
                 trustedConfigUntrusted: defaultTrustStatusIsTrusted == false,
                 trustedConfigTrusted: defaultTrustStatusIsTrusted == true
@@ -207,7 +208,7 @@ export default {
     },
     onResetToDefaultSettings() {
       let actionNo = dialog.showMessageBoxSync(getCurrentWindow(), {
-        type: "error",
+        type: "question",
         buttons: ["Yes", "Cancel"],
         message: "Reset all settings to default values",
         detail: `Are you sure you want to reset the trust status for all networks and actions to default settings?`
@@ -373,8 +374,6 @@ button.selectableButtonOff {
   font-style: normal;
   font-size: 11px;
   line-height: 13px;
-
-  color: #2a394b;
 
   border-bottom: 2px solid #d9e0e5;
 }

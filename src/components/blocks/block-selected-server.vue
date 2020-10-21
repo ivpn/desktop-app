@@ -91,7 +91,7 @@ export default {
   font-size: 14px;
   line-height: 17px;
   letter-spacing: -0.3px;
-  color: $base-text-color-details;
+  color: var(--text-color-details);
 }
 
 .serverSelectBtn {

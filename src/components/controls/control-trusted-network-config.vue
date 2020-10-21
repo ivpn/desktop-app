@@ -9,6 +9,7 @@
 
     <select
       class="trustedConfigBase"
+      style="background: var(--background-color);"
       v-bind:class="{
         trustedConfigUntrusted: isTrusted == false,
         trustedConfigTrusted: isTrusted == true

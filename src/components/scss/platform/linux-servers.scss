@@ -18,8 +18,8 @@ img.serversButtonsBack {
 }
 
 button.sortBtnPlatform {
-    background: linear-gradient(0deg, #EFEEED 0%, #FFFFFF 100%), #FFFFFF;
-    border: 1px solid #CACACA !important;
+    background: linear-gradient(0deg, var(--button-background-gradient-start) 0%, var(--button-background) 100%), var(--button-background);
+    border: 1px solid var(--input-border-color) !important;
     box-sizing: border-box;
     padding-left: 3px;
     padding-right: 3px;
@@ -33,8 +33,8 @@ button.stateButtonOff {
 
     text-transform: capitalize;
     height: 28px;
-    background: linear-gradient(0deg, #EFEEED 0%, #FFFFFF 100%), #FFFFFF;
-    border: 1px solid #CACACA;
+    background: linear-gradient(0deg, var(--button-background-gradient-start) 0%, var(--button-background) 100%), var(--button-background);
+    border: 1px solid var(--input-border-color);
     box-sizing: border-box;
     border-radius: 4px;
     font-size: 14px;
@@ -48,8 +48,8 @@ button.stateButtonOn {
     outline: none;
 
     height: 28px;
-    background: linear-gradient(0deg, #F49572 0%, #FAAE91 100%), #FFFFFF;
-    border: 1px solid #CACACA;
+    background: linear-gradient(0deg, var(--button-on-background-gradient-start) 0%, var(--button-on-background) 100%), var(--button-on-background);
+    border: 1px solid var(--input-border-color);
     box-sizing: border-box;
 
 
@@ -66,5 +66,4 @@ button.stateButtonLeft{
 
 button.stateButtonRight{
     border-radius: 0px 4px 4px 0px;
-
 }
