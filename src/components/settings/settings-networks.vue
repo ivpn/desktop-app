@@ -95,18 +95,15 @@
             <select
               v-model="defaultTrustStatusIsTrusted"
               class="trustedConfigBase"
+              style="background: var(--background-color);"
               v-bind:class="{
                 trustedConfigUntrusted: defaultTrustStatusIsTrusted == false,
                 trustedConfigTrusted: defaultTrustStatusIsTrusted == true
               }"
             >
-              <!-- Option color applicable only for Windows.
-                (only for Windows) If not to set color manually 
-                  - white option text will not be visible on white background
-               -->
-              <option :value="false" style="color: red;">Untrusted</option>
-              <option :value="true" style="color: #3b99fc;">Trusted</option>
-              <option :value="null" style="color: #555555;">No status</option>
+              <option :value="false">Untrusted</option>
+              <option :value="true">Trusted</option>
+              <option :value="null">No status</option>
             </select>
           </div>
         </div>
