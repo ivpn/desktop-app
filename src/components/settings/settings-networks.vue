@@ -100,9 +100,13 @@
                 trustedConfigTrusted: defaultTrustStatusIsTrusted == true
               }"
             >
-              <option :value="false">Untrusted</option>
-              <option :value="true">Trusted</option>
-              <option :value="null">No status</option>
+              <!-- Option color applicable only for Windows.
+                (only for Windows) If not to set color manually 
+                  - white option text will not be visible on white background
+               -->
+              <option :value="false" style="color: red;">Untrusted</option>
+              <option :value="true" style="color: #3b99fc;">Trusted</option>
+              <option :value="null" style="color: #555555;">No status</option>
             </select>
           </div>
         </div>
@@ -207,7 +211,7 @@ export default {
     },
     onResetToDefaultSettings() {
       let actionNo = dialog.showMessageBoxSync(getCurrentWindow(), {
-        type: "error",
+        type: "question",
         buttons: ["Yes", "Cancel"],
         message: "Reset all settings to default values",
         detail: `Are you sure you want to reset the trust status for all networks and actions to default settings?`

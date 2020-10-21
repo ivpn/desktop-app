@@ -4,7 +4,7 @@
 $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
 
 :root {
-    --text-color-rgb: 42, 57, 75;
+    --text-color-rgb: 42, 57, 75; // #2A394B
     --text-color: rgba(var(--text-color-rgb));
     --text-color-details: #2A394B7f; //rgba(#2A394B, 0.5);
     --text-color-settings: #2A394Bda;   //rgba(#2A394B, 0.85);
@@ -17,7 +17,8 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
     --shadow-opacity-koef: 0.15;
     --separator-line-color: #e9e9e9;
 
-    --input-border-color: #8B9AAB;
+    --input-border-color-rgb: 139, 154, 171; // #8B9AAB;
+    --input-border-color: rgba(var(--input-border-color-rgb));
     --input-background: #FBFBFB;
 
     --map-background-color: #cbd2d3;
@@ -38,7 +39,8 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
          --shadow-opacity-koef: 0.9;
          --separator-line-color: #333333;
 
-         --input-border-color: #000000;
+         --input-border-color-rgb: 0,0,0;
+         --input-border-color:rgba(var(--input-border-color-rgb));
          --input-background:rgba(211, 223, 230, 0.33);
 
          --map-background-color: #292929;

@@ -154,8 +154,6 @@ export default {
   font-weight: 600;
   font-size: 18px;
   line-height: 120%;
-
-  color: #2a394b;
 }
 
 .small_text {
