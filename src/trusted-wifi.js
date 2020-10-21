@@ -65,7 +65,10 @@ async function processWifiChange() {
     currSSID = currentWiFiInfo.SSID;
   }
 
-  if (!currSSID) return;
+  if (!currSSID) {
+    lastProcessedRule = null;
+    return;
+  }
 
   // if trusted network control is enabled
   if (trustedNetworksControl == true) {
