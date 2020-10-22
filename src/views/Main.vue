@@ -33,12 +33,14 @@
       </div>
     </div>
     <div id="right" v-if="!isMinimizedUI">
-      <Map
-        :isBlured="isMapBlured"
-        :onAccountSettings="onAccountSettings"
-        :onSettings="onSettings"
-        :onMinimize="() => onMaximize(false)"
-      />
+      <transition name="fade" appear>
+        <Map
+          :isBlured="isMapBlured"
+          :onAccountSettings="onAccountSettings"
+          :onSettings="onSettings"
+          :onMinimize="() => onMaximize(false)"
+        />
+      </transition>
     </div>
   </div>
 </template>
@@ -68,6 +70,7 @@ export default {
     },
     currentViewComponent: function() {
       const daemonConnection = this.$store.state.daemonConnectionState;
+      if (daemonConnection == null) return null;
       if (
         daemonConnection == null ||
         daemonConnection === DaemonConnectionType.NotConnected ||

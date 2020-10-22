@@ -10,6 +10,8 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
     --text-color-settings: #2A394Bda;   //rgba(#2A394B, 0.85);
     --text-color-settings-menu: #2A394B;
 
+    // NOTE! the '--background-color-rgb' values should be synchronized with JS implementation
+    // (src/background.js : getBackgroundColor())
     --background-color-rgb:255,255,255; // #ffffff;
     --background-color: rgba(var(--background-color-rgb)); 
     --background-color-alternate: #f2f3f6;

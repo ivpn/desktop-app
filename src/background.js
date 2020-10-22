@@ -44,8 +44,7 @@ SentryInit();
 import "./ipc/main-listener";
 
 import store from "@/store";
-import { DaemonConnectionType } from "@/store/types";
-
+import { DaemonConnectionType, ColorTheme } from "@/store/types";
 import daemonClient from "./daemon-client";
 import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
@@ -212,7 +211,7 @@ if (gotTheLock) {
     } else {
       let msgBoxConfig = {
         type: "question",
-        message: "Are you sure want to quit?",
+        message: "Are you sure you want to quit?",
         detail: "You are connected to the VPN.",
         buttons: [
           "Cancel",
@@ -354,6 +353,7 @@ function createWindow() {
   if (!IsWindowHasTitle()) titleBarStyle = "hidden"; //"hiddenInset";
 
   let windowConfig = {
+    backgroundColor: getBackgroundColor(),
     show: false,
 
     width: store.state.settings.minimizedUI
@@ -417,6 +417,7 @@ function createSettingsWindow(viewName) {
   if (viewName == null) viewName = "general";
 
   let windowConfig = {
+    backgroundColor: getBackgroundColor(),
     show: false,
 
     width: 800,
@@ -534,8 +535,7 @@ function updateAppDockVisibility() {
 function menuOnShow() {
   try {
     if (!win) createWindow();
-
-    if (win) {
+    else {
       win.restore();
       win.show();
       win.focus();
@@ -600,4 +600,18 @@ function OnAppUpdateAvailable(newDaemonVer, newUiVer) {
   } catch (e) {
     console.error(e);
   }
+}
+
+// COLORS
+function getBackgroundColor() {
+  // NOTE! the return values should be synchronized with CSS configuration
+  // (src/components/scss/constants.scss)
+  const theme = nativeTheme.themeSource;
+  if (
+    (theme === ColorTheme.system && nativeTheme.shouldUseDarkColors === true) ||
+    theme === ColorTheme.dark
+  )
+    return "#1c1c1e";
+
+  return "#FFFFFF";
 }

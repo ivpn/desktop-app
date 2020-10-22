@@ -13,7 +13,7 @@ import { IsWindowHasTitle } from "@/platform/platform";
 import { InitDefaultCopyMenus } from "./app-def-context-menus";
 
 export default {
-  mounted() {
+  beforeCreate() {
     // function using to re-apply all mutations
     // This is required to send to renderer processes current storage state
     sender.RefreshStorage();

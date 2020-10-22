@@ -277,6 +277,13 @@ async function processResponse(response) {
     case daemonResponses.HelloResp:
       store.commit("daemonVersion", obj.Version);
 
+      // Check minimal required daemon version
+      if (IsNewerVersion(obj.Version, config.MinRequiredDaemonVer)) {
+        store.commit("daemonIsOldVersionError", true);
+        return;
+      }
+      store.commit("daemonIsOldVersionError", false);
+
       commitSession(obj.Session);
 
       // if no info about account status - request it
@@ -499,14 +506,8 @@ function ConnectToDaemon() {
           );
           await sendRecv(helloReq, null, 10000);
 
-          if (
-            // the 'store.state.daemonVersion' must be already initialized
-            IsNewerVersion(
-              store.state.daemonVersion,
-              config.MinRequiredDaemonVer
-            )
-          ) {
-            store.commit("daemonIsOldVersionError", true);
+          // the 'store.state.daemonVersion' and 'store.state.daemonIsOldVersionError' must be already initialized
+          if (store.state.daemonIsOldVersionError === true) {
             store.commit(
               "daemonConnectionState",
               DaemonConnectionType.NotConnected
@@ -524,7 +525,6 @@ function ConnectToDaemon() {
           }
 
           // Saving 'connected' state to a daemon
-          store.commit("daemonIsOldVersionError", false);
           store.commit("daemonConnectionState", DaemonConnectionType.Connected);
 
           // send logging + obfsproxy configuration
@@ -567,6 +567,7 @@ function ConnectToDaemon() {
 
     socket.on("error", e => {
       log.error(`Connection error: ${e}`);
+      reject(e);
     });
 
     log.debug("Connecting to daemon...");
