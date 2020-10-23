@@ -47,7 +47,7 @@ $switchBorder: transparent; //#d1d7e3;
 $switchBackground: #ff6258; //#d1d7e3;
 // $switchBackground: #d1d7e3; //#d1d7e3;
 $switchDot: var(--background-color); // #fff;
-$switchActive: #9ec4ff;
+$switchActive: #449cf8;
 // $switchActive: #449cf8;
 $switchBorderActive: #5d9bfb;
 // $switchBorderActive: green;
