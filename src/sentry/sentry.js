@@ -45,10 +45,12 @@ export function SentryInit() {
 export function SentrySendDiagnosticReport(
   AccountID,
   comment,
-  eventAdditionalDataObject
+  eventAdditionalDataObject,
+  daemonVer
 ) {
   if (!DSN || comment == "" || eventAdditionalDataObject == null) return;
 
+  if (!daemonVer) daemonVer = "UNKNOWN";
   // Sentry can not accept very long fields (>16KB)
   // therefore, here we are dividing fields on smaller
   const maxFieldSize = 16 * 1024;
@@ -92,7 +94,8 @@ export function SentrySendDiagnosticReport(
         ["comment"]: { "User comment": comment }
       },
       tags: {
-        AccountID: AccountID
+        AccountID: AccountID,
+        DaemonVersion: daemonVer
       }
     });
   } catch (e) {

@@ -141,6 +141,11 @@ ipcMain.handle("renderer-request-get-diagnostic-logs", async () => {
   if (data != null) {
     if (store.state.account.session != null)
       data[" IVPN User"] = store.state.account.session.AccountID;
+
+    let daemonVer = store.state.daemonVersion;
+    if (!daemonVer) daemonVer = "UNKNOWN";
+    data[" DaemonVersion"] = daemonVer;
+
     data[" Settings"] = JSON.stringify(store.state.settings, null, 2);
   }
   return data;
@@ -151,7 +156,12 @@ ipcMain.handle(
     let accountID = "";
     if (store.state.account.session != null)
       accountID = store.state.account.session.AccountID;
-    return SentrySendDiagnosticReport(accountID, comment, dataObj);
+    return SentrySendDiagnosticReport(
+      accountID,
+      comment,
+      dataObj,
+      store.state.daemonVersion
+    );
   }
 );
 
