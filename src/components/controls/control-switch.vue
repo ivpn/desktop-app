@@ -121,6 +121,9 @@ $switchBorderActive: #5d9bfb;
   }
   &:hover {
     input {
+      & + div {
+        opacity: 0.7;
+      }
       &:disabled + div {
         border-color: $switchBorder;
       }
