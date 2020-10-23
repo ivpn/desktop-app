@@ -7,7 +7,9 @@ export async function CheckUpdates() {
     const response = await fetch(updateJsonUrl, options);
     return await response.json();
   } catch (e) {
-    console.error(e);
+    if (e instanceof SyntaxError)
+      console.error("[updater] parsing update file info error: ", e.message);
+    else console.error("[updater] error: ", e);
     return null;
   }
 }

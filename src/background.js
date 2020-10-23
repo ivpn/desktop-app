@@ -371,8 +371,6 @@ function createWindow() {
     titleBarStyle: titleBarStyle,
     autoHideMenuBar: true,
 
-    skipTaskbar: true,
-
     webPreferences: {
       enableRemoteModule: true,
       // Use pluginOptions.nodeIntegration, leave this alone
