@@ -70,7 +70,7 @@ export default {
     async Login(isForceLogout) {
       try {
         // check accoundID
-        var pattern = new RegExp("^(i-....-....-....)|(ivpn........)$"); // fragment locator
+        var pattern = new RegExp("^(i-....-....-....)|(ivpn[a-zA-Z0-9]{7,8})$"); // fragment locator
         if (this.accountID) this.accountID = this.accountID.trim();
         if (pattern.test(this.accountID) !== true) {
           throw new Error(
