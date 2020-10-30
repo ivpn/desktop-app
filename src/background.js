@@ -102,7 +102,8 @@ if (gotTheLock) {
 
   // INIT COLOR SCHEME
   try {
-    nativeTheme.themeSource = store.state.settings.colorTheme;
+    if (store.state.settings.colorTheme)
+      nativeTheme.themeSource = store.state.settings.colorTheme;
   } catch (e) {
     console.error("Failed to set color scheme: ", e);
   }
