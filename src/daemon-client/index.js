@@ -188,7 +188,7 @@ function send(request, reqNo) {
   let serialized = toJson(request);
   // : Full logging is only for debug. Must be removed from production!
   //log.debug(`==> ${serialized}`);
-  log.debug(`==> ${request.Command}`);
+  log.debug(`==> ${request.Command}  [${request.Idx}]`);
   socket.write(`${serialized}\n`);
 
   return request.Idx;
@@ -268,7 +268,7 @@ async function processResponse(response) {
     // TODO: Full logging is only for debug. Must be removed from production!
     //log.log(`<== ${obj.Command} ${response.length > 512 ? " ..." : response}`);
     //log.log(`<== ${response}`);
-    log.debug(`<== ${obj.Command}`);
+    log.debug(`<== ${obj.Command} [${obj.Idx}]`);
   } else log.error(`<== ${response}`);
 
   if (obj == null || obj.Command == null || obj.Command.length <= 0) return;
@@ -545,11 +545,9 @@ function ConnectToDaemon() {
             }
           }, 0);
 
-          send({
-            Command: daemonRequests.PingServers,
-            RetryCount: 5,
-            TimeOutMs: 5000
-          });
+          const pingRetryCount = 5;
+          const pingTimeOutMs = 5000;
+          PingServers(pingRetryCount, pingTimeOutMs);
 
           resolve(); // RESOLVE
         } catch (e) {
@@ -661,15 +659,32 @@ async function GeoLookup(isRetryTry) {
   return retLocation;
 }
 
-async function PingServers() {
-  return await sendRecv(
-    {
-      Command: daemonRequests.PingServers,
-      RetryCount: PingServersRetriesCnt,
-      TimeOutMs: PingServersTimeoutMs
-    },
-    [daemonResponses.PingServersResp]
-  );
+let pingServersPromise = null;
+async function PingServers(RetryCount, TimeOutMs) {
+  const p = pingServersPromise;
+  if (p) {
+    console.debug("Pinging already in progress. Waiting...");
+    return await p;
+  }
+
+  let ret = null;
+  store.commit("vpnState/isPingingServers", true);
+  try {
+    pingServersPromise = sendRecv(
+      {
+        Command: daemonRequests.PingServers,
+        RetryCount: RetryCount ? RetryCount : PingServersRetriesCnt,
+        TimeOutMs: TimeOutMs ? TimeOutMs : PingServersTimeoutMs
+      },
+      [daemonResponses.PingServersResp]
+    );
+
+    ret = await pingServersPromise;
+  } finally {
+    pingServersPromise = null;
+    store.commit("vpnState/isPingingServers", false);
+  }
+  return ret;
 }
 
 async function GetDiagnosticLogs() {

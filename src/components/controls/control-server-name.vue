@@ -24,7 +24,10 @@
       class="flexRow"
       v-bind:class="{ marginLeft: isHideFlag == null || isHideName == null }"
     >
-      <img :src="pingStatusImg" v-if="isShowPingPicture" />
+      <img
+        :src="pingStatusImg"
+        v-if="isShowPingPicture == 'true' || isShowPingPicture == true"
+      />
 
       <div
         class="pingtext marginLeft"

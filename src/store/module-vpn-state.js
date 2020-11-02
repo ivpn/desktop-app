@@ -63,7 +63,10 @@ export default {
 
     // Servers hash object: serversHashed[gateway] = server
     serversHashed: {},
-    servers: { wireguard: [], openvpn: [], config: {} }
+    servers: { wireguard: [], openvpn: [], config: {} },
+
+    // true when servers pinging in progress
+    isPingingServers: false
 
     /*
     // SERVERS
@@ -135,6 +138,9 @@ export default {
     },
     servers(state, serversObj) {
       updateServers(state, serversObj);
+    },
+    isPingingServers(state, val) {
+      state.isPingingServers = val;
     },
     serversPingStatus(state, pingResultArray) {
       updateServersPings(state, pingResultArray);
