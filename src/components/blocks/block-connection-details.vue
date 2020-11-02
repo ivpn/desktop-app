@@ -19,6 +19,11 @@
       description="Ensure that all traffic is routed through VPN"
       :onChecked="firewallOnChecked"
       :isChecked="this.$store.state.vpnState.firewallState.IsEnabled"
+      :checkedColor="
+        this.$store.state.vpnState.firewallState.IsPersistent
+          ? '#77152a77'
+          : null
+      "
       :isProgress="firewallIsProgress"
     />
 
@@ -31,7 +36,7 @@
       :onChecked="antitrackerOnChecked"
       :isChecked="this.$store.state.settings.isAntitracker"
       :checkedColor="
-        this.$store.state.settings.isAntitrackerHardcore ? '#00008B99' : null
+        this.$store.state.settings.isAntitrackerHardcore ? '#77152a' : null
       "
       :isProgress="antitrackerIsProgress"
     />

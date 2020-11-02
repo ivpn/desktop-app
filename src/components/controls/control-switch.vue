@@ -20,10 +20,8 @@ export default {
       return this.isChecked === true;
     },
     style: function() {
-      if (this.checkedColor == null || this.isConnected === false) return {};
-      return {
-        background: this.checkedColor //"#00008B99"
-      };
+      if (this.checkedColor == null || this.isConnected === false) return "";
+      return `background: ${this.checkedColor}`;
     }
   },
 
@@ -49,8 +47,7 @@ $switchBackground: #ff6258; //#d1d7e3;
 $switchDot: var(--background-color); // #fff;
 $switchActive: #449cf8;
 // $switchActive: #449cf8;
-$switchBorderActive: #5d9bfb;
-// $switchBorderActive: green;
+$switchBorderActive: transparent; //#5d9bfb;
 
 .switch {
   margin: 0;
@@ -123,12 +120,6 @@ $switchBorderActive: #5d9bfb;
     input {
       & + div {
         opacity: 0.7;
-      }
-      &:disabled + div {
-        border-color: $switchBorder;
-      }
-      &:checked + div {
-        background: $switchBorderActive;
       }
     }
   }
