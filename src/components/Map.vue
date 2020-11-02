@@ -68,7 +68,6 @@
         v-bind:class="{ blured: isBlured === 'true' }"
         @mousedown="mouseDown"
         @mouseup="mouseUp"
-        @mouseleave="mouseUp"
         @mousemove="mouseMove"
         @wheel="wheel"
       >
@@ -487,6 +486,15 @@ export default {
       this.moving = false;
     },
     mouseMove(e) {
+      if (e.buttons !== 1) {
+        // MouseEvent.buttons
+        // 0 : No button or un-initialized
+        // 1 : Primary button (usually the left button)
+        // 2 : Secondary button (usually the right button)
+        this.mouseUp();
+        return;
+      }
+
       if (this.moving) {
         if (this.map != null) {
           // MOVING
