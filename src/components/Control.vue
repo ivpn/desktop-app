@@ -255,18 +255,35 @@ export default {
     },
     onServerChanged(server, isExitServer) {
       if (server == null || isExitServer == null) return;
-      if (!isExitServer) {
-        if (server === this.$store.state.settings.serverEntry) return;
-        this.$store.dispatch("settings/isRandomServer", false);
-        this.$store.dispatch("settings/serverEntry", server);
-      } else {
-        if (server === this.$store.state.settings.serverExit) return;
-        this.$store.dispatch("settings/isRandomExitServer", false);
-        this.$store.dispatch("settings/serverExit", server);
-      }
-      this.$store.dispatch("settings/isFastestServer", false);
 
-      if (connected(this)) connect(this, true);
+      let needReconnect = false;
+      if (!isExitServer) {
+        if (
+          !this.$store.state.settings.serverEntry ||
+          this.$store.state.settings.serverEntry.gateway !== server.gateway ||
+          this.$store.state.settings.isRandomServer !== false
+        ) {
+          this.$store.dispatch("settings/isRandomServer", false);
+          this.$store.dispatch("settings/serverEntry", server);
+          needReconnect = true;
+        }
+      } else {
+        if (
+          !this.$store.state.settings.serverExit ||
+          this.$store.state.settings.serverExit.gateway !== server.gateway ||
+          this.$store.state.settings.isRandomExitServer !== false
+        ) {
+          this.$store.dispatch("settings/isRandomExitServer", false);
+          this.$store.dispatch("settings/serverExit", server);
+          needReconnect = true;
+        }
+      }
+      if (this.$store.state.settings.isFastestServer !== false) {
+        this.$store.dispatch("settings/isFastestServer", false);
+        needReconnect = true;
+      }
+
+      if (needReconnect == true && connected(this)) connect(this, true);
     },
     onFastestServer() {
       this.$store.dispatch("settings/isFastestServer", true);
