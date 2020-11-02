@@ -30,6 +30,10 @@ import { Platform, PlatformEnum } from "@/platform/platform";
 
 const getDefaultState = () => {
   let defState = {
+    // session
+    isExpectedAccountToBeLoggedIn: false,
+
+    // VPN
     vpnType: VpnTypeEnum.OpenVPN,
     isMultiHop: false,
     serverEntry: null,
@@ -129,7 +133,18 @@ export default {
     },
 
     resetToDefaults(state) {
-      Object.assign(state, getDefaultState());
+      var defaultState = getDefaultState();
+
+      // some parameters have to stay without changes
+      defaultState.vpnType = state.vpnType;
+      defaultState.isExpectedAccountToBeLoggedIn =
+        state.isExpectedAccountToBeLoggedIn;
+
+      Object.assign(state, defaultState);
+    },
+
+    isExpectedAccountToBeLoggedIn(state, val) {
+      state.isExpectedAccountToBeLoggedIn = val;
     },
 
     vpnType(state, val) {
@@ -299,6 +314,10 @@ export default {
 
   // can be called from renderer
   actions: {
+    isExpectedAccountToBeLoggedIn(context, val) {
+      context.commit("isExpectedAccountToBeLoggedIn", val);
+    },
+
     vpnType(context, val) {
       context.commit("vpnType", val);
       // selected servers should be of correct VPN type. Necessary to update them

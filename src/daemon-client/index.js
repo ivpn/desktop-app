@@ -248,6 +248,8 @@ function commitSession(sessionRespObj) {
     WgKeysRegenIntervalSec: sessionRespObj.WgKeysRegenInerval // note! spelling error in received parameter name
   };
   store.commit(`account/session`, session);
+  if (session.Session)
+    store.commit("settings/isExpectedAccountToBeLoggedIn", true);
   return session;
 }
 
@@ -596,6 +598,7 @@ async function Login(accountID, force) {
 }
 
 async function Logout() {
+  store.commit("settings/isExpectedAccountToBeLoggedIn", false);
   await KillSwitchSetIsPersistent(false);
   await EnableFirewall(false);
   await Disconnect();

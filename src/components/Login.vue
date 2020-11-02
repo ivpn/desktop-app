@@ -64,6 +64,17 @@ export default {
 
       const force = true;
       this.Login(force);
+    } else {
+      if (this.$store.state.settings.isExpectedAccountToBeLoggedIn === true) {
+        this.$store.dispatch("settings/isExpectedAccountToBeLoggedIn", false);
+        setTimeout(() => {
+          dialog.showMessageBox(getCurrentWindow(), {
+            type: "info",
+            buttons: ["OK"],
+            message: `You are logged out.\n\nYou have been redirected to the login page to re-enter your credentials.`
+          });
+        }, 0);
+      }
     }
   },
   methods: {
