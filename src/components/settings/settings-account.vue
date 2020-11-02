@@ -37,6 +37,22 @@
         <div class="settingsBoldFont" style="margin-bottom: 16px">
           Subscription details
         </div>
+
+        <!-- ACCOUNT EXPIRATION TEXT -->
+        <div
+          style="margin-bottom: 12px; color: darkorange"
+          v-if="$store.getters['account/messageAccountExpiration']"
+        >
+          {{ $store.getters["account/messageAccountExpiration"] }}
+        </div>
+        <!-- FREE TRIAL EXPIRATION TEXT -->
+        <div
+          style="margin-bottom: 12px; color: darkorange"
+          v-if="$store.getters['account/messageFreeTrial']"
+        >
+          {{ $store.getters["account/messageFreeTrial"] }}
+        </div>
+
         <div class="flexRowAlignTop">
           <div style="min-width: 170px; margin-right:17px">
             <div class="settingsGrayDescriptionFont">Subscription</div>

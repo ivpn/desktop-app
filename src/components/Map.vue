@@ -57,8 +57,36 @@
     </div>
     -->
 
-    <div class="geolocationInfoPanel">
-      <GeolocationInfoControl style="display: flex; align-items: center;" />
+    <div class="bottomPanel">
+      <div class="flexRow">
+        <div class="geolocationInfoPanel">
+          <GeolocationInfoControl style="display: flex; align-items: center;" />
+        </div>
+        <div calsss="flexRowRestSpace"></div>
+      </div>
+      <div
+        class="accountWillExpire"
+        v-if="$store.getters['account/messageAccountExpiration']"
+      >
+        <img src="@/assets/alert-triangle.svg" style="margin-right: 12px" />
+        {{ $store.getters["account/messageAccountExpiration"] }}
+        <div class="flexRowRestSpace" />
+        <button class="noBordersBtn" v-on:click="onAccountRenew()">
+          RENEW
+        </button>
+      </div>
+      <div
+        class="trialWillExpire"
+        v-on:click="onAccountRenew()"
+        v-if="$store.getters['account/messageFreeTrial']"
+      >
+        <img src="@/assets/alert-circle.svg" style="margin-right: 12px" />
+        {{ $store.getters["account/messageFreeTrial"] }}
+        <div class="flexRowRestSpace" />
+        <button class="noBordersBtn">
+          UPGRADE
+        </button>
+      </div>
     </div>
     <!-- Map -->
     <div class="mapcontainer" ref="combined">
@@ -159,6 +187,7 @@
 </template>
 
 <script>
+const { shell } = require("electron");
 const { dialog, getCurrentWindow } = require("electron").remote;
 
 import { VpnStateEnum, PauseStateEnum, ColorTheme } from "@/store/types";
@@ -426,6 +455,9 @@ export default {
       if (scheme === ColorTheme.system) {
         this.isDarkTheme = IsOsDarkColorScheme();
       } else this.isDarkTheme = scheme === ColorTheme.dark;
+    },
+    onAccountRenew() {
+      shell.openExternal(`https://www.ivpn.net/account`);
     },
     // ================= CONNECTION ====================
     async disconnect() {
@@ -1153,15 +1185,19 @@ $popup-background: var(--background-color);
   margin-top: -60px;
 }
 
-.geolocationInfoPanel {
+.bottomPanel {
   @extend .buttonsPanelBase;
-
-  position: absolute;
   bottom: 0;
   margin-bottom: 32px;
-
-  padding: 10px;
   margin-left: 32px;
+  width: calc(100% - 64px);
+
+  pointer-events: none;
+}
+
+.geolocationInfoPanel {
+  //pointer-events: auto;
+  padding: 10px;
 
   background: rgba(var(--background-color-rgb), 0.6);
 
@@ -1174,6 +1210,48 @@ $popup-background: var(--background-color);
   display: flex;
   align-items: center;
 }
+
+// ============== account expiration =================
+div.upgradeBase {
+  min-height: 40px;
+  border-radius: 8px;
+
+  display: flex;
+  align-items: center;
+
+  font-size: 12px;
+  line-height: 14px;
+  letter-spacing: -0.4px;
+
+  margin-top: 12px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+div.upgradeBase button {
+  font-size: 12px;
+  line-height: 14px;
+  letter-spacing: -0.4px;
+  pointer-events: auto;
+  //cursor: pointer;
+}
+div.accountWillExpire {
+  @extend .upgradeBase;
+  background: #f3e2a3;
+  color: #776832;
+}
+div.accountWillExpire button {
+  color: #776832;
+}
+div.trialWillExpire {
+  @extend .upgradeBase;
+  background: #b2d5fb;
+  color: #3e6894;
+}
+div.trialWillExpire button {
+  color: #3e6894;
+}
+
+// ============== settings =================
 
 .settingsBtnMarginLeft {
   margin-left: 24px;
