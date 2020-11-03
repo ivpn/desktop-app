@@ -1,6 +1,19 @@
 @import "base.scss";
 @import "macos-servers.scss";
 
+// GLOBAL DEFINITION FO ALL ELEMENTS 
+input:focus {
+  outline-color: #8fb3f4;
+  outline-width: 2px;
+  outline-style: solid;
+}
+textarea:focus {
+  outline-color: #8fb3f4;
+  outline-width: 2px;
+  outline-style: solid;
+}
+// ===================================
+
 .leftPanelTopSpace {
   min-height: 29px;
 }
