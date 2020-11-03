@@ -365,6 +365,8 @@ function createWindow() {
     resizable: false,
     fullscreenable: false,
     maximizable: false,
+    skipTaskbar:
+      store.state.settings.showAppInSystemDock !== false ? false : true,
 
     center: true,
     title: "IVPN",
@@ -402,6 +404,7 @@ function createWindow() {
   win.once("ready-to-show", () => {
     win.show();
   });
+
   win.on("closed", () => {
     win = null;
   });
@@ -454,9 +457,6 @@ function createSettingsWindow(viewName) {
     // Load the index.html when not in development
     settingsWindow.loadURL("app://./index.html" + `/#/settings/${viewName}`);
   }
-
-  // show\hide app from system dock
-  updateAppDockVisibility();
 
   settingsWindow.once("ready-to-show", () => {
     settingsWindow.show();
@@ -520,13 +520,10 @@ function updateAppDockVisibility() {
     // macOS
     if (app != null && app.dock != null) app.dock.hide(); // remove from dock
 
-    // Windows
+    // Windows & Linux
     if (win != null) {
       win.setSkipTaskbar(true);
     }
-
-    // ensure window is still visible
-    if (win != null) win.show();
   }
 }
 
