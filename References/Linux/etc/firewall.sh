@@ -179,22 +179,16 @@ function main {
 
       # remove same rule if exists (just to avoid duplicates)
       ${IPv4BIN} -D ${OUT_IVPN_IF} -d $@ -j ACCEPT
-      ${IPv4BIN} -D ${OUT_IVPN_IF} -s $@ -j ACCEPT
-      ${IPv4BIN} -D ${IN_IVPN_IF} -d $@ -j ACCEPT
       ${IPv4BIN} -D ${IN_IVPN_IF} -s $@ -j ACCEPT
 
       #add new rule
       ${IPv4BIN} -A ${OUT_IVPN_IF} -d $@ -j ACCEPT
-      ${IPv4BIN} -A ${OUT_IVPN_IF} -s $@ -j ACCEPT
-      ${IPv4BIN} -A ${IN_IVPN_IF} -d $@ -j ACCEPT
       ${IPv4BIN} -A ${IN_IVPN_IF} -s $@ -j ACCEPT
 
     elif [[ $1 = "-remove_exceptions" ]]; then
 
       shift
       ${IPv4BIN} -D ${OUT_IVPN_IF} -d $@ -j ACCEPT
-      ${IPv4BIN} -D ${OUT_IVPN_IF} -s $@ -j ACCEPT
-      ${IPv4BIN} -D ${IN_IVPN_IF} -d $@ -j ACCEPT
       ${IPv4BIN} -D ${IN_IVPN_IF} -s $@ -j ACCEPT
 
     elif [[ $1 = "-connected" ]]; then

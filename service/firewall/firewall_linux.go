@@ -277,11 +277,11 @@ func getLanIPs() ([]string, error) {
 
 	retIps := make([]string, 0, 4)
 	for _, ifs := range ipnetList {
-		// Skip local interface - we have separate rules for local iface
-		if ifs.Network() == "lo" {
+		// Skip localhost interface - we have separate rules for local iface
+		if ifs.IP.String() == "127.0.0.1" {
 			continue
 		}
-		retIps = append(retIps, ifs.IP.String())
+		retIps = append(retIps, ifs.String())
 	}
 
 	return retIps, nil
