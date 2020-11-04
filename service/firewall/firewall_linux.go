@@ -36,6 +36,9 @@ var (
 	// key: is a string representation of allowed IP
 	// value: true - if exception rule is persistant (persistant, means will stay available even client is disconnected)
 	allowedHosts map[string]bool
+	// IP addresses of local interfaces (using for 'allow LAN' functionality)
+	allowedLanIPs       []string
+	connectedVpnLocalIP string
 )
 
 const (
@@ -92,6 +95,7 @@ func implSetPersistant(persistant bool) error {
 
 // ClientConnected - allow communication for local vpn/client IP address
 func implClientConnected(clientLocalIPAddress net.IP) error {
+	connectedVpnLocalIP = clientLocalIPAddress.String()
 	inf, err := netinfo.InterfaceByIPAddr(clientLocalIPAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get local interface by IP: %w", err)
@@ -103,6 +107,7 @@ func implClientConnected(clientLocalIPAddress net.IP) error {
 
 // ClientDisconnected - Disable communication for local vpn/client IP address
 func implClientDisconnected() error {
+	connectedVpnLocalIP = ""
 	// remove all exceptions related to current connection (all non-persistant exceptions)
 	err := removeAllHostsFromExceptions()
 	if err != nil {
@@ -113,25 +118,38 @@ func implClientDisconnected() error {
 }
 
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
-	localIPs, err := getLanIPs()
-	if err != nil {
-		return fmt.Errorf("failed to get local IPs: %w", err)
-	}
-
 	if isAllowLAN {
+		localIPs, err := getLanIPs()
+		if err != nil {
+			return fmt.Errorf("failed to get local IPs: %w", err)
+		}
+
+		if len(allowedLanIPs) <= 0 {
+			removeHostsFromExceptions(allowedLanIPs, true)
+		}
+
+		allowedLanIPs = localIPs
+
 		if isAllowLanMulticast {
 			// allow LAN + multicast
-			return addHostsToExceptions(append(localIPs, multicastIP), true)
+			allowedLanIPs = append(allowedLanIPs, multicastIP)
+			return addHostsToExceptions(allowedLanIPs, true)
 		}
 
 		// disallow Multicast
-		removeHostsFromExceptions([]string{multicastIP})
+		removeHostsFromExceptions([]string{multicastIP}, true)
 		// allow LAN
-		return addHostsToExceptions(localIPs, true)
+		return addHostsToExceptions(allowedLanIPs, true)
 	}
 
 	// disallow everything (LAN + multicast)
-	return removeHostsFromExceptions(append(localIPs, multicastIP))
+	if len(allowedLanIPs) <= 0 {
+		return nil
+	}
+
+	toRemove := allowedLanIPs
+	allowedLanIPs = nil
+	return removeHostsFromExceptions(toRemove, true)
 }
 
 // AddHostsToExceptions - allow comminication with this hosts
@@ -154,24 +172,36 @@ func implSetManualDNS(addr net.IP) error {
 
 //---------------------------------------------------------------------
 
-func applyAddHostsToExceptions(hostsIPs []string) error { //
+func applyAddHostsToExceptions(hostsIPs []string, isPersistant bool) error {
 	var ipList string
 	ipList = strings.Join(hostsIPs, ",")
 
 	if len(ipList) > 0 {
-		log.Info("-add_exceptions ", ipList)
-		return shell.Exec(nil, platform.FirewallScript(), "-add_exceptions", ipList)
+		scriptCommand := "-add_exceptions"
+
+		if isPersistant {
+			scriptCommand = "-add_exceptions_static"
+		}
+
+		log.Info(scriptCommand, " ", ipList)
+		return shell.Exec(nil, platform.FirewallScript(), scriptCommand, ipList)
 	}
 	return nil
 }
 
-func applyRemoveHostsFromExceptions(hostsIPs []string) error {
+func applyRemoveHostsFromExceptions(hostsIPs []string, isPersistant bool) error {
 	var ipList string
 	ipList = strings.Join(hostsIPs, ",")
 
 	if len(ipList) > 0 {
-		log.Info("-remove_exceptions ", ipList)
-		return shell.Exec(nil, platform.FirewallScript(), "-remove_exceptions", ipList)
+		scriptCommand := "-remove_exceptions"
+
+		if isPersistant {
+			scriptCommand = "-remove_exceptions_static"
+		}
+
+		log.Info(scriptCommand, " ", ipList)
+		return shell.Exec(nil, platform.FirewallScript(), scriptCommand, ipList)
 	}
 	return nil
 }
@@ -180,15 +210,25 @@ func reApplyExceptions() error {
 
 	// Allow LAN communication (if necessary)
 	// Restore all exceptions (all hosts which are allowed)
-	allowedIPs := make([]string, 0, len(allowedHosts)+2)
+	allowedIPs := make([]string, 0, len(allowedHosts))
+	allowedIPsPersistant := make([]string, 0, len(allowedHosts))
 	if len(allowedHosts) > 0 {
-		for ipStr := range allowedHosts {
-			allowedIPs = append(allowedIPs, ipStr)
+		for ipStr, isPersistant := range allowedHosts {
+			if isPersistant {
+				allowedIPsPersistant = append(allowedIPsPersistant, ipStr)
+			} else {
+				allowedIPs = append(allowedIPs, ipStr)
+			}
 		}
 	}
 
 	// Apply all allowed hosts
-	err := applyAddHostsToExceptions(allowedIPs)
+	err := applyAddHostsToExceptions(allowedIPs, false)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = applyAddHostsToExceptions(allowedIPsPersistant, true)
 	if err != nil {
 		log.Error(err)
 	}
@@ -217,7 +257,7 @@ func addHostsToExceptions(IPs []string, isPersistant bool) error {
 		return nil
 	}
 
-	err := applyAddHostsToExceptions(newIPs)
+	err := applyAddHostsToExceptions(newIPs, isPersistant)
 	if err != nil {
 		log.Error(err)
 	}
@@ -225,7 +265,7 @@ func addHostsToExceptions(IPs []string, isPersistant bool) error {
 }
 
 // Deprecate comminication with this hosts
-func removeHostsFromExceptions(IPs []string) error {
+func removeHostsFromExceptions(IPs []string, isPersistant bool) error {
 	if len(IPs) == 0 {
 		return nil
 	}
@@ -242,7 +282,7 @@ func removeHostsFromExceptions(IPs []string) error {
 		return nil
 	}
 
-	err := applyRemoveHostsFromExceptions(toRemoveIPs)
+	err := applyRemoveHostsFromExceptions(toRemoveIPs, isPersistant)
 	if err != nil {
 		log.Error(err)
 	}
@@ -262,7 +302,7 @@ func removeAllHostsFromExceptions() error {
 		delete(allowedHosts, ipStr) // erase map
 	}
 
-	return removeHostsFromExceptions(toRemoveIPs)
+	return removeHostsFromExceptions(toRemoveIPs, false)
 }
 
 //---------------------------------------------------------------------
@@ -279,6 +319,9 @@ func getLanIPs() ([]string, error) {
 	for _, ifs := range ipnetList {
 		// Skip localhost interface - we have separate rules for local iface
 		if ifs.IP.String() == "127.0.0.1" {
+			continue
+		}
+		if len(connectedVpnLocalIP) > 0 && ifs.IP.String() == connectedVpnLocalIP {
 			continue
 		}
 		retIps = append(retIps, ifs.String())
