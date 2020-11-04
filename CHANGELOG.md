@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.7 - 2020-10-13
+
+[NEW] Compatibility with the new IVPN GUI client  
+
 ## Version 2.12.5 - 2020-08-10
 
 [FIXED] UI notification about the connection state  
