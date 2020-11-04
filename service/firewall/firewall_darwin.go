@@ -142,7 +142,7 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 
 // AddHostsToExceptions - allow comminication with this hosts
 // Note!: all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
-func implAddHostsToExceptions(IPs []net.IP) error {
+func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool) error {
 	IPsStr := make([]string, 0, len(IPs))
 	for _, ip := range IPs {
 		IPsStr = append(IPsStr, ip.String())

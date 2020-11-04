@@ -22,9 +22,11 @@
 
 package service
 
-import "github.com/ivpn/desktop-app-daemon/api/types"
+import (
+	"net"
+)
 
-func (s *Service) implIsGoingToPingServers(servers *types.ServersInfoResponse) error {
+func (s *Service) implIsGoingToPingServers(hosts []net.IP) error {
 	// nothing to do for Windows implementation
 	// firewall configured to allow all connectivity for service
 	return nil

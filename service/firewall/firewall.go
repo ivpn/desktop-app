@@ -154,11 +154,11 @@ func ClientDisconnected() error {
 
 // AddHostsToExceptions - allow comminication with this hosts
 // Note!: all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
-func AddHostsToExceptions(IPs []net.IP) error {
+func AddHostsToExceptions(IPs []net.IP, onlyForICMP bool) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	err := implAddHostsToExceptions(IPs)
+	err := implAddHostsToExceptions(IPs, onlyForICMP)
 	if err != nil {
 		log.Error("Failed to add hosts to exceptions:", err)
 	}

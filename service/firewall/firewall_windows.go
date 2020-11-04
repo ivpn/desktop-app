@@ -170,7 +170,7 @@ func implClientDisconnected() (retErr error) {
 	return doRemoveClientIPFilters()
 }
 
-func implAddHostsToExceptions(IPs []net.IP) error {
+func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool) error {
 	// nothing to do for windows implementation
 	return nil
 }

@@ -636,7 +636,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	}
 
 	// Add host IP to firewall exceptions
-	err := firewall.AddHostsToExceptions(vpnProc.DestinationIPs())
+	const onlyForICMP = false
+	err := firewall.AddHostsToExceptions(vpnProc.DestinationIPs(), onlyForICMP)
 	if err != nil {
 		log.Error("Failed to start. Unable to add hosts to firewall exceptions:", err.Error())
 		return err
@@ -807,15 +808,15 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 		return nil, nil
 	}
 
-	// get servers info
-	servers, err := s._serversUpdater.GetServers()
+	// get servers IP
+	hosts, err := s.getHostsToPing()
 	if err != nil {
-		log.Info("Servers ping failed (unable to get servers list): " + err.Error())
+		log.Info("Servers ping failed: " + err.Error())
 		return nil, err
 	}
 
 	// OS-specific preparations (e.g. we need to add servers IPs to firewall exceptions list)
-	if err := s.implIsGoingToPingServers(servers); err != nil {
+	if err := s.implIsGoingToPingServers(hosts); err != nil {
 		log.Info("Servers ping failed : " + err.Error())
 		return nil, err
 	}
@@ -884,23 +885,16 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 	}
 
 	log.Info("Pinging servers...")
-
-	// ping each OpenVPN server
-	for _, s := range servers.OpenvpnServers {
-		if len(s.IPAddresses) <= 0 {
+	for _, s := range hosts {
+		if s == nil {
+			continue
+		}
+		ipStr := s.String()
+		if len(ipStr) <= 0 {
 			continue
 		}
 		waiter.Add(1) // +1 goroutine to wait
-		go pingFunc(s.IPAddresses[0])
-	}
-
-	// ping each WireGuard server
-	for _, s := range servers.WireguardServers {
-		if len(s.Hosts) <= 0 {
-			continue
-		}
-		waiter.Add(1) // +1 goroutine to wait
-		go pingFunc(s.Hosts[0].Host)
+		go pingFunc(ipStr)
 	}
 
 	successfullyPinged := 0
@@ -923,9 +917,44 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 	waiter.Wait()
 	done <- true
 
-	log.Info(fmt.Sprintf("Pinged %d of %d servers (%d successfully)", len(retMap), len(servers.OpenvpnServers)+len(servers.WireguardServers), successfullyPinged))
+	log.Info(fmt.Sprintf("Pinged %d of %d servers (%d successfully)", len(retMap), len(hosts), successfullyPinged))
 
 	return retMap, nil
+}
+
+func (s *Service) getHostsToPing() ([]net.IP, error) {
+	// get servers info
+	servers, err := s._serversUpdater.GetServers()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get servers list: %w", err)
+	}
+
+	hosts := make([]net.IP, 0, len(servers.OpenvpnServers)+len(servers.WireguardServers))
+
+	// OpenVPN servers
+	for _, s := range servers.OpenvpnServers {
+		if len(s.IPAddresses) <= 0 {
+			continue
+		}
+		ip := net.ParseIP(s.IPAddresses[0])
+		if ip != nil {
+			hosts = append(hosts, ip)
+		}
+	}
+
+	// ping each WireGuard server
+	for _, s := range servers.WireguardServers {
+		if len(s.Hosts) <= 0 {
+			continue
+		}
+
+		ip := net.ParseIP(s.Hosts[0].Host)
+		if ip != nil {
+			hosts = append(hosts, ip)
+		}
+	}
+
+	return hosts, nil
 }
 
 // SetKillSwitchState enable\disable killswitch

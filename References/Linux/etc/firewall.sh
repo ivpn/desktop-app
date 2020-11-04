@@ -41,7 +41,9 @@ OUT_IVPN_IF=IVPN-OUT-VPN
 # can be used, for example, for 'allow LAN' functionality
 IN_IVPN_STAT_EXP=IVPN-IN-STAT-EXP
 OUT_IVPN_STAT_EXP=IVPN-OUT-STAT-EXP
-
+# chain for non-VPN depended exceptios: only for ICMP protocol (ping)
+IN_IVPN_ICMP_EXP=IVPN-IN-ICMP-EXP
+OUT_IVPN_ICMP_EXP=IVPN-OUT-ICMP-EXP
 
 # returns 0 if chain exists
 function chain_exists()
@@ -109,6 +111,9 @@ function enable_firewall {
     create_chain ${IPv4BIN} ${IN_IVPN_STAT_EXP}
     create_chain ${IPv4BIN} ${OUT_IVPN_STAT_EXP}
 
+    create_chain ${IPv4BIN} ${IN_IVPN_ICMP_EXP}
+    create_chain ${IPv4BIN} ${OUT_IVPN_ICMP_EXP}
+
     # allow  local (lo) interface
     ${IPv4BIN} -A ${OUT_IVPN} -o lo -j ACCEPT
     ${IPv4BIN} -A ${IN_IVPN} -i lo -j ACCEPT
@@ -130,6 +135,8 @@ function enable_firewall {
     ${IPv4BIN} -A ${IN_IVPN} -j ${IN_IVPN_IF}
     ${IPv4BIN} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -A ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
+    ${IPv4BIN} -A ${OUT_IVPN} -j ${OUT_IVPN_ICMP_EXP}
+    ${IPv4BIN} -A ${IN_IVPN} -j ${IN_IVPN_ICMP_EXP}
 
     set +e
 
@@ -147,6 +154,8 @@ function disable_firewall {
     ${IPv4BIN} -D ${IN_IVPN} -j ${IN_IVPN_IF}
     ${IPv4BIN} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -D ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
+    ${IPv4BIN} -D ${OUT_IVPN} -j ${OUT_IVPN_ICMP_EXP}
+    ${IPv4BIN} -D ${IN_IVPN} -j ${IN_IVPN_ICMP_EXP}
 
     ${IPv4BIN} -F ${OUT_IVPN_IF}
     ${IPv4BIN} -F ${IN_IVPN_IF}
@@ -154,6 +163,8 @@ function disable_firewall {
     ${IPv4BIN} -F ${IN_IVPN}
     ${IPv4BIN} -F ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -F ${IN_IVPN_STAT_EXP}
+    ${IPv4BIN} -F ${OUT_IVPN_ICMP_EXP}
+    ${IPv4BIN} -F ${IN_IVPN_ICMP_EXP}
 
     ${IPv4BIN} -X ${OUT_IVPN_IF}
     ${IPv4BIN} -X ${IN_IVPN_IF}
@@ -161,6 +172,8 @@ function disable_firewall {
     ${IPv4BIN} -X ${IN_IVPN}
     ${IPv4BIN} -X ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -X ${IN_IVPN_STAT_EXP}
+    ${IPv4BIN} -X ${OUT_IVPN_ICMP_EXP}
+    ${IPv4BIN} -X ${IN_IVPN_ICMP_EXP}
 
     ### IPv6 ###
     ${IPv6BIN} -D OUTPUT -j ${OUT_IVPN}
@@ -218,6 +231,24 @@ function remove_exceptions {
   ${IPv4BIN} -D ${OUT_CH} -d $@ -j ACCEPT
 }
 
+function add_exceptions_icmp {
+  IN_CH=$1
+  OUT_CH=$2
+  shift 2
+  EXP=$@
+
+  create_chain ${IPv4BIN} ${IN_CH}
+  create_chain ${IPv4BIN} ${OUT_CH}
+
+  # remove same rule if exists (just to avoid duplicates)
+  ${IPv4BIN} -D ${IN_CH} -p icmp --icmp-type 0 -s $@ -m state --state ESTABLISHED,RELATED -j ACCEPT
+  ${IPv4BIN} -D ${OUT_CH} -p icmp --icmp-type 8 -d $@ -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+  #add new rule
+  ${IPv4BIN} -A ${IN_CH} -p icmp --icmp-type 0 -s $@ -m state --state ESTABLISHED,RELATED -j ACCEPT
+  ${IPv4BIN} -A ${OUT_CH} -p icmp --icmp-type 8 -d $@ -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+}
+
 function main {
 
     if [[ $1 = "-enable" ]] ; then
@@ -260,14 +291,16 @@ function main {
       shift
       remove_exceptions ${IN_IVPN_STAT_EXP} ${OUT_IVPN_STAT_EXP} $@
 
+    elif [[ $1 = "-add_exceptions_icmp" ]]; then
+
+      shift
+      add_exceptions_icmp ${IN_IVPN_ICMP_EXP} ${OUT_IVPN_ICMP_EXP} $@
+
     elif [[ $1 = "-connected" ]]; then
         client_connected $2
     elif [[ $1 = "-disconnected" ]]; then
         shift
         client_disconnected
-    elif [[ $1 = "-test" ]]; then
-        shift
-        add_exceptions ${IN_IVPN_IF} ${OUT_IVPN_IF} $@
     else
         echo "Unknown command"
         return 2

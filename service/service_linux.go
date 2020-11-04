@@ -23,10 +23,12 @@
 package service
 
 import (
-	"github.com/ivpn/desktop-app-daemon/api/types"
+	"net"
+
+	"github.com/ivpn/desktop-app-daemon/service/firewall"
 )
 
-func (s *Service) implIsGoingToPingServers(servers *types.ServersInfoResponse) error {
-	// TODO: not implemented
-	return nil
+func (s *Service) implIsGoingToPingServers(hosts []net.IP) error {
+	const onlyForICMP = true
+	return firewall.AddHostsToExceptions(hosts, onlyForICMP)
 }
