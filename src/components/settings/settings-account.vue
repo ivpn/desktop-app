@@ -177,7 +177,8 @@ export default {
         console.error(e);
         dialog.showMessageBoxSync(getCurrentWindow(), {
           type: "error",
-          message: "Failed to log out. Please check connectivity.",
+          message: "Failed to log out.",
+          detail: e,
           buttons: ["OK"]
         });
       } finally {
