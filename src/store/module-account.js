@@ -81,9 +81,10 @@ export default {
       //  ACCOUNT EXPIRATION TEST!
       accState.Account.IsFreeTrial = true;
       var result = new Date();
-      result.setDate(result.getDate() - 1);
+      result.setDate(result.getDate() + 1);
       accState.Account.ActiveUntil = Math.round(result / 1000);
       accState.Account.WillAutoRebill = false;
+      //accState.Account.Active = false;
       */
 
       state.accountStatus = accState.Account;
@@ -126,7 +127,8 @@ export default {
       const currDate = new Date();
       var diffDays = Math.round((expirationDate - currDate) / oneDay);
 
-      if (diffDays < 0) return "Your free trial has expired";
+      if (diffDays < 0 || state.accountStatus.Active === false)
+        return "Your free trial has expired";
       if (state.accountStatus.WillAutoRebill === true) return null;
 
       if (diffDays == 0) return "Your free trial expires today";
@@ -142,7 +144,8 @@ export default {
       var diffDays = Math.round((expirationDate - currDate) / oneDay);
       if (diffDays > 3) return null;
 
-      if (diffDays < 0) return "Your subscription has expired";
+      if (diffDays < 0 || state.accountStatus.Active === false)
+        return "Your subscription has expired";
       if (state.accountStatus.WillAutoRebill === true) return null;
 
       if (diffDays == 0) return "Your account expires today";
