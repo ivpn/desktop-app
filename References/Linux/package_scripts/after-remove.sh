@@ -13,25 +13,21 @@ silent() {
   "$@" > /dev/null 2>&1
 }
 
+# STOPPING APPLICATION (same functionality implemented also in 'before-install.sh')
 echo "[+] Checking for 'ivpn-ui' running processes ..."
-ps aux | grep /opt/ivpn/ui/ivpn-ui.AppImage | grep -v grep
+ps aux | grep /opt/ivpn/ui/bin/ivpn-ui | grep -v grep  > /dev/null 2>&1
 if [ $? -eq 0 ]; then
   echo "[!] Detected: IVPN app is running"
-
   echo "[+] Disconnecting (if connected) ..."
   /usr/local/bin/ivpn disconnect || echo "[-] Failed to disconnect"
-
   echo "[+] Disabling firewall (if enabled) ..."
   /usr/local/bin/ivpn firewall -off || echo "[-] Failed to disable firewall"
-
   echo "[+] Killing all 'ivpn-ui' processes ..."
   # We should be careful here: WE SHOULD NOT KILL THIS SCRIPT :)
   # (which also can have 'ivpn-ui' in process description)
-  silent kill -TERM $(ps aux | grep /opt/ivpn/ui/ivpn-ui.AppImage | grep -v grep | awk '{print $2}')
-  silent kill -TERM $(ps aux | grep ivpn-ui | grep /tmp/.mount_ivpn | grep -v grep | awk '{print $2}')
+  silent kill -TERM $(ps aux | grep /opt/ivpn/ui/bin/ivpn-ui | grep -v grep | awk '{print $2}')
   silent sleep 2
-  silent kill -KILL $(ps aux | grep /opt/ivpn/ui/ivpn-ui.AppImage | grep -v grep | awk '{print $2}')
-  silent kill -KILL $(ps aux | grep ivpn-ui | grep /tmp/.mount_ivpn | grep -v grep | awk '{print $2}')
+  silent kill -KILL $(ps aux | grep /opt/ivpn/ui/bin/ivpn-ui | grep -v grep | awk '{print $2}')
 fi
 
 # DEB argument on upgrade - 'upgrade'; RPM - '1'
