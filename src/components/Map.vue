@@ -294,6 +294,12 @@ export default {
         return null;
       return this.$store.state.location;
     },
+    isFastestServer: function() {
+      return this.$store.state.settings.isFastestServer;
+    },
+    isRandomExitServer: function() {
+      return this.$store.state.settings.isRandomExitServer;
+    },
 
     isPaused: function() {
       return this.$store.state.vpnState.pauseState === PauseStateEnum.Paused;
@@ -386,6 +392,15 @@ export default {
       this.updateAnimations();
       if (oldVal !== newVal) this.centerServer(this.selectedServer);
     },
+    isFastestServer() {
+      if (this.isFastestServer !== true && this.isRandomExitServer != true)
+        this.centerServer(this.selectedServer);
+    },
+    isRandomExitServer() {
+      if (this.isFastestServer !== true && this.isRandomExitServer != true)
+        this.centerServer(this.selectedServer);
+    },
+
     isMinimizedUI() {
       if (!this.isMinimizedUI) this.centerCurrentLocation();
     },

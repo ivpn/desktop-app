@@ -120,7 +120,6 @@ export default {
 
     messageFreeTrial: state => {
       if (!state.accountStatus) return null;
-      if (state.accountStatus.WillAutoRebill === true) return null;
       if (!state.accountStatus.IsFreeTrial) return null;
 
       const expirationDate = new Date(state.accountStatus.ActiveUntil * 1000);
@@ -128,13 +127,14 @@ export default {
       var diffDays = Math.round((expirationDate - currDate) / oneDay);
 
       if (diffDays < 0) return "Your free trial has expired";
+      if (state.accountStatus.WillAutoRebill === true) return null;
+
       if (diffDays == 0) return "Your free trial expires today";
       if (diffDays == 1) return "Your free trial expires in 1 day";
       return `Your free trial expires in ${diffDays} days`;
     },
     messageAccountExpiration: state => {
       if (!state.accountStatus) return null;
-      if (state.accountStatus.WillAutoRebill === true) return null;
       if (state.accountStatus.IsFreeTrial) return null;
 
       const expirationDate = new Date(state.accountStatus.ActiveUntil * 1000);
@@ -143,6 +143,8 @@ export default {
       if (diffDays > 3) return null;
 
       if (diffDays < 0) return "Your subscription has expired";
+      if (state.accountStatus.WillAutoRebill === true) return null;
+
       if (diffDays == 0) return "Your account expires today";
       if (diffDays == 1) return "Your account expires in 1 day";
       return `Your account expires in ${diffDays} days`;

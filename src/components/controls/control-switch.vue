@@ -42,12 +42,14 @@ export default {
 $switchSize: 31px;
 $wToHproportion: 2;
 $switchBorder: transparent; //#d1d7e3;
+$switchBorderActive: transparent; //#5d9bfb;
+$switchAnimationPieBorder: #449cf8;
+
 $switchBackground: #ff6258; //#d1d7e3;
 // $switchBackground: #d1d7e3; //#d1d7e3;
 $switchDot: var(--background-color); // #fff;
 $switchActive: #449cf8;
 // $switchActive: #449cf8;
-$switchBorderActive: transparent; //#5d9bfb;
 
 .switch {
   margin: 0;
@@ -89,7 +91,7 @@ $switchBorderActive: transparent; //#5d9bfb;
         width: $switchSize;
         height: $switchSize;
         border: 3px solid transparent;
-        border-top-color: $switchBorderActive;
+        border-top-color: $switchAnimationPieBorder; //$switchBorderActive;
         border-radius: 50%;
         position: absolute;
         opacity: 0;
