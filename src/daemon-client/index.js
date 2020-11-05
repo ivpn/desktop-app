@@ -236,7 +236,17 @@ async function sendRecv(request, waitRespCommandsList, timeoutMs) {
 
   return promise;
 }
-
+function commitNoSession() {
+  const session = {
+    AccountID: "",
+    Session: "",
+    WgPublicKey: "",
+    WgLocalIP: "",
+    WgKeyGenerated: new Date(),
+    WgKeysRegenIntervalSec: 0
+  };
+  commitSession(session);
+}
 function commitSession(sessionRespObj) {
   if (sessionRespObj == null) return;
   const session = {
@@ -602,9 +612,18 @@ async function Logout() {
   await KillSwitchSetIsPersistent(false);
   await EnableFirewall(false);
   await Disconnect();
-  await sendRecv({
-    Command: daemonRequests.SessionDelete
-  });
+  try {
+    await sendRecv({
+      Command: daemonRequests.SessionDelete
+    });
+  } catch (e) {
+    console.error(e);
+  }
+
+  // It can happen that there will be no CONNECTION TO API or error on backend side
+  // In this case the daemon will not logout.
+  // Here we manually removing local session info
+  commitNoSession();
 }
 
 async function AccountStatus() {
