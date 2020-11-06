@@ -49,12 +49,12 @@ export default {
 
     pauseState: PauseStateEnum.Resumed,
 
-    firewallState: null /*{
+    firewallState: {
       IsEnabled: null,
       IsPersistent: null,
       IsAllowLAN: null,
       IsAllowMulticast: null
-    }*/,
+    },
 
     dns: "",
 
