@@ -14,5 +14,5 @@ const (
 	WiFiSecurityWPAEnterpriseMixed WiFiSecurity = 8
 	WiFiSecurityWPA2Enterprise     WiFiSecurity = 9
 	WiFiSecurityEnterprise         WiFiSecurity = 10*/
-	WiFiSecurityUnknown WiFiSecurity = 0xFFFFFFFF
+	WiFiSecurityUnknown WiFiSecurity = 0xFFFF
 )

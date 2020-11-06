@@ -343,7 +343,7 @@ func GetCurrentSSID() string {
 // GetCurrentNetworkSecurity returns current security mode
 func GetCurrentNetworkSecurity() WiFiSecurity {
 	// TODO: implement getCurrentNetworkSecurity functionality
-	return 0xFFFFFFFF
+	return 0xFFFF
 
 	// ret := WiFiSecurityUnknown
 	// if C.getCurrentNetworkIsInsecure() == 1 {
