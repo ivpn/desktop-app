@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.8 - 2020-11-09
+
+[FIXED] (Linux) Firewall: Allow LAN functionality  
+[FIXED] (Linux) Determine FastestServer when IVPN Firewall enabled  
+
+[Download IVPN Client .deb v. 2.12.8](https://cdn.ivpn.net/releases/linux/2.12.8/ivpn_2.12.8_amd64.deb)  
+SHA256: c2ff205408d7c3e4fe74310e9a19ea7617e68215986c01b499f329d7744ee83b   
+[Download IVPN Client .rpm v. 2.12.8](https://cdn.ivpn.net/releases/linux/2.12.8/ivpn-2.12.8-1.x86_64.rpm)  
+SHA256: bd7b7a16830013388f0f8712464fc1ed63d46f2fa3dc8704f5ba645df0e3ebc0  
+
 ## Version 2.12.7 - 2020-10-13
 
 [NEW] Compatibility with the new IVPN GUI client    
