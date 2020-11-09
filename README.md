@@ -91,7 +91,7 @@ These instructions will get you a copy of the project up and running on your loc
 
   * To compile projects and to build `.DEB` and `.RPM` packages just run `build-packages.sh` script:  
       -  `cd $GOPATH/src/github.com/ivpn/desktop-app-cli`  
-      -  `References/Linux/build-packages.sh -v 2.12.7`  
+      -  `References/Linux/build-packages.sh -v 2.12.8`  
 
 Compiled packages can be found at `$GOPATH/src/github.com/ivpn/desktop-app-cli/References/Linux/_out_bin`  
 
