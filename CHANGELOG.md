@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.8 - 2020-11-09
+
+[FIXED] (Linux) Firewall: Allow LAN functionality  
+[FIXED] (Linux) Determine FastestServer when IVPN Firewall enabled 
+
 ## Version 2.12.7 - 2020-10-13
 
 [NEW] Compatibility with the new IVPN GUI client  
