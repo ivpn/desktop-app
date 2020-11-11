@@ -387,7 +387,7 @@ func (c *Client) PingServers() (pingResults []types.PingResultType, err error) {
 		return pingResults, err
 	}
 
-	req := types.PingServers{RetryCount: 4, TimeOutMs: 5000}
+	req := types.PingServers{RetryCount: 4, TimeOutMs: 6000}
 	var resp types.PingServersResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return pingResults, err

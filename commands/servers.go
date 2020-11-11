@@ -104,7 +104,11 @@ func (c *CmdServers) Run() error {
 	for _, s := range svrs {
 		str := ""
 		if c.ping {
-			str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%dms\t", s.protocol, s.gateway, s.city, s.countryCode, s.country, s.pingMs)
+			pingStr := " ?  "
+			if s.pingMs > 0 {
+				pingStr = fmt.Sprintf("%dms", s.pingMs)
+			}
+			str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t", s.protocol, s.gateway, s.city, s.countryCode, s.country, pingStr)
 		} else {
 			str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t", s.protocol, s.gateway, s.city, s.countryCode, s.country)
 		}
