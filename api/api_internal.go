@@ -32,6 +32,7 @@ import (
 	"net"
 	"net/http"
 	"path"
+	"time"
 )
 
 func (a *API) getAlternateIPs() (lastGoodIP net.IP, ipList []net.IP) {
@@ -69,7 +70,7 @@ func newRequest(urlPath string, method string, contentType string, body io.Reade
 	return req, nil
 }
 
-func (a *API) doRequest(urlPath string, method string, contentType string, request interface{}) (resp *http.Response, err error) {
+func (a *API) doRequest(urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
 	lastIP, ips := a.getAlternateIPs()
 
 	// When trying to access API server by alternate IPs (not by DNS name)
@@ -81,7 +82,11 @@ func (a *API) doRequest(urlPath string, method string, contentType string, reque
 		},
 	}
 	// configure http-client with preconfigured TLS transport
-	client := &http.Client{Transport: transCfg, Timeout: _defaultRequestTimeout}
+	timeout := _defaultRequestTimeout
+	if timeoutMs > 0 {
+		timeout = time.Millisecond * time.Duration(timeoutMs)
+	}
+	client := &http.Client{Transport: transCfg, Timeout: timeout}
 
 	data := []byte{}
 	if request != nil {
@@ -144,8 +149,8 @@ func (a *API) doRequest(urlPath string, method string, contentType string, reque
 	return firstResp, fmt.Errorf("Unable to access IVPN API server: %w", firstErr)
 }
 
-func (a *API) requestRaw(urlPath string, method string, contentType string, requestObject interface{}) (responseData []byte, err error) {
-	resp, err := a.doRequest(urlPath, method, contentType, requestObject)
+func (a *API) requestRaw(urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int) (responseData []byte, err error) {
+	resp, err := a.doRequest(urlPath, method, contentType, requestObject, timeoutMs)
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}
@@ -159,7 +164,11 @@ func (a *API) requestRaw(urlPath string, method string, contentType string, requ
 }
 
 func (a *API) request(urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}) error {
-	body, err := a.requestRaw(urlPath, method, contentType, requestObject)
+	return a.requestEx(urlPath, method, contentType, requestObject, responseObject, 0)
+}
+
+func (a *API) requestEx(urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}, timeoutMs int) error {
+	body, err := a.requestRaw(urlPath, method, contentType, requestObject, timeoutMs)
 	if err != nil {
 		return err
 	}

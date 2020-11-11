@@ -82,3 +82,12 @@ func (p *Protocol) OnWiFiChanged(ssid string, isInsecureNetwork bool) {
 		SSID:              ssid,
 		IsInsecureNetwork: isInsecureNetwork})
 }
+
+// OnPingStatus - servers ping status
+func (p *Protocol) OnPingStatus(retMap map[string]int) {
+	var results []types.PingResultType
+	for k, v := range retMap {
+		results = append(results, types.PingResultType{Host: k, Ping: v})
+	}
+	p.notifyClients(&types.PingServersResp{PingResults: results})
+}

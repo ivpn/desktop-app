@@ -82,3 +82,18 @@ type SessionStatusResponse struct {
 	APIErrorResponse
 	ServiceStatus ServiceStatusAPIResp `json:"service_status"`
 }
+
+// GeoLookupResponse geolocation info
+type GeoLookupResponse struct {
+	//ip_address   string
+	//isp          string
+	//organization string
+	//country      string
+	//country_code string
+	//city         string
+
+	Latitude  float32 `json:"latitude"`
+	Longitude float32 `json:"longitude"`
+
+	//isIvpnServer bool
+}
