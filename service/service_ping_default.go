@@ -22,6 +22,16 @@
 
 // +build windows linux
 
+package service
+
+import (
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/ivpn/desktop-app-daemon/ping"
+)
+
 // PingServers ping vpn servers
 func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, error) {
 
