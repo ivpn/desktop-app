@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,7 +39,6 @@ import (
 	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
-	"github.com/ivpn/desktop-app-daemon/ping"
 	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
@@ -786,150 +786,21 @@ func (s *Service) ResetManualDNS() error {
 	return err
 }
 
-// PingServers ping vpn servers
-func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, error) {
-
-	// do not allow multiple ping request simultaneously
-	if s._isServersPingInProgress {
-		log.Info("Servers pinging skipped. Ping already in progress")
-		return nil, nil
-	}
-	defer func() { s._isServersPingInProgress = false }()
-	s._isServersPingInProgress = true
-
-	vpn := s._vpn
-	if vpn != nil {
-		log.Info("Servers pinging skipped due to connected state")
-		return nil, nil
-	}
-
-	if retryCount <= 0 || timeoutMs <= 0 {
-		log.Debug("Servers pinging skipped: arguments value is 0")
-		return nil, nil
-	}
-
-	// get servers IP
-	hosts, err := s.getHostsToPing()
-	if err != nil {
-		log.Info("Servers ping failed: " + err.Error())
-		return nil, err
-	}
-
-	// OS-specific preparations (e.g. we need to add servers IPs to firewall exceptions list)
-	if err := s.implIsGoingToPingServers(hosts); err != nil {
-		log.Info("Servers ping failed : " + err.Error())
-		return nil, err
-	}
-
-	// initialize waiter (will wait to finish all go-routines)
-	var waiter sync.WaitGroup
-
-	type pair struct {
-		host string
-		ping int
-	}
-
-	resultChan := make(chan pair, 1)
-	// define generic ping function
-	pingFunc := func(ip string) {
-		// notify waiter: goroutine is finished
-		defer waiter.Done()
-
-		pinger, err := ping.NewPinger(ip)
-		if err != nil {
-			log.Error("Pinger creation error: " + err.Error())
-			return
-		}
-
-		pinger.SetPrivileged(true)
-		pinger.Count = retryCount
-		pinger.Interval = time.Millisecond * 1000 // do not use small interval (<350ms). Possible unexpected behavior: pings never return sometimes
-		pinger.Timeout = time.Millisecond * time.Duration(timeoutMs)
-
-		pinger.Run()
-
-		stat := pinger.Statistics()
-
-		// Pings filtering ...
-		// there is a chance that one ping responce is much higher than the rest received responses
-		// This, for example, observed on some virtual machines. The first ping result is catastrophically higher than the rest
-		// Hera we are ignoring such situations (ignoring highest pings when necessary)
-		var avgPing time.Duration = 0
-		maxAllowedTTL := float32(stat.AvgRtt) * 1.3
-		if stat.PacketLoss < 0 || float32(stat.MaxRtt) < maxAllowedTTL {
-			avgPing = stat.AvgRtt
-			//log.Debug(int(stat.AvgRtt/time.Millisecond), " == ", int(avgPing/time.Millisecond), "\t", stat)
-		} else {
-			cntResults := 0
-			for _, p := range stat.Rtts {
-				if float32(p) >= maxAllowedTTL {
-					continue
-				}
-				avgPing += p
-				cntResults++
-			}
-			if cntResults > 0 {
-				avgPing = avgPing / time.Duration(cntResults)
-			} else {
-				avgPing = stat.AvgRtt
-			}
-			//log.Debug(int(stat.AvgRtt/time.Millisecond), " -> ", int(avgPing/time.Millisecond), "\t", stat)
-		}
-
-		resultChan <- pair{host: ip, ping: int(avgPing / time.Millisecond)}
-
-		// ... pings filtering
-
-		// Original pings data:
-		//resultChan <- pair{host: ip, ping: int(stat.AvgRtt / time.Millisecond)}
-	}
-
-	log.Info("Pinging servers...")
-	for _, s := range hosts {
-		if s == nil {
-			continue
-		}
-		ipStr := s.String()
-		if len(ipStr) <= 0 {
-			continue
-		}
-		waiter.Add(1) // +1 goroutine to wait
-		go pingFunc(ipStr)
-	}
-
-	successfullyPinged := 0
-	retMap := make(map[string]int)
-	done := make(chan bool)
-	go func() {
-		for {
-			select {
-			case r := <-resultChan:
-				retMap[r.host] = r.ping
-				if r.ping > 0 {
-					successfullyPinged = successfullyPinged + 1
-				}
-			case <-done:
-				return
-			}
-		}
-	}()
-
-	waiter.Wait()
-	done <- true
-
-	log.Info(fmt.Sprintf("Pinged %d of %d servers (%d successfully)", len(retMap), len(hosts), successfullyPinged))
-
-	return retMap, nil
-}
-
-func (s *Service) getHostsToPing() ([]net.IP, error) {
+// if 'currentLocation' defined - the output hosts list will be sorted by distance to current location
+func (s *Service) getHostsToPing(currentLocation *types.GeoLookupResponse) ([]net.IP, error) {
 	// get servers info
 	servers, err := s._serversUpdater.GetServers()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get servers list: %w", err)
 	}
 
-	hosts := make([]net.IP, 0, len(servers.OpenvpnServers)+len(servers.WireguardServers))
+	type hostInfo struct {
+		Latitude  float32
+		Longitude float32
+		host      net.IP
+	}
+
+	hosts := make([]hostInfo, 0, len(servers.OpenvpnServers)+len(servers.WireguardServers))
 
 	// OpenVPN servers
 	for _, s := range servers.OpenvpnServers {
@@ -938,7 +809,7 @@ func (s *Service) getHostsToPing() ([]net.IP, error) {
 		}
 		ip := net.ParseIP(s.IPAddresses[0])
 		if ip != nil {
-			hosts = append(hosts, ip)
+			hosts = append(hosts, hostInfo{Latitude: s.Latitude, Longitude: s.Longitude, host: ip})
 		}
 	}
 
@@ -950,11 +821,24 @@ func (s *Service) getHostsToPing() ([]net.IP, error) {
 
 		ip := net.ParseIP(s.Hosts[0].Host)
 		if ip != nil {
-			hosts = append(hosts, ip)
+			hosts = append(hosts, hostInfo{Latitude: s.Latitude, Longitude: s.Longitude, host: ip})
 		}
 	}
 
-	return hosts, nil
+	if currentLocation != nil {
+		cLat := float64(currentLocation.Latitude)
+		cLot := float64(currentLocation.Longitude)
+		sort.Slice(hosts, func(i, j int) bool {
+			di := helpers.GetDistanceFromLatLonInKm(cLat, cLot, float64(hosts[i].Latitude), float64(hosts[i].Longitude))
+			dj := helpers.GetDistanceFromLatLonInKm(cLat, cLot, float64(hosts[j].Latitude), float64(hosts[j].Longitude))
+			return di < dj
+		})
+	}
+	ret := make([]net.IP, 0, len(hosts))
+	for _, h := range hosts {
+		ret = append(ret, h.host)
+	}
+	return ret, nil
 }
 
 // SetKillSwitchState enable\disable killswitch

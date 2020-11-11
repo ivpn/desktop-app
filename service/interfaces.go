@@ -61,4 +61,5 @@ type IServiceEventsReceiver interface {
 	OnDNSChanged(dns net.IP)
 	OnKillSwitchStateChanged()
 	OnWiFiChanged(ssid string, isInsecureNetwork bool)
+	OnPingStatus(retMap map[string]int)
 }

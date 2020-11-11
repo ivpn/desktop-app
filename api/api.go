@@ -45,6 +45,7 @@ const (
 	_sessionStatusPath     = _apiPathPrefix + "/session/status"
 	_sessionDeletePath     = _apiPathPrefix + "/session/delete"
 	_wgKeySetPath          = _apiPathPrefix + "/session/wg/set"
+	_geoLookupPath         = _apiPathPrefix + "/geo-lookup"
 )
 
 var log *logger.Logger
@@ -130,7 +131,7 @@ func (a *API) DoRequestRaw(urlPath string, method string, contentType string, re
 	if !strings.HasPrefix(urlPath, _apiPathPrefix) {
 		urlPath = path.Join(_apiPathPrefix, urlPath)
 	}
-	return a.requestRaw(urlPath, method, contentType, requestObject)
+	return a.requestRaw(urlPath, method, contentType, requestObject, 0)
 }
 
 // SessionNew - try to register new session
@@ -149,7 +150,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) 
 		PublicKey:  wgPublicKey,
 		ForceLogin: forceLogin}
 
-	data, err := a.requestRaw(_sessionNewPath, "POST", "application/json", request)
+	data, err := a.requestRaw(_sessionNewPath, "POST", "application/json", request, 0)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -189,7 +190,7 @@ func (a *API) SessionStatus(session string) (
 
 	request := &types.SessionStatusRequest{Session: session}
 
-	data, err := a.requestRaw(_sessionStatusPath, "POST", "application/json", request)
+	data, err := a.requestRaw(_sessionStatusPath, "POST", "application/json", request, 0)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -246,4 +247,15 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 	}
 
 	return localIP, nil
+}
+
+// GeoLookup get geolocation
+func (a *API) GeoLookup(timeoutMs int) (location *types.GeoLookupResponse, err error) {
+	resp := &types.GeoLookupResponse{}
+
+	if err := a.requestEx(_geoLookupPath, "GET", "", nil, resp, timeoutMs); err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
