@@ -93,13 +93,29 @@ echo "Commit : $COMMIT"
 
 cd ../../../
 
+BUILDTAGS_DEBUG=""
+BUILDTAGS_NOWIFI=""
+
 if [[ "$@" == *"-debug"* ]]
 then
-    echo "Compiling in DEBUG mode"
-    go build -tags debug -o "IVPN Agent" -o "IVPN Agent" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=$VERSION -X github.com/ivpn/desktop-app-daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app-daemon/version._time=$DATE"
-else
-    go build -o "IVPN Agent" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=$VERSION -X github.com/ivpn/desktop-app-daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app-daemon/version._time=$DATE"
+  BUILDTAGS_DEBUG="-tags debug"
 fi
 
+echo ""
+echo "Enable WIFI support?"
+echo "(this will lead to some additional library dependencies for the final binary)"
+read -p "[y\n]? (n - default): " yn
+case $yn in
+    [Yy]* )
+        ;;
+    [Nn]* )
+      BUILDTAGS_NOWIFI="-tags nowifi"
+      ;;
+    * )
+      BUILDTAGS_NOWIFI="-tags nowifi"
+      ;;
+esac
+
+go build $BUILDTAGS_NOWIFI $BUILDTAGS_DEBUG -o "IVPN Agent" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=$VERSION -X github.com/ivpn/desktop-app-daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app-daemon/version._time=$DATE"
 
 echo "Cpmpiled daemon binary: '$(pwd)/IVPN Agent'"

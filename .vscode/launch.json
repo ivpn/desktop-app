@@ -14,6 +14,7 @@
             "args": ["-logging"],
             //"buildFlags": "-tags debug"
             "buildFlags": ""
+            //"buildFlags": "-tags nowifi"
         }
     ]
 }
