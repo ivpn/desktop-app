@@ -165,7 +165,7 @@ CreatePackage()
   #
   # NOTE! 'remove' scripts is using from old version!
 
-  fpm $EXTRA_ARGS \
+  fpm -d ivpn $EXTRA_ARGS \
     --deb-no-default-config-files -s dir -t $PKG_TYPE -n ivpn-ui -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
     --template-scripts --template-value pkg=$PKG_TYPE --template-value version=$VERSION \
     --vendor "Privatus Limited" --maintainer "Privatus Limited" \
