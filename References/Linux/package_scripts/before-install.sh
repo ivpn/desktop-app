@@ -26,3 +26,11 @@ if [ -f /opt/ivpn/mutable/upgradeID.tmp ]; then
     echo "[ ] Upgrade detected"
     mv /opt/ivpn/mutable/upgradeID.tmp /opt/ivpn/mutable/toUpgradeID.tmp || echo "[-] Failed to prepare accountID to re-login"
 fi
+
+if [ -f /usr/local/bin/ivpn ]; then
+  echo "[+] Trying to disable firewall (before install)..."
+  /usr/local/bin/ivpn firewall -off || echo "[-] Failed to disable firewall"
+
+  echo "[+] Trying to disconnect (before install) ..."
+  /usr/local/bin/ivpn disconnect || echo "[-] Failed to disconnect"
+fi

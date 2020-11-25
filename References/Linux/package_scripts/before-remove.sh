@@ -3,6 +3,13 @@
 echo "[*] Before remove (<%= pkg %>)"
 
 PKG_TYPE=<%= pkg %>
+
+echo "[+] Disabling firewall (before remove) ..."
+/usr/local/bin/ivpn firewall -off || echo "[-] Failed to disable firewall"
+
+echo "[+] Disconnecting (before remove) ..."
+/usr/local/bin/ivpn disconnect || echo "[-] Failed to disconnect"
+
 if [ "$PKG_TYPE" = "rpm" ]; then
     if [ -f /opt/ivpn/mutable/rpm_upgrade.lock ]; then
         echo "[ ] Upgrade detected. Remove operations skipped"
@@ -19,12 +26,6 @@ if [ -f /opt/ivpn/mutable/settings.json ]; then
         echo $ACCID > /opt/ivpn/mutable/upgradeID.tmp || echo "[-] Failed to save accountID into temporary file"
     fi
 fi
-
-echo "[+] Disconnecting ..."
-/usr/local/bin/ivpn disconnect || echo "[-] Failed to disconnect"
-
-echo "[+] Disabling firewall ..."
-/usr/local/bin/ivpn firewall -off || echo "[-] Failed to disable firewall"
 
 echo "[+] Logging out ..."
 /usr/local/bin/ivpn logout || echo "[-] Failed to log out"
