@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.10 - 2020-11-12
+[IMPROVED] (macOS) Сompatibility with macOS Big Sur  
+[FIXED] (macOS) Removed dependencies from WIFI libraries 
+
 ## Version 2.12.8 - 2020-11-09
 
 [FIXED] (Linux) Firewall: Allow LAN functionality  
