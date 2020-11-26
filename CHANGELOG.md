@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.10 - 2020-11-26
+
+[IMPROVED] (Linux) minor improvements in deb/rpm package scripts 
+
 ## Version 2.12.8 - 2020-11-09
 
 [FIXED] (Linux) Firewall: Allow LAN functionality  
