@@ -24,17 +24,23 @@ mkdir -p $OUT_DIR
 # version info variables
 VERSION=""
 DATE="$(date "+%Y-%m-%d")"
-COMMIT="$(git rev-list -1 HEAD)"
+COMMIT=""
 
 # reading version info from arguments
-while getopts ":v:" opt; do
+while getopts ":v:c:" opt; do
   case $opt in
     v) VERSION="$OPTARG"
+    ;;
+    c) COMMIT="$OPTARG"
     ;;
 #    \?) echo "Invalid option -$OPTARG" >&2
 #   ;;
   esac
 done
+
+if [ -z "$COMMIT" ]; then
+  COMMIT="$(git rev-list -1 HEAD)"
+fi
 
 # updating servers.json
 ./update-servers.sh
