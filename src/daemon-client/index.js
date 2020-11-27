@@ -333,8 +333,10 @@ async function processResponse(response) {
         ClientIP: obj.ClientIP,
         ServerIP: obj.ServerIP,
         ExitServerID: obj.ExitServerID,
-        ManualDNS: obj.ManualDNS
+        ManualDNS: obj.ManualDNS,
+        IsCanPause: "IsCanPause" in obj ? obj.IsCanPause : null
       });
+      console.log(obj);
 
       requestGeoLookupAsync();
       break;
@@ -843,8 +845,13 @@ async function Connect(entryServer, exitServer) {
 }
 
 async function Disconnect() {
-  await ResumeConnection();
-  store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
+  try {
+    await ResumeConnection();
+  } catch (e) {
+    log.error(e);
+  } finally {
+    store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
+  }
   if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED)
     store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTING);
   await sendRecv(

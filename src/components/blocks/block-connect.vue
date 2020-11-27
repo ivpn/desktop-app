@@ -124,6 +124,9 @@ export default {
     isCanPause: function() {
       if (!this.isConnected) return false;
       if (this.isProgress === true) return false;
+
+      var connInfo = this.$store.state.vpnState.connectionInfo;
+      if (connInfo === null || connInfo.IsCanPause === false) return false;
       if (this.$store.state.vpnState.pauseState === PauseStateEnum.Resumed)
         return true;
       return false;

@@ -40,7 +40,8 @@ export default {
       ClientIP: "",
       ServerIP: "",
       ExitServerID: "",
-      ManualDNS: ""
+      ManualDNS: "",
+      IsCanPause: null //(true/false)
     }*/,
 
     disconnectedInfo: {
