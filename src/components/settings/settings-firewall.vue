@@ -24,21 +24,23 @@
         established - see On-demand Firewall options below
       </div>
 
-      <div class="settingsRadioBtn">
-        <input
-          type="radio"
-          id="alwaysOn"
-          name="firewall"
-          :value="true"
-          v-model="firewallPersistent"
-          :checked="firewallPersistent === true"
-        />
-        <label class="defColor" for="alwaysOn">Always-on firewall</label>
-      </div>
-      <div class="fwDescription">
-        When the option is enabled the IVPN Firewall is started during system
-        boot time before any other process. IVPN Firewall will always be active
-        even when IVPN Client is not running
+      <div v-if="isCanBePersistent">
+        <div class="settingsRadioBtn">
+          <input
+            type="radio"
+            id="alwaysOn"
+            name="firewall"
+            :value="true"
+            v-model="firewallPersistent"
+            :checked="firewallPersistent === true"
+          />
+          <label class="defColor" for="alwaysOn">Always-on firewall</label>
+        </div>
+        <div class="fwDescription">
+          When the option is enabled the IVPN Firewall is started during system
+          boot time before any other process. IVPN Firewall will always be
+          active even when IVPN Client is not running
+        </div>
       </div>
     </div>
 
@@ -103,6 +105,18 @@ export default {
   },
   methods: {},
   computed: {
+    isCanBePersistent: function() {
+      var os = require("os");
+      var release = os.release();
+      if (release) {
+        // TODO: persistant firewall not working properly on Linux Fedora
+        // Here we are disabling this functionality in UI
+        // Looking for a string like: "5.6.0-0.rc5.git0.2.fc32.x86_64" <- Fedora 32
+        if (os.platform() === "linux" && release.match(/.+\.fc[0-9]{2,3}\..+/))
+          return false;
+      }
+      return true;
+    },
     firewallPersistent: {
       get() {
         return this.$store.state.vpnState.firewallState.IsPersistent;
