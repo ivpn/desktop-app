@@ -24,3 +24,4 @@ pnpm-debug.log*
 /dist_electron
 /References/Linux/_out_bin/*
 /References/Linux/_tmp/*
+main_style.js
