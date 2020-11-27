@@ -181,7 +181,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 			} else {
 				log.Info("Started")
 				// CONNECTED
-				stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP)
+				stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP, true)
 			}
 
 		case <-time.After(time.Second * 5):

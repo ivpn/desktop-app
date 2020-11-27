@@ -454,7 +454,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	// CONNECTED
 	log.Info("Connection started")
 	// Send 'connected' notification only after 'dns' package informed about correct DNS value
-	stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP)
+	stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP, true)
 
 	return nil
 }

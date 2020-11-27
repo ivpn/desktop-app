@@ -156,6 +156,7 @@ type ConnectedResp struct {
 	ServerIP        string
 	ExitServerID    string
 	ManualDNS       string
+	IsCanPause      bool
 }
 
 // DisconnectionReason - disconnection reason

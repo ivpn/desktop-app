@@ -862,7 +862,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 								ServerIP:        state.ServerIP.String(),
 								VpnType:         state.VpnType,
 								ExitServerID:    state.ExitServerID,
-								ManualDNS:       dns.GetLastManualDNS()})
+								ManualDNS:       dns.GetLastManualDNS(),
+								IsCanPause:      state.IsCanPause})
 
 						} else {
 							log.Debug("Skip sending 'Connected' notification. New connection request is awaiting ", cnt)

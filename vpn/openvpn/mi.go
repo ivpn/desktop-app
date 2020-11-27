@@ -346,7 +346,8 @@ func (i *ManagementInterface) miCommunication() {
 					ClientIP:            clientIP,
 					ServerIP:            serverIP,
 					IsAuthError:         isAuthError,
-					StateAdditionalInfo: additionalInfo}
+					StateAdditionalInfo: additionalInfo,
+					IsCanPause:          len(i.GetRouteAddCommands()) > 0}
 
 				select {
 				case i.stateChan <- state: // notify: state was changed

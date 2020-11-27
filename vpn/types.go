@@ -128,6 +128,7 @@ type StateInfo struct {
 	ClientIP     net.IP // applicable only for 'CONNECTED' state
 	ServerIP     net.IP // applicable only for 'CONNECTED' state
 	ExitServerID string // applicable only for 'CONNECTED' state
+	IsCanPause   bool   // applicable only for 'CONNECTED' state
 	IsAuthError  bool   // applicable only for 'EXITING' state
 
 	// TODO: try to avoid using this protocol-specific parameter in future
@@ -147,13 +148,14 @@ func NewStateInfo(state State, description string) StateInfo {
 }
 
 // NewStateInfoConnected - create new state object for CONNECTED state
-func NewStateInfoConnected(clientIP net.IP, serverIP net.IP) StateInfo {
+func NewStateInfoConnected(clientIP net.IP, serverIP net.IP, isCanPause bool) StateInfo {
 	return StateInfo{
 		State:       CONNECTED,
 		Description: "",
 		ClientIP:    clientIP,
 		ServerIP:    serverIP,
-		IsAuthError: false}
+		IsAuthError: false,
+		IsCanPause:  isCanPause}
 }
 
 // Process represents VPN object operations
