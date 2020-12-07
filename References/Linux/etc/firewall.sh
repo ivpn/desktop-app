@@ -31,6 +31,8 @@
 IPv4BIN=iptables
 IPv6BIN=ip6tables
 
+LOCKWAITTIME=2
+
 # main chains for IVPN firewall
 IN_IVPN=IVPN-IN
 OUT_IVPN=IVPN-OUT
@@ -50,14 +52,14 @@ function chain_exists()
 {
     local bin=$1
     local chain_name=$2
-    ${bin} -n -L ${chain_name} >/dev/null 2>&1
+    ${bin} -w ${LOCKWAITTIME} -n -L ${chain_name} >/dev/null 2>&1
 }
 
 function create_chain()
 {
   local bin=$1
   local chain_name=$2
-  chain_exists ${bin} ${chain_name} || ${bin} -N ${chain_name}
+  chain_exists ${bin} ${chain_name} || ${bin} -w ${LOCKWAITTIME} -N ${chain_name}
 }
 
 # Checks if the IVPN Firewall is enabled
@@ -80,27 +82,27 @@ function enable_firewall {
 
     if [ -f /proc/net/if_inet6 ]; then
       ### IPv6 ###
-      # IPv6: block everything by default
-      ${IPv6BIN} -P INPUT DROP
-      ${IPv6BIN} -P OUTPUT DROP
+
       # IPv6: define chains
       create_chain ${IPv6BIN} ${IN_IVPN}
       create_chain ${IPv6BIN} ${OUT_IVPN}
       # IPv6: allow  local (lo) interface
-      ${IPv6BIN} -A ${OUT_IVPN} -o lo -j ACCEPT
-      ${IPv6BIN} -A ${IN_IVPN} -i lo -j ACCEPT
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -o lo -j ACCEPT
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -i lo -j ACCEPT
       # IPv6: assign our chains to global (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
-      ${IPv6BIN} -A OUTPUT -j ${OUT_IVPN}
-      ${IPv6BIN} -A INPUT -j ${IN_IVPN}
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A OUTPUT -j ${OUT_IVPN}
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A INPUT -j ${IN_IVPN}
+
+      # IPv6: block everything by default
+      ${IPv6BIN} -w ${LOCKWAITTIME} -P INPUT DROP
+      ${IPv6BIN} -w ${LOCKWAITTIME} -P OUTPUT DROP
+
     else
       echo "IPv6 disabled: skipping IPv6 rules"
     fi
 
     ### IPv4 ###
-    # block everything by default
-    ${IPv4BIN} -P INPUT DROP
-    ${IPv4BIN} -P OUTPUT DROP
-
+ 
     # define chains
     create_chain ${IPv4BIN} ${IN_IVPN}
     create_chain ${IPv4BIN} ${OUT_IVPN}
@@ -115,12 +117,12 @@ function enable_firewall {
     create_chain ${IPv4BIN} ${OUT_IVPN_ICMP_EXP}
 
     # allow  local (lo) interface
-    ${IPv4BIN} -A ${OUT_IVPN} -o lo -j ACCEPT
-    ${IPv4BIN} -A ${IN_IVPN} -i lo -j ACCEPT
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -o lo -j ACCEPT
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -i lo -j ACCEPT
 
     # allow DHCP port (67out 68in)
-    ${IPv4BIN} -A ${OUT_IVPN} -p udp --dport 67 -j ACCEPT
-    ${IPv4BIN} -A ${IN_IVPN} -p udp --dport 68 -j ACCEPT
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -p udp --dport 67 -j ACCEPT
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -p udp --dport 68 -j ACCEPT
 
     # enable all ICMP ping outgoing request (needed to be able to ping VPN servers)
     #${IPv4BIN} -A ${OUT_IVPN} -p icmp --icmp-type 8 -d 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
@@ -129,14 +131,18 @@ function enable_firewall {
     # assign our chains to global 
     # (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
     # (global -> IVPN_CHAIN -> IN_IVPN_STAT_EXP)
-    ${IPv4BIN} -A OUTPUT -j ${OUT_IVPN}
-    ${IPv4BIN} -A INPUT -j ${IN_IVPN}
-    ${IPv4BIN} -A ${OUT_IVPN} -j ${OUT_IVPN_IF}
-    ${IPv4BIN} -A ${IN_IVPN} -j ${IN_IVPN_IF}
-    ${IPv4BIN} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
-    ${IPv4BIN} -A ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
-    ${IPv4BIN} -A ${OUT_IVPN} -j ${OUT_IVPN_ICMP_EXP}
-    ${IPv4BIN} -A ${IN_IVPN} -j ${IN_IVPN_ICMP_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A OUTPUT -j ${OUT_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A INPUT -j ${IN_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_ICMP_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_ICMP_EXP}
+
+    # block everything by default
+    ${IPv4BIN} -w ${LOCKWAITTIME} -P INPUT DROP
+    ${IPv4BIN} -w ${LOCKWAITTIME} -P OUTPUT DROP
 
     set +e
 
@@ -147,60 +153,60 @@ function enable_firewall {
 function disable_firewall {
     # Flush rules and delete custom chains
 
+    ### allow everything by default ###
+    ${IPv4BIN} -w ${LOCKWAITTIME} -P INPUT ACCEPT
+    ${IPv4BIN} -w ${LOCKWAITTIME} -P OUTPUT ACCEPT
+    ${IPv6BIN} -w ${LOCKWAITTIME} -P INPUT ACCEPT
+    ${IPv6BIN} -w ${LOCKWAITTIME} -P OUTPUT ACCEPT
+
     ### IPv4 ###
-    ${IPv4BIN} -D OUTPUT -j ${OUT_IVPN}
-    ${IPv4BIN} -D INPUT -j ${IN_IVPN}
-    ${IPv4BIN} -D ${OUT_IVPN} -j ${OUT_IVPN_IF}
-    ${IPv4BIN} -D ${IN_IVPN} -j ${IN_IVPN_IF}
-    ${IPv4BIN} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
-    ${IPv4BIN} -D ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
-    ${IPv4BIN} -D ${OUT_IVPN} -j ${OUT_IVPN_ICMP_EXP}
-    ${IPv4BIN} -D ${IN_IVPN} -j ${IN_IVPN_ICMP_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D OUTPUT -j ${OUT_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D INPUT -j ${IN_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_IF}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_ICMP_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_ICMP_EXP}
 
-    ${IPv4BIN} -F ${OUT_IVPN_IF}
-    ${IPv4BIN} -F ${IN_IVPN_IF}
-    ${IPv4BIN} -F ${OUT_IVPN}
-    ${IPv4BIN} -F ${IN_IVPN}
-    ${IPv4BIN} -F ${OUT_IVPN_STAT_EXP}
-    ${IPv4BIN} -F ${IN_IVPN_STAT_EXP}
-    ${IPv4BIN} -F ${OUT_IVPN_ICMP_EXP}
-    ${IPv4BIN} -F ${IN_IVPN_ICMP_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_STAT_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_STAT_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_ICMP_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_ICMP_EXP}
 
-    ${IPv4BIN} -X ${OUT_IVPN_IF}
-    ${IPv4BIN} -X ${IN_IVPN_IF}
-    ${IPv4BIN} -X ${OUT_IVPN}
-    ${IPv4BIN} -X ${IN_IVPN}
-    ${IPv4BIN} -X ${OUT_IVPN_STAT_EXP}
-    ${IPv4BIN} -X ${IN_IVPN_STAT_EXP}
-    ${IPv4BIN} -X ${OUT_IVPN_ICMP_EXP}
-    ${IPv4BIN} -X ${IN_IVPN_ICMP_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_IF}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_STAT_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_STAT_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_ICMP_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_ICMP_EXP}
 
     ### IPv6 ###
-    ${IPv6BIN} -D OUTPUT -j ${OUT_IVPN}
-    ${IPv6BIN} -D INPUT -j ${IN_IVPN}
-    ${IPv6BIN} -F ${OUT_IVPN}
-    ${IPv6BIN} -F ${IN_IVPN}
-    ${IPv6BIN} -X ${OUT_IVPN}
-    ${IPv6BIN} -X ${IN_IVPN}
-
-    ### allow everything by default ###
-    ${IPv4BIN} -P INPUT ACCEPT
-    ${IPv4BIN} -P OUTPUT ACCEPT
-    ${IPv6BIN} -P INPUT ACCEPT
-    ${IPv6BIN} -P OUTPUT ACCEPT
+    ${IPv6BIN} -w ${LOCKWAITTIME} -D OUTPUT -j ${OUT_IVPN}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -D INPUT -j ${IN_IVPN}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN}
 
     echo "IVPN Firewall disabled"
 }
 
 function client_connected {
   IFACE=$1
-  ${IPv4BIN} -A ${OUT_IVPN_IF} -o ${IFACE} -j ACCEPT
-  ${IPv4BIN} -A ${IN_IVPN_IF} -i ${IFACE} -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_IF} -o ${IFACE} -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN_IF} -i ${IFACE} -j ACCEPT
 }
 
 function client_disconnected {
-  ${IPv4BIN} -F ${OUT_IVPN_IF}
-  ${IPv4BIN} -F ${IN_IVPN_IF}
+  ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF}
+  ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF}
 }
 
 function add_exceptions {
@@ -212,13 +218,9 @@ function add_exceptions {
   create_chain ${IPv4BIN} ${IN_CH}
   create_chain ${IPv4BIN} ${OUT_CH}
 
-  # remove same rule if exists (just to avoid duplicates)
-  ${IPv4BIN} -D ${IN_CH} -s $@ -j ACCEPT
-  ${IPv4BIN} -D ${OUT_CH} -d $@ -j ACCEPT
-
   #add new rule
-  ${IPv4BIN} -A ${IN_CH} -s $@ -j ACCEPT
-  ${IPv4BIN} -A ${OUT_CH} -d $@ -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_CH} -s $@ -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_CH} -d $@ -j ACCEPT
 }
 
 function remove_exceptions {
@@ -227,8 +229,8 @@ function remove_exceptions {
   shift 2
   EXP=$@
 
-  ${IPv4BIN} -D ${IN_CH} -s $@ -j ACCEPT
-  ${IPv4BIN} -D ${OUT_CH} -d $@ -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_CH} -s $@ -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_CH} -d $@ -j ACCEPT
 }
 
 function add_exceptions_icmp {
@@ -241,12 +243,12 @@ function add_exceptions_icmp {
   create_chain ${IPv4BIN} ${OUT_CH}
 
   # remove same rule if exists (just to avoid duplicates)
-  ${IPv4BIN} -D ${IN_CH} -p icmp --icmp-type 0 -s $@ -m state --state ESTABLISHED,RELATED -j ACCEPT
-  ${IPv4BIN} -D ${OUT_CH} -p icmp --icmp-type 8 -d $@ -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_CH} -p icmp --icmp-type 0 -s $@ -m state --state ESTABLISHED,RELATED -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_CH} -p icmp --icmp-type 8 -d $@ -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 
   #add new rule
-  ${IPv4BIN} -A ${IN_CH} -p icmp --icmp-type 0 -s $@ -m state --state ESTABLISHED,RELATED -j ACCEPT
-  ${IPv4BIN} -A ${OUT_CH} -p icmp --icmp-type 8 -d $@ -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_CH} -p icmp --icmp-type 0 -s $@ -m state --state ESTABLISHED,RELATED -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_CH} -p icmp --icmp-type 8 -d $@ -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 }
 
 function main {
