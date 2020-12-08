@@ -260,7 +260,7 @@ func (i *ManagementInterface) miCommunication() {
 					// LOG:1607410951,,net_route_v4_add: 193.203.48.54/32 via 192.168.1.1 dev [NULL] table 0 metric -1
 					submaches := mesLogRouteAddCmdRegexpOvpn45.FindStringSubmatch(cmdStr)
 					if len(submaches) >= 2 {
-						i.addRouteAddCommand(fmt.Sprint(routeCommandOvpn45, " ", submaches[1]))
+						i.addRouteAddCommand(fmt.Sprint(routeCommandOvpn45, " add ", submaches[1]))
 					}
 				}
 			} else {
