@@ -6,7 +6,7 @@ echo "[*] After remove (<%= version %> : <%= pkg %> : $1)"
 # (script can be executed with 'sudo', but we should get real user)
 USER="${SUDO_USER:-$USER}"
 UI_APP_USER_DIR="/home/${USER}/.config/ivpn-ui"
-AUTOSTART_FILE="/home/${USER}/.config/autostart/ivpn-ui.AppImage.desktop"
+AUTOSTART_FILE="/home/${USER}/.config/autostart/ivpn-ui.desktop"
 DESKTOP_FILE=/usr/share/applications/IVPN.desktop
 
 silent() {
