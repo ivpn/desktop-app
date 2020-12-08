@@ -28,9 +28,6 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Compilation
 
-**Note!** To avoid mixing styles for different platforms, it is required to comment a few lines of code that are not specific for the current platform.
-Please, look into file `src/main.js` (function `changeUIStyle`)
-
 Update all project  dependencies:
 ```
 npm install
