@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 )
 
@@ -200,6 +201,9 @@ func (i *ManagementInterface) miCommunication() {
 	mesLogRouteAddCmdRegexp := regexp.MustCompile(".*route(.exe)?[ \t]+add[ \t]+.*([0-9]{1,3}[.]){3,3}[0-9]{1,3}.*([0-9]{1,3}[.]){3,3}[0-9]{1,3}.*")
 	mesLogPushReplyCmdRegexp := regexp.MustCompile(".*PUSH.*'PUSH_REPLY[ ,]*(.*)'")
 
+	mesLogRouteAddCmdRegexpOvpn45 := regexp.MustCompile(".*net_route_v4_add:[ \t]+(([0-9]{1,3}[.]){3,3}[0-9]{1,3}(\\/[0-9]+)?[ \t]+.*[ \t]+([0-9]{1,3}[.]){3,3}[0-9]{1,3}).*")
+	routeCommandOvpn45 := platform.RouteCommand()
+
 	if i.miConn == nil {
 		i.log.Panic("INTERNAL ERROR: OpenVPN MI connection is null!")
 	}
@@ -250,6 +254,14 @@ func (i *ManagementInterface) miCommunication() {
 				// /sbin/route add -net 128.0.0.0 10.57.40.1 128.0.0.0
 				if mesLogRouteAddCmdRegexp.MatchString(cmdStr) {
 					i.addRouteAddCommand(cmdStr)
+				} else if len(routeCommandOvpn45) > 0 {
+					// OpenVPN >= 4.5:
+					// Routing log format was changed since OpenVPN 4.5
+					// LOG:1607410951,,net_route_v4_add: 193.203.48.54/32 via 192.168.1.1 dev [NULL] table 0 metric -1
+					submaches := mesLogRouteAddCmdRegexpOvpn45.FindStringSubmatch(cmdStr)
+					if len(submaches) >= 2 {
+						i.addRouteAddCommand(fmt.Sprint(routeCommandOvpn45, " ", submaches[1]))
+					}
 				}
 			} else {
 				// LOG:1586341059,,PUSH: Received control message: 'PUSH_REPLY,redirect-gateway def1,explicit-exit-notify 3,comp-lzo no,route-gateway 10.34.44.1,topology subnet,ping 10,ping-restart 60,dhcp-option DNS 10.34.44.1,ifconfig 10.34.44.19 255.255.252.0,peer-id 17,cipher AES-256-GCM'

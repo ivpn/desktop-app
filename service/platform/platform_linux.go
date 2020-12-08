@@ -47,6 +47,7 @@ func doOsInit() (warnings []string, errors []error) {
 	obfsproxyStartScript = "/usr/bin/obfsproxy"
 	wgBinaryPath = path.Join("/usr/bin", "wg-quick")
 	wgToolBinaryPath = path.Join("/usr/bin", "wg")
+	routeCommand = "/sbin/ip route"
 
 	warnings, errors = doOsInitForBuild()
 
