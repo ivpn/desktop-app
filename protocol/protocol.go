@@ -356,6 +356,21 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command)
 
+	sendStateIfConnected := func(reqIdx int) {
+		vpnState := p._lastVPNState
+		if vpnState.State == vpn.CONNECTED {
+			p.sendResponse(conn, &types.ConnectedResp{
+				TimeSecFrom1970: vpnState.Time,
+				ClientIP:        vpnState.ClientIP.String(),
+				ServerIP:        vpnState.ServerIP.String(),
+				VpnType:         vpnState.VpnType,
+				ExitServerID:    vpnState.ExitServerID,
+				ManualDNS:       dns.GetLastManualDNS(),
+				IsCanPause:      vpnState.IsCanPause},
+				reqIdx)
+		}
+	}
+
 	switch reqCmd.Command {
 	case "Hello":
 		var req types.Hello
@@ -395,17 +410,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if req.GetStatus == true {
 			// send VPN connection  state
-			vpnState := p._lastVPNState
-			if vpnState.State == vpn.CONNECTED {
-				p.sendResponse(conn, &types.ConnectedResp{
-					TimeSecFrom1970: vpnState.Time,
-					ClientIP:        vpnState.ClientIP.String(),
-					ServerIP:        vpnState.ServerIP.String(),
-					VpnType:         vpnState.VpnType,
-					ExitServerID:    vpnState.ExitServerID,
-					ManualDNS:       dns.GetLastManualDNS()},
-					req.Idx)
-			}
+			sendStateIfConnected(req.Idx)
+
 			// send Firewall state
 			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err == nil {
 				p.sendResponse(conn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast}, reqCmd.Idx)
@@ -426,14 +432,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// send VPN connection  state
 		vpnState := p._lastVPNState
 		if vpnState.State == vpn.CONNECTED {
-			p.sendResponse(conn, &types.ConnectedResp{
-				TimeSecFrom1970: vpnState.Time,
-				ClientIP:        vpnState.ClientIP.String(),
-				ServerIP:        vpnState.ServerIP.String(),
-				VpnType:         vpnState.VpnType,
-				ExitServerID:    vpnState.ExitServerID,
-				ManualDNS:       dns.GetLastManualDNS()},
-				reqCmd.Idx)
+			sendStateIfConnected(reqCmd.Idx)
 		} else if vpnState.State == vpn.DISCONNECTED {
 			p.sendResponse(conn, &types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqCmd.Idx)
 		} else {
