@@ -18,11 +18,7 @@ echo "[+] Checking for 'ivpn-ui' running processes ..."
 ps aux | grep /opt/ivpn/ui/bin/ivpn-ui | grep -v grep  > /dev/null 2>&1
 if [ $? -eq 0 ]; then
   echo "[!] Detected: IVPN app is running"
-  echo "[+] Disconnecting (if connected) ..."
-  /usr/local/bin/ivpn disconnect || echo "[-] Failed to disconnect"
-  echo "[+] Disabling firewall (if enabled) ..."
-  /usr/local/bin/ivpn firewall -off || echo "[-] Failed to disable firewall"
-  echo "[+] Killing all 'ivpn-ui' processes ..."
+
   # We should be careful here: WE SHOULD NOT KILL THIS SCRIPT :)
   # (which also can have 'ivpn-ui' in process description)
   silent kill -TERM $(ps aux | grep /opt/ivpn/ui/bin/ivpn-ui | grep -v grep | awk '{print $2}')
