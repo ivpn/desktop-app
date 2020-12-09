@@ -68,8 +68,8 @@ const getDefaultState = () => {
     ovpnProxyPass: "",
 
     // firewall
-    firewallOnOffOnConnect: true,
-    firewallOffOnExit: true,
+    firewallActivateOnConnect: true,
+    firewallDeactivateOnDisconnect: true,
 
     // antitracker
     isAntitracker: false,
@@ -225,11 +225,11 @@ export default {
     },
 
     // firewall
-    firewallOnOffOnConnect(state, val) {
-      state.firewallOnOffOnConnect = val;
+    firewallActivateOnConnect(state, val) {
+      state.firewallActivateOnConnect = val;
     },
-    firewallOffOnExit(state, val) {
-      state.firewallOffOnExit = val;
+    firewallDeactivateOnDisconnect(state, val) {
+      state.firewallDeactivateOnDisconnect = val;
     },
 
     // antitracker
@@ -393,11 +393,11 @@ export default {
     },
 
     // firewall
-    firewallOnOffOnConnect(context, val) {
-      context.commit("firewallOnOffOnConnect", val);
+    firewallActivateOnConnect(context, val) {
+      context.commit("firewallActivateOnConnect", val);
     },
-    firewallOffOnExit(context, val) {
-      context.commit("firewallOffOnExit", val);
+    firewallDeactivateOnDisconnect(context, val) {
+      context.commit("firewallDeactivateOnDisconnect", val);
     },
 
     // antitracker

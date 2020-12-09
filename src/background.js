@@ -200,8 +200,39 @@ if (gotTheLock) {
   app.on("before-quit", async event => {
     // if disconnected -> close application immediately
     if (store.getters["vpnState/isDisconnected"]) {
-      if (store.state.settings.firewallOffOnExit) {
-        await daemonClient.EnableFirewall(false);
+      if (
+        store.state.vpnState.firewallState.IsPersistent == false &&
+        store.state.vpnState.firewallState.IsEnabled == true
+      ) {
+        let actionNo = dialog.showMessageBoxSync({
+          type: "question",
+          message: "Deactivate Firewall?",
+          detail:
+            "The IVPN Firewall is active.\nDo you want to deactivate it before exiting the application?",
+          buttons: [
+            "Cancel",
+            "Keep Firewall activated & Quit",
+            "Deactivate Firewall & Quit"
+          ]
+        });
+
+        switch (actionNo) {
+          case 0: // Cancel
+            // discard exiting
+            event.preventDefault();
+            // show app window back (if not minimizing to tray)
+            if (store.state.settings.minimizeToTray !== true)
+              setTimeout(menuOnShow, 0);
+            break;
+
+          case 1: // Keep Firewall activate & Quit
+            // do nothing here
+            break;
+
+          case 2: // Deactivate Firewall & Quit
+            await daemonClient.EnableFirewall(false);
+            break;
+        }
       }
       return;
     }
@@ -240,7 +271,7 @@ if (gotTheLock) {
         setTimeout(async () => {
           try {
             if (
-              store.state.settings.firewallOnOffOnConnect ||
+              store.state.settings.firewallDeactivateOnDisconnect ||
               store.state.settings.disconnectOnQuit
             )
               await daemonClient.EnableFirewall(false);

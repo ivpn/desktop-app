@@ -344,7 +344,7 @@ async function processResponse(response) {
     case daemonResponses.DisconnectedResp:
       store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
       store.commit(`vpnState/disconnected`, obj.ReasonDescription);
-      if (store.state.settings.firewallOnOffOnConnect === true) {
+      if (store.state.settings.firewallDeactivateOnDisconnect === true) {
         await EnableFirewall(false);
       }
       requestGeoLookupAsync();
@@ -779,7 +779,7 @@ async function Connect(entryServer, exitServer) {
     }
   }
 
-  if (store.state.settings.firewallOnOffOnConnect === true) {
+  if (store.state.settings.firewallActivateOnConnect === true) {
     await EnableFirewall(true);
   }
 

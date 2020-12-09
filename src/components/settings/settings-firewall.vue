@@ -48,27 +48,27 @@
     <div class="settingsBoldFont">
       On-demand Firewall:
     </div>
+
     <div class="param">
       <input
         type="checkbox"
-        id="firewallOnOffOnConnect"
+        id="firewallActivateOnConnect"
         :disabled="firewallPersistent === true"
-        v-model="firewallOnOffOnConnect"
+        v-model="firewallActivateOnConnect"
       />
-      <label class="defColor" for="firewallOnOffOnConnect"
-        >Activate on connect to VPN and deactivate on disconnect</label
+      <label class="defColor" for="firewallActivateOnConnect"
+        >Activate IVPN Firewall on connect to VPN</label
       >
     </div>
     <div class="param">
       <input
         type="checkbox"
-        id="firewallOffOnExit"
+        id="firewallDeactivateOnDisconnect"
         :disabled="firewallPersistent === true"
-        v-model="firewallOffOnExit"
+        v-model="firewallDeactivateOnDisconnect"
       />
-      <label class="defColor" for="firewallOffOnExit"
-        >Deactivate IVPN Firewall on IVPN Client exit (when VPN
-        disconnected)</label
+      <label class="defColor" for="firewallDeactivateOnDisconnect"
+        >Deactivate IVPN Firewall on disconnect from VPN</label
       >
     </div>
 
@@ -142,20 +142,20 @@ export default {
       }
     },
 
-    firewallOnOffOnConnect: {
+    firewallActivateOnConnect: {
       get() {
-        return this.$store.state.settings.firewallOnOffOnConnect;
+        return this.$store.state.settings.firewallActivateOnConnect;
       },
       set(value) {
-        this.$store.dispatch("settings/firewallOnOffOnConnect", value);
+        this.$store.dispatch("settings/firewallActivateOnConnect", value);
       }
     },
-    firewallOffOnExit: {
+    firewallDeactivateOnDisconnect: {
       get() {
-        return this.$store.state.settings.firewallOffOnExit;
+        return this.$store.state.settings.firewallDeactivateOnDisconnect;
       },
       set(value) {
-        this.$store.dispatch("settings/firewallOffOnExit", value);
+        this.$store.dispatch("settings/firewallDeactivateOnDisconnect", value);
       }
     }
   }
