@@ -82,7 +82,7 @@ export default {
         return require(`@/assets/flags/${ccode}.svg`);
       } catch (e) {
         console.log(e);
-        return require(`@/assets/flags/unk.svg`);
+        return null; //return require(`@/assets/flags/unk.svg`);
       }
     },
     selectedImg: function() {
