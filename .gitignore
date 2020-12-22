@@ -25,3 +25,8 @@ pnpm-debug.log*
 /References/Linux/_out_bin/*
 /References/Linux/_tmp/*
 main_style.js
+References/macOS/_image
+net.ivpn.client.Helper
+IVPN Helper-Info.plist
+libivpn.dylib
+References/macOS/_compiled

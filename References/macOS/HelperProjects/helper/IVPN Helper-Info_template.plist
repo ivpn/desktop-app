@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>net.ivpn.client.Helper</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Helper</string>
+	<key>CFBundleShortVersionString</key>
+	<string>2.6.0</string>
+	<key>CFBundleVersion</key>
+	<string>2.6.0</string>
+	<key>SMAuthorizedClients</key>
+	<array>
+		<string>identifier net.ivpn.client.IVPN and certificate leaf[subject.OU] = HERE_SHOULD_BE_DEVELOPERID_CERTIFICATE</string>
+	</array>
+</dict>
+</plist>
