@@ -54,7 +54,6 @@ echo "    Version:                 '${_VERSION}'"
 echo "    Apple DevID certificate: '${_SIGN_CERT}'"
 echo "    File to notarize:        '${_PATH_DMG_FILE}'"
 echo " "
-read -p "Press enter to start sending for notarization"
 
 _NOTARIZATION_SENT=0
 echo " *** [APPLE NOTARIZATION] Do you wish to upload '${_PATH_DMG_FILE}' to Apple for notarization? *** "
