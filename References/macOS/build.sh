@@ -43,7 +43,7 @@ fi
 echo "[+] *** COMPILING IVPN BINARIES AND MAKING DMG ***";
 echo "    Version:                 '${_VERSION}'"
 if [ -z "${_SIGN_CERT}" ]; then
-  echo "    WARNING: Apple DevID not defined (skipping signing binaries)"
+  echo "    WARNING: Apple DevID not defined (signing & notarization will be skipped)"
   read -p "Press enter to continue"
 else
   echo "    Apple DevID certificate: '${_SIGN_CERT}'"
@@ -90,13 +90,15 @@ echo "    UI sources:     ${_PATH_ABS_REPO_UI}"
 echo "    Daemon sources: ${_PATH_ABS_REPO_DAEMON}"
 echo "    CLI sources:    ${_PATH_ABS_REPO_CLI}"
 
+read -p "Press enter to continue"
+
 echo "[+] Checking UI project version..."
 cat "${_PATH_ABS_REPO_UI}/package.json" | grep \"version\" | grep \"${_VERSION}\"
 CheckLastResult "ERROR: Please set correct version in file '${_PATH_ABS_REPO_UI}/package.json'"
 
 # ============================== BUILDING PROJECTS =============================
 echo "[+] Building IVPN Daemon (${_PATH_ABS_REPO_DAEMON})...";
-#${_PATH_ABS_REPO_DAEMON}/References/macOS/scripts/build-all.sh -norebuild -v ${_VERSION}
+${_PATH_ABS_REPO_DAEMON}/References/macOS/scripts/build-all.sh -norebuild -v ${_VERSION}
 CheckLastResult "[!] ERROR building IVPN Daemon"
 
 echo "[+] Building helper ..."
@@ -114,7 +116,7 @@ CheckLastResult "[!] ERROR building libivpn.dylib"
 cd ${_SCRIPT_DIR}
 
 echo "[+] Building IVPN CLI (${_PATH_ABS_REPO_CLI})...";
-#${_PATH_ABS_REPO_CLI}/References/macOS/build.sh -v ${_VERSION}
+${_PATH_ABS_REPO_CLI}/References/macOS/build.sh -v ${_VERSION}
 CheckLastResult "[!] ERROR building IVPN CLI"
 
 echo "[+] Building UI (${_PATH_ABS_REPO_UI})...";
@@ -123,7 +125,7 @@ echo "[+] Building UI: Installing NPM molules ..."
 #npm install
 CheckLastResult
 echo "[+] Building UI: Build..."
-#npm run electron:build
+npm run electron:build
 CheckLastResult
 
 # ============================== PREPARING DMG ==============================
@@ -194,6 +196,14 @@ find "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources/obfsproxy" -iname "*.pyc" -t
 #echo "[+] Preparing DMG image: Signing..."
 #../sign-file.sh "./_image/IVPN.app" || CheckLastResult
 
+# ============================== SIGNING ==============================
+if [ -z "${_SIGN_CERT}" ]; then
+  echo "[!] WARNING! SIGNING CERTIFICATE NOT DEFINED"
+  echo "             Signing skipped!"
+else
+  ${_SCRIPT_DIR}/sign_image.sh -c ${_SIGN_CERT}
+  CheckLastResult "ERROR: SIGNING FAILED!"
+fi
 # ============================== GENERATING DMG ==============================
 echo "[+] GENERATING DMG ..."
 _PATH_COMPILED_FOLDER=${_SCRIPT_DIR}/_compiled
@@ -268,9 +278,17 @@ CheckLastResult
 echo "[+] Generating DMG: Removing temporary DMG DMG ..."
 rm -f ${_PATH_TMP_DMG_FILE}
 
+# ============================== NOTARIZATION ==============================
+if [ -z "${_SIGN_CERT}" ]; then
+  echo "[!] WARNING! SIGNING CERTIFICATE NOT DEFINED"
+  echo "             Notarization skipped!"
+else
+  ${_SCRIPT_DIR}/notarize_dmg.sh -c ${_SIGN_CERT} -v ${_VERSION}
+  CheckLastResult "ERROR: NOTARIZATION FAILED!"
+fi
+
 echo "[+] SCCESS"
 
 open ${_PATH_COMPILED_FOLDER}
-
 # restore default folder
 cd ${_BASE_DIR}

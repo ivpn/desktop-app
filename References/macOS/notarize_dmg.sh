@@ -21,7 +21,7 @@ function CheckLastResult
 }
 
 # The Apple DevID certificate which will be used to sign binaries
-_SIGN_CERT="WQXXM75BYN" # default value. Specific value can be passed by command-line argument: -c <APPLE_DEVID_SERT>
+_SIGN_CERT=""
 # version info variables
 _VERSION=""
 
@@ -41,17 +41,6 @@ if [ -z "${_VERSION}" ] || [ -z "${_SIGN_CERT}" ]; then
   exit 1
 fi
 
-echo "[ ] *** Ready to build & notarize ***"
-echo "    Version:                 '${_VERSION}'"
-echo "    Apple DevID certificate: '${_SIGN_CERT}'"
-read -p "Press enter to continue"
-
-echo "[i] Starting build script ..."
-./build.sh -v ${_VERSION} -c ${_SIGN_CERT}
-CheckLastResult "ERROR: build failed"
-
-# =============== SENDING FOR NOTARISATION ====================
-echo "[i] Ready for notarization"
 _PATH_COMPILED_FOLDER=${_SCRIPT_DIR}/_compiled
 _PATH_DMG_FILE="${_PATH_COMPILED_FOLDER}/IVPN-"${_VERSION}".dmg"
 
@@ -59,7 +48,13 @@ if [ ! -f ${_PATH_DMG_FILE} ]; then
   echo "ERROR: Unable to notarize. File not exists '${_PATH_DMG_FILE}'"
   exit 1
 fi
-echo "    File to notarize: '${_PATH_DMG_FILE}'"
+
+echo "[ ] *** Ready to send for notarization ***"
+echo "    Version:                 '${_VERSION}'"
+echo "    Apple DevID certificate: '${_SIGN_CERT}'"
+echo "    File to notarize:        '${_PATH_DMG_FILE}'"
+echo " "
+read -p "Press enter to start sending for notarization"
 
 _NOTARIZATION_SENT=0
 echo " *** [APPLE NOTARIZATION] Do you wish to upload '${_PATH_DMG_FILE}' to Apple for notarization? *** "
