@@ -53,6 +53,8 @@ var (
 	obfsproxyStartScript string
 	obfsproxyHostPort    int
 
+	routeCommand string // exmaple: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux
+
 	wgBinaryPath     string
 	wgToolBinaryPath string
 	wgConfigFilePath string
@@ -135,6 +137,14 @@ func Init() (warnings []string, errors []error) {
 	}
 	if err := checkFileAccessRightsExecutable("wgToolBinaryPath", wgToolBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
+	}
+
+	if len(routeCommand) > 0 {
+		routeBinary := strings.Split(routeCommand, " ")[0]
+		if err := checkFileAccessRightsExecutable("routeCommand", routeBinary); err != nil {
+			routeCommand = ""
+			warnings = append(warnings, fmt.Errorf("Route binary error: %w", err).Error())
+		}
 	}
 
 	w, e := doInitOperations()
@@ -286,6 +296,12 @@ func ObfsproxyStartScript() string {
 // ObfsproxyHostPort is an port of obfsproxy host
 func ObfsproxyHostPort() int {
 	return obfsproxyHostPort
+}
+
+// RouteCommand shell command to update routing table
+// exmaple: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux
+func RouteCommand() string {
+	return routeCommand
 }
 
 // WgBinaryPath path to WireGuard binary
