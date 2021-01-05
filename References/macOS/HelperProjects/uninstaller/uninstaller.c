@@ -339,9 +339,6 @@ int uninstall() {
       printf("[ ] Disconnecting IVPN ...\n");
       system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn disconnect");
 
-      printf("[ ] Logout ...\n");
-      system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn logout");
-
       printf("[ ] Closing IVPN app...\n");
       if (system("osascript -e 'quit app \"ivpn-ui\"'"))
       {
@@ -355,6 +352,9 @@ int uninstall() {
         system( "osascript -e 'display alert \"IVPN Uninstaller\" message \"Please, close IVPN application and try again.\"'");
         return 4;
       }
+
+      printf("[ ] Logout ...\n");
+      system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn logout");
 
       printf("[ ] Removing apps defaults...\n");
       system("defaults delete net.ivpn.client.IVPN"); // old UI bundleID
