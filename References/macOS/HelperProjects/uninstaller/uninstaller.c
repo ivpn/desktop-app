@@ -164,7 +164,6 @@ int is_helper_installation_required() {
 
 int remove_helper_with_auth(AuthorizationRef authRef) {
   CFErrorRef error = NULL;
-  char messageBuff[256] = {0};
   int ret = 0;
 
   bool isSuccess = SMJobRemove(kSMDomainSystemLaunchd, CFStringCreateWithCString(kCFAllocatorDefault, HELPER_LABEL, kCFStringEncodingMacRoman), authRef, true, &error);
@@ -176,17 +175,14 @@ int remove_helper_with_auth(AuthorizationRef authRef) {
     return 1;
   }
 
-  if (!AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/rm", kAuthorizationFlagDefaults, HELPER_TO_REMOVE_PLIST_PATH, NULL))
+  const char *filesToRemove[] = {HELPER_TO_REMOVE_PLIST_PATH, HELPER_TO_REMOVE_BIN_PATH, NULL};
+  OSStatus err = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/rm", kAuthorizationFlagDefaults, filesToRemove, NULL);
+  if (err)
   { 
-    snprintf(messageBuff, 256, "ERROR: Cannot remove file: '%s'", HELPER_TO_REMOVE_PLIST_PATH);
+    char messageBuff[256] = {0};
+    snprintf(messageBuff, 256, "ERROR (%d): Error removing files: '%s' and/or '%s'", err, HELPER_TO_REMOVE_PLIST_PATH, HELPER_TO_REMOVE_BIN_PATH);
     logmes(LOG_ERR, messageBuff);
     ret=2;
-  }
-  if (!AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/rm", kAuthorizationFlagDefaults, HELPER_TO_REMOVE_BIN_PATH, NULL))
-  {
-    snprintf(messageBuff, 256, "ERROR: Cannot remove file: '%s'", HELPER_TO_REMOVE_BIN_PATH);
-    logmes(LOG_ERR, messageBuff);
-    ret=3;
   }
 
   if (ret==0)
@@ -210,7 +206,7 @@ int remove_helper() {
                                kAuthorizationFlagExtendRights;
     AuthorizationRef authRef = NULL;
 
-    const char *prompt = "This will remove the previously installed IVPN helper.\n\n Please, enter credentials for the current OS user.\n\n";
+    const char *prompt = "This will remove the previously installed IVPN helper.\n\n";
     AuthorizationItem envItems = {kAuthorizationEnvironmentPrompt, strlen(prompt), (void *)prompt, 0};
     AuthorizationEnvironment env = { 1, &envItems };
 
@@ -314,16 +310,121 @@ int install_helper() {
 }
 
 int uninstall() {
-  logmes(LOG_DEBUG, "Uninstalling IVPN ...");
+      logmes(LOG_INFO, "Uninstalling IVPN ...");
+      const char *homeDir = getenv("HOME");
 
-    printf("FW OFF: %d\n",      system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn firewall -off"));
-    printf("disconnect: %d\n",  system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn disconnect"));
-    printf("logout: %d\n",      system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn logout"));
+      CFErrorRef error = NULL;
+      AuthorizationRef authRef = NULL;
 
-    printf("defaults: %d\n",    system("defaults delete net.ivpn.client.IVPN")); // old UI bundleID
-    printf("defaults: %d\n",    system("defaults delete com.electron.ivpn-ui"));
+      OSStatus err = AuthorizationCreate(NULL, NULL, kAuthorizationFlagDefaults, &authRef);
+      if(err != errAuthorizationSuccess)
+      {
+        logmes(LOG_ERR, "ERROR: Creating authorization failed");
+        return 1;
+      }
+    
+      const char *args0[] = {NULL};
+      // Hack to force "authentication required" window to pop-up;
+      if (AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/echo", kAuthorizationFlagDefaults, args0, NULL))
+      {
+        logmes(LOG_ERR, "FAILED to get privileges");
+        return 2;
+      }
 
-  return 0;
+      bool hasErrors = false;
+
+      printf("[ ] Disabling IVPN firewall ...\n");
+      system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn firewall -off");
+      
+      printf("[ ] Disconnecting IVPN ...\n");
+      system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn disconnect");
+
+      printf("[ ] Logout ...\n");
+      system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn logout");
+
+      printf("[ ] Closing IVPN app...\n");
+      if (system("osascript -e 'quit app \"ivpn-ui\"'"))
+      {
+        logmes(LOG_ERR, "ERROR: Unable to close application (ivpn-ui). IVPN not uninstalled.");
+        system( "osascript -e 'display alert \"IVPN Uninstaller\" message \"Please, close IVPN application and try again.\"'");
+        return 3;
+      }
+      if (system("osascript -e 'quit app \"IVPN\"'"))
+      {
+        logmes(LOG_ERR, "ERROR: Unable to close application (IVPN). IVPN not uninstalled.");
+        system( "osascript -e 'display alert \"IVPN Uninstaller\" message \"Please, close IVPN application and try again.\"'");
+        return 4;
+      }
+
+      printf("[ ] Removing apps defaults...\n");
+      system("defaults delete net.ivpn.client.IVPN"); // old UI bundleID
+      system("defaults delete com.electron.ivpn-ui");
+
+      printf("[ ] Removing helper ...\n"); 
+      remove_helper_with_auth(authRef);
+
+      char relFile1[128], relFile2[128];
+      snprintf(relFile1, 128, "%s/Library/Preferences/net.ivpn.client.IVPN.plist", homeDir); 
+      snprintf(relFile2, 128, "%s/Library/Preferences/com.electron.ivpn-ui.plist", homeDir); 
+
+      const char *filesToRemove[] = {
+        "/Library/Logs/IVPN Agent.log",
+        "/Library/Logs/IVPN Agent.log.0",
+        "/Library/Logs/IVPN Agent CrashInfo.log",
+        "/Library/Logs/IVPN Agent CrashInfo.log.0",
+        "/Library/Application Support/net.ivpn.client.Agent/last-btime", // seems, the file created by OS,
+        relFile1,
+        relFile2
+      };
+
+      for (int i=0;i<7;i++) 
+      {
+        char* fname = filesToRemove[i];
+        printf("[ ] Removing file: %s ...\n", fname);
+        char *args[] = {fname, NULL};
+        OSStatus ret = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/rm", kAuthorizationFlagDefaults, args, NULL);
+        if (ret) 
+        {
+          printf("    error removing file (%d): '%s'\n", ret, fname);
+          hasErrors = true;
+        }
+      }
+
+      char relDir1[128], relDir2[128];
+      snprintf(relDir1, 128, "%s/Library/Application Support/IVPN", homeDir);  // old UI
+      snprintf(relDir2, 128, "%s/Library/Application Support/ivpn-ui", homeDir);
+
+      const char *foldersToRemove[] = {
+        "/Applications/IVPN.app",
+        "/Library/Application Support/IVPN/OpenVPN",
+        "/Library/Application Support/IVPN",
+        "/Library/Application Support/net.ivpn.client.Agent/LocalMachine", // seems, the folder created by OS
+        "/Library/Application Support/net.ivpn.client.Agent", // seems, the folder created by OS
+        relDir1,
+        relDir2
+      };
+
+     for (int i=0;i<7;i++) 
+     {
+        char* fname = foldersToRemove[i];
+        printf("[] Removing folder: %s ...\n", fname);
+        char *args[] = {"-R",  fname, NULL};
+        OSStatus ret = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/rm", kAuthorizationFlagDefaults, args, NULL);
+        if (ret) 
+        {
+          printf("    error removing folder (%d): '%s'\n", ret, fname);
+          hasErrors = true;
+        }
+      }
+
+      AuthorizationFree(authRef, kAuthorizationFlagDefaults);
+
+      if (hasErrors)
+        system( "osascript -e 'display alert \"IVPN Uninstaller\" message \"IVPN removed with errors!\"'");
+      else 
+        system( "osascript -e 'display alert \"IVPN Uninstaller\" message \"IVPN removed!\"'");
+
+      return hasErrors;
 }
 
 int main(int argc, char **argv) {
