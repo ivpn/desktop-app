@@ -130,7 +130,7 @@ func Launch() {
 		// waiting for port number info
 		openedPort := <-startedOnPortChan
 
-		// for Windows and macOS-debug we need to save port info into a file
+		// save port info into a file (UI clients is able to read it)
 		if isNeedToSavePortInFile() == true {
 			file, err := os.Create(platform.ServicePortFile())
 			if err != nil {

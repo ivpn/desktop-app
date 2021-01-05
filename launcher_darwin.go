@@ -25,8 +25,6 @@ package main
 import (
 	"os"
 
-	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/oshelpers/macos/libivpn"
 	"github.com/ivpn/desktop-app-daemon/shell"
 )
 
@@ -51,15 +49,16 @@ func doPrepareToRun() error {
 
 // inform OS-specific implementation about listener port
 func doStartedOnPort(openedPort int, secret uint64) {
-	libivpn.StartXpcListener(openedPort, secret)
+	implStartedOnPort(openedPort, secret)
 }
 
 // OS-specific service finalizer
 func doStopped() {
-	// do not forget to close 'libivpn' dynamic library
-	logger.Debug("Unloading libivpn...")
-	libivpn.Unload()
-	logger.Debug("Unloaded libivpn")
+	implStopped()
+}
+
+func isNeedToSavePortInFile() bool {
+	return true
 }
 
 // checkIsAdmin - check is application running with root privileges
