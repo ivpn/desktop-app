@@ -516,17 +516,45 @@ async function connectToDaemon(doNotTryToInstall, isCanRetry) {
         store.commit("daemonIsInstalling", true);
       }, //onInstallationStarted,
       exitCode => {
-        // force UI to show 'connecting' state
-        store.commit("daemonConnectionState", DaemonConnectionType.Connecting);
+        // check if we still need to install helper
+        darwinDaemonInstaller.IsDaemonInstallationRequired(code => {
+          if (code == 0) {
+            // error: the helper not installed (we still detection that helper must be installed (code == 0))
+            console.error(
+              `Error installing helper [code1: ${exitCode}, code2: ${code}]`
+            );
 
-        // wait some time to give Daemon chance to fully start
-        setTimeout(async () => {
-          store.commit("daemonIsInstalling", false);
+            // set daemon state 'NotConnected'
+            store.commit(
+              "daemonConnectionState",
+              DaemonConnectionType.NotConnected
+            );
 
-          // if success - try to connect to daemon with possibility to retry (wait until daemon start)
-          if (exitCode == 0) await connectToDaemon(true, true);
-          else await connectToDaemon(true);
-        }, 500);
+            // do not forget to notify that daemon installation is finished
+            store.commit("daemonIsInstalling", false);
+            // Skip connection to daemon
+            return;
+          }
+
+          // daemon installation not required. Connecting to daemon...
+
+          // force UI to show 'connecting' state
+          store.commit(
+            "daemonConnectionState",
+            DaemonConnectionType.Connecting
+          );
+
+          // wait some time to give Daemon chance to fully start
+          setTimeout(async () => {
+            // do not forget to notify that daemon installation is finished
+            store.commit("daemonIsInstalling", false);
+
+            // if success - try to connect to daemon with possibility to retry (wait until daemon start)
+            // (doNotTryToInstall=true, isCanRetry=true)
+            if (exitCode == 0) await connectToDaemon(true, true);
+            else await connectToDaemon(true);
+          }, 500);
+        });
       } //onInstallationFinished
     );
     return;

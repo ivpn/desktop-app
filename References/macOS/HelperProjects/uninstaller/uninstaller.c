@@ -4,6 +4,9 @@
 #include <string.h>
 
 #define HELPER_LABEL "net.ivpn.client.Helper"
+#define HELPER_TO_REMOVE_PLIST_PATH "/Library/LaunchDaemons/net.ivpn.client.Helper.plist"
+#define HELPER_TO_REMOVE_BIN_PATH "/Library/PrivilegedHelperTools/net.ivpn.client.Helper"
+
 // #define IS_INSTALLER 0   //  IS_INSTALLER should be passed by compiler
 //  Makefile example: cc -D IS_INSTALLER='1' ...
 
@@ -47,7 +50,7 @@ void logmesError(CFErrorRef error) {
     logmes(LOG_ERR, ptr);
 }
 
-CFDictionaryRef get_bundle_dictionary(char *bundlePath) {
+CFDictionaryRef get_bundle_dictionary(const char *bundlePath) {
     CFStringRef bundleString = CFStringCreateWithCString(kCFAllocatorDefault, bundlePath, kCFStringEncodingMacRoman);
     CFStringRef bundleStringEscaped = CFURLCreateStringByAddingPercentEscapes(NULL, bundleString, NULL, NULL, kCFStringEncodingUTF8);
     CFURLRef url = CFURLCreateWithString(NULL, bundleStringEscaped, NULL);
@@ -158,8 +161,75 @@ int is_helper_installation_required() {
     return 0; // helper not installed. Installation required
 }
 
+
+int remove_helper_with_auth(AuthorizationRef authRef) {
+  CFErrorRef error = NULL;
+  char messageBuff[256] = {0};
+  int ret = 0;
+
+  bool isSuccess = SMJobRemove(kSMDomainSystemLaunchd, CFStringCreateWithCString(kCFAllocatorDefault, HELPER_LABEL, kCFStringEncodingMacRoman), authRef, true, &error);
+  if (!isSuccess)
+  {
+    logmesError(error);
+    logmes(LOG_ERR, "ERROR: Cannot remove helper");
+    if (error != NULL) CFRelease(error);
+    return 1;
+  }
+
+  if (!AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/rm", kAuthorizationFlagDefaults, HELPER_TO_REMOVE_PLIST_PATH, NULL))
+  { 
+    snprintf(messageBuff, 256, "ERROR: Cannot remove file: '%s'", HELPER_TO_REMOVE_PLIST_PATH);
+    logmes(LOG_ERR, messageBuff);
+    ret=2;
+  }
+  if (!AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/rm", kAuthorizationFlagDefaults, HELPER_TO_REMOVE_BIN_PATH, NULL))
+  {
+    snprintf(messageBuff, 256, "ERROR: Cannot remove file: '%s'", HELPER_TO_REMOVE_BIN_PATH);
+    logmes(LOG_ERR, messageBuff);
+    ret=3;
+  }
+
+  if (ret==0)
+	  logmes(LOG_INFO, "Success (IVPN Helper removed)");
+  else 
+    logmes(LOG_ERR, "IVPN helper removal not complete successfully.");
+
+  return ret;
+}
+
+int remove_helper() {
+    logmes(LOG_INFO, "Removing IVPN helper...");
+
+    CFErrorRef error = NULL;
+
+    AuthorizationItem authItem = { kSMRightModifySystemDaemons, 0, NULL, 0 };
+    AuthorizationRights authRights = { 1, &authItem };
+    AuthorizationFlags flags = kAuthorizationFlagDefaults |
+                               kAuthorizationFlagInteractionAllowed |
+                               kAuthorizationFlagPreAuthorize |
+                               kAuthorizationFlagExtendRights;
+    AuthorizationRef authRef = NULL;
+
+    const char *prompt = "This will remove the previously installed IVPN helper.\n\n Please, enter credentials for the current OS user.\n\n";
+    AuthorizationItem envItems = {kAuthorizationEnvironmentPrompt, strlen(prompt), (void *)prompt, 0};
+    AuthorizationEnvironment env = { 1, &envItems };
+
+    OSStatus err = AuthorizationCreate(&authRights, &env, flags, &authRef);
+    if(err == errAuthorizationSuccess)
+    {
+      int ret = remove_helper_with_auth(authRef);
+      AuthorizationFree(authRef, kAuthorizationFlagDefaults);
+      return ret;
+    }
+
+    logmes(LOG_ERR, "ERROR: Getting authorization failed (IVPN helper NOT removed)");
+    return err;
+}
+
 int install_helper() {
     logmes(LOG_INFO, "Installing IVPN helper...");
+
+    bool isUpgrade = false;
 
     char messageBuff[256] = {0};
 
@@ -183,7 +253,8 @@ int install_helper() {
         return 1;
       }
 
-      snprintf(messageBuff, 256, "Installing IVPN helper v%s (already installed version v%s) ...", currentVer, installedVer);
+      isUpgrade = true;
+      snprintf(messageBuff, 256, "Upgrading IVPN helper v%s (already installed version v%s) ...", currentVer, installedVer);
       logmes(LOG_INFO, messageBuff);
     }
     else
@@ -201,7 +272,11 @@ int install_helper() {
                                kAuthorizationFlagPreAuthorize |
                                kAuthorizationFlagExtendRights;
 
-    const char *prompt = "The IVPN Helper tool going to be installed\n\n Please, enter credentials for the current OS user.\n\n";
+    const char *promptUpgrade = "A new version of IVPN has been installed and the privileged helper must be upgraded too.\n\n";
+    const char *prompt = "A privileged helper must be installed to use the IVPN client.\n\n";
+    if (isUpgrade)
+      prompt = promptUpgrade;
+
     AuthorizationItem envItems = {kAuthorizationEnvironmentPrompt, strlen(prompt), (void *)prompt, 0};
     AuthorizationEnvironment env = { 1, &envItems };
 
@@ -209,6 +284,10 @@ int install_helper() {
     OSStatus err = AuthorizationCreate(&authRights, &env, flags, &authRef);
     if(err == errAuthorizationSuccess)
     {
+        if (isUpgrade) {
+          remove_helper_with_auth(authRef);
+        }
+
         bool isSuccess = SMJobBless(kSMDomainSystemLaunchd,
                       CFStringCreateWithCString(kCFAllocatorDefault, HELPER_LABEL, kCFStringEncodingMacRoman),
                       (AuthorizationRef) authRef,
@@ -231,48 +310,6 @@ int install_helper() {
     }
 
 	logmes(LOG_ERR, "ERROR: Getting authorization failed (IVPN helper NOT installed)");
-    return err;
-}
-
-int remove_helper() {
-    logmes(LOG_INFO, "Removing IVPN helper...");
-
-    CFErrorRef error = NULL;
-
-    AuthorizationItem authItem = { kSMRightModifySystemDaemons, 0, NULL, 0 };
-    AuthorizationRights authRights = { 1, &authItem };
-    AuthorizationFlags flags = kAuthorizationFlagDefaults |
-                               kAuthorizationFlagInteractionAllowed |
-                               kAuthorizationFlagPreAuthorize |
-                               kAuthorizationFlagExtendRights;
-    AuthorizationRef authRef = NULL;
-
-    const char *prompt = "This will remove the previously installed IVPN helper.\n\n";
-    AuthorizationItem envItems = {kAuthorizationEnvironmentPrompt, strlen(prompt), (void *)prompt, 0};
-    AuthorizationEnvironment env = { 1, &envItems };
-
-    OSStatus err = AuthorizationCreate(&authRights, &env, flags, &authRef);
-    if(err == errAuthorizationSuccess)
-    {
-        bool isSuccess = SMJobRemove(kSMDomainSystemLaunchd, CFStringCreateWithCString(kCFAllocatorDefault, HELPER_LABEL, kCFStringEncodingMacRoman), (AuthorizationRef) authRef, true, &error);
-
-        AuthorizationFree(authRef, kAuthorizationFlagDefaults);
-
-        if (isSuccess)
-        {
-			      logmes(LOG_INFO, "Success (IVPN Helper removed)");
-            return 0;
-        }
-        else
-        {
-            logmesError(error);
-            logmes(LOG_ERR, "ERROR removing IVPN helper");
-            if (error != NULL) CFRelease(error);
-            return 1;
-        }
-    }
-
-    logmes(LOG_ERR, "ERROR: Getting authorization failed (IVPN helper NOT removed)");
     return err;
 }
 

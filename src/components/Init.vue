@@ -5,7 +5,7 @@
     <div class="main" v-if="isDaemonInstalling">
       Installing IVPN Daemon ...
       <div class="small_text" style="margin-top: 10px">
-        Please, follow instructions on the dialog
+        Please follow the instructions in the dialog
       </div>
     </div>
     <div v-else-if="isConnecting" class="main small_text">

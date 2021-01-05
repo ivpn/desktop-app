@@ -28,8 +28,12 @@ function InstallDaemon(onInstallationStarted, done) {
   }
 }
 
-function InstallDaemonIfRequired(onInstallationStarted, done) {
-  if (Platform() !== PlatformEnum.macOS) return;
+// result: onResultFunc(exitCode), where exitCode==0 when daemon have to be installed
+function IsDaemonInstallationRequired(onResultFunc) {
+  if (Platform() !== PlatformEnum.macOS) {
+    if (onResultFunc) onResultFunc(1);
+    return;
+  }
 
   let logStringPrefix = "[IVPN Installer --is_helper_installation_required]";
 
@@ -42,15 +46,32 @@ function InstallDaemonIfRequired(onInstallationStarted, done) {
 
     cmd.on("exit", code => {
       // if exitCode == 0 - the daemon must be installed
+      if (onResultFunc) onResultFunc(code);
+    });
+  } catch (e) {
+    console.log(`Failed to run ${logStringPrefix}: ${e}`);
+    if (onResultFunc) onResultFunc(-1);
+  }
+}
+
+function InstallDaemonIfRequired(onInstallationStarted, done) {
+  if (Platform() !== PlatformEnum.macOS) return;
+
+  try {
+    IsDaemonInstallationRequired(code => {
+      // if exitCode == 0 - the daemon must be installed
       if (code == 0) InstallDaemon(onInstallationStarted, done);
       else if (done) done(code);
     });
   } catch (e) {
-    console.log(`Failed to run ${logStringPrefix}: ${e}`);
+    console.log(
+      `Failed to run [[IVPN Installer --is_helper_installation_required]]: ${e}`
+    );
     if (done) done(-1);
   }
 }
 
 export default {
-  InstallDaemonIfRequired
+  InstallDaemonIfRequired,
+  IsDaemonInstallationRequired
 };
