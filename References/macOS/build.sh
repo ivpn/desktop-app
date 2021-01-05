@@ -7,6 +7,8 @@ _SCRIPT=`basename "$0"`
 cd "$(dirname "$0")"
 _SCRIPT_DIR="$( pwd )"
 
+_BUILDTAGS_USE_LIBVPN="" # can be a '-libivpn' to  use XPC listener for notifying clients about daemon connection port (latest IVPN UI not using XPC)
+
 # check result of last executed command
 function CheckLastResult
 {
@@ -98,7 +100,7 @@ CheckLastResult "ERROR: Please set correct version in file '${_PATH_ABS_REPO_UI}
 
 # ============================== BUILDING PROJECTS =============================
 echo "[+] Building IVPN Daemon (${_PATH_ABS_REPO_DAEMON})...";
-${_PATH_ABS_REPO_DAEMON}/References/macOS/scripts/build-all.sh -norebuild -v ${_VERSION}
+${_PATH_ABS_REPO_DAEMON}/References/macOS/scripts/build-all.sh -norebuild -wifi ${_BUILDTAGS_USE_LIBVPN} -v ${_VERSION}
 CheckLastResult "[!] ERROR building IVPN Daemon"
 
 echo "[+] Building helper ..."
@@ -109,10 +111,18 @@ else
 fi
 CheckLastResult "[!] ERROR building helper binary"
 
-echo "[+] Building libivpn.dylib ..."
-cd ${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/libivpn
-make
-CheckLastResult "[!] ERROR building libivpn.dylib"
+if [ ! -z ${_BUILDTAGS_USE_LIBVPN} ]; then
+  echo "[+] Building libivpn.dylib ..."
+  cd ${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/libivpn
+  make
+  CheckLastResult "[!] ERROR building libivpn.dylib"
+fi
+
+cd ${_SCRIPT_DIR}
+
+echo "[+] Building Uninstaller/Installer ..."
+${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/uninstaller/build.sh -c ${_SIGN_CERT}
+CheckLastResult "[!] ERROR building Uninstaller/Installer"
 cd ${_SCRIPT_DIR}
 
 echo "[+] Building IVPN CLI (${_PATH_ABS_REPO_CLI})...";
@@ -122,7 +132,7 @@ CheckLastResult "[!] ERROR building IVPN CLI"
 echo "[+] Building UI (${_PATH_ABS_REPO_UI})...";
 cd ${_PATH_ABS_REPO_UI}
 echo "[+] Building UI: Installing NPM molules ..."
-#npm install
+npm install
 CheckLastResult
 echo "[+] Building UI: Build..."
 npm run electron:build
@@ -173,14 +183,18 @@ echo "[+] Preparing DMG image: Copying CLI..."
 mkdir "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/cli" || CheckLastResult
 cp -R "${_PATH_ABS_REPO_CLI}/References/macOS/_out_bin/ivpn" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/cli" || CheckLastResult
 
-echo "[+] Preparing DMG image: Copying net.ivpn.client.Helper ..."
-mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/Library/LaunchServices" || CheckLastResult
-cp "${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/helper/net.ivpn.client.Helper" "${_PATH_UI_COMPILED_IMAGE}/Contents/Library/LaunchServices"
+echo "[+] Preparing DMG image: Copying IVPN Installer.app ..."
+cp -R "${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/uninstaller/bin/IVPN Installer.app" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS"
+CheckLastResult
+echo "[+] Preparing DMG image: Copying IVPN Uninstaller.app ..."
+cp -R "${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/uninstaller/bin/IVPN Uninstaller.app" "${_PATH_IMAGE_FOLDER}"
 CheckLastResult
 
-echo "[+] Preparing DMG image: Copying libivpn.dylib ..."
-cp "${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/libivpn/libivpn.dylib" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS"
-CheckLastResult
+if [ ! -z ${_BUILDTAGS_USE_LIBVPN} ]; then
+  echo "[+] Preparing DMG image: Copying libivpn.dylib ..."
+  cp "${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/libivpn/libivpn.dylib" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS"
+  CheckLastResult
+fi
 
 echo "[+] Preparing DMG image: Copying background image for DMG ..."
 mkdir -p "${_PATH_IMAGE_FOLDER}/.background" && cp "${_PATH_ABS_REPO_UI}/References/macOS/resources/dmg_background.png" "${_PATH_IMAGE_FOLDER}/.background/back.png"
@@ -201,7 +215,7 @@ if [ -z "${_SIGN_CERT}" ]; then
   echo "[!] WARNING! SIGNING CERTIFICATE NOT DEFINED"
   echo "             Signing skipped!"
 else
-  ${_SCRIPT_DIR}/sign_image.sh -c ${_SIGN_CERT}
+  ${_SCRIPT_DIR}/sign_image.sh -c ${_SIGN_CERT} ${_BUILDTAGS_USE_LIBVPN}
   CheckLastResult "ERROR: SIGNING FAILED!"
 fi
 # ============================== GENERATING DMG ==============================
@@ -212,6 +226,7 @@ _PATH_TMP_DMG_FILE="${_PATH_COMPILED_FOLDER}/ivpn.temp.dmg"
 
 _BACKGROUND_FILE="back.png"
 _APPLICATION_NAME="IVPN.app"
+_UNINSTALL_APPLICATION_NAME="IVPN Uninstaller.app"
 _source=${_PATH_IMAGE_FOLDER}
 _title=IVPN
 _size=256000
@@ -250,6 +265,7 @@ echo '
            set background picture of theViewOptions to file ".background:'${_BACKGROUND_FILE}'"
            make new alias file at container window to POSIX file "/Applications" with properties {name:"Applications"}
            set position of item "'${_APPLICATION_NAME}'" of container window to {120, 110}
+           set position of item "'${_UNINSTALL_APPLICATION_NAME}'" of container window to {420, 300}
            set position of item "Applications" of container window to {420, 110}
            set position of item ".background" of container window to {120, 500}
            set position of item ".fseventsd" of container window to {420, 500}

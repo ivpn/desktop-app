@@ -33,7 +33,7 @@ done
 if [ -z "${_SIGN_CERT}" ]; then
   echo "ERROR: Apple DevID not defined"
   echo "Usage:"
-  echo "    $0 -c <APPLE_DEVID_SERT>"
+  echo "    $0 -c <APPLE_DEVID_SERT> [-libivpn]"
   exit 1
 fi
 
@@ -58,19 +58,27 @@ done
 #restore temporarily setting the IFS (internal field seperator)
 unset IFS; set +f
 
-ListCompiledLibs=(
-"_image/IVPN.app/Contents/MacOS/libivpn.dylib"
-)
+ListCompiledLibs=()
+if [[ "$@" == *"-libivpn"* ]]
+then
+  ListCompiledLibs=(
+  "_image/IVPN.app/Contents/MacOS/libivpn.dylib"
+  )
+fi
 
 ListCompiledBinaries=(
 "_image/IVPN.app/Contents/MacOS/ivpn-ui"
 "_image/IVPN.app/Contents/MacOS/IVPN Agent"
 "_image/IVPN.app/Contents/MacOS/cli/ivpn"
+"_image/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/IVPN Installer"
+"_image/IVPN.app/Contents/MacOS/IVPN Installer.app"
 "_image/IVPN.app"
+"_image/IVPN Uninstaller.app"
+"_image/IVPN Uninstaller.app/Contents/MacOS/IVPN Uninstaller"
 )
 
 ListThirdPartyBinaries=(
-"_image/IVPN.app/Contents/Library/LaunchServices/net.ivpn.client.Helper"
+"_image/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/Library/LaunchServices/net.ivpn.client.Helper"
 "_image/IVPN.app/Contents/MacOS/openvpn"
 "_image/IVPN.app/Contents/MacOS/WireGuard/wg"
 "_image/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"

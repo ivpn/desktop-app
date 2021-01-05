@@ -463,11 +463,16 @@ function onDataReceived(received) {
 //////////////////////////////////////////////////////////////////////////////////////////
 /// PUBLIC METHODS
 //////////////////////////////////////////////////////////////////////////////////////////
-function ConnectToDaemon() {
+function ConnectToDaemon(setConnState) {
   if (socket != null) {
     socket.destroy();
     socket = null;
   }
+
+  if (setConnState === undefined)
+    setConnState = function(state) {
+      store.commit("daemonConnectionState", state);
+    };
 
   return new Promise((resolve, reject) => {
     let portInfo = null;
@@ -475,12 +480,12 @@ function ConnectToDaemon() {
     try {
       portInfo = getDaemonConnectionParams();
     } catch (e) {
-      store.commit("daemonConnectionState", DaemonConnectionType.NotConnected);
+      setConnState(DaemonConnectionType.NotConnected);
       reject(e);
       return;
     }
     if (!portInfo) {
-      store.commit("daemonConnectionState", DaemonConnectionType.NotConnected);
+      setConnState(DaemonConnectionType.NotConnected);
       reject("IVPN daemon connection info is unknown.");
       return;
     }
@@ -514,18 +519,12 @@ function ConnectToDaemon() {
         };
 
         try {
-          store.commit(
-            "daemonConnectionState",
-            DaemonConnectionType.Connecting
-          );
+          setConnState(DaemonConnectionType.Connecting);
           await sendRecv(helloReq, null, 10000);
 
           // the 'store.state.daemonVersion' and 'store.state.daemonIsOldVersionError' must be already initialized
           if (store.state.daemonIsOldVersionError === true) {
-            store.commit(
-              "daemonConnectionState",
-              DaemonConnectionType.NotConnected
-            );
+            setConnState(DaemonConnectionType.NotConnected);
 
             socket.destroy();
             socket = null;
@@ -539,7 +538,7 @@ function ConnectToDaemon() {
           }
 
           // Saving 'connected' state to a daemon
-          store.commit("daemonConnectionState", DaemonConnectionType.Connected);
+          setConnState(DaemonConnectionType.Connected);
 
           // send logging + obfsproxy configuration
           SetLogging();
@@ -573,7 +572,7 @@ function ConnectToDaemon() {
 
     socket.on("close", () => {
       // Save 'disconnected' state
-      store.commit("daemonConnectionState", DaemonConnectionType.NotConnected);
+      setConnState(DaemonConnectionType.NotConnected);
       log.debug("Connection closed");
     });
 

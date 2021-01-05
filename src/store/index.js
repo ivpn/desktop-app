@@ -42,6 +42,7 @@ export default new Vuex.Store({
     daemonConnectionState: null, // DaemonConnectionType from "./types";
     daemonVersion: "",
     daemonIsOldVersionError: false,
+    daemonIsInstalling: false,
 
     configParams: {
       UserDefinedOvpnFile: ""
@@ -115,6 +116,9 @@ export default new Vuex.Store({
     },
     daemonVersion(state, value) {
       state.daemonVersion = value;
+    },
+    daemonIsInstalling(state, value) {
+      state.daemonIsInstalling = value;
     },
     latestVersionInfo(state, value) {
       state.latestVersionInfo = value;

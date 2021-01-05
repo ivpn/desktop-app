@@ -79,28 +79,26 @@ read -p "(y\n)" yn
     esac
 
     if [[ ${_NOTARIZATION_SENT} == 1 ]]; then
-    echo "--------------------------------------------"
-    echo " *** Do you wish to stample Apple notarization result to a file? *** "
-    echo "    [NOTE!] Before doing that, you must wait until Apple service"
-    echo "            will finish notarization process with 'Package Approved' result."
-    echo "            Usually, it takes less than a hour."
-    echo "            Untill that, you can leave this script opened (do not answer 'y')."
-    echo ""
-    echo "    Usefull commands (you can execute them in another terminal):  "
-    echo "        To check notarization history:  "
-    echo "            xcrun altool --notarization-history 0 -u <APPLE_NOTARIZATION_USER> "
-    echo "        To check notarization status of concrete package:  "
-    echo "            xcrun altool --notarization-info <RequestUUID> -u <APPLE_NOTARIZATION_USER> "
-    read -p "(y\n)" yn
-        case $yn in
-            [Yy]* )
-              echo "STAPLING NOTARIZATION INFO...";
-              xcrun stapler staple "${_PATH_DMG_FILE}"
-              CheckLastResult;
-              ;;
-            [Nn]* );;
-            * ) ;;
-        esac
+      echo "--------------------------------------------"
+      echo " *** Do you wish to stample Apple notarization result to a file? *** "
+      echo "    [NOTE!] Before doing that, you must wait until Apple service"
+      echo "            will finish notarization process with 'Package Approved' result."
+      echo "            Usually, it takes less than a hour."
+      echo "            Untill that, you can leave this script opened (do not answer 'y')."
+      echo ""
+      echo "    Usefull commands (you can execute them in another terminal):  "
+      echo "        To check notarization history:  "
+      echo "            xcrun altool --notarization-history 0 -u <APPLE_NOTARIZATION_USER> "
+      echo "        To check notarization status of concrete package:  "
+      echo "            xcrun altool --notarization-info <RequestUUID> -u <APPLE_NOTARIZATION_USER> "
+      read -p "(y\n)" yn
+          case $yn in
+              [Yy]* )
+                echo "STAPLING NOTARIZATION INFO...";
+                xcrun stapler staple "${_PATH_DMG_FILE}"
+                CheckLastResult;
+                ;;
+              [Nn]* );;
+              * ) ;;
+          esac
     fi
-
-fi

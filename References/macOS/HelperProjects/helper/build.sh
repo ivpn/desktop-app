@@ -37,7 +37,7 @@ done
 
 if [ -z "${_VERSION}" ] || [ -z "${_SIGN_CERT}" ]; then
   echo "Usage:"
-  echo "    $0 -v <version> -c <APPLE_DEVID_SERT>"
+  echo "    $0 -v <version> -c <APPLE_DEVID_CERT>"
   exit 1
 fi
 
@@ -56,7 +56,14 @@ _PLIST_INFO="IVPN Helper-Info.plist"
 # ================ UPDATING PLIST FILES =================
 echo "[+] Ubdating PLIST ..."
 cp "${_PLIST_INFO_TEMPLATE}" "${_PLIST_INFO}"|| CheckLastResult
-plutil -replace SMAuthorizedClients -xml "<array> <string>identifier net.ivpn.client.IVPN and certificate leaf[subject.OU] = ${_SIGN_CERT}</string> </array>" "${_PLIST_INFO}" || CheckLastResult
+
+#plutil -replace SMAuthorizedClients -xml "<array> <string>identifier net.ivpn.client.installer and certificate leaf[subject.OU] = ${_SIGN_CERT}</string> </array>" "${_PLIST_INFO}" || CheckLastResult
+plutil -replace SMAuthorizedClients -xml \
+        "<array> \
+          <string>identifier net.ivpn.client.installer and certificate leaf[subject.OU] = ${_SIGN_CERT}</string>\
+          <string>identifier net.ivpn.client.uninstaller and certificate leaf[subject.OU] = ${_SIGN_CERT}</string>\
+        </array>" "${_PLIST_INFO}" || CheckLastResult
+
 plutil -replace CFBundleShortVersionString -xml "<string>${_VERSION}</string>" "${_PLIST_INFO}" || CheckLastResult
 plutil -replace CFBundleVersion -xml "<string>${_VERSION}</string>" "${_PLIST_INFO}" || CheckLastResult
 
@@ -66,8 +73,8 @@ cc -D TEAM_IDENTIFIER="\"${_SIGN_CERT}\"" \
         -O2 \
         -mmacosx-version-min=10.6 \
         -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker "${_PLIST_INFO}" \
-        -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __launchd_plist \
-        -Xlinker "${_PLIST_LAUNCHD}" -o "${_OUT_BINARY}" helper.c \
+        -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __launchd_plist -Xlinker "${_PLIST_LAUNCHD}" \
+        -o "${_OUT_BINARY}" helper.c \
         ${_CFLAGS}
 CheckLastResult
 

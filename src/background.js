@@ -46,6 +46,7 @@ import "./ipc/main-listener";
 import store from "@/store";
 import { DaemonConnectionType, ColorTheme } from "@/store/types";
 import daemonClient from "./daemon-client";
+import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
 import { InitConnectionResumer } from "./connection-resumer";
@@ -92,6 +93,9 @@ ipcMain.on("renderer-request-show-settings-connection", () => {
 });
 ipcMain.on("renderer-request-show-settings-networks", () => {
   showSettings("networks");
+});
+ipcMain.handle("renderer-request-connect-to-daemon", async () => {
+  return await connectToDaemon();
 });
 
 if (gotTheLock) {
@@ -503,14 +507,68 @@ function closeSettingsWindow() {
 }
 
 // INITIALIZE CONNECTION TO A DAEMON
-async function connectToDaemon() {
-  try {
-    await daemonClient.ConnectToDaemon();
-    // initialize app updater
-    StartUpdateChecker(OnAppUpdateAvailable);
-  } catch (e) {
-    console.error("Failed to connect to IVPN Daemon: ", e);
+async function connectToDaemon(doNotTryToInstall, isCanRetry) {
+  // MACOS ONLY: install daemon (privileged helper) if required
+  if (doNotTryToInstall !== true && Platform() === PlatformEnum.macOS) {
+    darwinDaemonInstaller.InstallDaemonIfRequired(
+      () => {
+        console.log("Installing daemon...");
+        store.commit("daemonIsInstalling", true);
+      }, //onInstallationStarted,
+      exitCode => {
+        // force UI to show 'connecting' state
+        store.commit("daemonConnectionState", DaemonConnectionType.Connecting);
+
+        // wait some time to give Daemon chance to fully start
+        setTimeout(async () => {
+          store.commit("daemonIsInstalling", false);
+
+          // if success - try to connect to daemon with possibility to retry (wait until daemon start)
+          if (exitCode == 0) await connectToDaemon(true, true);
+          else await connectToDaemon(true);
+        }, 500);
+      } //onInstallationFinished
+    );
+    return;
   }
+
+  let setConnState = function(state) {
+    setTimeout(() => store.commit("daemonConnectionState", state), 0);
+  };
+
+  let onSetConnState = function(state) {
+    // do not set 'NotConnected' state if we still trying to reconnect
+    if (
+      state === DaemonConnectionType.NotConnected &&
+      store.state.daemonConnectionState !== DaemonConnectionType.Connected
+    )
+      return;
+
+    store.commit("daemonConnectionState", state);
+  };
+
+  setConnState(DaemonConnectionType.Connecting);
+  let connect = async function(retryNo) {
+    try {
+      await daemonClient.ConnectToDaemon(onSetConnState);
+      // initialize app updater
+      StartUpdateChecker(OnAppUpdateAvailable);
+
+      setConnState(DaemonConnectionType.Connected);
+    } catch (e) {
+      if (isCanRetry != true || retryNo > 10) {
+        setConnState(DaemonConnectionType.NotConnected);
+      } else {
+        // force UI to show 'connecting' state
+        setConnState(DaemonConnectionType.Connecting);
+        console.log(`Connecting to IVPN Daemon (retry #${retryNo}) ...`);
+        setTimeout(async () => {
+          await connect(retryNo + 1);
+        }, 1000);
+      }
+    }
+  };
+  connect(1);
 }
 
 function showSettings(settingsViewName) {

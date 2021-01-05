@@ -1,10 +1,19 @@
 <template>
   <div class="flexColumn">
-    <div class="flexColumn" v-if="!(isConnecting && !isProcessing)">
-      <div class="main">
-        <spinner :loading="isProcessing" />
-        <div class="large_text">Error connecting to IVPN daemon</div>
+    <spinner :loading="isProcessing" />
 
+    <div class="main" v-if="isDaemonInstalling">
+      Installing IVPN Daemon ...
+      <div class="small_text" style="margin-top: 10px">
+        Please, follow instructions on the dialog
+      </div>
+    </div>
+    <div v-else-if="isConnecting" class="main small_text">
+      Connecting ...
+    </div>
+    <div v-else class="flexColumn">
+      <div class="main">
+        <div class="large_text">Error connecting to IVPN daemon</div>
         <div v-if="daemonIsOldVersionError">
           <div class="small_text">
             Unsupported IVPN daemon version v{{ currDaemonVer }} (minimum
@@ -35,7 +44,6 @@
             >.
           </div>
         </div>
-
         <button class="btn" v-on:click="ConnectToDaemon">Retry ...</button>
       </div>
       <button
@@ -44,9 +52,6 @@
       >
         www.ivpn.net
       </button>
-    </div>
-    <div v-else class="main small_text">
-      Connecting ...
     </div>
   </div>
 </template>
@@ -69,22 +74,20 @@ export default {
   },
   methods: {
     async ConnectToDaemon() {
-      this.isProcessing = true;
-      setTimeout(async () => {
-        try {
-          await sender.ConnectToDaemon();
-        } catch (e) {
-          console.error(e);
-        } finally {
-          this.isProcessing = false;
-        }
-      }, 1500);
+      try {
+        await sender.ConnectToDaemon();
+      } catch (e) {
+        console.error(e);
+      }
     },
     visitWebsite() {
       shell.openExternal(`https://www.ivpn.net`);
     }
   },
   computed: {
+    isDaemonInstalling: function() {
+      return this.$store.state.daemonIsInstalling;
+    },
     isConnecting: function() {
       const connState = this.$store.state.daemonConnectionState;
       return connState == null || connState === DaemonConnectionType.Connecting;
@@ -97,6 +100,11 @@ export default {
     },
     daemonIsOldVersionError: function() {
       return this.$store.state.daemonIsOldVersionError;
+    }
+  },
+  watch: {
+    isConnecting() {
+      this.isProcessing = this.isConnecting;
     }
   }
 };
