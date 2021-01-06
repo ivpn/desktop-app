@@ -2,7 +2,8 @@
   <div class="flexColumn">
     <spinner :loading="isProcessing" />
 
-    <div class="main" v-if="isDaemonInstalling">
+    <div v-if="isInitialization" class="main small_text"></div>
+    <div class="main" v-else-if="isDaemonInstalling">
       Installing IVPN Daemon ...
       <div class="small_text" style="margin-top: 10px">
         Please follow the instructions in the dialog
@@ -69,8 +70,17 @@ export default {
   },
   data: function() {
     return {
-      isProcessing: false
+      isProcessing: false,
+      isDelayElapsedAfterMount: false
     };
+  },
+  mounted() {
+    // In order to avoid text blinking, we are showing blank view first few seconds
+    // untill 'daemonConnectionState' will not be initialised.
+    // The blank view also will be visible first few seconds even after 'daemonConnectionState' was intialized by 'Connecting'
+    setTimeout(() => {
+      this.isDelayElapsedAfterMount = true;
+    }, 3000);
   },
   methods: {
     async ConnectToDaemon() {
@@ -88,9 +98,19 @@ export default {
     isDaemonInstalling: function() {
       return this.$store.state.daemonIsInstalling;
     },
+    isInitialization: function() {
+      return (
+        (this.$store.state.daemonConnectionState == null &&
+          !this.isDaemonInstalling &&
+          this.isDelayElapsedAfterMount == false) ||
+        (this.isConnecting && this.isDelayElapsedAfterMount == false)
+      );
+    },
     isConnecting: function() {
-      const connState = this.$store.state.daemonConnectionState;
-      return connState == null || connState === DaemonConnectionType.Connecting;
+      return (
+        this.$store.state.daemonConnectionState ===
+        DaemonConnectionType.Connecting
+      );
     },
     minRequiredVer: function() {
       return config.MinRequiredDaemonVer;

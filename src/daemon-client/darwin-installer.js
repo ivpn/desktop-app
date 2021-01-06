@@ -20,6 +20,11 @@ function InstallDaemon(onInstallationStarted, done) {
       console.log(`[ERROR] ${logStringPrefix}: ${err}`);
     });
 
+    cmd.on("error", err => {
+      console.error(err);
+      if (done) done(-1);
+    });
+
     cmd.on("exit", code => {
       if (done) done(code);
     });
@@ -43,6 +48,11 @@ function IsDaemonInstallationRequired(onResultFunc) {
       "/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/IVPN Installer",
       ["--is_helper_installation_required"]
     );
+
+    cmd.on("error", err => {
+      console.error(err);
+      if (onResultFunc) onResultFunc(-1);
+    });
 
     cmd.on("exit", code => {
       // if exitCode == 0 - the daemon must be installed
