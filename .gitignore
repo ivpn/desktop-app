@@ -31,3 +31,4 @@ IVPN Helper-Info.plist
 libivpn.dylib
 References/macOS/_compiled
 References/macOS/HelperProjects/uninstaller/bin
+dsn.js

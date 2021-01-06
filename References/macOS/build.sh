@@ -148,7 +148,8 @@ _FNAME_UI_ORIG="ivpn-ui.app"
 _PATH_COMPILED_UI_ORIG="${_PATH_ABS_REPO_UI}/dist_electron/mac/${_FNAME_UI_ORIG}"
 
 # Erasing old files
-rm -rf ${_PATH_IMAGE_FOLDER}
+rm -fr ${_PATH_IMAGE_FOLDER}
+sleep 2
 mkdir ${_PATH_IMAGE_FOLDER}  || CheckLastResult
 
 if [ ! -d ${_PATH_COMPILED_UI_ORIG} ]; then
@@ -228,7 +229,7 @@ _BACKGROUND_FILE="back.png"
 _APPLICATION_NAME="IVPN.app"
 _UNINSTALL_APPLICATION_NAME="IVPN Uninstaller.app"
 _source=${_PATH_IMAGE_FOLDER}
-_title=IVPN
+_title="IVPN ${_VERSION}"
 _size=256000
 
 # creating output directory (if not exists)
@@ -280,7 +281,7 @@ CheckLastResult
 sleep 5
 
 echo "[+] Generating DMG: chmod DMG image ..."
-chmod -Rf go-w /Volumes/"${_title}"
+chmod -Rf go-w "/Volumes/${_title}"
 sync
 sync
 
