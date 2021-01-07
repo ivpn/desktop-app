@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.14 - 2020-01-06
+
+[IMPROVED] (Linux) Firewall script is more robust now  
+[IMPROVED] (Linux) Notify UI if ‘pause’ functionality not possible  
+[FIXED] (Linux) ‘Pause’ functionality for OpenVPN v4.5  
+
+[Download IVPN Client .deb v. 2.12.14](https://cdn.ivpn.net/releases/linux/2.12.14/ivpn_2.12.14_amd64.deb)  
+SHA256: ae58c01ce4fe69edf49d3aacdb93c8cc0da4f57380b815862c0c451fbdc023c4   
+[Download IVPN Client .rpm v. 2.12.14](https://cdn.ivpn.net/releases/linux/2.12.14/ivpn-2.12.14-1.x86_64.rpm)  
+SHA256: 2c42dac0654e01713a2d439cbea430f3463ad6730114382833c7da6fd4f736ab  
+
 ## Version 2.12.8 - 2020-11-09
 
 [FIXED] (Linux) Firewall: Allow LAN functionality  
