@@ -1,10 +1,20 @@
 <template>
   <div class="flexColumn">
-    <div class="flexColumn" v-if="!(isConnecting && !isProcessing)">
-      <div class="main">
-        <spinner :loading="isProcessing" />
-        <div class="large_text">Error connecting to IVPN daemon</div>
+    <spinner :loading="isProcessing" />
 
+    <div v-if="isInitialization" class="main small_text"></div>
+    <div class="main" v-else-if="isDaemonInstalling">
+      Installing IVPN Daemon ...
+      <div class="small_text" style="margin-top: 10px">
+        Please follow the instructions in the dialog
+      </div>
+    </div>
+    <div v-else-if="isConnecting" class="main small_text">
+      Connecting ...
+    </div>
+    <div v-else class="flexColumn">
+      <div class="main">
+        <div class="large_text">Error connecting to IVPN daemon</div>
         <div v-if="daemonIsOldVersionError">
           <div class="small_text">
             Unsupported IVPN daemon version v{{ currDaemonVer }} (minimum
@@ -35,7 +45,6 @@
             >.
           </div>
         </div>
-
         <button class="btn" v-on:click="ConnectToDaemon">Retry ...</button>
       </div>
       <button
@@ -44,9 +53,6 @@
       >
         www.ivpn.net
       </button>
-    </div>
-    <div v-else class="main small_text">
-      Connecting ...
     </div>
   </div>
 </template>
@@ -64,30 +70,47 @@ export default {
   },
   data: function() {
     return {
-      isProcessing: false
+      isProcessing: false,
+      isDelayElapsedAfterMount: false
     };
+  },
+  mounted() {
+    // In order to avoid text blinking, we are showing blank view first few seconds
+    // untill 'daemonConnectionState' will not be initialised.
+    // The blank view also will be visible first few seconds even after 'daemonConnectionState' was intialized by 'Connecting'
+    setTimeout(() => {
+      this.isDelayElapsedAfterMount = true;
+    }, 3000);
   },
   methods: {
     async ConnectToDaemon() {
-      this.isProcessing = true;
-      setTimeout(async () => {
-        try {
-          await sender.ConnectToDaemon();
-        } catch (e) {
-          console.error(e);
-        } finally {
-          this.isProcessing = false;
-        }
-      }, 1500);
+      try {
+        await sender.ConnectToDaemon();
+      } catch (e) {
+        console.error(e);
+      }
     },
     visitWebsite() {
       shell.openExternal(`https://www.ivpn.net`);
     }
   },
   computed: {
+    isDaemonInstalling: function() {
+      return this.$store.state.daemonIsInstalling;
+    },
+    isInitialization: function() {
+      return (
+        (this.$store.state.daemonConnectionState == null &&
+          !this.isDaemonInstalling &&
+          this.isDelayElapsedAfterMount == false) ||
+        (this.isConnecting && this.isDelayElapsedAfterMount == false)
+      );
+    },
     isConnecting: function() {
-      const connState = this.$store.state.daemonConnectionState;
-      return connState == null || connState === DaemonConnectionType.Connecting;
+      return (
+        this.$store.state.daemonConnectionState ===
+        DaemonConnectionType.Connecting
+      );
     },
     minRequiredVer: function() {
       return config.MinRequiredDaemonVer;
@@ -97,6 +120,11 @@ export default {
     },
     daemonIsOldVersionError: function() {
       return this.$store.state.daemonIsOldVersionError;
+    }
+  },
+  watch: {
+    isConnecting() {
+      this.isProcessing = this.isConnecting;
     }
   }
 };

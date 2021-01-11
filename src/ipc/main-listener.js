@@ -32,9 +32,11 @@ import store from "@/store";
 
 const { ipcMain, nativeTheme } = require("electron");
 
-ipcMain.handle("renderer-request-connect-to-daemon", async () => {
-  return await client.ConnectToDaemon();
-});
+// info: this event is processing in 'background.js'
+//ipcMain.handle("renderer-request-connect-to-daemon", async () => {
+//  return await client.ConnectToDaemon();
+//});
+
 ipcMain.handle("renderer-request-refresh-storage", async () => {
   // function using to re-apply all mutations
   // This is required to send to renderer processes current storage state

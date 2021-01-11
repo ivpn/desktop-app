@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key>
+	<string>IVPN Uninstaller</string>
+	<key>CFBundleIdentifier</key>
+	<string>net.ivpn.client.uninstaller</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Uninstaller</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>3.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>3.0.0</string>
+	<key>SMPrivilegedExecutables</key>
+	<dict>
+		<key>net.ivpn.client.Helper</key>
+		<string>identifier net.ivpn.client.Helper and certificate leaf[subject.OU] = WQXXM75BYN</string>
+	</dict>
+</dict>
+</plist>

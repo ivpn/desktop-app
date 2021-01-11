@@ -70,7 +70,6 @@ export default {
     },
     currentViewComponent: function() {
       const daemonConnection = this.$store.state.daemonConnectionState;
-      if (daemonConnection == null) return null;
       if (
         daemonConnection == null ||
         daemonConnection === DaemonConnectionType.NotConnected ||
