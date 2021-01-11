@@ -675,9 +675,18 @@ async function GeoLookup(isRetryTry) {
   store.commit("location", retLocation);
   store.commit("isRequestingLocation", false); // un-mark 'Checking geolookup...'
 
-  if (retLocation == null && isRetryTry == null) {
-    console.log("First attempt of geo-lookup request failed. Retrying ...");
-    retLocation = GeoLookup(true);
+  if (retLocation == null && !isRetryTry) {
+    for (let r = 1; r <= 3; r++) {
+      console.log(`Geo-lookup request failed. Retrying (${r})...`);
+
+      let promise = new Promise(resolve => {
+        store.commit("isRequestingLocation", true); // mark 'Checking geolookup...'
+        setTimeout(() => resolve(GeoLookup(true)), r * 1000);
+      });
+
+      retLocation = await promise;
+      if (retLocation != null) break;
+    }
   }
 
   return retLocation;
