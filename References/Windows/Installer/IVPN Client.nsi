@@ -198,6 +198,12 @@ Function .onInit
 
   ClearErrors
 
+  ; hack to not prompt for last 2.12.x releases
+  ; It is required for easy migration from 2.x to 3.x version (do not perform logout)
+  ReadRegStr $R1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "DisplayVersion"
+  ${StrLoc} $R2 $R1 "2.12." ">"
+  StrCmp $R2 "0" done ; R2 must be 0 if upgrading from '2.12.X' version
+
   ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "UninstallString"
   StrCmp $R0 "" done
   IfSilent uninst is_not_quiet
@@ -366,6 +372,13 @@ Section "${PRODUCT_NAME}" SecIVPN
   Push 15000 ; 15 seconds
   Call WaitFileOpenForWritting
 
+  ; Remove files from old installations
+  ; TODO: not required if upgarding from v3.x.x
+  ; (only necessay for v2.12.x because uninstaller for old versions does not support '-update' argument)
+  Delete "$INSTDIR\*.*"
+  RMDir /r "$INSTDIR\OpenVPN"
+  RMDir /r "$INSTDIR\WireGuard"
+
   ; extract all files from source dir (it is important that IVPN Client Application must be stopped on this moment)
   File /r "${SOURCE_DIR}\*.*"
 
@@ -383,18 +396,6 @@ Section "${PRODUCT_NAME}" SecIVPN
   CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
   CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall ${PRODUCT_NAME}.lnk" "$INSTDIR\Uninstall.exe"
   CreateShortCut "$SMPROGRAMS\$StartMenuFolder\${PRODUCT_NAME}.lnk" "$INSTDIR\ui\IVPN Client.exe"
-
-  ; Remove files from old installations
-  Delete "$INSTDIR\OpenVPN\x86_64\tap\OemWin2k.inf"
-  Delete "$INSTDIR\OpenVPN\x86\tap\OemWin2k.inf"
-  Delete "$INSTDIR\up.bat"
-  Delete "$INSTDIR\down.bat"
-  Delete "$INSTDIR\OpenVPN\x86\libeay32.dll"
-  Delete "$INSTDIR\OpenVPN\x86\ssleay32.dll"
-  Delete "$INSTDIR\OpenVPN\x86_64\libeay32.dll"
-  Delete "$INSTDIR\OpenVPN\x86_64\ssleay32.dll"
-  RMDir /r "$INSTDIR\WireGuard\x86\Wintun"
-  RMDir /r "$INSTDIR\WireGuard\x86_64\Wintun"
 
   Call CheckIsWin7DriverInstalled
 
