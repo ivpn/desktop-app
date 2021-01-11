@@ -35,10 +35,10 @@ echo     APPVER         : '%APPVER%'
 echo     SOURCES Service: %SERVICE_REPO%
 echo     SOURCES CLI    : %CLI_REPO%
 
-rem call :build_service						|| goto :error
-rem call :build_cli								|| goto :error
-rem call :build_ui								|| goto :error
-rem
+call :build_service						|| goto :error
+call :build_cli								|| goto :error
+call :build_ui								|| goto :error
+
 call :copy_files 							|| goto :error
 call :build_installer					|| goto :error
 

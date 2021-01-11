@@ -179,8 +179,9 @@ FunctionEnd
   ; install for  'all users'
   SetShellVarContext all
 
-  StrCpy $StartMenuFolder "IVPN"
+  SetRegView 64
   StrCpy $BitDir "x86_64"
+  StrCpy $StartMenuFolder "IVPN"
   DetailPrint "Running on architecture: $BitDir"
 !macroend
 
@@ -192,7 +193,9 @@ Function .onInit
   Call CheckOSSupported
 
   ClearErrors
-  DetailPrint "Uninstalling old version..."
+
+  ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "UninstallString"
+  StrCmp $R0 "" done
   IfSilent uninst is_not_quiet
 is_not_quiet:
   MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed.$\n$\nClick OK to uninstall the old version." IDOK uninst
@@ -201,9 +204,6 @@ uninst:
   ExecWait '$R0 _?=$INSTDIR'
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client"
 done:
-
-  SetRegView 64
-  StrCpy $BitDir "x86_64"
 
 FunctionEnd
 
@@ -214,8 +214,6 @@ FunctionEnd
 ; --------------
 ; user interface
 ; --------------
-
-
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
 !define MUI_HEADERIMAGE_BITMAP "header.bmp"
@@ -324,6 +322,7 @@ FunctionEnd
 !define PRODUCT_TAP_WIN_COMPONENT_ID "tapivpn"
 
 Section "${PRODUCT_NAME}" SecIVPN
+  SetRegView 64
   SetOutPath "$INSTDIR"
 
   ; Stop IVPN service
@@ -368,8 +367,6 @@ Section "${PRODUCT_NAME}" SecIVPN
 
   CreateDirectory "$INSTDIR\log"
 
-  SetRegView 64
-
   WriteRegStr HKLM "Software\${PRODUCT_IDENTIFIER}" "" $INSTDIR
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}" "DisplayName" "${PRODUCT_NAME}"
@@ -378,17 +375,10 @@ Section "${PRODUCT_NAME}" SecIVPN
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}" "Publisher" "${PRODUCT_PUBLISHER}"
 
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "IVPN Client Runtime Warmup"
-
-  ;!insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
-
-  ;!insertmacro MUI_STARTMENU_WRITE_BEGIN Application
-    CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
-    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall ${PRODUCT_NAME}.lnk" "$INSTDIR\Uninstall.exe"
-  ;!insertmacro MUI_STARTMENU_WRITE_END
-
-  ; create shortcut
-  CreateShortCut "$SMPROGRAMS\$StartMenuFolder\${PRODUCT_NAME}.lnk" "$INSTDIR\IVPN Client.exe"
+  ; create StartMenu shortcuts
+  CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
+  CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall ${PRODUCT_NAME}.lnk" "$INSTDIR\Uninstall.exe"
+  CreateShortCut "$SMPROGRAMS\$StartMenuFolder\${PRODUCT_NAME}.lnk" "$INSTDIR\ui\IVPN Client.exe"
 
   ; Remove files from old installations
   Delete "$INSTDIR\OpenVPN\x86_64\tap\OemWin2k.inf"
@@ -468,6 +458,7 @@ SectionEnd
 ; -----------
 
 Section "Uninstall"
+  SetRegView 64
   DetailPrint "Ensure firewall is disabled..."
   nsExec::ExecToLog '"${PATHDIR}\ivpn.exe" firewall -off'
   DetailPrint "Ensure VPN is disconnected..."
@@ -517,12 +508,10 @@ Section "Uninstall"
   Delete "$INSTDIR\*.*"
   RMDir "$INSTDIR"
 
-  SetShellVarContext current ; To be able to get environment variables of current user ("$LOCALAPPDATA")
-  RMDir /r "$LOCALAPPDATA\IVPN"
-  RMDir /r "$LOCALAPPDATA\IVPN_Limited"
+  SetShellVarContext current ; To be able to get environment variables of current user ("$LOCALAPPDATA", "$APPDATA")
+  RMDir /r "$APPDATA\ivpn-ui"
   SetShellVarContext all
-  RMDir /r "$LOCALAPPDATA\IVPN"
-  RMDir /r "$LOCALAPPDATA\IVPN_Limited"
+  RMDir /r "$APPDATA\ivpn-ui"
 
   ;!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
   StrCpy $StartMenuFolder "IVPN"
@@ -531,7 +520,6 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\$StartMenuFolder\${PRODUCT_NAME}.lnk"
   RMDir "$SMPROGRAMS\$StartMenuFolder"
   DeleteRegKey /ifempty HKLM "Software\${PRODUCT_IDENTIFIER}"
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "IVPN Client Runtime Warmup"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}"
 
   ; UPDATING %PATH% VARIABLE
