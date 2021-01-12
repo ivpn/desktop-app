@@ -372,12 +372,20 @@ Section "${PRODUCT_NAME}" SecIVPN
   Push 15000 ; 15 seconds
   Call WaitFileOpenForWritting
 
-  ; Remove files from old installations
-  ; TODO: not required if upgarding from v3.x.x
-  ; (only necessay for v2.12.x because uninstaller for old versions does not support '-update' argument)
-  Delete "$INSTDIR\*.*"
-  RMDir /r "$INSTDIR\OpenVPN"
-  RMDir /r "$INSTDIR\WireGuard"
+  ; hack to not prompt for last 2.12.x releases
+  ; It is required for easy migration from 2.x to 3.x version (do not perform logout)
+  ReadRegStr $R1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "DisplayVersion"
+  ${StrLoc} $R2 $R1 "2.12." ">"
+  ${If} $R2 == 0 ; R2 must be 0 if upgrading from '2.12.X' version
+    ; Remove files from old installations
+    ; TODO: not required if upgarding from v3.x.x
+    ; (only necessay for v2.12.x because uninstaller for old versions does not support '-update' argument)
+    DetailPrint "Removing files from previous installation 2.12.x ..."
+    Delete "$DESKTOP\IVPN Client.lnk"
+    Delete "$INSTDIR\*.*"
+    RMDir /r "$INSTDIR\OpenVPN"
+    RMDir /r "$INSTDIR\WireGuard"
+  ${EndIf}
 
   ; extract all files from source dir (it is important that IVPN Client Application must be stopped on this moment)
   File /r "${SOURCE_DIR}\*.*"
@@ -557,9 +565,9 @@ Section "Uninstall"
   ${StrRepl} $1 $1 ";${PATHDIR}" ""
   ${StrRepl} $1 $1 ${PATHDIR} ""
   ${If} $1 != $0
-	WriteRegExpandStr ${env_hklm} PATH "$1"
-	; make sure windows knows about the change
-	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=100
+  	WriteRegExpandStr ${env_hklm} PATH "$1"
+  	; make sure windows knows about the change
+  	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=100
   ${EndIf}
 
 SectionEnd
