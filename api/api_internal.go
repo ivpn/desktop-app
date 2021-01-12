@@ -24,7 +24,10 @@ package api
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -70,6 +73,65 @@ func newRequest(urlPath string, method string, contentType string, body io.Reade
 	return req, nil
 }
 
+func findPinnedKey(certHashes []string, certBase64hash256 string) bool {
+	for _, hash := range certHashes {
+		if hash == certBase64hash256 {
+			return true
+		}
+	}
+	return false
+}
+
+type dialer func(network, addr string) (net.Conn, error)
+
+func makeDialer(certHashes []string, skipCAVerification bool, serverName string) dialer {
+	return func(network, addr string) (net.Conn, error) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error(fmt.Sprintf("PANIC (API request): "), r)
+				if err, ok := r.(error); ok {
+					log.ErrorTrace(err)
+				}
+			}
+		}()
+
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: skipCAVerification,
+			ServerName:         serverName, // only have sense when skipCAVerification == false
+		}
+
+		c, err := tls.Dial(network, addr, tlsConfig)
+		if err != nil {
+			return c, err
+		}
+		connstate := c.ConnectionState()
+		var lastErr error = nil
+		for _, peercert := range connstate.PeerCertificates {
+			der, err := x509.MarshalPKIXPublicKey(peercert.PublicKey)
+			if err != nil {
+				lastErr = err
+				continue
+			}
+
+			hash := sha256.Sum256(der)
+			certBase64hash := base64.StdEncoding.EncodeToString(hash[:])
+
+			if err != nil {
+				log.Error(err)
+			}
+
+			if findPinnedKey(certHashes, certBase64hash) {
+				return c, nil // Pinned Key found
+			}
+
+		}
+		if lastErr != nil {
+			return nil, fmt.Errorf("Certificate check error: pinned certificate key not found: %w", lastErr)
+		}
+		return nil, fmt.Errorf("Certificate check error: pinned certificate key not found")
+	}
+}
+
 func (a *API) doRequest(urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
 	lastIP, ips := a.getAlternateIPs()
 
@@ -77,9 +139,13 @@ func (a *API) doRequest(urlPath string, method string, contentType string, reque
 	// we need to configure TLS to use api.ivpn.net hostname
 	// (to avoid certificate errors)
 	transCfg := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			ServerName: _apiHost,
-		},
+		// NOTE: TLSClientConfig not in use in case of DialTLS defined
+		//TLSClientConfig: &tls.Config{
+		//	ServerName: _apiHost,
+		//},
+
+		// using certificate key pinning
+		DialTLS: makeDialer(APIIvpnHashes, false, _apiHost),
 	}
 	// configure http-client with preconfigured TLS transport
 	timeout := _defaultRequestTimeout
