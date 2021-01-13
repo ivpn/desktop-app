@@ -85,7 +85,7 @@ Compiled binaries location:
 **Note!** In order to run application as macOS daemon, the binary must be signed by Apple Developer ID.
 
 #### Linux
-Some packages required to be installed to be able to compile daemon sources.
+Some packages required to be installed to be able to compile daemon sources.  
 Example of installing required packages for Ubuntu:
 ``` 
 #install 'libiw-dev' package
