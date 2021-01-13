@@ -88,6 +88,16 @@ These instructions will get you a copy of the project up and running on your loc
   *  Clone [desktop-app-daemon](https://github.com/ivpn/desktop-app-daemon) project
       -  `cd $GOPATH/src/github.com/ivpn`  
       -  `git clone https://github.com/ivpn/desktop-app-daemon.git`  
+      
+  *  Some packages required to be installed to be able to compile daemon sources.  
+     Example of installing required packages for Ubuntu:
+      ``` 
+      #install 'libiw-dev' package
+      sudo apt-get install libiw-dev
+
+      #install 'rpm' package
+      sudo apt install rpm
+      ```
 
   * To compile projects and to build `.DEB` and `.RPM` packages just run `build-packages.sh` script:  
       -  `cd $GOPATH/src/github.com/ivpn/desktop-app-cli`  
