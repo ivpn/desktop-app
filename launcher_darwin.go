@@ -23,7 +23,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"path"
 
 	"github.com/ivpn/desktop-app-daemon/shell"
 )
@@ -31,19 +33,23 @@ import (
 // Prepare to start IVPN daemon for macOS
 func doPrepareToRun() error {
 	// create symlink to 'ivpn' cli client
-
-	linkpath := "/usr/local/bin/ivpn"
-	if _, err := os.Stat(linkpath); err != nil {
-		// FIXME: we always getting error (even if symlink is exists)
-		if os.IsNotExist(err) {
-			log.Info("Creating symlink to IVPN CLI: ", linkpath)
-			err := shell.Exec(log, "ln", "-fs", "/Applications/IVPN.app/Contents/MacOS/cli/ivpn", linkpath)
-			if err != nil {
-				log.Error("Failed to create symlink to IVPN CLI: ", err)
+	binFolder := "/usr/local/bin"            // "/usr/local/bin"
+	linkpath := path.Join(binFolder, "ivpn") // "/usr/local/bin/ivpn"
+	if _, err := os.Stat(linkpath); os.IsNotExist(err) {
+		// "/usr/local/bin"
+		if _, err := os.Stat(binFolder); os.IsNotExist(err) {
+			log.Info(fmt.Sprintf("Folder '%s' not exists. Creating it...", binFolder))
+			if err = os.Mkdir(binFolder, 0775); err != nil {
+				log.Error(fmt.Sprintf("Failed to create folder '%s': ", binFolder), err)
 			}
 		}
+		// "/usr/local/bin/ivpn"
+		log.Info("Creating symlink to IVPN CLI: ", linkpath)
+		err := shell.Exec(log, "ln", "-fs", "/Applications/IVPN.app/Contents/MacOS/cli/ivpn", linkpath)
+		if err != nil {
+			log.Error("Failed to create symlink to IVPN CLI: ", err)
+		}
 	}
-
 	return nil
 }
 
