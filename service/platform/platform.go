@@ -223,6 +223,12 @@ func Is64Bit() bool {
 	return false
 }
 
+// AllowedClients returns list of clients which are allowed to connect to daemon
+// (list of absolute paths to binaries)
+func AllowedClients() []string {
+	return implAllowedClients()
+}
+
 // SettingsFile path to settings file
 func SettingsFile() string {
 	return settingsFile

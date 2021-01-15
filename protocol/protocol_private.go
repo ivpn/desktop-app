@@ -105,6 +105,11 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 }
 
 // -------------- sending responses ---------------
+func (p *Protocol) sendError(conn net.Conn, errorText string, cmdIdx int) {
+	log.Error(errorText)
+	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: errorText}, cmdIdx)
+}
+
 func (p *Protocol) sendErrorResponse(conn net.Conn, request types.CommandBase, err error) {
 	log.Error(fmt.Sprintf("%sError processing request '%s': %s", p.connLogID(conn), request.Command, err))
 	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: err.Error()}, request.Idx)

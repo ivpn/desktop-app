@@ -36,10 +36,12 @@ import (
 	"time"
 
 	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
+	"github.com/ivpn/desktop-app-daemon/helpers/process"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
 	"github.com/ivpn/desktop-app-daemon/service/preferences"
 	"github.com/ivpn/desktop-app-daemon/vpn"
 	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
@@ -218,6 +220,41 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 	}
 }
 
+// isNewConnectionAllowed is checking who is owner (PID & binary path) of this port
+// If connecting binary is not in the list of allowed clients
+// OR connected binary has wrong properties (owner, access rights, location) - return error
+func (p *Protocol) isNewConnectionAllowed(clientRemoteAddrTCP *net.TCPAddr) error {
+	pid, err := process.GetPortOwnerPID(clientRemoteAddrTCP.Port)
+	if err != nil {
+		return fmt.Errorf("unable to check connected TCP port owner: %w", err)
+	}
+	binPath, err := process.GetBinaryPathByPID(pid)
+	if err != nil {
+		return fmt.Errorf("unable to check connected TCP port owner binary %w", err)
+	}
+	if len(binPath) == 0 {
+		return fmt.Errorf("unable to check connected TCP port owner binary")
+	}
+	log.Info(fmt.Sprintf("Connected binary (%v): %s", clientRemoteAddrTCP, binPath))
+
+	// check is connected binary is allowed to connect
+	isClientAllowed := false
+	for _, allowedBinPath := range platform.AllowedClients() {
+		if allowedBinPath == binPath {
+			isClientAllowed = true
+			break
+		}
+	}
+	if isClientAllowed != true {
+		return fmt.Errorf("not known client binary (%s)", binPath)
+	}
+	// check is connected binary has correct properties (owner, access rights, location)
+	if err := filerights.CheckFileAccessRightsExecutable(binPath); err != nil {
+		return fmt.Errorf("unaccepted client binary properties: %w", err)
+	}
+	return nil
+}
+
 func (p *Protocol) processClient(conn net.Conn) {
 	// keepAlone informs daemon\service to do nothing when client disconnects
 	// 		false (default) - VPN disconnects when client disconnects from a daemon
@@ -227,7 +264,8 @@ func (p *Protocol) processClient(conn net.Conn) {
 	// In case of wrong secret - the daemon drops connection
 	isAuthenticated := false
 
-	log.Info("Client connected: ", conn.RemoteAddr())
+	clientRemoteAddr := conn.RemoteAddr()
+	log.Info("Client connected: ", clientRemoteAddr)
 
 	stopChannel := make(chan struct{}, 1)
 	defer func() {
@@ -263,6 +301,17 @@ func (p *Protocol) processClient(conn net.Conn) {
 			log.Info("Current state not changing [KeepDaemonAlone=true]")
 		}
 	}()
+
+	// check is connection allowed fir this client
+	clientRemoteAddrTCP, err := net.ResolveTCPAddr("tcp4", clientRemoteAddr.String())
+	if err != nil {
+		p.sendResponse(conn, &types.ErrorResp{ErrorMessage: fmt.Sprintf("Refusing connection: Unable to determine remote TCP4 address of connected client: %s", err.Error())}, 0)
+		return
+	}
+	if err := p.isNewConnectionAllowed(clientRemoteAddrTCP); err != nil {
+		p.sendError(conn, fmt.Sprintf("Refusing connection: %s", err.Error()), 0)
+		return
+	}
 
 	// service changes notifier
 	startChangesNotifier := func() {
@@ -318,6 +367,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 				return
 			}
 			if hello.Secret != p._secret {
+				log.Warning(fmt.Errorf("Refusing connection: secret verification error"))
 				p.sendErrorResponse(conn, cmd, fmt.Errorf("secret verification error"))
 				return
 			}

@@ -1,4 +1,4 @@
-// +build darwin,!debug linux,!debug
+// +build darwin linux
 
 package filerights
 

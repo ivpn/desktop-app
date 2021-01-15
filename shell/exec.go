@@ -125,6 +125,39 @@ func ExecAndProcessOutput(logger *logger.Logger, outProcessFunc func(text string
 	return err
 }
 
+// ExecAndGetOutput - execute external process and return it's console output
+func ExecAndGetOutput(logger *logger.Logger, maxRetBuffSize int, textToHideInLog string, name string, args ...string) (outText string, outErrText string, exitCode int, err error) {
+	strOut := strings.Builder{}
+	strErr := strings.Builder{}
+	outProcessFunc := func(text string, isError bool) {
+		if len(text) == 0 {
+			return
+		}
+		if isError {
+			if strErr.Len() > maxRetBuffSize {
+				return
+			}
+			strErr.WriteString(text + "\n")
+		} else {
+			if strOut.Len() > maxRetBuffSize {
+				return
+			}
+			strOut.WriteString(text + "\n")
+		}
+	}
+
+	retErr := ExecAndProcessOutput(logger, outProcessFunc, textToHideInLog, name, args...)
+
+	retExitCode := 0
+	if retErr != nil {
+		if code, e := GetCmdExitCode(err); e == nil {
+			retExitCode = code
+		}
+	}
+
+	return strOut.String(), strErr.String(), retExitCode, retErr
+}
+
 // ExecEx - execute external process
 // Synchronous operation. Waits until process finished
 func ExecEx(logger *logger.Logger, outChan chan<- string, errChan chan<- string, textToHideInLog string, name string, args ...string) error {
