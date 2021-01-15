@@ -42,17 +42,19 @@ silent chmod 0600 $IVPN_ETC/servers.json  # can read/wrire only owner (root)
 silent chmod 0700 $IVPN_ETC/*.sh          # can execute only owner (root)
 silent chmod 0700 $IVPN_ETC/*.up          # can execute only owner (root)
 silent chmod 0700 $IVPN_ETC/*.down        # can execute only owner (root)
+silent chmod 0755 /usr/local/bin/ivpn         # can change only owner (root)
+silent chmod 0755 /usr/local/bin/ivpn-service # can change only owner (root)
 
 
 IVPN_SAVED_DNS_FILE="/etc/resolv.conf.ivpnsave"
-if [ -f $IVPN_SAVED_DNS_FILE ]; then 
+if [ -f $IVPN_SAVED_DNS_FILE ]; then
   echo "[+] restoring DNS configuration from previous installation"
-  mv $IVPN_SAVED_DNS_FILE /etc/resolv.conf || echo "[-] Restoring DNS failed" 
+  mv $IVPN_SAVED_DNS_FILE /etc/resolv.conf || echo "[-] Restoring DNS failed"
 fi
 
 echo "[+] Service install start (pleaserun) ..."
-INSTALL_OUTPUT=$(sh /usr/share/pleaserun/ivpn-service/install.sh) 
-if [ $? -eq 0 ]; then 
+INSTALL_OUTPUT=$(sh /usr/share/pleaserun/ivpn-service/install.sh)
+if [ $? -eq 0 ]; then
     # Print output of the install script
     echo $INSTALL_OUTPUT
 
