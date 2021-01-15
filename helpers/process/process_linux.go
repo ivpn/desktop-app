@@ -68,9 +68,8 @@ func doGetPortOwnerPID(localTCPPort int) (int, error) {
 
 // doGetBinaryPathByPID returns absolute path of process binary
 func doGetBinaryPathByPID(pid int) (string, error) {
-	// TODO! WARNING: 'ps' command does not return fill path if binary was started by symlink in located in %PATH%
-	// ps 72045
-	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "ps", fmt.Sprintf("%d", pid))
+	// ls -l /proc/12110/exe
+	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "ls", "-l", fmt.Sprintf("/proc/%d/exe", pid))
 	if err != nil {
 		return "", fmt.Errorf("Unable to determine binary path of PID:%d", pid)
 	}
@@ -78,16 +77,10 @@ func doGetBinaryPathByPID(pid int) (string, error) {
 		return "", fmt.Errorf("Unable to determine binary path of PID:%d [exit code: %d]", pid, exitCode)
 	}
 
-	// Output example (macOS):
-	// 		>> ps 72045
-	// 		PID   TT  STAT      TIME COMMAND
-	// 		72045   ??  S      0:04.69 /Applications/IVPN.app/Contents/MacOS/ivpn-ui
 	// Output example (Ubuntu Linux):
-	//		>> ps 2353
-	//		PID TTY      STAT   TIME COMMAND
-	//		2353 ?        Sl     0:02 /opt/ivpn/ui/bin/ivpn-ui
-
-	regextStr := fmt.Sprintf("^[ \\t]*%d[ \\t]+.+[ \\t]+(.+)$", pid)
+	//		>> ls -l /proc/12110/exe
+	//		lrwxrwxrwx 1 user user 0 xxx 15 23:05 /proc/12110/exe -> /opt/ivpn/ui/bin/ivpn-ui
+	regextStr := fmt.Sprintf("^.*\\/proc\\/%d\\/exe[ \\t]*->[ \\t]*([^ \\t]+)[ \\t]*$", pid)
 	rexp := regexp.MustCompile(regextStr)
 	lines := strings.Split(outText, "\n")
 	for _, line := range lines {

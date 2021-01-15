@@ -68,3 +68,10 @@ func doInitOperations() (w string, e error) { return "", nil }
 func FirewallScript() string {
 	return firewallScript
 }
+
+// AllowedClients returns list of clients which are allowed to connect to daemon
+// (list of absolute paths to binaries)
+func implAllowedClients() []string {
+	// allow connection only for IVPN UI and IVPN CLI
+	return []string{"/opt/ivpn/ui/bin/ivpn-ui", "/usr/local/bin/ivpn"}
+}
