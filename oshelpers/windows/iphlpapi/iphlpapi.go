@@ -45,6 +45,7 @@ var (
 	_fCancelIPChangeNotify = _dll.NewProc("CancelIPChangeNotify")
 	_fGetBestRoute         = _dll.NewProc("GetBestRoute")
 	_fGetIPForwardTable    = _dll.NewProc("GetIpForwardTable")
+	_fGetExtendedTcpTable  = _dll.NewProc("GetExtendedTcpTable")
 )
 
 // APINotifyRouteChange - The GetBestRoute function retrieves the best route to the specified destination IP address.
@@ -96,6 +97,30 @@ func GetIPForwardTable(pIPForwardTable []byte, pdwSize *uint32, bOrder bool) (r 
 		uintptr(unsafe.Pointer(&pIPForwardTable[0])),
 		uintptr(unsafe.Pointer(pdwSize)),
 		uintptr(order))
+
+	if err != syscall.Errno(0) {
+		return syscall.Errno(retval), err
+	}
+
+	return syscall.Errno(retval), nil
+}
+
+// GetExtendedTCPTable - function retrieves a table that contains a list of TCP endpoints available to the application.
+// https://docs.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-getextendedtcptable
+func GetExtendedTCPTable(tcpTable []byte, pdwSize *uint32, order bool, afType int, tableClass TCPTableClass) (r syscall.Errno, err error) {
+	defer catchPanic(&err)
+
+	var sortOrder int
+	if order {
+		sortOrder = 1
+	}
+
+	retval, _, err := _fGetExtendedTcpTable.Call(
+		uintptr(unsafe.Pointer(&tcpTable[0])),
+		uintptr(unsafe.Pointer(pdwSize)),
+		uintptr(sortOrder),
+		uintptr(afType),
+		uintptr(tableClass), 0)
 
 	if err != syscall.Errno(0) {
 		return syscall.Errno(retval), err

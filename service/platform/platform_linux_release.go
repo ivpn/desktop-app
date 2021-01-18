@@ -43,5 +43,8 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnProxyAuthFile = path.Join(tmpDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(tmpDir, "wgivpn.conf")
 
+	// allow connection only for IVPN UI and IVPN CLI
+	allowedClients = []string{"/opt/ivpn/ui/bin/ivpn-ui", "/usr/local/bin/ivpn"}
+
 	return nil, nil
 }

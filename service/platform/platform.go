@@ -35,6 +35,10 @@ import (
 )
 
 var (
+	// list of clients which are allowed to connect to daemon
+	// (list of absolute paths to binaries)
+	allowedClients []string
+
 	settingsFile    string
 	servicePortFile string
 	serversFile     string
@@ -81,6 +85,10 @@ func Init() (warnings []string, errors []error) {
 	}
 	if warnings == nil {
 		warnings = make([]string, 0)
+	}
+
+	if len(allowedClients) == 0 {
+		fmt.Println("!!! WARNING !!! : 'allowedClients' not defined! Security check of connected client path is disabled (any client can connect to daemon)")
 	}
 
 	// creating required folders
@@ -226,7 +234,7 @@ func Is64Bit() bool {
 // AllowedClients returns list of clients which are allowed to connect to daemon
 // (list of absolute paths to binaries)
 func AllowedClients() []string {
-	return implAllowedClients()
+	return allowedClients
 }
 
 // SettingsFile path to settings file

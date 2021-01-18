@@ -235,14 +235,19 @@ func (p *Protocol) isNewConnectionAllowed(clientRemoteAddrTCP *net.TCPAddr) erro
 	if len(binPath) == 0 {
 		return fmt.Errorf("unable to check connected TCP port owner binary")
 	}
-	log.Info(fmt.Sprintf("Connected binary (%v): %s", clientRemoteAddrTCP, binPath))
+	log.Info(fmt.Sprintf("Connected binary (%v): '%s'", clientRemoteAddrTCP, binPath))
 
 	// check is connected binary is allowed to connect
 	isClientAllowed := false
-	for _, allowedBinPath := range platform.AllowedClients() {
-		if allowedBinPath == binPath {
-			isClientAllowed = true
-			break
+	allowedClients := platform.AllowedClients()
+	if len(allowedClients) == 0 {
+		isClientAllowed = true // if 'allowedClients' not defined - skip checking connected client path
+	} else {
+		for _, allowedBinPath := range allowedClients {
+			if strings.ToLower(allowedBinPath) == strings.ToLower(binPath) {
+				isClientAllowed = true
+				break
+			}
 		}
 	}
 	if isClientAllowed != true {

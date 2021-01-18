@@ -24,6 +24,22 @@
 
 package iphlpapi
 
+// TCPTableClass - The TCP_TABLE_CLASS enumeration defines the set of values used to indicate the type of table returned by calls to GetExtendedTcpTable.
+// https://docs.microsoft.com/en-us/windows/win32/api/iprtrmib/ne-iprtrmib-tcp_table_class
+type TCPTableClass int
+
+const (
+	TCPTableBasicListener          TCPTableClass = iota
+	TCPTableBasicConnections       TCPTableClass = iota
+	TCPTableBasicAll               TCPTableClass = iota
+	TCPTableOwnerPidListener       TCPTableClass = iota
+	TCPTableOwnerPidConnections    TCPTableClass = iota
+	TCPTableOwnerPidAll            TCPTableClass = iota
+	TCPTableOwnerModuleListener    TCPTableClass = iota
+	TCPTableOwnerModuleConnections TCPTableClass = iota
+	TCPTableOwnerMuduleAll         TCPTableClass = iota
+)
+
 // APIMibIPForwardRow - MIB_IPFORWARDROW structure. https://docs.microsoft.com/ru-ru/windows/win32/api/ipmib/ns-ipmib-mib_ipforwardrow
 type APIMibIPForwardRow struct {
 	DwForwardDest      [4]byte
@@ -40,4 +56,15 @@ type APIMibIPForwardRow struct {
 	DwForwardMetric3   uint32
 	DwForwardMetric4   uint32
 	DwForwardMetric5   uint32
+}
+
+// MibTCPRowOwnerPid - The MIB_TCPROW_OWNER_PID structure contains information that describes an IPv4 TCP connection with IPv4 addresses, ports used by the TCP connection, and the specific process ID (PID) associated with connection.
+// https://docs.microsoft.com/en-us/windows/win32/api/tcpmib/ns-tcpmib-mib_tcprow_owner_pid
+type MibTCPRowOwnerPid struct {
+	DwState      uint32
+	DwLocalAddr  [4]byte //uint32
+	DwLocalPort  [4]byte //uint32
+	DwRemoteAddr [4]byte //uint32
+	DwRemotePort [4]byte //uint32
+	DwOwningPid  uint32
 }

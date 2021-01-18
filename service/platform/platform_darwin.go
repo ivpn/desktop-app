@@ -67,10 +67,3 @@ func FirewallScript() string {
 func DNSScript() string {
 	return dnsScript
 }
-
-// AllowedClients returns list of clients which are allowed to connect to daemon
-// (list of absolute paths to binaries)
-func implAllowedClients() []string {
-	// allow connection only for IVPN UI and IVPN CLI
-	return []string{"/Applications/IVPN.app/Contents/MacOS/ivpn-ui", "/Applications/IVPN.app/Contents/MacOS/cli/ivpn"}
-}
