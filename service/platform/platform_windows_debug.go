@@ -58,7 +58,7 @@ func doOsInitForBuild() {
 	fmt.Printf("!!! DEBUG VERSION !!! servicePortFile       : '%s'\n", servicePortFile)
 	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
-	fmt.Println("!!!DEBUG!!! 'allowedClients' not defined for debug mode. Any client can connect to daemon")
+	fmt.Println("!!! DEBUG VERSION !!! 'allowedClients' not defined for debug mode. Any client can connect to daemon")
 }
 
 func getInstallDir() string {

@@ -60,7 +60,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnProxyAuthFile = path.Join(tmpDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(tmpDir, "wgivpn.conf")
 
-	fmt.Println("!!!DEBUG!!! 'allowedClients' not defined for debug mode. Any client can connect to daemon")
+	fmt.Println("!!! DEBUG VERSION !!! 'allowedClients' not defined for debug mode. Any client can connect to daemon")
 
 	return nil, nil
 }

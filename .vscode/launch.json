@@ -13,7 +13,7 @@
             "env": {},
             "args": ["-logging"],
             //"buildFlags": "-tags debug"
-            "buildFlags": ""
+            //"buildFlags": ""
             //"buildFlags": "-tags nowifi"
         }
     ]

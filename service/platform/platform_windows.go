@@ -41,7 +41,7 @@ func doInitConstants() {
 		servicePortFile = path.Join(installDir, "etc/port.txt")
 	} else {
 		// debug version can have different port file value
-		fmt.Println("!!! WARNING!!! Non-standard service port file: ", servicePortFile)
+		fmt.Println("!!! WARNING !!! Non-standard service port file: ", servicePortFile)
 	}
 
 	logFile = path.Join(installDir, "log/IVPN Agent.log")

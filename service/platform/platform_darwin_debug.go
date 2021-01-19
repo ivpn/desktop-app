@@ -69,7 +69,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	wgBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wireguard-go")
 	wgToolBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wg")
 
-	fmt.Println("!!!DEBUG!!! 'allowedClients' not defined for debug mode. Any client can connect to daemon")
+	fmt.Println("!!! DEBUG VERSION !!! 'allowedClients' not defined for debug mode. Any client can connect to daemon")
 
 	return nil, nil
 }
