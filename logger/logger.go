@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
 )
 
 var isCanPrintToConsole bool
@@ -365,9 +366,13 @@ func createLogFile() error {
 		}
 
 		var err error
-		globalLogFile, err = os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+		globalLogFile, err = os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600) // read\write only for privileged user
 		if err != nil {
 			return fmt.Errorf("failed to create log-file: %w", err)
+		}
+		// only for Windows: Golang is not able to change file permissins in Windows style
+		if err := filerights.WindowsChmod(filePath, 0600); err != nil { // read\write only for privileged user
+			return fmt.Errorf("failed to change log-file permissions: %w", err)
 		}
 	} else {
 		return fmt.Errorf("logfile name not initialized")

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/go-acl"
 )
 
 var envVarProgramFiles string
@@ -71,4 +73,10 @@ func isFileExists(file string) error {
 		return fmt.Errorf("'%s' is directory", file)
 	}
 	return nil
+}
+
+// WindowsChmod - changing file permissions in Windows style
+// (Golang is not able to change file permissins  in Windows style)
+func WindowsChmod(name string, fileMode os.FileMode) error {
+	return acl.Chmod(name, fileMode)
 }

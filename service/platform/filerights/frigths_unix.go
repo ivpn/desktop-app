@@ -120,3 +120,9 @@ func ensureFileOwner(finfo os.FileInfo) error {
 	}
 	return nil
 }
+
+// WindowsChmod - changing file permissions in Windows style
+// (applicable only for Windows)
+func WindowsChmod(name string, fileMode os.FileMode) error {
+	return nil // do nothing for darwin or linux
+}

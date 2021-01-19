@@ -31,6 +31,7 @@ import (
 
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
 )
 
 var log *logger.Logger
@@ -83,7 +84,17 @@ func (p *Preferences) SavePreferences() error {
 		return fmt.Errorf("failed to save preferences file (json marshal error): %w", err)
 	}
 
-	return ioutil.WriteFile(platform.SettingsFile(), data, 0600) // read\write only for privilaged user
+	settingsFile := platform.SettingsFile()
+	if err := ioutil.WriteFile(settingsFile, data, 0600); err != nil { // read\write only for privileged user
+		return err
+	}
+
+	// only for Windows: Golang is not able to change file permissins in Windows style
+	if err := filerights.WindowsChmod(settingsFile, 0600); err != nil { // read\write only for privileged user
+		return fmt.Errorf("failed to change settings-file permissions: %w", err)
+	}
+
+	return nil
 }
 
 // LoadPreferences loads preferences
