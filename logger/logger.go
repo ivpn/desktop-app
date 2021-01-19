@@ -321,12 +321,12 @@ func write(fields ...interface{}) {
 	writeMutex.Lock()
 	defer writeMutex.Unlock()
 
-	if isCanPrintToConsole {
-		// printing into console
-		fmt.Println(fields...)
-	}
-
 	if isLoggingEnabled {
+		if isCanPrintToConsole {
+			// printing into console
+			fmt.Println(fields...)
+		}
+
 		if globalLogFile == nil {
 			createLogFile()
 		}

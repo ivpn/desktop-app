@@ -191,7 +191,7 @@ func (c *ConnectionParams) generateConfiguration(
 		}
 	}
 
-	if logger.IsEnabled() {
+	if len(logFile) > 0 && logger.IsEnabled() {
 		cfg = append(cfg, fmt.Sprintf(`log "%s"`, logFile))
 	}
 

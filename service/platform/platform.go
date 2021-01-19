@@ -259,7 +259,8 @@ func LogFile() string {
 
 // OpenvpnLogFile path to log-file for openvpn
 func OpenvpnLogFile() string {
-	return openvpnLogFile
+	return "" // OpenVPN logging disabled (it is not required due to all openvpn log data present in global daemon log)
+	//return  openvpnLogFile
 }
 
 // OpenVpnBinaryPath path to openvpn binary
