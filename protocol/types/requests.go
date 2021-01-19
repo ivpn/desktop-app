@@ -43,10 +43,6 @@ type Hello struct {
 	//	KeepDaemonAlone == false (default) - VPN disconnects when client disconnects from a daemon
 	//	KeepDaemonAlone == true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
 	KeepDaemonAlone bool
-
-	// Register credentials (if not logged in)
-	// Used when updating from an old client version
-	SetRawCredentials RawCredentials
 }
 
 // RawCredentials - RAW credentials
