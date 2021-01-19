@@ -37,7 +37,7 @@ import (
 // doGetPortOwnerPID returns PID of a process which is an owning of local TCP port
 func doGetPortOwnerPID(localTCPPort int) (int, error) {
 	//  lsof -i tcp:52994
-	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "lsof", "-i", fmt.Sprintf("tcp:%d", localTCPPort))
+	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "lsof", "-n", "-i", fmt.Sprintf("tcp:%d", localTCPPort))
 	if err != nil {
 		return -1, fmt.Errorf("Unable to determine PID of port owner for TCP:%d", localTCPPort)
 	}
@@ -55,7 +55,7 @@ func doGetPortOwnerPID(localTCPPort int) (int, error) {
 	// 		COMMAND  PID   USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
 	// 		ivpn-ui 2353 user   46u  IPv4  41298      0t0  TCP localhost:52994->localhost:41587 (ESTABLISHED)
 
-	regextStr := fmt.Sprintf("^[ \\t]*[^ \\t]+[ \\t]+([0-9]+)[ \\t]+.*TCP[ \\t]+localhost:%d->localhost:[0-9]+.*\\(ESTABLISHED\\).*", localTCPPort)
+	regextStr := fmt.Sprintf("^[ \\t]*[^ \\t]+[ \\t]+([0-9]+)[ \\t]+.*TCP[ \\t]+127\\.0\\.0\\.1:%d->127\\.0\\.0\\.1:[0-9]+.*\\(ESTABLISHED\\).*", localTCPPort)
 	rexp := regexp.MustCompile(regextStr)
 	lines := strings.Split(outText, "\n")
 	for _, line := range lines {
