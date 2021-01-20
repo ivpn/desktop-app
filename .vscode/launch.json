@@ -12,7 +12,7 @@
             "program": "${workspaceRoot}",
             "env": {},
             "args": ["-logging"],
-            //"buildFlags": "-tags debug",
+            "buildFlags": "-tags debug",
             //"buildFlags": "-tags debug -ldflags '-X github.com/ivpn/desktop-app-daemon/version._version=2.12.8'"
             //"buildFlags": ""
             //"buildFlags": "-tags nowifi"

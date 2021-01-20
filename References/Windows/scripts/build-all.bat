@@ -80,7 +80,7 @@ goto :success
 
 	if exist "bin\%~1\IVPN Service.exe" del "bin\%~1\IVPN Service.exe" || exit /b 1
 
-	go build -tags release -o "bin\%~1\IVPN Service.exe" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app-daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app-daemon/version._time=%DATE%" || exit /b 1
+	go build -tags release -o "bin\%~1\IVPN Service.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app-daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app-daemon/version._time=%DATE%" || exit /b 1
 	goto :eof
 
 :build_native_libs

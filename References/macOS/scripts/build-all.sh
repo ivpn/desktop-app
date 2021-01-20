@@ -127,6 +127,6 @@ then
   esac
 fi
 
-go build $BUILDTAGS_NOWIFI $BUILDTAGS_USE_LIBVPN $BUILDTAGS_DEBUG -o "IVPN Agent" -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=$VERSION -X github.com/ivpn/desktop-app-daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app-daemon/version._time=$DATE"
+go build $BUILDTAGS_NOWIFI $BUILDTAGS_USE_LIBVPN $BUILDTAGS_DEBUG -o "IVPN Agent" -trimpath -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=$VERSION -X github.com/ivpn/desktop-app-daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app-daemon/version._time=$DATE"
 
 echo "Cpmpiled daemon binary: '$(pwd)/IVPN Agent'"
