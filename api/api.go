@@ -26,8 +26,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -47,6 +45,14 @@ const (
 	_wgKeySetPath          = _apiPathPrefix + "/session/wg/set"
 	_geoLookupPath         = _apiPathPrefix + "/geo-lookup"
 )
+
+// APIAliases - aliases of API requests (can be requested by UI client)
+var APIAliases = map[string]string{
+	"geo-lookup":         _geoLookupPath,
+	"updateInfo_Linux":   "/updates/linux/update.json",
+	"updateInfo_macOS":   "/updates/mac/update.json",
+	"updateInfo_Windows": "/updates/win/update.json",
+}
 
 var log *logger.Logger
 
@@ -126,12 +132,13 @@ func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 	return servers, nil
 }
 
-// DoRequestRaw do request to API request. Returns raw data of response
-func (a *API) DoRequestRaw(urlPath string, method string, contentType string, requestObject interface{}) (responseData []byte, err error) {
-	if !strings.HasPrefix(urlPath, _apiPathPrefix) {
-		urlPath = path.Join(_apiPathPrefix, urlPath)
+// DoRequestByAlias do API request (by API endpoint alias). Returns raw data of response
+func (a *API) DoRequestByAlias(apiAlias string) (responseData []byte, err error) {
+	url, ok := APIAliases[apiAlias]
+	if ok != true || len(url) == 0 {
+		return nil, fmt.Errorf("Unexpected API alias")
 	}
-	return a.requestRaw(urlPath, method, contentType, requestObject, 0)
+	return a.requestRaw(url, "", "", nil, 0)
 }
 
 // SessionNew - try to register new session

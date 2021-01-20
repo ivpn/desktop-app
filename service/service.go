@@ -196,8 +196,8 @@ func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 }
 
 // APIRequest do custom request to API
-func (s *Service) APIRequest(apiPath string, method string, contentType string, requestObject interface{}) (responseData []byte, err error) {
-	return s._api.DoRequestRaw(apiPath, method, contentType, requestObject)
+func (s *Service) APIRequest(apiAlias string) (responseData []byte, err error) {
+	return s._api.DoRequestByAlias(apiAlias)
 }
 
 // GetDisabledFunctions returns info about functions which are disabled

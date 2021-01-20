@@ -218,8 +218,5 @@ type WiFiCurrentNetwork struct {
 // APIRequest do custom request to API
 type APIRequest struct {
 	CommandBase
-	APIPath         string
-	HTTPMethod      string
-	HTTPContentType string
-	RequestData     string
+	APIPath string
 }
