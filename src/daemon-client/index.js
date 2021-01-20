@@ -25,6 +25,7 @@ const fs = require("fs");
 const net = require("net");
 const os = require("os");
 
+import { Platform, PlatformEnum } from "@/platform/platform";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { API_SUCCESS } from "@/api/statuscode";
 import { IsNewerVersion } from "@/app-updater";
@@ -650,6 +651,35 @@ async function AccountStatus() {
   ]);
 }
 
+async function GetAppUpdateInfo() {
+  try {
+    let apiAlias = "";
+
+    switch (Platform()) {
+      case PlatformEnum.Windows:
+        apiAlias = "updateInfo_Windows";
+        break;
+      case PlatformEnum.macOS:
+        apiAlias = "updateInfo_macOS";
+        break;
+      case PlatformEnum.Linux:
+        apiAlias = "updateInfo_Linux";
+        break;
+      default:
+        throw new Error("Unsupported platform");
+    }
+
+    let resp = await sendRecv(
+      { Command: daemonRequests.APIRequest, APIPath: apiAlias },
+      [daemonResponses.APIResponse]
+    );
+    return JSON.parse(`${resp.ResponseData}`);
+  } catch (e) {
+    console.error("Failed to check latest update info: ", e);
+  }
+  return null;
+}
+
 async function GeoLookup(isRetryTry) {
   let isRealGeoLocationCheck = function() {
     return (
@@ -1055,6 +1085,9 @@ export default {
   Login,
   Logout,
   AccountStatus,
+
+  GetAppUpdateInfo,
+
   GeoLookup,
   PingServers,
   KillSwitchGetStatus,

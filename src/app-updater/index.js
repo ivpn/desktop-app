@@ -1,14 +1,12 @@
-import { Platform, PlatformEnum } from "@/platform/platform";
 import store from "@/store";
 
 function getUpdater() {
-  switch (Platform()) {
-    case PlatformEnum.Windows:
-      break;
-    case PlatformEnum.macOS:
-      break;
-    default:
-      return require("./linux");
+  try {
+    // Can be loaded different updaters according to platform (switch (Platform()) {...} )
+    // Currently, we are using common updater for all platforms
+    return require("./common_updater");
+  } catch (e) {
+    console.error("[ERROR] IsAbleToCheckUpdate :", e);
   }
   return null;
 }

@@ -273,6 +273,8 @@ export default {
   line-height: 17pt;
   margin-right: 15px;
   text-transform: capitalize;
+
+  min-width: 80px;
 }
 
 .badge-grey {

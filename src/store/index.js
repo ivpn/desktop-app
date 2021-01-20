@@ -86,9 +86,7 @@ export default new Vuex.Store({
             "description": "UI Bugfix description"
           }
         ]
-      },
-      "downloadPageLink": "https://www.ivpn.net/...",
-      "changelogLink": "https://www.ivpn.net/setup/..."
+      }
     }*/
     latestVersionInfo: null
   },
