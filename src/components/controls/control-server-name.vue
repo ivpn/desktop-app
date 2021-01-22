@@ -41,6 +41,14 @@
 
 <script>
 import { PingQuality } from "@/store/types";
+
+import Image_speedometer from "@/assets/speedometer.svg";
+import Image_shuffle from "@/assets/shuffle.svg";
+import Image_check from "@/assets/check.svg";
+import Image_iconStatusGood from "@/assets/iconStatusGood.svg";
+import Image_iconStatusModerate from "@/assets/iconStatusModerate.svg";
+import Image_iconStatusBad from "@/assets/iconStatusBad.svg";
+
 export default {
   // possible values of "size" : 'normal' (default), 'large'
   // possible values of "isFullName" : 'false\null' (default), 'true'
@@ -72,31 +80,30 @@ export default {
       return `${this.server.city}, ${this.server.country_code}`;
     },
     serverImage: function() {
-      if (this.isFastestServer === true)
-        return require("@/assets/speedometer.svg");
-      if (this.isRandomServer === true) return require("@/assets/shuffle.svg");
+      if (this.isFastestServer === true) return Image_speedometer;
+      if (this.isRandomServer === true) return Image_shuffle;
       if (this.manualImage != null) return this.manualImage;
-      if (this.server == null) return require(`@/assets/flags/unk.svg`);
+      if (this.server == null) return `/flags/unk.svg`;
       try {
         const ccode = this.server.country_code.toLowerCase();
-        return require(`@/assets/flags/${ccode}.svg`);
+        return `/flags/${ccode}.svg`;
       } catch (e) {
         console.log(e);
-        return null; //return require(`@/assets/flags/unk.svg`);
+        return null;
       }
     },
     selectedImg: function() {
-      return require("@/assets/check.svg");
+      return Image_check;
     },
     pingStatusImg: function() {
       if (this.server == null) return null;
       switch (this.server.pingQuality) {
         case PingQuality.Good:
-          return require("@/assets/iconStatusGood.svg");
+          return Image_iconStatusGood;
         case PingQuality.Moderate:
-          return require("@/assets/iconStatusModerate.svg");
+          return Image_iconStatusModerate;
         case PingQuality.Bad:
-          return require("@/assets/iconStatusBad.svg");
+          return Image_iconStatusBad;
       }
       return null;
     }

@@ -8,9 +8,9 @@
 </template>
 
 <script>
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 import { IsWindowHasTitle } from "@/platform/platform";
-import { InitDefaultCopyMenus } from "./app-def-context-menus";
+import { InitDefaultCopyMenus } from "@/context-menu/renderer";
 
 export default {
   beforeCreate() {

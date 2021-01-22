@@ -54,8 +54,12 @@ import { InitTrustedNetworks } from "./trusted-wifi";
 import { IsWindowHasTitle } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
+import path from "path";
 
 import { StartUpdateChecker } from "@/app-updater";
+
+// default copy/edit context menu event handlers
+require("@/context-menu/main");
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -134,14 +138,14 @@ if (gotTheLock) {
             label: "Switch to test view",
             click() {
               if (win !== null)
-                win.webContents.send("change-view-request", "/test");
+                win.webContents.send("main-change-view-request", "/test");
             }
           },
           {
             label: "Switch to main view",
             click() {
               if (win !== null)
-                win.webContents.send("change-view-request", "/");
+                win.webContents.send("main-change-view-request", "/");
             }
           }
         ]
@@ -410,11 +414,13 @@ function createWindow() {
     autoHideMenuBar: true,
 
     webPreferences: {
-      enableRemoteModule: true,
+      preload: path.join(__dirname, "preload.js"),
+
       // Use pluginOptions.nodeIntegration, leave this alone
       // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-      // nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
-      nodeIntegration: true
+      //nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
+      nodeIntegration: false,
+      contextIsolation: true
     }
   };
 
@@ -472,8 +478,9 @@ function createSettingsWindow(viewName) {
     autoHideMenuBar: true,
 
     webPreferences: {
-      enableRemoteModule: true,
-      nodeIntegration: true
+      preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true
     }
   };
 
@@ -615,8 +622,8 @@ function showSettings(settingsViewName) {
 
       // Temporary navigate to '\'. This is required only if we already showing 'settings' view
       // (to be able to re-init 'settings' view with new parameters)
-      win.webContents.send("change-view-request", "/");
-      win.webContents.send("change-view-request", lastRouteArgs);
+      win.webContents.send("main-change-view-request", "/");
+      win.webContents.send("main-change-view-request", lastRouteArgs);
     }
   } catch (e) {
     console.log(e);

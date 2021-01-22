@@ -119,7 +119,7 @@
 </template>
 
 <script>
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 
 import { IsNewerVersion } from "@/app-updater";
 
@@ -154,7 +154,7 @@ export default {
     },
 
     uiVersion: function() {
-      return require("electron").remote.app.getVersion();
+      return sender.appGetVersion();
     },
     daemonVersion: function() {
       return this.$store.state.daemonVersion;

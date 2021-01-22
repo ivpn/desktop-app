@@ -20,9 +20,7 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-const electron = require("electron");
-const remote = electron.remote;
-const Menu = remote.Menu;
+const sender = window.ipcSender;
 
 const keyCodes = {
   V: 86,
@@ -30,52 +28,6 @@ const keyCodes = {
   X: 88,
   A: 65
 };
-
-// Default COPY/PASTE context menu for all input elements
-const InputMenuInput = Menu.buildFromTemplate([
-  {
-    label: "Undo",
-    role: "undo"
-  },
-  {
-    label: "Redo",
-    role: "redo"
-  },
-  {
-    type: "separator"
-  },
-  {
-    label: "Cut",
-    role: "cut"
-  },
-  {
-    label: "Copy",
-    role: "copy"
-  },
-  {
-    label: "Paste",
-    role: "paste"
-  },
-  {
-    type: "separator"
-  },
-  {
-    label: "Select all",
-    role: "selectall"
-  }
-]);
-
-// Default COPY context menu for all label elements
-const InputMenuLabel = Menu.buildFromTemplate([
-  {
-    label: "Copy",
-    role: "copy"
-  },
-  {
-    label: "Select all",
-    role: "selectall"
-  }
-]);
 
 export function InitDefaultCopyMenus() {
   document.body.addEventListener("contextmenu", e => {
@@ -89,11 +41,11 @@ export function InitDefaultCopyMenus() {
         node.nodeName.match(/^(input|textarea)$/i) ||
         node.isContentEditable
       ) {
-        InputMenuInput.popup(remote.getCurrentWindow());
+        sender.ShowContextMenuEdit();
         break;
       } else if (node.nodeName.match(/^(label)$/i)) {
         if (getSelection().toString()) {
-          InputMenuLabel.popup(remote.getCurrentWindow());
+          sender.ShowContextMenuCopy();
         }
         break;
       }

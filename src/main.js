@@ -25,9 +25,11 @@ import App from "./App.vue";
 import router from "./router";
 import store from "./store";
 
+const sender = window.ipcSender;
+
 Vue.config.productionTip = false;
 
-require("./main_style.js");
+import "@/main_style.js";
 
 new Vue({
   router,
@@ -35,9 +37,9 @@ new Vue({
   render: h => h(App)
 }).$mount("#app");
 
-const electron = window.require("electron");
-const { ipcRenderer } = electron;
-ipcRenderer.on("change-view-request", (event, arg) => {
+// Waiting for "change view" requests from main thread
+const ipcRenderer = sender.GetSafeIpcRenderer();
+ipcRenderer.on("main-change-view-request", (event, arg) => {
   try {
     // Avoid error:'Avoided redundant navigation to current location: ...'
     // That error can happen when navigating to a current route
@@ -49,11 +51,7 @@ ipcRenderer.on("change-view-request", (event, arg) => {
 });
 
 // After initialized, ask main thread about initial route
-async function getInitRouteArgs() {
-  return await ipcRenderer.invoke("renderer-request-ui-initial-route-args");
-}
-
 setTimeout(async () => {
-  let initRouteArgs = await getInitRouteArgs();
+  let initRouteArgs = await sender.GetInitRouteArgs();
   if (initRouteArgs != null) router.push(initRouteArgs);
 }, 0);

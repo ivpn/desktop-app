@@ -1,6 +1,6 @@
 {
   "name": "ivpn-ui",
-  "version": "3.2.30",
+  "version": "3.2.31",
   "description": "IVPN Client",
   "author": "IVPN Limited",
   "license": "GPL-3.0",
@@ -11,7 +11,7 @@
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
     "electron:build": "node pre_build.js && vue-cli-service electron:build",
-    "electron:serve": "vue-cli-service electron:serve",
+    "electron:serve": "node pre_build.js && vue-cli-service electron:serve",
     "postinstall": "electron-builder install-app-deps",
     "postuninstall": "electron-builder install-app-deps"
   },

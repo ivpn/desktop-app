@@ -258,8 +258,7 @@
 </template>
 
 <script>
-const { dialog, getCurrentWindow } = require("electron").remote;
-
+const sender = window.ipcSender;
 import serverNameControl from "@/components/controls/control-server-name.vue";
 import SwitchProgress from "@/components/controls/control-switch-small.vue";
 import imgArrowLeft from "@/components/images/arrow-left.vue";
@@ -267,6 +266,20 @@ import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import { enumValueName, getDistanceFromLatLonInKm } from "@/helpers/helpers";
 import { ServersSortTypeEnum } from "@/store/types";
+
+import Image_arrow_left_windows from "@/assets/arrow-left-windows.svg";
+import Image_arrow_left_macos from "@/assets/arrow-left-macos.svg";
+import Image_arrow_left_linux from "@/assets/arrow-left-linux.svg";
+import Image_search_windows from "@/assets/search-windows.svg";
+import Image_search_macos from "@/assets/search-macos.svg";
+import Image_search_linux from "@/assets/search-linux.svg";
+import Image_settings_windows from "@/assets/settings-windows.svg";
+import Image_settings_macos from "@/assets/settings-macos.svg";
+import Image_settings_linux from "@/assets/settings-linux.svg";
+import Image_sort from "@/assets/sort.svg";
+import Image_check_thin from "@/assets/check-thin.svg";
+import Image_star_active from "@/assets/star-active.svg";
+import Image_star_inactive from "@/assets/star-inactive.svg";
 
 export default {
   props: [
@@ -401,11 +414,11 @@ export default {
     arrowLeftImagePath: function() {
       switch (Platform()) {
         case PlatformEnum.Windows:
-          return require("@/assets/arrow-left-windows.svg");
+          return Image_arrow_left_windows;
         case PlatformEnum.macOS:
-          return require("@/assets/arrow-left-macos.svg");
+          return Image_arrow_left_macos;
         default:
-          return require("@/assets/arrow-left-linux.svg");
+          return Image_arrow_left_linux;
       }
     },
     searchImage: function() {
@@ -413,28 +426,28 @@ export default {
 
       switch (Platform()) {
         case PlatformEnum.Windows:
-          return require("@/assets/search-windows.svg");
+          return Image_search_windows;
         case PlatformEnum.macOS:
-          return require("@/assets/search-macos.svg");
+          return Image_search_macos;
         default:
-          return require("@/assets/search-linux.svg");
+          return Image_search_linux;
       }
     },
     settingsImage: function() {
       switch (Platform()) {
         case PlatformEnum.Windows:
-          return require("@/assets/settings-windows.svg");
+          return Image_settings_windows;
         case PlatformEnum.macOS:
-          return require("@/assets/settings-macos.svg");
+          return Image_settings_macos;
         default:
-          return require("@/assets/settings-linux.svg");
+          return Image_settings_linux;
       }
     },
     sortImage: function() {
-      return require("@/assets/sort.svg");
+      return Image_sort;
     },
     selectedImage: function() {
-      return require("@/assets/check-thin.svg");
+      return Image_check_thin;
     }
   },
 
@@ -449,7 +462,7 @@ export default {
     },
     onServerSelected: function(server) {
       if (this.isInaccessibleServer(server)) {
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "info",
           buttons: ["OK"],
           message: "Entry and exit servers cannot be in the same country",
@@ -489,11 +502,11 @@ export default {
       if (
         this.$store.state.settings.serversFavoriteList.includes(server.gateway)
       )
-        return require("@/assets/star-active.svg");
-      return require("@/assets/star-inactive.svg");
+        return Image_star_active;
+      return Image_star_inactive;
     },
     favoriteImageActive: function() {
-      return require("@/assets/star-active.svg");
+      return Image_star_active;
     },
     onFastestServerConfig() {
       this.isFastestServerConfig = true;
@@ -555,7 +568,7 @@ export default {
       );
 
       if (notExcludedActiveServers.length < 1) {
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "info",
           buttons: ["OK"],
           message: "Please, keep at least one server",

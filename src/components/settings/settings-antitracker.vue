@@ -33,8 +33,7 @@
 </template>
 
 <script>
-const { shell } = require("electron");
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 
 export default {
   data: function() {
@@ -42,10 +41,10 @@ export default {
   },
   methods: {
     onLearnMoreLink: () => {
-      shell.openExternal(`https://www.ivpn.net/antitracker`);
+      sender.shellOpenExternal(`https://www.ivpn.net/antitracker`);
     },
     onHardcodeLink: () => {
-      shell.openExternal(`https://www.ivpn.net/antitracker/hardcore`);
+      sender.shellOpenExternal(`https://www.ivpn.net/antitracker/hardcore`);
     }
   },
   computed: {

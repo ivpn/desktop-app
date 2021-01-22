@@ -56,8 +56,8 @@
 </template>
 
 <script>
-const { shell } = require("electron");
 import { isValidURL } from "@/helpers/helpers";
+const sender = window.ipcSender;
 
 export default {
   mounted() {
@@ -100,11 +100,12 @@ export default {
       });
     },
     onUpgrade: function() {
-      if (isValidURL(this.UpgradeToURL)) shell.openExternal(this.UpgradeToURL);
-      else shell.openExternal(`https://www.ivpn.net/account`);
+      if (isValidURL(this.UpgradeToURL))
+        sender.shellOpenExternal(this.UpgradeToURL);
+      else sender.shellOpenExternal(`https://www.ivpn.net/account`);
     },
     onContactSupport: function() {
-      shell.openExternal(`https://www.ivpn.net/contactus`);
+      sender.shellOpenExternal(`https://www.ivpn.net/contactus`);
     }
   }
 };

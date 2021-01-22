@@ -80,15 +80,13 @@
 </template>
 
 <script>
-const { dialog, getCurrentWindow } = require("electron").remote;
-
 import Servers from "./Servers.vue";
 import ConnectBlock from "./blocks/block-connect.vue";
 import ConnectionDetailsBlock from "./blocks/block-connection-details.vue";
 import SelectedServerBlock from "@/components/blocks/block-selected-server.vue";
 import HopButtonsBlock from "./blocks/block-hop-buttons.vue";
 
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 import { VpnStateEnum, VpnTypeEnum, PauseStateEnum } from "@/store/types";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 
@@ -105,7 +103,7 @@ async function connect(me, isConnect) {
     else await sender.Disconnect();
   } catch (e) {
     console.error(e);
-    dialog.showMessageBoxSync(getCurrentWindow(), {
+    sender.showMessageBoxSync({
       type: "error",
       buttons: ["OK"],
       message: `Failed to ${isConnect ? "connect" : "disconnect"}: ` + e
@@ -189,7 +187,7 @@ export default {
         !isStrNullOrEmpty(this.connectionFailureInfo.ReasonDescription) &&
         this.connectionFailureInfo.ReasonDescription.length > 0
       ) {
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
           message: `Failed to connect`,

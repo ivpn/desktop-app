@@ -30,7 +30,7 @@
 </template>
 
 <script>
-const { dialog, getCurrentWindow } = require("electron").remote;
+const sender = window.ipcSender;
 
 import { VpnStateEnum, VpnTypeEnum } from "@/store/types";
 
@@ -47,7 +47,7 @@ export default {
       if (
         this.$store.state.vpnState.connectionState !== VpnStateEnum.DISCONNECTED
       ) {
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "info",
           buttons: ["OK"],
           message: "You are now connected to IVPN",

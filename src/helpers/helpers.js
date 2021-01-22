@@ -29,6 +29,11 @@ export function enumValueName(theEnum, value) {
   return null;
 }
 
+export function IsRenderer() {
+  if (typeof window !== "undefined") return true;
+  return false;
+}
+
 export function isValidURL(str, isIgnoreProtocol) {
   var pattern = new RegExp(
     "^(https?:\\/\\/)" +

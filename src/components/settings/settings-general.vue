@@ -146,7 +146,7 @@
 import { ColorTheme } from "@/store/types";
 import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 
 // VUE component
 export default {

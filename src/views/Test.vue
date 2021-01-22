@@ -1,51 +1,11 @@
 <template>
   <div class="about">
-    <h1>This is a test page</h1>
-    <Spinner />
-    <div id="demo">
-      <button v-on:click="doLogout">
-        Logout
-      </button>
-      <button v-on:click="$router.push('/')">
-        To main view...
-      </button>
-
-      <button v-on:click="doTestComonentsChange">
-        Toggle
-      </button>
-      <transition name="fade">
-        <p v-if="show">hello</p>
-      </transition>
-    </div>
-
-    <div>
-      <button v-on:click="doChangeVPNType">
-        Change VPN type
-      </button>
-      {{ this.$store.state.settings.vpnType }}
-    </div>
-
-    <transition name="component-fade" mode="out-in">
-      <component v-bind:is="currentViewComponent"></component>
-    </transition>
-
     <pre align="left">GETTERS {{ theGetters }}</pre>
     <pre align="left">STATE {{ theState }}</pre>
-
-    <button v-on:click="doTest">
-      Test
-    </button>
   </div>
 </template>
 
 <script>
-import Login from "@/components/Login.vue";
-import Control from "@/components/Control.vue";
-import Spinner from "@/components/controls/control-spinner.vue";
-import sender from "./../ipc/renderer-sender";
-
-import { VpnTypeEnum } from "@/store/types";
-
 function removeServers(key, value) {
   if (key == "vpnState/activeServers")
     return { DEBUG: `DEBUG: excluded from output (array len=${value.length})` };
@@ -58,15 +18,10 @@ function removeServers(key, value) {
 }
 
 export default {
-  components: {
-    Login,
-    Control,
-    Spinner
-  },
+  components: {},
   data: function() {
     return {
-      show: true,
-      currentViewComponent: Control
+      show: true
     };
   },
 
@@ -79,30 +34,7 @@ export default {
     }
   },
 
-  methods: {
-    async doLogout() {
-      await sender.Logout();
-    },
-    doTest() {
-      console.debug("button CLICKED!");
-      this.$store.dispatch("testRenderInc");
-    },
-    doTestComonentsChange() {
-      // this.show = !this.show;
-      if (this.currentViewComponent === Control) {
-        this.currentViewComponent = Login;
-      } else {
-        this.currentViewComponent = Control;
-      }
-    },
-    doChangeVPNType() {
-      console.log("Change VPN type");
-      let type = this.$store.state.settings.vpnType;
-      if (type === VpnTypeEnum.OpenVPN) type = VpnTypeEnum.WireGuard;
-      else type = VpnTypeEnum.OpenVPN;
-      this.$store.dispatch("settings/vpnType", type);
-    }
-  }
+  methods: {}
 };
 </script>
 

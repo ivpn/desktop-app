@@ -187,15 +187,15 @@
 </template>
 
 <script>
-const { shell } = require("electron");
-const { dialog, getCurrentWindow } = require("electron").remote;
-
 import { VpnStateEnum, PauseStateEnum, ColorTheme } from "@/store/types";
 import { IsOsDarkColorScheme } from "@/helpers/renderer";
 
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 import popupControl from "@/components/controls/control-map-popup.vue";
 import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
+
+import Image_world_map_dark from "@/assets/world_map_dark.svg";
+import Image_world_map_light from "@/assets/world_map_light.svg";
 
 import {
   notLinear,
@@ -271,8 +271,8 @@ export default {
 
   computed: {
     mapImage: function() {
-      if (this.isDarkTheme) return require("@/assets/world_map_dark.svg");
-      return require("@/assets/world_map_light.svg");
+      if (this.isDarkTheme) return Image_world_map_dark;
+      return Image_world_map_light;
     },
     servers: function() {
       return this.$store.getters["vpnState/activeServers"];
@@ -379,8 +379,7 @@ export default {
     this.animConnectedWaves = this.$refs.animationConnectedWaves;
 
     // resize canvas on window resize
-    let currentWindow = getCurrentWindow();
-    currentWindow.on("resize", this.windowResizing);
+    // (this method should be called each time when main window resizing)
     this.windowResizing();
 
     this.updateAnimations();
@@ -455,6 +454,7 @@ export default {
       this.isMapLoaded = true;
     },
     windowResizing() {
+      // This method should be called each time when main window resizing
       let c = this.canvas;
 
       if (c == null) return;
@@ -472,7 +472,7 @@ export default {
       } else this.isDarkTheme = scheme === ColorTheme.dark;
     },
     onAccountRenew() {
-      shell.openExternal(`https://www.ivpn.net/account`);
+      sender.shellOpenExternal(`https://www.ivpn.net/account`);
     },
     // ================= CONNECTION ====================
     async disconnect() {
@@ -481,7 +481,7 @@ export default {
         sender.Disconnect();
       } catch (e) {
         console.error(e);
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
           message: `Failed to disconnect: ` + e
@@ -500,7 +500,7 @@ export default {
         else await sender.Connect(location, null);
       } catch (e) {
         console.error(e);
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
           message: `Failed to connect: ` + e
@@ -513,7 +513,7 @@ export default {
         await sender.ResumeConnection();
       } catch (e) {
         console.error(e);
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
           message: `Failed to resume: ` + e

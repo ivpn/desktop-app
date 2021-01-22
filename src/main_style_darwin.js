@@ -1,2 +1,2 @@
-require("@/assets/fonts/fonts_macos.scss");
-require("@/components/scss/platform/macos.scss");
+import "@/assets/fonts/fonts_macos.scss";
+import "@/components/scss/platform/macos.scss";

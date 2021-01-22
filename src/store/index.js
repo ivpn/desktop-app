@@ -22,9 +22,9 @@
 
 import Vue from "vue";
 import Vuex from "vuex";
-import { createSharedMutations } from "vuex-electron";
+import createSharedMutations from "./vuex-modules/shared-mutations.js";
 
-import { isStrNullOrEmpty } from "../helpers/helpers";
+import { isStrNullOrEmpty, IsRenderer } from "../helpers/helpers";
 
 import account from "./module-account";
 import vpnState from "./module-vpn-state";
@@ -33,8 +33,18 @@ import settings from "./module-settings";
 
 Vue.use(Vuex);
 
+let sharedMutationsOptions = {};
+if (IsRenderer()) {
+  // renderer
+  sharedMutationsOptions.type = "renderer";
+  sharedMutationsOptions.ipcRenderer = window.ipcSender.GetSafeIpcRenderer();
+} else {
+  // main
+  sharedMutationsOptions.type = "main";
+}
+
 export default new Vuex.Store({
-  plugins: [createSharedMutations()],
+  plugins: [createSharedMutations(sharedMutationsOptions)],
 
   modules: { account, vpnState, uiState, settings },
   strict: true,

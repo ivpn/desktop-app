@@ -106,14 +106,14 @@ const daemonResponses = Object.freeze({
 // Read information about connection parameters from a file
 function getDaemonConnectionParams_cb(callback) {
   let getConnectionInfoFile = function(fileCb) {
-    switch (os.platform()) {
-      case "darwin":
+    switch (Platform()) {
+      case PlatformEnum.macOS:
         fileCb(null, "/Library/Application Support/IVPN/port.txt");
         break;
-      case "linux":
+      case PlatformEnum.Linux:
         fileCb(null, "/opt/ivpn/mutable/port.txt");
         break;
-      case "win32": {
+      case PlatformEnum.Windows: {
         let Registry = require("winreg");
         let regKey = new Registry({
           hive: Registry.HKLM,
@@ -351,7 +351,6 @@ async function processResponse(response) {
         ManualDNS: obj.ManualDNS,
         IsCanPause: "IsCanPause" in obj ? obj.IsCanPause : null
       });
-      console.log(obj);
 
       requestGeoLookupAsync();
       break;

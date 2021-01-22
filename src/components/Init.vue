@@ -58,10 +58,9 @@
 </template>
 
 <script>
-const { shell } = require("electron");
 import spinner from "@/components/controls/control-spinner.vue";
 import { DaemonConnectionType } from "@/store/types";
-import sender from "./../ipc/renderer-sender";
+const sender = window.ipcSender;
 import config from "@/config";
 
 export default {
@@ -91,7 +90,7 @@ export default {
       }
     },
     visitWebsite() {
-      shell.openExternal(`https://www.ivpn.net`);
+      sender.shellOpenExternal(`https://www.ivpn.net`);
     }
   },
   computed: {

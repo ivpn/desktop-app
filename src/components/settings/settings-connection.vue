@@ -257,12 +257,10 @@
 </template>
 
 <script>
-const { dialog, getCurrentWindow, shell } = require("electron").remote;
-
 import spinner from "@/components/controls/control-spinner.vue";
 import { VpnTypeEnum, VpnStateEnum, PortTypeEnum, Ports } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 import { dateDefaultFormat } from "@/helpers/helpers";
 
 export default {
@@ -281,7 +279,7 @@ export default {
       if (
         this.$store.state.vpnState.connectionState !== VpnStateEnum.DISCONNECTED
       ) {
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "info",
           buttons: ["OK"],
           message: "You are now connected to IVPN",
@@ -298,13 +296,13 @@ export default {
     },
     onVPNConfigFileLocation: function() {
       const file = this.userDefinedOvpnFile;
-      if (file) shell.showItemInFolder(file);
+      if (file) sender.shellShowItemInFolder(file);
     },
     onWgKeyRegenerate: async function() {
       if (
         this.$store.state.vpnState.connectionState !== VpnStateEnum.DISCONNECTED
       ) {
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "info",
           buttons: ["OK"],
           message: "You are now connected to IVPN",
@@ -319,7 +317,7 @@ export default {
         await sender.WgRegenerateKeys();
       } catch (e) {
         console.log(`ERROR: ${e}`);
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
           message: "Error generating WireGuard keys",

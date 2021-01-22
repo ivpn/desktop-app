@@ -32,12 +32,8 @@
 </template>
 
 <script>
-const { dialog, getCurrentWindow } = require("electron").remote;
-const { shell } = require("electron");
-const os = require("os");
-
 import spinner from "@/components/controls/control-spinner.vue";
-import sender from "./../ipc/renderer-sender";
+const sender = window.ipcSender;
 import { API_SUCCESS, API_SESSION_LIMIT } from "@/api/statuscode";
 
 export default {
@@ -68,7 +64,7 @@ export default {
       if (this.$store.state.settings.isExpectedAccountToBeLoggedIn === true) {
         this.$store.dispatch("settings/isExpectedAccountToBeLoggedIn", false);
         setTimeout(() => {
-          dialog.showMessageBox(getCurrentWindow(), {
+          sender.showMessageBox({
             type: "info",
             buttons: ["OK"],
             message: `You are logged out.\n\nYou have been redirected to the login page to re-enter your credentials.`
@@ -115,7 +111,7 @@ export default {
         }
       } catch (e) {
         console.error(e);
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
           message: "Failed to login",
@@ -126,7 +122,7 @@ export default {
       }
     },
     CreateAccount() {
-      shell.openExternal(`https://www.ivpn.net/signup?os=${os.platform()}`);
+      sender.shellOpenExternal(`https://www.ivpn.net/signup`);
     },
     keyup(event) {
       if (event.keyCode === 13) {
