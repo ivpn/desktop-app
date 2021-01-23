@@ -1,5 +1,5 @@
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui-beta
+//  https://github.com/ivpn/desktop-app-ui2
 //
 //  Modified by Stelnykovych Alexandr
 //  Copyright (c) 2020 Privatus Limited.
