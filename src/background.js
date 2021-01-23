@@ -385,6 +385,30 @@ function getWindowIcon() {
   return null;
 }
 
+function createBrowserWindow(config) {
+  config.webPreferences = {
+    preload: path.join(__dirname, "preload.js"),
+
+    // Use pluginOptions.nodeIntegration, leave this alone
+    // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
+    //nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
+    nodeIntegration: false,
+    contextIsolation: true,
+    sandbox: true,
+    "disableBlinkFeatures ": "Auxclick"
+  };
+
+  let icon = getWindowIcon();
+  if (icon != null) config.icon = icon;
+
+  let retWnd = new BrowserWindow(config);
+  retWnd.webContents.on("will-navigate", (event, newURL) => {
+    console.log("[WARNING] Preventing navigation to:", newURL);
+    event.preventDefault();
+  });
+  return retWnd;
+}
+
 // CREATE WINDOW
 function createWindow() {
   // Create the browser window.
@@ -411,23 +435,10 @@ function createWindow() {
     title: "IVPN",
 
     titleBarStyle: titleBarStyle,
-    autoHideMenuBar: true,
-
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-
-      // Use pluginOptions.nodeIntegration, leave this alone
-      // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-      //nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
-      nodeIntegration: false,
-      contextIsolation: true
-    }
+    autoHideMenuBar: true
   };
 
-  let icon = getWindowIcon();
-  if (icon != null) windowConfig.icon = icon;
-
-  win = new BrowserWindow(windowConfig);
+  win = createBrowserWindow(windowConfig);
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
@@ -475,19 +486,10 @@ function createSettingsWindow(viewName) {
     center: true,
     title: "Settings",
 
-    autoHideMenuBar: true,
-
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      nodeIntegration: false,
-      contextIsolation: true
-    }
+    autoHideMenuBar: true
   };
 
-  let icon = getWindowIcon();
-  if (icon != null) windowConfig.icon = icon;
-
-  settingsWindow = new BrowserWindow(windowConfig);
+  settingsWindow = createBrowserWindow(windowConfig);
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
