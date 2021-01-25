@@ -68,7 +68,7 @@ goto :success
 
 :build_service
 	echo [*] Building IVPN service and dependencies...
-	call %SERVICE_REPO%\References\Windows\scripts\build-all.bat %APPVER% || exit /b 1
+	call %SERVICE_REPO%\References\Windows\scripts\build-all.bat %APPVER% exclude32bit || exit /b 1
 	goto :eof
 
 :build_cli
