@@ -334,8 +334,17 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 	// Update WG keys, if necessary
 	err := s.WireGuardGenerateKeys(true)
 	if err != nil {
-		log.Warning("Failed to regenerate WireGuard keys: ", err)
-		// TODO: notify UI
+		// If new WG keys regeneration failed but we still have active keys - keep connecting
+		// (this could happen, for example, when FW is enabled and we even not tried to make API request)
+		// Return error only if the keys had to be regenerated more than 3 days ago.
+		_, activePublicKey, _, _, lastUpdate, interval := s.WireGuardGetKeys()
+
+		if len(activePublicKey) > 0 && lastUpdate.Add(interval).Add(time.Hour*24*3).After(time.Now()) == true {
+			// continue connection
+			log.Warning(fmt.Errorf("WG KEY generation failed (%w). But we keep connecting (will try to regenerate it next 3 days)", err))
+		} else {
+			return err
+		}
 	}
 
 	createVpnObjfunc := func() (vpn.Process, error) {
@@ -716,6 +725,15 @@ func (s *Service) Connected() bool {
 		return false
 	}
 	return true
+}
+
+// ConnectedType returns connected VPN type (only if VPN connected!)
+func (s *Service) ConnectedType() (isConnected bool, connectedVpnType vpn.Type) {
+	vpnObj := s._vpn
+	if vpnObj == nil {
+		return false, 0
+	}
+	return true, vpnObj.Type()
 }
 
 // FirewallEnabled returns firewall state (enabled\disabled)
