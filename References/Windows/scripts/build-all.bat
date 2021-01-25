@@ -3,6 +3,9 @@
 setlocal
 set SCRIPTDIR=%~dp0
 set APPVER=%1
+
+rem E.g. 'exclude32bit'
+set EXTRA_ARG=%2
 set COMMIT=""
 set DATE=""
 
@@ -69,8 +72,13 @@ goto :success
 	set PATH=%SCRIPTDIR%..\.deps\wireguard-windows\.deps\go\bin;%PATH%
 	cd "%SCRIPTDIR%..\..\.."
 
-	call :build_agent_plat x86 386 		|| exit /b 1
-	call :build_agent_plat x86_64 amd64 	|| exit /b 1
+	IF not "%EXTRA_ARG%" == "exclude32bit" (
+		call :build_agent_plat x86 386 		|| exit /b 1
+	)
+	IF not "%EXTRA_ARG%" == "exclude64bit" (
+		call :build_agent_plat x86_64 amd64 	|| exit /b 1
+	)
+
 	goto :eof
 
 :build_agent_plat
@@ -84,10 +92,14 @@ goto :success
 	goto :eof
 
 :build_native_libs
-	echo [*] Building Native projects x86
-	msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x86 || exit /b 1
-	echo [*] Building Native projects x64
-	msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x64 || exit /b 1
+	IF not "%EXTRA_ARG%" == "exclude32bit" (
+		echo [*] Building Native projects x86
+		msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x86 || exit /b 1
+	)
+	IF not "%EXTRA_ARG%" == "exclude64bit" (
+		echo [*] Building Native projects x64
+		msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x64 || exit /b 1
+	)
 	goto :eof
 
 :build_wireguard
