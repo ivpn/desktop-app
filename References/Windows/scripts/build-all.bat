@@ -1,5 +1,4 @@
 @ECHO OFF
-
 setlocal
 set SCRIPTDIR=%~dp0
 set APPVER=%1
@@ -8,7 +7,7 @@ set DATE=""
 
 rem ==================================================
 rem DEFINE required WireGuard version here
-set WGVER=v0.3.4
+set WGVER=v0.0.38
 rem ==================================================
 
 echo ==================================================
@@ -45,6 +44,7 @@ if %needRebuildWireGuard% == 1 call :build_wireguard || goto :error
 
 call :update_servers_info || goto :error
 call :build_agent || goto :error
+call ::build_wintun_installer || goto :error
 
 (
 	rem Save Go variables (to be able to compile CLI with the same Go version)
@@ -138,6 +138,16 @@ goto :success
 	copy /y "%SCRIPTDIR%..\.deps\wireguard-windows\x86\wireguard.exe" 	"%SCRIPTDIR%..\WireGuard\x86\wireguard.exe" 	>nul 2>&1 || exit /b 1
 	copy /y "%SCRIPTDIR%..\.deps/wireguard-windows\amd64\wg.exe" 		"%SCRIPTDIR%..\WireGuard\x86_64\wg.exe" 		>nul 2>&1 || exit /b 1
 	copy /y "%SCRIPTDIR%..\.deps\wireguard-windows\amd64\wireguard.exe" "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe" 	>nul 2>&1 || exit /b 1
+	goto :eof
+
+:build_wintun_installer
+	echo [*] Building Wintun driver installer ...
+	cd "%SCRIPTDIR%..\WintunInstaller"
+	call build_installer.bat || exit /b 1
+	echo [*] Wintun installer build DONE. Copying compiled binaries ...
+	cd "%SCRIPTDIR%..\WintunInstaller"
+	copy /y "bin\WintunInstaller_x86.msi"		"%SCRIPTDIR%..\WireGuard\x86\WintunInstaller_x86.msi" 		>nul 2>&1 || exit /b 1
+	copy /y "bin\WintunInstaller_x86_64.msi"	"%SCRIPTDIR%..\WireGuard\x86_64\WintunInstaller_x86_64.msi"	>nul 2>&1 || exit /b 1
 	goto :eof
 
 :success
