@@ -70,7 +70,7 @@ func Launch() {
 
 	// Enable logging (if necessary)
 	// Logging can be enabled from command lone (-logging)
-	// or from previously saved daemon references
+	// or from previously saved daemon preferences
 	isLoggingEnabledArgument := false
 	for _, arg := range os.Args {
 		arg = strings.ToLower(arg)
@@ -90,6 +90,8 @@ func Launch() {
 		}
 	}
 
+	logger.Info("version:" + version.GetFullVersion())
+
 	if len(warnings) > 0 {
 		for _, w := range warnings {
 			logger.Warning(w)
@@ -105,8 +107,6 @@ func Launch() {
 		os.Exit(1)
 		return
 	}
-
-	logger.Info("version:" + version.GetFullVersion())
 
 	tzName, tzOffsetSec := time.Now().Zone()
 	log.Info("Starting IVPN daemon", fmt.Sprintf(" [%s]", runtime.GOOS), fmt.Sprintf(" [timezone: %s %d (%dh)]", tzName, tzOffsetSec, tzOffsetSec/(60*60)), " ...")
