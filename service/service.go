@@ -235,7 +235,7 @@ func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
 }
 
 // ConnectOpenVPN start OpenVPN connection
-func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
@@ -315,11 +315,11 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, firewallDuringConnection, stateChan)
+	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection, stateChan)
 }
 
 // ConnectWireGuard start WireGuard connection
-func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	// stop active connection (if exists)
 	if err := s.Disconnect(); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
@@ -334,8 +334,17 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 	// Update WG keys, if necessary
 	err := s.WireGuardGenerateKeys(true)
 	if err != nil {
-		log.Warning("Failed to regenerate WireGuard keys: ", err)
-		// TODO: notify UI
+		// If new WG keys regeneration failed but we still have active keys - keep connecting
+		// (this could happen, for example, when FW is enabled and we even not tried to make API request)
+		// Return error only if the keys had to be regenerated more than 3 days ago.
+		_, activePublicKey, _, _, lastUpdate, interval := s.WireGuardGetKeys()
+
+		if len(activePublicKey) > 0 && lastUpdate.Add(interval).Add(time.Hour*24*3).After(time.Now()) == true {
+			// continue connection
+			log.Warning(fmt.Errorf("WG KEY generation failed (%w). But we keep connecting (will try to regenerate it next 3 days)", err))
+		} else {
+			return err
+		}
 	}
 
 	createVpnObjfunc := func() (vpn.Process, error) {
@@ -363,10 +372,10 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, firewallDuringConnection, stateChan)
+	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection, stateChan)
 }
 
-func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	prefs := s.Preferences()
 	if prefs.Session.IsLoggedIn() == false {
 		return ErrorNotLoggedIn{}
@@ -392,7 +401,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		lastConnectionTryTime := time.Now()
 
 		// start connection
-		err = s.connect(vpnObj, s._manualDNS, firewallDuringConnection, stateChan)
+		err = s.connect(vpnObj, s._manualDNS, firewallOn, firewallDuringConnection, stateChan)
 		if err != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", err))
 			if s._requiredVpnState == Connect {
@@ -437,8 +446,10 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 	return nil
 }
 
-// Connect connect vpn
-func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+// Connect connect vpn.
+// Param 'firewallOn' - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored).
+// Param 'firewallDuringConnection' - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
+func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	var connectRoutinesWaiter sync.WaitGroup
 
 	// stop active connection (if exists)
@@ -617,7 +628,21 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallDuringC
 	}
 
 	log.Info("Initializing firewall")
-	if firewallDuringConnection == true {
+	// firewallOn - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored)
+	// firewallDuringConnection - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
+	if firewallOn == true {
+		fw, err := firewall.GetEnabled()
+		if err != nil {
+			log.Error("Failed to check firewall state:", err.Error())
+			return err
+		}
+		if fw == false {
+			if err := s.SetKillSwitchState(true); err != nil {
+				log.Error("Failed to enable firewall:", err.Error())
+				return err
+			}
+		}
+	} else if firewallDuringConnection == true {
 		// in case to enable FW for this connection parameter:
 		// - check initial FW state
 		// - if it disabled - enable it (will be disabled on disconnect)
@@ -716,6 +741,15 @@ func (s *Service) Connected() bool {
 		return false
 	}
 	return true
+}
+
+// ConnectedType returns connected VPN type (only if VPN connected!)
+func (s *Service) ConnectedType() (isConnected bool, connectedVpnType vpn.Type) {
+	vpnObj := s._vpn
+	if vpnObj == nil {
+		return false, 0
+	}
+	return true, vpnObj.Type()
 }
 
 // FirewallEnabled returns firewall state (enabled\disabled)

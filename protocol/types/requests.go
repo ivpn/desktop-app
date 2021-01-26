@@ -129,8 +129,13 @@ type WGHost struct {
 // Connect request to establish new VPN connection
 type Connect struct {
 	CommandBase
-	VpnType                    vpn.Type
-	CurrentDNS                 string
+	VpnType    vpn.Type
+	CurrentDNS string
+	// Enable firewall before connection
+	// (if true - the parameter 'firewallDuringConnection' will be ignored)
+	FirewallOn bool
+	// Enable firewall before connection and disable after disconnection
+	// (has effect only if Firewall not enabled before)
 	FirewallOnDuringConnection bool
 
 	WireGuardParameters struct {
