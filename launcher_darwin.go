@@ -45,7 +45,7 @@ func doPrepareToRun() error {
 		}
 		// "/usr/local/bin/ivpn"
 		log.Info("Creating symlink to IVPN CLI: ", linkpath)
-		err := shell.Exec(log, "ln", "-fs", "/Applications/IVPN.app/Contents/MacOS/cli/ivpn", linkpath)
+		err := shell.Exec(log, "/bin/ln", "-fs", "/Applications/IVPN.app/Contents/MacOS/cli/ivpn", linkpath)
 		if err != nil {
 			log.Error("Failed to create symlink to IVPN CLI: ", err)
 		}

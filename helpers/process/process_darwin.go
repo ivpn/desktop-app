@@ -37,7 +37,7 @@ import (
 // doGetPortOwnerPID returns PID of a process which is an owning of local TCP port
 func doGetPortOwnerPID(localTCPPort int) (int, error) {
 	//  lsof -i tcp:52994
-	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "lsof", "-n", "-i", fmt.Sprintf("tcp:%d", localTCPPort))
+	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "/usr/sbin/lsof", "-n", "-i", fmt.Sprintf("tcp:%d", localTCPPort))
 	if err != nil {
 		return -1, fmt.Errorf("Unable to determine PID of port owner for TCP:%d", localTCPPort)
 	}

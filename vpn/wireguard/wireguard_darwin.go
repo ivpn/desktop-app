@@ -300,7 +300,7 @@ func (wg *WireGuard) initializeConfiguration(utunName string) error {
 // Configure WireGuard interface
 // example command: ipconfig set utun7 MANUAL 10.0.0.121 255.255.255.0
 func (wg *WireGuard) initializeUnunInterface(utunName string) error {
-	return shell.Exec(log, "ipconfig", "set", utunName, "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask)
+	return shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask)
 }
 
 // WireGuard configuration
@@ -354,19 +354,19 @@ func (wg *WireGuard) setRoutes() error {
 
 	// Update main route
 	// example command: sudo route -n add -net 0/1 10.0.0.1
-	if err := shell.Exec(log, "route", "-n", "add", "-net", "0/1", wg.connectParams.hostLocalIP.String()); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-net", "0/1", wg.connectParams.hostLocalIP.String()); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
 	// Update routing to remote server (remote_server default_router 255.255.255)
 	// example command: sudo route -n add -net 145.239.239.55 192.168.1.1 255.255.255.255
-	if err := shell.Exec(log, "route", "-n", "add", "-net", wg.connectParams.hostIP.String(), wg.internals.defGateway.String(), "255.255.255.255"); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-net", wg.connectParams.hostIP.String(), wg.internals.defGateway.String(), "255.255.255.255"); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
 	// Update routing table
 	// example command: sudo route -n add -net 128.0.0.0 10.0.0.1 128.0.0.0
-	if err := shell.Exec(log, "route", "-n", "add", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String(), "128.0.0.0"); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String(), "128.0.0.0"); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
@@ -376,9 +376,9 @@ func (wg *WireGuard) setRoutes() error {
 func (wg *WireGuard) removeRoutes() error {
 	log.Info("Restoring routing table...")
 
-	shell.Exec(log, "route", "-n", "delete", "0/1", wg.connectParams.hostIP.String())
-	shell.Exec(log, "route", "-n", "delete", wg.connectParams.hostIP.String())
-	shell.Exec(log, "route", "-n", "delete", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String(), "128.0.0.0")
+	shell.Exec(log, "/sbin/route", "-n", "delete", "0/1", wg.connectParams.hostIP.String())
+	shell.Exec(log, "/sbin/route", "-n", "delete", wg.connectParams.hostIP.String())
+	shell.Exec(log, "/sbin/route", "-n", "delete", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String(), "128.0.0.0")
 
 	return nil
 }
