@@ -1,3 +1,3 @@
 #!/bin/sh
 
-#echo "[*] Before remove (<%= version %> : <%= pkg %> : $1)"
+#/usr/bin/echo "[*] Before remove (<%= version %> : <%= pkg %> : $1)"

@@ -1,3 +1,3 @@
 #!/bin/sh
 
-#echo "[*] Before install (<%= version %> : <%= pkg %> : $1)"
+#/usr/bin/echo "[*] Before install (<%= version %> : <%= pkg %> : $1)"
