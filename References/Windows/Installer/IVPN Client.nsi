@@ -494,7 +494,7 @@ Section "Uninstall"
   ; When service stopping - IVPN Client must also Close automatically
   ; anyway, there could be situations when IVPN Client not connected to service (cannot receive 'service exiting' notification.)
   ; Therefore, here we try to stop IVPN Client process manually.
-  nsExec::ExecToStack "taskkill /IM $\"${PROCESS_NAME}$\" /T /F"
+  nsExec::ExecToStack '"$SYSDIR\taskkill" /IM "${PROCESS_NAME}" /T /F'
   ; give some time to stop the process
   Sleep 1500
 
@@ -642,7 +642,7 @@ Function StopService
 	killservice:
 	; if we still here - service still not stopped. Killing it manually
 	DetailPrint "WARNING: Unable to stop service. Killing process ..."
-	nsExec::ExecToStack 'taskkill /fi "Services eq ${IVPN_SERVICE_NAME}" /F'
+	nsExec::ExecToStack '"$SYSDIR\taskkill" /fi "Services eq ${IVPN_SERVICE_NAME}" /F'
 	Pop $0 ; Return
 	Pop $1 ; Output
 	${If} $0 < 0
@@ -726,7 +726,7 @@ Function StopClient
 	DetailPrint "Terminating IVPN Client application..."
 
 	; stop client
-	nsExec::ExecToStack "taskkill /IM $\"${PROCESS_NAME}$\" /F"
+	nsExec::ExecToStack '"$SYSDIR\taskkill" /IM "${PROCESS_NAME}" /F'
 	Pop $0 ; Return
 	Pop $1 ; Output
 	${If} $0 != '0'
@@ -757,7 +757,7 @@ Function StopClient
 FunctionEnd
 
 Function IsClientStopped
-	nsExec::ExecToStack 'tasklist /FI "IMAGENAME eq ${PROCESS_NAME}"'
+	nsExec::ExecToStack '"$SYSDIR\tasklist" /FI "IMAGENAME eq ${PROCESS_NAME}"'
 	Pop $0 ; Return
 	Pop $1 ; Output
 	${If} $0 != '0'
@@ -849,7 +849,7 @@ Function CheckIsWin7DriverInstalled
 			MessageBox MB_ICONINFORMATION|MB_OK  "Windows 7 Service Pack 1 is not installed on your PC.$\nPlease, install ServicePack1.$\n$\nProbably, you would need to reinstall the application then.\
 				$\n$\nhttps://www.microsoft.com/en-us/download/details.aspx?id=5842" IDOK true ;IDCANCEL next
 				true:
-					ExecShell "" "iexplore.exe" "https://www.microsoft.com/en-us/download/details.aspx?id=5842"
+					;ExecShell "" "iexplore.exe" "https://www.microsoft.com/en-us/download/details.aspx?id=5842"
 					;nsExec::ExecToStack 'cmd /Q /C start /Q https://www.microsoft.com/en-us/download/details.aspx?id=5842'
 			;	next:
 			;Quit
@@ -857,7 +857,7 @@ Function CheckIsWin7DriverInstalled
 
 		checkRequiredWinUpdate:
 			; check is KB3033929 security update installed (if not - notify to user)
-			nsExec::ExecToStack 'cmd /Q /C "%SYSTEMROOT%\System32\wbem\wmic.exe qfe get hotfixid"'
+			nsExec::ExecToStack '"$SYSDIR\cmd" /Q /C "%SYSTEMROOT%\System32\wbem\wmic.exe qfe get hotfixid"'
 			Pop $0 ; Return
 			Pop $1 ; Output
 
@@ -876,14 +876,14 @@ Function CheckIsWin7DriverInstalled
 							$\nPlease, install Security Update(KB3033929). \
 							$\n$\nhttps://www.microsoft.com/en-us/download/details.aspx?id=46148" IDOK yes_x64 ;IDCANCEL quit
 							yes_x64:
-								ExecShell "" "iexplore.exe" "https://www.microsoft.com/en-us/download/details.aspx?id=46148"
+								;ExecShell "" "iexplore.exe" "https://www.microsoft.com/en-us/download/details.aspx?id=46148"
 								;nsExec::ExecToStack 'cmd start /Q https://www.microsoft.com/en-us/download/details.aspx?id=46148'
 					${Else}
 						MessageBox MB_ICONINFORMATION|MB_OK  "Security Update for Windows 7 (KB3033929) is not installed on your PC.\
 							$\nPlease, install Security Update(KB3033929). \
 							$\n$\nhttps://www.microsoft.com/en-in/download/details.aspx?id=46078" IDOK yes_x32 ;IDCANCEL quit
 							yes_x32:
-								ExecShell "" "iexplore.exe" "https://www.microsoft.com/en-in/download/details.aspx?id=46078"
+								;ExecShell "" "iexplore.exe" "https://www.microsoft.com/en-in/download/details.aspx?id=46078"
 								;nsExec::ExecToStack 'cmd start /Q https://www.microsoft.com/en-in/download/details.aspx?id=46078'
 					${EndIf}
 				;quit:
