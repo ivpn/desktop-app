@@ -183,7 +183,7 @@
       </div>
 
       <div class="flexRow paramBlock">
-        <div class="defColor paramName">Regenerate key every:</div>
+        <div class="defColor paramName">Rotate key every:</div>
         <select
           v-model="wgKeyRegenerationInterval"
           style="background: var(--background-color);"
@@ -241,7 +241,7 @@
         </div>
         <div class="flexRow detailedConfigParamBlock">
           <div class="defColor paramName">
-            Will be automatically regenerated:
+            Will be automatically rotated:
           </div>
           <div class="detailedParamValue">
             {{ wgKeysWillBeRegeneratedStr }}
@@ -299,19 +299,6 @@ export default {
       if (file) sender.shellShowItemInFolder(file);
     },
     onWgKeyRegenerate: async function() {
-      if (
-        this.$store.state.vpnState.connectionState !== VpnStateEnum.DISCONNECTED
-      ) {
-        sender.showMessageBoxSync({
-          type: "info",
-          buttons: ["OK"],
-          message: "You are now connected to IVPN",
-          detail:
-            "You can regenerate WireGuard keys only when IVPN is disconnected."
-        });
-        return;
-      }
-
       try {
         this.isProcessing = true;
         await sender.WgRegenerateKeys();

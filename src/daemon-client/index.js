@@ -833,10 +833,6 @@ async function Connect(entryServer, exitServer) {
     }
   }
 
-  if (store.state.settings.firewallActivateOnConnect === true) {
-    await EnableFirewall(true);
-  }
-
   let port = store.getters["settings/getPort"];
 
   if (settings.vpnType === VpnTypeEnum.OpenVPN) {
@@ -894,7 +890,8 @@ async function Connect(entryServer, exitServer) {
     Command: daemonRequests.Connect,
     VpnType: settings.vpnType,
     [vpnParamsPropName]: vpnParamsObj,
-    currentDNS
+    CurrentDNS: currentDNS,
+    FirewallOn: store.state.settings.firewallActivateOnConnect === true
   });
 }
 
@@ -1054,10 +1051,6 @@ async function SetObfsproxy() {
 }
 
 async function WgRegenerateKeys() {
-  if (store.state.vpnState.connectionState !== VpnStateEnum.DISCONNECTED) {
-    throw Error("Unable to generate WireGuard keys in connected state");
-  }
-
   await sendRecv({
     Command: daemonRequests.WireGuardGenerateNewKeys
   });
