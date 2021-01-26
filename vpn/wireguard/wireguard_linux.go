@@ -63,11 +63,11 @@ func (wg *WireGuard) init() error {
 	i, _ := net.InterfaceByName(wgInterfaceName)
 	if i != nil {
 		log.Info(fmt.Sprintf("Stopping WireGuard interface ('%s' expected to be stopped before the new connection)...", wgInterfaceName))
-		err := shell.Exec(log, "ip", "link", "set", "down", wgInterfaceName) // command: sudo ip link set down wgivpn
+		err := shell.Exec(log, "/usr/bin/ip", "link", "set", "down", wgInterfaceName) // command: sudo ip link set down wgivpn
 		if err != nil {
 			log.Warning(err)
 		}
-		err = shell.Exec(log, "ip", "link", "delete", wgInterfaceName) // command: sudo ip link delete wgivpn
+		err = shell.Exec(log, "/usr/bin/ip", "link", "delete", wgInterfaceName) // command: sudo ip link delete wgivpn
 		if err != nil {
 			log.Warning(err)
 		}
