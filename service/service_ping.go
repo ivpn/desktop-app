@@ -20,8 +20,6 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-// +build darwin
-
 package service
 
 import (
@@ -32,7 +30,10 @@ import (
 	"github.com/ivpn/desktop-app-daemon/ping"
 )
 
-// PingServers ping vpn servers
+// PingServers ping vpn servers.
+// In some cases the multiple (and simultaneous pings) are leading to OS crash on macOS and Windows.
+// It happens when installed some third-party 'security' software.
+// Therefore, we using ping algorithm which avoids simultaneous pings and doing it one-by-one
 func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, error) {
 
 	if s._vpn != nil {
@@ -135,7 +136,7 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 	result = funcPingIteration(300, &timeoutTime)
 
 	// The first ping result already received.
-	// So, not where is no rush to do second ping iteration in background
+	// So, now there is no rush to do second ping iteration. Doing it in background.
 	go func() {
 		defer func() {
 			s._isServersPingInProgress = false
