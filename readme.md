@@ -59,50 +59,56 @@ These instructions will get you a copy of the project up and running on your loc
 
 #### Windows  
 
-To compile IVPN service binary run the batch file from the terminal.  
-Use Developer Command Prompt for Visual Studio (required for building native sub-projects).  
-  
+**Note!**
+  IVPN Daemon must be installed appropriately on a target system.  
+  We recommend using [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a Windows installer for IVPN software.  
+
+  To compile IVPN service binary run the batch file from the terminal.  
+  Use Developer Command Prompt for Visual Studio (required for building native sub-projects).  
+
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
 References/Windows/scripts/build-all.bat
 ```
-The batch script will compile IVPN Service binary and all required dependencies.
-
-**Note!**
-IVPN Daemon must be installed appropriately on a target system.  
-We recommend using [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a Windows installer for IVPN software.
 
 #### macOS  
-  
+
+  **Note!**
+  IVPN Daemon must be installed appropriately on a target system.  
+  We recommend using [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a macOS DMG package for IVPN software.  
+
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
 References/macOS/scripts/build-all.sh
 ```
-The batch script will compile IVPN Service binary and all required dependencies (OpenVPN, WireGuard).
-Compiled binaries location:
+
+  The batch script will compile IVPN Service binary and all required dependencies (OpenVPN, WireGuard).
+  Compiled binaries location:
 
   - WireGuard:  `References/macOS/_deps/wg_inst`
   - OpenVPN:  `References/macOS/_deps/openvpn_inst/bin`
   - IVPN Service: `IVPN Agent`
 
-**Note!** 
-In order to run application as macOS daemon, the binary must be signed by Apple Developer ID.
-**Note!**
-IVPN Daemon must be installed appropriately on a target system. We recommend using [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a macOS DMG package for IVPN software.
+  **Note!** 
+  In order to run application as macOS daemon, the binary must be signed by Apple Developer ID.
 
 #### Linux  
-  
+
+**Note!**
+  IVPN Daemon must be installed appropriately on a target system.  
+  We recommend using:  
+    - [IVPN CLI](https://github.com/ivpn/desktop-app-cli) project to build a 'base' Linux redistributable packages of IVPN software  
+    - [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a 'UI' Linux redistributable packages of IVPN software  
+
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
 ./References/Linux/scripts/build-all.sh  
 ```
-The compiled binary can be found at `References/Linux/scripts/_out_bin`
-
-**Note!**
-IVPN Daemon must be installed appropriately on a target system. We recommend using [IVPN CLI](https://github.com/ivpn/desktop-app-cli) project to build a Linux redistributable packages of IVPN software.
+  
+  The compiled binary can be found at `References/Linux/scripts/_out_bin`
 
 <a name="versioning"></a>
 ## Versioning
