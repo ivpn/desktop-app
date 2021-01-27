@@ -39,7 +39,7 @@ These instructions will get you a copy of the project up and running on your loc
 #### Windows
 
   - Windows 10+
-  - Build Tools for Visual Studio 2019 (ensure Windows SDK 10.0 is installed)
+  - Build Tools for Visual Studio 2019 (ensure 'Windows SDK 10.0' and 'MSVC v142 C++ x64 build tools' is installed)
   - Go 1.13+ (downloads automatically by the build script)
   - Git
 
@@ -69,7 +69,7 @@ These instructions will get you a copy of the project up and running on your loc
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
-References/Windows/scripts/build-all.bat
+References/Windows/scripts/build-all.bat <VERSION_X.X.X>
 ```
 
 #### macOS  
@@ -81,7 +81,7 @@ References/Windows/scripts/build-all.bat
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
-References/macOS/scripts/build-all.sh
+References/macOS/scripts/build-all.sh -v <VERSION_X.X.X>
 ```
 
   The batch script will compile IVPN Service binary and all required dependencies (OpenVPN, WireGuard).
@@ -105,7 +105,7 @@ References/macOS/scripts/build-all.sh
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
-./References/Linux/scripts/build-all.sh  
+./References/Linux/scripts/build-all.sh -v <VERSION_X.X.X>
 ```
   
   The compiled binary can be found at `References/Linux/scripts/_out_bin`
