@@ -1,14 +1,16 @@
 # IVPN Daemon (Windows/macOS/Linux)
 
-**IVPN Daemon** is a core module of IVPN Client for desktop platforms (Windows/macOS/Linux) built mostly using Go language. It runs under privileged user as a system service/daemon.  
-Some of the features include:
-  - multiple protocols (OpenVPN, WireGuard)
-  - Kill-switch
-  - custom DNS
-  - Multi-Hop
-  - AntiTracker
+**IVPN Daemon** is a core module of IVPN Client software for desktop platforms (Windows/macOS/Linux) built mostly using Go language.  
+It runs under privileged user as a system service/daemon.  
 
-This project is in use by [IVPN Client UI](https://github.com/ivpn/desktop-app-ui) and [IVPN CLI](https://github.com/ivpn/desktop-app-cli) projects.
+Some of the features include:  
+  - multiple protocols (OpenVPN, WireGuard)  
+  - Kill-switch  
+  - custom DNS  
+  - Multi-Hop  
+  - AntiTracker  
+  
+This project is in use by [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) and [IVPN CLI](https://github.com/ivpn/desktop-app-cli) projects.
 
 IVPN Client app is distributed on the official site [www.ivpn.net](https://www.ivpn.net).  
 
@@ -37,11 +39,8 @@ These instructions will get you a copy of the project up and running on your loc
 #### Windows
 
   - Windows 10+
-  - NSIS installer
-  - Microsoft Visual Studio Community 2019 or Build Tools for Visual Studio 2019
-    (ensure Windows SDK 10.0 is installed)
+  - Build Tools for Visual Studio 2019 (ensure Windows SDK 10.0 is installed)
   - Go 1.13+ (downloads automatically by the build script)
-  - WiX Toolset (downloads automatically by the build script)
   - Git
 
 #### macOS
@@ -53,13 +52,16 @@ These instructions will get you a copy of the project up and running on your loc
 
 #### Linux
   - Go 1.13+
+  - packages: 'rpm' and 'libiw-dev'
   - Git
 
 ### Compilation
 
-#### Windows
+#### Windows  
 
-To compile IVPN service binary run the batch file from the terminal. Use Developer Command Prompt for Visual Studio (required for building native sub-projects).
+To compile IVPN service binary run the batch file from the terminal.  
+Use Developer Command Prompt for Visual Studio (required for building native sub-projects).  
+  
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
@@ -67,9 +69,12 @@ References/Windows/scripts/build-all.bat
 ```
 The batch script will compile IVPN Service binary and all required dependencies.
 
-#### macOS
+**Note!**
+IVPN Daemon must be installed appropriately on a target system.  
+We recommend using [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a Windows installer for IVPN software.
 
-To compile IVPN daemon binary run the batch file from the terminal.
+#### macOS  
+  
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
@@ -82,20 +87,13 @@ Compiled binaries location:
   - OpenVPN:  `References/macOS/_deps/openvpn_inst/bin`
   - IVPN Service: `IVPN Agent`
 
-**Note!** In order to run application as macOS daemon, the binary must be signed by Apple Developer ID.
+**Note!** 
+In order to run application as macOS daemon, the binary must be signed by Apple Developer ID.
+**Note!**
+IVPN Daemon must be installed appropriately on a target system. We recommend using [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a macOS DMG package for IVPN software.
 
-#### Linux
-Some packages required to be installed to be able to compile daemon sources.  
-Example of installing required packages for Ubuntu:
-``` 
-#install 'libiw-dev' package
-sudo apt-get install libiw-dev
-
-#install 'rpm' package
-sudo apt install rpm
-```
-
-Run build script:
+#### Linux  
+  
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
@@ -104,7 +102,7 @@ cd desktop-app-daemon
 The compiled binary can be found at `References/Linux/scripts/_out_bin`
 
 **Note!**
-IVPN Daemon must be installed appropriately on a target system. We recommend referring the [IVPN CLI](https://github.com/ivpn/desktop-app-cli) project for the build instructions to compile IVPN redistributable packages for Linux.
+IVPN Daemon must be installed appropriately on a target system. We recommend using [IVPN CLI](https://github.com/ivpn/desktop-app-cli) project to build a Linux redistributable packages of IVPN software.
 
 <a name="versioning"></a>
 ## Versioning
