@@ -1,6 +1,6 @@
 //
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui-beta
+//  https://github.com/ivpn/desktop-app-ui2
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -19,6 +19,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
+import { IsRenderer } from "../helpers/helpers";
 
 export const PlatformEnum = Object.freeze({
   unknown: 0,
@@ -27,12 +28,16 @@ export const PlatformEnum = Object.freeze({
   Windows: 3
 });
 
+import os from "os";
+
 export function Platform() {
   //return PlatformEnum.macOS;
   //return PlatformEnum.Linux;
   //return PlatformEnum.Windows;
 
-  const os = require("os");
+  if (IsRenderer()) return window.ipcSender.Platform();
+
+  // main process
   switch (os.platform()) {
     case "win32":
       return PlatformEnum.Windows;

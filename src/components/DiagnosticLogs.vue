@@ -32,8 +32,7 @@
 </template>
 
 <script>
-import sender from "@/ipc/renderer-sender";
-const { dialog, getCurrentWindow } = require("electron").remote;
+const sender = window.ipcSender;
 
 export default {
   props: {
@@ -73,7 +72,7 @@ export default {
           this.diagnosticDataObj
         );
 
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "info",
           buttons: ["OK"],
           message: "Report sent to IVPN",

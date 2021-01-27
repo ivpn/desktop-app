@@ -1,6 +1,6 @@
 //
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui-beta
+//  https://github.com/ivpn/desktop-app-ui2
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -20,16 +20,15 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-const electron = require("electron");
-const remote = electron.remote;
-const Menu = remote.Menu;
+import { Menu, ipcMain } from "electron";
 
-const keyCodes = {
-  V: 86,
-  C: 67,
-  X: 88,
-  A: 65
-};
+ipcMain.on("renderer-request-show-context-menu-copy", () => {
+  InputMenuLabel.popup();
+});
+
+ipcMain.on("renderer-request-show-context-menu-edit", () => {
+  InputMenuInput.popup();
+});
 
 // Default COPY/PASTE context menu for all input elements
 const InputMenuInput = Menu.buildFromTemplate([
@@ -64,7 +63,6 @@ const InputMenuInput = Menu.buildFromTemplate([
     role: "selectall"
   }
 ]);
-
 // Default COPY context menu for all label elements
 const InputMenuLabel = Menu.buildFromTemplate([
   {
@@ -76,51 +74,3 @@ const InputMenuLabel = Menu.buildFromTemplate([
     role: "selectall"
   }
 ]);
-
-export function InitDefaultCopyMenus() {
-  document.body.addEventListener("contextmenu", e => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    let node = e.target;
-
-    while (node) {
-      if (
-        node.nodeName.match(/^(input|textarea)$/i) ||
-        node.isContentEditable
-      ) {
-        InputMenuInput.popup(remote.getCurrentWindow());
-        break;
-      } else if (node.nodeName.match(/^(label)$/i)) {
-        if (getSelection().toString()) {
-          InputMenuLabel.popup(remote.getCurrentWindow());
-        }
-        break;
-      }
-      node = node.parentNode;
-    }
-  });
-
-  // Ability to get working Copy\Paste to 'input' elements
-  // without modification application menu (which is required for macOS)
-  document.onkeydown = function(event) {
-    if (event.ctrlKey || event.metaKey) {
-      // detect ctrl or cmd
-      const field = document.activeElement;
-      switch (event.which) {
-        case keyCodes.A:
-          document.execCommand("selectall");
-          return false;
-        case keyCodes.V:
-          if (field != null) document.execCommand("paste");
-          return false;
-        case keyCodes.C:
-          document.execCommand("copy");
-          return false;
-        case keyCodes.X:
-          if (field != null) document.execCommand("cut");
-          return false;
-      }
-    }
-  };
-}

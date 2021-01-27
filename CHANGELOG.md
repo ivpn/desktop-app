@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 3.2.3 - 2021-01-06
+
+[NEW] 'On-demand firewall' configuration divided into two options: 'activate on connect' and 'deactivate on disconnect'  
+[NEW] Removed from settings "Deactivate IVPN Firewall on IVPN Client exit"  
+[IMPROVED] (Linux) Added package dependency from base (ivpn) package  
+[FIXED] Do not show the 'pause' button if not able to pause  
+[FIXED] (Linux) Minor fix in package ‘uninstallers’  
+
 ## Version 3.2.0 - 2020-11-09
 
 [NEW] Dark Mode  

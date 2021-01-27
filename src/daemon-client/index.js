@@ -1,6 +1,6 @@
 //
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui-beta
+//  https://github.com/ivpn/desktop-app-ui2
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -25,6 +25,7 @@ const fs = require("fs");
 const net = require("net");
 const os = require("os");
 
+import { Platform, PlatformEnum } from "@/platform/platform";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { API_SUCCESS } from "@/api/statuscode";
 import { IsNewerVersion } from "@/app-updater";
@@ -103,36 +104,50 @@ const daemonResponses = Object.freeze({
 });
 
 // Read information about connection parameters from a file
-function getDaemonConnectionParams() {
-  try {
-    let fpath = "";
-    switch (os.platform()) {
-      case "win32":
-        // TODO: READ CORRECT PATH FROM REGISTRY
-        fpath = "C:/Program Files/IVPN Client/etc/port.txt";
+function getDaemonConnectionParams_cb(callback) {
+  let getConnectionInfoFile = function(fileCb) {
+    switch (Platform()) {
+      case PlatformEnum.macOS:
+        fileCb(null, "/Library/Application Support/IVPN/port.txt");
         break;
-      case "darwin":
-        fpath = "/Library/Application Support/IVPN/port.txt";
+      case PlatformEnum.Linux:
+        fileCb(null, "/opt/ivpn/mutable/port.txt");
         break;
-      case "linux":
-        fpath = "/opt/ivpn/mutable/port.txt";
+      case PlatformEnum.Windows: {
+        let Registry = require("winreg");
+        let regKey = new Registry({
+          hive: Registry.HKLM,
+          key: "\\Software\\IVPN Client"
+        });
+        regKey.get(Registry.DEFAULT_VALUE, function(err, item) {
+          if (err)
+            fileCb(`Error reading installation path (registry):${err}`, null);
+          else fileCb(null, `${item.value}\\etc\\port.txt`);
+        });
         break;
+      }
       default:
-        throw new Error(`Not supported platform: '${os.platform()}'`);
+        fileCb(`Not supported platform: '${os.platform()}'`, null);
     }
+  };
 
-    const connData = fs.readFileSync(fpath).toString();
-
-    const parsed = connData.split(":");
-    if (parsed.length !== 2) {
-      throw new Error("Failed to parse port-info file");
+  getConnectionInfoFile((err, path) => {
+    if (err) callback(err, null);
+    else {
+      try {
+        const connData = fs.readFileSync(path).toString();
+        const parsed = connData.split(":");
+        if (parsed.length !== 2)
+          throw new Error("Failed to parse port-info file");
+        callback(null, { port: parsed[0], secret: parsed[1] });
+      } catch (e) {
+        callback(
+          new Error(`Unable to obtain IVPN daemon connection parameters: ${e}`),
+          null
+        );
+      }
     }
-
-    return { port: parsed[0], secret: parsed[1] };
-  } catch (e) {
-    console.error("Unable to obtain IVPN daemon connection parameters: ", e);
-  }
-  return null;
+  });
 }
 
 // JavaScript does not support int64 (and do not know how to serialize it)
@@ -336,7 +351,6 @@ async function processResponse(response) {
         ManualDNS: obj.ManualDNS,
         IsCanPause: "IsCanPause" in obj ? obj.IsCanPause : null
       });
-      console.log(obj);
 
       requestGeoLookupAsync();
       break;
@@ -463,131 +477,133 @@ function onDataReceived(received) {
 //////////////////////////////////////////////////////////////////////////////////////////
 /// PUBLIC METHODS
 //////////////////////////////////////////////////////////////////////////////////////////
-function ConnectToDaemon() {
+function ConnectToDaemon(setConnState) {
   if (socket != null) {
     socket.destroy();
     socket = null;
   }
 
+  if (setConnState === undefined)
+    setConnState = function(state) {
+      store.commit("daemonConnectionState", state);
+    };
+
   return new Promise((resolve, reject) => {
-    let portInfo = null;
+    let connectF = function(err, portInfo) {
+      if (err) {
+        let errStr = `Unable to obtain IVPN daemon connection parameters: ${err}`;
+        console.error("DAEMON CONNECTION ERROR: " + errStr);
+        setConnState(DaemonConnectionType.NotConnected);
+        reject(errStr);
+        return;
+      }
 
-    try {
-      portInfo = getDaemonConnectionParams();
-    } catch (e) {
-      store.commit("daemonConnectionState", DaemonConnectionType.NotConnected);
-      reject(e);
-      return;
-    }
-    if (!portInfo) {
-      store.commit("daemonConnectionState", DaemonConnectionType.NotConnected);
-      reject("IVPN daemon connection info is unknown.");
-      return;
-    }
+      if (!portInfo) {
+        setConnState(DaemonConnectionType.NotConnected);
+        reject("IVPN daemon connection info is unknown.");
+        return;
+      }
 
-    // initialize current default state
-    store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED);
+      // initialize current default state
+      store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED);
 
-    socket = new net.Socket();
-    socket.setNoDelay(true);
+      socket = new net.Socket();
+      socket.setNoDelay(true);
 
-    socket
-      .on("connect", async () => {
-        // SEND HELLO
-        // eslint-disable-next-line no-undef
-        const secretBInt = BigInt(`0x${portInfo.secret}`);
+      socket
+        .on("connect", async () => {
+          // SEND HELLO
+          // eslint-disable-next-line no-undef
+          const secretBInt = BigInt(`0x${portInfo.secret}`);
 
-        let appVersion = "";
-        try {
-          appVersion = `${require("electron").app.getVersion()}:Electron UI`;
-        } catch (e) {
-          console.error(e);
-        }
-        const helloReq = {
-          Command: daemonRequests.Hello,
-          Version: appVersion,
-          Secret: secretBInt,
-          GetServersList: true,
-          GetStatus: true,
-          GetConfigParams: true,
-          KeepDaemonAlone: true
-        };
-
-        try {
-          store.commit(
-            "daemonConnectionState",
-            DaemonConnectionType.Connecting
-          );
-          await sendRecv(helloReq, null, 10000);
-
-          // the 'store.state.daemonVersion' and 'store.state.daemonIsOldVersionError' must be already initialized
-          if (store.state.daemonIsOldVersionError === true) {
-            store.commit(
-              "daemonConnectionState",
-              DaemonConnectionType.NotConnected
-            );
-
-            socket.destroy();
-            socket = null;
-
-            const err = new Error(
-              `Unsupported IVPN Daemon version: v${store.state.daemonVersion} (minimum required v${config.MinRequiredDaemonVer})`
-            );
-            log.error(err);
-            reject(err); // REJECT
-            return;
+          let appVersion = "";
+          try {
+            appVersion = `${require("electron").app.getVersion()}:Electron UI`;
+          } catch (e) {
+            console.error(e);
           }
+          const helloReq = {
+            Command: daemonRequests.Hello,
+            Version: appVersion,
+            Secret: secretBInt,
+            GetServersList: true,
+            GetStatus: true,
+            GetConfigParams: true,
+            KeepDaemonAlone: true
+          };
 
-          // Saving 'connected' state to a daemon
-          store.commit("daemonConnectionState", DaemonConnectionType.Connected);
+          try {
+            setConnState(DaemonConnectionType.Connecting);
+            await sendRecv(helloReq, null, 10000);
 
-          // send logging + obfsproxy configuration
-          SetLogging();
-          SetObfsproxy();
+            // the 'store.state.daemonVersion' and 'store.state.daemonIsOldVersionError' must be already initialized
+            if (store.state.daemonIsOldVersionError === true) {
+              setConnState(DaemonConnectionType.NotConnected);
 
-          setTimeout(async () => {
-            // Till this time we already must receive 'connected' info (if we are connected)
-            // If we are in disconnected state and 'settings.autoConnectOnLaunch' enabled => start connection
-            if (
-              store.state.settings.autoConnectOnLaunch &&
-              store.getters["vpnState/isDisconnected"]
-            ) {
-              console.log(
-                "Connecting on app start according to configuration (autoConnectOnLaunch)"
+              socket.destroy();
+              socket = null;
+
+              const err = new Error(
+                `Unsupported IVPN Daemon version: v${store.state.daemonVersion} (minimum required v${config.MinRequiredDaemonVer})`
               );
-              Connect();
+              log.error(err);
+              reject(err); // REJECT
+              return;
             }
-          }, 0);
 
-          const pingRetryCount = 5;
-          const pingTimeOutMs = 5000;
-          PingServers(pingRetryCount, pingTimeOutMs);
+            // Saving 'connected' state to a daemon
+            setConnState(DaemonConnectionType.Connected);
 
-          resolve(); // RESOLVE
-        } catch (e) {
-          log.error(`Error receiving Hello response: ${e}`);
-          reject(e); // REJECT
-        }
-      })
-      .on("data", onDataReceived);
+            // send logging + obfsproxy configuration
+            SetLogging();
+            SetObfsproxy();
 
-    socket.on("close", () => {
-      // Save 'disconnected' state
-      store.commit("daemonConnectionState", DaemonConnectionType.NotConnected);
-      log.debug("Connection closed");
-    });
+            setTimeout(async () => {
+              // Till this time we already must receive 'connected' info (if we are connected)
+              // If we are in disconnected state and 'settings.autoConnectOnLaunch' enabled => start connection
+              if (
+                store.state.settings.autoConnectOnLaunch &&
+                store.getters["vpnState/isDisconnected"]
+              ) {
+                console.log(
+                  "Connecting on app start according to configuration (autoConnectOnLaunch)"
+                );
+                Connect();
+              }
+            }, 0);
 
-    socket.on("error", e => {
-      log.error(`Connection error: ${e}`);
-      reject(e);
-    });
+            const pingRetryCount = 5;
+            const pingTimeOutMs = 5000;
+            PingServers(pingRetryCount, pingTimeOutMs);
 
-    log.debug("Connecting to daemon...");
-    try {
-      socket.connect(parseInt(portInfo.port, 10), "127.0.0.1");
-    } catch (e) {
-      console.error("Daemon connection error: ", e);
-    }
+            resolve(); // RESOLVE
+          } catch (e) {
+            log.error(`Error receiving Hello response: ${e}`);
+            reject(e); // REJECT
+          }
+        })
+        .on("data", onDataReceived);
+
+      socket.on("close", () => {
+        // Save 'disconnected' state
+        setConnState(DaemonConnectionType.NotConnected);
+        log.debug("Connection closed");
+      });
+
+      socket.on("error", e => {
+        log.error(`Connection error: ${e}`);
+        reject(e);
+      });
+
+      log.debug("Connecting to daemon...");
+      try {
+        socket.connect(parseInt(portInfo.port, 10), "127.0.0.1");
+      } catch (e) {
+        console.error("Daemon connection error: ", e);
+      }
+    };
+
+    getDaemonConnectionParams_cb(connectF);
   });
 }
 
@@ -632,6 +648,35 @@ async function AccountStatus() {
   return await sendRecv({ Command: daemonRequests.AccountStatus }, [
     daemonResponses.AccountStatusResp
   ]);
+}
+
+async function GetAppUpdateInfo() {
+  try {
+    let apiAlias = "";
+
+    switch (Platform()) {
+      case PlatformEnum.Windows:
+        apiAlias = "updateInfo_Windows";
+        break;
+      case PlatformEnum.macOS:
+        apiAlias = "updateInfo_macOS";
+        break;
+      case PlatformEnum.Linux:
+        apiAlias = "updateInfo_Linux";
+        break;
+      default:
+        throw new Error("Unsupported platform");
+    }
+
+    let resp = await sendRecv(
+      { Command: daemonRequests.APIRequest, APIPath: apiAlias },
+      [daemonResponses.APIResponse]
+    );
+    return JSON.parse(`${resp.ResponseData}`);
+  } catch (e) {
+    console.error("Failed to check latest update info: ", e);
+  }
+  return null;
 }
 
 async function GeoLookup(isRetryTry) {
@@ -788,10 +833,6 @@ async function Connect(entryServer, exitServer) {
     }
   }
 
-  if (store.state.settings.firewallActivateOnConnect === true) {
-    await EnableFirewall(true);
-  }
-
   let port = store.getters["settings/getPort"];
 
   if (settings.vpnType === VpnTypeEnum.OpenVPN) {
@@ -849,7 +890,8 @@ async function Connect(entryServer, exitServer) {
     Command: daemonRequests.Connect,
     VpnType: settings.vpnType,
     [vpnParamsPropName]: vpnParamsObj,
-    currentDNS
+    CurrentDNS: currentDNS,
+    FirewallOn: store.state.settings.firewallActivateOnConnect === true
   });
 }
 
@@ -1009,10 +1051,6 @@ async function SetObfsproxy() {
 }
 
 async function WgRegenerateKeys() {
-  if (store.state.vpnState.connectionState !== VpnStateEnum.DISCONNECTED) {
-    throw Error("Unable to generate WireGuard keys in connected state");
-  }
-
   await sendRecv({
     Command: daemonRequests.WireGuardGenerateNewKeys
   });
@@ -1039,6 +1077,9 @@ export default {
   Login,
   Logout,
   AccountStatus,
+
+  GetAppUpdateInfo,
+
   GeoLookup,
   PingServers,
   KillSwitchGetStatus,

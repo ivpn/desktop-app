@@ -152,9 +152,8 @@
 </template>
 
 <script>
-const { dialog, getCurrentWindow } = require("electron").remote;
 import trustedNetConfigControl from "@/components/controls/control-trusted-network-config.vue";
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 
 export default {
   components: {
@@ -207,7 +206,7 @@ export default {
       this.$store.dispatch("settings/wifi", wifi);
     },
     onResetToDefaultSettings() {
-      let actionNo = dialog.showMessageBoxSync(getCurrentWindow(), {
+      let actionNo = sender.showMessageBoxSync({
         type: "question",
         buttons: ["Yes", "Cancel"],
         message: "Reset all settings to default values",
@@ -232,9 +231,8 @@ export default {
     availableWiFiNetworks: function() {
       var nets = [];
       try {
-        nets = this.$store.state.vpnState.availableWiFiNetworks.filter(
-          w => w.SSID
-        );
+        let allNets = this.$store.state.vpnState.availableWiFiNetworks;
+        if (allNets != null) nets = allNets.filter(w => w.SSID);
       } catch (e) {
         console.error(e);
       }

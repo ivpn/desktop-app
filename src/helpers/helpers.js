@@ -1,6 +1,6 @@
 //
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui-beta
+//  https://github.com/ivpn/desktop-app-ui2
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -27,6 +27,11 @@ export function isStrNullOrEmpty(str) {
 export function enumValueName(theEnum, value) {
   for (var k in theEnum) if (theEnum[k] == value) return k;
   return null;
+}
+
+export function IsRenderer() {
+  if (typeof window !== "undefined") return true;
+  return false;
 }
 
 export function isValidURL(str, isIgnoreProtocol) {

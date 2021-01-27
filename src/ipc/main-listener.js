@@ -1,6 +1,6 @@
 //
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui-beta
+//  https://github.com/ivpn/desktop-app-ui2
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -25,16 +25,22 @@ import {
   SentryIsAbleToUse
 } from "@/sentry/sentry.js";
 
+import { ipcMain, nativeTheme, dialog, app, shell } from "electron";
+import { Platform } from "@/platform/platform";
+
 import client from "../daemon-client";
 import { CheckUpdates, Upgrade, IsAbleToCheckUpdate } from "@/app-updater";
 import { AutoLaunchIsEnabled, AutoLaunchSet } from "@/auto-launch";
 import store from "@/store";
+import config from "@/config";
 
-const { ipcMain, nativeTheme } = require("electron");
+import os from "os";
 
-ipcMain.handle("renderer-request-connect-to-daemon", async () => {
-  return await client.ConnectToDaemon();
-});
+// info: this event is processing in 'background.js'
+//ipcMain.handle("renderer-request-connect-to-daemon", async () => {
+//  return await client.ConnectToDaemon();
+//});
+
 ipcMain.handle("renderer-request-refresh-storage", async () => {
   // function using to re-apply all mutations
   // This is required to send to renderer processes current storage state
@@ -193,4 +199,64 @@ ipcMain.on("renderer-request-ui-color-scheme-get", event => {
 ipcMain.handle("renderer-request-ui-color-scheme-set", (event, theme) => {
   store.dispatch("settings/colorTheme", theme);
   nativeTheme.themeSource = theme;
+});
+
+// DIALOG
+ipcMain.on("renderer-request-showmsgboxsync", (event, diagConfig) => {
+  event.returnValue = dialog.showMessageBoxSync(
+    event.sender.getOwnerBrowserWindow(),
+    diagConfig
+  );
+});
+ipcMain.handle("renderer-request-showmsgbox", async (event, diagConfig) => {
+  return await dialog.showMessageBox(
+    event.sender.getOwnerBrowserWindow(),
+    diagConfig
+  );
+});
+
+// WINDOW
+ipcMain.handle("renderer-request-UI-minimize", async (event, isMinimize) => {
+  let win = event.sender.getOwnerBrowserWindow();
+  if (win == null) return null;
+  const animate = false;
+  if (isMinimize)
+    return await win.setBounds({ width: config.MinimizedUIWidth }, animate);
+  else return await win.setBounds({ width: config.MaximizedUIWidth }, animate);
+});
+ipcMain.handle("renderer-request-close-current-window", async event => {
+  return await event.sender.getOwnerBrowserWindow().close();
+});
+
+// SHELL
+ipcMain.handle(
+  "renderer-request-shell-show-item-in-folder",
+  async (event, file) => {
+    return await shell.showItemInFolder(file);
+  }
+);
+ipcMain.handle("renderer-request-shell-open-external", async (event, uri) => {
+  if (uri == null) return;
+  if (
+    uri != config.URLsAllowedPrefix &&
+    !uri.startsWith(config.URLsAllowedPrefix + "/")
+  ) {
+    throw Error(
+      `Not allowed to open links which are not starting from '${config.URLsAllowedPrefix}'`
+    );
+  }
+  return shell.openExternal(uri);
+});
+
+// OS
+ipcMain.on("renderer-request-os-release", event => {
+  event.returnValue = os.release();
+});
+ipcMain.on("renderer-request-platform", event => {
+  event.returnValue = Platform();
+});
+
+// APP
+ipcMain.on("renderer-request-app-getversion", event => {
+  event.returnValue = app.getVersion();
 });

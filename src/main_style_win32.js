@@ -1,2 +1,2 @@
-require("@/assets/fonts/fonts_windows.scss");
-require("@/components/scss/platform/windows.scss");
+import "@/assets/fonts/fonts_windows.scss";
+import "@/components/scss/platform/windows.scss";

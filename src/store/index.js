@@ -1,6 +1,6 @@
 //
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui-beta
+//  https://github.com/ivpn/desktop-app-ui2
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -22,9 +22,9 @@
 
 import Vue from "vue";
 import Vuex from "vuex";
-import { createSharedMutations } from "vuex-electron";
+import createSharedMutations from "./vuex-modules/shared-mutations.js";
 
-import { isStrNullOrEmpty } from "../helpers/helpers";
+import { isStrNullOrEmpty, IsRenderer } from "../helpers/helpers";
 
 import account from "./module-account";
 import vpnState from "./module-vpn-state";
@@ -33,8 +33,18 @@ import settings from "./module-settings";
 
 Vue.use(Vuex);
 
+let sharedMutationsOptions = {};
+if (IsRenderer()) {
+  // renderer
+  sharedMutationsOptions.type = "renderer";
+  sharedMutationsOptions.ipcRenderer = window.ipcSender.GetSafeIpcRenderer();
+} else {
+  // main
+  sharedMutationsOptions.type = "main";
+}
+
 export default new Vuex.Store({
-  plugins: [createSharedMutations()],
+  plugins: [createSharedMutations(sharedMutationsOptions)],
 
   modules: { account, vpnState, uiState, settings },
   strict: true,
@@ -42,6 +52,7 @@ export default new Vuex.Store({
     daemonConnectionState: null, // DaemonConnectionType from "./types";
     daemonVersion: "",
     daemonIsOldVersionError: false,
+    daemonIsInstalling: false,
 
     configParams: {
       UserDefinedOvpnFile: ""
@@ -85,9 +96,7 @@ export default new Vuex.Store({
             "description": "UI Bugfix description"
           }
         ]
-      },
-      "downloadPageLink": "https://www.ivpn.net/...",
-      "changelogLink": "https://www.ivpn.net/setup/..."
+      }
     }*/
     latestVersionInfo: null
   },
@@ -115,6 +124,9 @@ export default new Vuex.Store({
     },
     daemonVersion(state, value) {
       state.daemonVersion = value;
+    },
+    daemonIsInstalling(state, value) {
+      state.daemonIsInstalling = value;
     },
     latestVersionInfo(state, value) {
       state.latestVersionInfo = value;

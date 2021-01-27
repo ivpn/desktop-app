@@ -46,16 +46,14 @@
 </template>
 
 <script>
-const { remote, ipcRenderer } = require("electron");
-import { DaemonConnectionType } from "@/store/types";
+const sender = window.ipcSender;
 
+import { DaemonConnectionType } from "@/store/types";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import Init from "@/components/Init.vue";
 import Login from "@/components/Login.vue";
 import Control from "@/components/Control.vue";
 import Map from "@/components/Map.vue";
-
-import config from "@/config";
 
 export default {
   components: {
@@ -70,7 +68,6 @@ export default {
     },
     currentViewComponent: function() {
       const daemonConnection = this.$store.state.daemonConnectionState;
-      if (daemonConnection == null) return null;
       if (
         daemonConnection == null ||
         daemonConnection === DaemonConnectionType.NotConnected ||
@@ -105,28 +102,24 @@ export default {
   methods: {
     onAccountSettings: function() {
       //if (this.$store.state.settings.minimizedUI)
-      ipcRenderer.send("renderer-request-show-settings-account");
+      sender.ShowAccountSettings();
       //else this.$router.push({ name: "settings", params: { view: "account" } });
     },
     onSettings: function() {
-      ipcRenderer.send("renderer-request-show-settings-general");
+      sender.ShowSettings();
     },
     onConnectionSettings: function() {
-      ipcRenderer.send("renderer-request-show-settings-connection");
+      sender.ShowConnectionSettings();
     },
     onWifiSettings: function() {
-      ipcRenderer.send("renderer-request-show-settings-networks");
+      sender.ShowWifiSettings();
     },
     onMaximize: function(isMaximize) {
       this.$store.dispatch("settings/minimizedUI", !isMaximize);
       this.updateUIState();
     },
     updateUIState: function() {
-      const win = remote.getCurrentWindow();
-      const animate = false;
-      if (this.isMinimizedUI)
-        win.setBounds({ width: config.MinimizedUIWidth }, animate);
-      else win.setBounds({ width: config.MaximizedUIWidth }, animate);
+      sender.uiMinimize(this.isMinimizedUI);
     }
   }
 };

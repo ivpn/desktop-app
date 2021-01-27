@@ -119,12 +119,9 @@
 import spinner from "@/components/controls/control-spinner.vue";
 import { dateDefaultFormat } from "@/helpers/helpers";
 
-const { shell } = require("electron");
-const { dialog, getCurrentWindow } = require("electron").remote;
+import qrcode from "qrcode-generator";
 
-const qrcode = require("qrcode-generator");
-
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 
 export default {
   components: {
@@ -161,7 +158,7 @@ export default {
   methods: {
     async logOut() {
       if (
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "question",
           message: "Do you really want to log out?",
           buttons: ["Log out", "Cancel"]
@@ -175,7 +172,7 @@ export default {
       } catch (e) {
         this.isProcessing = false;
         console.error(e);
-        dialog.showMessageBoxSync(getCurrentWindow(), {
+        sender.showMessageBoxSync({
           type: "error",
           message: "Failed to log out.",
           detail: e,
@@ -189,10 +186,10 @@ export default {
       await sender.AccountStatus();
     },
     upgrade() {
-      shell.openExternal(`https://www.ivpn.net/account`);
+      sender.shellOpenExternal(`https://www.ivpn.net/account`);
     },
     addMoreTime() {
-      shell.openExternal(`https://www.ivpn.net/account`);
+      sender.shellOpenExternal(`https://www.ivpn.net/account`);
     }
   },
   computed: {

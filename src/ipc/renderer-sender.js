@@ -1,6 +1,6 @@
 //
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui-beta
+//  https://github.com/ivpn/desktop-app-ui2
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -20,8 +20,7 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-const electron = window.require("electron");
-const { ipcRenderer } = electron;
+const { ipcRenderer } = require("electron");
 
 async function invoke(channel, ...args) {
   try {
@@ -39,6 +38,52 @@ async function invoke(channel, ...args) {
 }
 
 export default {
+  // This object is using to expose ipcRenderer functionality (send\receive) only for limited channels
+  // E.g. 'shared-mutation' plugin for vuex is requiring IPC communication
+  GetSafeIpcRenderer() {
+    // NOTE! in case of extending functionality,
+    // do not forget to ensure that 'allowedChannels' contains correct (required) channels
+    return {
+      send: function(channel, ...args) {
+        const allowedChannels = [
+          "vuex-mutations-notify-main",
+          "vuex-mutations-connect"
+        ];
+
+        if (allowedChannels.includes(channel)) {
+          //console.log("SafeIpcRenderer send:", channel);
+          return ipcRenderer.send(channel, ...args);
+        } else
+          console.log(
+            "[ERROR] SafeIpcRenderer: unsupported channel to for 'send()' operation: ",
+            channel
+          );
+      },
+      on: function(channel, listener) {
+        const allowedChannels = [
+          "main-change-view-request",
+          "vuex-mutations-notify-renderers"
+        ];
+
+        if (allowedChannels.includes(channel)) {
+          //console.log("SafeIpcRenderer register event handler:", channel);
+          ipcRenderer.on(channel, listener);
+        } else
+          console.log(
+            "[ERROR] SafeIpcRenderer: unsupported channel to for registering event receiver: ",
+            channel
+          );
+      }
+    };
+  },
+
+  // After initialized, ask main thread about initial route
+  GetInitRouteArgs: async function() {
+    return await ipcRenderer.invoke("renderer-request-ui-initial-route-args");
+  },
+
+  // DAEMON
+
   ConnectToDaemon: async () => {
     return await invoke("renderer-request-connect-to-daemon");
   },
@@ -158,5 +203,64 @@ export default {
   },
   ColorSchemeSet: scheme => {
     return invoke("renderer-request-ui-color-scheme-set", scheme);
+  },
+
+  // NAVIGATION
+  ShowAccountSettings: function() {
+    ipcRenderer.send("renderer-request-show-settings-account");
+  },
+  ShowSettings: function() {
+    ipcRenderer.send("renderer-request-show-settings-general");
+  },
+  ShowConnectionSettings: function() {
+    ipcRenderer.send("renderer-request-show-settings-connection");
+  },
+  ShowWifiSettings: function() {
+    ipcRenderer.send("renderer-request-show-settings-networks");
+  },
+
+  // CONTEXT MENU
+  ShowContextMenuCopy: function() {
+    ipcRenderer.send("renderer-request-show-context-menu-copy");
+  },
+  ShowContextMenuEdit: function() {
+    ipcRenderer.send("renderer-request-show-context-menu-edit");
+  },
+
+  // DIALOG
+  showMessageBoxSync: diagConfig => {
+    return ipcRenderer.sendSync("renderer-request-showmsgboxsync", diagConfig);
+  },
+  showMessageBox: diagConfig => {
+    return invoke("renderer-request-showmsgbox", diagConfig);
+  },
+
+  // WINDOW
+  closeCurrentWindow: () => {
+    return invoke("renderer-request-close-current-window");
+  },
+  uiMinimize: isMinimize => {
+    return invoke("renderer-request-UI-minimize", isMinimize);
+  },
+
+  // SHELL
+  shellShowItemInFolder: file => {
+    return invoke("renderer-request-shell-show-item-in-folder", file);
+  },
+  shellOpenExternal: uri => {
+    return invoke("renderer-request-shell-open-external", uri);
+  },
+
+  // OS
+  osRelease: () => {
+    return ipcRenderer.sendSync("renderer-request-os-release");
+  },
+  Platform: () => {
+    return ipcRenderer.sendSync("renderer-request-platform");
+  },
+
+  // APP
+  appGetVersion: () => {
+    return ipcRenderer.sendSync("renderer-request-app-getversion");
   }
 };

@@ -80,17 +80,16 @@
 </template>
 
 <script>
-const { dialog, getCurrentWindow } = require("electron").remote;
 import OnOffButtonControl from "@/components/controls/control-config-on-off-button.vue";
 import SelectButtonControl from "@/components/controls/control-config-to-select-button.vue";
 import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 import { enumValueName } from "@/helpers/helpers";
 import { VpnTypeEnum, PortTypeEnum } from "@/store/types";
 
 function processError(e) {
   console.error(e);
-  dialog.showMessageBoxSync(getCurrentWindow(), {
+  sender.showMessageBoxSync({
     type: "error",
     buttons: ["OK"],
     message: e
@@ -152,7 +151,7 @@ export default {
       if (this.wifiSSID == "") return null;
       const TRUSTED = "#64ad07";
       const UNTRUSTED = "#FF6258";
-      const INSECURE = "orange";
+      const INSECURE = "darkorange";
       const NOTRUSTSTATUS = "var(--background-color-alternate)"; //"#BBBBBB";
       const trustState = this.getTrustInfoForCurrentWifi();
 

@@ -26,7 +26,7 @@
 </template>
 
 <script>
-import sender from "@/ipc/renderer-sender";
+const sender = window.ipcSender;
 
 export default {
   async beforeDestroy() {

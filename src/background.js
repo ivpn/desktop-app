@@ -1,6 +1,6 @@
 //
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui-beta
+//  https://github.com/ivpn/desktop-app-ui2
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -46,6 +46,7 @@ import "./ipc/main-listener";
 import store from "@/store";
 import { DaemonConnectionType, ColorTheme } from "@/store/types";
 import daemonClient from "./daemon-client";
+import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
 import { InitConnectionResumer } from "./connection-resumer";
@@ -53,8 +54,12 @@ import { InitTrustedNetworks } from "./trusted-wifi";
 import { IsWindowHasTitle } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
+import path from "path";
 
 import { StartUpdateChecker } from "@/app-updater";
+
+// default copy/edit context menu event handlers
+require("@/context-menu/main");
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -93,6 +98,9 @@ ipcMain.on("renderer-request-show-settings-connection", () => {
 ipcMain.on("renderer-request-show-settings-networks", () => {
   showSettings("networks");
 });
+ipcMain.handle("renderer-request-connect-to-daemon", async () => {
+  return await connectToDaemon();
+});
 
 if (gotTheLock) {
   InitPersistentSettings();
@@ -130,14 +138,14 @@ if (gotTheLock) {
             label: "Switch to test view",
             click() {
               if (win !== null)
-                win.webContents.send("change-view-request", "/test");
+                win.webContents.send("main-change-view-request", "/test");
             }
           },
           {
             label: "Switch to main view",
             click() {
               if (win !== null)
-                win.webContents.send("change-view-request", "/");
+                win.webContents.send("main-change-view-request", "/");
             }
           }
         ]
@@ -377,6 +385,30 @@ function getWindowIcon() {
   return null;
 }
 
+function createBrowserWindow(config) {
+  config.webPreferences = {
+    preload: path.join(__dirname, "preload.js"),
+
+    // Use pluginOptions.nodeIntegration, leave this alone
+    // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
+    //nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
+    nodeIntegration: false,
+    contextIsolation: true,
+    sandbox: true,
+    "disableBlinkFeatures ": "Auxclick"
+  };
+
+  let icon = getWindowIcon();
+  if (icon != null) config.icon = icon;
+
+  let retWnd = new BrowserWindow(config);
+  retWnd.webContents.on("will-navigate", (event, newURL) => {
+    console.log("[WARNING] Preventing navigation to:", newURL);
+    event.preventDefault();
+  });
+  return retWnd;
+}
+
 // CREATE WINDOW
 function createWindow() {
   // Create the browser window.
@@ -403,21 +435,10 @@ function createWindow() {
     title: "IVPN",
 
     titleBarStyle: titleBarStyle,
-    autoHideMenuBar: true,
-
-    webPreferences: {
-      enableRemoteModule: true,
-      // Use pluginOptions.nodeIntegration, leave this alone
-      // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-      // nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
-      nodeIntegration: true
-    }
+    autoHideMenuBar: true
   };
 
-  let icon = getWindowIcon();
-  if (icon != null) windowConfig.icon = icon;
-
-  win = new BrowserWindow(windowConfig);
+  win = createBrowserWindow(windowConfig);
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
@@ -465,18 +486,10 @@ function createSettingsWindow(viewName) {
     center: true,
     title: "Settings",
 
-    autoHideMenuBar: true,
-
-    webPreferences: {
-      enableRemoteModule: true,
-      nodeIntegration: true
-    }
+    autoHideMenuBar: true
   };
 
-  let icon = getWindowIcon();
-  if (icon != null) windowConfig.icon = icon;
-
-  settingsWindow = new BrowserWindow(windowConfig);
+  settingsWindow = createBrowserWindow(windowConfig);
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
@@ -503,14 +516,96 @@ function closeSettingsWindow() {
 }
 
 // INITIALIZE CONNECTION TO A DAEMON
-async function connectToDaemon() {
-  try {
-    await daemonClient.ConnectToDaemon();
-    // initialize app updater
-    StartUpdateChecker(OnAppUpdateAvailable);
-  } catch (e) {
-    console.error("Failed to connect to IVPN Daemon: ", e);
+async function connectToDaemon(doNotTryToInstall, isCanRetry) {
+  // MACOS ONLY: install daemon (privileged helper) if required
+  if (doNotTryToInstall !== true && Platform() === PlatformEnum.macOS) {
+    darwinDaemonInstaller.InstallDaemonIfRequired(
+      () => {
+        console.log("Installing daemon...");
+        store.commit("daemonIsInstalling", true);
+      }, //onInstallationStarted,
+      exitCode => {
+        // check if we still need to install helper
+        darwinDaemonInstaller.IsDaemonInstallationRequired(code => {
+          if (code == 0) {
+            // error: the helper not installed (we still detection that helper must be installed (code == 0))
+            console.error(
+              `Error installing helper [code1: ${exitCode}, code2: ${code}]`
+            );
+
+            // set daemon state 'NotConnected'
+            store.commit(
+              "daemonConnectionState",
+              DaemonConnectionType.NotConnected
+            );
+
+            // do not forget to notify that daemon installation is finished
+            store.commit("daemonIsInstalling", false);
+            // Skip connection to daemon
+            return;
+          }
+
+          // daemon installation not required. Connecting to daemon...
+
+          // force UI to show 'connecting' state
+          store.commit(
+            "daemonConnectionState",
+            DaemonConnectionType.Connecting
+          );
+
+          // wait some time to give Daemon chance to fully start
+          setTimeout(async () => {
+            // do not forget to notify that daemon installation is finished
+            store.commit("daemonIsInstalling", false);
+
+            // if success - try to connect to daemon with possibility to retry (wait until daemon start)
+            // (doNotTryToInstall=true, isCanRetry=true)
+            if (exitCode == 0) await connectToDaemon(true, true);
+            else await connectToDaemon(true);
+          }, 500);
+        });
+      } //onInstallationFinished
+    );
+    return;
   }
+
+  let setConnState = function(state) {
+    setTimeout(() => store.commit("daemonConnectionState", state), 0);
+  };
+
+  let onSetConnState = function(state) {
+    // do not set 'NotConnected' state if we still trying to reconnect
+    if (
+      state === DaemonConnectionType.NotConnected &&
+      store.state.daemonConnectionState !== DaemonConnectionType.Connected
+    )
+      return;
+
+    store.commit("daemonConnectionState", state);
+  };
+
+  setConnState(DaemonConnectionType.Connecting);
+  let connect = async function(retryNo) {
+    try {
+      await daemonClient.ConnectToDaemon(onSetConnState);
+      // initialize app updater
+      StartUpdateChecker(OnAppUpdateAvailable);
+
+      setConnState(DaemonConnectionType.Connected);
+    } catch (e) {
+      if (isCanRetry != true || retryNo > 10) {
+        setConnState(DaemonConnectionType.NotConnected);
+      } else {
+        // force UI to show 'connecting' state
+        setConnState(DaemonConnectionType.Connecting);
+        console.log(`Connecting to IVPN Daemon (retry #${retryNo}) ...`);
+        setTimeout(async () => {
+          await connect(retryNo + 1);
+        }, 1000);
+      }
+    }
+  };
+  connect(1);
 }
 
 function showSettings(settingsViewName) {
@@ -529,8 +624,8 @@ function showSettings(settingsViewName) {
 
       // Temporary navigate to '\'. This is required only if we already showing 'settings' view
       // (to be able to re-init 'settings' view with new parameters)
-      win.webContents.send("change-view-request", "/");
-      win.webContents.send("change-view-request", lastRouteArgs);
+      win.webContents.send("main-change-view-request", "/");
+      win.webContents.send("main-change-view-request", lastRouteArgs);
     }
   } catch (e) {
     console.log(e);
