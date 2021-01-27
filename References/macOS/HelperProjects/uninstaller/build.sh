@@ -22,7 +22,7 @@ function CheckLastResult
 
 # The Apple DevID certificate which will be used to sign IVPN Agent (Daemon) binary
 # The helper will check IVPN Agent signature with this value
-_SIGN_CERT="" #"WQXXM75BYN" # default value. Specific value can be passed by command-line argument: -c <APPLE_DEVID_SERT>
+_SIGN_CERT="" # E.g. "WXXXXXXXXN". Specific value can be passed by command-line argument: -c <APPLE_DEVID_SERT>
 while getopts ":c:" opt; do
   case $opt in
     c) _SIGN_CERT="$OPTARG"
@@ -32,7 +32,8 @@ done
 
 if [ -z "${_SIGN_CERT}" ]; then
   echo "Usage:"
-  echo "    $0 -c <APPLE_DEVID_CERT>"
+  echo "    $0 -c <APPLE_DEVID_CERTIFICATE>"
+  echo "    Example: $0 -c WXXXXXXXXN"
   exit 1
 fi
 

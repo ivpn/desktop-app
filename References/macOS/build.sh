@@ -38,15 +38,20 @@ done
 
 if [ -z "${_VERSION}" ]; then
   echo "Usage:"
-  echo "    $0 -v <version> -c <APPLE_DEVID_SERT>"
+  echo "    $0 -v <version> -c <APPLE_DEVID_CERTIFICATE>"
+  echo "    Example: $0 -v 0.0.1 -c WXXXXXXXXN"
   exit 1
 fi
 
 echo "[+] *** COMPILING IVPN BINARIES AND MAKING DMG ***";
 echo "    Version:                 '${_VERSION}'"
 if [ -z "${_SIGN_CERT}" ]; then
-  echo "    WARNING: Apple DevID not defined (signing & notarization will be skipped)"
-  read -p "Press enter to continue"
+  echo "    ERROR: Apple DevID not defined (signing & notarization will be skipped)"
+  echo "           It is not possible to build helper and uninstaller projects."
+  echo "           Signing & notarization not possible too."
+  echo "    Usage:"
+  echo "          $0 -v <version> -c <APPLE_DEVID_CERTIFICATE>"
+  exit 1
 else
   echo "    Apple DevID certificate: '${_SIGN_CERT}'"
 fi
@@ -92,11 +97,11 @@ echo "    UI sources:     ${_PATH_ABS_REPO_UI}"
 echo "    Daemon sources: ${_PATH_ABS_REPO_DAEMON}"
 echo "    CLI sources:    ${_PATH_ABS_REPO_CLI}"
 
-read -p "Press enter to continue"
-
 echo "[+] Checking UI project version..."
 cat "${_PATH_ABS_REPO_UI}/package.json" | grep \"version\" | grep \"${_VERSION}\"
 CheckLastResult "ERROR: Please set correct version in file '${_PATH_ABS_REPO_UI}/package.json'"
+
+read -p "Press enter to continue"
 
 # ============================== BUILDING PROJECTS =============================
 echo "[+] Building IVPN Daemon (${_PATH_ABS_REPO_DAEMON})...";
@@ -105,9 +110,9 @@ CheckLastResult "[!] ERROR building IVPN Daemon"
 
 echo "[+] Building helper ..."
 if [ -z "${_SIGN_CERT}" ]; then
-  ${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/helper/build.sh -v ${_VERSION} -c ${_SIGN_CERT}
-else
   ${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/helper/build.sh -v ${_VERSION}
+else
+  ${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/helper/build.sh -v ${_VERSION} -c ${_SIGN_CERT}
 fi
 CheckLastResult "[!] ERROR building helper binary"
 
