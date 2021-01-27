@@ -20,7 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-// +build windows linux
+// +build fastping
 
 package service
 
