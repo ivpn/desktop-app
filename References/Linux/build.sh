@@ -3,7 +3,6 @@
 # Usage example:
 #   build-packages.sh -v 0.0.1
 #
-#   NOTE! The correspond version of application already should be compiled (the file must be available: dist_electron/ivpn-ui-XXX.AppImage)
 
 # To be able to build packages the 'fpm' tool shall be installed
 # (https://fpm.readthedocs.io/en/latest/installing.html)
@@ -75,12 +74,12 @@ then
   echo "Usage:"
   echo "    $0 -v <version>"
   echo ""
-  echo "    NOTE! The correspond version of application already should be compiled (the file must be available: dist_electron/ivpn-ui-XXX.AppImage)"
   exit 1
 fi
 echo "======================================================"
-echo "============== Preparing ============================="
+echo "============ Building UI binary ======================"
 echo "======================================================"
+
 if [ -d $APP_UNPACKED_DIR ]; then
   echo "[+] Removing: $APP_UNPACKED_DIR"
   rm -fr "$APP_UNPACKED_DIR"
@@ -90,11 +89,8 @@ if [ -d $APP_BIN_DIR ]; then
   rm -fr "$APP_BIN_DIR"
 fi
 
-echo "======================================================"
-echo "============== Building binary ======================="
-echo "======================================================"
 cat "$IVPN_DESKTOP_UI2_SOURCES/package.json" | grep \"version\" | grep \"$VERSION\"
-CheckLastResult "ERROR: Please set correct version in file '$IVPN_DESKTOP_UI2_SOURCES/package.json'"
+CheckLastResult "ERROR: Please set correct version in file '${IVPN_DESKTOP_UI2_SOURCES}package.json'"
 
 echo "*** Installing NPM molules ... ***"
 cd $IVPN_DESKTOP_UI2_SOURCES
