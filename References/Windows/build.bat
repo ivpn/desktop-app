@@ -160,7 +160,4 @@ goto :success
 
 :remove_tmp_vars_before_exit
 	endlocal
-	rem Removing temporary global variables
-	set IVPN_GOROOT=
-	set IVPN_PATH=
 	goto :eof

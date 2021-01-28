@@ -29,7 +29,8 @@ These instructions will get you a copy of the project up and running on your loc
   - [npm](https://www.npmjs.com/get-npm)
   - [nsis](https://nsis.sourceforge.io/Download)
   - Build Tools for Visual Studio 2019 ('Windows SDK 10.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools')
-  - Go 1.13+ (downloads automatically by the build script)
+  - gcc compiler e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/)
+  - Go 1.13+
   - Git
 
 #### macOS
@@ -50,6 +51,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 #### Windows
 Instructions to build Windows installer of IVPN Client software (daemon+CLI+UI):  
+Use Developer Command Prompt for Visual Studio (required for building native sub-projects).  
 
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
