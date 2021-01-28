@@ -72,6 +72,7 @@ cd desktop-app-cli/
   Compiled binary can be found at: `References/macOS/_out_bin/`
 
 #### Linux
+Instructions to build Linux DEB and RPM packages of IVPN software ('base' package: daemon + CLI):  
     
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
