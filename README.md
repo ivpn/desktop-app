@@ -23,22 +23,71 @@ This is the official Git repo of the [IVPN Client UI (beta)](https://github.com/
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
 ### Requirements
-  [npm](https://www.npmjs.com/get-npm)
+  
+  #### Windows
+
+  - [npm](https://www.npmjs.com/get-npm)
+  - Build Tools for Visual Studio 2019 (ensure 'Windows SDK 10.0' and 'MSVC v142 C++ x64 build tools' is installed)
+  - Go 1.13+ (downloads automatically by the build script)
+  - Git
+
+#### macOS
+
+  - [npm](https://www.npmjs.com/get-npm)
+  - Xcode Command Line Tools
+  - Go 1.13+
+  - Git
+
+#### Linux
+  - [npm](https://www.npmjs.com/get-npm)
+  - packages: [FPM](https://fpm.readthedocs.io/en/latest/installing.html), curl, rpm, libiw-dev
+  - Go 1.13+
+  - Git
 
 
 ### Compilation
 
-Update all project  dependencies:
+#### Windows
+Instructions to build Windows installer of IVPN Client software (daemon+CLI+UI):  
+
 ```
-npm install
+git clone https://github.com/ivpn/desktop-app-daemon.git
+git clone https://github.com/ivpn/desktop-app-cli.git
+git clone https://github.com/ivpn/desktop-app-ui2.git
+cd desktop-app-ui2/References/Windows
+build.bat
 ```
 
-Compile binary for current platform:
+  Compiled binaries can be found at: `desktop-app-ui2\References\Windows\bin`  
+  
+#### macOS
+Instructions to build macOS DMG package of IVPN Client software (daemon+CLI+UI):  
+  
 ```
-npm run electron:build
+git clone https://github.com/ivpn/desktop-app-daemon.git
+git clone https://github.com/ivpn/desktop-app-cli.git
+git clone https://github.com/ivpn/desktop-app-ui2.git
+cd ivpn/desktop-app-ui2/References/macOS
+./build.sh -v <VERSION_X.X.X> -c <APPLE_DevID_CERTIFICATE>
 ```
 
-The compiled binary will be available in the folder `dist_electron`.
+  Compiled binary can be found at: `desktop-app-ui2/References/macOS/_compiled`
+
+#### Linux
+Instructions to build Linux DEB and RPM packages of IVPN software 'UI' package:  
+    
+```
+git clone https://github.com/ivpn/desktop-app-ui2.git
+cd desktop-app-ui2/References/Linux
+./build.sh -v <VERSION_X.X.X>
+```
+  
+  Compiled packages can be found at `desktop-app-ui2/References/Linux/_out_bin`  
+  
+  **Note!**
+  It is required to have installed IVPN Daemon before running IVPN UI.
+  **Info**
+  You may be interested also in [IVPN Client CLI](https://github.com/ivpn/desktop-app-cli) project to build a 'base' Linux redistributable package (daemon + CLI)) of IVPN software.
 
 **Important:** To be able to run the compiled UI app, the latest IVPN Client version must be installed.
 [IVPN official apps](https://www.ivpn.net/apps-overview).
