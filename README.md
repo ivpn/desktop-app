@@ -24,7 +24,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Requirements
   
-  #### Windows
+#### Windows
 
   - [npm](https://www.npmjs.com/get-npm)
   - Build Tools for Visual Studio 2019 (ensure 'Windows SDK 10.0' and 'MSVC v142 C++ x64 build tools' is installed)
