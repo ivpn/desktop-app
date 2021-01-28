@@ -53,7 +53,7 @@ if not exist "%SCRIPTDIR%..\WireGuard\x86\wg.exe" 					set needRebuildWireGuard=
 if not exist "%SCRIPTDIR%..\WireGuard\x86\wireguard.exe" 			set needRebuildWireGuard=1
 if not exist "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe" 				set needRebuildWireGuard=1
 if not exist "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe" 		set needRebuildWireGuard=1
-if not exist "%SCRIPTDIR%..\.deps\wireguard-windows\.deps\prepared" set needRebuildWireGuard=1
+rem if not exist "%SCRIPTDIR%..\.deps\wireguard-windows\.deps\prepared" set needRebuildWireGuard=1
 if %needRebuildWireGuard% == 1 call :build_wireguard || goto :error
 
 call :update_servers_info || goto :error
