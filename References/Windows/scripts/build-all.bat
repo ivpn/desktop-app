@@ -11,6 +11,13 @@ set DATE=""
 
 rem ==================================================
 rem DEFINE required WireGuard version here
+rem This parameter take place only for clean build
+rem It uses to download correspond version of WireGuard sources for building
+rem If the files (bellow) already exists - building WireGuard binaries will be skipped
+rem        	%SCRIPTDIR%..\WireGuard\x86\wg.exe
+rem        	%SCRIPTDIR%..\WireGuard\x86\wireguard.exe
+rem        	%SCRIPTDIR%..\WireGuard\x86_64\wg.exe
+rem        	%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe
 set WGVER=v0.3.4
 rem ==================================================
 
@@ -133,12 +140,23 @@ goto :success
 
 		echo [*] Checking out wireguard-windows version [%WGVER%]...
 		git checkout %WGVER% >nul 2>&1 || exit /b 1
+			echo [*] Building wireguard-windows from NEW sources...
 	) else (
+		echo [*] Building wireguard-windows from ALREADY DOWNLOADED sources...
 		cd "%SCRIPTDIR%..\.deps\wireguard-windows" 	|| exit /b 1
 	)
 
-	echo [*] Building wireguard-windows ...
-	call build.bat || exit /b 1
+	call build.bat
+	if not %errorlevel%==0 (
+			echo [!] ERROR: Building WireGuard from official sources
+			echo [ ]        You can skip building WireGuard binaries.
+			echo [ ]        To skip build, copy correspond precompiled official WireGuard binaries to locations:
+			echo [ ]        	%SCRIPTDIR%..\WireGuard\x86\wg.exe
+			echo [ ]        	%SCRIPTDIR%..\WireGuard\x86\wireguard.exe
+			echo [ ]        	%SCRIPTDIR%..\WireGuard\x86_64\wg.exe
+			echo [ ]        	%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe
+			exit /b 1
+	)
 
 	echo [*] WireGuard build DONE. Copying compiled binaries ...
 
