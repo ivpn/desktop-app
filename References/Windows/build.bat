@@ -11,6 +11,9 @@ echo ==================================================
 
 rem Getting info about current date
 FOR /F "tokens=* USEBACKQ" %%F IN (`date /T`) DO SET DATE=%%F
+rem remove spaces
+set DATE=%DATE: =%
+
 rem Getting info about commit
 cd %SCRIPTDIR%\..\..
 FOR /F "tokens=* USEBACKQ" %%F IN (`git rev-list -1 HEAD`) DO SET COMMIT=%%F
@@ -30,17 +33,6 @@ goto :success
 
 :build
 	echo [*] Building IVPN CLI
-
-	IF "%IVPN_GOROOT%" == "" goto :build_skip_ivpn_vars
-
-	rem There are Go variables saved by another IVPN script (to be able to compile CLI with the same Go version)
-	echo [!] Using IVPN environment variables IVPN_GOROOT and IVPN_PATH
-	set "GOROOT=%IVPN_GOROOT%"
-	set "PATH=%IVPN_PATH%"
-	echo *    GOROOT= %GOROOT%
-	echo *    PATH  = %PATH%
-
-:build_skip_ivpn_vars
 
 	if exist "bin\x86\cli\ivpn.exe" del "bin\x86\cli\ivpn.exe" || exit /b 1
 	if exist "bin\x86_64\cli\ivpn.exe" del "bin\x86_64\cli\ivpn.exe" || exit /b 1
