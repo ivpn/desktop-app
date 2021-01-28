@@ -85,14 +85,9 @@ cd desktop-app-ui2/References/Linux
   Compiled packages can be found at `desktop-app-ui2/References/Linux/_out_bin`  
   
   **Note!**
-  It is required to have installed IVPN Daemon before running IVPN UI.
-  **Info**
-  You may be interested also in [IVPN Client CLI](https://github.com/ivpn/desktop-app-cli) project to build a 'base' Linux redistributable package (daemon + CLI)) of IVPN software.
-
-**Important:** To be able to run the compiled UI app, the latest IVPN Client version must be installed.
-[IVPN official apps](https://www.ivpn.net/apps-overview).
-[A daemon sources](https://github.com/ivpn/desktop-app-daemon).
-[An IVPN Client sources](https://github.com/ivpn/desktop-app-ui).
+  It is required to have installed IVPN Daemon before running IVPN UI.  
+  **Info:**
+  You may be interested also in [IVPN Client CLI](https://github.com/ivpn/desktop-app-cli) project to build a 'base' Linux redistributable package (daemon + CLI) of IVPN software.
 
 <a name="versioning"></a>
 ## Versioning
