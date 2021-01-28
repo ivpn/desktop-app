@@ -9,7 +9,7 @@ Some of the features include:
   - custom DNS  
   - Multi-Hop  
   - AntiTracker  
-  
+
 This project is in use by [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) and [IVPN CLI](https://github.com/ivpn/desktop-app-cli) projects.
 
 IVPN Client app is distributed on the official site [www.ivpn.net](https://www.ivpn.net).  
@@ -38,14 +38,13 @@ These instructions will get you a copy of the project up and running on your loc
 
 #### Windows
 
-  - Windows 10+
   - Build Tools for Visual Studio 2019 ('Windows SDK 10.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools')
-  - Go 1.13+ (downloads automatically by the build script)
+  - gcc compiler e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/)
+  - Go 1.13+
   - Git
 
 #### macOS
 
-  - macOS Mojave 10.14.6
   - Xcode Command Line Tools
   - Go 1.13+
   - Git
@@ -69,7 +68,7 @@ These instructions will get you a copy of the project up and running on your loc
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
-References/Windows/scripts/build-all.bat <VERSION_X.X.X>
+References/Windows/scripts/build-all.bat <VERSION_X.X.X> exclude32bit
 ```
 
 #### macOS  
@@ -91,7 +90,7 @@ References/macOS/scripts/build-all.sh -v <VERSION_X.X.X>
   - OpenVPN:  `References/macOS/_deps/openvpn_inst/bin`
   - IVPN Service: `IVPN Agent`
 
-  **Note!** 
+  **Note!**
   In order to run application as macOS daemon, the binary must be signed by Apple Developer ID.
 
 #### Linux  
@@ -107,7 +106,7 @@ git clone https://github.com/ivpn/desktop-app-daemon.git
 cd desktop-app-daemon
 ./References/Linux/scripts/build-all.sh -v <VERSION_X.X.X>
 ```
-  
+
   The compiled binary can be found at `References/Linux/scripts/_out_bin`
 
 <a name="versioning"></a>

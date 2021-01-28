@@ -27,6 +27,9 @@ echo ==================================================
 
 rem Getting info about current date
 FOR /F "tokens=* USEBACKQ" %%F IN (`date /T`) DO SET DATE=%%F
+rem remove spaces
+set DATE=%DATE: =%
+
 rem Getting info about commit
 cd %SCRIPTDIR%\..\..\..
 FOR /F "tokens=* USEBACKQ" %%F IN (`git rev-list -1 HEAD`) DO SET COMMIT=%%F
@@ -56,14 +59,6 @@ if %needRebuildWireGuard% == 1 call :build_wireguard || goto :error
 call :update_servers_info || goto :error
 call :build_agent || goto :error
 
-(
-	rem Save Go variables (to be able to compile CLI with the same Go version)
-	rem parenthesis "()" are important here !
-	endlocal
-	set "IVPN_GOROOT=%GOROOT%"
-	set "IVPN_PATH=%PATH%"
-)
-
 rem THE END
 goto :success
 
@@ -73,10 +68,6 @@ goto :success
 	goto :eof
 
 :build_agent
-	set GOOS=windows
-	set GOPATH=%SCRIPTDIR%..\.deps\wireguard-windows\.deps\gopath
-	set GOROOT=%SCRIPTDIR%..\.deps\wireguard-windows\.deps\go
-	set PATH=%SCRIPTDIR%..\.deps\wireguard-windows\.deps\go\bin;%PATH%
 	cd "%SCRIPTDIR%..\..\.."
 
 	IF not "%EXTRA_ARG%" == "exclude32bit" (
