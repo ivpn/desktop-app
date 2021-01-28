@@ -23,10 +23,11 @@ This is the official Git repo of the [IVPN Client UI (beta)](https://github.com/
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
 ### Requirements
-  
+
 #### Windows
 
   - [npm](https://www.npmjs.com/get-npm)
+  - [nsis](https://nsis.sourceforge.io/Download)
   - Build Tools for Visual Studio 2019 ('Windows SDK 10.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools')
   - Go 1.13+ (downloads automatically by the build script)
   - Git
@@ -59,10 +60,10 @@ build.bat
 ```
 
   Compiled binaries can be found at: `desktop-app-ui2\References\Windows\bin`  
-  
+
 #### macOS
 Instructions to build macOS DMG package of IVPN Client software (daemon+CLI+UI):  
-  
+
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 git clone https://github.com/ivpn/desktop-app-cli.git
@@ -75,15 +76,15 @@ cd ivpn/desktop-app-ui2/References/macOS
 
 #### Linux
 Instructions to build Linux DEB and RPM packages of IVPN software 'UI' package:  
-    
+
 ```
 git clone https://github.com/ivpn/desktop-app-ui2.git
 cd desktop-app-ui2/References/Linux
 ./build.sh -v <VERSION_X.X.X>
 ```
-  
+
   Compiled packages can be found at `desktop-app-ui2/References/Linux/_out_bin`  
-  
+
   **Note!**
   It is required to have installed IVPN Daemon before running IVPN UI.  
   **Info:**

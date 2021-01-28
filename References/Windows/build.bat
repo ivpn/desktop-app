@@ -78,10 +78,17 @@ goto :success
 	goto :eof
 
 :build_ui
-	echo [*] Building UI...
+	echo ==================================================
+	echo ============ BUILDING IVPN UI ====================
+	echo ==================================================
   cd %SCRIPTDIR%\..\..  || exit /b 1
-	call npm run electron:build  || exit /b 1
+
+	echo [*] Installing NPM dependencies...
+	call npm install  || exit /b 1
+
+	echo [*] Building UI...
 	cd %SCRIPTDIR%  || exit /b 1
+	call npm run electron:build || exit /b 1
 	goto :eof
 
 :copy_files
