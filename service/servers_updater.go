@@ -99,7 +99,7 @@ func (s *serversUpdater) startUpdater() error {
 			if _, err := s.updateServers(); err != nil {
 				log.Error(err)
 				if isFirstIteration {
-					// The first try to update can be failed because of daemon is tarting on OS boot
+					// The first try to update can be failed because of daemon is starting on OS boot
 					// There could be not all connectivity initialized
 					// Therefore - trying in 5min later
 					updateDelay = time.Minute * 5
