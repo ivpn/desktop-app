@@ -93,9 +93,20 @@ func (s *serversUpdater) GetServers() (*types.ServersInfoResponse, error) {
 
 func (s *serversUpdater) startUpdater() error {
 	go func(s *serversUpdater) {
+		isFirstIteration := true
 		for {
-			s.updateServers()
-			time.Sleep(time.Hour)
+			updateDelay := time.Hour
+			if _, err := s.updateServers(); err != nil {
+				log.Error(err)
+				if isFirstIteration {
+					// The first try to update can be failed because of daemon is tarting on OS boot
+					// There could be not all connectivity initialized
+					// Therefore - trying in 5min later
+					updateDelay = time.Minute * 5
+				}
+			}
+			isFirstIteration = false
+			time.Sleep(updateDelay)
 		}
 	}(s)
 
