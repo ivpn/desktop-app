@@ -427,15 +427,48 @@ int uninstall() {
       return hasErrors;
 }
 
+int start_helper() {
+  // This instructions is creating 'fake' connection to service.
+  // Benefints of this operations - OS will restart helper if it will crash.
+  // Additionally, (already installed) helper will be started (if it not started)
+  xpc_connection_t connection = xpc_connection_create_mach_service(HELPER_LABEL, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
+  xpc_connection_set_event_handler(connection, ^(xpc_object_t server)
+  {
+      // event received
+  });
+  xpc_connection_resume(connection);
+
+  // send a start request
+  xpc_object_t message = xpc_dictionary_create(NULL, NULL, 0);
+  xpc_dictionary_set_int64(message, "test", 0);
+  xpc_connection_send_message_with_reply(connection, message, NULL, ^(xpc_object_t reply)
+  {
+    // reply received
+  });
+  xpc_release(message);
+
+  return 0;
+}
+
 int main(int argc, char **argv) {
     if (argc >= 2)
     {
         if (strcmp(argv[1], "--is_helper_installation_required")==0)
             return is_helper_installation_required();
-        if (strcmp(argv[1], "--install_helper")==0)
-            return install_helper();
+        if (strcmp(argv[1], "--install_helper")==0) {
+            int ret = install_helper();
+            if (ret==0)
+            {
+              // Helper must be already started
+              // Just making it to be able automatically restart on crash
+              start_helper();
+            }
+            return ret;
+        }
         if (strcmp(argv[1], "--uninstall_helper")==0)
             return remove_helper();
+        if (strcmp(argv[1], "--start_helper")==0)
+            return start_helper();
         if (strcmp(argv[1], "--uninstall")==0)
             return uninstall();
     }
@@ -446,6 +479,7 @@ int main(int argc, char **argv) {
       printf(" arguments:\n");
       printf("    --install_helper\n");
       printf("    --uninstall_helper\n");
+      printf("    --start_helper\n");
       printf("    --uninstall\n");
       printf("    --is_helper_installation_required (returns exit code: 0 -> helper have to be installed)\n");
       return 1;

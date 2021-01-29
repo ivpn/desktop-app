@@ -516,9 +516,13 @@ function closeSettingsWindow() {
 }
 
 // INITIALIZE CONNECTION TO A DAEMON
-async function connectToDaemon(doNotTryToInstall, isCanRetry) {
+async function connectToDaemon(
+  doNotTryToInstall,
+  isCanRetry,
+  doNotTryToMacosStart
+) {
   // MACOS ONLY: install daemon (privileged helper) if required
-  if (doNotTryToInstall !== true && Platform() === PlatformEnum.macOS) {
+  if (Platform() === PlatformEnum.macOS && doNotTryToInstall !== true) {
     darwinDaemonInstaller.InstallDaemonIfRequired(
       () => {
         console.log("Installing daemon...");
@@ -560,8 +564,9 @@ async function connectToDaemon(doNotTryToInstall, isCanRetry) {
 
             // if success - try to connect to daemon with possibility to retry (wait until daemon start)
             // (doNotTryToInstall=true, isCanRetry=true)
-            if (exitCode == 0) await connectToDaemon(true, true);
-            else await connectToDaemon(true);
+            if (exitCode == 0)
+              await connectToDaemon(true, true, doNotTryToMacosStart);
+            else await connectToDaemon(true, false, doNotTryToMacosStart);
           }, 500);
         });
       } //onInstallationFinished
@@ -588,11 +593,24 @@ async function connectToDaemon(doNotTryToInstall, isCanRetry) {
   let connect = async function(retryNo) {
     try {
       await daemonClient.ConnectToDaemon(onSetConnState);
+
       // initialize app updater
       StartUpdateChecker(OnAppUpdateAvailable);
 
       setConnState(DaemonConnectionType.Connected);
     } catch (e) {
+      // MACOS ONLY: try to start daemon (privileged helper)
+      if (Platform() === PlatformEnum.macOS && doNotTryToMacosStart != true) {
+        darwinDaemonInstaller.TryStartDaemon();
+        // wait some time to give Daemon chance to fully start
+        setTimeout(async () => {
+          // if success - try to connect to daemon with possibility to retry (wait until daemon start)
+          // (doNotTryToInstall=true, isCanRetry=true, doNotTryToMacosStart=true)
+          await connectToDaemon(true, true, true);
+        }, 500);
+        return;
+      }
+
       if (isCanRetry != true || retryNo > 10) {
         setConnState(DaemonConnectionType.NotConnected);
       } else {

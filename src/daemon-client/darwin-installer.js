@@ -55,6 +55,34 @@ function InstallDaemon(onInstallationStarted, done) {
   }
 }
 
+function TryStartDaemon(done) {
+  let spawn = require("child_process").spawn;
+
+  let logStringPrefix = "[IVPN Installer --start_helper]";
+
+  try {
+    let cmd = spawn(
+      "/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/IVPN Installer",
+      ["--start_helper"]
+    );
+
+    cmd.stderr.on("data", err => {
+      console.log(`[ERROR] ${logStringPrefix}: ${err}`);
+    });
+
+    cmd.on("error", err => {
+      console.error(err);
+      if (done) done(-1);
+    });
+
+    cmd.on("exit", code => {
+      if (done) done(code);
+    });
+  } catch (e) {
+    console.log(`Failed to run ${logStringPrefix}: ${e}`);
+  }
+}
+
 // result: onResultFunc(exitCode), where exitCode==0 when daemon have to be installed
 function IsDaemonInstallationRequired(onResultFunc) {
   if (Platform() !== PlatformEnum.macOS) {
@@ -105,5 +133,6 @@ function InstallDaemonIfRequired(onInstallationStarted, done) {
 
 export default {
   InstallDaemonIfRequired,
-  IsDaemonInstallationRequired
+  IsDaemonInstallationRequired,
+  TryStartDaemon
 };
