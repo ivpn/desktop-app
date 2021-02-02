@@ -546,6 +546,7 @@ function ConnectToDaemon(setConnState) {
               const err = new Error(
                 `Unsupported IVPN Daemon version: v${store.state.daemonVersion} (minimum required v${config.MinRequiredDaemonVer})`
               );
+              err.unsupportedDaemonVersion = true;
               log.error(err);
               reject(err); // REJECT
               return;

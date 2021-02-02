@@ -611,7 +611,11 @@ async function connectToDaemon(
         return;
       }
 
-      if (isCanRetry != true || retryNo > 10) {
+      if (
+        e.unsupportedDaemonVersion === true ||
+        isCanRetry != true ||
+        retryNo > 10
+      ) {
         setConnState(DaemonConnectionType.NotConnected);
       } else {
         // force UI to show 'connecting' state
