@@ -9,7 +9,7 @@
       <textarea readonly id="logsBlock" v-model="diagDataText" />
 
       <div style="margin-top:20px; margin-bottom: 5px;">
-        Please write a description of the problem you are experincing:
+        Please write a description of the problem you are experiencing:
       </div>
       <textarea id="commentBlock" v-model="userComment"></textarea>
       <div class="flexRow" style="margin-top:20px;">
