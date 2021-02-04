@@ -408,6 +408,11 @@ func (i *ManagementInterface) sendResponse(commands ...string) error {
 }
 
 func (i *ManagementInterface) sendResp(canLog bool, command string) error {
+
+	// Only one command allowed to send
+	// This avoids the MI commands injection possibility (for the situations when we are controlling only command prefix)
+	command = strings.Split(command, "\n")[0]
+
 	if canLog {
 		i.log.Info("[->]: ", command)
 	}
