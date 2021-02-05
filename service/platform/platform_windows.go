@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 )
 
 var (
@@ -51,6 +52,11 @@ func doInitConstants() {
 }
 
 func doOsInit() (warnings []string, errors []error) {
+	SYSTEMROOT := os.Getenv("SYSTEMROOT")
+	if len(SYSTEMROOT) > 0 {
+		routeCommand = strings.ReplaceAll(path.Join(SYSTEMROOT, "System32", "ROUTE.EXE"), "/", "\\")
+	}
+
 	doOsInitForBuild()
 	_installDir := getInstallDir()
 
