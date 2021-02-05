@@ -179,6 +179,7 @@ export default {
     return invoke("renderer-request-submit-diagnostic-logs", comment, data);
   },
 
+  // UPDATES
   AppUpdatesIsAbleToUpdate: () => {
     return ipcRenderer.sendSync(
       "renderer-request-app-updates-is-able-to-update"
@@ -190,7 +191,14 @@ export default {
   AppUpdatesUpgrade: async () => {
     return invoke("renderer-request-app-updates-upgrade");
   },
+  AppUpdatesCancelDownload: async () => {
+    return invoke("renderer-request-app-updates-cancel-download");
+  },
+  AppUpdatesInstall: async () => {
+    return invoke("renderer-request-app-updates-install");
+  },
 
+  // AUTO-LAUNCH
   AutoLaunchIsEnabled: async () => {
     return invoke("renderer-request-auto-launch-is-enabled");
   },
@@ -198,6 +206,7 @@ export default {
     return invoke("renderer-request-auto-launch-set", isEnabled);
   },
 
+  // COLOR SCHEME
   ColorScheme: () => {
     return ipcRenderer.sendSync("renderer-request-ui-color-scheme-get");
   },

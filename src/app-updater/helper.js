@@ -20,30 +20,30 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import client from "@/daemon-client";
-import config from "@/config";
+export function IsNewVersion(oldVer, newVer) {
+  if (!oldVer || !newVer) return false;
+  oldVer = oldVer.trim();
+  newVer = newVer.trim();
+  if (!oldVer || !newVer) return false;
 
-export async function CheckUpdates() {
-  try {
-    return await client.GetAppUpdateInfo();
-  } catch (e) {
-    if (e instanceof SyntaxError)
-      console.error("[updater] parsing update file info error: ", e.message);
-    else console.error("[updater] error: ", e);
-
-    return null;
-  }
-}
-
-export function Upgrade(latestVersionInfo) {
-  if (!latestVersionInfo) {
-    console.error("Upgrade skipped: no information about latest version");
-    return null;
-  }
+  const newVerStrings = newVer.split(".");
+  const curVerStrings = oldVer.split(".");
 
   try {
-    require("electron").shell.openExternal(config.URLApps);
+    for (let i = 0; i < newVerStrings.length && i < curVerStrings.length; i++) {
+      if (parseInt(newVerStrings[i], 10) > parseInt(curVerStrings[i], 10))
+        return true;
+      if (parseInt(newVerStrings[i], 10) < parseInt(curVerStrings[i], 10))
+        return false;
+    }
+
+    if (newVerStrings.length > curVerStrings.length) {
+      for (let i = curVerStrings.length; i < newVerStrings.length; i++) {
+        if (parseInt(newVerStrings[i], 10) > 0) return true;
+      }
+    }
   } catch (e) {
-    console.error(e);
+    console.log(e);
   }
+  return false;
 }

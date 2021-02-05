@@ -44,7 +44,11 @@ SentryInit();
 import "./ipc/main-listener";
 
 import store from "@/store";
-import { DaemonConnectionType, ColorTheme } from "@/store/types";
+import {
+  DaemonConnectionType,
+  ColorTheme,
+  AppUpdateStage
+} from "@/store/types";
 import daemonClient from "./daemon-client";
 import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
@@ -56,7 +60,7 @@ import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
 import path from "path";
 
-import { StartUpdateChecker } from "@/app-updater";
+import { StartUpdateChecker, Install } from "@/app-updater";
 
 // default copy/edit context menu event handlers
 require("@/context-menu/main");
@@ -67,6 +71,7 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
 let settingsWindow;
+
 let isTrayInitialized = false;
 let lastRouteArgs = null; // last route arguments (requested by renderer process when window initialized)
 
@@ -318,6 +323,14 @@ if (gotTheLock) {
   store.subscribe(mutation => {
     try {
       switch (mutation.type) {
+        case "uiState/appUpdateProgress": {
+          let progress = store.state.uiState.appUpdateProgress;
+          if (!progress || progress.state != AppUpdateStage.ReadyToInstall)
+            break;
+          if (store.state.uiState.currentSettingsViewName != "version")
+            OnAppUpdateReadyToInstall();
+          break;
+        }
         case "vpnState/currentWiFiInfo":
           // if wifi
           if (
@@ -739,6 +752,31 @@ function OnAppUpdateAvailable(newDaemonVer, newUiVer) {
         });
         break;
       case 3: // Remind Me Later
+        break;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+function OnAppUpdateReadyToInstall() {
+  try {
+    // notify user
+    if (win == null) createWindow();
+    let msgBoxConfig = {
+      type: "info",
+      message: "A new version of IVPN Client is ready to install!",
+      buttons: ["Install", "Details ...", "Cancel"]
+    };
+
+    const actionNo = dialog.showMessageBoxSync(win, msgBoxConfig);
+    switch (actionNo) {
+      case 0: // Install
+        Install();
+        break;
+      case 1: // Details
+        menuOnVersion();
+        break;
+      case 3: // Cancel
         break;
     }
   } catch (e) {

@@ -86,3 +86,13 @@ export const ColorTheme = Object.freeze({
   light: "light",
   dark: "dark"
 });
+
+export const AppUpdateStage = Object.freeze({
+  NoStatus: "No update status",
+  CancelledDownload: "Download cancelled",
+  Downloading: "Downloading ...",
+  CheckingSignature: "Checking signature ...",
+  ReadyToInstall: "Ready to install",
+  Installing: "Installing...",
+  Error: "Error"
+});

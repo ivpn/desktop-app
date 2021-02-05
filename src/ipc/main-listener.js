@@ -29,10 +29,11 @@ import { ipcMain, nativeTheme, dialog, app, shell } from "electron";
 import { Platform } from "@/platform/platform";
 
 import client from "../daemon-client";
-import { CheckUpdates, Upgrade, IsAbleToCheckUpdate } from "@/app-updater";
+import { CheckUpdates, IsAbleToCheckUpdate } from "@/app-updater";
 import { AutoLaunchIsEnabled, AutoLaunchSet } from "@/auto-launch";
 import store from "@/store";
 import config from "@/config";
+import { Upgrade, CancelDownload, Install } from "@/app-updater";
 
 import os from "os";
 
@@ -171,6 +172,7 @@ ipcMain.handle(
   }
 );
 
+// UPDATES
 ipcMain.on("renderer-request-app-updates-is-able-to-update", event => {
   try {
     event.returnValue = IsAbleToCheckUpdate();
@@ -184,7 +186,14 @@ ipcMain.handle("renderer-request-app-updates-check", async () => {
 ipcMain.handle("renderer-request-app-updates-upgrade", async () => {
   return await Upgrade();
 });
+ipcMain.handle("renderer-request-app-updates-cancel-download", async () => {
+  return await CancelDownload();
+});
+ipcMain.handle("renderer-request-app-updates-install", async () => {
+  return await Install();
+});
 
+// AUTO-LAUNCH
 ipcMain.handle("renderer-request-auto-launch-is-enabled", async () => {
   return await AutoLaunchIsEnabled();
 });

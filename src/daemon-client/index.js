@@ -28,7 +28,7 @@ const os = require("os");
 import { Platform, PlatformEnum } from "@/platform/platform";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { API_SUCCESS } from "@/api/statuscode";
-import { IsNewerVersion } from "@/app-updater";
+import { IsNewVersion } from "@/app-updater/helper";
 import config from "@/config";
 
 import {
@@ -305,7 +305,7 @@ async function processResponse(response) {
       store.commit("daemonVersion", obj.Version);
 
       // Check minimal required daemon version
-      if (IsNewerVersion(obj.Version, config.MinRequiredDaemonVer)) {
+      if (IsNewVersion(obj.Version, config.MinRequiredDaemonVer)) {
         store.commit("daemonIsOldVersionError", true);
         return;
       }
