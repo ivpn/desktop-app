@@ -204,7 +204,7 @@ func (i *ManagementInterface) miCommunication() {
 	mesLogRouteAddCmdRegexp := regexp.MustCompile(
 		"(?i)" + // i modifier: insensitive. Case insensitive match (ignores case of [a-zA-Z])
 			"^" + // beginning of the line (it is important for security reason)
-			regexp.QuoteMeta(routeCommand) + "[ \t]+" + // platform-specific route command
+			regexp.QuoteMeta(routeCommand) + "[ ]+" + // platform-specific route command
 			"ADD[ \t]+" + // 'add' instruction
 			"(-net[ \t]+)?" + // '-net' instruction for macOS
 			"(([0-9]{1,3}[.]){3,3}[0-9]{1,3})(/[0-9]{1,2})?[ \t]+" + // IPv4 address
