@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/version"
 	"github.com/ivpn/desktop-app-daemon/vpn"
@@ -228,6 +229,11 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 
 	} else if vpn.Type(r.VpnType) == vpn.WireGuard {
 		hostValue := r.WireGuardParameters.EntryVpnServer.Hosts[rand.Intn(len(r.WireGuardParameters.EntryVpnServer.Hosts))]
+
+		// prevent user-defined data injection: ensure that nothing except the base64 public key will be stored in the configuration
+		if !helpers.ValidateBase64(hostValue.PublicKey) {
+			return fmt.Errorf("WG public key is not base64 string")
+		}
 
 		connectionParams := wireguard.CreateConnectionParams(
 			r.WireGuardParameters.Port.Port,

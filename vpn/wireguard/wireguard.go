@@ -29,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/vpn"
@@ -186,6 +187,11 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 	listenPort, err := netinfo.GetFreePort()
 	if err != nil {
 		return nil, fmt.Errorf("unable to obtain free local port: %w", err)
+	}
+
+	// prevent user-defined data injection: ensure that nothing except the base64 public key will be stored in the configuration
+	if !helpers.ValidateBase64(wg.connectParams.hostPublicKey) {
+		return nil, fmt.Errorf("WG public key is not base64 string")
 	}
 
 	interfaceCfg := []string{
