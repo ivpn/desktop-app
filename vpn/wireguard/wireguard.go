@@ -193,6 +193,9 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 	if !helpers.ValidateBase64(wg.connectParams.hostPublicKey) {
 		return nil, fmt.Errorf("WG public key is not base64 string")
 	}
+	if !helpers.ValidateBase64(wg.connectParams.clientPrivateKey) {
+		return nil, fmt.Errorf("WG private key is not base64 string")
+	}
 
 	interfaceCfg := []string{
 		"[Interface]",
