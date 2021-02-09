@@ -99,7 +99,7 @@
               </button>
               <!-- INSTALL BUTTON -->
               <button
-                v-else-if="isReadyToInstall"
+                v-else-if="isReadyToInstall || isInstalling"
                 class="master btn"
                 v-on:click="onInstallPressed"
               >
@@ -110,7 +110,7 @@
         </div>
 
         <UpdateProgress
-          v-if="isHasDownloadState"
+          v-if="isHasDownloadState || isErrorState"
           class="flexRowRestSpace"
           style="margin-left: 10px;"
         />
@@ -263,14 +263,24 @@ export default {
       return this.updateProgress.state;
     },
     isDownloading: function() {
-      return this.state == AppUpdateStage.Downloading;
+      return (
+        this.state == AppUpdateStage.Downloading ||
+        this.state == AppUpdateStage.CheckingSignature
+      );
     },
     isReadyToInstall: function() {
       return this.state == AppUpdateStage.ReadyToInstall;
     },
+    isInstalling: function() {
+      return this.state == AppUpdateStage.Installing;
+    },
     isHasDownloadState: function() {
-      if (!this.state) return false;
+      if (!this.state || this.isErrorState) return false;
       return true;
+    },
+    isErrorState: function() {
+      if (this.state == AppUpdateStage.Error) return true;
+      return false;
     },
     // CIRRENT VERSIONS
     uiVersion: function() {

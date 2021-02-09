@@ -36,6 +36,7 @@ export default {
       state: AppUpdaterStageEnum.Downloading,
       error: null,
       readyToInstallBinary: "",
+      readyToInstallSignatureFile: "",
       downloadStatus: { 
         contentLength: 0,
         downloaded:    0

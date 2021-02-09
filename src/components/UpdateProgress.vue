@@ -1,6 +1,7 @@
 <template>
   <div id="main">
-    <div id="progressBar">
+    <div v-if="isErrorState" style="color: grey">{{ errorMessage }}</div>
+    <div v-else id="progressBar">
       <div id="progress" ref="progress"></div>
     </div>
   </div>
@@ -18,6 +19,7 @@ export default {
   },
   methods: {
     updateProgressBarState: function() {
+      if (!this.$refs.progress || !this.$refs.progress.style) return;
       this.$refs.progress.style.width =
         (Number(this.downloaded) / Number(this.contentLength)) * 100 + "%";
     }
@@ -31,6 +33,17 @@ export default {
       if (!this.updateProgress) return null;
       return this.updateProgress.state;
     },
+    errorMessage: function() {
+      if (!this.isErrorState || !this.updateProgress) return null;
+      let msg = this.updateProgress.error;
+      if (!msg) return "Update failed";
+      return msg;
+    },
+    isErrorState: function() {
+      if (this.state == AppUpdateStage.Error) return true;
+      return false;
+    },
+
     downloaded: function() {
       if (!this.state || !this.updateProgress) return 0;
       if (this.state == AppUpdateStage.ReadyToInstall) return 1; // for 'ReadyToInstall' downloaded and contentLength must be same

@@ -22,15 +22,43 @@
 
 import client from "@/daemon-client";
 import config from "@/config";
-import { IsNewVersion } from "./helper";
 import store from "@/store";
 import { AppUpdateStage } from "@/store/types";
+import { IsNewVersion } from "./helper";
+import { Platform, PlatformEnum } from "@/platform/platform";
+import {
+  ValidateDataOpenSSLCertificate,
+  ValidateFileOpenSSLCertificate
+} from "@/helpers/main_signature";
+
+const os = require("os");
 
 let DownloadUpdateCancelled = false;
 
 export async function CheckUpdates() {
   try {
-    let updatesInfo = await client.GetAppUpdateInfo();
+    let updatesInfoData = await client.GetAppUpdateInfo();
+
+    if (
+      !updatesInfoData ||
+      !updatesInfoData.updateInfoRespRaw ||
+      !updatesInfoData.updateInfoSignRespRaw
+    )
+      return null;
+
+    if (
+      (await ValidateDataOpenSSLCertificate(
+        updatesInfoData.updateInfoRespRaw,
+        updatesInfoData.updateInfoSignRespRaw,
+        "IVPN_UpdateInfo"
+      )) !== true
+    ) {
+      console.error("Failed to validate application update info signature");
+      return null;
+    }
+
+    let updatesInfo = JSON.parse(`${updatesInfoData.updateInfoRespRaw}`);
+
     if (!updatesInfo) return null;
     if (!updatesInfo.generic || !updatesInfo.generic.version) return null;
     return updatesInfo;
@@ -72,14 +100,50 @@ export async function Install() {
     return;
   }
 
-  console.log("INSTALLING :", updateProgress.readyToInstallBinary);
+  console.log(
+    "INSTALLING :",
+    updateProgress.readyToInstallBinary,
+    updateProgress.readyToInstallSignatureFile
+  );
+
   setState({
-    updateState: AppUpdateStage.Installing
+    state: AppUpdateStage.Installing
   });
+
+  try {
+    // validating certificate before start
+    if (
+      (await ValidateFileOpenSSLCertificate(
+        updateProgress.readyToInstallBinary,
+        updateProgress.readyToInstallSignatureFile
+      )) !== true
+    ) {
+      setState({
+        state: AppUpdateStage.Error,
+        error: "Unable to start update: signature verification error"
+      });
+      return;
+    }
+
+    // START INSTALL
+    if (Platform() === PlatformEnum.Windows) {
+      let spawn = require("child_process").spawn;
+      spawn(updateProgress.readyToInstallBinary);
+    } else {
+      throw new Error(
+        "Automatic updates installation is not supported for this platform"
+      );
+    }
+  } catch (err) {
+    setState({
+      state: AppUpdateStage.Error,
+      error: "Unable to start update: " + err
+    });
+  }
   return true;
 }
 
-export function Upgrade(latestVersionInfo) {
+export async function Upgrade(latestVersionInfo) {
   if (!latestVersionInfo) {
     console.error("Upgrade skipped: no information about latest version");
     return null;
@@ -103,58 +167,82 @@ export function Upgrade(latestVersionInfo) {
         });
       };
 
-      let onDownloadFinished = async function(downloadedFile, error) {
-        if (DownloadUpdateCancelled) {
-          setState({
-            updateState: AppUpdateStage.CancelledDownload
-          });
-          return;
-        }
+      setState({
+        state: AppUpdateStage.Downloading
+      });
+      // DOWNLOAD SIGNATURE
+      let downloadedSignatureFile = null;
+      try {
+        downloadedSignatureFile = await Download(
+          latestVersionInfo.generic.signature
+        );
+      } catch (error) {
+        // failed to download (or failed or save)
+        setState({
+          state: AppUpdateStage.Error,
+          error: "Failed to download update signature: " + error
+        });
+      }
 
-        if (error) {
-          // failed to download (or failed or save) binary
-          setState({
-            state: AppUpdateStage.Error,
-            error: "Failed to download update: " + error
-          });
-        } else {
-          // checking downloaded binary signature
-          setState({
-            state: AppUpdateStage.CheckingSignature
-          });
-          if (await CheckSignature()) {
-            // signature ok - ready to install
-            setState({
-              state: AppUpdateStage.ReadyToInstall,
-              readyToInstallBinary: downloadedFile
-            });
-          } else {
-            // signature check error
-            setState({
-              state: AppUpdateStage.Error,
-              error:
-                "Update failed: Signature verification failed of update binary"
-            });
-          }
-        }
-      };
+      if (DownloadUpdateCancelled) {
+        setState({
+          updateState: AppUpdateStage.CancelledDownload
+        });
+        return;
+      }
 
-      Download(
-        latestVersionInfo.generic.downloadLink,
-        onDownloadProgress,
-        onDownloadFinished
-      );
+      // DOWNLOAD BINARY
+      let downloadedFile = null;
+      try {
+        downloadedFile = await Download(
+          latestVersionInfo.generic.downloadLink,
+          onDownloadProgress
+        );
+      } catch (error) {
+        // failed to download (or failed or save) binary
+        setState({
+          state: AppUpdateStage.Error,
+          error: "Failed to download update: " + error
+        });
+      }
+
+      if (DownloadUpdateCancelled) {
+        setState({
+          updateState: AppUpdateStage.CancelledDownload
+        });
+        return;
+      }
+
+      // checking downloaded binary signature
+      setState({
+        state: AppUpdateStage.CheckingSignature
+      });
+      if (
+        await ValidateFileOpenSSLCertificate(
+          downloadedFile,
+          downloadedSignatureFile
+        )
+      ) {
+        // signature ok - ready to install
+        setState({
+          state: AppUpdateStage.ReadyToInstall,
+          readyToInstallBinary: downloadedFile,
+          readyToInstallSignatureFile: downloadedSignatureFile
+        });
+      } else {
+        // signature check error
+        setState({
+          state: AppUpdateStage.Error,
+          error: "Update failed: signature verification error"
+        });
+      }
     }
   } catch (e) {
     console.error(e);
   }
 }
 
-async function CheckSignature() {
-  return true;
-}
-
-async function Download(link, onProgress, onEnd) {
+async function Download(link, onProgress) {
   return await new Promise((resolve, reject) => {
     try {
       var path = require("path");
@@ -162,7 +250,7 @@ async function Download(link, onProgress, onEnd) {
       var https = require("https");
 
       let filename = link.substring(link.lastIndexOf("/") + 1);
-      let outFilePath = path.join("/tmp", filename);
+      let outFilePath = path.join(os.tmpdir(), filename);
 
       var file = fs.createWriteStream(outFilePath);
 
@@ -189,16 +277,13 @@ async function Download(link, onProgress, onEnd) {
 
           // finished
           res.on("end", () => {
-            if (onEnd) onEnd(outFilePath);
             resolve(outFilePath);
           });
         })
         .on("error", e => {
-          if (onEnd) onEnd(null, e);
           reject(e);
         });
     } catch (e) {
-      if (onEnd) onEnd(null, e);
       reject(e);
     }
   });

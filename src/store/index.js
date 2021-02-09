@@ -79,6 +79,7 @@ export default new Vuex.Store({
       "generic": {
         "version": "3.2.45",
         "downloadLink": "https://repo.ivpn.net/binaries/audit2021/IVPN-3.2.40.dmg",
+        "signature":    "https://repo.ivpn.net/binaries/audit2021/IVPN-3.2.40.dmg.sign.sha256.base64",
         "releaseNotes": [
           {
             "type": "new",
