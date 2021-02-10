@@ -99,11 +99,19 @@
               </button>
               <!-- INSTALL BUTTON -->
               <button
-                v-else-if="isReadyToInstall || isInstalling"
+                v-else-if="isReadyToInstall"
                 class="master btn"
                 v-on:click="onInstallPressed"
               >
                 Install
+              </button>
+              <!-- INSTALLING BUTTON -->
+              <button
+                v-if="isInstalling"
+                class="slave btn"
+                style="background: transparent; color: grey; birder: 0px"
+              >
+                Installing ...
               </button>
             </div>
           </div>
@@ -126,7 +134,7 @@
       <div v-if="isGenericUpdater">
         <!-- generic -->
 
-        <div v-if="genericReleaseNotes && latestDaemonVersionHasUpdate">
+        <div v-if="genericReleaseNotes && isHasUpgrade">
           <div class="boldFont">Release notes</div>
           <div
             v-for="note of genericReleaseNotes"

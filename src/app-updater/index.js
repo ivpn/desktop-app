@@ -72,12 +72,7 @@ export function StartUpdateChecker(onHasUpdateCallback) {
           onHasUpdateCallback &&
           updater.IsNewerVersion(updatesInfo, currDaemonVer, currUiVer)
         ) {
-          onHasUpdateCallback(
-            updatesInfo.daemon.version,
-            updatesInfo.uiClient.version,
-            currDaemonVer,
-            currUiVer
-          );
+          onHasUpdateCallback(updatesInfo, currDaemonVer, currUiVer);
         }
       } catch (e) {
         console.error(e);

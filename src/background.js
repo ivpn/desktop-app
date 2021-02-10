@@ -715,10 +715,21 @@ function menuOnVersion() {
 }
 
 // UPDATE
-function OnAppUpdateAvailable(newDaemonVer, newUiVer) {
-  // Arguments: updatesInfo.daemon.version, updatesInfo.uiClient.version, currDaemonVer, currUiVer
+function OnAppUpdateAvailable(updatesInfo) {
+  // Arguments: updatesInfo, currDaemonVer, currUiVer
   try {
     // check if we should skip user notification for this version
+
+    let newDaemonVer;
+    let newUiVer;
+    if (updatesInfo.generic) {
+      newDaemonVer = updatesInfo.generic.version.trim();
+      newUiVer = updatesInfo.generic.version.trim();
+    } else {
+      newDaemonVer = updatesInfo.daemon.version.trim();
+      newUiVer = updatesInfo.uiClient.version.trim();
+    }
+
     newDaemonVer = newDaemonVer.trim();
     newUiVer = newUiVer.trim();
     if (

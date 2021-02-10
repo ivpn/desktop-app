@@ -34,6 +34,7 @@ import {
 const os = require("os");
 
 let DownloadUpdateCancelled = false;
+let DownloadRequest = null;
 
 export async function CheckUpdates() {
   try {
@@ -86,7 +87,13 @@ function setState(updateState) {
 }
 
 export async function CancelDownload() {
-  DownloadUpdateCancelled = true;
+  try {
+    DownloadUpdateCancelled = true;
+    if (DownloadRequest) DownloadRequest.destroy();
+    DownloadRequest = null;
+  } catch (e) {
+    console.warn(e);
+  }
 }
 
 export async function Install() {
@@ -128,7 +135,12 @@ export async function Install() {
     // START INSTALL
     if (Platform() === PlatformEnum.Windows) {
       let spawn = require("child_process").spawn;
-      spawn(updateProgress.readyToInstallBinary);
+
+      spawn(updateProgress.readyToInstallBinary, null, {
+        shell: true,
+        stdio: "ignore",
+        detached: true
+      }).unref();
     } else {
       throw new Error(
         "Automatic updates installation is not supported for this platform"
@@ -150,6 +162,7 @@ export async function Upgrade(latestVersionInfo) {
   }
 
   DownloadUpdateCancelled = false;
+  DownloadRequest = null;
 
   try {
     if (!latestVersionInfo.generic || !latestVersionInfo.generic.downloadLink) {
@@ -182,6 +195,7 @@ export async function Upgrade(latestVersionInfo) {
           state: AppUpdateStage.Error,
           error: "Failed to download update signature: " + error
         });
+        return;
       }
 
       if (DownloadUpdateCancelled) {
@@ -204,6 +218,7 @@ export async function Upgrade(latestVersionInfo) {
           state: AppUpdateStage.Error,
           error: "Failed to download update: " + error
         });
+        return;
       }
 
       if (DownloadUpdateCancelled) {
@@ -254,10 +269,13 @@ async function Download(link, onProgress) {
 
       var file = fs.createWriteStream(outFilePath);
 
-      let request = https
+      DownloadRequest = https
         .get(link, res => {
           if (res.statusCode != 200) {
-            throw new Error(`StatusCode: ${res.statusCode}`);
+            if (DownloadRequest) DownloadRequest.destroy();
+            DownloadRequest = null;
+            reject(new Error(`StatusCode: ${res.statusCode}`));
+            return;
           }
           // pipe to file
           res.pipe(file);
@@ -267,20 +285,18 @@ async function Download(link, onProgress) {
 
           // listening for progress event
           res.on("data", d => {
-            if (DownloadUpdateCancelled) {
-              request.abort();
-              return;
-            }
             received += d.length;
             if (onProgress) onProgress(contentLength, received);
           });
 
           // finished
           res.on("end", () => {
+            DownloadRequest = null;
             resolve(outFilePath);
           });
         })
         .on("error", e => {
+          DownloadRequest = null;
           reject(e);
         });
     } catch (e) {
