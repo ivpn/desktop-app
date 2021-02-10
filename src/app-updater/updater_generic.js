@@ -136,11 +136,20 @@ export async function Install() {
     if (Platform() === PlatformEnum.Windows) {
       let spawn = require("child_process").spawn;
 
-      spawn(updateProgress.readyToInstallBinary, null, {
+      let cmd = spawn(updateProgress.readyToInstallBinary, null, {
         shell: true,
         stdio: "ignore",
         detached: true
-      }).unref();
+      });
+
+      cmd.on("exit", code => {
+        if (code != 0) {
+          setState({
+            state: AppUpdateStage.Error,
+            error: "Failed to run update binary"
+          });
+        }
+      });
     } else {
       throw new Error(
         "Automatic updates installation is not supported for this platform"
