@@ -31,11 +31,11 @@ These instructions will get you a copy of the project up and running on your loc
 #### Windows
   - [Go 1.13+](https://golang.org/)
   - Git
-  
+
 #### macOS
   - [Go 1.13+](https://golang.org/)
   - Git
-  
+
 #### Linux
   - [Go 1.13+](https://golang.org/)
   - packages: [FPM](https://fpm.readthedocs.io/en/latest/installing.html), curl, rpm, libiw-dev
@@ -48,7 +48,7 @@ These instructions will get you a copy of the project up and running on your loc
   **Note!**
   IVPN Daemon must be installed appropriately on a target system.  
   We recommend using [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a Windows installer for IVPN software.  
-  
+
 ```
 git clone https://github.com/ivpn/desktop-app-cli.git
 cd desktop-app-cli
@@ -56,13 +56,13 @@ References\Windows\build.bat <VERSION_X.X.X>
 ```
 
   Compiled binaries can be found at: `bin\x86_64\cli`  
-  
+
 #### macOS
-  
+
   **Note!**
   IVPN Daemon must be installed appropriately on a target system.  
   We recommend using [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a macOS DMG package for IVPN software.  
-  
+
 ```
 git clone https://github.com/ivpn/desktop-app-cli.git
 cd desktop-app-cli/
@@ -73,20 +73,20 @@ cd desktop-app-cli/
 
 #### Linux
 Instructions to build Linux DEB and RPM packages of IVPN software ('base' package: daemon + CLI):  
-    
+
 ```
 git clone https://github.com/ivpn/desktop-app-daemon.git
 git clone https://github.com/ivpn/desktop-app-cli.git
 cd desktop-app-cli/References/Linux/
 ./build.sh -v <VERSION_X.X.X>
 ```
-  
+
   Compiled packages can be found at `desktop-app-cli/References/Linux/_out_bin`  
-  
+
   **Info**
   You may be interested also in [IVPN Client UI](https://github.com/ivpn/desktop-app-ui2) project to build a 'UI' Linux redistributable packages of IVPN software.
-  
-  
+
+
 ##### Manual installation on Linux
 Sometimes it is required to have the possibility to install IVPN binaries manually.  
 It's easy to do it by following the rules described below.
@@ -100,7 +100,6 @@ total 52
 -rwx------ 1 root root  1927 May 25 16:50 client.up
 -rwx------ 1 root root  5224 May 25 16:50 firewall.sh
 -rw------- 1 root root 21524 May 26 20:52 servers.json
--r-------- 1 root root   451 May 25 16:50 signing.pub
 -r-------- 1 root root   636 May 25 16:50 ta.key
 ```
 1. Build the current project to get 'ivpn service' and 'ivpn cli' binaries.
