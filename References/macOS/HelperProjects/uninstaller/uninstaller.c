@@ -445,8 +445,20 @@ int update(const char* dmgFile, const char* signatureFile) {
         return 1;
       }
 
+      const char *args0[] = {NULL};
+      // Hack to force "authentication required" window to pop-up;
+      if (AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/echo", kAuthorizationFlagDefaults, args0, NULL))
+      {
+        logmes(LOG_ERR, "FAILED to get privileges");
+        return 2;
+      }
+
       int r = disconnectAndQuitApp();
-      if (r) return r;
+      if (r) 
+      {
+        AuthorizationFree(authRef, kAuthorizationFlagDefaults);
+        return r;
+      }
 
       char *args[] = {dmgFile, signatureFile, NULL};
       OSStatus ret = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/install.sh", kAuthorizationFlagDefaults, args, NULL);
@@ -454,7 +466,7 @@ int update(const char* dmgFile, const char* signatureFile) {
       if (ret)
       {
         logmes(LOG_ERR, "FAILED to get privileges");
-        return 2;
+        return 3;
       }
 
       AuthorizationFree(authRef, kAuthorizationFlagDefaults);
