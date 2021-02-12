@@ -237,29 +237,12 @@ export async function Upgrade(latestVersionInfo) {
         return;
       }
 
-      // checking downloaded binary signature
+      // ready to install
       setState({
-        state: AppUpdateStage.CheckingSignature
+        state: AppUpdateStage.ReadyToInstall,
+        readyToInstallBinary: downloadedFile,
+        readyToInstallSignatureFile: downloadedSignatureFile
       });
-      if (
-        await ValidateFileOpenSSLCertificate(
-          downloadedFile,
-          downloadedSignatureFile
-        )
-      ) {
-        // signature ok - ready to install
-        setState({
-          state: AppUpdateStage.ReadyToInstall,
-          readyToInstallBinary: downloadedFile,
-          readyToInstallSignatureFile: downloadedSignatureFile
-        });
-      } else {
-        // signature check error
-        setState({
-          state: AppUpdateStage.Error,
-          error: "Update failed: signature verification error"
-        });
-      }
     }
   } catch (e) {
     console.error(e);

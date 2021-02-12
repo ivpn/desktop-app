@@ -2,6 +2,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
+import config from "@/config";
 import { GetOpenSSLBinaryPath } from "./main_platform";
 
 // SIGNING EXAMPLE
@@ -50,11 +51,8 @@ export async function ValidateFileOpenSSLCertificate(
     .slice(0, -1)
     .join(".");
 
-  // eslint-disable-next-line no-undef
-  let pubKeyPathInternal = path.join(__static, "update", "public.pem");
-  let pubKeyPath = path.join(os.tmpdir(), "tmp_ivpn_public.pem");
+  let pubKeyPath = path.join(config.GetResourcesPath(), "public.pem");
   try {
-    fs.copyFileSync(pubKeyPathInternal, pubKeyPath);
     //    decode base64:
     //        openssl base64 -d -in sign.sha256.base64 -out sign2.sha256
     let retCode = await executeOpenSSlCommand([
@@ -84,7 +82,6 @@ export async function ValidateFileOpenSSLCertificate(
     return false;
   } finally {
     try {
-      fs.unlinkSync(pubKeyPath);
       fs.unlinkSync(tmpSignSha256File);
     } catch (e) {
       console.warn(e);
