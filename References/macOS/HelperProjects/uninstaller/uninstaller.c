@@ -161,7 +161,6 @@ int is_helper_installation_required() {
     return 0; // helper not installed. Installation required
 }
 
-
 int remove_helper_with_auth(AuthorizationRef authRef) {
   CFErrorRef error = NULL;
   int ret = 0;
@@ -309,6 +308,29 @@ int install_helper() {
     return err;
 }
 
+int disconnectAndQuitApp() {
+  printf("[ ] Disabling IVPN firewall ...\n");
+  system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn firewall -off");
+
+  printf("[ ] Disconnecting IVPN ...\n");
+  system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn disconnect");
+
+  printf("[ ] Closing IVPN app...\n");
+  if (system("/usr/bin/osascript -e 'quit app \"ivpn-ui\"'"))
+  {
+    logmes(LOG_ERR, "ERROR: Unable to close application (ivpn-ui).");
+    system( "/usr/bin/osascript -e 'display alert \"IVPN Uninstaller\" message \"Please, close IVPN application and try again.\"'");
+    return 3;
+  }
+  if (system("/usr/bin/osascript -e 'quit app \"IVPN\"'"))
+  {
+    logmes(LOG_ERR, "ERROR: Unable to close application (IVPN).");
+    system( "/usr/bin/osascript -e 'display alert \"IVPN Uninstaller\" message \"Please, close IVPN application and try again.\"'");
+    return 4;
+  }
+  return 0;
+}
+
 int uninstall() {
       logmes(LOG_INFO, "Uninstalling IVPN ...");
       const char *homeDir = getenv("HOME");
@@ -333,25 +355,8 @@ int uninstall() {
 
       bool hasErrors = false;
 
-      printf("[ ] Disabling IVPN firewall ...\n");
-      system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn firewall -off");
-
-      printf("[ ] Disconnecting IVPN ...\n");
-      system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn disconnect");
-
-      printf("[ ] Closing IVPN app...\n");
-      if (system("/usr/bin/osascript -e 'quit app \"ivpn-ui\"'"))
-      {
-        logmes(LOG_ERR, "ERROR: Unable to close application (ivpn-ui). IVPN not uninstalled.");
-        system( "/usr/bin/osascript -e 'display alert \"IVPN Uninstaller\" message \"Please, close IVPN application and try again.\"'");
-        return 3;
-      }
-      if (system("/usr/bin/osascript -e 'quit app \"IVPN\"'"))
-      {
-        logmes(LOG_ERR, "ERROR: Unable to close application (IVPN). IVPN not uninstalled.");
-        system( "/usr/bin/osascript -e 'display alert \"IVPN Uninstaller\" message \"Please, close IVPN application and try again.\"'");
-        return 4;
-      }
+      int ret = disconnectAndQuitApp();
+      if (ret) return ret;
 
       printf("[ ] Logout ...\n");
       system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn logout");
@@ -427,6 +432,36 @@ int uninstall() {
       return hasErrors;
 }
 
+int update(const char* dmgFile, const char* signatureFile) {
+      logmes(LOG_INFO, "Updating IVPN ...");
+
+      CFErrorRef error = NULL;
+      AuthorizationRef authRef = NULL;
+
+      OSStatus err = AuthorizationCreate(NULL, NULL, kAuthorizationFlagDefaults, &authRef);
+      if(err != errAuthorizationSuccess)
+      {
+        logmes(LOG_ERR, "ERROR: Creating authorization failed");
+        return 1;
+      }
+
+      int r = disconnectAndQuitApp();
+      if (r) return r;
+
+      char *args[] = {dmgFile, signatureFile, NULL};
+      OSStatus ret = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/install.sh", kAuthorizationFlagDefaults, args, NULL);
+      
+      if (ret)
+      {
+        logmes(LOG_ERR, "FAILED to get privileges");
+        return 2;
+      }
+
+      AuthorizationFree(authRef, kAuthorizationFlagDefaults);
+
+      return ret;
+}
+
 int start_helper() {
   // This instructions is creating 'fake' connection to service.
   // Benefints of this operations - OS will restart helper if it will crash.
@@ -471,6 +506,15 @@ int main(int argc, char **argv) {
             return start_helper();
         if (strcmp(argv[1], "--uninstall")==0)
             return uninstall();
+        if (strcmp(argv[1], "--update")==0) 
+        {
+            if (argc < 4 )
+            {
+              printf("No arguments provided for this command.\n");
+              return 2;
+            }
+            return update(argv[2], argv[3]);
+        }
     }
 
     if (IS_INSTALLER != 0)
@@ -481,6 +525,7 @@ int main(int argc, char **argv) {
       printf("    --uninstall_helper\n");
       printf("    --start_helper\n");
       printf("    --uninstall\n");
+      printf("    --update <DMG_with_update> <signature_file_of_the_DMG>\n");
       printf("    --is_helper_installation_required (returns exit code: 0 -> helper have to be installed)\n");
       return 1;
     }

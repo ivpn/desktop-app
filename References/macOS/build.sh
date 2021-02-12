@@ -234,7 +234,7 @@ _BACKGROUND_FILE="back.png"
 _APPLICATION_NAME="IVPN.app"
 _UNINSTALL_APPLICATION_NAME="IVPN Uninstaller.app"
 _source=${_PATH_IMAGE_FOLDER}
-_title="IVPN ${_VERSION}"
+_title="IVPN-${_VERSION}"
 _size=256000
 
 # creating output directory (if not exists)

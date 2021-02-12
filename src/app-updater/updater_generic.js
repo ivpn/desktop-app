@@ -96,6 +96,51 @@ export async function CancelDownload() {
   }
 }
 
+async function installWindows(updateProgress) {
+  let spawn = require("child_process").spawn;
+
+  let cmd = spawn(updateProgress.readyToInstallBinary, null, {
+    shell: true,
+    stdio: "ignore",
+    detached: true
+  });
+
+  cmd.on("exit", code => {
+    if (code != 0) {
+      setState({
+        state: AppUpdateStage.Error,
+        error: "Failed to run update binary"
+      });
+    }
+  });
+}
+
+async function installMacOS(updateProgress) {
+  let spawn = require("child_process").spawn;
+
+  let cmd = spawn(
+    "/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/IVPN Installer",
+    [
+      "--update",
+      updateProgress.readyToInstallBinary,
+      updateProgress.readyToInstallSignatureFile
+    ],
+    {
+      stdio: "ignore",
+      detached: true
+    }
+  );
+
+  cmd.on("exit", code => {
+    if (code != 0) {
+      setState({
+        state: AppUpdateStage.Error,
+        error: "Failed to run update binary"
+      });
+    }
+  });
+}
+
 export async function Install() {
   let updateProgress = store.state.uiState.appUpdateProgress;
   if (
@@ -134,22 +179,9 @@ export async function Install() {
 
     // START INSTALL
     if (Platform() === PlatformEnum.Windows) {
-      let spawn = require("child_process").spawn;
-
-      let cmd = spawn(updateProgress.readyToInstallBinary, null, {
-        shell: true,
-        stdio: "ignore",
-        detached: true
-      });
-
-      cmd.on("exit", code => {
-        if (code != 0) {
-          setState({
-            state: AppUpdateStage.Error,
-            error: "Failed to run update binary"
-          });
-        }
-      });
+      installWindows(updateProgress);
+    } else if (Platform() === PlatformEnum.macOS) {
+      installMacOS(updateProgress);
     } else {
       throw new Error(
         "Automatic updates installation is not supported for this platform"
