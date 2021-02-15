@@ -57,7 +57,7 @@ var (
 	obfsproxyStartScript string
 	obfsproxyHostPort    int
 
-	routeCommand string // exmaple: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux
+	routeCommand string // Example: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux, "C:\\Windows\\System32\\ROUTE.EXE" - for Windows
 
 	wgBinaryPath     string
 	wgToolBinaryPath string
@@ -314,7 +314,7 @@ func ObfsproxyHostPort() int {
 }
 
 // RouteCommand shell command to update routing table
-// exmaple: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux
+// Example: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux, "C:\\Windows\\System32\\ROUTE.EXE" - for Windows
 func RouteCommand() string {
 	return routeCommand
 }

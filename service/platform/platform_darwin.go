@@ -42,6 +42,8 @@ func doInitConstants() {
 }
 
 func doOsInit() (warnings []string, errors []error) {
+	routeCommand = "/sbin/route"
+
 	warnings, errors = doOsInitForBuild()
 
 	if errors == nil {
