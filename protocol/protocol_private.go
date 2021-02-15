@@ -39,7 +39,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
 )
 
-// connID returns connection info (required to destinguish communication between several connections in log)
+// connID returns connection info (required to distinguish communication between several connections in log)
 func (p *Protocol) connLogID(c net.Conn) string {
 	if c == nil {
 		return ""
@@ -214,11 +214,17 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 			hosts = append(hosts, net.ParseIP(v))
 		}
 
+		if len(hosts) < 1 {
+			return fmt.Errorf("VPN host not defined")
+		}
+		// in case of multiple hosts - take random host from the list
+		host := hosts[rand.Intn(len(hosts))]
+
 		connectionParams := openvpn.CreateConnectionParams(
 			r.OpenVpnParameters.MultihopExitSrvID,
 			r.OpenVpnParameters.Port.Protocol > 0, // is TCP
 			r.OpenVpnParameters.Port.Port,
-			hosts,
+			host,
 			r.OpenVpnParameters.ProxyType,
 			net.ParseIP(r.OpenVpnParameters.ProxyAddress),
 			r.OpenVpnParameters.ProxyPort,

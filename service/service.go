@@ -576,7 +576,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 					}
 
 					// Inform firewall about client local IP
-					firewall.ClientConnected(state.ClientIP)
+					firewall.ClientConnected(state.ClientIP, state.ClientPort, state.ServerIP, state.ServerPort)
 				default:
 				}
 
@@ -662,7 +662,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 	// Add host IP to firewall exceptions
 	const onlyForICMP = false
-	err := firewall.AddHostsToExceptions(vpnProc.DestinationIPs(), onlyForICMP)
+	err := firewall.AddHostsToExceptions([]net.IP{vpnProc.DestinationIP()}, onlyForICMP)
 	if err != nil {
 		log.Error("Failed to start. Unable to add hosts to firewall exceptions:", err.Error())
 		return err

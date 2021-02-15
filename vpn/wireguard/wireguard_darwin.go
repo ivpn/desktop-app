@@ -139,7 +139,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 			// todo
 			if strings.Contains(text, strTriggerInterfaceDown) {
 				// TODO: detecting if an interface was down. It can happen, for example, when another tunnel was initialized (e.g. separate OpenVPN connection)
-				// Normally, we no not need it. netchange.Detector checking for routing chnages (implemented on service level)
+				// Normally, we no not need it. netchange.Detector checking for routing changes (implemented on service level)
 			}
 		}
 	}()
@@ -181,7 +181,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 			} else {
 				log.Info("Started")
 				// CONNECTED
-				stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP, true)
+				wg.notifyConnectedStat(stateChan)
 			}
 
 		case <-time.After(time.Second * 5):

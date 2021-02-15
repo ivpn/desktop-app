@@ -97,7 +97,7 @@ func implSetPersistant(persistant bool) error {
 }
 
 // ClientConnected - allow communication for local vpn/client IP address
-func implClientConnected(clientLocalIPAddress net.IP) error {
+func implClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP net.IP, serverPort int) error {
 	connectedVpnLocalIP = clientLocalIPAddress.String()
 	inf, err := netinfo.InterfaceByIPAddr(clientLocalIPAddress)
 	if err != nil {
