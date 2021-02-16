@@ -13,7 +13,7 @@ package wifiNotifier
 #include "iwlib_2_linux.c"
 
 #include <stdio.h>  // printf
-#include <string.h> // strdup prototype
+#include <string.h> // strndup prototype
 #include <stdlib.h> // free protype
 
 #include <netinet/in.h>
@@ -189,7 +189,7 @@ static inline char* get_essid (char *iface)
 {
    int           fd;
    struct iwreq  w;
-   char          essid[IW_ESSID_MAX_SIZE];
+   char          essid[IW_ESSID_MAX_SIZE+1];
    if (!iface) return NULL;
 
    fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -205,7 +205,7 @@ static inline char* get_essid (char *iface)
 
    if (isOK != 0) return NULL;
 
-   return strdup (essid);
+   return strndup (essid, 32); // normally, the IW_ESSID_MAX_SIZE is 32 bytes (the coping with potential security flaws within the driver)
 }
 
 static inline char * getCurrentWifiInfo(int* retIsInsecure) {
