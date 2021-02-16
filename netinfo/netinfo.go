@@ -109,7 +109,6 @@ func GetFreeUDPPort() (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to resolve TCP address: %w", err)
 	}
-	fmt.Println(addr, err)
 
 	l, err := net.ListenUDP("udp", addr)
 	if err != nil {
