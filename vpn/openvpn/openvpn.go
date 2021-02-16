@@ -224,6 +224,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 					// save source and destination port
 					stateInf.ClientPort = o.localPort
 					stateInf.ServerPort = o.connectParams.hostPort
+					stateInf.IsTCP = o.connectParams.tcp
 
 					// notify about correct local IP in VPN network
 					o.clientIP = stateInf.ClientIP

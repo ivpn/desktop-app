@@ -576,7 +576,10 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 					}
 
 					// Inform firewall about client local IP
-					firewall.ClientConnected(state.ClientIP, state.ClientPort, state.ServerIP, state.ServerPort)
+					firewall.ClientConnected(
+						state.ClientIP, state.ClientPort,
+						state.ServerIP, state.ServerPort,
+						state.IsTCP)
 				default:
 				}
 

@@ -97,15 +97,32 @@ func implSetPersistant(persistant bool) error {
 }
 
 // ClientConnected - allow communication for local vpn/client IP address
-func implClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP net.IP, serverPort int) error {
+func implClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) error {
 	connectedVpnLocalIP = clientLocalIPAddress.String()
 	inf, err := netinfo.InterfaceByIPAddr(clientLocalIPAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get local interface by IP: %w", err)
 	}
 
-	scriptArgs := fmt.Sprintf("-connected %s %s", inf.Name, clientLocalIPAddress)
-	return shell.Exec(nil, platform.FirewallScript(), scriptArgs)
+	protocol := "udp"
+	if isTCP {
+		protocol = "tcp"
+	}
+	scriptArgs := fmt.Sprintf("-connected %s %s %d %s %d %s",
+		inf.Name,
+		clientLocalIPAddress,
+		clientPort,
+		serverIP,
+		serverPort,
+		protocol)
+	err = shell.Exec(nil, platform.FirewallScript(), scriptArgs)
+	if err != nil {
+		return fmt.Errorf("failed to add rule for current connection directions: %w", err)
+	}
+
+	// Connection already established. The rule for VPN interface is defined.
+	// Removing host IP from exceptions
+	return removeHostsFromExceptions([]string{serverIP.String()}, false)
 }
 
 // ClientDisconnected - Disable communication for local vpn/client IP address

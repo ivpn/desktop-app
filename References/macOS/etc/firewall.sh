@@ -174,16 +174,9 @@ function main {
       pfctl -a "${ANCHOR_NAME}" -t "${EXCEPTIONS_TABLE}" -T delete $@
 
     elif [[ $1 = "-connected" ]]; then       
+        
         IFACE=$2  
-        #SRC_ADDR=$3
-        #SRC_PORT=$4
-        DST_ADDR=$5
-        #DST_PORT=$6
         client_connected ${IFACE} 
-
-        # Connection already established. The rule for VPN interface is defined. 
-        # Removing host IP from EXCEPTIONS_TABLE
-        pfctl -a "${ANCHOR_NAME}" -t "${EXCEPTIONS_TABLE}" -T delete ${DST_ADDR}
 
     elif [[ $1 = "-disconnected" ]]; then
         shift

@@ -131,7 +131,7 @@ func implSetPersistant(persistant bool) (retErr error) {
 }
 
 // ClientConnected - allow communication for local vpn/client IP address
-func implClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP net.IP, serverPort int) (retErr error) {
+func implClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) (retErr error) {
 	// start / commit transaction
 	if err := manager.TransactionStart(); err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)

@@ -125,6 +125,7 @@ type StateInfo struct {
 
 	VpnType      Type
 	Time         int64  // unix time (seconds)
+	IsTCP        bool   // applicable only for 'CONNECTED' state
 	ClientIP     net.IP // applicable only for 'CONNECTED' state
 	ClientPort   int    // applicable only for 'CONNECTED' state (source port)
 	ServerIP     net.IP // applicable only for 'CONNECTED' state
@@ -150,10 +151,11 @@ func NewStateInfo(state State, description string) StateInfo {
 }
 
 // NewStateInfoConnected - create new state object for CONNECTED state
-func NewStateInfoConnected(clientIP net.IP, localPort int, serverIP net.IP, destPort int, isCanPause bool) StateInfo {
+func NewStateInfoConnected(isTCP bool, clientIP net.IP, localPort int, serverIP net.IP, destPort int, isCanPause bool) StateInfo {
 	return StateInfo{
 		State:       CONNECTED,
 		Description: "",
+		IsTCP:       isTCP,
 		ClientIP:    clientIP,
 		ClientPort:  localPort,
 		ServerIP:    serverIP,

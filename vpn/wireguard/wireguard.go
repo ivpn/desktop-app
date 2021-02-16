@@ -220,9 +220,13 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 }
 
 func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
+	const isTCP = false
+	const isCanPause = true
 	stateChan <- vpn.NewStateInfoConnected(
+		isTCP,
 		wg.connectParams.clientLocalIP,
 		wg.localPort,
 		wg.connectParams.hostIP,
-		wg.connectParams.hostPort, true)
+		wg.connectParams.hostPort,
+		isCanPause)
 }
