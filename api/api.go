@@ -55,8 +55,8 @@ var APIAliases = map[string]string{
 	"updateInfo_macOS": "/updates/mac/update_test_delme.json",
 	"updateSign_macOS": "/updates/mac/update_test_delme.json.sign.sha256.base64",
 
-	"updateInfo_Windows": "/releases/win/update_test_delme.json",
-	"updateSign_Windows": "/releases/win/update_test_delme.json.sign.sha256.base64",
+	"updateInfo_Windows": "/updates/win/update_test_delme.json",
+	"updateSign_Windows": "/updates/win/update_test_delme.json.sign.sha256.base64",
 }
 
 var log *logger.Logger
