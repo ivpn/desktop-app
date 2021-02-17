@@ -284,8 +284,18 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		}()
 	}
 
+	// Generating random secret for MI
+	// This value used to validate that connected MI (to the listening TCP port) is the instance of OpenVPN which we already started
+	// Check procedure:
+	// 1. daemon is starting listening on a port for a connection from OpenVPN MI
+	// 2. daemon is running OpenVPN binary and reading its console output
+	// 3. OpenVPN MI connects back to the daemon (to the listening TCP port)
+	// 4. daemon sends 'echo' command with secret string to MI
+	// 5. daemon checks OpenVPN console output for the secret string which were sent by TCP connection
+	miSecret := fmt.Sprintf("[IVPN_SECRET_%X%X]", rand.Uint64(), rand.Uint64())
+
 	// start new management interface
-	mi, err := StartManagementInterface(o.connectParams.username, o.connectParams.password, internalStateChan)
+	mi, err := StartManagementInterface(miSecret, o.connectParams.username, o.connectParams.password, internalStateChan)
 	if err != nil {
 		return fmt.Errorf("failed to start MI: %w", err)
 	}
@@ -327,8 +337,9 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 	const maxBufSize int = 512
 	strOut := strings.Builder{}
 	strErr := strings.Builder{}
+	isCanSkipOutputCheck := false
 	outProcessFunc := func(text string, isError bool) {
-		if len(text) == 0 {
+		if isCanSkipOutputCheck || len(text) == 0 {
 			return
 		}
 		if isError {
@@ -337,6 +348,13 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 			}
 			strErr.WriteString(text)
 		} else {
+			if strings.Contains(text, miSecret) {
+				// MI connection verified
+				// Allowing communication with MI
+				mi.SetConnectionVerified()
+				isCanSkipOutputCheck = true
+			}
+
 			if strOut.Len() > maxBufSize {
 				return
 			}

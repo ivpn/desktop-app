@@ -43,6 +43,9 @@ import (
 type ManagementInterface struct {
 	log *logger.Logger
 
+	secret         string
+	isConnVerified chan struct{}
+
 	miConn    *net.TCPConn
 	listener  *net.TCPListener
 	stateChan chan<- vpn.StateInfo
@@ -60,8 +63,11 @@ type ManagementInterface struct {
 }
 
 // StartManagementInterface - starts TCP interface to communicate with IVPN application (server to listen incoming connections)
-func StartManagementInterface(username string, password string, stateChan chan<- vpn.StateInfo) (mi *ManagementInterface, err error) {
+func StartManagementInterface(miSecret string, username string, password string, stateChan chan<- vpn.StateInfo) (mi *ManagementInterface, err error) {
 	ret := &ManagementInterface{
+		secret:         miSecret,
+		isConnVerified: make(chan struct{}),
+
 		log:       logger.NewLogger("ovpnmi"),
 		stateChan: stateChan,
 		username:  username,
@@ -97,6 +103,15 @@ func (i *ManagementInterface) StopManagementInterface() error {
 		}
 	}
 	return ret
+}
+
+// SetConnectionVerified sets the current MI connection as verified: communication allowed
+func (i *ManagementInterface) SetConnectionVerified() {
+	// do not block if channell already full
+	select {
+	case i.isConnVerified <- struct{}{}:
+	default:
+	}
 }
 
 // ListenAddress returns ip:port of listener
@@ -225,6 +240,19 @@ func (i *ManagementInterface) miCommunication() {
 		i.miConn.Close()
 		i.log.Info("OpenVPN MI disconnected: ", i.miConn.RemoteAddr())
 	}()
+
+	// sending secret value to be verified by daemon
+	i.sendResponse(fmt.Sprintf("echo %s", i.secret))
+	// waiting for verification
+	// if not verified during 5 seconds - close current MI connection
+	select {
+	case <-i.isConnVerified:
+		i.log.Info("Connection verified")
+		break
+	case <-time.After(5 * time.Second):
+		i.log.Error("Connection NOT verified!")
+		return
+	}
 
 	// request version info
 	i.sendResponse("version")
