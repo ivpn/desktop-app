@@ -266,63 +266,15 @@ static inline char* getAvailableSSIDs(void) {
 
     return retSSID;
 }
-
-static inline void onNetworkStateChanged()
-{
-	extern void __onWifiChanged(char *);
-	__onWifiChanged(getCurrentSSID());
-}
-
-static inline void setWifiNotifier(void) {
-    struct sockaddr_nl addr;
-    int sock, len;
-    char buffer[4096];
-    struct nlmsghdr *nlh;
-
-    if ((sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) == -1) {
-        perror("couldn't open NETLINK_ROUTE socket");
-        return;
-    }
-
-    memset(&addr, 0, sizeof(addr));
-    addr.nl_family = AF_NETLINK;
-    addr.nl_groups = RTMGRP_IPV4_IFADDR;
-
-    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        perror("couldn't bind");
-        return;
-    }
-
-    nlh = (struct nlmsghdr *)buffer;
-    while ((len = recv(sock, nlh, 4096, 0)) > 0) {
-        while ((NLMSG_OK(nlh, len)) && (nlh->nlmsg_type != NLMSG_DONE)) {
-            switch(nlh->nlmsg_type) {
-                case RTM_NEWADDR:
-                case RTM_DELADDR:
-                    onNetworkStateChanged();
-            }
-            nlh = NLMSG_NEXT(nlh, len);
-        }
-    }
-}
 */
 import "C"
 import (
+	"fmt"
 	"strings"
 	"unsafe"
+
+	"github.com/ivpn/desktop-app-daemon/oshelpers/linux/netlink"
 )
-
-var internalOnWifiChangedCb func(string)
-
-//export __onWifiChanged
-func __onWifiChanged(ssid *C.char) {
-	goSsid := C.GoString(ssid)
-	C.free(unsafe.Pointer(ssid))
-
-	if internalOnWifiChangedCb != nil {
-		internalOnWifiChangedCb(goSsid)
-	}
-}
 
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
 func GetAvailableSSIDs() []string {
@@ -353,7 +305,27 @@ func GetCurrentNetworkSecurity() WiFiSecurity {
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func SetWifiNotifier(cb func(string)) {
-	internalOnWifiChangedCb = cb
-	go C.setWifiNotifier()
+func SetWifiNotifier(cb func(string)) error {
+	if cb == nil {
+		return fmt.Errorf("callback function not defined")
+	}
+
+	l, err := netlink.CreateListener()
+	if err != nil {
+		return fmt.Errorf("Netlink listener initialization error: %w", err)
+	}
+	go func() {
+		for {
+			msgs, err := l.ReadMsgs()
+			if err != nil {
+				fmt.Println("Could not read netlink messages: %s", err)
+			}
+			for _, m := range msgs {
+				if netlink.IsNewAddr(&m) || netlink.IsDelAddr(&m) {
+					cb(GetCurrentSSID())
+				}
+			}
+		}
+	}()
+	return nil
 }

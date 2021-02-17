@@ -42,15 +42,14 @@ var timerDelayedNotify *time.Timer
 
 const delayBeforeWiFiChangeNotify = time.Second * 1
 
-func (s *Service) initWiFiFunctionality() error {
+func (s *Service) initWiFiFunctionality() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("initWiFiFunctionality PANIC (recovered): ", r)
 		}
 	}()
 
-	wifiNotifier.SetWifiNotifier(s.onWiFiChanged)
-	return nil
+	return wifiNotifier.SetWifiNotifier(s.onWiFiChanged)
 }
 
 func (s *Service) onWiFiChanged(ssid string) {

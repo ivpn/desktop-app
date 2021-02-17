@@ -20,6 +20,7 @@ func GetCurrentNetworkSecurity() WiFiSecurity {
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func SetWifiNotifier(cb func(string)) {
+func SetWifiNotifier(cb func(string)) error {
 	logger.Debug("WiFi functionality disabled in this build")
+	return nil
 }
