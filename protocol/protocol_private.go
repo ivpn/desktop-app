@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/version"
 	"github.com/ivpn/desktop-app-daemon/vpn"
@@ -38,7 +39,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
 )
 
-// connID returns connection info (required to destinguish communication between several connections in log)
+// connID returns connection info (required to distinguish communication between several connections in log)
 func (p *Protocol) connLogID(c net.Conn) string {
 	if c == nil {
 		return ""
@@ -208,26 +209,51 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 	retManualDNS := net.ParseIP(r.CurrentDNS)
 
 	if vpn.Type(r.VpnType) == vpn.OpenVPN {
+		// PARAMETERS VALIDATION
+		// parsing hosts
 		var hosts []net.IP
 		for _, v := range r.OpenVpnParameters.EntryVpnServer.IPAddresses {
 			hosts = append(hosts, net.ParseIP(v))
 		}
+		if len(hosts) < 1 {
+			return fmt.Errorf("VPN host not defined")
+		}
+		// in case of multiple hosts - take random host from the list
+		host := hosts[rand.Intn(len(hosts))]
 
+		// only one-line parameter is allowed
+		multihopExitSrvID := strings.Split(r.OpenVpnParameters.MultihopExitSrvID, "\n")[0]
+		// nothing from supported proxy types should be in this parameter
+		proxyType := r.OpenVpnParameters.ProxyType
+		if len(proxyType) > 0 && proxyType != "http" && proxyType != "socks" {
+			proxyType = ""
+		}
+		// only one-line parameter is allowed
+		proxyUsername := strings.Split(r.OpenVpnParameters.ProxyUsername, "\n")[0]
+		proxyPassword := strings.Split(r.OpenVpnParameters.ProxyPassword, "\n")[0]
+
+		// CONNECTION
+		// OpenVPN connection parameters
 		connectionParams := openvpn.CreateConnectionParams(
-			r.OpenVpnParameters.MultihopExitSrvID,
+			multihopExitSrvID,
 			r.OpenVpnParameters.Port.Protocol > 0, // is TCP
 			r.OpenVpnParameters.Port.Port,
-			hosts,
-			r.OpenVpnParameters.ProxyType,
+			host,
+			proxyType,
 			net.ParseIP(r.OpenVpnParameters.ProxyAddress),
 			r.OpenVpnParameters.ProxyPort,
-			r.OpenVpnParameters.ProxyUsername,
-			r.OpenVpnParameters.ProxyPassword)
+			proxyUsername,
+			proxyPassword)
 
 		return p._service.ConnectOpenVPN(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
 
 	} else if vpn.Type(r.VpnType) == vpn.WireGuard {
 		hostValue := r.WireGuardParameters.EntryVpnServer.Hosts[rand.Intn(len(r.WireGuardParameters.EntryVpnServer.Hosts))]
+
+		// prevent user-defined data injection: ensure that nothing except the base64 public key will be stored in the configuration
+		if !helpers.ValidateBase64(hostValue.PublicKey) {
+			return fmt.Errorf("WG public key is not base64 string")
+		}
 
 		connectionParams := wireguard.CreateConnectionParams(
 			r.WireGuardParameters.Port.Port,

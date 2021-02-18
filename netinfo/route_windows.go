@@ -71,7 +71,7 @@ func getWindowsIPv4Routes() ([]iphlpapi.APIMibIPForwardRow, error) {
 	num := *(*uint32)(unsafe.Pointer(&buf[0]))
 
 	routes := make([]iphlpapi.APIMibIPForwardRow, num)
-	sr := uintptr(unsafe.Pointer(&buf[0])) + unsafe.Sizeof(num)
+	sr := unsafe.Pointer(uintptr(unsafe.Pointer(&buf[0])) + unsafe.Sizeof(num))
 	rowSize := unsafe.Sizeof(iphlpapi.APIMibIPForwardRow{})
 
 	if len(buf) < int((unsafe.Sizeof(num) + rowSize*uintptr(num))) {
@@ -79,7 +79,7 @@ func getWindowsIPv4Routes() ([]iphlpapi.APIMibIPForwardRow, error) {
 	}
 
 	for i := uint32(0); i < num; i++ {
-		routes[i] = *((*iphlpapi.APIMibIPForwardRow)(unsafe.Pointer(sr + (rowSize * uintptr(i)))))
+		routes[i] = *((*iphlpapi.APIMibIPForwardRow)(unsafe.Pointer(uintptr(sr) + (rowSize * uintptr(i)))))
 	}
 
 	return routes, nil

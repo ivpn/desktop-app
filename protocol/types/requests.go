@@ -45,18 +45,6 @@ type Hello struct {
 	KeepDaemonAlone bool
 }
 
-// RawCredentials - RAW credentials
-type RawCredentials struct {
-	AccountID      string
-	Session        string
-	OvpnUser       string
-	OvpnPass       string
-	WgPublicKey    string
-	WgPrivateKey   string
-	WgLocalIP      string
-	WgKeyGenerated int64 // Unix time
-}
-
 // GetServers request servers list
 type GetServers struct {
 	CommandBase

@@ -83,7 +83,7 @@ func doGetPortOwnerPID(localTCPPort int) (int, error) {
 	//	table        []MibTCPRowOwnerPid
 	//}
 	dwNumEntries := *(*uint32)(unsafe.Pointer(&buf[0]))
-	rowsStartPtr := uintptr(unsafe.Pointer(&buf[0])) + unsafe.Sizeof(dwNumEntries)
+	rowsStartPtr := unsafe.Pointer(uintptr(unsafe.Pointer(&buf[0])) + unsafe.Sizeof(dwNumEntries))
 	rowSize := unsafe.Sizeof(iphlpapi.MibTCPRowOwnerPid{})
 
 	if len(buf) < int((unsafe.Sizeof(dwNumEntries) + rowSize*uintptr(dwNumEntries))) {
@@ -91,7 +91,7 @@ func doGetPortOwnerPID(localTCPPort int) (int, error) {
 	}
 	var row iphlpapi.MibTCPRowOwnerPid
 	for i := uint32(0); i < dwNumEntries; i++ {
-		row = *((*iphlpapi.MibTCPRowOwnerPid)(unsafe.Pointer(rowsStartPtr + (rowSize * uintptr(i)))))
+		row = *(*iphlpapi.MibTCPRowOwnerPid)(unsafe.Pointer(uintptr(rowsStartPtr) + (rowSize * uintptr(i))))
 
 		localPort := uint16(uint16(row.DwLocalPort[0])<<8 | uint16(row.DwLocalPort[1]))
 

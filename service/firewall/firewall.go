@@ -38,6 +38,10 @@ func init() {
 
 var (
 	connectedClientInterfaceIP net.IP
+	connectedClientPort        int
+	connectedHostIP            net.IP
+	connectedHostPort          int
+	connectedIsTCP             bool
 	mutex                      sync.Mutex
 	isClientPaused             bool
 )
@@ -71,7 +75,7 @@ func SetEnabled(enable bool) error {
 		// We must not do it in Paused state!
 		clientAddr := connectedClientInterfaceIP
 		if clientAddr != nil && isClientPaused == false {
-			return implClientConnected(clientAddr)
+			return implClientConnected(clientAddr, connectedClientPort, connectedHostIP, connectedHostPort, connectedIsTCP)
 		}
 	}
 	return nil
@@ -118,7 +122,7 @@ func ClientResumed() {
 }
 
 // ClientConnected - allow communication for local vpn/client IP address
-func ClientConnected(clientLocalIPAddress net.IP) error {
+func ClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 	ClientResumed()
@@ -126,7 +130,12 @@ func ClientConnected(clientLocalIPAddress net.IP) error {
 	log.Info("Client connected: ", clientLocalIPAddress)
 
 	connectedClientInterfaceIP = clientLocalIPAddress
-	err := implClientConnected(clientLocalIPAddress)
+	connectedClientPort = clientPort
+	connectedHostIP = serverIP
+	connectedHostPort = serverPort
+	connectedIsTCP = isTCP
+
+	err := implClientConnected(clientLocalIPAddress, clientPort, serverIP, serverPort, isTCP)
 	if err != nil {
 		log.Error(err)
 	}

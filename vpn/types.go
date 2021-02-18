@@ -124,9 +124,12 @@ type StateInfo struct {
 	Description string
 
 	VpnType      Type
-	Time         int64  // unix time (sconds)
+	Time         int64  // unix time (seconds)
+	IsTCP        bool   // applicable only for 'CONNECTED' state
 	ClientIP     net.IP // applicable only for 'CONNECTED' state
+	ClientPort   int    // applicable only for 'CONNECTED' state (source port)
 	ServerIP     net.IP // applicable only for 'CONNECTED' state
+	ServerPort   int    // applicable only for 'CONNECTED' state (destination port)
 	ExitServerID string // applicable only for 'CONNECTED' state
 	IsCanPause   bool   // applicable only for 'CONNECTED' state
 	IsAuthError  bool   // applicable only for 'EXITING' state
@@ -148,12 +151,15 @@ func NewStateInfo(state State, description string) StateInfo {
 }
 
 // NewStateInfoConnected - create new state object for CONNECTED state
-func NewStateInfoConnected(clientIP net.IP, serverIP net.IP, isCanPause bool) StateInfo {
+func NewStateInfoConnected(isTCP bool, clientIP net.IP, localPort int, serverIP net.IP, destPort int, isCanPause bool) StateInfo {
 	return StateInfo{
 		State:       CONNECTED,
 		Description: "",
+		IsTCP:       isTCP,
 		ClientIP:    clientIP,
+		ClientPort:  localPort,
 		ServerIP:    serverIP,
+		ServerPort:  destPort,
 		IsAuthError: false,
 		IsCanPause:  isCanPause}
 }
@@ -162,12 +168,12 @@ func NewStateInfoConnected(clientIP net.IP, serverIP net.IP, isCanPause bool) St
 type Process interface {
 	// Type just returns VPN type
 	Type() Type
-	// Init performs basic initialisations before connection
+	// Init performs basic initializations before connection
 	// It is usefull, for example, for WireGuard(Windows) - to ensure that WG service is fully uninstalled
 	// (currently, in use by WireGuard(Windows))
 	Init() error
 
-	// Connect - SYNCHRONOUSLY execute openvpn process (wait untill it finished)
+	// Connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 	Connect(stateChan chan<- StateInfo) error
 	Disconnect() error
 	Pause() error
@@ -177,7 +183,7 @@ type Process interface {
 	SetManualDNS(addr net.IP) error
 	ResetManualDNS() error
 
-	// DestinationIPs -  Get destination IPs (VPN host server or proxy server IP address)
+	// DestinationIP -  Get destination IP (VPN host server or proxy server IP address)
 	// This information if required, for example, to allow this address in firewall
-	DestinationIPs() []net.IP
+	DestinationIP() net.IP
 }

@@ -76,9 +76,18 @@ func InterfaceByIPAddr(localAddr net.IP) (*net.Interface, error) {
 	return nil, errors.New("not found network interface with address:" + localAddr.String())
 }
 
-// GetFreePort - get unused TCP local port
+// GetFreePort - get unused local port
 // Note there is no guarantee that port will not be in use right after finding it
-func GetFreePort() (int, error) {
+func GetFreePort(isTCP bool) (int, error) {
+	if isTCP {
+		return GetFreeTCPPort()
+	}
+	return GetFreeUDPPort()
+}
+
+// GetFreeTCPPort - get unused TCP local port
+// Note there is no guarantee that port will not be in use right after finding it
+func GetFreeTCPPort() (int, error) {
 	addr, err := net.ResolveTCPAddr("tcp", ":0")
 	if err != nil {
 		return 0, fmt.Errorf("failed to resolve TCP address: %w", err)
@@ -86,11 +95,27 @@ func GetFreePort() (int, error) {
 
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		return 0, fmt.Errorf("failed to start listener: %w", err)
+		return 0, fmt.Errorf("failed to obtain free local TCP port: %w", err)
 	}
 	defer l.Close()
 
 	return l.Addr().(*net.TCPAddr).Port, nil
+}
+
+// GetFreeUDPPort - get unused UDP local port
+// Note there is no guarantee that port will not be in use right after finding it
+func GetFreeUDPPort() (int, error) {
+	addr, err := net.ResolveUDPAddr("udp", ":0")
+	if err != nil {
+		return 0, fmt.Errorf("failed to resolve TCP address: %w", err)
+	}
+
+	l, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return 0, fmt.Errorf("failed to obtain free local UDP port: %w", err)
+	}
+	defer l.Close()
+	return l.LocalAddr().(*net.UDPAddr).Port, nil
 }
 
 // GetInterfaceByIndex - get interface info by its index

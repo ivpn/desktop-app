@@ -101,12 +101,12 @@ BUILDTAGS_USE_LIBVPN=""
 
 if [[ "$@" == *"-debug"* ]]
 then
-  BUILDTAGS_DEBUG="-tags debug"
+  BUILDTAGS_DEBUG="debug"
 fi
 
 if [[ "$@" == *"-libivpn"* ]]
 then
-  BUILDTAGS_USE_LIBVPN="-tags libivpn"
+  BUILDTAGS_USE_LIBVPN="libivpn"
 fi
 
 if [[ "$@" != *"-wifi"* ]]
@@ -119,14 +119,14 @@ then
       [Yy]* )
           ;;
       [Nn]* )
-        BUILDTAGS_NOWIFI="-tags nowifi"
+        BUILDTAGS_NOWIFI="nowifi"
         ;;
       * )
-        BUILDTAGS_NOWIFI="-tags nowifi"
+        BUILDTAGS_NOWIFI="nowifi"
         ;;
   esac
 fi
 
-go build $BUILDTAGS_NOWIFI $BUILDTAGS_USE_LIBVPN $BUILDTAGS_DEBUG -o "IVPN Agent" -trimpath -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=$VERSION -X github.com/ivpn/desktop-app-daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app-daemon/version._time=$DATE"
+go build -tags "${BUILDTAGS_NOWIFI} ${BUILDTAGS_USE_LIBVPN} ${BUILDTAGS_DEBUG}" -o "IVPN Agent" -trimpath -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=$VERSION -X github.com/ivpn/desktop-app-daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app-daemon/version._time=$DATE"
 
 echo "Cpmpiled daemon binary: '$(pwd)/IVPN Agent'"

@@ -346,7 +346,8 @@ func GetCurrentNetworkSecurity() WiFiSecurity {
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func SetWifiNotifier(cb func(string)) {
+func SetWifiNotifier(cb func(string)) error {
 	internalOnWifiChangedCb = cb
 	go C.setWifiNotifier()
+	return nil
 }

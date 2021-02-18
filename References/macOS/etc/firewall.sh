@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Useful commands:
+# Show all rules/anchors
+#   sudo pfctl -s rules
+# Show all rules for "ivpn_firewall" anchor
+#   sudo pfctl -a "ivpn_firewall" -s rules
+#   sudo pfctl -a "ivpn_firewall/tunnel" -s rules
+# Show table
+#   sudo pfctl -a "ivpn_firewall" -t ivpn_servers -T show
+
 PATH=/sbin:/usr/sbin:$PATH
 
 ANCHOR_NAME="ivpn_firewall"
@@ -165,7 +174,10 @@ function main {
       pfctl -a "${ANCHOR_NAME}" -t "${EXCEPTIONS_TABLE}" -T delete $@
 
     elif [[ $1 = "-connected" ]]; then       
-        client_connected $2
+        
+        IFACE=$2  
+        client_connected ${IFACE} 
+
     elif [[ $1 = "-disconnected" ]]; then
         shift
         client_disconnected

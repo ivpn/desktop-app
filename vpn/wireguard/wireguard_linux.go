@@ -129,7 +129,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 			}
 
 			// notify connected
-			stateChan <- vpn.NewStateInfoConnected(wg.connectParams.clientLocalIP, wg.connectParams.hostIP, true)
+			wg.notifyConnectedStat(stateChan)
 
 			wgInterfaceName := filepath.Base(wg.configFilePath)
 			wgInterfaceName = strings.TrimSuffix(wgInterfaceName, path.Ext(wgInterfaceName))

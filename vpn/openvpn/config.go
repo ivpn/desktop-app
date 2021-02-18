@@ -43,7 +43,7 @@ type ConnectionParams struct {
 	multihopExitSrvID string
 	tcp               bool
 	hostPort          int
-	hostIPs           []net.IP
+	hostIP            net.IP
 	proxyType         string
 	proxyAddress      net.IP
 	proxyPort         int
@@ -68,7 +68,7 @@ func CreateConnectionParams(
 	multihopExitSrvID string,
 	tcp bool,
 	hostPort int,
-	hostIPs []net.IP,
+	hostIP net.IP,
 	proxyType string,
 	proxyAddress net.IP,
 	proxyPort int,
@@ -79,7 +79,7 @@ func CreateConnectionParams(
 		multihopExitSrvID: multihopExitSrvID,
 		tcp:               tcp,
 		hostPort:          hostPort,
-		hostIPs:           hostIPs,
+		hostIP:            hostIP,
 		proxyType:         proxyType,
 		proxyAddress:      proxyAddress,
 		proxyPort:         proxyPort,
@@ -89,6 +89,7 @@ func CreateConnectionParams(
 
 // WriteConfigFile saves OpenVPN connection parameters into a config file
 func (c *ConnectionParams) WriteConfigFile(
+	localPort int,
 	filePathToSave string,
 	miAddr string,
 	miPort int,
@@ -97,7 +98,7 @@ func (c *ConnectionParams) WriteConfigFile(
 	extraParameters string,
 	isCanUseV24Params bool) error {
 
-	cfg, err := c.generateConfiguration(miAddr, miPort, logFile, obfsproxyPort, extraParameters, isCanUseV24Params)
+	cfg, err := c.generateConfiguration(localPort, miAddr, miPort, logFile, obfsproxyPort, extraParameters, isCanUseV24Params)
 	if err != nil {
 		return fmt.Errorf("failed to generate openvpn configuration : %w", err)
 	}
@@ -123,6 +124,7 @@ func (c *ConnectionParams) WriteConfigFile(
 }
 
 func (c *ConnectionParams) generateConfiguration(
+	localPort int,
 	miAddr string,
 	miPort int,
 	logFile string,
@@ -209,23 +211,17 @@ func (c *ConnectionParams) generateConfiguration(
 		cfg = append(cfg, "proto udp")
 	}
 
-	if len(c.hostIPs) < 1 {
+	if c.hostIP.IsUnspecified() {
 		return nil, errors.New("unable to connect. Host IP not defined")
 	}
 	if c.hostPort < 0 || c.hostPort > 65535 {
 		return nil, errors.New("unable to connect. Invalid port")
 	}
 
-	for _, host := range c.hostIPs {
-		cfg = append(cfg, fmt.Sprintf("remote %s %d", host, c.hostPort))
-	}
-
-	if len(c.hostIPs) > 1 {
-		cfg = append(cfg, "remote-random")
-	}
+	cfg = append(cfg, fmt.Sprintf("remote %s %d", c.hostIP, c.hostPort))
 
 	cfg = append(cfg, "resolv-retry infinite")
-	cfg = append(cfg, "nobind")
+	cfg = append(cfg, fmt.Sprintf("lport %d", localPort))
 	cfg = append(cfg, "persist-key")
 
 	if _, err := os.Stat(platform.OpenvpnCaKeyFile()); os.IsNotExist(err) {
@@ -259,13 +255,11 @@ func (c *ConnectionParams) generateConfiguration(
 		}
 
 		if localGatewayAddress == nil {
-			return nil, errors.New("internal error: LocalGatewayAdress not defined. Unable to generate OpenVPN configuration")
+			return nil, errors.New("internal error: LocalGatewayAddress not defined. Unable to generate OpenVPN configuration")
 		}
 
 		if c.proxyAddress.Equal(net.IPv4(127, 0, 0, 1)) {
-			for _, addr := range c.hostIPs {
-				cfg = append(cfg, fmt.Sprintf("route %s 255.255.255.255 %s", addr.String(), localGatewayAddress.String()))
-			}
+			cfg = append(cfg, fmt.Sprintf("route %s 255.255.255.255 %s", c.hostIP.String(), localGatewayAddress.String()))
 		} else {
 			cfg = append(cfg, fmt.Sprintf("route %s 255.255.255.255 %s", c.proxyAddress, localGatewayAddress.String()))
 		}

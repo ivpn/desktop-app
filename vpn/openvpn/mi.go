@@ -43,6 +43,9 @@ import (
 type ManagementInterface struct {
 	log *logger.Logger
 
+	secret         string
+	isConnVerified chan struct{}
+
 	miConn    *net.TCPConn
 	listener  *net.TCPListener
 	stateChan chan<- vpn.StateInfo
@@ -60,8 +63,11 @@ type ManagementInterface struct {
 }
 
 // StartManagementInterface - starts TCP interface to communicate with IVPN application (server to listen incoming connections)
-func StartManagementInterface(username string, password string, stateChan chan<- vpn.StateInfo) (mi *ManagementInterface, err error) {
+func StartManagementInterface(miSecret string, username string, password string, stateChan chan<- vpn.StateInfo) (mi *ManagementInterface, err error) {
 	ret := &ManagementInterface{
+		secret:         miSecret,
+		isConnVerified: make(chan struct{}),
+
 		log:       logger.NewLogger("ovpnmi"),
 		stateChan: stateChan,
 		username:  username,
@@ -97,6 +103,15 @@ func (i *ManagementInterface) StopManagementInterface() error {
 		}
 	}
 	return ret
+}
+
+// SetConnectionVerified sets the current MI connection as verified: communication allowed
+func (i *ManagementInterface) SetConnectionVerified() {
+	// do not block if channell already full
+	select {
+	case i.isConnVerified <- struct{}{}:
+	default:
+	}
 }
 
 // ListenAddress returns ip:port of listener
@@ -191,18 +206,30 @@ func (i *ManagementInterface) start() error {
 // miCommunication - communication with openVPN process (OpenVPN Management Interface).
 // Processing requests from client and sending response
 func (i *ManagementInterface) miCommunication() {
+	// Example: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux, "C:\\Windows\\System32\\ROUTE.EXE" - for Windows
+	routeCommand := platform.RouteCommand()
 
 	mesRegexp := regexp.MustCompile("^>([a-zA-Z0-9-]+):(.*)")
 	mesNeedPassRegexp := regexp.MustCompile("Need '(.+)' username/password")
+
 	// 'route add ...' commands detection RegExp
-	// expected: c:\windows\system32\route.exe add 128.0.0.0 mask 128.0.0.0 10.42.40.1
-	// expected: /sbin/ip route add 0.0.0.0/1 via 10.60.40.1
-	// ignored (example): linux route add commandfailed: external program exited with error status: 2
-	mesLogRouteAddCmdRegexp := regexp.MustCompile(".*route(.exe)?[ \t]+add[ \t]+.*([0-9]{1,3}[.]){3,3}[0-9]{1,3}.*([0-9]{1,3}[.]){3,3}[0-9]{1,3}.*")
+	// Windows (OpenVPN 2.4):	>LOG:1612484260,,C:\WINDOWS\system32\route.exe ADD 123.200.11.22 MASK 255.255.255.255 192.168.1.1
+	// macOS   (OpenVPN 2.4):	>LOG:1612517083,,/sbin/route add -net 123.200.11.22 192.168.1.1 255.255.255.255\r
+	// Linux   (OpenVPN 2.4):	>LOG:1612516859,,/sbin/ip route add 123.200.11.22/32 via 192.168.1.1\r
+	mesLogRouteAddCmdRegexp := regexp.MustCompile(
+		"(?i)" + // i modifier: insensitive. Case insensitive match (ignores case of [a-zA-Z])
+			"^" + // beginning of the line (it is important for security reason)
+			regexp.QuoteMeta(routeCommand) + "[ ]+" + // platform-specific route command
+			"ADD[ \t]+" + // 'add' instruction
+			"(-net[ \t]+)?" + // '-net' instruction for macOS
+			"(([0-9]{1,3}[.]){3,3}[0-9]{1,3})(/[0-9]{1,2})?[ \t]+" + // IPv4 address
+			"((MASK|via)[ \t]+)?" + // instructions 'MASK' for Windows or 'via' for Linux
+			"([0-9]{1,3}[.]){3,3}[0-9]{1,3}([ \t]+" + // IPv4 address
+			"([0-9]{1,3}[.]){3,3}[0-9]{1,3})?") // IPv4 address
+
 	mesLogPushReplyCmdRegexp := regexp.MustCompile(".*PUSH.*'PUSH_REPLY[ ,]*(.*)'")
 
 	mesLogRouteAddCmdRegexpOvpn45 := regexp.MustCompile(".*net_route_v4_add:[ \t]+(([0-9]{1,3}[.]){3,3}[0-9]{1,3}(\\/[0-9]+)?[ \t]+.*[ \t]+([0-9]{1,3}[.]){3,3}[0-9]{1,3}).*")
-	routeCommandOvpn45 := platform.RouteCommand()
 
 	if i.miConn == nil {
 		i.log.Panic("INTERNAL ERROR: OpenVPN MI connection is null!")
@@ -213,6 +240,19 @@ func (i *ManagementInterface) miCommunication() {
 		i.miConn.Close()
 		i.log.Info("OpenVPN MI disconnected: ", i.miConn.RemoteAddr())
 	}()
+
+	// sending secret value to be verified by daemon
+	i.sendResponse(fmt.Sprintf("echo %s", i.secret))
+	// waiting for verification
+	// if not verified during 5 seconds - close current MI connection
+	select {
+	case <-i.isConnVerified:
+		i.log.Info("Connection verified")
+		break
+	case <-time.After(5 * time.Second):
+		i.log.Error("Connection NOT verified!")
+		return
+	}
 
 	// request version info
 	i.sendResponse("version")
@@ -246,21 +286,22 @@ func (i *ManagementInterface) miCommunication() {
 		switch msgSource {
 		case "LOG":
 			// detect for routing change commands
-
-			// LOG:1564229538,,/sbin/route add -net 128.0.0.0 10.57.40.1 128.0.0.0
 			cols := strings.Split(msgText, ",")
 			if len(cols) == 3 {
-				cmdStr := strings.ToLower(cols[2])
-				// /sbin/route add -net 128.0.0.0 10.57.40.1 128.0.0.0
-				if mesLogRouteAddCmdRegexp.MatchString(cmdStr) {
-					i.addRouteAddCommand(cmdStr)
-				} else if len(routeCommandOvpn45) > 0 {
-					// OpenVPN >= 4.5:
-					// Routing log format was changed since OpenVPN 4.5
-					// LOG:1607410951,,net_route_v4_add: 193.203.48.54/32 via 192.168.1.1 dev [NULL] table 0 metric -1
-					submaches := mesLogRouteAddCmdRegexpOvpn45.FindStringSubmatch(cmdStr)
-					if len(submaches) >= 2 {
-						i.addRouteAddCommand(fmt.Sprint(routeCommandOvpn45, " add ", submaches[1]))
+				if len(routeCommand) > 0 {
+					cmdStr := strings.ToLower(cols[2])
+
+					submaches := mesLogRouteAddCmdRegexp.FindStringSubmatch(cmdStr)
+					if len(submaches) >= 1 {
+						i.addRouteAddCommand(submaches[0])
+					} else {
+						// OpenVPN >= 4.5:
+						// Routing log format was changed since OpenVPN 4.5
+						// LOG:1607410951,,net_route_v4_add: 193.203.48.54/32 via 192.168.1.1 dev [NULL] table 0 metric -1
+						submaches := mesLogRouteAddCmdRegexpOvpn45.FindStringSubmatch(cmdStr)
+						if len(submaches) >= 2 {
+							i.addRouteAddCommand(fmt.Sprint(routeCommand, " add ", submaches[1]))
+						}
 					}
 				}
 			} else {
@@ -408,6 +449,11 @@ func (i *ManagementInterface) sendResponse(commands ...string) error {
 }
 
 func (i *ManagementInterface) sendResp(canLog bool, command string) error {
+
+	// Only one command allowed to send
+	// This avoids the MI commands injection possibility (for the situations when we are controlling only command prefix)
+	command = strings.Split(command, "\n")[0]
+
 	if canLog {
 		i.log.Info("[->]: ", command)
 	}
@@ -428,9 +474,16 @@ func (i *ManagementInterface) sendResp(canLog bool, command string) error {
 }
 
 func (i *ManagementInterface) addRouteAddCommand(command string) {
+	// Example: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux, "C:\\Windows\\System32\\ROUTE.EXE" - for Windows
+	routeCommand := platform.RouteCommand()
+
 	i.routeAddCmdsMutex.Lock()
 	defer i.routeAddCmdsMutex.Unlock()
 
+	if !strings.HasPrefix(strings.ToLower(command), strings.ToLower(routeCommand)) {
+		i.log.Warning("Unexpected 'route-add' command: ", command)
+		return
+	}
 	command = strings.TrimSpace(command) // this is reqid
 
 	i.routeAddCmds = append(i.routeAddCmds, command)

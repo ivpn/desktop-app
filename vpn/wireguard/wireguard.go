@@ -29,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/vpn"
@@ -76,6 +77,7 @@ type WireGuard struct {
 	toolBinaryPath string
 	configFilePath string
 	connectParams  ConnectionParams
+	localPort      int
 
 	// Must be implemented (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	internals internalVariables
@@ -94,10 +96,10 @@ func NewWireGuardObject(wgBinaryPath string, wgToolBinaryPath string, wgConfigFi
 		connectParams:  connectionParams}, nil
 }
 
-// DestinationIPs -  Get destination IPs (VPN host server or proxy server IP address)
+// DestinationIP -  Get destination IP (VPN host server or proxy server IP address)
 // This information if required, for example, to allow this address in firewall
-func (wg *WireGuard) DestinationIPs() []net.IP {
-	return []net.IP{wg.connectParams.hostIP}
+func (wg *WireGuard) DestinationIP() net.IP {
+	return wg.connectParams.hostIP
 }
 
 // Type just returns VPN type
@@ -183,15 +185,25 @@ func (wg *WireGuard) generateAndSaveConfigFile(cfgFilePath string) error {
 }
 
 func (wg *WireGuard) generateConfig() ([]string, error) {
-	listenPort, err := netinfo.GetFreePort()
+	localPort, err := netinfo.GetFreeUDPPort()
 	if err != nil {
 		return nil, fmt.Errorf("unable to obtain free local port: %w", err)
+	}
+
+	wg.localPort = localPort
+
+	// prevent user-defined data injection: ensure that nothing except the base64 public key will be stored in the configuration
+	if !helpers.ValidateBase64(wg.connectParams.hostPublicKey) {
+		return nil, fmt.Errorf("WG public key is not base64 string")
+	}
+	if !helpers.ValidateBase64(wg.connectParams.clientPrivateKey) {
+		return nil, fmt.Errorf("WG private key is not base64 string")
 	}
 
 	interfaceCfg := []string{
 		"[Interface]",
 		"PrivateKey = " + wg.connectParams.clientPrivateKey,
-		"ListenPort = " + strconv.Itoa(listenPort)}
+		"ListenPort = " + strconv.Itoa(wg.localPort)}
 
 	peerCfg := []string{
 		"[Peer]",
@@ -205,4 +217,16 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 	peerCfg = append(peerCfg, pCgf...)
 
 	return append(interfaceCfg, peerCfg...), nil
+}
+
+func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
+	const isTCP = false
+	const isCanPause = true
+	stateChan <- vpn.NewStateInfoConnected(
+		isTCP,
+		wg.connectParams.clientLocalIP,
+		wg.localPort,
+		wg.connectParams.hostIP,
+		wg.connectParams.hostPort,
+		isCanPause)
 }

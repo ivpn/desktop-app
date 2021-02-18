@@ -223,6 +223,23 @@ function add_exceptions {
   ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_CH} -d $@ -j ACCEPT
 }
 
+function add_direction_exception {
+  IN_CH=$1
+  OUT_CH=$2
+
+  SRC_PORT=$3
+  DST_ADDR=$4
+  DST_PORT=$5
+  PROTOCOL=$6
+
+  create_chain ${IPv4BIN} ${IN_CH}
+  create_chain ${IPv4BIN} ${OUT_CH}
+
+  #add new rule
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_CH}  -s ${DST_ADDR} -p ${PROTOCOL} --sport ${DST_PORT} --dport ${SRC_PORT} -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_CH} -d ${DST_ADDR} -p ${PROTOCOL} --sport ${SRC_PORT} --dport ${DST_PORT} -j ACCEPT
+}
+
 function remove_exceptions {
   IN_CH=$1
   OUT_CH=$2
@@ -299,7 +316,18 @@ function main {
       add_exceptions_icmp ${IN_IVPN_ICMP_EXP} ${OUT_IVPN_ICMP_EXP} $@
 
     elif [[ $1 = "-connected" ]]; then
-        client_connected $2
+        IFACE=$2
+        #SRC_ADDR=$3
+        SRC_PORT=$4
+        DST_ADDR=$5
+        DST_PORT=$6
+        PROTOCOL=$7
+
+        # allow all communication trough vpn interface
+        client_connected ${IFACE}
+
+        # allow communication with host only srcPort <=> host.dstsPort
+        add_direction_exception ${IN_IVPN_IF} ${OUT_IVPN_IF} ${SRC_PORT} ${DST_ADDR} ${DST_PORT} ${PROTOCOL}
     elif [[ $1 = "-disconnected" ]]; then
         shift
         client_disconnected

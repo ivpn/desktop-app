@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/obfsproxy"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/shell"
@@ -92,8 +93,9 @@ type OpenVPN struct {
 	obfsproxy           *obfsproxy.Obfsproxy
 
 	// current VPN state
-	state    vpn.State
-	clientIP net.IP // applicable only for 'CONNECTED' state
+	state     vpn.State
+	clientIP  net.IP // applicable only for 'CONNECTED' state
+	localPort int
 
 	// platform-specific properties (for macOS, Windows etc. ...)
 	psProps platformSpecificProperties
@@ -133,13 +135,13 @@ func NewOpenVpnObject(
 		nil
 }
 
-// DestinationIPs -  Get destination IPs (VPN host server or proxy server IP address)
+// DestinationIP -  Get destination IPs (VPN host server or proxy server IP address)
 // This information if required, for example, to allow this address in firewall
-func (o *OpenVPN) DestinationIPs() []net.IP {
+func (o *OpenVPN) DestinationIP() net.IP {
 	if o.connectParams.proxyAddress != nil {
-		return []net.IP{o.connectParams.proxyAddress}
+		return o.connectParams.proxyAddress
 	}
-	return o.connectParams.hostIPs
+	return o.connectParams.hostIP
 }
 
 // Type just returns VPN type
@@ -204,12 +206,6 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		routinesWaiter.Wait()
 	}()
 
-	if o.isObfsProxy && len(o.connectParams.hostIPs) > 0 {
-		// in case of obfsproxy and multiple hostIPs - we are unable to determine which server we are connected for
-		// Therefore, we are using only one random serverIP to connect
-		o.connectParams.hostIPs = []net.IP{o.connectParams.hostIPs[rand.Intn(len(o.connectParams.hostIPs))]}
-	}
-
 	// analyse and forward state changes
 	routinesWaiter.Add(1)
 	go func() {
@@ -225,6 +221,10 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 				if o.state == vpn.CONNECTED {
 					// save exitServerID (in MultiHop)
 					stateInf.ExitServerID = o.connectParams.multihopExitSrvID
+					// save source and destination port
+					stateInf.ClientPort = o.localPort
+					stateInf.ServerPort = o.connectParams.hostPort
+					stateInf.IsTCP = o.connectParams.tcp
 
 					// notify about correct local IP in VPN network
 					o.clientIP = stateInf.ClientIP
@@ -232,9 +232,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 					if o.isObfsProxy {
 						// in case of obfsproxy - 'stateInf.ServerIP' returns local IP (IP of obfsproxy 127.0.0.1)
 						// We must notify about real remote ServerIP, therefore we modifying this parameter before notifying about successful connection
-
-						// for obfsproxy, there should be only one hostIP, therefore we are taking first from the list
-						stateInf.ServerIP = o.connectParams.hostIPs[0]
+						stateInf.ServerIP = o.connectParams.hostIP
 					}
 
 					o.implOnConnected() // process "on connected" event (if necessary)
@@ -286,8 +284,18 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		}()
 	}
 
+	// Generating random secret for MI
+	// This value used to validate that connected MI (to the listening TCP port) is the instance of OpenVPN which we already started
+	// Check procedure:
+	// 1. daemon is starting listening on a port for a connection from OpenVPN MI
+	// 2. daemon is running OpenVPN binary and reading its console output
+	// 3. OpenVPN MI connects back to the daemon (to the listening TCP port)
+	// 4. daemon sends 'echo' command with secret string to MI
+	// 5. daemon checks OpenVPN console output for the secret string which were sent by TCP connection
+	miSecret := fmt.Sprintf("[IVPN_SECRET_%X%X]", rand.Uint64(), rand.Uint64())
+
 	// start new management interface
-	mi, err := StartManagementInterface(o.connectParams.username, o.connectParams.password, internalStateChan)
+	mi, err := StartManagementInterface(miSecret, o.connectParams.username, o.connectParams.password, internalStateChan)
 	if err != nil {
 		return fmt.Errorf("failed to start MI: %w", err)
 	}
@@ -299,6 +307,12 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		return nil
 	}
 
+	// local port to be used for connection (source port)
+	o.localPort, err = netinfo.GetFreePort(o.connectParams.tcp)
+	if err != nil {
+		return err
+	}
+
 	miIP, miPort, err := mi.ListenAddress()
 	if err != nil {
 		return fmt.Errorf("failed to start MI listener: %w", err)
@@ -306,6 +320,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 
 	// create config file
 	err = o.connectParams.WriteConfigFile(
+		o.localPort,
 		o.configPath,
 		miIP, miPort,
 		o.logFile,
@@ -322,8 +337,9 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 	const maxBufSize int = 512
 	strOut := strings.Builder{}
 	strErr := strings.Builder{}
+	isCanSkipOutputCheck := false
 	outProcessFunc := func(text string, isError bool) {
-		if len(text) == 0 {
+		if isCanSkipOutputCheck || len(text) == 0 {
 			return
 		}
 		if isError {
@@ -332,6 +348,13 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 			}
 			strErr.WriteString(text)
 		} else {
+			if strings.Contains(text, miSecret) {
+				// MI connection verified
+				// Allowing communication with MI
+				mi.SetConnectionVerified()
+				isCanSkipOutputCheck = true
+			}
+
 			if strOut.Len() > maxBufSize {
 				return
 			}
