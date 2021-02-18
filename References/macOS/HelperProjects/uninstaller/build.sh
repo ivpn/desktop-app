@@ -69,6 +69,7 @@ mkdir -p "bin/IVPN Installer.app/Contents/Library/LaunchServices" || CheckLastRe
 mkdir -p "bin/IVPN Installer.app/Contents/MacOS" || CheckLastResult
 cp "../helper/net.ivpn.client.Helper" "bin/IVPN Installer.app/Contents/Library/LaunchServices" || CheckLastResult
 cp "bin/IVPN Installer" "bin/IVPN Installer.app/Contents/MacOS" || CheckLastResult
+cp "etc/install.sh" "bin/IVPN Installer.app/Contents/MacOS" || CheckLastResult
 cp "IVPN Installer-Info.plist" "bin/IVPN Installer.app/Contents/Info.plist" || CheckLastResult
 
 echo "[+] IVPN Installer: IVPN Uninstaller.app ..."

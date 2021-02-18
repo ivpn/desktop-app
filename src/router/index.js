@@ -28,7 +28,7 @@ import Settings from "../views/Settings.vue";
 
 Vue.use(VueRouter);
 
-const routes = [
+const mainRoutes = [
   {
     path: "/",
     name: "Main",
@@ -53,11 +53,25 @@ const routes = [
     component: () => import(/* webpackChunkName: "about" */ "../views/Test.vue")
   }
 ];
+const forbiddenToChangeRouteFrom = [];
+const routes = mainRoutes.concat(forbiddenToChangeRouteFrom);
 
 const router = new VueRouter({
   mode: "hash",
   base: process.env.BASE_URL,
   routes
+});
+
+router.beforeEach((to, from, next) => {
+  // check if route allowed
+  for (let route of forbiddenToChangeRouteFrom) {
+    if (from.path === route.path) {
+      next(false);
+      return;
+    }
+  }
+  // allow route
+  next();
 });
 
 export default router;

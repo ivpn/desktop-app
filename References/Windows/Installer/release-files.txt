@@ -5,7 +5,6 @@ IVPN Service.exe
 cli\ivpn.exe
 etc\ca.crt
 etc\servers.json
-etc\signing.pub
 etc\ta.key
 devcon\x86_64\devcon.exe
 OpenVPN\obfsproxy\bz2.pyd

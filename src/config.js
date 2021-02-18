@@ -19,6 +19,18 @@
 //  You should have received a copy of the GNU General Public License
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
+import path from "path";
+function IsDebug() {
+  if (process.env.WEBPACK_DEV_SERVER_URL) return true;
+  return false;
+}
+function GetResourcesPath() {
+  if (this.IsDebug()) {
+    // eslint-disable-next-line no-undef
+    return path.join(__static, "..", "extraResources");
+  }
+  return process.resourcesPath;
+}
 
 export default {
   MinRequiredDaemonVer: "2.12.15",
@@ -28,5 +40,8 @@ export default {
 
   // shellOpenExternal(...) allows only URLs started with this prefix
   URLsAllowedPrefix: "https://www.ivpn.net",
-  URLApps: "https://www.ivpn.net/apps/"
+  URLApps: "https://www.ivpn.net/apps/",
+
+  IsDebug,
+  GetResourcesPath
 };

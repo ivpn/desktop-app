@@ -74,7 +74,27 @@ export default new Vuex.Store({
 
     // Updates info example:
     /*
+    // NOTE: if section 'generic' defined - the 'daemon' and 'uiClient' must be ignored
     {
+      "generic": {
+        "version": "3.2.45",
+        "downloadLink": "https://repo.ivpn.net/binaries/audit2021/IVPN-3.2.40.dmg",
+        "signature":    "https://repo.ivpn.net/binaries/audit2021/IVPN-3.2.40.dmg.sign.sha256.base64",
+        "releaseNotes": [
+          {
+            "type": "new",
+            "description": "New feature description"
+          },
+          {
+            "type": "improved",
+            "description": "Improvement description"
+          },
+          {
+            "type": "fix",
+            "description": "UI Bugfix description"
+          }
+        ]
+      },
       "daemon": {
         "version": "2.12.7",
         "releaseNotes": [

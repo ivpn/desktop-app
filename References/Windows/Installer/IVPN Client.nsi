@@ -197,24 +197,6 @@ Function .onInit
   Call CheckOSSupported
 
   ClearErrors
-
-  ; hack to not prompt for last 2.12.x releases
-  ; It is required for easy migration from 2.x to 3.x version (do not perform logout)
-  ReadRegStr $R1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "DisplayVersion"
-  ${StrLoc} $R2 $R1 "2.12." ">"
-  StrCmp $R2 "0" done ; R2 must be 0 if upgrading from '2.12.X' version
-
-  ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "UninstallString"
-  StrCmp $R0 "" done
-  IfSilent uninst is_not_quiet
-is_not_quiet:
-  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed.$\n$\nClick OK to uninstall the old version." IDOK uninst
-  Abort
-uninst:
-  ExecWait '$R0 -update'
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client"
-done:
-
 FunctionEnd
 
 Function un.onInit
@@ -332,6 +314,30 @@ FunctionEnd
 !define PRODUCT_TAP_WIN_COMPONENT_ID "tapivpn"
 
 Section "${PRODUCT_NAME}" SecIVPN
+  ; <<<<<<<<<<<<<<< Uninstall previous section START
+  ; hack to not prompt for last 2.12.x releases
+  ; It is required for easy migration from 2.x to 3.x version (to do not perform logout)
+  ReadRegStr $R1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "DisplayVersion"
+  ${StrLoc} $R2 $R1 "2.12." ">"
+  StrCmp $R2 "0" done ; R2 must be 0 if upgrading from '2.12.X' version
+
+  ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "UninstallString"
+  StrCmp $R0 "" done
+
+  ; # Do not promt before uninstalling previous version
+  ; IfSilent uninst is_not_quiet
+  ; is_not_quiet:
+  ;  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed.$\n$\nClick OK to uninstall the old version." IDOK uninst
+  ;  Abort
+  ;uninst:
+
+  DetailPrint "Removing previous installation..."
+  ; # '_?=$INSTDIR' is required to be able to wait untill uninstaller finish
+  ; # https://nsis.sourceforge.io/When_I_use_ExecWait_uninstaller.exe_it_doesn't_wait_for_the_uninstaller
+  ExecWait '"$R0" /S -update _?=$INSTDIR'
+  done:
+  ; Uninstall previous section END >>>>>>>>>>>
+
   SetRegView 64
   SetOutPath "$INSTDIR"
 
@@ -491,10 +497,21 @@ Section "Uninstall"
 
   ; wait a little (give change for IVPN Client application to stop)
   Sleep 1500
+
   ; When service stopping - IVPN Client must also Close automatically
   ; anyway, there could be situations when IVPN Client not connected to service (cannot receive 'service exiting' notification.)
   ; Therefore, here we try to stop IVPN Client process manually.
-  nsExec::ExecToStack '"$SYSDIR\taskkill" /IM "${PROCESS_NAME}" /T /F'
+  ${StrContains} $0 " -update" $CMDLINE
+  ${If} $0 == ""
+      ; uninstall
+      nsExec::ExecToStack '"$SYSDIR\taskkill" /IM "${PROCESS_NAME}" /T /F'
+  ${Else}
+      ; update
+      ; Do not use /T option when upgrade.
+      ; Otherwise we will kill current uninstaller process (which was spwaned by ${PROCESS_NAME})
+      nsExec::ExecToStack '"$SYSDIR\taskkill" /IM "${PROCESS_NAME}" /F'
+  ${EndIf}
+
   ; give some time to stop the process
   Sleep 1500
 
@@ -534,8 +551,6 @@ Section "Uninstall"
       ; update
   ${EndIf}
 
-
-
   SetShellVarContext current ; To be able to get environment variables of current user ("$LOCALAPPDATA", "$APPDATA")
   RMDir /r "$APPDATA\ivpn-ui"
   SetShellVarContext all
@@ -569,7 +584,6 @@ Section "Uninstall"
   	; make sure windows knows about the change
   	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=100
   ${EndIf}
-
 SectionEnd
 
 ; ----------------

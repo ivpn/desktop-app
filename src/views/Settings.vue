@@ -170,6 +170,7 @@ export default {
   },
   mounted() {
     if (this.$route.params.view != null) this.view = this.$route.params.view;
+    this.$store.dispatch("uiState/currentSettingsViewName", this.view);
   },
   data: function() {
     return {
@@ -192,9 +193,11 @@ export default {
       if (this.$store.state.settings.minimizedUI) {
         sender.closeCurrentWindow();
       } else this.$router.push("/");
+      this.$store.dispatch("uiState/currentSettingsViewName", null);
     },
     onView: function(viewName) {
       this.view = viewName;
+      this.$store.dispatch("uiState/currentSettingsViewName", this.view);
     }
   }
 };

@@ -21,16 +21,23 @@
 //
 
 import store from "@/store";
+import { Platform, PlatformEnum } from "@/platform/platform";
+const NoUpdaterErrorMessage = "App updater not available for this platform";
 
 function getUpdater() {
   try {
-    // Can be loaded different updaters according to platform (switch (Platform()) {...} )
-    // Currently, we are using common updater for all platforms
-    return require("./common_updater");
+    // Can be loaded different updaters according to platform
+    if (IsGenericUpdater()) return require("./updater_generic");
+    return require("./updater_linux");
   } catch (e) {
     console.error("[ERROR] IsAbleToCheckUpdate :", e);
   }
   return null;
+}
+
+export function IsGenericUpdater() {
+  if (Platform() === PlatformEnum.Linux) return false;
+  return true;
 }
 
 export function IsAbleToCheckUpdate() {
@@ -42,7 +49,7 @@ export function IsAbleToCheckUpdate() {
 export function StartUpdateChecker(onHasUpdateCallback) {
   const updater = getUpdater();
   if (updater == null) {
-    console.warn("App updater not available for this platform");
+    console.warn(NoUpdaterErrorMessage);
     return false;
   }
 
@@ -63,15 +70,9 @@ export function StartUpdateChecker(onHasUpdateCallback) {
         if (
           updatesInfo &&
           onHasUpdateCallback &&
-          (IsNewerVersion(currDaemonVer, updatesInfo.daemon.version) ||
-            IsNewerVersion(currUiVer, updatesInfo.uiClient.version))
+          updater.IsNewerVersion(updatesInfo, currDaemonVer, currUiVer)
         ) {
-          onHasUpdateCallback(
-            updatesInfo.daemon.version,
-            updatesInfo.uiClient.version,
-            currDaemonVer,
-            currUiVer
-          );
+          onHasUpdateCallback(updatesInfo, currDaemonVer, currUiVer);
         }
       } catch (e) {
         console.error(e);
@@ -100,9 +101,8 @@ export async function CheckUpdates() {
   console.log("Checking for app updates...");
   try {
     let updatesInfo = await updater.CheckUpdates();
+
     if (!updatesInfo) return null;
-    if (!updatesInfo.daemon || !updatesInfo.daemon.version) return null;
-    if (!updatesInfo.uiClient || !updatesInfo.uiClient.version) return null;
 
     store.commit("latestVersionInfo", updatesInfo);
     return updatesInfo;
@@ -115,37 +115,26 @@ export async function CheckUpdates() {
 export function Upgrade() {
   const updater = getUpdater();
   if (updater == null) {
-    console.error("App updater not available for this platform");
+    console.warn(NoUpdaterErrorMessage);
     return null;
   }
-
-  return updater.Upgrade(store.state.latestVersionInfo);
+  if (updater.Upgrade) return updater.Upgrade(store.state.latestVersionInfo);
 }
 
-export function IsNewerVersion(oldVer, newVer) {
-  if (!oldVer || !newVer) return false;
-  oldVer = oldVer.trim();
-  newVer = newVer.trim();
-  if (!oldVer || !newVer) return false;
-
-  const newVerStrings = newVer.split(".");
-  const curVerStrings = oldVer.split(".");
-
-  try {
-    for (let i = 0; i < newVerStrings.length && i < curVerStrings.length; i++) {
-      if (parseInt(newVerStrings[i], 10) > parseInt(curVerStrings[i], 10))
-        return true;
-      if (parseInt(newVerStrings[i], 10) < parseInt(curVerStrings[i], 10))
-        return false;
-    }
-
-    if (newVerStrings.length > curVerStrings.length) {
-      for (let i = curVerStrings.length; i < newVerStrings.length; i++) {
-        if (parseInt(newVerStrings[i], 10) > 0) return true;
-      }
-    }
-  } catch (e) {
-    console.log(e);
+export function CancelDownload() {
+  const updater = getUpdater();
+  if (updater == null) {
+    console.warn(NoUpdaterErrorMessage);
+    return null;
   }
-  return false;
+  if (updater.CancelDownload) return updater.CancelDownload();
+}
+
+export function Install() {
+  const updater = getUpdater();
+  if (updater == null) {
+    console.warn(NoUpdaterErrorMessage);
+    return null;
+  }
+  if (updater.Install) return updater.Install();
 }

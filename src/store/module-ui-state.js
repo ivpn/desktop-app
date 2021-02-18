@@ -28,7 +28,22 @@ export default {
     isDefaultControlView: true,
     // favorite servers view selected
     serversFavoriteView: false,
-    pauseConnectionTill: null //new Date()
+    pauseConnectionTill: null, // Date()
+
+    currentSettingsViewName: null, // 'account', 'general', 'version' ...
+    /*
+    {
+      state: AppUpdaterStageEnum.Downloading,
+      error: null,
+      readyToInstallBinary: "",
+      readyToInstallSignatureFile: "",
+      downloadStatus: { 
+        contentLength: 0,
+        downloaded:    0
+      }
+    }
+    */
+    appUpdateProgress: null
   },
 
   mutations: {
@@ -40,6 +55,12 @@ export default {
     },
     pauseConnectionTill(state, value) {
       state.pauseConnectionTill = value;
+    },
+    appUpdateProgress(state, value) {
+      state.appUpdateProgress = value;
+    },
+    currentSettingsViewName(state, value) {
+      state.currentSettingsViewName = value;
     }
   },
 
@@ -53,6 +74,9 @@ export default {
     },
     pauseConnectionTill(context, value) {
       context.commit("pauseConnectionTill", value);
+    },
+    currentSettingsViewName(context, value) {
+      context.commit("currentSettingsViewName", value);
     }
   }
 };

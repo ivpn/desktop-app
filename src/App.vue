@@ -60,7 +60,11 @@ textarea {
 body {
   background: var(--background-color);
 }
-
+/*
+button:hover {
+  opacity: 80%;
+}
+*/
 #app {
   position: absolute;
   left: 0;
