@@ -21,6 +21,7 @@
 //
 
 import store from "@/store";
+import { AppUpdateStage } from "@/store/types";
 import { Platform, PlatformEnum } from "@/platform/platform";
 const NoUpdaterErrorMessage = "App updater not available for this platform";
 
@@ -33,6 +34,10 @@ function getUpdater() {
     console.error("[ERROR] IsAbleToCheckUpdate :", e);
   }
   return null;
+}
+
+function setState(updateState) {
+  store.commit("uiState/appUpdateProgress", updateState);
 }
 
 export function IsGenericUpdater() {
@@ -100,15 +105,26 @@ export async function CheckUpdates() {
 
   console.log("Checking for app updates...");
   try {
+    setState({
+      state: AppUpdateStage.CheckingForUpdates
+    });
+
     let updatesInfo = await updater.CheckUpdates();
-
-    if (!updatesInfo) return null;
-
     store.commit("latestVersionInfo", updatesInfo);
+
+    setState({
+      state: AppUpdateStage.CheckingFinished
+    });
+
     return updatesInfo;
   } catch (e) {
     console.error(e);
+    setState({
+      state: AppUpdateStage.Error,
+      error: e
+    });
   }
+
   return null;
 }
 

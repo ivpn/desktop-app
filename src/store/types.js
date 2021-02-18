@@ -89,6 +89,8 @@ export const ColorTheme = Object.freeze({
 
 export const AppUpdateStage = Object.freeze({
   NoStatus: "No update status",
+  CheckingForUpdates: "Checking for app updates...",
+  CheckingFinished: "Checking for app updates finished",
   CancelledDownload: "Download cancelled",
   Downloading: "Downloading ...",
   CheckingSignature: "Checking signature ...",

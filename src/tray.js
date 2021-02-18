@@ -32,7 +32,7 @@ let tray = null;
 let menuHandlerShow = null;
 let menuHandlerPreferences = null;
 let menuHandlerAccount = null;
-let menuHandlerVersion = null;
+let menuHandlerCheckUpdates = null;
 
 let iconConnected = null;
 let iconDisconnected = null;
@@ -45,12 +45,12 @@ export function InitTray(
   menuItemShow,
   menuItemPreferences,
   menuItemAccount,
-  menuItemVersion
+  menuItemCheckUpdates
 ) {
   menuHandlerShow = menuItemShow;
   menuHandlerPreferences = menuItemPreferences;
   menuHandlerAccount = menuItemAccount;
-  menuHandlerVersion = menuItemVersion;
+  menuHandlerCheckUpdates = menuItemCheckUpdates;
 
   // load icons
   switch (Platform()) {
@@ -239,12 +239,6 @@ function updateTrayMenu() {
   const isLoggedIn = store.getters["account/isLoggedIn"];
   // menuHandlerVersion
   var mainMenu = [
-    {
-      label: `IVPN v${app.getVersion()}`,
-      enabled: menuHandlerVersion == null ? false : true,
-      click: menuHandlerVersion == null ? () => {} : () => menuHandlerVersion()
-    },
-    { type: "separator" },
     { label: "Show IVPN", click: menuHandlerShow },
     { type: "separator" }
   ];
@@ -304,6 +298,12 @@ function updateTrayMenu() {
     mainMenu.push({ type: "separator" });
     mainMenu.push({ label: "Account", click: menuHandlerAccount });
     mainMenu.push({ label: "Settings", click: menuHandlerPreferences });
+    if (menuHandlerCheckUpdates != null) {
+      mainMenu.push({
+        label: `Check for updates...`,
+        click: menuHandlerCheckUpdates
+      });
+    }
     mainMenu.push({ type: "separator" });
   }
   mainMenu.push({ label: "Quit", click: menuItemQuit });

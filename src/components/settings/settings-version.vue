@@ -222,28 +222,19 @@ export default {
     spinner
   },
   data: function() {
-    return {
-      isChecking: false
-    };
+    return {};
   },
   mounted() {},
   methods: {
     onCheckUpdatesPressed: async function() {
-      this.isChecking = true;
-      try {
-        await sender.AppUpdatesCheck();
-      } finally {
-        // You already have the latest version installed (v3.2.40)
-        this.isChecking = false;
-
-        if (!this.isHasUpgrade) {
-          sender.showMessageBox({
-            type: "info",
-            buttons: ["OK"],
-            message: "Nothing to update.",
-            detail: `You already have the latest version installed!\n\nDaemon: ${this.daemonVersionInfo}\nUI: ${this.uiVersionInfo}`
-          });
-        }
+      await sender.AppUpdatesCheck();
+      if (this.$store.state.latestVersionInfo == null) {
+        sender.showMessageBox({
+          type: "warning",
+          buttons: ["OK"],
+          message: "No update info",
+          detail: `Unable to check updates`
+        });
       }
     },
     onUpgradePressed: async function() {
@@ -257,6 +248,10 @@ export default {
     }
   },
   computed: {
+    isChecking: function() {
+      return this.state == AppUpdateStage.CheckingForUpdates;
+    },
+
     isGenericUpdater: function() {
       return IsGenericUpdater();
     },
@@ -295,6 +290,12 @@ export default {
     },
     isHasDownloadState: function() {
       if (!this.state || this.isErrorState) return false;
+      if (
+        this.state == AppUpdateStage.NoStatus ||
+        this.state == AppUpdateStage.CheckingForUpdates ||
+        this.state == AppUpdateStage.CheckingFinished
+      )
+        return false;
       return true;
     },
     isErrorState: function() {
@@ -406,6 +407,24 @@ export default {
         return rn;
       } catch {
         return null;
+      }
+    }
+  },
+  watch: {
+    state(newState, oldState) {
+      if (
+        newState !== AppUpdateStage.CheckingFinished ||
+        oldState !== AppUpdateStage.CheckingForUpdates
+      )
+        return;
+      if (this.$store.state.latestVersionInfo == null) return;
+      else if (!this.isHasUpgrade) {
+        sender.showMessageBox({
+          type: "info",
+          buttons: ["OK"],
+          message: "Nothing to update.",
+          detail: `You already have the latest version installed!\n\nDaemon: ${this.daemonVersionInfo}\nUI: ${this.uiVersionInfo}`
+        });
       }
     }
   }
