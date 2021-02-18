@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="settingsTitle">FIREWALL</div>
+    <div class="settingsTitle">FIREWALL SETTINGS</div>
 
     <div class="settingsBoldFont">
       Non-VPN traffic blocking:

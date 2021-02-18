@@ -1,6 +1,6 @@
 <template>
   <div class="flexColumn">
-    <div class="settingsTitle">NETWORKS</div>
+    <div class="settingsTitle">WIFI CONTROL SETTINGS</div>
 
     <div class="param">
       <input
@@ -9,12 +9,12 @@
         v-model="trustedNetworksControl"
       />
       <label class="defColor" for="trustedNetworksControl"
-        >Trusted\Untrusted networks control</label
+        >Trusted/Untrusted WiFi network control</label
       >
     </div>
     <div class="fwDescription">
-      By enabling this feature you can define a network as trusted or untrusted
-      and what actions to take when joining the network
+      By enabling this feature you can define a WiFi network as trusted or
+      untrusted and what actions to take when joining the WiFi network
     </div>
 
     <div class="flexRow">

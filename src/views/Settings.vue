@@ -62,7 +62,7 @@
                 activeBtn: view === 'networks'
               }"
             >
-              Networks
+              WiFi control
             </button>
 
             <button
@@ -103,7 +103,7 @@
                 activeBtn: view === 'version'
               }"
             >
-              Version
+              Update
             </button>
           </div>
         </div>

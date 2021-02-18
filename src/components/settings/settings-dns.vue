@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="settingsTitle">DNS</div>
+    <div class="settingsTitle">DNS SETTINGS</div>
 
     <div class="param">
       <input type="checkbox" id="dnsIsCustom" v-model="dnsIsCustom" />

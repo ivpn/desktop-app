@@ -1,10 +1,10 @@
 <template>
   <div>
-    <div class="settingsTitle">ANTITRACKER</div>
+    <div class="settingsTitle">ANTITRACKER SETTINGS</div>
 
     <div class="defColor" style="margin-bottom: 24px;">
-      IVPN blocks ads, malicious websites, and third-party trackers using our
-      private DNS servers.
+      When AntiTracker is enabled, IVPN blocks ads, malicious websites, and
+      third-party trackers using our private DNS servers.
       <button class="link" v-on:click="onLearnMoreLink">
         Learn more
       </button>
@@ -24,9 +24,10 @@
       user surveilance (currently: Google and Facebook)
     </div>
     <div class="fwDescription">
-      To better understand the impact please see our
+      To better understand how this may impact your experience please refer to
+      our
       <button class="link" v-on:click="onHardcodeLink">
-        hardcore mode</button
+        hardcore mode FAQ</button
       >.
     </div>
   </div>

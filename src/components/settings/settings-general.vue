@@ -85,7 +85,10 @@
         id="connectVPNOnInsecureNetwork"
         v-model="connectVPNOnInsecureNetwork"
       />
-      <label class="defColor" for="connectVPNOnInsecureNetwork"
+      <label
+        class="defColor"
+        for="connectVPNOnInsecureNetwork"
+        title="A WiFi network is considered insecure if it doesn't require encryption"
         >When joining insecure WiFi networks</label
       >
     </div>

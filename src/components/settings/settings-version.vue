@@ -232,7 +232,19 @@ export default {
       try {
         await sender.AppUpdatesCheck();
       } finally {
+        // You already have the latest version installed (v3.2.40)
         this.isChecking = false;
+
+        if (!this.isHasUpgrade) {
+          setTimeout(() => {
+            sender.showMessageBoxSync({
+              type: "info",
+              buttons: ["OK"],
+              message: "Nothing to update.",
+              detail: `You already have the latest version installed!\n\nDaemon: ${this.daemonVersionInfo}\nUI: ${this.uiVersionInfo}`
+            });
+          }, 0);
+        }
       }
     },
     onUpgradePressed: async function() {

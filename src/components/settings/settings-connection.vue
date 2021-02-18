@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="settingsTitle">CONNECTION</div>
+    <div class="settingsTitle">CONNECTION SETTINGS</div>
     <div class="settingsBoldFont">
       VPN protocol:
     </div>
@@ -33,10 +33,10 @@
 
     <!-- OpenVPN -->
     <div v-if="isOpenVPN">
-      <div class="settingsBoldFont">OpenVPN configuration</div>
+      <div class="settingsBoldFont">OpenVPN configuration:</div>
 
       <div class="flexRow paramBlock">
-        <div class="defColor paramName">Prefered port:</div>
+        <div class="defColor paramName">Preferred port:</div>
         <select v-model="port" style="background: var(--background-color);">
           <option
             v-for="item in prefferedPorts"
@@ -47,77 +47,80 @@
         </select>
       </div>
 
-      <div class="flexRow paramBlock" v-if="!connectionUseObfsproxy">
-        <div class="defColor paramName">
-          Network proxy:
+      <div v-bind:class="{ disabled: connectionUseObfsproxy }">
+        <div class="flexRow paramBlock">
+          <div class="defColor paramName">
+            Network proxy:
+          </div>
+          <div class="settingsRadioBtnProxy">
+            <input
+              type="radio"
+              id="proxyNone"
+              name="proxy"
+              v-model="ovpnProxyType"
+              value=""
+            />
+            <label class="defColor" for="proxyNone">None</label>
+          </div>
+          <div class="settingsRadioBtnProxy">
+            <input
+              type="radio"
+              id="proxyHTTP"
+              name="proxy"
+              v-model="ovpnProxyType"
+              value="http"
+            />
+            <label class="defColor" for="proxyHTTP">HTTP</label>
+          </div>
+          <div class="settingsRadioBtnProxy">
+            <input
+              type="radio"
+              id="proxySocks"
+              name="proxy"
+              v-model="ovpnProxyType"
+              value="socks"
+            />
+            <label class="defColor" for="proxySocks">Socks</label>
+          </div>
         </div>
-        <div class="settingsRadioBtnProxy">
-          <input
-            type="radio"
-            id="proxyNone"
-            name="proxy"
-            v-model="ovpnProxyType"
-            value=""
-          />
-          <label class="defColor" for="proxyNone">None</label>
-        </div>
-        <div class="settingsRadioBtnProxy">
-          <input
-            type="radio"
-            id="proxyHTTP"
-            name="proxy"
-            v-model="ovpnProxyType"
-            value="http"
-          />
-          <label class="defColor" for="proxyHTTP">HTTP</label>
-        </div>
-        <div class="settingsRadioBtnProxy">
-          <input
-            type="radio"
-            id="proxySocks"
-            name="proxy"
-            v-model="ovpnProxyType"
-            value="socks"
-          />
-          <label class="defColor" for="proxySocks">Socks</label>
+
+        <div v-bind:class="{ disabled: ovpnProxyType.length == 0 }">
+          <div class="flexRow">
+            <div class="paramBlockText">
+              <div>Server:</div>
+              <input
+                class="settingsTextInput proxyParam"
+                placeholder="0.0.0.0"
+                v-model="ovpnProxyServer"
+              />
+            </div>
+            <div class="paramBlockText">
+              <div>Port:</div>
+              <input
+                class="settingsTextInput proxyParam"
+                v-model="ovpnProxyPort"
+              />
+            </div>
+            <div class="paramBlockText">
+              <div>Login:</div>
+              <input
+                class="settingsTextInput proxyParam"
+                v-model="ovpnProxyUser"
+              />
+            </div>
+            <div class="paramBlockText">
+              <div>Password:</div>
+              <input
+                type="password"
+                class="settingsTextInput proxyParam"
+                v-model="ovpnProxyPass"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div v-if="ovpnProxyType.length > 0 && !connectionUseObfsproxy">
-        <div class="flexRow">
-          <div class="paramBlockText">
-            <div>Server:</div>
-            <input
-              class="settingsTextInput proxyParam"
-              placeholder="0.0.0.0"
-              v-model="ovpnProxyServer"
-            />
-          </div>
-          <div class="paramBlockText">
-            <div>Port:</div>
-            <input
-              class="settingsTextInput proxyParam"
-              v-model="ovpnProxyPort"
-            />
-          </div>
-          <div class="paramBlockText">
-            <div>Login:</div>
-            <input
-              class="settingsTextInput proxyParam"
-              v-model="ovpnProxyUser"
-            />
-          </div>
-          <div class="paramBlockText">
-            <div>Password:</div>
-            <input
-              class="settingsTextInput proxyParam"
-              v-model="ovpnProxyPass"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="settingsBoldFont">Additional</div>
+      <div class="settingsBoldFont">Additional settings</div>
       <div class="param">
         <input
           type="checkbox"
@@ -139,24 +142,23 @@
           v-model="openvpnManualConfig"
         />
         <label class="defColor" for="openvpnManualConfig"
-          >Show manual configuration parameters info</label
+          >Add additional OpenVPN configuration parameters</label
         >
       </div>
       <div v-if="openvpnManualConfig && userDefinedOvpnFile">
         <div class="description">
-          Please be aware that adding parameters may affect the proper
-          functioning of the VPN tunnel. Only add parameters if you understand
-          what you are doing
+          Please be aware that this is a feature for advanced users as adding
+          parameters may affect the proper functioning and security of the VPN
+          tunnel
           <button
             class="btn settingsGrayLongDescriptionFont"
             v-on:click="onVPNConfigFileLocation"
           >
             Open configuration file location ...
           </button>
-          <div align="right">
+          <div>
             <label
               class="settingsGrayLongDescriptionFont selectable"
-              align="right"
               style="margin-top:5px; font-size: 10px;"
             >
               {{ userDefinedOvpnFile }}
@@ -168,10 +170,10 @@
 
     <!-- Wireguard -->
     <div v-if="!isOpenVPN">
-      <div class="settingsBoldFont">Wireguard configuration</div>
+      <div class="settingsBoldFont">Wireguard configuration:</div>
 
       <div class="flexRow paramBlock">
-        <div class="defColor paramName">Preffered port:</div>
+        <div class="defColor paramName">Preferred port:</div>
         <select v-model="port" style="background: var(--background-color);">
           <option
             v-for="item in prefferedPorts"
@@ -527,7 +529,6 @@ select {
 
 .btn {
   margin-top: 10px;
-  width: 100%;
   height: 24px;
 
   background: transparent;
@@ -544,5 +545,10 @@ div.description {
 
 input.proxyParam {
   width: 100px;
+}
+
+div.disabled {
+  pointer-events: none;
+  opacity: 0.5;
 }
 </style>
