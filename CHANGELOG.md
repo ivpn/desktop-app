@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 2.12.16 - 2020-01-29
+
+[NEW] Certificate pinning to prevent man-in-the-middle attacks  
+[FIXED] Minor issue with WireGuard key rotation mechanism  
+
+[Download IVPN Client .deb v. 2.12.16](https://cdn.ivpn.net/releases/linux/2.12.16/ivpn_2.12.16_amd64.deb)  
+SHA256: 63786e87c8bd2847d286d41ebde5ce5c099825a071e7c0b194c9ddd5ad0391d8   
+[Download IVPN Client .rpm v. 2.12.16](https://cdn.ivpn.net/releases/linux/2.12.16/ivpn-2.12.16-1.x86_64.rpm)  
+SHA256: 36bd6261d6bb7e35f26cc149d5d4ce56ab61e6073fd99ea27830f828561125aa  
+
 ## Version 2.12.14 - 2020-01-06
 
 [IMPROVED] (Linux) Firewall script is more robust now  
