@@ -30,6 +30,7 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -692,8 +693,18 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		var resp types.SessionNewResp
+		// validate AccountID value
+		matched, err := regexp.MatchString("^(i-....-....-....)|(ivpn[a-zA-Z0-9]{7,8})$", req.AccountID)
+		if err != nil {
+			p.sendError(conn, fmt.Sprintf("[daemon] Account ID validation failed: %s", err), reqCmd.Idx)
+			break
+		}
+		if !matched {
+			p.sendError(conn, "[daemon] Your account ID has to be in 'i-XXXX-XXXX-XXXX' or 'ivpnXXXXXXXX' format.", reqCmd.Idx)
+			break
+		}
 
+		var resp types.SessionNewResp
 		apiCode, apiErrMsg, accountInfo, err := p._service.SessionNew(req.AccountID, req.ForceLogin)
 		if err != nil {
 			if apiCode == 0 {

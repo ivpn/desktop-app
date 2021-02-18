@@ -209,27 +209,41 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 	retManualDNS := net.ParseIP(r.CurrentDNS)
 
 	if vpn.Type(r.VpnType) == vpn.OpenVPN {
+		// PARAMETERS VALIDATION
+		// parsing hosts
 		var hosts []net.IP
 		for _, v := range r.OpenVpnParameters.EntryVpnServer.IPAddresses {
 			hosts = append(hosts, net.ParseIP(v))
 		}
-
 		if len(hosts) < 1 {
 			return fmt.Errorf("VPN host not defined")
 		}
 		// in case of multiple hosts - take random host from the list
 		host := hosts[rand.Intn(len(hosts))]
 
+		// only one-line parameter is allowed
+		multihopExitSrvID := strings.Split(r.OpenVpnParameters.MultihopExitSrvID, "\n")[0]
+		// nothing from supported proxy types should be in this parameter
+		proxyType := r.OpenVpnParameters.ProxyType
+		if len(proxyType) > 0 && proxyType != "http" && proxyType != "socks" {
+			proxyType = ""
+		}
+		// only one-line parameter is allowed
+		proxyUsername := strings.Split(r.OpenVpnParameters.ProxyUsername, "\n")[0]
+		proxyPassword := strings.Split(r.OpenVpnParameters.ProxyPassword, "\n")[0]
+
+		// CONNECTION
+		// OpenVPN connection parameters
 		connectionParams := openvpn.CreateConnectionParams(
-			r.OpenVpnParameters.MultihopExitSrvID,
+			multihopExitSrvID,
 			r.OpenVpnParameters.Port.Protocol > 0, // is TCP
 			r.OpenVpnParameters.Port.Port,
 			host,
-			r.OpenVpnParameters.ProxyType,
+			proxyType,
 			net.ParseIP(r.OpenVpnParameters.ProxyAddress),
 			r.OpenVpnParameters.ProxyPort,
-			r.OpenVpnParameters.ProxyUsername,
-			r.OpenVpnParameters.ProxyPassword)
+			proxyUsername,
+			proxyPassword)
 
 		return p._service.ConnectOpenVPN(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
 
