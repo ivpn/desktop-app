@@ -1,7 +1,7 @@
 <template>
   <div class="flexColumn">
     <div class="settingsTitle">VERSION</div>
-
+    <spinner :loading="isChecking" />
     <!-- VERSION INFO -->
     <div v-if="isGenericUpdater" class="flexRow">
       <!-- generic -->
@@ -210,7 +210,7 @@
 
 <script>
 const sender = window.ipcSender;
-
+import spinner from "@/components/controls/control-spinner.vue";
 import UpdateProgress from "@/components/UpdateProgress.vue";
 import { IsNewVersion } from "@/app-updater/helper";
 import { IsGenericUpdater } from "@/app-updater";
@@ -218,7 +218,8 @@ import { AppUpdateStage } from "@/store/types";
 
 export default {
   components: {
-    UpdateProgress
+    UpdateProgress,
+    spinner
   },
   data: function() {
     return {
@@ -236,14 +237,12 @@ export default {
         this.isChecking = false;
 
         if (!this.isHasUpgrade) {
-          setTimeout(() => {
-            sender.showMessageBoxSync({
-              type: "info",
-              buttons: ["OK"],
-              message: "Nothing to update.",
-              detail: `You already have the latest version installed!\n\nDaemon: ${this.daemonVersionInfo}\nUI: ${this.uiVersionInfo}`
-            });
-          }, 0);
+          sender.showMessageBox({
+            type: "info",
+            buttons: ["OK"],
+            message: "Nothing to update.",
+            detail: `You already have the latest version installed!\n\nDaemon: ${this.daemonVersionInfo}\nUI: ${this.uiVersionInfo}`
+          });
         }
       }
     },

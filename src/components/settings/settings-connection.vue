@@ -199,41 +199,29 @@
         </select>
       </div>
 
-      <div class="paramBlockDetailedConfig" v-if="IsAccountActive">
-        <input
-          type="checkbox"
-          id="wgConfigDetailed"
-          v-model="wgConfigDetailed"
-        />
-        <label class="defColor" for="wgConfigDetailed"
-          >View detailed configuration</label
-        >
-      </div>
+      <div v-if="IsAccountActive">
+        <div class="settingsBoldFont">Wireguard key information:</div>
 
-      <div
-        class="detailedConfigBlock"
-        v-if="wgConfigDetailed && IsAccountActive"
-      >
         <spinner :loading="isProcessing" />
-        <div class="flexRow detailedConfigParamBlock">
+        <div class="flexRow paramBlock">
           <div class="defColor paramName">Local IP:</div>
           <div class="detailedParamValue">
             {{ this.$store.state.account.session.WgLocalIP }}
           </div>
         </div>
-        <div class="flexRow detailedConfigParamBlock">
+        <div class="flexRow paramBlock">
           <div class="defColor paramName">Public key:</div>
           <div class="detailedParamValue">
             {{ this.$store.state.account.session.WgPublicKey }}
           </div>
         </div>
-        <div class="flexRow detailedConfigParamBlock">
+        <div class="flexRow paramBlock">
           <div class="defColor paramName">Generated:</div>
           <div class="detailedParamValue">
             {{ wgKeysGeneratedDateStr }}
           </div>
         </div>
-        <div class="flexRow detailedConfigParamBlock">
+        <div class="flexRow paramBlock">
           <div class="defColor paramName">
             Expiration date:
           </div>
@@ -241,7 +229,7 @@
             {{ wgKeysExpirationDateStr }}
           </div>
         </div>
-        <div class="flexRow detailedConfigParamBlock">
+        <div class="flexRow paramBlock">
           <div class="defColor paramName">
             Will be automatically rotated:
           </div>
@@ -250,7 +238,7 @@
           </div>
         </div>
 
-        <button class="btn" v-on:click="onWgKeyRegenerate">
+        <button class="btn paramBlock" v-on:click="onWgKeyRegenerate">
           Regenerate
         </button>
       </div>
@@ -272,7 +260,6 @@ export default {
   data: function() {
     return {
       isProcessing: false,
-      wgConfigDetailed: false,
       openvpnManualConfig: false
     };
   },
@@ -495,11 +482,10 @@ div.detailedConfigParamBlock {
   @extend .flexRow;
   margin-top: 10px;
   width: 100%;
-  font-size: 11px;
 }
 div.detailedParamValue {
   opacity: 0.7;
-  max-width: 165px;
+
   overflow-wrap: break-word;
   -webkit-user-select: text;
   letter-spacing: 0.1px;
