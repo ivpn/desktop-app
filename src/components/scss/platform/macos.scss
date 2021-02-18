@@ -2,17 +2,6 @@
 @import "macos-servers.scss";
 
 // GLOBAL DEFINITION FO ALL ELEMENTS 
-input:focus {
-  outline-color: #8fb3f4;
-  outline-width: 2px;
-  outline-style: solid;
-}
-textarea:focus {
-  outline-color: #8fb3f4;
-  outline-width: 2px;
-  outline-style: solid;
-}
-// ===================================
 
 .leftPanelTopSpace {
   min-height: 29px;
@@ -55,6 +44,11 @@ input.styledBig {
     line-height: 18px;
     letter-spacing: -0.4px;
   }
+  input.styledBig:focus {
+    outline: none;
+    box-shadow: 0 0 1pt 1pt #8fb3f4;
+  }  
+
 input.styledBig::placeholder {
     opacity:1;
   }
@@ -82,3 +76,7 @@ button.slave {
     color: #6d849a;
   }
 
+  button.master:focus {
+    outline: none;
+    box-shadow: 0 0 1pt 1pt #8fb3f4;
+  }  

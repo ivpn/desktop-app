@@ -1,12 +1,17 @@
 <template>
   <div class="login">
     <spinner :loading="isProcessing" />
+
     <div class="column">
       <div>
+        <div class="centered" style="margin-top: -50px; margin-bottom:50px">
+          <img src="@/assets/logo.svg" />
+        </div>
+
         <div class="centered">
-          <div class="large_text">Log in to your IVPN account</div>
+          <div class="large_text">Enter your Account ID</div>
           <div style="height: 12px" />
-          <div class="small_text">Enter your Account ID</div>
+          <!--<div class="small_text">Enter your Account ID</div>-->
         </div>
 
         <div style="height: 21px" />
