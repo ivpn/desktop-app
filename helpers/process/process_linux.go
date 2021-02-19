@@ -36,7 +36,7 @@ import (
 // doGetPortOwnerPID returns PID of a process which is an owning of local TCP port
 func doGetPortOwnerPID(localTCPPort int) (int, error) {
 	//  lsof -i tcp:52994
-	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "/usr/bin/lsof", "-n", "-i", fmt.Sprintf("tcp:%d", localTCPPort))
+	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "lsof", "-n", "-i", fmt.Sprintf("tcp:%d", localTCPPort))
 	if err != nil {
 		return -1, fmt.Errorf("Unable to determine PID of port owner for TCP:%d", localTCPPort)
 	}
@@ -69,7 +69,7 @@ func doGetPortOwnerPID(localTCPPort int) (int, error) {
 // doGetBinaryPathByPID returns absolute path of process binary
 func doGetBinaryPathByPID(pid int) (string, error) {
 	// ls -l /proc/12110/exe
-	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "/usr/bin/ls", "-l", fmt.Sprintf("/proc/%d/exe", pid))
+	outText, _, exitCode, err := shell.ExecAndGetOutput(nil, 2048, "", "ls", "-l", fmt.Sprintf("/proc/%d/exe", pid))
 	if err != nil {
 		return "", fmt.Errorf("Unable to determine binary path of PID:%d", pid)
 	}
