@@ -56,18 +56,13 @@ export function InitTray(
   // load icons
   switch (Platform()) {
     case PlatformEnum.Windows:
-      iconConnected = nativeImage.createFromPath(
-        __static + "/tray/windows/connected.ico"
-      );
-      iconDisconnected = nativeImage.createFromPath(
-        __static + "/tray/windows/disconnected.ico"
-      );
-      iconPaused = nativeImage.createFromPath(
-        __static + "/tray/windows/paused.ico"
-      );
-      iconsConnecting.push(
-        nativeImage.createFromPath(__static + "/tray/windows/connecting.ico")
-      );
+      {
+        const f = __static + "/tray/windows/original";
+        iconConnected = nativeImage.createFromPath(f + "/connected.ico");
+        iconDisconnected = nativeImage.createFromPath(f + "/disconnected.ico");
+        iconPaused = iconDisconnected;
+        iconsConnecting.push(nativeImage.createFromPath(f + "/connecting.ico"));
+      }
       break;
     case PlatformEnum.Linux:
       iconConnected = nativeImage.createFromPath(
