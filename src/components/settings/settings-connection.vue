@@ -209,19 +209,19 @@
             {{ this.$store.state.account.session.WgLocalIP }}
           </div>
         </div>
-        <div class="flexRow paramBlock">
+        <div class="flexRow paramBlockDetailedConfig">
           <div class="defColor paramName">Public key:</div>
           <div class="detailedParamValue">
             {{ this.$store.state.account.session.WgPublicKey }}
           </div>
         </div>
-        <div class="flexRow paramBlock">
+        <div class="flexRow paramBlockDetailedConfig">
           <div class="defColor paramName">Generated:</div>
           <div class="detailedParamValue">
             {{ wgKeysGeneratedDateStr }}
           </div>
         </div>
-        <div class="flexRow paramBlock">
+        <div class="flexRow paramBlockDetailedConfig">
           <div class="defColor paramName">
             Expiration date:
           </div>
@@ -229,7 +229,7 @@
             {{ wgKeysExpirationDateStr }}
           </div>
         </div>
-        <div class="flexRow paramBlock">
+        <div class="flexRow paramBlockDetailedConfig">
           <div class="defColor paramName">
             Will be automatically rotated:
           </div>
@@ -464,9 +464,7 @@ div.paramBlock {
 
 div.paramBlockDetailedConfig {
   @extend .flexRow;
-  margin-top: 32px;
-  font-size: 12px;
-  opacity: 0.8;
+  margin-top: 10px;
 }
 div.detailedConfigBlock {
   margin-left: 22px;
