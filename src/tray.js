@@ -57,45 +57,33 @@ export function InitTray(
   switch (Platform()) {
     case PlatformEnum.Windows:
       {
-        const f = __static + "/tray/windows/original";
-        iconConnected = nativeImage.createFromPath(f + "/connected.ico");
-        iconDisconnected = nativeImage.createFromPath(f + "/disconnected.ico");
-        iconPaused = iconDisconnected;
-        iconsConnecting.push(nativeImage.createFromPath(f + "/connecting.ico"));
+        const f = __static + "/tray/windows/";
+        iconConnected = nativeImage.createFromPath(f + "connected.ico");
+        iconDisconnected = nativeImage.createFromPath(f + "disconnected.ico");
+        iconPaused = nativeImage.createFromPath(f + "paused.ico");
+        iconsConnecting.push(nativeImage.createFromPath(f + "connecting.ico"));
       }
       break;
     case PlatformEnum.Linux:
-      iconConnected = nativeImage.createFromPath(
-        __static + "/tray/linux/connected.png"
-      );
-      iconDisconnected = nativeImage.createFromPath(
-        __static + "/tray/linux/disconnected.png"
-      );
-      iconPaused = nativeImage.createFromPath(
-        __static + "/tray/linux/paused.png"
-      );
-      iconsConnecting.push(
-        nativeImage.createFromPath(__static + "/tray/linux/connecting.png")
-      );
+      {
+        const f = __static + "/tray/linux/";
+        iconConnected = nativeImage.createFromPath(f + "connected.png");
+        iconDisconnected = nativeImage.createFromPath(f + "disconnected.png");
+        iconPaused = nativeImage.createFromPath(f + "paused.png");
+        iconsConnecting.push(nativeImage.createFromPath(f + "connecting.png"));
+      }
       break;
     case PlatformEnum.macOS:
       {
-        iconPaused = nativeImage.createFromPath(
-          __static + "/tray/mac/icon-pausedTemplate.png"
-        );
-
-        const f = __static + "/tray/mac/original";
-        iconConnected = nativeImage.createFromPath(
-          f + "/icon-connectedTemplate.png"
-        );
+        const f = __static + "/tray/mac/";
+        iconPaused = nativeImage.createFromPath(f + "pausedTemplate.png");
+        iconConnected = nativeImage.createFromPath(f + "connectedTemplate.png");
         iconDisconnected = nativeImage.createFromPath(
-          f + "/icon-disconnectedTemplate.png"
+          f + "disconnectedTemplate.png"
         );
-        const c1 = nativeImage.createFromPath(f + "/icon-1Template.png");
-        const c2 = nativeImage.createFromPath(f + "/icon-2Template.png");
-        const c3 = nativeImage.createFromPath(f + "/icon-3Template.png");
-        const c4 = nativeImage.createFromPath(f + "/icon-4Template.png");
-        iconsConnecting.push(iconDisconnected, c1, c2, c3, c4, c3, c2, c1);
+        iconsConnecting.push(
+          nativeImage.createFromPath(f + "connectingTemplate.png")
+        );
       }
       break;
   }

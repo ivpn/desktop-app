@@ -13,7 +13,7 @@
         style="text-align: center"
         class="descriptipn"
       >
-        Loading connection info failed
+        Failed to load connection info
       </div>
       <div v-if="isInfoAvailable">
         <div class="flexRow row">
