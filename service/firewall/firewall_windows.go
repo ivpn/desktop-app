@@ -127,7 +127,7 @@ func implSetPersistant(persistant bool) (retErr error) {
 		return reEnable()
 	}
 
-	return nil
+	return doEnable()
 }
 
 // ClientConnected - allow communication for local vpn/client IP address
