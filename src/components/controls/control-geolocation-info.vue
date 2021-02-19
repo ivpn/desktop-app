@@ -40,28 +40,32 @@ export default {
       return this.$store.state.isRequestingLocation;
     },
     isInfoAvailable: function() {
-      return this.$store.state.location != null;
+      let l = this.$store.state.location;
+      if (!l) return false;
+      if (!l.city && !l.country && !l.isp && !l.ip_address) return false;
+      return true;
     },
     ip: function() {
-      if (this.$store.state.location == null) return null;
+      let l = this.$store.state.location;
+      if (!l || !l.ip_address) return null;
       return this.$store.state.location.ip_address;
     },
     locationName: function() {
-      if (this.$store.state.location == null) return null;
-      if (
-        this.$store.state.location.city == "" &&
-        this.$store.state.location.country == "" &&
-        this.$store.state.location.country_code == ""
-      )
-        return "";
-      if (this.$store.state.location.city == "")
-        return `${this.$store.state.location.country}`;
-      return `${this.$store.state.location.city}, ${this.$store.state.location.country_code}`;
+      let l = this.$store.state.location;
+      if (!l) return null;
+
+      if (l.city) {
+        if (l.country_code) return `${l.city}, ${l.country_code}`;
+        else if (l.country) return `${l.city}, ${l.country}`;
+      } else if (l.country) return `${l.country}`;
+      return null;
     },
     isp: function() {
-      if (this.$store.state.location == null) return null;
-      if (this.$store.state.location.isIvpnServer == true) return "IVPN";
-      return this.$store.state.location.isp;
+      let l = this.$store.state.location;
+      if (!l) return null;
+      if (l.isIvpnServer == true) return "IVPN";
+      if (!l.isp) return null;
+      return l.isp;
     }
   }
 };

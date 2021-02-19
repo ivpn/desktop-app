@@ -676,9 +676,11 @@ async function GeoLookup(isRetryTry) {
           `API ERROR: Unable to save geo-lookup result (connection state changed)`
         );
       } else {
+        // {"ip_address":"","isp":"","organization":"","country":"","country_code":"","city":"","latitude": 0.0,"longitude":0.0,"isIvpnServer":false}
         retLocation = JSON.parse(`${resp.ResponseData}`);
-        if (retLocation == null || retLocation.ip_address === undefined) {
-          log.error(`API ERROR:bad geo-lookup response`);
+        if (!retLocation || !retLocation.latitude || !retLocation.longitude) {
+          log.error(`API ERROR: bad geo-lookup response`);
+          retLocation = null;
         } else {
           retLocation.isRealLocation = isRealGeoLocationOnStart;
           log.debug("API: 'geo-lookup' success.");
@@ -687,9 +689,10 @@ async function GeoLookup(isRetryTry) {
     }
   } catch (e) {
     console.error("geo-lookup error", e);
+  } finally {
+    store.commit("location", retLocation);
+    store.commit("isRequestingLocation", false); // un-mark 'Checking geolookup...'
   }
-  store.commit("location", retLocation);
-  store.commit("isRequestingLocation", false); // un-mark 'Checking geolookup...'
 
   if (retLocation == null && !isRetryTry) {
     for (let r = 1; r <= 3; r++) {
