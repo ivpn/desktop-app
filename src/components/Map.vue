@@ -592,7 +592,7 @@ export default {
     // ================= SCROLLING ====================
     centerCurrentLocation(noAnimation) {
       if (!this.isConnected && this.location != null)
-        this.centerServer(this.location, noAnimation);
+        this.centerServer(this.location, noAnimation, true);
       else this.centerServer(this.selectedServer, noAnimation);
     },
     centerServer(server, noAnimation, isPopupRequired) {
@@ -712,7 +712,7 @@ export default {
       if (mapLocation == null) return;
       // do not show 'disconnect' popup
       if (
-        isPopupRequired !== true &&
+        isPopupRequired !== true ||
         !this.isCanShowPopupForLocation(mapLocation.location)
       ) {
         return;
