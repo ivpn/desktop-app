@@ -10,17 +10,6 @@
   }
 }
 
-// GLOBAL DEFINITION FO ALL ELEMENTS 
-input:focus {
-  outline-color: #8fb3f4;
-  outline-width: 2px;
-  outline-style: solid;
-}
-textarea:focus {
-  outline-color: #8fb3f4;
-  outline-width: 2px;
-  outline-style: solid;
-}
 // ===================================
 
 // === HOP BUTTONS ===
@@ -60,6 +49,10 @@ input.styled {
     box-sizing: border-box;
     
     border-radius: 0px;
+
+    outline-color: #8fb3f4;
+    outline-width: 2px;
+    outline-style: solid;
 }
 input.styled::placeholder {
     font-size: 14px;
@@ -83,6 +76,7 @@ button.master {
 
     border: 0px;
     cursor: pointer;
+
   }
   
 button.slave {
