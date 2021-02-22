@@ -1,13 +1,29 @@
 <template>
   <div class="main">
-    <img class="flag" :src="serverImage" />
-    <div class="text" v-bind:class="{ text_large: isLargeText }">
-      {{ serverName }}
+    <img
+      v-bind:class="{ flag: isSingleLine, flagBig: !isSingleLine }"
+      :src="serverImage"
+    />
+
+    <div
+      class="textBloack text"
+      v-if="isShowSingleLine"
+      v-bind:class="{ text_large: isLargeText, firstLine: !isSingleLine }"
+    >
+      {{ singleLine }}
+    </div>
+    <div class="textBloack text" v-else>
+      <div class="text firstLine">
+        {{ multilineFirstLine }}
+      </div>
+      <div class="text secondLine">
+        {{ multilineSecondLine }}
+      </div>
     </div>
 
     <img
       :src="selectedImg"
-      style="margin-left:10px"
+      style="margin-left:10px; margin-right: 4px"
       v-if="isShowSelected === true"
     />
   </div>
@@ -27,22 +43,52 @@ export default {
   props: {
     server: Object,
     isLargeText: Boolean,
+
+    isSingleLine: Boolean,
+    isCountryFirst: Boolean,
+
     isFullName: String,
+
     isShowSelected: Boolean,
     isFastestServer: Boolean,
     isRandomServer: Boolean
   },
 
   computed: {
-    serverName: function() {
+    isShowSingleLine: function() {
+      return (
+        this.isSingleLine ||
+        this.isFullName ||
+        this.isFastestServer ||
+        this.isRandomServer
+      );
+    },
+    singleLine: function() {
       if (this.isFastestServer === true) return "Fastest server";
       if (this.isRandomServer === true) return "Random server";
       if (!this.server) return "";
       if (!this.server.city && !this.server.country) return "";
-      if (this.server.city == "") return this.server.country;
-      if (this.isFullName === "true")
-        return `${this.server.city}, ${this.server.country}`;
-      return `${this.server.city}, ${this.server.country_code}`;
+      if (!this.server.city) return this.server.country;
+
+      if (this.isCountryFirst) {
+        if (this.isFullName === "true")
+          return `${this.server.country}, ${this.server.city}`;
+        return `${this.server.country_code}, ${this.server.city}`;
+      } else {
+        if (this.isFullName === "true")
+          return `${this.server.city}, ${this.server.country}`;
+        return `${this.server.city}, ${this.server.country_code}`;
+      }
+    },
+    multilineFirstLine: function() {
+      if (!this.server) return "";
+      if (this.isCountryFirst) return this.server.country;
+      return this.server.city;
+    },
+    multilineSecondLine: function() {
+      if (!this.server) return "";
+      if (this.isCountryFirst) return this.server.city;
+      return this.server.country;
     },
     serverImage: function() {
       if (this.isFastestServer === true) return Image_speedometer;
@@ -85,11 +131,22 @@ export default {
   align-items: center;
 }
 
+img.flag {
+  width: 24px;
+}
+
+img.flagBig {
+  @extend .flag;
+  width: 28px;
+}
+
 .text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
 
+div.textBloack {
   font-size: 14px;
   line-height: 20px;
   margin-left: 16px;
@@ -99,6 +156,20 @@ export default {
   font-size: 18px;
   line-height: 21px;
   margin-left: 10px;
+}
+
+div.firstLine {
+  text-align: left;
+  font-size: 16px;
+  margin-bottom: 0px;
+}
+
+div.secondLine {
+  text-align: left;
+  font-size: 12px;
+  line-height: 14px;
+  color: grey;
+  margin-top: 0px;
 }
 
 .flexRow {

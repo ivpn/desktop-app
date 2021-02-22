@@ -205,8 +205,9 @@
           v-bind:class="{ disabledButton: isInaccessibleServer(server) }"
         >
           <serverNameControl
-            :server="server"
             class="serverName"
+            :server="server"
+            :isCountryFirst="sortTypeStr === 'Country'"
             :isShowSelected="
               isFastestServerConfig === false && isSelectedServer(server)
             "
