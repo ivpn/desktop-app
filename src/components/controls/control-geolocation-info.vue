@@ -17,8 +17,20 @@
       </div>
       <div v-if="isInfoAvailable">
         <div class="flexRow row">
-          <div class="descriptipn">Your IP</div>
-          <div class="value">{{ ip }}</div>
+          <div class="descriptipn">
+            Your IP
+          </div>
+
+          <div class="value">
+            {{ ip }}
+            <button
+              class="noBordersBtn"
+              v-on:click="onRefreshCurrLocation"
+              style="padding: 0px; margin: 0px; margin-left: 2px; pointer-events: auto;"
+            >
+              <img width="10" height="10" src="@/assets/refresh.svg" />
+            </button>
+          </div>
         </div>
         <div class="flexRow row">
           <div class="descriptipn">Location</div>
@@ -34,7 +46,18 @@
 </template>
 
 <script>
+const sender = window.ipcSender;
+
 export default {
+  methods: {
+    onRefreshCurrLocation() {
+      try {
+        sender.GeoLookup();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  },
   computed: {
     isRequestingLocation: function() {
       return this.$store.state.isRequestingLocation;
