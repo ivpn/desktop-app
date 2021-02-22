@@ -72,7 +72,8 @@
           <!-- CHECK UPDATES BUTTON -->
           <button
             v-if="!isHasUpgrade"
-            class="slave btn"
+            class="settingsButton"
+            style="min-width: 200px;"
             v-on:click="onCheckUpdatesPressed"
           >
             {{ updateBtnText }}
@@ -82,7 +83,7 @@
             <!-- UPGRADE BUTTON -->
             <button
               v-if="isHasUpgrade && !isHasDownloadState"
-              class="master btn"
+              class="master updateBtnSize"
               v-on:click="onUpgradePressed"
             >
               Update
@@ -92,7 +93,7 @@
               <!-- CANCEL DOWNLOAD BUTTON -->
               <button
                 v-if="isDownloading"
-                class="slave btn"
+                class="slave updateBtnSize"
                 v-on:click="onCancelDownloadPressed"
               >
                 Cancel
@@ -100,7 +101,7 @@
               <!-- INSTALL BUTTON -->
               <button
                 v-else-if="isReadyToInstall"
-                class="master btn"
+                class="master updateBtnSize"
                 v-on:click="onInstallPressed"
               >
                 Install
@@ -108,7 +109,7 @@
               <!-- INSTALLING BUTTON -->
               <button
                 v-if="isInstalling"
-                class="slave btn"
+                class="slave updateBtnSize"
                 style="background: transparent; color: grey; birder: 0px"
               >
                 Installing ...
@@ -228,12 +229,19 @@ export default {
   methods: {
     onCheckUpdatesPressed: async function() {
       await sender.AppUpdatesCheck();
-      if (this.$store.state.latestVersionInfo == null) {
+      if (!this.$store.state.latestVersionInfo) {
         sender.showMessageBox({
           type: "warning",
           buttons: ["OK"],
           message: "No update info",
           detail: `Unable to check updates`
+        });
+      } else if (!this.sHasUpgrade) {
+        sender.showMessageBox({
+          type: "info",
+          buttons: ["OK"],
+          message: "Nothing to update.",
+          detail: `You already have the latest version installed!\n\nDaemon: ${this.daemonVersionInfo}\nUI: ${this.uiVersionInfo}`
         });
       }
     },
@@ -257,7 +265,7 @@ export default {
     },
     updateBtnText: function() {
       if (this.isChecking === true) return "Checking ...";
-      return "Check for Updates";
+      return "Check for updates ...";
     },
     isAbleToCheckUpdate: function() {
       let ret = sender.AppUpdatesIsAbleToUpdate();
@@ -411,6 +419,7 @@ export default {
     }
   },
   watch: {
+    /*
     state(newState, oldState) {
       if (
         newState !== AppUpdateStage.CheckingFinished ||
@@ -426,7 +435,7 @@ export default {
           detail: `You already have the latest version installed!\n\nDaemon: ${this.daemonVersionInfo}\nUI: ${this.uiVersionInfo}`
         });
       }
-    }
+    }*/
   }
 };
 </script>
@@ -445,7 +454,7 @@ export default {
   margin-bottom: 20px;
 }
 
-.btn {
+.updateBtnSize {
   width: 150px;
   height: 30px;
 }

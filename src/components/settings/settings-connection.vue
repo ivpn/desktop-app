@@ -238,7 +238,11 @@
           </div>
         </div>
 
-        <button class="btn paramBlock" v-on:click="onWgKeyRegenerate">
+        <button
+          class="settingsButton paramBlock"
+          style="margin-top: 10px; height: 24px;"
+          v-on:click="onWgKeyRegenerate"
+        >
           Regenerate
         </button>
       </div>
@@ -509,17 +513,6 @@ select {
   border: 0.5px solid rgba(0, 0, 0, 0.2);
   border-radius: 3.5px;
   width: 186px;
-}
-
-.btn {
-  margin-top: 10px;
-  height: 24px;
-
-  background: transparent;
-  border: 0.5px solid #c8c8c8;
-  box-sizing: border-box;
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 div.description {

@@ -142,7 +142,7 @@
 
           <div class="flexRowRestSpace" />
 
-          <button class="btn" v-on:click="onResetToDefaultSettings">
+          <button class="settingsButton" v-on:click="onResetToDefaultSettings">
             Reset to default settings
           </button>
         </div>
@@ -384,14 +384,6 @@ button.selectableButtonOn {
 button.selectableButtonSeparator {
   @extend .selectableButtonOff;
   cursor: auto;
-}
-
-button.btn {
-  background: transparent;
-  border: 0.5px solid #c8c8c8;
-  box-sizing: border-box;
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 select.trustedConfigBase {

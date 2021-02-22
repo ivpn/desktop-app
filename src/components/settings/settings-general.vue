@@ -129,7 +129,11 @@
       </div>
       <div class="flexRowRestSpace"></div>
 
-      <button class="btn" v-on:click="onLogs" v-if="isCanSendDiagLogs">
+      <button
+        class="settingsButton"
+        v-on:click="onLogs"
+        v-if="isCanSendDiagLogs"
+      >
         Diagnostic logs ...
       </button>
     </div>
@@ -313,13 +317,6 @@ div.description {
   max-width: 490px;
 }
 
-button.btn {
-  background: transparent;
-  border: 0.5px solid #c8c8c8;
-  box-sizing: border-box;
-  border-radius: 4px;
-  cursor: pointer;
-}
 #diagnosticLogs {
   background: white;
   z-index: 99;

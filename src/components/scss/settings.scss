@@ -59,6 +59,14 @@
     margin-top: 4px;
     width: 186px;
   }
+  
+  button.settingsButton {
+    background: transparent;
+    border: 0.5px solid #c8c8c8;
+    box-sizing: border-box;
+    border-radius: 4px;
+    cursor: pointer;
+  }
 
   .settingsLinkText {
     font-size: 13px;
@@ -66,3 +74,4 @@
     letter-spacing: -0.4px;
     color: #398FE6;
   }
+
