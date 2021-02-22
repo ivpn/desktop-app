@@ -34,7 +34,7 @@ const getDefaultState = () => {
     isExpectedAccountToBeLoggedIn: false,
 
     // VPN
-    vpnType: VpnTypeEnum.OpenVPN,
+    vpnType: VpnTypeEnum.WireGuard,
     isMultiHop: false,
     serverEntry: null,
     serverExit: null,
