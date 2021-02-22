@@ -14,14 +14,20 @@
           }}
         </div>
         <div style="height: 4px" />
-        <serverNameControl
-          class="serverName"
-          size="large"
-          :server="this.server"
-          :isFastestServer="isFastestServer"
-          :isRandomServer="isRandomServer"
-          :isShowPingPicture="!(isFastestServer || isRandomServer)"
-        />
+        <div class="flexRow">
+          <serverNameControl
+            class="serverName"
+            :isLargeText="true"
+            :server="this.server"
+            :isFastestServer="isFastestServer"
+            :isRandomServer="isRandomServer"
+            :isShowPingPicture="!(isFastestServer || isRandomServer)"
+          />
+          <serverPingInfoControl
+            :server="this.server"
+            style="margin-left: 9px"
+          />
+        </div>
       </div>
 
       <div class="arrowRightSimple"></div>
@@ -31,12 +37,14 @@
 
 <script>
 import serverNameControl from "@/components/controls/control-server-name.vue";
+import serverPingInfoControl from "@/components/controls/control-server-ping.vue";
 import { VpnStateEnum } from "@/store/types";
 
 export default {
   props: ["onShowServersPressed", "isExitServer"],
   components: {
-    serverNameControl
+    serverNameControl,
+    serverPingInfoControl
   },
   computed: {
     server: function() {

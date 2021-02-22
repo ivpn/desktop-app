@@ -1,16 +1,7 @@
 <template>
   <div class="main">
-    <img
-      class="flag"
-      v-if="isHideFlag == null"
-      v-bind:class="{ flagBigger: isFlagBigger != null }"
-      :src="serverImage"
-    />
-    <div
-      class="text"
-      v-if="isHideName == null"
-      v-bind:class="{ text_large: size === 'large' }"
-    >
+    <img class="flag" :src="serverImage" />
+    <div class="text" v-bind:class="{ text_large: isLargeText }">
       {{ serverName }}
     </div>
 
@@ -19,23 +10,6 @@
       style="margin-left:10px"
       v-if="isShowSelected === true"
     />
-
-    <div
-      class="flexRow"
-      v-bind:class="{ marginLeft: isHideFlag == null || isHideName == null }"
-    >
-      <img
-        :src="pingStatusImg"
-        v-if="isShowPingPicture == 'true' || isShowPingPicture == true"
-      />
-
-      <div
-        class="pingtext marginLeft"
-        v-if="isShowPingTime != null && pingStatusImg != null"
-      >
-        {{ server.ping }}ms
-      </div>
-    </div>
   </div>
 </template>
 
@@ -50,30 +24,21 @@ import Image_iconStatusModerate from "@/assets/iconStatusModerate.svg";
 import Image_iconStatusBad from "@/assets/iconStatusBad.svg";
 
 export default {
-  // possible values of "size" : 'normal' (default), 'large'
-  // possible values of "isFullName" : 'false\null' (default), 'true'
-  props: [
-    "server",
-    "size",
-    "isFullName",
-    "isShowPingPicture",
-    "isShowPingTime",
-    "isShowSelected",
-    "isHideName",
-    "isHideFlag",
-    "isFastestServer",
-    "isRandomServer",
-    "isFlagBigger",
-    "manualName",
-    "manualImage"
-  ],
+  props: {
+    server: Object,
+    isLargeText: Boolean,
+    isFullName: String,
+    isShowSelected: Boolean,
+    isFastestServer: Boolean,
+    isRandomServer: Boolean
+  },
+
   computed: {
     serverName: function() {
       if (this.isFastestServer === true) return "Fastest server";
       if (this.isRandomServer === true) return "Random server";
-      if (this.manualName != null) return this.manualName;
-      if (this.server == null) return "";
-      if (this.server.city == "" && this.server.country == "") return "";
+      if (!this.server) return "";
+      if (!this.server.city && !this.server.country) return "";
       if (this.server.city == "") return this.server.country;
       if (this.isFullName === "true")
         return `${this.server.city}, ${this.server.country}`;
@@ -82,8 +47,7 @@ export default {
     serverImage: function() {
       if (this.isFastestServer === true) return Image_speedometer;
       if (this.isRandomServer === true) return Image_shuffle;
-      if (this.manualImage != null) return this.manualImage;
-      if (this.server == null) return `/flags/unk.svg`;
+      if (!this.server) return `/flags/unk.svg`;
       try {
         const ccode = this.server.country_code.toLowerCase();
         return `/flags/${ccode}.svg`;
@@ -96,7 +60,7 @@ export default {
       return Image_check;
     },
     pingStatusImg: function() {
-      if (this.server == null) return null;
+      if (!this.server) return null;
       switch (this.server.pingQuality) {
         case PingQuality.Good:
           return Image_iconStatusGood;
@@ -119,10 +83,6 @@ export default {
 .main {
   display: flex;
   align-items: center;
-}
-
-.flagBigger {
-  width: 26px;
 }
 
 .text {

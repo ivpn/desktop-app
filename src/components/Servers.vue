@@ -213,14 +213,10 @@
           />
 
           <div class="flexRow" v-if="isFastestServerConfig === false">
-            <!-- NO CONFIG -->
-            <serverNameControl
+            <serverPingInfoControl
               class="pingInfo"
               :server="server"
-              isHideName="true"
-              isHideFlag="true"
-              isShowPingPicture="true"
-              isShowPingTime="true"
+              :isShowPingTime="true"
             />
 
             <img
@@ -260,6 +256,7 @@
 <script>
 const sender = window.ipcSender;
 import serverNameControl from "@/components/controls/control-server-name.vue";
+import serverPingInfoControl from "@/components/controls/control-server-ping.vue";
 import SwitchProgress from "@/components/controls/control-switch-small.vue";
 import imgArrowLeft from "@/components/images/arrow-left.vue";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
@@ -291,6 +288,7 @@ export default {
   ],
   components: {
     serverNameControl,
+    serverPingInfoControl,
     SwitchProgress,
     imgArrowLeft
   },
@@ -655,8 +653,8 @@ input#filter {
 }
 
 .serverName {
-  max-width: 196px;
-  width: 196px;
+  max-width: 195px;
+  width: 195px;
 }
 
 .pingInfo {

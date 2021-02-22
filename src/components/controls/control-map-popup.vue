@@ -11,11 +11,10 @@
         countries. Please select a different entry or exit server.
       </div>
     </div>
-    <serverNameControl
-      :server="location"
-      isFullName="true"
-      isShowPingPicture="true"
-    />
+    <div class="flexRow">
+      <serverNameControl :server="location" isFullName="true" />
+      <serverPingInfoControl :server="location" style="margin-left: 9px" />
+    </div>
 
     <div style="height: 12px" />
     <button class="master" v-if="isCanConnect" v-on:click="onConnect(location)">
@@ -46,12 +45,14 @@
 
 <script>
 import serverNameControl from "@/components/controls/control-server-name.vue";
+import serverPingInfoControl from "@/components/controls/control-server-ping.vue";
 import { VpnStateEnum, PauseStateEnum } from "@/store/types";
 
 export default {
   props: ["location", "onConnect", "onDisconnect", "onMouseClick", "onResume"],
   components: {
-    serverNameControl
+    serverNameControl,
+    serverPingInfoControl
   },
   data: () => ({
     pauseTimeUpdateTimer: null,
