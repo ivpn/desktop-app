@@ -441,6 +441,11 @@ export default {
     // HELPERS
     updateSelectedServers(context) {
       updateSelectedServers(context);
+    },
+    notifySelectedServersPropsUpdated(context) {
+      // Do nothing. Just trigger mechanism to update properties for 'selected servers' objects
+      context.commit("serverEntry", context.state.serverEntry);
+      context.commit("serverExit", context.state.serverExit);
     }
   }
 };

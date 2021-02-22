@@ -386,10 +386,11 @@ export default {
   },
 
   watch: {
-    selectedServer(oldVal, newVal) {
+    selectedServer(newVal, oldVal) {
       this.updateCities();
       this.updateAnimations();
-      if (oldVal !== newVal) this.centerServer(this.selectedServer);
+      if (oldVal && newVal && oldVal.gateway !== newVal.gateway)
+        this.centerServer(this.selectedServer);
     },
     isFastestServer() {
       if (this.isFastestServer !== true && this.isRandomExitServer != true)
@@ -710,13 +711,8 @@ export default {
       let mapLocation = isUse(this.locationsToDisplay, x, y, 1, 0, 0, 0, 0);
 
       if (mapLocation == null) return;
-      // do not show 'disconnect' popup
-      if (
-        isPopupRequired !== true ||
-        !this.isCanShowPopupForLocation(mapLocation.location)
-      ) {
-        return;
-      }
+
+      if (isPopupRequired !== true) return;
 
       // save selected location info: server(or current user location info)
       this.selectedPopupLocation = mapLocation.location;
@@ -727,10 +723,6 @@ export default {
 
       // show popup
       this.isPopupVisible = true;
-    },
-    isCanShowPopupForLocation(location) {
-      if (this.isConnected && location === this.selectedServer) return false;
-      return true;
     },
     // ================= ZOOMING ====================
     wheel(e) {

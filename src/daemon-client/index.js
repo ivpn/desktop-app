@@ -325,6 +325,8 @@ async function processResponse(response) {
     case daemonResponses.PingServersResp:
       if (obj.PingResults == null) break;
       store.commit(`vpnState/serversPingStatus`, obj.PingResults);
+      // update ping time info for selected servers
+      store.dispatch("settings/notifySelectedServersPropsUpdated");
       break;
     case daemonResponses.SetAlternateDNSResp:
       if (obj.IsSuccess == null || obj.IsSuccess !== true) break;
