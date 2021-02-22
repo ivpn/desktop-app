@@ -37,6 +37,8 @@ input.styled::placeholder {
     color: #6d849a;
     opacity:0.5;
   }
+
+
 input.styledBig { 
     @extend .styled;
     height: 56px;
@@ -44,7 +46,8 @@ input.styledBig {
     line-height: 18px;
     letter-spacing: -0.4px;
   }
-  input.styledBig:focus {
+
+input.styled:focus {
     outline: none;
     box-shadow: 0 0 1pt 1pt #8fb3f4;
   }  
