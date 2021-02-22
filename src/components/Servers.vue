@@ -365,9 +365,10 @@ export default {
             return a.city.localeCompare(b.city);
 
           case ServersSortTypeEnum.Latency:
-            if (a.ping === b.ping) return 0;
-            if (a.ping < b.ping) return -1;
-            return 1;
+            if (a.ping && b.ping) return a.ping - b.ping;
+            if (a.ping && !b.ping) return -1;
+            if (!a.ping && b.ping) return 1;
+            return 0;
 
           case ServersSortTypeEnum.Proximity: {
             const l = store.getters["getLastRealLocation"];
@@ -403,8 +404,8 @@ export default {
       let filter = this.filter.toLowerCase();
       let filtered = servers.filter(
         s =>
-          s.city.toLowerCase().includes(filter) ||
-          //s.country.toLowerCase().includes(filter) ||
+          (s.city && s.city.toLowerCase().includes(filter)) ||
+          (s.country && s.country.toLowerCase().includes(filter)) ||
           (s.country_code && s.country_code.toLowerCase().includes(filter))
       );
 
