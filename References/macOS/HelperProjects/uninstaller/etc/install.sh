@@ -138,11 +138,11 @@ if [ -d "${_app_path}" ]; then
     RemoveBackup
     echo "[+] Backup old application '${_app_path}' -> '${_app_backup}'"
     mv -f "${_app_path}" "${_app_backup}" || { echoerr "Failed to make a backup"; UnmountDMG; exit 71; }
-fi 
+fi
 
 echo "[+] Copying ..."
 cp -R "${_app_path_src}" "${_app_path}" || { echoerr "Failed to install the update"; RestoreBackup; UnmountDMG; exit 72; }
-    
+
 RemoveBackup
 UnmountDMG
 
@@ -151,6 +151,6 @@ UnmountDMG
 KillAppProcess
 
 echo "[+] Starting '${_app_path}' ..."
-open "${_app_path}"
+sudo -u "$USER" open "${_app_path}"
 
 exit 0

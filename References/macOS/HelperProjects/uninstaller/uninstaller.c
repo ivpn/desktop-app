@@ -308,13 +308,16 @@ int install_helper() {
     return err;
 }
 
-int disconnectAndQuitApp() {
+int disconnectApp() {
   printf("[ ] Disabling IVPN firewall ...\n");
   system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn firewall -off");
 
   printf("[ ] Disconnecting IVPN ...\n");
   system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn disconnect");
+  return 0;
+}
 
+int quitApp() {
   printf("[ ] Closing IVPN app...\n");
   if (system("/usr/bin/osascript -e 'quit app \"ivpn-ui\"'"))
   {
@@ -355,7 +358,8 @@ int uninstall() {
 
       bool hasErrors = false;
 
-      int ret = disconnectAndQuitApp();
+      disconnectApp();
+      int ret = quitApp();
       if (ret) return ret;
 
       printf("[ ] Logout ...\n");
@@ -453,12 +457,7 @@ int update(const char* dmgFile, const char* signatureFile) {
         return 2;
       }
 
-      int r = disconnectAndQuitApp();
-      if (r) 
-      {
-        AuthorizationFree(authRef, kAuthorizationFlagDefaults);
-        return r;
-      }
+      disconnectApp();
 
       char *args[] = {dmgFile, signatureFile, NULL};
       OSStatus ret = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/install.sh", kAuthorizationFlagDefaults, args, NULL);
