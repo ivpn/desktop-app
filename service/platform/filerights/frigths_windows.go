@@ -11,12 +11,17 @@ import (
 )
 
 var envVarProgramFiles string
+var envVarSystemroot string
 var isDebug bool = false
 
 func init() {
 	envVarProgramFiles = strings.ToLower(os.Getenv("ProgramFiles"))
 	if len(envVarProgramFiles) == 0 {
 		fmt.Println("!!! ERROR !!! Unable to determine 'ProgramFiles' environment variable")
+	}
+	envVarSystemroot = strings.ToLower(os.Getenv("SYSTEMROOT"))
+	if len(envVarSystemroot) == 0 {
+		fmt.Println("!!! ERROR !!! Unable to determine 'SYSTEMROOT' environment variable")
 	}
 }
 
@@ -42,7 +47,18 @@ func CheckFileAccessRightsStaticConfig(file string) error {
 func CheckFileAccessRightsExecutable(file string) error {
 	// No file rights check for Windows
 	// Application is installed to a '%PROGRAMFILES%' which is write-accessible only for admins
-	return isFileInProgramFiles(file)
+	// External binaries can be started only from '%SYSTEMROOT%' which is also write-accessible only for admins
+
+	file = strings.ToLower(strings.ReplaceAll(file, "/", "\\"))
+
+	if strings.HasPrefix(file, envVarProgramFiles) {
+		return isFileInProgramFiles(file)
+	}
+	if strings.HasPrefix(file, envVarSystemroot) {
+		return isFileInSystemroot(file)
+	}
+
+	return fmt.Errorf("file '%s' is not in folders '%s' or '%s'", file, envVarProgramFiles, envVarSystemroot)
 }
 
 func isFileInProgramFiles(file string) error {
@@ -50,16 +66,35 @@ func isFileInProgramFiles(file string) error {
 		return err
 	}
 
+	if len(envVarProgramFiles) == 0 {
+		return fmt.Errorf("the 'ProgramFiles' environment variable not initialized")
+	}
+
 	if isDebug == false {
-		if len(envVarProgramFiles) == 0 {
-			return fmt.Errorf("the 'ProgramFiles' environment variable not initialized")
-		}
 		if strings.HasPrefix(strings.ToLower(strings.ReplaceAll(file, "/", "\\")), envVarProgramFiles) == false {
 			return fmt.Errorf("file '%s' is not in folder '%s'", file, envVarProgramFiles)
 		}
 	}
 	return nil
 }
+
+func isFileInSystemroot(file string) error {
+	if err := isFileExists(file); err != nil {
+		return err
+	}
+
+	if len(envVarSystemroot) == 0 {
+		return fmt.Errorf("the 'SYSTEMROOT' environment variable not initialized")
+	}
+
+	if isDebug == false {
+		if strings.HasPrefix(strings.ToLower(strings.ReplaceAll(file, "/", "\\")), envVarSystemroot) == false {
+			return fmt.Errorf("file '%s' is not in folder '%s'", file, envVarSystemroot)
+		}
+	}
+	return nil
+}
+
 func isFileExists(file string) error {
 	stat, err := os.Stat(file)
 	if err != nil {
