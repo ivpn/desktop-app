@@ -70,6 +70,7 @@
 
       <div style="min-width: 50px; margin-left:auto; margin-right:0;">
         <SwitchProgress
+          v-bind:class="{ lowOpacity: isCanResume }"
           :onChecked="onChecked"
           :isChecked="isChecked"
           :isProgress="isProgress"
@@ -176,6 +177,10 @@ $shadow: 0px 3px 1px rgba(0, 0, 0, 0.06),
   justify-content: space-between;
   align-items: center;
   min-height: 92px;
+}
+
+.lowOpacity {
+  opacity: 0.5;
 }
 
 .large_text {
