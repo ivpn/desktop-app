@@ -7,6 +7,8 @@ echo "[*] After remove (<%= version %> : <%= pkg %> : $1)"
 USER="${SUDO_USER:-$USER}"
 UI_APP_USER_DIR="/home/${USER}/.config/ivpn-ui"
 AUTOSTART_FILE="/home/${USER}/.config/autostart/ivpn-ui.desktop"
+
+DESKTOP_FILE_DIR=/usr/share/applications
 DESKTOP_FILE=/usr/share/applications/IVPN.desktop
 
 silent() {
@@ -36,7 +38,7 @@ if [ "$1" = "upgrade" ] || [ "$1" = "1" ] ; then
   fi
 else
   # REMOVE
-  if [ -f $DESKTOP_FILE ]; then
+  if [ -d $DESKTOP_FILE_DIR ] ; then
     echo "[+] Uninstalling .desktop file: '$DESKTOP_FILE' ..."
     rm $DESKTOP_FILE || echo "[-] Failed"
   fi
