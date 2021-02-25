@@ -58,6 +58,10 @@ func CheckFileAccessRightsExecutable(file string) error {
 		return isFileInSystemroot(file)
 	}
 
+	if isDebug {
+		return nil
+	}
+
 	return fmt.Errorf("file '%s' is not in folders '%s' or '%s'", file, envVarProgramFiles, envVarSystemroot)
 }
 
