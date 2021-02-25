@@ -53,7 +53,7 @@
     />
 
     <!-- WIFI -->
-    <transition name="fade">
+    <transition name="fade" v-if="IsTrustedWiFiNetworksEnabled">
       <div v-if="wifiSSID">
         <div class="horizontalLine" />
 
@@ -164,6 +164,9 @@ export default {
     },
     IsPaused: function() {
       return this.$store.state.vpnState.pauseState == PauseStateEnum.Paused;
+    },
+    IsTrustedWiFiNetworksEnabled: function() {
+      return this.$store.state.settings.wifi?.trustedNetworksControl;
     }
   },
 
