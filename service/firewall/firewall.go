@@ -75,10 +75,13 @@ func SetEnabled(enable bool) error {
 		// We must not do it in Paused state!
 		clientAddr := connectedClientInterfaceIP
 		if clientAddr != nil && isClientPaused == false {
-			return implClientConnected(clientAddr, connectedClientPort, connectedHostIP, connectedHostPort, connectedIsTCP)
+			e := implClientConnected(clientAddr, connectedClientPort, connectedHostIP, connectedHostPort, connectedIsTCP)
+			if e != nil {
+				log.Error(e)
+			}
 		}
 	}
-	return nil
+	return err
 }
 
 // SetPersistant - set persistant firewall state and enable it if necessary
