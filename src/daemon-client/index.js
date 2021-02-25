@@ -872,13 +872,11 @@ async function Connect(entryServer, exitServer) {
 }
 
 async function Disconnect() {
-  try {
-    await ResumeConnection();
-  } catch (e) {
-    log.error(e);
-  } finally {
-    store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
-  }
+  // Disconnect command will automatically 'resume' on daemon side (if necessary)
+  // Do not send 'Resume' command in case of 'Disconnect' (in order to avoid unexpected re-connections)
+  // Here we just saving 'Resumed' state
+  store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
+
   if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED)
     store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTING);
   await sendRecv(
