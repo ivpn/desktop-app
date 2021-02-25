@@ -161,15 +161,12 @@ div.textBloack {
 div.firstLine {
   text-align: left;
   font-size: 16px;
-  margin-bottom: 0px;
 }
 
 div.secondLine {
   text-align: left;
   font-size: 12px;
-  line-height: 14px;
   color: grey;
-  margin-top: 0px;
 }
 
 .flexRow {

@@ -117,6 +117,8 @@ export default {
 
   height: 82px;
   width: 100%;
+
+  padding-bottom: 4px;
 }
 
 .serverName {
