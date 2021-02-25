@@ -50,9 +50,9 @@ input.styled {
     
     border-radius: 0px;
 
-    outline-color: #8fb3f4;
-    outline-width: 2px;
-    outline-style: solid;
+    //outline-color: #8fb3f4;
+    //outline-width: 2px;
+    //outline-style: solid;
 }
 input.styled::placeholder {
     font-size: 14px;
@@ -78,7 +78,11 @@ button.master {
     cursor: pointer;
 
   }
-  
+
+button.master:hover {
+    opacity: 0.8;
+  }
+
 button.slave {
     @extend .master;
     background: var(--button-slave-background);

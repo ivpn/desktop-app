@@ -49,7 +49,7 @@ input.styledBig {
 
 input.styled:focus {
     outline: none;
-    box-shadow: 0 0 1pt 1pt #8fb3f4;
+    //box-shadow: 0 0 1pt 1pt ;//#8fb3f4;
   }  
 
 input.styledBig::placeholder {
@@ -72,14 +72,21 @@ button.master {
   
     cursor: pointer;
   }
+
+button.master:hover {
+    opacity: 0.8;
+  }
+
+button.master:focus {
+    outline: none;
+    // box-shadow: 0 0 1pt 1pt #8fb3f4;
+  }  
+
 button.slave {
     @extend .master;
     background: #ffffff;
     border: 1px solid #7d91a5;
     color: #6d849a;
+
   }
 
-  button.master:focus {
-    outline: none;
-    box-shadow: 0 0 1pt 1pt #8fb3f4;
-  }  
