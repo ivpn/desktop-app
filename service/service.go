@@ -403,13 +403,13 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		lastConnectionTryTime := time.Now()
 
 		// start connection
-		err = s.connect(vpnObj, s._manualDNS, firewallOn, firewallDuringConnection, stateChan)
-		if err != nil {
-			log.Error(fmt.Sprintf("Connection error: %s", err))
+		connErr := s.connect(vpnObj, s._manualDNS, firewallOn, firewallDuringConnection, stateChan)
+		if connErr != nil {
+			log.Error(fmt.Sprintf("Connection error: %s", connErr))
 			if s._requiredVpnState == Connect {
 				// throw error only on first try to connect
 				// if we were already connected (_requiredVpnState==KeepConnection) - ignore error and try to reconnect
-				return err
+				return connErr
 			}
 		}
 
@@ -421,6 +421,14 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 			// no delay before reconnection (if last connection was long time ago)
 			if time.Now().After(lastConnectionTryTime.Add(time.Second * 30)) {
 				delayBeforeReconnect = 0
+			}
+			// no delay before reconnection if reconnection was requested by VPN object
+			if connErr != nil {
+				var reconnectReqErr *vpn.ReconnectionRequiredError
+				if errors.As(connErr, &reconnectReqErr) {
+					log.Info("VPN object requested re-connection")
+					delayBeforeReconnect = 0
+				}
 			}
 
 			if delayBeforeReconnect > 0 {
@@ -708,6 +716,9 @@ func (s *Service) reconnect() {
 // Disconnect disconnect vpn
 func (s *Service) Disconnect() error {
 	s._requiredVpnState = Disconnect
+	if err := s.Resume(); err != nil {
+		log.Error("Resume failed:", err)
+	}
 	return s.disconnect()
 }
 

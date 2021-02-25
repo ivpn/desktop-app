@@ -55,8 +55,10 @@ type internalVariables struct {
 	// WG running process (shell command)
 	command       *exec.Cmd
 	isGoingToStop bool
-	isPaused      bool
 	defGateway    net.IP
+
+	isPaused      bool
+	omResumedChan chan struct{} // channel for 'On Resume' events
 }
 
 func (wg *WireGuard) init() error {
@@ -64,7 +66,26 @@ func (wg *WireGuard) init() error {
 }
 
 // connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
-func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
+func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) (err error) {
+	wg.internals.omResumedChan = make(chan struct{}, 1)
+	defer func() {
+		// The 'Pause' functionality is based on fact that connection will be re-connected by a service
+		// if we disconnected without any 'disconnect' request.
+		// Therefore, in case of 'pause' we just stopping real connection
+		// and waiting for 'resume' command to return control to the owner service.
+		if wg.internals.isPaused && !wg.internals.isGoingToStop {
+			// waiting to 'resume' event
+			<-wg.internals.omResumedChan
+			err = &vpn.ReconnectionRequiredError{Err: err}
+		}
+	}()
+
+	return wg.internalConnect(stateChan)
+}
+
+// connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
+func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
+
 	var routineStopWaiter sync.WaitGroup
 
 	// if we are trying to connect when no connectivity (WiFi off?) -
@@ -214,7 +235,12 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 func (wg *WireGuard) disconnect() error {
 	wg.internals.isGoingToStop = true
+	log.Info("Stopping")
+	wg.resume()
+	return wg.internalDisconnect()
+}
 
+func (wg *WireGuard) internalDisconnect() error {
 	cmd := wg.internals.command
 
 	// ProcessState contains information about an exited process,
@@ -234,29 +260,20 @@ func (wg *WireGuard) isPaused() bool {
 
 func (wg *WireGuard) pause() error {
 	wg.internals.isPaused = true
-
-	if err := wg.removeRoutes(); err != nil {
-		return fmt.Errorf("failed to remove routes: %w", err)
-	}
-
-	if err := dns.Pause(); err != nil {
-		return fmt.Errorf("failed to restore DNS: %w", err)
-	}
-	return nil
+	return wg.internalDisconnect()
 }
 
 func (wg *WireGuard) resume() error {
-	defer func() {
-		wg.internals.isPaused = false
-	}()
-
-	if err := wg.setRoutes(); err != nil {
-		return fmt.Errorf("failed to set routes: %w", err)
+	// send 'resumed' event
+	resumeCh := wg.internals.omResumedChan
+	if resumeCh != nil {
+		select {
+		case resumeCh <- struct{}{}:
+		default:
+		}
 	}
 
-	if err := dns.Resume(nil); err != nil {
-		return fmt.Errorf("failed to set DNS: %w", err)
-	}
+	wg.internals.isPaused = false
 	return nil
 }
 

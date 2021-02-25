@@ -24,6 +24,7 @@ package vpn
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 )
@@ -187,3 +188,20 @@ type Process interface {
 	// This information if required, for example, to allow this address in firewall
 	DestinationIP() net.IP
 }
+
+// ReconnectionRequiredError object can be returned by vpn.Process.Connect() function
+// which means that it requesting to do re-connect immediately
+type ReconnectionRequiredError struct {
+	Err error
+}
+
+func (e *ReconnectionRequiredError) Error() string {
+	mes := "re-connection required"
+	if e.Err == nil {
+		return mes
+	}
+	return fmt.Sprintf("%s: %s", mes, e.Err.Error())
+}
+
+// Unwrap returns inner error
+func (e *ReconnectionRequiredError) Unwrap() error { return e.Err }
