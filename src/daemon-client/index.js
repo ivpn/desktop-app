@@ -935,10 +935,18 @@ async function ResumeConnection() {
   }
 }
 
+function throwIfForbiddenToEnableFirewall() {
+  if (store.state.vpnState.pauseState !== PauseStateEnum.Resumed)
+    throw Error("Please, resume connection first to enable Firewall");
+}
+
 async function EnableFirewall(enable) {
   if (store.state.vpnState.firewallState.IsPersistent === true) {
     console.error("Not allowed to change firewall state in Persistent mode");
     return;
+  }
+  if (enable === true) {
+    throwIfForbiddenToEnableFirewall();
   }
 
   await sendRecv({
@@ -970,6 +978,9 @@ async function KillSwitchSetAllowLAN(AllowLAN) {
   });
 }
 async function KillSwitchSetIsPersistent(IsPersistent) {
+  if (IsPersistent === true) {
+    throwIfForbiddenToEnableFirewall();
+  }
   await sendRecv({
     Command: daemonRequests.KillSwitchSetIsPersistent,
     IsPersistent

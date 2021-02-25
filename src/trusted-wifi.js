@@ -174,6 +174,7 @@ async function applyTrustRule(isTrusted, actions) {
       console.log(
         "Joined untrusted network. Enabling firewall (according to preferences) ..."
       );
+      await daemonClient.ResumeConnection();
       await daemonClient.EnableFirewall(true);
     }
     if (

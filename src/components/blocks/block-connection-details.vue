@@ -15,6 +15,7 @@
     <!-- FIREWALL -->
 
     <OnOffButtonControl
+      v-bind:class="{ lowOpacity: IsPaused }"
       text="Firewall"
       description="Ensure that all traffic is routed through VPN"
       :onChecked="firewallOnChecked"
@@ -85,14 +86,14 @@ import SelectButtonControl from "@/components/controls/control-config-to-select-
 import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
 const sender = window.ipcSender;
 import { enumValueName } from "@/helpers/helpers";
-import { VpnTypeEnum, PortTypeEnum } from "@/store/types";
+import { VpnTypeEnum, PortTypeEnum, PauseStateEnum } from "@/store/types";
 
 function processError(e) {
   console.error(e);
-  sender.showMessageBoxSync({
+  sender.showMessageBox({
     type: "error",
     buttons: ["OK"],
-    message: e
+    message: e.toString()
   });
 }
 
@@ -160,6 +161,9 @@ export default {
       else if (trustState.isInsecure == true) return INSECURE;
       if (this.isTrustedNetworksControlActive == true) return NOTRUSTSTATUS;
       return NOTRUSTSTATUS;
+    },
+    IsPaused: function() {
+      return this.$store.state.vpnState.pauseState == PauseStateEnum.Paused;
     }
   },
 
@@ -249,5 +253,8 @@ div.blockWithMrgings {
   @extend .left_panel_element;
   margin-top: 18px;
   margin-bottom: 18px;
+}
+.lowOpacity {
+  opacity: 0.5;
 }
 </style>

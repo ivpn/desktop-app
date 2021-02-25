@@ -9,12 +9,12 @@
     <div>
       <div class="settingsRadioBtn">
         <input
+          ref="radioFWOnDemand"
           type="radio"
           id="onDemand"
           name="firewall"
-          :value="false"
-          v-model="firewallPersistent"
-          :checked="firewallPersistent !== true"
+          value="false"
+          v-on:click="onPersistentFWChange(false)"
         />
         <label class="defColor" for="onDemand">On-demand</label>
       </div>
@@ -27,12 +27,12 @@
       <div v-if="isCanBePersistent">
         <div class="settingsRadioBtn">
           <input
+            ref="radioFWPersistent"
             type="radio"
             id="alwaysOn"
             name="firewall"
-            :value="true"
-            v-model="firewallPersistent"
-            :checked="firewallPersistent === true"
+            value="true"
+            v-on:click="onPersistentFWChange(true)"
           />
           <label class="defColor" for="alwaysOn">Always-on firewall</label>
         </div>
@@ -53,7 +53,7 @@
       <input
         type="checkbox"
         id="firewallActivateOnConnect"
-        :disabled="firewallPersistent === true"
+        :disabled="IsPersistent === true"
         v-model="firewallActivateOnConnect"
       />
       <label class="defColor" for="firewallActivateOnConnect"
@@ -64,7 +64,7 @@
       <input
         type="checkbox"
         id="firewallDeactivateOnDisconnect"
-        :disabled="firewallPersistent === true"
+        :disabled="IsPersistent === true"
         v-model="firewallDeactivateOnDisconnect"
       />
       <label class="defColor" for="firewallDeactivateOnDisconnect"
@@ -100,11 +100,47 @@
 import { Platform, PlatformEnum } from "@/platform/platform";
 const sender = window.ipcSender;
 
+function processError(e) {
+  console.error(e);
+  sender.showMessageBox({
+    type: "error",
+    buttons: ["OK"],
+    message: e.toString()
+  });
+}
+
 export default {
   data: function() {
     return {};
   },
-  methods: {},
+  mounted() {
+    this.updatePersistentFwUiState();
+  },
+
+  methods: {
+    updatePersistentFwUiState() {
+      if (this.$store.state.vpnState.firewallState.IsPersistent) {
+        this.$refs.radioFWPersistent.checked = true;
+        this.$refs.radioFWOnDemand.checked = false;
+      } else {
+        this.$refs.radioFWPersistent.checked = false;
+        this.$refs.radioFWOnDemand.checked = true;
+      }
+    },
+    async onPersistentFWChange(value) {
+      try {
+        await sender.KillSwitchSetIsPersistent(value);
+      } catch (e) {
+        processError(e);
+      }
+      this.updatePersistentFwUiState();
+    }
+  },
+  watch: {
+    IsPersistent() {
+      this.updatePersistentFwUiState();
+    }
+  },
   computed: {
     isCanBePersistent: function() {
       var release = sender.osRelease();
@@ -120,13 +156,8 @@ export default {
       }
       return true;
     },
-    firewallPersistent: {
-      get() {
-        return this.$store.state.vpnState.firewallState.IsPersistent;
-      },
-      async set(value) {
-        await sender.KillSwitchSetIsPersistent(value);
-      }
+    IsPersistent: function() {
+      return this.$store.state.vpnState.firewallState.IsPersistent;
     },
     firewallAllowLan: {
       get() {

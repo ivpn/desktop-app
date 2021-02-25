@@ -26,14 +26,16 @@ async function invoke(channel, ...args) {
   try {
     return await ipcRenderer.invoke(channel, ...args);
   } catch (e) {
-    console.error(e);
+    console.error(`(renderer-sender) ` + e);
+
     // remove prefix error text
     // (like: Error occurred in handler for 'renderer-request-login': Error: ...)
     const regexp = new RegExp(`^.+ '${channel}': (Error:)*`);
     const errStr = `${e}`;
     const corrected = errStr.replace(regexp, "");
-    if (errStr === corrected) throw e;
-    throw new Error(corrected);
+    return new Promise((resolve, reject) => {
+      reject(corrected.trim());
+    });
   }
 }
 
