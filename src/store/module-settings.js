@@ -137,6 +137,7 @@ export default {
 
       // some parameters have to stay without changes
       defaultState.vpnType = state.vpnType;
+      defaultState.colorTheme = state.colorTheme;
       defaultState.isExpectedAccountToBeLoggedIn =
         state.isExpectedAccountToBeLoggedIn;
 
