@@ -37,12 +37,14 @@
         {{ pauseTimeLeftText }}
       </div>
 
+      <!--
       <div style="height: 12px" />
       <button class="master" v-on:click="onResume()">
         <div class="btnResumeText">
           RESUME
         </div>
       </button>
+      -->
     </div>
   </div>
 </template>

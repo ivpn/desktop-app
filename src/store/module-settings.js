@@ -101,6 +101,7 @@ const getDefaultState = () => {
     showAppInSystemDock: false,
     serversSortType: ServersSortTypeEnum.City,
     colorTheme: ColorTheme.default,
+    connectSelectedMapLocation: false,
 
     // updates
     skipAppUpdate: {
@@ -277,6 +278,9 @@ export default {
     minimizeToTray(state, val) {
       state.minimizeToTray = val;
     },
+    connectSelectedMapLocation(state, val) {
+      state.connectSelectedMapLocation = val;
+    },
     showAppInSystemDock(state, val) {
       state.showAppInSystemDock = val;
     },
@@ -428,6 +432,9 @@ export default {
     },
     minimizeToTray(context, val) {
       context.commit("minimizeToTray", val);
+    },
+    connectSelectedMapLocation(context, val) {
+      context.commit("connectSelectedMapLocation", val);
     },
     showAppInSystemDock(context, val) {
       context.commit("showAppInSystemDock", val);

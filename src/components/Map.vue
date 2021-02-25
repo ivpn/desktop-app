@@ -43,7 +43,7 @@
         <img src="@/assets/user.svg" />
       </button>
 
-      <button class="settingsBtn" v-on:click="centerCurrentLocation(false)">
+      <button class="settingsBtn" v-on:click="centerCurrentLocation()">
         <img src="@/assets/crosshair.svg" />
       </button>
     </div>
@@ -400,7 +400,6 @@ export default {
       if (this.isFastestServer !== true && this.isRandomExitServer != true)
         this.centerServer(this.selectedServer);
     },
-
     isMinimizedUI() {
       if (!this.isMinimizedUI) this.centerCurrentLocation();
     },
@@ -493,6 +492,15 @@ export default {
     async connect(location) {
       this.isPopupVisible = false;
       try {
+        // check if we can change server (for multihop)
+        var settings = this.$store.state.settings;
+        if (settings.isMultiHop === true) {
+          if (location.country_code === settings.serverEntry?.country_code) {
+            // Entry and exit servers cannot be in the same country
+            return;
+          }
+        }
+
         this.$store.dispatch("settings/isFastestServer", false);
         this.$store.dispatch("settings/isRandomServer", false);
 
@@ -568,26 +576,37 @@ export default {
     locationClicked(location) {
       if (this.$store.getters["account/isLoggedIn"] !== true) return;
 
-      if (
-        location != null &&
-        location.gateway != null &&
-        this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
-      ) {
-        if (this.$store.state.settings.isMultiHop) {
-          if (
-            location.country_code !==
-            this.$store.state.settings.serverEntry.country_code
-          )
-            this.$store.dispatch("settings/serverExit", location);
-        } else this.$store.dispatch("settings/serverEntry", location);
+      // does selected VPN server location?
+      if (location?.gateway) {
+        let conectionState = this.$store.state.vpnState.connectionState;
 
-        this.$store.dispatch("settings/isFastestServer", false);
-        this.$store.dispatch("settings/isRandomServer", false);
+        if (conectionState === VpnStateEnum.DISCONNECTED) {
+          // VPN disconnected: select cliecked server
+          if (this.$store.state.settings.isMultiHop) {
+            if (
+              location.country_code !==
+              this.$store.state.settings.serverEntry.country_code
+            )
+              this.$store.dispatch("settings/serverExit", location);
+          } else this.$store.dispatch("settings/serverEntry", location);
+
+          this.$store.dispatch("settings/isFastestServer", false);
+          this.$store.dispatch("settings/isRandomServer", false);
+        }
+
+        if (this.$store.state.settings.connectSelectedMapLocation === true) {
+          // connect to a selected server
+          this.connect(location);
+        }
       }
 
-      const isPopupRequired = true;
-      const noAnimation = false;
-      this.centerServer(location, noAnimation, isPopupRequired);
+      if (this.location == location) {
+        // center current location and show popup
+        this.centerCurrentLocation();
+      } else {
+        // center clicked server location
+        this.centerServer(location);
+      }
     },
 
     // ================= SCROLLING ====================

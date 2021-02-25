@@ -272,7 +272,7 @@ function updateTrayMenu() {
     mainMenu.push({ label: "Settings", click: menuHandlerPreferences });
     if (menuHandlerCheckUpdates != null) {
       mainMenu.push({
-        label: `Check for updates...`,
+        label: `Check for Updates`,
         click: menuHandlerCheckUpdates
       });
     }

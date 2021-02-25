@@ -38,6 +38,16 @@
         the application icon in the system tray.
       </div>
     </div>
+    <div class="param">
+      <input
+        type="checkbox"
+        id="connectSelectedMapLocation"
+        v-model="connectSelectedMapLocation"
+      />
+      <label class="defColor" for="connectSelectedMapLocation"
+        >Connect to location when selecting it on map screen</label
+      >
+    </div>
 
     <div class="settingsBoldFont">
       View:
@@ -232,6 +242,14 @@ export default {
         this.$store.dispatch("settings/minimizeToTray", value);
         if (value !== true)
           this.$store.dispatch("settings/showAppInSystemDock", true);
+      }
+    },
+    connectSelectedMapLocation: {
+      get() {
+        return this.$store.state.settings.connectSelectedMapLocation;
+      },
+      set(value) {
+        this.$store.dispatch("settings/connectSelectedMapLocation", value);
       }
     },
     showAppInSystemDock: {

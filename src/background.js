@@ -33,8 +33,8 @@ import {
   nativeTheme
 } from "electron";
 import {
-  createProtocol,
-  installVueDevtools
+  createProtocol
+  //installVueDevtools
 } from "vue-cli-plugin-electron-builder/lib";
 
 import { SentryInit } from "./sentry/sentry.js";
@@ -195,6 +195,7 @@ if (gotTheLock) {
       console.error(e);
     }
 
+    /*
     if (isDevelopment && !process.env.IS_TEST) {
       // Install Vue Devtools
       // Devtools extensions are broken in Electron 6.0.0 and greater
@@ -207,7 +208,7 @@ if (gotTheLock) {
       } catch (e) {
         console.error("Vue Devtools failed to install:", e.toString());
       }
-    }
+    }*/
 
     createWindow();
   });
