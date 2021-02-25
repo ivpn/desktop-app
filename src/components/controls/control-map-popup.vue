@@ -12,7 +12,11 @@
       </div>
     </div>
     <div class="flexRow">
-      <serverNameControl :server="location" isFullName="true" />
+      <serverNameControl
+        :server="location"
+        isFullName="true"
+        style="max-width: 90%"
+      />
       <serverPingInfoControl :server="location" style="margin-left: 9px" />
     </div>
 
