@@ -132,7 +132,54 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string)
 	}
 }
 
-func (a *API) doRequest(urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+func (a *API) doRequest(host string, urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+	if len(host) == 0 || host == _apiHost {
+		return a.doRequestAPIHost(urlPath, method, contentType, request, timeoutMs)
+	} else if host == _updateHost {
+		return a.doRequestUpdateHost(urlPath, method, contentType, request, timeoutMs)
+	}
+	return nil, fmt.Errorf("unknown host type")
+}
+
+func (a *API) doRequestUpdateHost(urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+	transCfg := &http.Transport{
+		// using certificate key pinning
+		DialTLS: makeDialer(UpdateIvpnHashes, false, _updateHost),
+	}
+
+	// configure http-client with preconfigured TLS transport
+	timeout := _defaultRequestTimeout
+	if timeoutMs > 0 {
+		timeout = time.Millisecond * time.Duration(timeoutMs)
+	}
+	client := &http.Client{Transport: transCfg, Timeout: timeout}
+
+	data := []byte{}
+	if request != nil {
+		data, err = json.Marshal(request)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	bodyBuffer := bytes.NewBuffer(data)
+
+	// try to access API server by host DNS
+	req, err := newRequest(getURL(_updateHost, urlPath), method, contentType, bodyBuffer)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, e := client.Do(req)
+	if e != nil {
+		log.Warning("Failed to access " + _updateHost)
+		return resp, fmt.Errorf("Unable to access IVPN repo server: %w", e)
+	}
+
+	return resp, nil
+}
+
+func (a *API) doRequestAPIHost(urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
 	lastIP, ips := a.getAlternateIPs()
 
 	// When trying to access API server by alternate IPs (not by DNS name)
@@ -215,8 +262,8 @@ func (a *API) doRequest(urlPath string, method string, contentType string, reque
 	return firstResp, fmt.Errorf("Unable to access IVPN API server: %w", firstErr)
 }
 
-func (a *API) requestRaw(urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int) (responseData []byte, err error) {
-	resp, err := a.doRequest(urlPath, method, contentType, requestObject, timeoutMs)
+func (a *API) requestRaw(host string, urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int) (responseData []byte, err error) {
+	resp, err := a.doRequest(host, urlPath, method, contentType, requestObject, timeoutMs)
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}
@@ -229,12 +276,12 @@ func (a *API) requestRaw(urlPath string, method string, contentType string, requ
 	return body, nil
 }
 
-func (a *API) request(urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}) error {
-	return a.requestEx(urlPath, method, contentType, requestObject, responseObject, 0)
+func (a *API) request(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}) error {
+	return a.requestEx(host, urlPath, method, contentType, requestObject, responseObject, 0)
 }
 
-func (a *API) requestEx(urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}, timeoutMs int) error {
-	body, err := a.requestRaw(urlPath, method, contentType, requestObject, timeoutMs)
+func (a *API) requestEx(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}, timeoutMs int) error {
+	body, err := a.requestRaw(host, urlPath, method, contentType, requestObject, timeoutMs)
 	if err != nil {
 		return err
 	}

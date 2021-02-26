@@ -37,6 +37,7 @@ import (
 const (
 	_defaultRequestTimeout = time.Second * 15
 	_apiHost               = "api.ivpn.net"
+	_updateHost            = "repo.ivpn.net"
 	_apiPathPrefix         = "v4"
 	_serversPath           = _apiPathPrefix + "/servers.json"
 	_sessionNewPath        = _apiPathPrefix + "/session/new"
@@ -46,17 +47,21 @@ const (
 	_geoLookupPath         = _apiPathPrefix + "/geo-lookup"
 )
 
+// Alias - alias description of API request (can be requested by UI client)
+type Alias struct {
+	host string
+	path string
+}
+
 // APIAliases - aliases of API requests (can be requested by UI client)
-var APIAliases = map[string]string{
-	"geo-lookup":       _geoLookupPath,
-	"updateInfo_Linux": "/updates/linux/update.json",
-	"updateSign_Linux": "/updates/linux/update.json",
-
-	"updateInfo_macOS": "/updates/mac/update_test_delme.json",
-	"updateSign_macOS": "/updates/mac/update_test_delme.json.sign.sha256.base64",
-
-	"updateInfo_Windows": "/updates/win/update_test_delme.json",
-	"updateSign_Windows": "/updates/win/update_test_delme.json.sign.sha256.base64",
+var APIAliases = map[string]Alias{
+	"geo-lookup":         {host: _apiHost, path: _geoLookupPath},
+	"updateInfo_Linux":   {host: _updateHost, path: "/updates/linux/update.json"},
+	"updateSign_Linux":   {host: _updateHost, path: "/updates/linux/update.json"},
+	"updateInfo_macOS":   {host: _updateHost, path: "/macos/update.json"},
+	"updateSign_macOS":   {host: _updateHost, path: "/macos/update.json.sign.sha256.base64"},
+	"updateInfo_Windows": {host: _updateHost, path: "/windows/update.json"},
+	"updateSign_Windows": {host: _updateHost, path: "/windows/update.json.sign.sha256.base64"},
 }
 
 var log *logger.Logger
@@ -128,7 +133,7 @@ func (a *API) SetAlternateIPs(IPs []string) error {
 // DownloadServersList - download servers list form API IVPN server
 func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 	servers := new(types.ServersInfoResponse)
-	if err := a.request(_serversPath, "GET", "", nil, servers); err != nil {
+	if err := a.request("", _serversPath, "GET", "", nil, servers); err != nil {
 		return nil, err
 	}
 
@@ -139,11 +144,12 @@ func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 
 // DoRequestByAlias do API request (by API endpoint alias). Returns raw data of response
 func (a *API) DoRequestByAlias(apiAlias string) (responseData []byte, err error) {
-	url, ok := APIAliases[apiAlias]
-	if ok != true || len(url) == 0 {
-		return nil, fmt.Errorf("Unexpected API alias")
+	alias, ok := APIAliases[apiAlias]
+	if ok != true {
+		return nil, fmt.Errorf("Unexpected request alias")
 	}
-	return a.requestRaw(url, "", "", nil, 0)
+	retData, retErr := a.requestRaw(alias.host, alias.path, "", "", nil, 0)
+	return retData, retErr
 }
 
 // SessionNew - try to register new session
@@ -162,7 +168,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) 
 		PublicKey:  wgPublicKey,
 		ForceLogin: forceLogin}
 
-	data, err := a.requestRaw(_sessionNewPath, "POST", "application/json", request, 0)
+	data, err := a.requestRaw("", _sessionNewPath, "POST", "application/json", request, 0)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -202,7 +208,7 @@ func (a *API) SessionStatus(session string) (
 
 	request := &types.SessionStatusRequest{Session: session}
 
-	data, err := a.requestRaw(_sessionStatusPath, "POST", "application/json", request, 0)
+	data, err := a.requestRaw("", _sessionStatusPath, "POST", "application/json", request, 0)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -227,7 +233,7 @@ func (a *API) SessionStatus(session string) (
 func (a *API) SessionDelete(session string) error {
 	request := &types.SessionDeleteRequest{Session: session}
 	resp := &types.APIErrorResponse{}
-	if err := a.request(_sessionDeletePath, "POST", "application/json", request, resp); err != nil {
+	if err := a.request("", _sessionDeletePath, "POST", "application/json", request, resp); err != nil {
 		return err
 	}
 	if resp.Status != types.CodeSuccess {
@@ -245,7 +251,7 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 
 	resp := &types.SessionsWireGuardResponse{}
 
-	if err := a.request(_wgKeySetPath, "POST", "application/json", request, resp); err != nil {
+	if err := a.request("", _wgKeySetPath, "POST", "application/json", request, resp); err != nil {
 		return nil, err
 	}
 
@@ -265,7 +271,7 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 func (a *API) GeoLookup(timeoutMs int) (location *types.GeoLookupResponse, err error) {
 	resp := &types.GeoLookupResponse{}
 
-	if err := a.requestEx(_geoLookupPath, "GET", "", nil, resp, timeoutMs); err != nil {
+	if err := a.requestEx("", _geoLookupPath, "GET", "", nil, resp, timeoutMs); err != nil {
 		return nil, err
 	}
 
