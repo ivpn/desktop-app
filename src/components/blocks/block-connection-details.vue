@@ -53,7 +53,10 @@
     />
 
     <!-- WIFI -->
-    <transition name="fade" v-if="IsTrustedWiFiNetworksEnabled">
+    <transition
+      name="fade"
+      v-if="isTrustedNetworksControlActive || isConnectVPNOnInsecureNetwork"
+    >
       <div v-if="wifiSSID">
         <div class="horizontalLine" />
 
@@ -125,6 +128,11 @@ export default {
       if (wifiSettings == null) return false;
       return wifiSettings.trustedNetworksControl;
     },
+    isConnectVPNOnInsecureNetwork: function() {
+      let wifiSettings = this.$store.state.settings.wifi;
+      if (wifiSettings == null) return false;
+      return wifiSettings.connectVPNOnInsecureNetwork;
+    },
     defaultTrustForUndefinedNetworks() {
       let wifiSettings = this.$store.state.settings.wifi;
       if (wifiSettings == null) return null;
@@ -164,9 +172,6 @@ export default {
     },
     IsPaused: function() {
       return this.$store.state.vpnState.pauseState == PauseStateEnum.Paused;
-    },
-    IsTrustedWiFiNetworksEnabled: function() {
-      return this.$store.state.settings.wifi?.trustedNetworksControl;
     }
   },
 
