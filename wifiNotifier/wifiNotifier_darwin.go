@@ -134,9 +134,34 @@ func GetCurrentSSID() string {
 	return goSsid
 }
 
-// GetCurrentNetworkSecurity returns current security mode
-func GetCurrentNetworkSecurity() WiFiSecurity {
-	return WiFiSecurity(C.getCurrentNetworkSecurity())
+// GetCurrentNetworkIsInsecure returns current security mode
+func GetCurrentNetworkIsInsecure() bool {
+	const (
+		CWSecurityNone               = 0
+		CWSecurityWEP                = 1
+		CWSecurityWPAPersonal        = 2
+		CWSecurityWPAPersonalMixed   = 3
+		CWSecurityWPA2Personal       = 4
+		CWSecurityPersonal           = 5
+		CWSecurityDynamicWEP         = 6
+		CWSecurityWPAEnterprise      = 7
+		CWSecurityWPAEnterpriseMixed = 8
+		CWSecurityWPA2Enterprise     = 9
+		CWSecurityEnterprise         = 10
+		CWSecurityWPA3Personal       = 11
+		CWSecurityWPA3Enterprise     = 12
+		CWSecurityWPA3Transition     = 13
+	)
+
+	security := C.getCurrentNetworkSecurity()
+	switch security {
+	case CWSecurityNone,
+		CWSecurityWEP,
+		CWSecurityPersonal,
+		CWSecurityDynamicWEP:
+		return true
+	}
+	return false
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'

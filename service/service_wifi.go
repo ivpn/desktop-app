@@ -29,12 +29,8 @@ import (
 )
 
 type wifiInfo struct {
-	ssid     string
-	security wifiNotifier.WiFiSecurity
-}
-
-func (inf *wifiInfo) IsInsecure() bool {
-	return inf.security == wifiNotifier.WiFiSecurityNone || inf.security == wifiNotifier.WiFiSecurityWEP
+	ssid       string
+	isInsecure bool
 }
 
 var lastWiFiInfo *wifiInfo
@@ -59,11 +55,11 @@ func (s *Service) onWiFiChanged(ssid string) {
 		}
 	}()
 
-	security := wifiNotifier.GetCurrentNetworkSecurity()
+	isInsecure := wifiNotifier.GetCurrentNetworkIsInsecure()
 
 	lastWiFiInfo = &wifiInfo{
 		ssid,
-		security}
+		isInsecure}
 
 	// do delay before processing wifi change
 	// (same wifi change event can occur several times in short period of time)
@@ -72,22 +68,18 @@ func (s *Service) onWiFiChanged(ssid string) {
 		timerDelayedNotify = nil
 	}
 	timerDelayedNotify = time.AfterFunc(delayBeforeWiFiChangeNotify, func() {
-		if lastWiFiInfo == nil || lastWiFiInfo.ssid != ssid || lastWiFiInfo.security != security {
+		if lastWiFiInfo == nil || lastWiFiInfo.ssid != ssid || lastWiFiInfo.isInsecure != isInsecure {
 			return // do nothing (new wifi info available)
 		}
 
 		// notify clients about WiFi change
-		s._evtReceiver.OnWiFiChanged(ssid, isInsecureWiFi(security))
+		s._evtReceiver.OnWiFiChanged(ssid, isInsecure)
 	})
-}
-
-func isInsecureWiFi(security wifiNotifier.WiFiSecurity) bool {
-	return security == wifiNotifier.WiFiSecurityNone || security == wifiNotifier.WiFiSecurityWEP
 }
 
 // GetWiFiCurrentState returns info about currently connected wifi
 func (s *Service) GetWiFiCurrentState() (ssid string, isInsecureNetwork bool) {
-	return wifiNotifier.GetCurrentSSID(), isInsecureWiFi(wifiNotifier.GetCurrentNetworkSecurity())
+	return wifiNotifier.GetCurrentSSID(), wifiNotifier.GetCurrentNetworkIsInsecure()
 }
 
 // GetWiFiAvailableNetworks returns list of available WIFI networks

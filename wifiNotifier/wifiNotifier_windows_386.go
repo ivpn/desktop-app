@@ -12,9 +12,9 @@ func GetCurrentSSID() string {
 	return ""
 }
 
-// GetCurrentNetworkSecurity returns current security mode
-func GetCurrentNetworkSecurity() WiFiSecurity {
-	return WiFiSecurityUnknown
+// GetCurrentNetworkIsInsecure returns current security mode
+func GetCurrentNetworkIsInsecure() bool {
+	return false
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'

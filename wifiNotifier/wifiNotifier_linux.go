@@ -292,10 +292,10 @@ func GetCurrentSSID() string {
 	return goSsid
 }
 
-// GetCurrentNetworkSecurity returns current security mode
-func GetCurrentNetworkSecurity() WiFiSecurity {
-	// TODO: implement getCurrentNetworkSecurity functionality
-	return 0xFFFF
+// GetCurrentNetworkIsInsecure returns current security mode
+func GetCurrentNetworkIsInsecure() bool {
+	// TODO: implement GetCurrentNetworkIsInsecure functionality for Linux
+	return false
 
 	// ret := WiFiSecurityUnknown
 	// if C.getCurrentNetworkIsInsecure() == 1 {
