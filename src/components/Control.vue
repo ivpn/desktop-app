@@ -300,14 +300,19 @@ export default {
         return;
       }
 
-      const show = sa.scrollHeight > sa.clientHeight + sa.scrollTop;
+      const isNeedToShow = function() {
+        let pixelsToTheEndScroll =
+          sa.scrollHeight - (sa.clientHeight + sa.scrollTop);
+        // hide if the 'pixels to scroll' < 20
+        if (pixelsToTheEndScroll < 20) return false;
+        return true;
+      };
 
-      // hide - imadiately; show - with 1sec delay
-      if (!show) this.isShowScrollButton = false;
+      // hide - imediately; show - with 1sec delay
+      if (!isNeedToShow()) this.isShowScrollButton = false;
       else {
         setTimeout(() => {
-          this.isShowScrollButton =
-            sa.scrollHeight > sa.clientHeight + sa.scrollTop;
+          this.isShowScrollButton = isNeedToShow();
         }, 1000);
       }
     },
