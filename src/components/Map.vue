@@ -385,6 +385,13 @@ export default {
     this.updateAnimations();
   },
 
+  created: function() {
+    window.addEventListener("mousemove", this.windowsmousemove);
+  },
+  destroyed: function() {
+    window.removeEventListener("mousemove", this.windowsmousemove);
+  },
+
   watch: {
     selectedServer(newVal, oldVal) {
       this.updateCities();
@@ -541,6 +548,14 @@ export default {
     mouseUp() {
       this.moving = false;
     },
+    windowsmousemove(e) {
+      if (this.moving) {
+        // the mouse event out of canvas bounds
+        if (e.toElement !== this.canvas) {
+          this.mouseMove(e);
+        }
+      }
+    },
     mouseMove(e) {
       if (e.buttons !== 1) {
         // MouseEvent.buttons
@@ -553,22 +568,30 @@ export default {
 
       if (this.moving) {
         if (this.map != null) {
+          let offsetX = e.offsetX;
+          let offsetY = e.offsetY;
+          if (e.toElement !== this.canvas) {
+            var rect = this.combinedDiv.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+          }
+
           // MOVING
           // scroll horisontally
-          this.combinedDiv.scrollLeft -= e.offsetX - this.lastMoveX;
+          this.combinedDiv.scrollLeft -= offsetX - this.lastMoveX;
 
           // scroll vertically
           let newScrollTop = this.combinedDiv.scrollTop;
-          newScrollTop -= e.offsetY - this.lastMoveY;
+          newScrollTop -= offsetY - this.lastMoveY;
           // set vertical scroll limit 6000 pixels (not necessary to show empty map area on the buttom)
           if (
-            this.lastMoveY - e.offsetY <= 0 ||
+            this.lastMoveY - offsetY <= 0 ||
             (newScrollTop + this.canvas.height) / this.scale < 6000
           )
             this.combinedDiv.scrollTop = newScrollTop;
 
-          this.lastMoveX = e.offsetX;
-          this.lastMoveY = e.offsetY;
+          this.lastMoveX = offsetX;
+          this.lastMoveY = offsetY;
         }
       }
     },
