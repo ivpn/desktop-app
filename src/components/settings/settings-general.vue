@@ -98,7 +98,7 @@
       <label
         class="defColor"
         for="connectVPNOnInsecureNetwork"
-        title="A WiFi network is considered insecure if it doesn't require encryption"
+        title="A WiFi network is considered insecure if it doesn't require encryption (WPA/2/3)"
         >When joining insecure WiFi networks</label
       >
     </div>

@@ -50,7 +50,7 @@
 
       <div class="subscriptionDetails" v-if="IsAccountStateExists">
         <div class="settingsBoldFont" style="margin-bottom: 16px">
-          Subscription details
+          Subscription details:
         </div>
 
         <div class="flexRowAlignTop">

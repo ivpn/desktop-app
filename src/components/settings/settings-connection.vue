@@ -120,7 +120,7 @@
         </div>
       </div>
 
-      <div class="settingsBoldFont">Additional settings</div>
+      <div class="settingsBoldFont">Additional settings:</div>
       <div class="param">
         <input
           type="checkbox"
@@ -147,22 +147,25 @@
       </div>
       <div v-if="openvpnManualConfig && userDefinedOvpnFile">
         <div class="description">
-          Please be aware that this is a feature for advanced users as adding
-          parameters may affect the proper functioning and security of the VPN
-          tunnel
+          <div>
+            Please be aware that this is a feature for advanced users as adding
+            parameters may affect the proper functioning and security of the VPN
+            tunnel
+          </div>
           <button
-            class="btn settingsGrayLongDescriptionFont"
+            style="margin-top: 4px"
+            class="settingsButton"
             v-on:click="onVPNConfigFileLocation"
           >
             Open configuration file location ...
           </button>
-          <div>
-            <label
+          <div style="max-width: 500px; margin: 0px; padding: 0px;">
+            <div
               class="settingsGrayLongDescriptionFont selectable"
-              style="margin-top:5px; font-size: 10px;"
+              style=" margin-top:5px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
             >
               {{ userDefinedOvpnFile }}
-            </label>
+            </div>
           </div>
         </div>
       </div>
