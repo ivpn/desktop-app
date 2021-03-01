@@ -651,9 +651,14 @@ async function GetAppUpdateInfo() {
       );
     }
 
+    let respRaw = null;
+    let signRespRaw = null;
+    if (updateInfoResp) respRaw = updateInfoResp.ResponseData;
+    if (updateInfoSignResp) signRespRaw = updateInfoSignResp.ResponseData;
+    
     return {
-      updateInfoRespRaw: updateInfoResp.ResponseData,
-      updateInfoSignRespRaw: updateInfoSignResp.ResponseData
+      updateInfoRespRaw: respRaw,
+      updateInfoSignRespRaw: signRespRaw
     };
   } catch (e) {
     console.error("Failed to check latest update info: ", e);
