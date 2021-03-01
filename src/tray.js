@@ -81,9 +81,11 @@ export function InitTray(
         iconDisconnected = nativeImage.createFromPath(
           f + "disconnectedTemplate.png"
         );
-        iconsConnecting.push(
-          nativeImage.createFromPath(f + "connectingTemplate.png")
-        );
+        const c1 = nativeImage.createFromPath(f + "icon-1Template.png");
+        const c2 = nativeImage.createFromPath(f + "icon-2Template.png");
+        const c3 = nativeImage.createFromPath(f + "icon-3Template.png");
+        const c4 = nativeImage.createFromPath(f + "icon-4Template.png");
+        iconsConnecting.push(iconDisconnected, c1, c2, c3, c4, c3, c2, c1);
       }
       break;
   }
