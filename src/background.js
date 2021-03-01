@@ -569,11 +569,11 @@ function createUpdateWindow() {
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
-    updateWindow.loadURL(process.env.WEBPACK_DEV_SERVER_URL + `/#/update/`);
+    updateWindow.loadURL(process.env.WEBPACK_DEV_SERVER_URL + `/#/update`);
   } else {
     createProtocol("app");
     // Load the index.html when not in development
-    updateWindow.loadURL("app://./index.html" + `/#/update/`);
+    updateWindow.loadURL("app://./index.html" + `/#/update`);
   }
 
   updateWindow.once("ready-to-show", () => {
