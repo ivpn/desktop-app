@@ -105,6 +105,7 @@ const getDefaultState = () => {
 
     // updates
     skipAppUpdate: {
+      genericVersion: null,
       daemonVersion: null,
       uiVersion: null
     }
@@ -444,6 +445,11 @@ export default {
     },
     colorTheme(context, val) {
       context.commit("colorTheme", val);
+    },
+
+    // UPDATES
+    skipAppUpdate(context, val) {
+      context.commit("skipAppUpdate", val);
     },
 
     // HELPERS

@@ -22,12 +22,14 @@
 
 import client from "@/daemon-client";
 import config from "@/config";
+import store from "@/store";
 import { IsNewVersion } from "./helper";
 
 export async function CheckUpdates() {
   try {
-    let updatesInfo = await client.GetAppUpdateInfo();
-    if (!updatesInfo) return null;
+    let updates = await client.GetAppUpdateInfo();
+    if (!updates || !updates.updateInfoRespRaw) return null;
+    let updatesInfo = JSON.parse(`${updates.updateInfoRespRaw}`);
     if (!updatesInfo.daemon || !updatesInfo.daemon.version) return null;
     if (!updatesInfo.uiClient || !updatesInfo.uiClient.version) return null;
     return updatesInfo;
@@ -47,6 +49,20 @@ export function IsNewerVersion(updatesInfo, currDaemonVer, currUiVer) {
   );
 }
 
+export function IsNeedSkipThisVersion(updatesInfo) {
+  var settings = store.state.settings;
+
+  return (
+    settings.skipAppUpdate &&
+    updatesInfo.daemon &&
+    updatesInfo.uiClient &&
+    settings.skipAppUpdate.daemonVersion &&
+    settings.skipAppUpdate.uiVersion &&
+    settings.skipAppUpdate.daemonVersion == updatesInfo.daemon.version &&
+    settings.skipAppUpdate.uiVersion == updatesInfo.uiClient.version
+  );
+}
+
 export function Upgrade(latestVersionInfo) {
   if (!latestVersionInfo) {
     console.error("Upgrade skipped: no information about latest version");
@@ -55,7 +71,9 @@ export function Upgrade(latestVersionInfo) {
 
   try {
     require("electron").shell.openExternal(config.URLApps);
+    return true; // trust that update is done. We can close 'update' window
   } catch (e) {
     console.error(e);
+    return false;
   }
 }

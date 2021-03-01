@@ -25,6 +25,7 @@ import VueRouter from "vue-router";
 import Main from "../views/Main.vue";
 import AccountLimit from "../views/AccountLimit.vue";
 import Settings from "../views/Settings.vue";
+import Update from "../views/dialogs/Update.vue";
 
 Vue.use(VueRouter);
 
@@ -53,7 +54,13 @@ const mainRoutes = [
     component: () => import(/* webpackChunkName: "about" */ "../views/Test.vue")
   }
 ];
-const forbiddenToChangeRouteFrom = [];
+const forbiddenToChangeRouteFrom = [
+  {
+    path: "/update",
+    name: "Update",
+    component: Update
+  }
+];
 const routes = mainRoutes.concat(forbiddenToChangeRouteFrom);
 
 const router = new VueRouter({

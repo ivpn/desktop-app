@@ -182,6 +182,16 @@ export default {
   },
 
   // UPDATES
+  UpdateWindowClose: () => {
+    return ipcRenderer.invoke("renderer-request-update-wnd-close");
+  },
+  UpdateWindowResizeContent: (width, height) => {
+    return ipcRenderer.invoke(
+      "renderer-request-update-wnd-resize",
+      width,
+      height
+    );
+  },
   AppUpdatesIsAbleToUpdate: () => {
     return ipcRenderer.sendSync(
       "renderer-request-app-updates-is-able-to-update"

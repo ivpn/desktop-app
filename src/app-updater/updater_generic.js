@@ -73,13 +73,22 @@ export async function CheckUpdates() {
 }
 
 export function IsNewerVersion(updatesInfo, currDaemonVer, currUiVer) {
-  if (updatesInfo && updatesInfo.generic) {
-    return (
-      IsNewVersion(currDaemonVer, updatesInfo.generic.version) ||
-      IsNewVersion(currUiVer, updatesInfo.generic.version)
-    );
-  }
-  return false;
+  if (!updatesInfo || !updatesInfo.generic) return false;
+
+  return (
+    IsNewVersion(currDaemonVer, updatesInfo.generic.version) ||
+    IsNewVersion(currUiVer, updatesInfo.generic.version)
+  );
+}
+
+export function IsNeedSkipThisVersion(updatesInfo) {
+  var settings = store.state.settings;
+  return (
+    settings.skipAppUpdate &&
+    updatesInfo.generic &&
+    settings.skipAppUpdate.genericVersion &&
+    settings.skipAppUpdate.genericVersion == updatesInfo.generic.version
+  );
 }
 
 function setState(updateState) {
@@ -234,7 +243,7 @@ export async function Upgrade(latestVersionInfo) {
         // failed to download (or failed or save)
         setState({
           state: AppUpdateStage.Error,
-          error: "Failed to download update signature: " + error
+          error: "Failed to download signature. Check connectivity"
         });
         return;
       }
@@ -257,7 +266,7 @@ export async function Upgrade(latestVersionInfo) {
         // failed to download (or failed or save) binary
         setState({
           state: AppUpdateStage.Error,
-          error: "Failed to download update: " + error
+          error: "Failed to download binary. Check connectivity"
         });
         return;
       }
@@ -293,6 +302,7 @@ async function Download(link, onProgress) {
 
       var file = fs.createWriteStream(outFilePath);
 
+      let isConnectionEstablished = false;
       DownloadRequest = https
         .get(link, res => {
           if (res.statusCode != 200) {
@@ -301,6 +311,9 @@ async function Download(link, onProgress) {
             reject(new Error(`StatusCode: ${res.statusCode}`));
             return;
           }
+
+          isConnectionEstablished = true;
+
           // pipe to file
           res.pipe(file);
 
@@ -320,9 +333,20 @@ async function Download(link, onProgress) {
           });
         })
         .on("error", e => {
+          console.log("Download error:", e);
           DownloadRequest = null;
           reject(e);
         });
+
+      setTimeout(() => {
+        console.log("Connection to server: timeout");
+        if (isConnectionEstablished != true) CancelDownload();
+      }, 5000);
+
+      DownloadRequest.setTimeout(10000, function() {
+        console.log("Download timeout");
+        reject("Timeout");
+      });
     } catch (e) {
       reject(e);
     }

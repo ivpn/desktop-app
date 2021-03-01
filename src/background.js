@@ -44,11 +44,7 @@ SentryInit();
 import "./ipc/main-listener";
 
 import store from "@/store";
-import {
-  DaemonConnectionType,
-  ColorTheme,
-  AppUpdateStage
-} from "@/store/types";
+import { DaemonConnectionType, ColorTheme } from "@/store/types";
 import daemonClient from "./daemon-client";
 import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
@@ -60,7 +56,7 @@ import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
 import path from "path";
 
-import { StartUpdateChecker, Install, CheckUpdates } from "@/app-updater";
+import { StartUpdateChecker } from "@/app-updater";
 
 // default copy/edit context menu event handlers
 require("@/context-menu/main");
@@ -71,6 +67,7 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 // be closed automatically when the JavaScript object is garbage collected.
 let win;
 let settingsWindow;
+let updateWindow;
 
 let isTrayInitialized = false;
 let lastRouteArgs = null; // last route arguments (requested by renderer process when window initialized)
@@ -106,6 +103,20 @@ ipcMain.on("renderer-request-show-settings-networks", () => {
 ipcMain.handle("renderer-request-connect-to-daemon", async () => {
   return await connectToDaemon();
 });
+ipcMain.handle("renderer-request-update-wnd-close", async () => {
+  if (!updateWindow) return;
+  updateWindow.destroy();
+});
+
+ipcMain.handle(
+  "renderer-request-update-wnd-resize",
+  async (event, width, height) => {
+    if (!updateWindow || (!width && !height)) return;
+    if (!width) width = updateWindow.getContentSize()[0];
+    if (!height) height = updateWindow.getContentSize()[1];
+    updateWindow.setContentSize(width, height);
+  }
+);
 
 if (gotTheLock) {
   InitPersistentSettings();
@@ -137,6 +148,8 @@ if (gotTheLock) {
             label: "Open development tools",
             click() {
               if (win !== null) win.webContents.openDevTools();
+              if (updateWindow !== null)
+                updateWindow.webContents.openDevTools();
             }
           },
           {
@@ -187,8 +200,11 @@ if (gotTheLock) {
   // Some APIs can only be used after this event occurs.
   app.on("ready", async () => {
     try {
-      InitTray(menuOnShow, menuOnPreferences, menuOnAccount, () =>
-        menuOnVersion(true)
+      InitTray(
+        menuOnShow,
+        menuOnPreferences,
+        menuOnAccount,
+        createUpdateWindow
       );
       isTrayInitialized = true;
     } catch (e) {
@@ -326,14 +342,6 @@ if (gotTheLock) {
   store.subscribe(mutation => {
     try {
       switch (mutation.type) {
-        case "uiState/appUpdateProgress": {
-          let progress = store.state.uiState.appUpdateProgress;
-          if (!progress || progress.state != AppUpdateStage.ReadyToInstall)
-            break;
-          if (store.state.uiState.currentSettingsViewName != "version")
-            OnAppUpdateReadyToInstall();
-          break;
-        }
         case "vpnState/currentWiFiInfo":
           // if wifi
           if (
@@ -477,7 +485,7 @@ function createWindow() {
     win = null;
   });
 }
-
+// SETTINGS WINDOW
 function createSettingsWindow(viewName) {
   if (win == null) createWindow();
 
@@ -529,6 +537,56 @@ function createSettingsWindow(viewName) {
 function closeSettingsWindow() {
   if (settingsWindow == null) return;
   settingsWindow.destroy(); // close();
+}
+// UPDATE WINDOW
+function createUpdateWindow() {
+  if (win == null) createWindow();
+
+  if (updateWindow != null) {
+    closeUpdateWindow();
+  }
+
+  let windowConfig = {
+    backgroundColor: getBackgroundColor(),
+    show: false,
+
+    width: 600,
+    height: 400,
+
+    resizable: false,
+    fullscreenable: false,
+    maximizable: false,
+
+    parent: win,
+
+    center: true,
+    title: "IVPN Update",
+
+    autoHideMenuBar: true
+  };
+
+  updateWindow = createBrowserWindow(windowConfig);
+
+  if (process.env.WEBPACK_DEV_SERVER_URL) {
+    // Load the url of the dev server if in development mode
+    updateWindow.loadURL(process.env.WEBPACK_DEV_SERVER_URL + `/#/update/`);
+  } else {
+    createProtocol("app");
+    // Load the index.html when not in development
+    updateWindow.loadURL("app://./index.html" + `/#/update/`);
+  }
+
+  updateWindow.once("ready-to-show", () => {
+    updateWindow.show();
+  });
+  updateWindow.on("closed", () => {
+    updateWindow = null;
+  });
+}
+
+function closeUpdateWindow() {
+  if (updateWindow == null) return;
+  updateWindow.destroy(); // close();
 }
 
 // INITIALIZE CONNECTION TO A DAEMON
@@ -712,93 +770,11 @@ function menuOnPreferences() {
   menuOnShow();
   showSettings("general");
 }
-function menuOnVersion(isCheckForUpdates) {
-  menuOnShow();
-  showSettings("version");
-  if (isCheckForUpdates === true) {
-    CheckUpdates();
-  }
-}
 
 // UPDATE
-function OnAppUpdateAvailable(updatesInfo) {
-  // Arguments: updatesInfo, currDaemonVer, currUiVer
-  try {
-    // check if we should skip user notification for this version
-
-    let newDaemonVer;
-    let newUiVer;
-    if (updatesInfo.generic) {
-      newDaemonVer = updatesInfo.generic.version.trim();
-      newUiVer = updatesInfo.generic.version.trim();
-    } else {
-      newDaemonVer = updatesInfo.daemon.version.trim();
-      newUiVer = updatesInfo.uiClient.version.trim();
-    }
-
-    newDaemonVer = newDaemonVer.trim();
-    newUiVer = newUiVer.trim();
-    if (
-      store.state.settings.skipAppUpdate &&
-      store.state.settings.skipAppUpdate.daemonVersion &&
-      store.state.settings.skipAppUpdate.uiVersion &&
-      newDaemonVer === store.state.settings.skipAppUpdate.daemonVersion &&
-      newUiVer === store.state.settings.skipAppUpdate.uiVersion
-    ) {
-      return;
-    }
-
-    // notify user
-    if (win == null) createWindow();
-
-    let msgBoxConfig = {
-      type: "info",
-      message: "A new version of IVPN Client is available!",
-      buttons: ["Details ...", "Skip This Version", "Remind Me Later"]
-    };
-
-    const actionNo = dialog.showMessageBoxSync(win, msgBoxConfig);
-    switch (actionNo) {
-      case 0: // Details
-        menuOnVersion();
-        break;
-      case 1: // Skip This Version
-        store.commit("settings/skipAppUpdate", {
-          daemonVersion: newDaemonVer,
-          uiVersion: newUiVer
-        });
-        break;
-      case 3: // Remind Me Later
-        break;
-    }
-  } catch (e) {
-    console.error(e);
-  }
-}
-function OnAppUpdateReadyToInstall() {
-  try {
-    // notify user
-    if (win == null) createWindow();
-    let msgBoxConfig = {
-      type: "info",
-      message: "A new version of IVPN Client is ready to install!",
-      buttons: ["Install", "Details ...", "Cancel"]
-    };
-
-    const actionNo = dialog.showMessageBoxSync(win, msgBoxConfig);
-    switch (actionNo) {
-      case 0: // Install
-        Install();
-        break;
-      case 1: // Details
-        menuOnVersion();
-        break;
-      case 3: // Cancel
-        break;
-    }
-  } catch (e) {
-    console.error(e);
-  }
+function OnAppUpdateAvailable() {
+  if (updateWindow) return;
+  createUpdateWindow();
 }
 
 // COLORS

@@ -626,7 +626,13 @@ async function GetAppUpdateInfo() {
         break;
       case PlatformEnum.Linux:
         apiAlias = "updateInfo_Linux";
-        apiAliasSign = "updateSign_Linux";
+        // For Linux it is not required to get update signature
+        // because are not perform automatic update for Linux.
+        // We just notifying users about new update available.
+        // Info:
+        //    Linux update is based on Linux repository (standard way for linux platforms)
+        //    (all binaries are signed by PGP key)
+        //apiAliasSign = "updateSign_Linux";
         break;
       default:
         throw new Error("Unsupported platform");
@@ -637,10 +643,13 @@ async function GetAppUpdateInfo() {
       [daemonResponses.APIResponse]
     );
 
-    let updateInfoSignResp = await sendRecv(
-      { Command: daemonRequests.APIRequest, APIPath: apiAliasSign },
-      [daemonResponses.APIResponse]
-    );
+    let updateInfoSignResp = null;
+    if (apiAliasSign) {
+      updateInfoSignResp = await sendRecv(
+        { Command: daemonRequests.APIRequest, APIPath: apiAliasSign },
+        [daemonResponses.APIResponse]
+      );
+    }
 
     return {
       updateInfoRespRaw: updateInfoResp.ResponseData,

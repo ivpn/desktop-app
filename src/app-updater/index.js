@@ -31,13 +31,17 @@ function getUpdater() {
     if (IsGenericUpdater()) return require("./updater_generic");
     return require("./updater_linux");
   } catch (e) {
-    console.error("[ERROR] IsAbleToCheckUpdate :", e);
+    console.error("[ERROR] getUpdater:", e);
   }
   return null;
 }
 
 function setState(updateState) {
   store.commit("uiState/appUpdateProgress", updateState);
+}
+
+function forgetVersionToSkip() {
+  store.commit("settings/skipAppUpdate", null);
 }
 
 export function IsGenericUpdater() {
@@ -51,7 +55,21 @@ export function IsAbleToCheckUpdate() {
   return true;
 }
 
+export function IsNewerVersion(updatesInfo, currDaemonVer, currUiVer) {
+  const updater = getUpdater();
+  if (updater == null) {
+    console.warn(NoUpdaterErrorMessage);
+    return false;
+  }
+  return updater.IsNewerVersion(updatesInfo, currDaemonVer, currUiVer);
+}
+
 export function StartUpdateChecker(onHasUpdateCallback) {
+  if (!onHasUpdateCallback) {
+    console.warn("Unable to start update checker: callback not defined");
+    return false;
+  }
+
   const updater = getUpdater();
   if (updater == null) {
     console.warn(NoUpdaterErrorMessage);
@@ -62,21 +80,20 @@ export function StartUpdateChecker(onHasUpdateCallback) {
     const currDaemonVer = store.state.daemonVersion;
     const currUiVer = require("electron").app.getVersion();
     if (!currDaemonVer || !currUiVer) {
-      console.warn(
-        "Unable to start app update checker: current app versions undefined"
-      );
+      console.warn("Unable to start update checker: app versions undefined");
       return false;
     }
 
     const doCheck = async function() {
-      const updatesInfo = await CheckUpdates();
-
+      const isManualCheck = false;
+      const updatesInfo = await CheckUpdates(isManualCheck);
+      if (!updatesInfo) return;
       try {
-        if (
-          updatesInfo &&
-          onHasUpdateCallback &&
-          updater.IsNewerVersion(updatesInfo, currDaemonVer, currUiVer)
-        ) {
+        if (updater.IsNewerVersion(updatesInfo, currDaemonVer, currUiVer)) {
+          if (updater.IsNeedSkipThisVersion(updatesInfo)) {
+            return;
+          }
+
           onHasUpdateCallback(updatesInfo, currDaemonVer, currUiVer);
         }
       } catch (e) {
@@ -96,7 +113,9 @@ export function StartUpdateChecker(onHasUpdateCallback) {
   return true;
 }
 
-export async function CheckUpdates() {
+export async function CheckUpdates(isManualCheck) {
+  if (isManualCheck != false) forgetVersionToSkip();
+
   const updater = getUpdater();
   if (updater == null) {
     console.error("App updater not available for this platform");
@@ -135,6 +154,7 @@ export function Upgrade() {
     return null;
   }
   if (updater.Upgrade) return updater.Upgrade(store.state.latestVersionInfo);
+  return null;
 }
 
 export function CancelDownload() {

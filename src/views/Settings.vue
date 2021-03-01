@@ -2,90 +2,92 @@
   <transition name="fade-quick" appear>
     <div id="main" class="row">
       <div id="leftPanel" class="settingsLeftPanel">
-        <div class="row settingsLeftPanelHeader" id="leftPanelHeader">
-          <button id="backBtn" class="noBordersBtn" v-on:click="goBack">
-            <!-- ARROW LEFT -->
-            <imgArrowLeft />
-          </button>
-          <div class="Header settingsHeader">Settings</div>
-        </div>
+        <div class="flexColumn">
+          <div class="row settingsLeftPanelHeader" id="leftPanelHeader">
+            <button id="backBtn" class="noBordersBtn" v-on:click="goBack">
+              <!-- ARROW LEFT -->
+              <imgArrowLeft />
+            </button>
+            <div class="Header settingsHeader">Settings</div>
+          </div>
 
-        <div class="row">
-          <div id="tabsTitle">
-            <button
-              v-if="isLoggedIn"
-              class="noBordersBtn tabTitleBtn"
-              v-on:click="onView('account')"
-              v-bind:class="{
-                activeBtn: view === 'account'
-              }"
-            >
-              Account
-            </button>
+          <!-- TABS -->
+          <div class="row" style="flex-grow: 1">
+            <div id="tabsTitle">
+              <button
+                v-if="isLoggedIn"
+                class="noBordersBtn tabTitleBtn"
+                v-on:click="onView('account')"
+                v-bind:class="{
+                  activeBtn: view === 'account'
+                }"
+              >
+                Account
+              </button>
 
-            <button
-              v-if="isLoggedIn"
-              class="noBordersBtn tabTitleBtn"
-              v-on:click="onView('general')"
-              v-bind:class="{
-                activeBtn: view === 'general'
-              }"
-            >
-              General
-            </button>
+              <button
+                v-if="isLoggedIn"
+                class="noBordersBtn tabTitleBtn"
+                v-on:click="onView('general')"
+                v-bind:class="{
+                  activeBtn: view === 'general'
+                }"
+              >
+                General
+              </button>
 
-            <button
-              v-if="isLoggedIn"
-              class="noBordersBtn tabTitleBtn"
-              v-on:click="onView('connection')"
-              v-bind:class="{
-                activeBtn: view === 'connection'
-              }"
-            >
-              Connection
-            </button>
-            <button
-              v-if="isLoggedIn"
-              class="noBordersBtn tabTitleBtn"
-              v-on:click="onView('firewall')"
-              v-bind:class="{
-                activeBtn: view === 'firewall'
-              }"
-            >
-              IVPN Firewall
-            </button>
-            <button
-              v-if="isLoggedIn"
-              class="noBordersBtn tabTitleBtn"
-              v-on:click="onView('networks')"
-              v-bind:class="{
-                activeBtn: view === 'networks'
-              }"
-            >
-              WiFi control
-            </button>
+              <button
+                v-if="isLoggedIn"
+                class="noBordersBtn tabTitleBtn"
+                v-on:click="onView('connection')"
+                v-bind:class="{
+                  activeBtn: view === 'connection'
+                }"
+              >
+                Connection
+              </button>
+              <button
+                v-if="isLoggedIn"
+                class="noBordersBtn tabTitleBtn"
+                v-on:click="onView('firewall')"
+                v-bind:class="{
+                  activeBtn: view === 'firewall'
+                }"
+              >
+                IVPN Firewall
+              </button>
+              <button
+                v-if="isLoggedIn"
+                class="noBordersBtn tabTitleBtn"
+                v-on:click="onView('networks')"
+                v-bind:class="{
+                  activeBtn: view === 'networks'
+                }"
+              >
+                WiFi control
+              </button>
 
-            <button
-              v-if="isLoggedIn"
-              class="noBordersBtn tabTitleBtn"
-              v-on:click="onView('antitracker')"
-              v-bind:class="{
-                activeBtn: view === 'antitracker'
-              }"
-            >
-              AntiTracker
-            </button>
-            <button
-              v-if="isLoggedIn"
-              class="noBordersBtn tabTitleBtn"
-              v-on:click="onView('dns')"
-              v-bind:class="{
-                activeBtn: view === 'dns'
-              }"
-            >
-              DNS
-            </button>
-            <!--
+              <button
+                v-if="isLoggedIn"
+                class="noBordersBtn tabTitleBtn"
+                v-on:click="onView('antitracker')"
+                v-bind:class="{
+                  activeBtn: view === 'antitracker'
+                }"
+              >
+                AntiTracker
+              </button>
+              <button
+                v-if="isLoggedIn"
+                class="noBordersBtn tabTitleBtn"
+                v-on:click="onView('dns')"
+                v-bind:class="{
+                  activeBtn: view === 'dns'
+                }"
+              >
+                DNS
+              </button>
+              <!--
           <button
             class="noBordersBtn tabTitleBtn"
             v-on:click="onView('openvpn')"
@@ -96,15 +98,28 @@
             OpenVPN
           </button>
           -->
-            <button
-              class="noBordersBtn tabTitleBtn"
-              v-on:click="onView('version')"
-              v-bind:class="{
-                activeBtn: view === 'version'
-              }"
+            </div>
+          </div>
+
+          <!-- VERSION -->
+          <div class="flexRow" style="flex-grow: 1">
+            <div
+              class="flexRow"
+              style="margin: 20px; margin-bottom: 40px; flex-grow: 1;"
             >
-              Update
-            </button>
+              <div style="flex-grow: 1; text-align: center;">
+                <div v-if="versionSingle" class="version">
+                  <!-- single version -->
+                  {{ versionSingle }}
+                </div>
+
+                <div v-else>
+                  <!-- daemon and UI versions different-->
+                  <div class="version">{{ versionUI }}</div>
+                  <div class="version">daemon {{ versionDaemon }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -131,9 +146,6 @@
         <div class="flexColumn" v-else-if="view === 'dns'">
           <dnsView />
         </div>
-        <div class="flexColumn" v-else-if="view === 'version'">
-          <versionView />
-        </div>
         <div class="flexColumn" v-else>
           <img src="@/assets/temp/under-construction.jpg" />
         </div>
@@ -153,7 +165,6 @@ import firewallView from "@/components/settings/settings-firewall.vue";
 import networksView from "@/components/settings/settings-networks.vue";
 import antitrackerView from "@/components/settings/settings-antitracker.vue";
 import dnsView from "@/components/settings/settings-dns.vue";
-import versionView from "@/components/settings/settings-version.vue";
 import imgArrowLeft from "@/components/images/arrow-left.vue";
 
 export default {
@@ -165,7 +176,6 @@ export default {
     networksView,
     antitrackerView,
     dnsView,
-    versionView,
     imgArrowLeft
   },
   mounted() {
@@ -186,6 +196,20 @@ export default {
     },
     platform: function() {
       return Platform();
+    },
+    versionSingle: function() {
+      if (this.versionDaemon === this.versionUI) return this.versionDaemon;
+      return null;
+    },
+    versionDaemon: function() {
+      let v = this.$store.state.daemonVersion;
+      if (!v) return "version unknown";
+      return `v${v}`;
+    },
+    versionUI: function() {
+      let v = sender.appGetVersion();
+      if (!v) return "version unknown";
+      return `v${v}`;
     }
   },
   methods: {
@@ -226,6 +250,7 @@ div.row {
   padding-top: 50px;
   background: var(--background-color-alternate);
   min-width: 232px;
+  max-width: 232px;
   height: 100vh;
 }
 #leftPanelHeader {
@@ -293,5 +318,8 @@ button.tabTitleBtn {
 button.activeBtn {
   font-weight: 500;
   color: #3b99fc;
+}
+div.version {
+  color: gray;
 }
 </style>
