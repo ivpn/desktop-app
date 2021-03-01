@@ -55,13 +55,21 @@ type Alias struct {
 
 // APIAliases - aliases of API requests (can be requested by UI client)
 var APIAliases = map[string]Alias{
-	"geo-lookup":         {host: _apiHost, path: _geoLookupPath},
-	"updateInfo_Linux":   {host: _updateHost, path: "/updates/linux/update.json"},
-	"updateSign_Linux":   {host: _updateHost, path: "/updates/linux/update.json"},
+	"geo-lookup": {host: _apiHost, path: _geoLookupPath},
+
+	"updateInfo_Linux":   {host: _updateHost, path: "/stable/_update_info/update.json"},
+	"updateSign_Linux":   {host: _updateHost, path: "/stable/_update_info/update.json.sign.sha256.base64"},
 	"updateInfo_macOS":   {host: _updateHost, path: "/macos/update.json"},
 	"updateSign_macOS":   {host: _updateHost, path: "/macos/update.json.sign.sha256.base64"},
 	"updateInfo_Windows": {host: _updateHost, path: "/windows/update.json"},
 	"updateSign_Windows": {host: _updateHost, path: "/windows/update.json.sign.sha256.base64"},
+
+	"updateInfo_manual_Linux":   {host: _updateHost, path: "/stable/_update_info/update_manual.json"},
+	"updateSign_manual_Linux":   {host: _updateHost, path: "/stable/_update_info/update_manual.json.sign.sha256.base64"},
+	"updateInfo_manual_macOS":   {host: _updateHost, path: "/macos/update_manual.json"},
+	"updateSign_manual_macOS":   {host: _updateHost, path: "/macos/update_manual.json.sign.sha256.base64"},
+	"updateInfo_manual_Windows": {host: _updateHost, path: "/windows/update_manual.json"},
+	"updateSign_manual_Windows": {host: _updateHost, path: "/windows/update_manual.json.sign.sha256.base64"},
 }
 
 var log *logger.Logger
