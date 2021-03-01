@@ -105,7 +105,7 @@
           <div class="flexRow" style="flex-grow: 1">
             <div
               class="flexRow"
-              style="margin: 20px; margin-bottom: 40px; flex-grow: 1;"
+              style="margin: 20px; flex-grow: 1;"
             >
               <div style="flex-grow: 1; text-align: center;">
                 <div v-if="versionSingle" class="version">

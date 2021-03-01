@@ -32,8 +32,6 @@
       <div class="description">
         By enabling this parameter, the application will stay in memory after
         closing the window and it will be accessible only via the tray icon.
-      </div>
-      <div class="description">
         <b>Caution:</b> Not all Linux desktop environments support displaying
         the application icon in the system tray.
       </div>
