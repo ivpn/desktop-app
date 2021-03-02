@@ -33,9 +33,10 @@
 
     <OnOffButtonControl
       text="AntiTracker"
-      description="AntiTracker blocks all known data trackers"
+      description="Block trackers whilst connected to VPN"
       :onChecked="antitrackerOnChecked"
       :isChecked="this.$store.state.settings.isAntitracker"
+      :switcherOpacity="!IsConnected ? 0.4 : 1"
       :checkedColor="
         this.$store.state.settings.isAntitrackerHardcore ? '#77152a' : null
       "
@@ -89,7 +90,12 @@ import SelectButtonControl from "@/components/controls/control-config-to-select-
 import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
 const sender = window.ipcSender;
 import { enumValueName } from "@/helpers/helpers";
-import { VpnTypeEnum, PortTypeEnum, PauseStateEnum } from "@/store/types";
+import {
+  VpnTypeEnum,
+  PortTypeEnum,
+  PauseStateEnum,
+  VpnStateEnum
+} from "@/store/types";
 
 function processError(e) {
   console.error(e);
@@ -172,6 +178,11 @@ export default {
     },
     IsPaused: function() {
       return this.$store.state.vpnState.pauseState == PauseStateEnum.Paused;
+    },
+    IsConnected: function() {
+      return (
+        this.$store.state.vpnState.connectionState === VpnStateEnum.CONNECTED
+      );
     }
   },
 

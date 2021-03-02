@@ -142,6 +142,8 @@ export default {
       defaultState.colorTheme = state.colorTheme;
       defaultState.isExpectedAccountToBeLoggedIn =
         state.isExpectedAccountToBeLoggedIn;
+      defaultState.skipAppUpdate = state.skipAppUpdate;
+      defaultState.logging = state.logging;
 
       Object.assign(state, defaultState);
     },

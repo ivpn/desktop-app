@@ -552,6 +552,8 @@ function createUpdateWindow() {
 
     width: 600,
     height: 400,
+    maxWidth: 600,
+    maxHeight: 500,
 
     resizable: false,
     fullscreenable: false,

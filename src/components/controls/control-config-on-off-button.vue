@@ -11,6 +11,7 @@
 
       <div>
         <SwitchProgress
+          :style="switcherStyle"
           :onChecked="onChecked"
           :isChecked="isChecked"
           :isProgress="isProgress"
@@ -34,8 +35,15 @@ export default {
     "isProgress",
     "text",
     "description",
-    "checkedColor"
-  ]
+    "checkedColor",
+    "switcherOpacity"
+  ],
+  computed: {
+    switcherStyle: function() {
+      if (!this.switcherOpacity) return "";
+      return `opacity: ${this.switcherOpacity}`;
+    }
+  }
 };
 </script>
 

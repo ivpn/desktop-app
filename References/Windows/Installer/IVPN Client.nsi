@@ -478,14 +478,16 @@ SectionEnd
 
 Section "Uninstall"
   SetRegView 64
-  DetailPrint "Ensure firewall is disabled..."
-  nsExec::ExecToLog '"${PATHDIR}\ivpn.exe" firewall -off'
+
   DetailPrint "Ensure VPN is disconnected..."
   nsExec::ExecToLog '"${PATHDIR}\ivpn.exe" disconnect'
 
   ${StrContains} $0 " -update" $CMDLINE
   ${If} $0 == ""
       ; uninstall
+      DetailPrint "Ensure firewall is disabled..."
+      nsExec::ExecToLog '"${PATHDIR}\ivpn.exe" firewall -off'
+      
       DetailPrint "Logout..."
       nsExec::ExecToLog '"${PATHDIR}\ivpn.exe" logout'
   ${Else}
