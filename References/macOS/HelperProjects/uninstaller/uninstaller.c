@@ -308,10 +308,13 @@ int install_helper() {
     return err;
 }
 
-int disconnectApp() {
+int disableFirewall() {
   printf("[ ] Disabling IVPN firewall ...\n");
   system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn firewall -off");
+  return 0;
+}
 
+int disconnectApp() {
   printf("[ ] Disconnecting IVPN ...\n");
   system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn disconnect");
   return 0;
@@ -358,6 +361,7 @@ int uninstall() {
 
       bool hasErrors = false;
 
+      disableFirewall();
       disconnectApp();
       int ret = quitApp();
       if (ret) return ret;
