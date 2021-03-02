@@ -6,7 +6,7 @@
       <spinner :loading="isProcessing" />
 
       <div class="flexRowSpace">
-        <div>
+        <div class="flexColumn">
           <div class="settingsGrayDescriptionFont">
             Account ID
           </div>
@@ -16,17 +16,19 @@
               {{ this.$store.state.account.session.AccountID }}
             </label>
           </div>
-          <div
-            class="statusButtonActive"
-            v-if="IsAccountStateExists && IsActive"
-          >
-            ACTIVE
-          </div>
-          <div
-            class="statusButtonNotActive"
-            v-if="IsAccountStateExists && !IsActive"
-          >
-            NOT ACTIVE
+          <div>
+            <div
+              class="statusButtonActive"
+              v-if="IsAccountStateExists && IsActive"
+            >
+              ACTIVE
+            </div>
+            <div
+              class="statusButtonNotActive"
+              v-if="IsAccountStateExists && !IsActive"
+            >
+              NOT ACTIVE
+            </div>
           </div>
         </div>
 
@@ -149,7 +151,7 @@ export default {
 
     qr.addData(accId);
     qr.make();
-    this.$refs.qrcode.innerHTML = qr.createSvgTag(3, 0);
+    this.$refs.qrcode.innerHTML = qr.createSvgTag(3, 10);
 
     // request account status (if not exists)
     if (this.$store.getters["account/isAccountStateExists"] !== true)
