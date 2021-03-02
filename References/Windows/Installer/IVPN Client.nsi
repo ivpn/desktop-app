@@ -402,7 +402,7 @@ Section "${PRODUCT_NAME}" SecIVPN
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}" "DisplayName" "${PRODUCT_NAME}"
   WriteRegExpandStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}" "UninstallString" "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}" "DisplayIcon" "$INSTDIR\$MUI_ICON"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}" "DisplayIcon" "$INSTDIR\${MUI_ICON}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}" "Publisher" "${PRODUCT_PUBLISHER}"
 
@@ -487,7 +487,7 @@ Section "Uninstall"
       ; uninstall
       DetailPrint "Ensure firewall is disabled..."
       nsExec::ExecToLog '"${PATHDIR}\ivpn.exe" firewall -off'
-      
+
       DetailPrint "Logout..."
       nsExec::ExecToLog '"${PATHDIR}\ivpn.exe" logout'
   ${Else}
