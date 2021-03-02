@@ -112,7 +112,7 @@ ipcMain.handle(
   "renderer-request-update-wnd-resize",
   async (event, width, height) => {
     if (!updateWindow || (!width && !height)) return;
-    if (!width) width = updateWindow.getContentSize()[0];
+    if (!width) width = config.UpdateWindowWidth;
     if (!height) height = updateWindow.getContentSize()[1];
     updateWindow.setContentSize(width, height);
   }
@@ -550,10 +550,10 @@ function createUpdateWindow() {
     backgroundColor: getBackgroundColor(),
     show: false,
 
-    width: 600,
+    width: config.UpdateWindowWidth,
     height: 400,
-    maxWidth: 600,
-    maxHeight: 500,
+    maxWidth: config.UpdateWindowWidth,
+    maxHeight: 600,
 
     resizable: false,
     fullscreenable: false,

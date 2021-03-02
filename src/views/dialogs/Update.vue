@@ -230,7 +230,9 @@ export default {
   components: { spinner, releaseNotes, UpdateProgress },
 
   data: function() {
-    return {};
+    return {
+      lastWindowHeight: 0
+    };
   },
 
   mounted() {
@@ -325,8 +327,11 @@ export default {
     updateWindowSize() {
       let contentdiv = this.$refs.contentdiv;
       if (!contentdiv) return;
-      if (!contentdiv.scrollHeight || contentdiv.scrollHeight < 150) return;
-      sender.UpdateWindowResizeContent(0, contentdiv.scrollHeight);
+      let h = contentdiv.scrollHeight;
+      if (!h || h < 150) return;
+      if (this.lastWindowHeight == h) return;
+      this.lastWindowHeight = h;
+      sender.UpdateWindowResizeContent(0, h);
     },
     onCheckUpdates: async function() {
       await sender.AppUpdatesCheck();
