@@ -85,6 +85,12 @@ func (p *Protocol) clientDisconnected(c net.Conn) {
 	c.Close()
 }
 
+func (p *Protocol) clientsConnectedCount() int {
+	p._connectionsMutex.Lock()
+	defer p._connectionsMutex.Unlock()
+	return len(p._connections)
+}
+
 // Notifying clients "service is going to stop" (client application (UI) will close)
 // Closing and erasing all clients connections
 func (p *Protocol) notifyClientsDaemonExiting() {

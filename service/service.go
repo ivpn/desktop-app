@@ -798,6 +798,15 @@ func (s *Service) Resume() error {
 	return vpn.Resume()
 }
 
+// IsPaused returns 'true' if current vpn connection is in paused state
+func (s *Service) IsPaused() bool {
+	vpn := s._vpn
+	if vpn == nil {
+		return false
+	}
+	return vpn.IsPaused()
+}
+
 // SetManualDNS set dns
 func (s *Service) SetManualDNS(dns net.IP) error {
 	vpn := s._vpn

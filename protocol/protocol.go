@@ -97,6 +97,7 @@ type Service interface {
 
 	Pause() error
 	Resume() error
+	IsPaused() bool
 
 	SessionNew(accountID string, forceLogin bool) (
 		apiCode int,
@@ -302,7 +303,14 @@ func (p *Protocol) processClient(conn net.Conn) {
 				p.Stop()
 			}
 		} else {
-			log.Info("Current state not changing [KeepDaemonAlone=true]")
+			if p._service.IsPaused() && p.clientsConnectedCount() == 0 {
+				log.Info("Connection is in paused state and no active clients available. Disconnecting ...")
+				if err := p._service.Disconnect(); err != nil {
+					log.Error(err)
+				}
+			} else {
+				log.Info("Current state not changing [KeepDaemonAlone=true]")
+			}
 		}
 	}()
 
