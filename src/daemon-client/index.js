@@ -275,8 +275,13 @@ async function processResponse(response) {
         AccountStatus();
       }
 
-      if (obj.DisabledFunctions != null)
+      if (obj.DisabledFunctions) {
         store.commit("disabledFunctions", obj.DisabledFunctions);
+        if (obj.DisabledFunctions.WireGuardError) {
+          // not able to use WG. Set OpenVPN as a default protocol
+          store.commit("settings/vpnType", VpnTypeEnum.OpenVPN);
+        }
+      }
 
       break;
 
@@ -655,7 +660,7 @@ async function GetAppUpdateInfo() {
     let signRespRaw = null;
     if (updateInfoResp) respRaw = updateInfoResp.ResponseData;
     if (updateInfoSignResp) signRespRaw = updateInfoSignResp.ResponseData;
-    
+
     return {
       updateInfoRespRaw: respRaw,
       updateInfoSignRespRaw: signRespRaw
