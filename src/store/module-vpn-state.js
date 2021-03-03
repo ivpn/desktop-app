@@ -121,6 +121,8 @@ export default {
   mutations: {
     connectionState(state, cs) {
       state.connectionState = cs;
+      if (cs == VpnStateEnum.DISCONNECTED)
+        state.pauseState = PauseStateEnum.Resumed;
     },
     connectionInfo(state, ci) {
       state.connectionInfo = ci;
@@ -132,6 +134,7 @@ export default {
     disconnected(state, disconnectionReason) {
       state.disconnectedInfo = { ReasonDescription: disconnectionReason };
       state.connectionState = VpnStateEnum.DISCONNECTED;
+      state.pauseState = PauseStateEnum.Resumed;
       state.connectionInfo = null;
     },
     pauseState(state, val) {

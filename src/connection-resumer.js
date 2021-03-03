@@ -22,14 +22,22 @@
 
 import store from "@/store";
 import daemonClient from "./daemon-client";
+import { PauseStateEnum } from "@/store/types";
 
 let resumerTimer = null;
 export function InitConnectionResumer() {
   store.subscribe(mutation => {
     try {
-      if (mutation.type === "uiState/pauseConnectionTill") {
+      if (
+        mutation.type === "uiState/pauseConnectionTill" ||
+        mutation.type === "vpnState/pauseState"
+      ) {
         if (resumerTimer != null) clearTimeout(resumerTimer);
         resumerTimer = null;
+
+        if (store.state.vpnState.pauseState == PauseStateEnum.Resumed) {
+          return;
+        }
 
         const pauseTill = store.state.uiState.pauseConnectionTill;
         if (pauseTill != null) {
