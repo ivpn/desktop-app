@@ -601,25 +601,42 @@ export default {
 
       // does selected VPN server location?
       if (location?.gateway) {
+        let settings = this.$store.state.settings;
         let conectionState = this.$store.state.vpnState.connectionState;
+        let oldSelectedServer = this.selectedServer;
 
         if (conectionState === VpnStateEnum.DISCONNECTED) {
           // VPN disconnected: select cliecked server
-          if (this.$store.state.settings.isMultiHop) {
-            if (
-              location.country_code !==
-              this.$store.state.settings.serverEntry.country_code
-            )
+          if (settings.isMultiHop) {
+            // for multihop, it is not permitted to select entry- and exit- servers from the same country
+            if (location.country_code !== settings.serverEntry.country_code) {
               this.$store.dispatch("settings/serverExit", location);
+            } else {
+              sender.showMessageBoxSync({
+                type: "info",
+                buttons: ["OK"],
+                message: "Entry and exit servers cannot be in the same country",
+                detail:
+                  "When using multihop you must select entry and exit servers in different countries. Please select a different entry or exit server."
+              });
+              return;
+            }
           } else this.$store.dispatch("settings/serverEntry", location);
 
           this.$store.dispatch("settings/isFastestServer", false);
           this.$store.dispatch("settings/isRandomServer", false);
         }
 
-        if (this.$store.state.settings.connectSelectedMapLocation === true) {
+        if (settings.connectSelectedMapLocation === true) {
           // connect to a selected server
-          this.connect(location);
+          if (
+            (this.isConnected || this.isConnecting) &&
+            location?.gateway == oldSelectedServer?.gateway
+          ) {
+            // do not connect if we already connected to the same server
+          } else {
+            this.connect(location);
+          }
         }
       }
 
