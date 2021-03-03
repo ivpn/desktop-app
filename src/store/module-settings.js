@@ -144,6 +144,7 @@ export default {
         state.isExpectedAccountToBeLoggedIn;
       defaultState.skipAppUpdate = state.skipAppUpdate;
       defaultState.logging = state.logging;
+      defaultState.showAppInSystemDock = state.showAppInSystemDock;
 
       Object.assign(state, defaultState);
     },

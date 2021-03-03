@@ -47,7 +47,7 @@ export default {
       if (
         this.$store.state.vpnState.connectionState !== VpnStateEnum.DISCONNECTED
       ) {
-        sender.showMessageBoxSync({
+        sender.showMessageBox({
           type: "info",
           buttons: ["OK"],
           message: "You are now connected to IVPN",

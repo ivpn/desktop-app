@@ -284,14 +284,24 @@ if (gotTheLock) {
         ]
       };
 
-      if (win == null) actionNo = dialog.showMessageBoxSync(msgBoxConfig);
-      else actionNo = dialog.showMessageBoxSync(win, msgBoxConfig);
+      // discard default event behavior
+      event.preventDefault();
+      // the Main window should be active (required for showMessageBox)
+      menuOnShow();
+      // temporary enable application icon in system dock
+      setAppDockVisibility(true);
+
+      // Using 'showMessageBox' not 'showMessageBoxSync' - this is required to not to block Tray menu items
+      let action = null;
+      if (win == null) action = await dialog.showMessageBox(msgBoxConfig);
+      else action = await dialog.showMessageBox(win, msgBoxConfig);
+      actionNo = action.response;
+
+      // restore default visibility of the application icon in system dock
+      updateAppDockVisibility();
     }
     switch (actionNo) {
       case 0: // Cancel
-        // discard exiting
-        event.preventDefault();
-
         // show app window back (if not minimizing to tray)
         if (store.state.settings.minimizeToTray !== true)
           setTimeout(menuOnShow, 0);
@@ -299,7 +309,6 @@ if (gotTheLock) {
 
       case 1: // Exit & Disconnect VPN
         // Quit application only after connection closed
-        event.preventDefault();
         setTimeout(async () => {
           try {
             if (
@@ -316,10 +325,6 @@ if (gotTheLock) {
           }
         }, 0);
         break;
-
-      //case 2: // Exit & Keep VPN connection
-      //  // just close application
-      //  break;
     }
   });
 
@@ -732,7 +737,11 @@ function showSettings(settingsViewName) {
 
 // show\hide app from SYSTEM DOCK
 function updateAppDockVisibility() {
-  if (store.state.settings.showAppInSystemDock) {
+  setAppDockVisibility(store.state.settings.showAppInSystemDock);
+}
+
+function setAppDockVisibility(isShow) {
+  if (isShow) {
     // macOS
     if (app != null && app.dock != null) app.dock.show();
 
@@ -754,8 +763,11 @@ function updateAppDockVisibility() {
 // MENU ITEMS
 function menuOnShow() {
   try {
-    if (!win) createWindow();
-    else {
+    if (!win) {
+      createWindow();
+      win.show();
+      win.focus();
+    } else {
       win.restore();
       win.show();
       win.focus();
