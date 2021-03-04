@@ -1,9 +1,15 @@
 <template>
   <div class="main">
-    <img
-      v-bind:class="{ flag: isSingleLine, flagBig: !isSingleLine }"
-      :src="serverImage"
-    />
+    <div class="flexColumn">
+      <img
+        v-bind:class="{
+          flag: isSingleLine,
+          flagBig: !isSingleLine,
+          flagVerticalOffset: isCountryFlagInUse && !isSingleLine
+        }"
+        :src="serverImage"
+      />
+    </div>
 
     <div
       class="textBloack text"
@@ -63,6 +69,7 @@ export default {
         this.isRandomServer
       );
     },
+
     singleLine: function() {
       if (this.isFastestServer === true) return "Fastest server";
       if (this.isRandomServer === true) return "Random server";
@@ -89,6 +96,9 @@ export default {
       if (!this.server) return "";
       if (this.isCountryFirst) return this.server.city;
       return this.server.country;
+    },
+    isCountryFlagInUse: function() {
+      return this.isFastestServer !== true && this.isRandomServer !== true;
     },
     serverImage: function() {
       if (this.isFastestServer === true) return Image_speedometer;
@@ -128,7 +138,15 @@ export default {
 @import "@/components/scss/constants";
 .main {
   display: flex;
-  align-items: center;
+}
+
+img.flagVerticalOffset {
+  // Small 'hack'
+  // Current flag images have internal vertical paddings
+  // We need to place flag vertically in the same line with City name
+  // Due to ve have no possibility to change image internal padding - we shifting IMG top on -4 pixels
+  // (which is ± image vertical paddings)
+  margin-top: -4px;
 }
 
 img.flag {

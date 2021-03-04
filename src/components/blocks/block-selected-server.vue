@@ -14,23 +14,28 @@
           }}
         </div>
         <div style="height: 4px" />
+
         <div class="flexRow">
           <serverNameControl
             class="serverName"
+            style="max-width: 245px;"
             :isLargeText="true"
             :server="this.server"
             :isFastestServer="isFastestServer"
             :isRandomServer="isRandomServer"
             :isShowPingPicture="!(isFastestServer || isRandomServer)"
           />
+
+          <div class="flexRow flexRowRestSpace" />
+
           <serverPingInfoControl
             :server="this.server"
-            style="margin-left: 9px"
+            style="margin-left: 9px; margin-right:8px"
           />
+
+          <div class="arrowRightSimple"></div>
         </div>
       </div>
-
-      <div class="arrowRightSimple"></div>
     </button>
   </div>
 </template>
@@ -110,10 +115,6 @@ export default {
   background-color: inherit;
   outline-width: 0;
   cursor: pointer;
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 
   height: 82px;
   width: 100%;
