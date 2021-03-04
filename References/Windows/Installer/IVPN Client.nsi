@@ -549,14 +549,14 @@ Section "Uninstall"
       ; uninstall
       RMDir /r "$INSTDIR\etc"
       RMDir "$INSTDIR"
+
+      SetShellVarContext current ; To be able to get environment variables of current user ("$LOCALAPPDATA", "$APPDATA")
+      RMDir /r "$APPDATA\ivpn-ui"
+      SetShellVarContext all
+      RMDir /r "$APPDATA\ivpn-ui"
   ${Else}
       ; update
   ${EndIf}
-
-  SetShellVarContext current ; To be able to get environment variables of current user ("$LOCALAPPDATA", "$APPDATA")
-  RMDir /r "$APPDATA\ivpn-ui"
-  SetShellVarContext all
-  RMDir /r "$APPDATA\ivpn-ui"
 
   ;!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
   StrCpy $StartMenuFolder "IVPN"
