@@ -1,40 +1,42 @@
 <template>
   <div id="main">
     <button class="serverSelectBtn" v-on:click="showServersList()">
-      <div align="left">
-        <div class="small_text">
-          {{
-            this.isExitServer
-              ? "Exit server"
-              : isConnected
-              ? "Connected to"
-              : isConnecting
-              ? "Connecting to ..."
-              : "Connect to"
-          }}
+      <div class="flexRow">
+        <div align="left">
+          <div class="small_text">
+            {{
+              this.isExitServer
+                ? "Exit server"
+                : isConnected
+                ? "Connected to"
+                : isConnecting
+                ? "Connecting to ..."
+                : "Connect to"
+            }}
+          </div>
+          <div style="height: 4px" />
+
+          <div class="flexRow">
+            <serverNameControl
+              class="serverName"
+              style="max-width: 245px;"
+              :isLargeText="true"
+              :server="this.server"
+              :isFastestServer="isFastestServer"
+              :isRandomServer="isRandomServer"
+              :isShowPingPicture="!(isFastestServer || isRandomServer)"
+            />
+          </div>
         </div>
-        <div style="height: 4px" />
 
-        <div class="flexRow">
-          <serverNameControl
-            class="serverName"
-            style="max-width: 245px;"
-            :isLargeText="true"
-            :server="this.server"
-            :isFastestServer="isFastestServer"
-            :isRandomServer="isRandomServer"
-            :isShowPingPicture="!(isFastestServer || isRandomServer)"
-          />
+        <div class="flexRow flexRowRestSpace" />
 
-          <div class="flexRow flexRowRestSpace" />
+        <serverPingInfoControl
+          :server="this.server"
+          style="margin-left: 9px; margin-right:8px"
+        />
 
-          <serverPingInfoControl
-            :server="this.server"
-            style="margin-left: 9px; margin-right:8px"
-          />
-
-          <div class="arrowRightSimple"></div>
-        </div>
+        <div class="arrowRightSimple"></div>
       </div>
     </button>
   </div>
