@@ -213,17 +213,23 @@
             "
           />
 
-          <div class="flexRow" v-if="isFastestServerConfig === false">
-            <serverPingInfoControl
-              class="pingInfo"
-              :server="server"
-              :isShowPingTime="true"
-            />
+          <div
+            class="flexColumn"
+            v-if="isFastestServerConfig === false"
+            style="margin-top: 11px"
+          >
+            <div class="flexRow">
+              <serverPingInfoControl
+                class="pingInfo"
+                :server="server"
+                :isShowPingTime="true"
+              />
 
-            <img
-              :src="favoriteImage(server)"
-              v-on:click="favoriteClicked($event, server)"
-            />
+              <img
+                :src="favoriteImage(server)"
+                v-on:click="favoriteClicked($event, server)"
+              />
+            </div>
           </div>
         </button>
 
