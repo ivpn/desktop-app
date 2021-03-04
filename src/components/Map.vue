@@ -625,6 +625,8 @@ export default {
 
           this.$store.dispatch("settings/isFastestServer", false);
           this.$store.dispatch("settings/isRandomServer", false);
+          if (settings.isMultiHop)
+            this.$store.dispatch("settings/isRandomExitServer", false);
         }
 
         if (settings.connectSelectedMapLocation === true) {

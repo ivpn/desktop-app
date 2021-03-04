@@ -1,9 +1,9 @@
 <template>
   <div id="main">
     <button class="serverSelectBtn" v-on:click="showServersList()">
-      <div class="flexRow">
-        <div align="left">
-          <div class="small_text">
+      <div class="flexRow" style="height: 100%;">
+        <div class="flexColumn" align="left">
+          <div class="small_text" style="margin-top: 8px">
             {{
               this.isExitServer
                 ? "Exit server"
@@ -14,8 +14,7 @@
                 : "Connect to"
             }}
           </div>
-          <div style="height: 4px" />
-
+          <div style="min-height: 4px" />
           <div class="flexRow">
             <serverNameControl
               class="serverName"
@@ -32,6 +31,7 @@
         <div class="flexRow flexRowRestSpace" />
 
         <serverPingInfoControl
+          v-show="!(isFastestServer || isRandomServer)"
           :server="this.server"
           style="margin-left: 9px; margin-right:8px"
         />

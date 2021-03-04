@@ -26,6 +26,7 @@ import {
 } from "@/sentry/sentry.js";
 
 import { ipcMain, nativeTheme, dialog, app, shell } from "electron";
+import path from "path";
 import { Platform } from "@/platform/platform";
 
 import client from "../daemon-client";
@@ -241,6 +242,7 @@ ipcMain.handle("renderer-request-close-current-window", async event => {
 ipcMain.handle(
   "renderer-request-shell-show-item-in-folder",
   async (event, file) => {
+    file = path.normalize(file);
     return await shell.showItemInFolder(file);
   }
 );
