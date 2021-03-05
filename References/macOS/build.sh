@@ -26,12 +26,16 @@ function CheckLastResult
 _SIGN_CERT=""
 # version info variables
 _VERSION=""
+
+_FILE_TO_INTEGRATE_IN_BUNDLE=""
 # reading version info from arguments
-while getopts ":v:c:" opt; do
+while getopts ":v:c:i:" opt; do
   case $opt in
     v) _VERSION="$OPTARG"
     ;;
     c) _SIGN_CERT="$OPTARG"
+    ;;
+    i) _FILE_TO_INTEGRATE_IN_BUNDLE="$OPTARG"
     ;;
   esac
 done
@@ -200,6 +204,11 @@ if [ ! -z ${_BUILDTAGS_USE_LIBVPN} ]; then
   echo "[+] Preparing DMG image: Copying libivpn.dylib ..."
   cp "${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/libivpn/libivpn.dylib" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS"
   CheckLastResult
+fi
+
+if [ ! -z ${_FILE_TO_INTEGRATE_IN_BUNDLE} ]; then
+  echo "[+] INTEGRATING EXTERNAL FILE INTO RESOURCES: ${_FILE_TO_INTEGRATE_IN_BUNDLE}..."
+  cp "${_FILE_TO_INTEGRATE_IN_BUNDLE}" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources"
 fi
 
 echo "[+] Preparing DMG image: Copying background image for DMG ..."
