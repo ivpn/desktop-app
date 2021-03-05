@@ -8,6 +8,8 @@
           flagVerticalOffset: isCountryFlagInUse && !isSingleLine
         }"
         :src="serverImage"
+        v-show="isImgLoadError !== true"
+        @error="onImgLoadError"
       />
     </div>
 
@@ -51,7 +53,9 @@ export default {
     isFastestServer: Boolean,
     isRandomServer: Boolean
   },
-
+  data: () => ({
+    isImgLoadError: false
+  }),
   computed: {
     isShowSingleLine: function() {
       return (
@@ -118,7 +122,11 @@ export default {
     }
   },
 
-  methods: {}
+  methods: {
+    onImgLoadError() {
+      this.isImgLoadError = true;
+    }
+  }
 };
 </script>
 
