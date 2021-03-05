@@ -26,12 +26,6 @@
         {{ multilineSecondLine }}
       </div>
     </div>
-
-    <img
-      :src="selectedImg"
-      style="margin-left:10px; margin-right: 4px"
-      v-if="isShowSelected === true"
-    />
   </div>
 </template>
 
@@ -40,7 +34,6 @@ import { PingQuality } from "@/store/types";
 
 import Image_speedometer from "@/assets/speedometer.svg";
 import Image_shuffle from "@/assets/shuffle.svg";
-import Image_check from "@/assets/check.svg";
 import Image_iconStatusGood from "@/assets/iconStatusGood.svg";
 import Image_iconStatusModerate from "@/assets/iconStatusModerate.svg";
 import Image_iconStatusBad from "@/assets/iconStatusBad.svg";
@@ -55,7 +48,6 @@ export default {
 
     isFullName: String,
 
-    isShowSelected: Boolean,
     isFastestServer: Boolean,
     isRandomServer: Boolean
   },
@@ -111,9 +103,6 @@ export default {
         console.log(e);
         return null;
       }
-    },
-    selectedImg: function() {
-      return Image_check;
     },
     pingStatusImg: function() {
       if (!this.server) return null;
