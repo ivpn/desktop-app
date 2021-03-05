@@ -4,10 +4,8 @@ package wifiNotifier
 
 /*
 #cgo CFLAGS: -x objective-c
-#cgo LDFLAGS: -framework Cocoa -framework SystemConfiguration -framework CoreWLAN -framework Foundation
+#cgo LDFLAGS: -framework SystemConfiguration -framework CoreWLAN -framework Foundation
 
-#import <Cocoa/Cocoa.h>
-#import <AppKit/NSApplication.h>
 #include <stdlib.h>
 #import <Foundation/Foundation.h>
 #import <CoreWLAN/CoreWLAN.h>
@@ -90,7 +88,7 @@ static inline void setWifiNotifier(void) {
      }];
 
     SCDynamicStoreContext ctx = { 0, NULL, NULL, NULL, NULL };
-    SCDynamicStoreRef store = SCDynamicStoreCreate(kCFAllocatorDefault, CFSTR("myapp"), wifi_network_changed, &ctx);
+    SCDynamicStoreRef store = SCDynamicStoreCreate(kCFAllocatorDefault, CFSTR("IVPN"), wifi_network_changed, &ctx);
 
     SCDynamicStoreSetNotificationKeys(store, (__bridge CFArrayRef)scKeys, NULL);
 
