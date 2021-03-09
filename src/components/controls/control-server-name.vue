@@ -2,10 +2,9 @@
   <div class="main">
     <div class="flexColumn">
       <img
+        class="pic"
         v-bind:class="{
-          flag: isSingleLine,
-          flagBig: !isSingleLine,
-          flagVerticalOffset: isCountryFlagInUse && !isSingleLine
+          flag: isCountryFlagInUse
         }"
         :src="serverImage"
         v-show="isImgLoadError !== true"
@@ -101,8 +100,8 @@ export default {
       if (this.isRandomServer === true) return Image_shuffle;
       if (!this.server) return `/flags/unk.svg`;
       try {
-        const ccode = this.server.country_code.toLowerCase();
-        return `/flags/${ccode}.svg`;
+        const ccode = this.server.country_code.toUpperCase();
+        return `/flags/svg/${ccode}.svg`;
       } catch (e) {
         console.log(e);
         return null;
@@ -137,22 +136,17 @@ export default {
   display: flex;
 }
 
-img.flagVerticalOffset {
-  // Small 'hack'
-  // Current flag images have internal vertical paddings
-  // We need to place flag vertically in the same line with City name
-  // Due to ve have no possibility to change image internal padding - we shifting IMG top on -4 pixels
-  // (which is ± image vertical paddings)
-  margin-top: -4px;
+img.pic {
+  width: 22px;
+  margin: 1px;
+  margin-top: 2px;
 }
 
 img.flag {
-  width: 24px;
-}
+  //border: 1px solid rgba(var(--flag-border-color-rgb), 0.5);
 
-img.flagBig {
-  @extend .flag;
-  width: 28px;
+  //border-radius: 2px;
+  box-shadow: 0 0 0.4pt 0.4pt rgba(var(--flag-border-color-rgb), 1);
 }
 
 .text {

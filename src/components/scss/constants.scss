@@ -27,6 +27,8 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
     --map-text-color: #6b6b6b;
     --map-point-color: #6b6b6b;
 
+    --flag-border-color-rgb: 203,210,211; // #cbd2d3;
+
     @media (prefers-color-scheme: dark){
          --text-color-rgb: 255, 255, 255;
          --text-color:rgba(var(--text-color-rgb));
@@ -48,6 +50,8 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
          --map-background-color: #292929;
          --map-text-color: #a2a2a2;
          --map-point-color: #d4d4d4;
+
+         --flag-border-color-rgb: 41,41,41; //#292929;
     }
 }
 
