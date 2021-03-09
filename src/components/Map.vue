@@ -1177,7 +1177,9 @@ function isUse(drawedCities, x, y, pointRadius, left, top, width, height) {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 //$shadow: 0px 4px 24px rgba(37, 51, 72, 0.25);
-$shadow: 0px 3px 12px rgba(39, 72, 113, 0.3);
+
+$shadow: 0px 3px 12px rgba(var(--shadow-color-rgb), var(--shadow-opacity));
+
 $popup-background: var(--background-color);
 
 @import "@/components/scss/constants";
