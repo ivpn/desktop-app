@@ -120,7 +120,8 @@ function connected(me) {
 export default {
   props: {
     onConnectionSettings: Function,
-    onWifiSettings: Function
+    onWifiSettings: Function,
+    onDefaultView: Function
   },
 
   components: {
@@ -227,7 +228,8 @@ export default {
       this.uiView = isExitServers
         ? viewTypeEnum.serversExit
         : viewTypeEnum.serversEntry;
-      this.$store.dispatch("uiState/isDefaultControlView", false);
+
+      if (this.onDefaultView) this.onDefaultView(false);
 
       // request servers ping not more often than once per 30 seconds
       if (
@@ -248,7 +250,8 @@ export default {
     },
     backToMainView() {
       this.uiView = viewTypeEnum.default;
-      this.$store.dispatch("uiState/isDefaultControlView", true);
+      if (this.onDefaultView) this.onDefaultView(true);
+
       setTimeout(this.recalcScrollButtonVisiblity, 1000);
     },
     onServerChanged(server, isExitServer) {

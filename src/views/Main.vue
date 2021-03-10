@@ -27,6 +27,7 @@
             v-bind:is="currentViewComponent"
             :onConnectionSettings="onConnectionSettings"
             :onWifiSettings="onWifiSettings"
+            :onDefaultView="onDefaultLeftView"
             id="left"
           ></component>
         </transition>
@@ -62,6 +63,11 @@ export default {
     Control,
     Map
   },
+  data: function() {
+    return {
+      isCanShowMinimizedButtons: true
+    };
+  },
   computed: {
     isLoggedIn: function() {
       return this.$store.getters["account/isLoggedIn"];
@@ -83,7 +89,7 @@ export default {
     },
     isMinimizedButtonsVisible: function() {
       if (this.currentViewComponent !== Control) return false;
-      if (this.$store.state.uiState.isDefaultControlView !== true) return false;
+      if (this.isCanShowMinimizedButtons !== true) return false;
       return this.isMinimizedUI;
     },
     isMinimizedUI: function() {
@@ -113,6 +119,9 @@ export default {
     },
     onWifiSettings: function() {
       sender.ShowWifiSettings();
+    },
+    onDefaultLeftView: function(isDefaultView) {
+      this.isCanShowMinimizedButtons = isDefaultView;
     },
     onMaximize: function(isMaximize) {
       this.$store.dispatch("settings/minimizedUI", !isMaximize);

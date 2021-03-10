@@ -24,8 +24,6 @@ export default {
   namespaced: true,
 
   state: {
-    // current view is default 'control view' (with button 'connect'... etc.; NOT servers view)
-    isDefaultControlView: true,
     // favorite servers view selected
     serversFavoriteView: false,
     pauseConnectionTill: null, // Date()
@@ -47,9 +45,6 @@ export default {
   },
 
   mutations: {
-    isDefaultControlView(state, value) {
-      state.isDefaultControlView = value;
-    },
     serversFavoriteView(state, value) {
       state.serversFavoriteView = value;
     },
@@ -66,9 +61,6 @@ export default {
 
   // can be called from renderer
   actions: {
-    isDefaultControlView(context, value) {
-      context.commit("isDefaultControlView", value);
-    },
     serversFavoriteView(context, value) {
       context.commit("serversFavoriteView", value);
     },
