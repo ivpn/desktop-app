@@ -139,7 +139,7 @@ export default {
 img.pic {
   width: 22px;
   margin: 1px;
-  margin-top: 2px;
+  margin-top: 2.4px;
 }
 
 img.flag {
@@ -157,7 +157,7 @@ img.flag {
 
 div.textBloack {
   font-size: 14px;
-  line-height: 20px;
+  line-height: 20.8px;
   margin-left: 16px;
 }
 
