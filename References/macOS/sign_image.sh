@@ -67,7 +67,7 @@ then
 fi
 
 ListCompiledBinaries=(
-"_image/IVPN.app/Contents/MacOS/ivpn-ui"
+"_image/IVPN.app/Contents/MacOS/IVPN"
 "_image/IVPN.app/Contents/MacOS/IVPN Agent"
 "_image/IVPN.app/Contents/MacOS/cli/ivpn"
 "_image/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/IVPN Installer"

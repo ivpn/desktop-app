@@ -104,15 +104,6 @@ echo "*** Building Electron app ... ***"
 $SCRIPT_DIR/compile-ui.sh
 CheckLastResult
 
-APP_BINARY="$SCRIPT_DIR/../../dist_electron/ivpn-ui-$VERSION.AppImage"
-if [ -f $APP_BINARY ]; then
-    echo "[ ] Exist: $APP_BINARY"
-else
-  echo "[!] File not exists: '$APP_BINARY'"
-  echo "    Build IVPN UI project (do not forget to set correct version for it in 'package.json')"
-  exit 1
-fi
-
 if [ -d $APP_UNPACKED_DIR ]; then
     echo "[ ] Exist: $APP_UNPACKED_DIR"
 else

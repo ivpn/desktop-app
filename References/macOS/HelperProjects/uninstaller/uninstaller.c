@@ -322,12 +322,6 @@ int disconnectApp() {
 
 int quitApp() {
   printf("[ ] Closing IVPN app...\n");
-  if (system("/usr/bin/osascript -e 'quit app \"ivpn-ui\"'"))
-  {
-    logmes(LOG_ERR, "ERROR: Unable to close application (ivpn-ui).");
-    system( "/usr/bin/osascript -e 'display alert \"IVPN Uninstaller\" message \"Please, close IVPN application and try again.\"'");
-    return 3;
-  }
   if (system("/usr/bin/osascript -e 'quit app \"IVPN\"'"))
   {
     logmes(LOG_ERR, "ERROR: Unable to close application (IVPN).");
@@ -377,7 +371,7 @@ int uninstall() {
       remove_helper_with_auth(authRef);
 
       char relFile1[128], relFile2[128];
-      snprintf(relFile1, 128, "%s/Library/Preferences/net.ivpn.client.IVPN.plist", homeDir);
+      snprintf(relFile1, 128, "%s/Library/Preferences/net.ivpn.client.IVPN.plist", homeDir); // old UI bundleID
       snprintf(relFile2, 128, "%s/Library/Preferences/com.electron.ivpn-ui.plist", homeDir);
 
       const char *filesToRemove[] = {
@@ -404,8 +398,7 @@ int uninstall() {
       }
 
       char relDir1[128], relDir2[128];
-      snprintf(relDir1, 128, "%s/Library/Application Support/IVPN", homeDir);  // old UI
-      snprintf(relDir2, 128, "%s/Library/Application Support/ivpn-ui", homeDir);
+      snprintf(relDir1, 128, "%s/Library/Application Support/IVPN", homeDir);
 
       const char *foldersToRemove[] = {
         "/Applications/IVPN.app",

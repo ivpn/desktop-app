@@ -551,9 +551,9 @@ Section "Uninstall"
       RMDir "$INSTDIR"
 
       SetShellVarContext current ; To be able to get environment variables of current user ("$LOCALAPPDATA", "$APPDATA")
-      RMDir /r "$APPDATA\ivpn-ui"
+      RMDir /r "$APPDATA\IVPN"
       SetShellVarContext all
-      RMDir /r "$APPDATA\ivpn-ui"
+      RMDir /r "$APPDATA\IVPN"
   ${Else}
       ; update
   ${EndIf}

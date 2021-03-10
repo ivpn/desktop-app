@@ -39,7 +39,7 @@ function RestoreBackup
 
 function CntAppRunningProcesses
 {
-    return `ps aux | grep -v grep | grep -c "/Applications/IVPN.app/Contents/MacOS/ivpn-ui"`
+    return `ps aux | grep -v grep | grep -c "/Applications/IVPN.app/Contents/MacOS/IVPN"`
 } 
 
 function KillAppProcess
@@ -48,13 +48,13 @@ function KillAppProcess
     _cnt=$?
     if [ "${_cnt}" != "0" ]; then
         echo "Killing application process ..."
-        killall "ivpn-ui"
+        killall "IVPN"
         sleep 1
 
         CntAppRunningProcesses
         _cnt=$?
         if [ "${_cnt}" != "0" ]; then
-            killall "ivpn-ui"
+            killall "IVPN"
         fi
     fi
 }
