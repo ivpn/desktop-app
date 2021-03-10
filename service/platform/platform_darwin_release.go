@@ -59,7 +59,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	wgToolBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wg"
 
 	// allow connection only for IVPN UI and IVPN CLI
-	allowedClients = []string{"/Applications/IVPN.app/Contents/MacOS/ivpn-ui", "/Applications/IVPN.app/Contents/MacOS/cli/ivpn"}
+	allowedClients = []string{"/Applications/IVPN.app/Contents/MacOS/IVPN", "/Applications/IVPN.app/Contents/MacOS/cli/ivpn"}
 
 	return nil, nil
 }
