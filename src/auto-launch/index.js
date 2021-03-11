@@ -20,11 +20,12 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+import { app } from "electron";
 import { Platform, PlatformEnum } from "@/platform/platform";
 
 // initialize application auto-launcher
 var AutoLaunch = require("auto-launch");
-let launcherOptions = { name: "IVPN" };
+let launcherOptions = { name: "IVPN", isHidden: true }; // isHidden is in use by Windows and Linux implementation (see function: WasOpenedAtLogin())
 var autoLauncher = null;
 
 if (Platform() === PlatformEnum.Linux) {
@@ -38,6 +39,18 @@ if (launcherOptions != null) autoLauncher = new AutoLaunch(launcherOptions);
 
 function AutoLaunchIsInitialized() {
   return autoLauncher != null;
+}
+
+export function WasOpenedAtLogin() {
+  try {
+    if (Platform() === PlatformEnum.macOS) {
+      let loginSettings = app.getLoginItemSettings();
+      return loginSettings.wasOpenedAtLogin;
+    }
+    return app.commandLine.hasSwitch("hidden");
+  } catch {
+    return false;
+  }
 }
 
 export async function AutoLaunchIsEnabled() {

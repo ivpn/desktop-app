@@ -57,6 +57,7 @@ import config from "@/config";
 import path from "path";
 
 import { StartUpdateChecker } from "@/app-updater";
+import { WasOpenedAtLogin } from "@/auto-launch";
 
 // default copy/edit context menu event handlers
 require("@/context-menu/main");
@@ -226,7 +227,12 @@ if (gotTheLock) {
       }
     }*/
 
-    createWindow();
+    if (store.state.settings.minimizeToTray && WasOpenedAtLogin()) {
+      // do not show main application window when application was started automatically on login
+      // (if enabled minimizeToTray)
+    } else {
+      createWindow();
+    }
   });
 
   app.on("before-quit", async event => {
