@@ -170,8 +170,8 @@ export default {
       );
     },
     // needed for watcher
-    connectionFailureInfo: function() {
-      return this.$store.state.vpnState.disconnectedInfo;
+    conectionState: function() {
+      return this.$store.state.vpnState.connectionState;
     },
     isMinimizedUI: function() {
       return this.$store.state.settings.minimizedUI;
@@ -182,19 +182,24 @@ export default {
   },
 
   watch: {
-    connectionFailureInfo() {
-      if (
-        this.connectionFailureInfo != null &&
-        !isStrNullOrEmpty(this.connectionFailureInfo.ReasonDescription) &&
-        this.connectionFailureInfo.ReasonDescription.length > 0
-      ) {
-        sender.showMessageBoxSync({
-          type: "error",
-          buttons: ["OK"],
-          message: `Failed to connect`,
-          detail: this.connectionFailureInfo.ReasonDescription
-        });
-      }
+    conectionState(newValue, oldValue) {
+      // show connection failure description:
+
+      // only in case of changing to DISCONNECTED
+      if (newValue !== VpnStateEnum.DISCONNECTED || newValue == oldValue)
+        return;
+
+      // if disconnection reason defined
+      let failureInfo = this.$store.state.vpnState.disconnectedInfo;
+      if (!failureInfo || isStrNullOrEmpty(failureInfo.ReasonDescription))
+        return;
+
+      sender.showMessageBoxSync({
+        type: "error",
+        buttons: ["OK"],
+        message: `Failed to connect`,
+        detail: failureInfo.ReasonDescription
+      });
     },
     port(newValue, oldValue) {
       if (!connected(this)) return;
