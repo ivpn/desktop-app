@@ -114,7 +114,7 @@
         <div
           ref="hiddenTestTextMeter"
           class="mapLocationName"
-          style="opacity: 0, pointer-events: none; z-index: -1;"
+          style="opacity: 0; pointer-events: none; z-index: -1;"
         ></div>
 
         <div class="mapLocationsContainer" ref="mapLocationsContainer">
