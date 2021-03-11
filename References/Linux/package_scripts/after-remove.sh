@@ -5,7 +5,7 @@ echo "[*] After remove (<%= version %> : <%= pkg %> : $1)"
 # Obtaining information about user running the script
 # (script can be executed with 'sudo', but we should get real user)
 USER="${SUDO_USER:-$USER}"
-UI_APP_USER_DIR="/home/${USER}/.config/ivpn-ui"
+UI_APP_USER_DIR="/home/${USER}/.config/IVPN"
 AUTOSTART_FILE="/home/${USER}/.config/autostart/ivpn-ui.desktop"
 
 DESKTOP_FILE_DIR=/usr/share/applications
