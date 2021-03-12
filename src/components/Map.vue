@@ -107,7 +107,7 @@
         v-bind:class="{ blured: isBlured === 'true' }"
       ></canvas>
 
-      <div style="position: relative ">
+      <div class="bigMapArea" ref="bigMapArea">
         <img ref="map" class="map" :src="mapImage" @load="mapLoaded" />
 
         <!-- Hidden element to calculate styled text size-->
@@ -203,6 +203,7 @@ import {
   getCoordinatesBy
 } from "@/helpers/helpers";
 
+const defaultZoomScale = 0.41;
 export default {
   components: {
     popupControl,
@@ -224,6 +225,7 @@ export default {
 
     canvas: null,
 
+    bigMapArea: null,
     map: null,
     combinedDiv: null,
     popup: null,
@@ -236,7 +238,7 @@ export default {
     animCurrLocCircle: null,
     animConnectedWaves: null,
 
-    scale: 0.41,
+    scale: defaultZoomScale,
 
     scrollTo: {
       left: -1,
@@ -253,6 +255,11 @@ export default {
     startMoveY: 0,
     lastMoveX: 0,
     lastMoveY: 0,
+
+    mapPos: {
+      mapLeftOffset: 0.0,
+      mapTopOffset: 0.0
+    },
 
     locationsToDisplay: [
       /*{
@@ -368,6 +375,7 @@ export default {
     this.canvas = this.$refs.canvas;
 
     this.popup = this.$refs.popup;
+    this.bigMapArea = this.$refs.bigMapArea;
     this.map = this.$refs.map;
     this.combinedDiv = this.$refs.combined;
     this.mapLocationsContainer = this.$refs.mapLocationsContainer;
@@ -445,14 +453,25 @@ export default {
 
   methods: {
     mapLoaded() {
-      this.map.style.width = `${this.map.naturalWidth * this.scale}px`;
+      const mapFullW = this.map.naturalWidth;
+      const mapFullH = this.map.naturalHeight;
+      // scale map
+      this.map.style.width = `${mapFullW * this.scale}px`;
+      // fit locations container to map scalled size
+      this.mapLocationsContainer.style.width = `${mapFullW * this.scale}px`;
+      this.mapLocationsContainer.style.height = `${mapFullH * this.scale}px`;
 
-      this.mapLocationsContainer.style.width = `${this.map.naturalWidth *
-        this.scale}px`;
-      this.mapLocationsContainer.style.height = `${this.map.naturalHeight *
-        this.scale}px`;
-      this.mapLocationsContainer.style.left = "0px";
-      this.mapLocationsContainer.style.top = "0px";
+      // To be able to scroll any direction with no border limits,
+      // we are creating big scrolling area and map will be placed on center of it
+      // So, there will be free space around the map.
+      this.mapPos.mapLeftOffset = mapFullW;
+      this.mapPos.mapTopOffset = mapFullH;
+      this.bigMapArea.style.width = `${mapFullW * 3}px`;
+      this.bigMapArea.style.height = `${mapFullH * 3}px`;
+      this.mapLocationsContainer.style.left = `${this.mapPos.mapLeftOffset}px`;
+      this.mapLocationsContainer.style.top = `${this.mapPos.mapTopOffset}px`;
+      this.map.style.left = `${this.mapPos.mapLeftOffset}px`;
+      this.map.style.top = `${this.mapPos.mapTopOffset}px`;
 
       this.updateCities();
       this.centerCurrentLocation(true);
@@ -577,18 +596,58 @@ export default {
           }
 
           // MOVING
-          // scroll horisontally
-          this.combinedDiv.scrollLeft -= offsetX - this.lastMoveX;
+          // SCROLL HORISONTALLY
+          const scrollLeftOffset = this.lastMoveX - offsetX;
+          const newScrollLeft = this.combinedDiv.scrollLeft + scrollLeftOffset;
 
-          // scroll vertically
-          let newScrollTop = this.combinedDiv.scrollTop;
-          newScrollTop -= offsetY - this.lastMoveY;
-          // set vertical scroll limit 6000 pixels (not necessary to show empty map area on the buttom)
           if (
-            this.lastMoveY - offsetY <= 0 ||
-            (newScrollTop + this.canvas.height) / this.scale < 6000
-          )
+            // map moving right
+            // (minimum visible right map part = 30% of natural width)
+            (scrollLeftOffset > 0 &&
+              ((newScrollLeft - this.mapPos.mapLeftOffset) / this.scale <
+                this.map.naturalWidth * 0.7 ||
+                this.map.naturalWidth * this.scale -
+                  (newScrollLeft - this.mapPos.mapLeftOffset) >
+                  this.canvas.width)) ||
+            // map moving left
+            // (minimum visible left map part = 30% of natural width)
+            (scrollLeftOffset < 0 &&
+              (newScrollLeft -
+                this.mapPos.mapLeftOffset +
+                this.canvas.width -
+                this.map.naturalWidth * 0.3 * this.scale >
+                0 ||
+                newScrollLeft > this.mapPos.mapLeftOffset))
+          ) {
+            this.combinedDiv.scrollLeft = newScrollLeft;
+          }
+
+          // SCROLL VERTICALLY
+          const scrollTopOffset = this.lastMoveY - offsetY;
+          const newScrollTop = this.combinedDiv.scrollTop + scrollTopOffset;
+          console.log(newScrollTop, scrollTopOffset);
+          if (
+            // map moving bottom
+            // (minimum visible bottom map part = 2249px+30% of natural height)
+            // (2249 pixels at the button of the map is just ocean. No necessary to show it)
+            (scrollTopOffset > 0 &&
+              ((newScrollTop - this.mapPos.mapTopOffset) / this.scale <
+                (this.map.naturalHeight - 2249) * 0.7 ||
+                (this.map.naturalHeight - 2249) * this.scale -
+                  (newScrollTop - this.mapPos.mapTopOffset) >
+                  this.canvas.height)) ||
+            // map moving top
+            // (minimum visible top map part = 30% of natural height)
+            (scrollTopOffset < 0 &&
+              (newScrollTop -
+                this.mapPos.mapTopOffset +
+                this.canvas.height -
+                this.map.naturalHeight * 0.3 * this.scale >
+                0 ||
+                newScrollTop > this.mapPos.mapTopOffset))
+          ) {
             this.combinedDiv.scrollTop = newScrollTop;
+          }
 
           this.lastMoveX = offsetX;
           this.lastMoveY = offsetY;
@@ -667,8 +726,10 @@ export default {
         this.scale * this.map.naturalHeight
       );
 
-      let scrollLeft = point.x - this.canvas.width / 2;
-      let scrollTop = point.y - this.canvas.height / 2;
+      let scrollLeft =
+        this.mapPos.mapLeftOffset + point.x - this.canvas.width / 2;
+      let scrollTop =
+        this.mapPos.mapTopOffset + point.y - this.canvas.height / 2;
 
       if (noAnimation != null && noAnimation) {
         this.stopScroll();
@@ -717,14 +778,16 @@ export default {
       const scrollLeftMax = sElement.scrollWidth - sElement.clientWidth;
       const scrollTopMax = sElement.scrollHeight - sElement.clientHeight;
 
-      if (
-        (Math.abs(xOffset) <= 1 ||
-          (sElement.scrollLeft <= 0 && xOffset > 0) ||
-          (sElement.scrollLeft >= scrollLeftMax && xOffset < 0)) &&
-        (Math.abs(yOffset) <= 1 ||
-          (sElement.scrollTop <= 0 && yOffset > 0) ||
-          (sElement.scrollTop >= scrollTopMax && yOffset < 0))
-      ) {
+      const isXScrollFinished =
+        Math.abs(xOffset) <= 1 ||
+        (sElement.scrollLeft <= 0 && xOffset > 0) ||
+        (sElement.scrollLeft >= scrollLeftMax && xOffset < 0);
+      const isYScrollFinished =
+        Math.abs(yOffset) <= 1 ||
+        (sElement.scrollTop <= 0 && yOffset > 0) ||
+        (sElement.scrollTop >= scrollTopMax && yOffset < 0);
+
+      if (isXScrollFinished && isYScrollFinished) {
         // Show popup for centered location
         this.showPopup(
           this.scrollTo.left + this.canvas.width / 2,
@@ -768,7 +831,13 @@ export default {
       // hide popup (if visible)
       this.isPopupVisible = false;
       if (x == null || y == null) return;
+
+      const mLOffset = this.mapPos.mapLeftOffset;
+      const mTOffset = this.mapPos.mapTopOffset;
+
       // looking for visible locations under map coordinates (x,y)
+      x -= mLOffset;
+      y -= mTOffset;
       let mapLocation = isUse(this.locationsToDisplay, x, y, 1, 0, 0, 0, 0);
 
       if (mapLocation == null) return;
@@ -779,8 +848,9 @@ export default {
       this.selectedPopupLocation = mapLocation.location;
       // set popup coordinates
       this.popup.style.left =
-        mapLocation.x - this.combinedDiv.scrollLeft + "px";
-      this.popup.style.top = mapLocation.y - this.combinedDiv.scrollTop + "px";
+        mapLocation.x - (this.combinedDiv.scrollLeft - mLOffset) + "px";
+      this.popup.style.top =
+        mapLocation.y - (this.combinedDiv.scrollTop - mTOffset) + "px";
 
       // show popup
       this.isPopupVisible = true;
@@ -791,13 +861,44 @@ export default {
       if (e.deltaY > 0) this.zoomIn(e);
       else this.zoomOut(e);
     },
+    /*
+    async startZooming(expectedScale) {
+      if (!expectedScale) return;
+
+      const theThis = this;
+
+      await new Promise(resolve => {
+        let zoomTick = function() {
+          const isZoomFinished =
+            Math.abs(theThis.scale - expectedScale) < 0.0001;
+          if (isZoomFinished) {
+            resolve();
+            return;
+          }
+
+          console.log("ZOOM", expectedScale, theThis.scale);
+          if (expectedScale > theThis.scale) theThis.zoomOut();
+          else if (expectedScale < theThis.scale) theThis.zoomIn();
+
+          setTimeout(async () => {
+            zoomTick();
+          }, 1000 / 60);
+        };
+        zoomTick();
+      });
+    },*/
+
     zoomIn(e) {
-      if (this.scale <= 0.3) return;
-      this.updateScale(this.scale - 0.025, e);
+      let step = 0.01;
+      let minScale = 0.04;
+      if (this.scale <= minScale) return;
+      this.updateScale(this.scale - step, e);
     },
     zoomOut(e) {
-      if (this.scale >= 1) return;
-      this.updateScale(this.scale + 0.025, e);
+      let step = 0.01;
+      let maxScale = 1.0;
+      if (this.scale >= maxScale) return;
+      this.updateScale(this.scale + step, e);
     },
 
     updateScale(newScale, zoomPoint) {
@@ -814,31 +915,36 @@ export default {
           offsetY: this.canvas.height / 2
         };
       }
+
+      const mapFullW = this.map.naturalWidth;
+      const mapFullH = this.map.naturalHeight;
+      const mLOffset = this.mapPos.mapLeftOffset;
+      const mTOffset = this.mapPos.mapTopOffset;
+
       const centerCoord = getPosFromCoordinates(
-        l + zoomPoint.offsetX,
-        t + zoomPoint.offsetY,
-        this.scale * this.map.naturalWidth,
-        this.scale * this.map.naturalHeight
+        l + zoomPoint.offsetX - mLOffset,
+        t + zoomPoint.offsetY - mTOffset,
+        this.scale * mapFullW,
+        this.scale * mapFullH
       );
 
       // change scale
       this.scale = newScale;
-      this.map.style.width = `${this.map.naturalWidth * this.scale}px`;
+      this.map.style.width = `${mapFullW * this.scale}px`;
 
-      this.mapLocationsContainer.style.width = `${this.map.naturalWidth *
-        this.scale}px`;
-      this.mapLocationsContainer.style.height = `${this.map.naturalHeight *
-        this.scale}px`;
+      this.mapLocationsContainer.style.width = `${mapFullW * this.scale}px`;
+      this.mapLocationsContainer.style.height = `${mapFullH * this.scale}px`;
 
       // keep scroll positions
       let newPoint = getCoordinatesBy(
         centerCoord.longitude,
         centerCoord.latitude,
-        this.scale * this.map.naturalWidth,
-        this.scale * this.map.naturalHeight
+        this.scale * mapFullW,
+        this.scale * mapFullH
       );
-      this.combinedDiv.scrollLeft = newPoint.x - zoomPoint.offsetX;
-      this.combinedDiv.scrollTop = newPoint.y - zoomPoint.offsetY;
+
+      this.combinedDiv.scrollLeft = mLOffset + newPoint.x - zoomPoint.offsetX;
+      this.combinedDiv.scrollTop = mTOffset + newPoint.y - zoomPoint.offsetY;
 
       // redraw locations
       this.updateCities();
@@ -1216,13 +1322,15 @@ $popup-background: var(--background-color);
   filter: blur(7px);
   backdrop-filter: blur(5px);
 }
-
+.bigMapArea {
+  position: relative;
+  background: var(--map-background-color);
+}
 .map {
   position: relative;
   z-index: 1;
 
   user-select: none;
-  background: var(--map-background-color);
 }
 
 .buttonsPanelBase {
