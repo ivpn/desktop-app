@@ -85,8 +85,8 @@ export function StartUpdateChecker(onHasUpdateCallback) {
     }
 
     const doCheck = async function() {
-      const isManualCheck = false;
-      const updatesInfo = await CheckUpdates(isManualCheck);
+      const isAutomaticCheck = true;
+      const updatesInfo = await CheckUpdates(isAutomaticCheck);
       if (!updatesInfo) return;
       try {
         if (updater.IsNewerVersion(updatesInfo, currDaemonVer, currUiVer)) {
@@ -113,8 +113,8 @@ export function StartUpdateChecker(onHasUpdateCallback) {
   return true;
 }
 
-export async function CheckUpdates(isManualCheck) {
-  if (isManualCheck != false) forgetVersionToSkip();
+export async function CheckUpdates(isAutomaticCheck) {
+  if (isAutomaticCheck != true) forgetVersionToSkip();
 
   const updater = getUpdater();
   if (updater == null) {
@@ -128,7 +128,7 @@ export async function CheckUpdates(isManualCheck) {
       state: AppUpdateStage.CheckingForUpdates
     });
 
-    let updatesInfo = await updater.CheckUpdates();
+    let updatesInfo = await updater.CheckUpdates(isAutomaticCheck);
     store.commit("latestVersionInfo", updatesInfo);
 
     setState({

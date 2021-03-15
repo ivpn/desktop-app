@@ -56,7 +56,7 @@ import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
 import path from "path";
 
-import { StartUpdateChecker } from "@/app-updater";
+import { StartUpdateChecker, CheckUpdates } from "@/app-updater";
 import { WasOpenedAtLogin } from "@/auto-launch";
 
 // default copy/edit context menu event handlers
@@ -201,12 +201,10 @@ if (gotTheLock) {
   // Some APIs can only be used after this event occurs.
   app.on("ready", async () => {
     try {
-      InitTray(
-        menuOnShow,
-        menuOnPreferences,
-        menuOnAccount,
-        createUpdateWindow
-      );
+      InitTray(menuOnShow, menuOnPreferences, menuOnAccount, () => {
+        CheckUpdates();
+        createUpdateWindow();
+      });
       isTrayInitialized = true;
     } catch (e) {
       console.error(e);

@@ -235,9 +235,7 @@ export default {
     };
   },
 
-  mounted() {
-    this.onCheckUpdates();
-  },
+  mounted() {},
   updated: function() {
     this.$nextTick(function() {
       // All DOM elements updated (https://ru.vuejs.org/v2/api/#updated)

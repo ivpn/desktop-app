@@ -616,32 +616,50 @@ async function AccountStatus() {
   ]);
 }
 
-async function GetAppUpdateInfo() {
+async function GetAppUpdateInfo(doManualUpdateCheck) {
   try {
     let apiAlias = "";
     let apiAliasSign = "";
 
-    switch (Platform()) {
-      case PlatformEnum.Windows:
-        apiAlias = "updateInfo_Windows";
-        apiAliasSign = "updateSign_Windows";
-        break;
-      case PlatformEnum.macOS:
-        apiAlias = "updateInfo_macOS";
-        apiAliasSign = "updateSign_macOS";
-        break;
-      case PlatformEnum.Linux:
-        apiAlias = "updateInfo_Linux";
-        // For Linux it is not required to get update signature
-        // because are not perform automatic update for Linux.
-        // We just notifying users about new update available.
-        // Info:
-        //    Linux update is based on Linux repository (standard way for linux platforms)
-        //    (all binaries are signed by PGP key)
-        //apiAliasSign = "updateSign_Linux";
-        break;
-      default:
-        throw new Error("Unsupported platform");
+    if (doManualUpdateCheck !== true) {
+      switch (Platform()) {
+        case PlatformEnum.Windows:
+          apiAlias = "updateInfo_Windows";
+          apiAliasSign = "updateSign_Windows";
+          break;
+        case PlatformEnum.macOS:
+          apiAlias = "updateInfo_macOS";
+          apiAliasSign = "updateSign_macOS";
+          break;
+        case PlatformEnum.Linux:
+          apiAlias = "updateInfo_Linux";
+          // For Linux it is not required to get update signature
+          // because are not perform automatic update for Linux.
+          // We just notifying users about new update available.
+          // Info:
+          //    Linux update is based on Linux repository (standard way for linux platforms)
+          //    (all binaries are signed by PGP key)
+          //apiAliasSign = "updateSign_Linux";
+          break;
+        default:
+          throw new Error("Unsupported platform");
+      }
+    } else {
+      switch (Platform()) {
+        case PlatformEnum.Windows:
+          apiAlias = "updateInfo_manual_Windows";
+          apiAliasSign = "updateSign_manual_Windows";
+          break;
+        case PlatformEnum.macOS:
+          apiAlias = "updateInfo_manual_macOS";
+          apiAliasSign = "updateSign_manual_macOS";
+          break;
+        case PlatformEnum.Linux:
+          apiAlias = "updateInfo_manual_Linux";
+          break;
+        default:
+          throw new Error("Unsupported platform");
+      }
     }
 
     let updateInfoResp = await sendRecv(

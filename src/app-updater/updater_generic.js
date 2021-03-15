@@ -36,9 +36,24 @@ const os = require("os");
 let DownloadUpdateCancelled = false;
 let DownloadRequest = null;
 
-export async function CheckUpdates() {
+export async function CheckUpdates(isAutomaticCheck) {
+  const defUpdInf = await checkUpdates();
+  if (isAutomaticCheck == true) return defUpdInf;
+  else {
+    const doManualUpdateCheck = true;
+    const manualUpdInf = await checkUpdates(doManualUpdateCheck);
+    if (!manualUpdInf) return defUpdInf;
+    if (!defUpdInf) return manualUpdInf;
+
+    if (IsNewVersion(defUpdInf.generic.version, manualUpdInf.generic.version))
+      return manualUpdInf;
+    return defUpdInf;
+  }
+}
+
+async function checkUpdates(doManualUpdateCheck) {
   try {
-    let updatesInfoData = await client.GetAppUpdateInfo();
+    let updatesInfoData = await client.GetAppUpdateInfo(doManualUpdateCheck);
 
     if (
       !updatesInfoData ||
