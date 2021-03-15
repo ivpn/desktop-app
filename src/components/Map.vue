@@ -123,6 +123,7 @@
             v-show="isMapLoaded"
             class="mapLocationPoint"
             v-for="l of locationsToDisplay"
+            @wheel="wheel"
             v-on:click="locationClicked(l.location)"
             v-bind:key="'point_' + l.location.city"
             v-bind:class="{
@@ -142,6 +143,7 @@
             v-show="isMapLoaded"
             class="mapLocationName"
             v-for="l of locationsToDisplay"
+            @wheel="wheel"
             v-on:click="locationClicked(l.location)"
             v-bind:key="'name_' + l.location.city"
             v-bind:class="{
@@ -196,6 +198,8 @@ import GeolocationInfoControl from "@/components/controls/control-geolocation-in
 
 import Image_world_map_dark from "@/assets/world_map_dark.svg";
 import Image_world_map_light from "@/assets/world_map_light.svg";
+
+import config from "@/config";
 
 import {
   notLinear,
@@ -625,7 +629,6 @@ export default {
           // SCROLL VERTICALLY
           const scrollTopOffset = this.lastMoveY - offsetY;
           const newScrollTop = this.combinedDiv.scrollTop + scrollTopOffset;
-          console.log(newScrollTop, scrollTopOffset);
           if (
             // map moving bottom
             // (minimum visible bottom map part = 2249px+30% of natural height)
@@ -889,13 +892,13 @@ export default {
     },*/
 
     zoomIn(e) {
-      let step = 0.01;
-      let minScale = 0.04;
+      let step = 0.025;
+      let minScale = 0.09;
       if (this.scale <= minScale) return;
       this.updateScale(this.scale - step, e);
     },
     zoomOut(e) {
-      let step = 0.01;
+      let step = 0.025;
       let maxScale = 1.0;
       if (this.scale >= maxScale) return;
       this.updateScale(this.scale + step, e);
@@ -908,8 +911,16 @@ export default {
       const l = this.combinedDiv.scrollLeft;
       const t = this.combinedDiv.scrollTop;
 
+      if (zoomPoint && zoomPoint.srcElement != this.canvas) {
+        // if event come from non-canvas element (mouse is over location point\text)
+        // - necessary to recalculate mouse position accourding canvas area
+        zoomPoint = {
+          offsetX: zoomPoint.clientX - config.MinimizedUIWidth,
+          offsetY: zoomPoint.clientY
+        };
+      }
       // save geo coordinates of center point (to be able to center same point after scalling)
-      if (zoomPoint == null) {
+      else if (zoomPoint == null) {
         zoomPoint = {
           offsetX: this.canvas.width / 2,
           offsetY: this.canvas.height / 2
@@ -931,7 +942,6 @@ export default {
       // change scale
       this.scale = newScale;
       this.map.style.width = `${mapFullW * this.scale}px`;
-
       this.mapLocationsContainer.style.width = `${mapFullW * this.scale}px`;
       this.mapLocationsContainer.style.height = `${mapFullH * this.scale}px`;
 
