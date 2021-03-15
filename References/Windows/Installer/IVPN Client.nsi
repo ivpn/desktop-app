@@ -341,6 +341,19 @@ Section "${PRODUCT_NAME}" SecIVPN
   SetRegView 64
   SetOutPath "$INSTDIR"
 
+  ; <<<
+  ; Checking if AutoStart item has correct value
+  ReadRegStr $R0 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}"
+  StrCmp $R0 "" reg_autostart_done ; no AutoRun registry item
+  ${StrLoc} $R2 $R0 "${APP_RUN_PATH}" ">"
+  ; if correct path not found - it is bad value and we should delete it
+  StrCmp $R2 "" reg_autostart_delete reg_autostart_done
+  reg_autostart_delete:
+  DetailPrint "Removing old AutoStart item from the registry ..."
+  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}"
+  reg_autostart_done:
+  ; <<<
+
   ; Stop IVPN service
   stopservcice:
   Call StopService
@@ -507,6 +520,9 @@ Section "Uninstall"
   ${If} $0 == ""
       ; uninstall
       nsExec::ExecToStack '"$SYSDIR\taskkill" /IM "${PROCESS_NAME}" /T /F'
+      ; remove AutoStart item
+      DetailPrint "Removing AutoStart item from the registry ..."
+      DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}"
   ${Else}
       ; update
       ; Do not use /T option when upgrade.
