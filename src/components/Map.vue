@@ -862,7 +862,7 @@ export default {
     wheel(e) {
       this.isPopupVisible = false;
       if (e.deltaY > 0) this.zoomIn(e);
-      else this.zoomOut(e);
+      else if (e.deltaY < 0) this.zoomOut(e);
     },
     /*
     async startZooming(expectedScale) {
@@ -892,16 +892,24 @@ export default {
     },*/
 
     zoomIn(e) {
-      let step = 0.025;
-      let minScale = 0.09;
+      const step = 0.025;
+      const minScale = 0.09;
+      let newScale = this.scale - step;
+
       if (this.scale <= minScale) return;
-      this.updateScale(this.scale - step, e);
+      if (newScale < minScale) newScale = minScale;
+
+      this.updateScale(newScale, e);
     },
     zoomOut(e) {
-      let step = 0.025;
-      let maxScale = 1.0;
+      const step = 0.025;
+      const maxScale = 1.0;
+      let newScale = this.scale + step;
+
       if (this.scale >= maxScale) return;
-      this.updateScale(this.scale + step, e);
+      if (newScale > maxScale) newScale = maxScale;
+
+      this.updateScale(newScale, e);
     },
 
     updateScale(newScale, zoomPoint) {
