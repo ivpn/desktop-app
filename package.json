@@ -1,6 +1,6 @@
 {
   "name": "ivpn-ui",
-  "version": "3.2.100",
+  "version": "3.2.101",
   "productName": "IVPN",
   "description": "IVPN Client",
   "author": "IVPN Limited",
@@ -23,6 +23,7 @@
     "core-js": "3.6.5",
     "electron-fetch": "1.7.1",
     "electron-log": "4.2.2",
+    "fast-xml-parser": "^3.19.0",
     "qrcode-generator": "1.4.4",
     "vue": "2.6.11",
     "vue-router": "3.3.4",

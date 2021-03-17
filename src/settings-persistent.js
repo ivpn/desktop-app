@@ -26,6 +26,7 @@ import path from "path";
 import { app } from "electron";
 
 import store from "@/store";
+import { ReadAndDeleteOldSettingsIfExists } from "@/settings-import-old";
 
 var saveSettingsTimeout = null;
 var saveAccStateTimeout = null;
@@ -36,6 +37,21 @@ const filenameAccState = path.join(userDataFolder, "acc-state.json");
 
 export function InitPersistentSettings() {
   // SETTINGS
+  // importing persistent settings from an old app version (upgrade)
+
+  try {
+    let oldSettings = ReadAndDeleteOldSettingsIfExists();
+    if (oldSettings && Object.keys(oldSettings).length > 0) {
+      const mergedState = merge(store.state.settings, oldSettings, {
+        arrayMerge: combineMerge
+      });
+      store.commit("settings/replaceState", mergedState);
+    }
+  } catch (e) {
+    console.log("ERROR importing settings from old installation:", e);
+  }
+
+  // persistent settings
   if (fs.existsSync(filename)) {
     try {
       // merge data from a settings file
