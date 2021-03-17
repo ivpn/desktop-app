@@ -314,7 +314,10 @@ FunctionEnd
 !define PRODUCT_TAP_WIN_COMPONENT_ID "tapivpn"
 
 Section "${PRODUCT_NAME}" SecIVPN
-  ; <<<<<<<<<<<<<<< Uninstall previous section START
+  SetRegView 64
+  SetOutPath "$INSTDIR"
+
+  ; <<< Uninstall previous section START
   ; hack to not prompt for last 2.12.x releases
   ; It is required for easy migration from 2.x to 3.x version (to do not perform logout)
   ReadRegStr $R1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "DisplayVersion"
@@ -323,34 +326,24 @@ Section "${PRODUCT_NAME}" SecIVPN
 
   ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "UninstallString"
   StrCmp $R0 "" done
-
-  ; # Do not promt before uninstalling previous version
-  ; IfSilent uninst is_not_quiet
-  ; is_not_quiet:
-  ;  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed.$\n$\nClick OK to uninstall the old version." IDOK uninst
-  ;  Abort
-  ;uninst:
-
   DetailPrint "Removing previous installation..."
   ; # '_?=$INSTDIR' is required to be able to wait untill uninstaller finish
   ; # https://nsis.sourceforge.io/When_I_use_ExecWait_uninstaller.exe_it_doesn't_wait_for_the_uninstaller
   ExecWait '"$R0" /S -update _?=$INSTDIR'
-  done:
-  ; Uninstall previous section END >>>>>>>>>>>
 
-  SetRegView 64
-  SetOutPath "$INSTDIR"
+  done:
+  ; >>> Uninstall previous section END
 
   ; <<<
   ; Checking if AutoStart item has correct value
   ReadRegStr $R0 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}"
   StrCmp $R0 "" reg_autostart_done ; no AutoRun registry item
   ${StrLoc} $R2 $R0 "${APP_RUN_PATH}" ">"
-  ; if correct path not found - it is bad value and we should delete it
-  StrCmp $R2 "" reg_autostart_delete reg_autostart_done
-  reg_autostart_delete:
-  DetailPrint "Removing old AutoStart item from the registry ..."
-  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}"
+  ; if correct path not found - it is bad value and we should fix it
+  StrCmp $R2 "" reg_autostart_update reg_autostart_done
+  reg_autostart_update:
+  DetailPrint "Fixing AutoStart registry item ..."  ; "C:\Program Files\IVPN Client\ui\IVPN Client.exe" --hidden
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}" '"${APP_RUN_PATH}" --hidden'
   reg_autostart_done:
   ; <<<
 
@@ -404,6 +397,13 @@ Section "${PRODUCT_NAME}" SecIVPN
     Delete "$INSTDIR\*.*"
     RMDir /r "$INSTDIR\OpenVPN"
     RMDir /r "$INSTDIR\WireGuard"
+
+    ; We should notify somehow to UI app that it can import application settings from previous installation
+    ; Here we saving info about previous version
+    ; So UI can find old settings by path: C:\Users\<USER>\AppData\Local\IVPN_Limited\IVPN_Client.exe_Url_2dhygxwi22dge5p2fgmqhjirdotrmd3i\<VERSION>\user.config
+    FileOpen $9 "$INSTDIR\old.ver" w ;Opens a Empty File and fills it
+    FileWrite $9 "$R1.0" ; save old app version (x.x.x.0)
+    FileClose $9 ;Closes the filled file
   ${EndIf}
 
   ; extract all files from source dir (it is important that IVPN Client Application must be stopped on this moment)

@@ -1,4 +1,5 @@
 import { Platform, PlatformEnum } from "@/platform/platform";
+
 import store from "@/store";
 
 import path from "path";
@@ -155,12 +156,33 @@ function readOldSettingsMacOS() {
 }
 function readOldSettingsWindows() {
   try {
-    var parser = require("fast-xml-parser");
+    const fPathOldVer = "C:\\Program Files\\IVPN Client\\old.ver";
 
-    const data = fs.readFileSync(
-      "/Users/test/Downloads/settings/user.config",
-      "utf8"
+    if (!fs.existsSync(fPathOldVer)) return null;
+    const oldVer = fs.readFileSync(fPathOldVer, "utf8");
+
+    // C:\Users\<USER>\AppData\Local\IVPN_Limited\IVPN_Client.exe_Url_2dhygxwi22dge5p2fgmqhjirdotrmd3i\<VERSION>\user.config
+    const settingsOldFile = path.join(
+      process.env.APPDATA,
+      "..", // APPDATA returns 'C:\Users\<USER>\AppData\Roaming' but we need 'C:\Users\<USER>\AppData\Local'
+      "Local",
+      "IVPN_Limited",
+      "IVPN_Client.exe_Url_2dhygxwi22dge5p2fgmqhjirdotrmd3i",
+      oldVer,
+      "user.config"
     );
+
+    if (!fs.existsSync(settingsOldFile)) return null;
+    const data = fs.readFileSync(settingsOldFile, "utf8");
+
+    // remove old settings (to not import it next time)
+    fs.unlinkSync(settingsOldFile);
+
+    try {
+      fs.unlinkSync(fPathOldVer);
+    } catch {
+      // ignore exceptions
+    }
 
     var options = {
       ignoreAttributes: false,
@@ -168,6 +190,8 @@ function readOldSettingsWindows() {
       parseNodeValue: true,
       trimValues: true
     };
+
+    var parser = require("fast-xml-parser");
     var jsonObj = parser.parse(data, options);
 
     const settings =
