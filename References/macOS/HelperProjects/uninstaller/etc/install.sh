@@ -59,6 +59,35 @@ function KillAppProcess
     fi
 }
 
+function StartApp
+{
+    # Start app
+    # Ensure application is started. If no - try to start it with some delay
+    for i in 1 2 2 2 3 4 5 5 6; do # max - 30 seconds to wait
+        echo "[+] Starting '${_app_path}' ..."
+        sudo -u "$USER" open "${_app_path}"
+
+        CntAppRunningProcesses
+        _cnt=$?
+        if [ "${_cnt}" != "0" ]; then
+            echo "[ ] App started"
+            return
+        fi
+
+        echo "[ ] Sleep '${i}' ..."
+        sleep ${i}
+
+        CntAppRunningProcesses
+        _cnt=$?
+        if [ "${_cnt}" != "0" ]; then
+            echo "[ ] App started"
+            return
+        fi
+        echo "[ ] Retry app start ..."
+    done
+    echo "[!] App NOT started"
+}
+
 function CheckSignature
 {
     echo "[+] Checking signature ..."
@@ -150,7 +179,8 @@ UnmountDMG
 # Here we just ensuring that app really closed. If no - forcing it to close
 KillAppProcess
 
-echo "[+] Starting '${_app_path}' ..."
-sudo -u "$USER" open "${_app_path}"
+# Start app
+# Ensure application is started. If no - try to start it with some delay
+StartApp
 
 exit 0
