@@ -40,7 +40,6 @@ export function ReadAndDeleteOldSettingsIfExists() {
   const boolParam = true;
   copyProp("VpnProtocolType", "vpnType");
   copyProp("IsMultiHop", "isMultiHop", boolParam);
-  copyProp("AutoConnectOnStart", "autoConnectOnLaunch", boolParam);
   copyProp("IsLoggingEnabled", "logging", boolParam);
   copyProp("ServiceUseObfsProxy", "connectionUseObfsproxy", boolParam);
   copyProp("FirewallAutoOnOff", "firewallActivateOnConnect", boolParam);
@@ -52,6 +51,12 @@ export function ReadAndDeleteOldSettingsIfExists() {
   copyProp("MacIsShowIconInSystemDock", "showAppInSystemDock", boolParam);
   copyProp("DoNotShowDialogOnAppClose", "quitWithoutConfirmation", boolParam);
   copyProp("DoNotShowDialogOnAppClose", "disconnectOnQuit", boolParam);
+
+  // macos and windows use different name for 'autoConnectOnLaunch'
+  if (oldSettings["AutoConnectOnStart"])
+    copyProp("AutoConnectOnStart", "autoConnectOnLaunch", boolParam);
+  else if (oldSettings["AutoConnectOnLaunch"])
+    copyProp("AutoConnectOnLaunch", "autoConnectOnLaunch", boolParam);
 
   let newWifiConf = {};
   if (oldSettings["ServiceConnectOnInsecureWifi"] !== undefined) {
