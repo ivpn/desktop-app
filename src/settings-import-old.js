@@ -1,5 +1,5 @@
 import { Platform, PlatformEnum } from "@/platform/platform";
-
+import { VpnTypeEnum } from "@/store/types";
 import store from "@/store";
 
 import path from "path";
@@ -7,16 +7,15 @@ import path from "path";
 const fs = require("fs");
 const os = require("os");
 
-export function ReadAndDeleteOldSettingsIfExists() {
+export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
+  if (!mergeMethod) return;
   // NOTE: not importing parameters
-  // Selected server (together with FastestServer)
+  // Fastest server settings
   // Connection port
   // OpenVPN proxy parameters
 
-  const oldSettings = readOldSettings();
-  if (!oldSettings) return null;
-
-  //console.log(oldSettings);
+  const old = readOldSettings();
+  if (!old) return null;
 
   let origSettings = store.state.settings;
   let settingsToMerge = {};
@@ -24,15 +23,15 @@ export function ReadAndDeleteOldSettingsIfExists() {
   // copy value from `oldSettings` to `settingsToMerge` (only if destProp is exist in `origSettings`)
   let copyProp = function(srcPropName, destPropName, isBool) {
     if (
-      oldSettings[srcPropName] === undefined ||
+      old[srcPropName] === undefined ||
       origSettings[destPropName] === undefined
     ) {
       console.debug("Parameter not exist:", srcPropName, "->", destPropName);
       return false;
     }
-    if (!isBool) settingsToMerge[destPropName] = oldSettings[srcPropName];
+    if (!isBool) settingsToMerge[destPropName] = old[srcPropName];
     else {
-      if (oldSettings[srcPropName] == 0) settingsToMerge[destPropName] = false;
+      if (old[srcPropName] == 0) settingsToMerge[destPropName] = false;
       else settingsToMerge[destPropName] = true;
     }
   };
@@ -52,25 +51,52 @@ export function ReadAndDeleteOldSettingsIfExists() {
   copyProp("DoNotShowDialogOnAppClose", "quitWithoutConfirmation", boolParam);
   copyProp("DoNotShowDialogOnAppClose", "disconnectOnQuit", boolParam);
 
-  // macos and windows use different name for 'autoConnectOnLaunch'
-  if (oldSettings["AutoConnectOnStart"])
+  let _svrId = null;
+  let _svrExitId = null;
+  const wgType = VpnTypeEnum.WireGuard;
+  // macos and windows use different name for some parameters
+  if (Platform() === PlatformEnum.macOS) {
     copyProp("AutoConnectOnStart", "autoConnectOnLaunch", boolParam);
-  else if (oldSettings["AutoConnectOnLaunch"])
+
+    if (settingsToMerge.vpnType === wgType) {
+      if (old.LastUsedWgServerId) _svrId = old.LastUsedWgServerId;
+    } else {
+      if (old.LastUsedServerId) _svrId = old.LastUsedServerId;
+      if (old.LastUsedExitServerId) _svrExitId = old.LastUsedExitServerId;
+    }
+  } else if (Platform() === PlatformEnum.Windows) {
     copyProp("AutoConnectOnLaunch", "autoConnectOnLaunch", boolParam);
 
+    if (settingsToMerge.vpnType === wgType) {
+      if (old.LastUsedWgServerId) _svrId = old.LastUsedWgServerId;
+    } else {
+      if (old.ServerId) _svrId = old.ServerId;
+      if (old.ExitServerId) _svrExitId = old.ExitServerId;
+    }
+  }
+
+  // detect FastestServer selection
+  let _fastestSvrId = null;
+  if (settingsToMerge.vpnType === wgType) {
+    if (old.LastWgFastestServerId) _fastestSvrId = old.LastWgFastestServerId;
+  } else {
+    if (old.LastOvpnFastestServerId)
+      _fastestSvrId = old.LastOvpnFastestServerId;
+  }
+  settingsToMerge.isFastestServer = _svrId && _svrId === _fastestSvrId;
+
   let newWifiConf = {};
-  if (oldSettings["ServiceConnectOnInsecureWifi"] !== undefined) {
+  if (old["ServiceConnectOnInsecureWifi"] !== undefined) {
     newWifiConf.connectVPNOnInsecureNetwork =
-      oldSettings["ServiceConnectOnInsecureWifi"] == 0 ? false : true;
+      old["ServiceConnectOnInsecureWifi"] == 0 ? false : true;
   }
 
   // trusted networks config
   try {
-    if (oldSettings.NetworkActions) {
-      let oldWifiConf = JSON.parse(oldSettings.NetworkActions);
+    if (old.NetworkActions) {
+      let oldWifiConf = JSON.parse(old.NetworkActions);
 
-      newWifiConf.trustedNetworksControl =
-        oldSettings.IsNetworkActionsEnabled == 1;
+      newWifiConf.trustedNetworksControl = old.IsNetworkActionsEnabled == 1;
       newWifiConf.actions = {
         unTrustedConnectVpn: oldWifiConf.UnTrustedConnectToVPN,
         unTrustedEnableFirewall: oldWifiConf.UnTrustedEnableKillSwitch,
@@ -112,7 +138,47 @@ export function ReadAndDeleteOldSettingsIfExists() {
     console.warn("Error importing WIFI settings from old installation:", e);
   }
 
-  return settingsToMerge;
+  // integrating imported data into settings
+  try {
+    // integrate old settings into ours
+    if (settingsToMerge && Object.keys(settingsToMerge).length > 0) {
+      mergeMethod(settingsToMerge);
+    }
+    console.log("Old configuration import DONE.");
+  } catch (e) {
+    _svrId = null;
+    _svrExitId = null;
+    console.log("ERROR importing settings from old installation:", e);
+  }
+
+  // selected servers can not be imported immediately (because servers list still not initialized)
+  // we keeping this properties locally until "vpnState/servers" will be updated
+  if (_svrId || _svrExitId) {
+    let unsubscribeMethod = store.subscribe(mutation => {
+      try {
+        if (mutation.type === "vpnState/servers" && (_svrId || _svrExitId)) {
+          const hashedSvrs = store.state.vpnState.serversHashed;
+          if (_svrId) {
+            let svr = hashedSvrs[_svrId];
+            if (svr) store.commit("settings/serverEntry", svr);
+
+            let svrEx = hashedSvrs[_svrExitId];
+            if (svrEx) store.commit("settings/serverExit", svrEx);
+          }
+
+          _svrId = null;
+          _svrExitId = null;
+          // we do not need subscription anymore
+          if (unsubscribeMethod) unsubscribeMethod();
+        }
+      } catch (e) {
+        console.error(
+          `Error in ImportAndDeleteOldSettingsIfExists (store.subscribe):`,
+          e
+        );
+      }
+    });
+  }
 }
 
 function readOldSettings() {
@@ -159,6 +225,7 @@ function readOldSettingsMacOS() {
   }
   return null;
 }
+
 function readOldSettingsWindows() {
   try {
     const fPathOldVer = "C:\\Program Files\\IVPN Client\\old.ver";

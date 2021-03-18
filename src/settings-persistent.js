@@ -26,7 +26,7 @@ import path from "path";
 import { app } from "electron";
 
 import store from "@/store";
-import { ReadAndDeleteOldSettingsIfExists } from "@/settings-import-old";
+import { ImportAndDeleteOldSettingsIfExists } from "@/settings-import-old";
 
 var saveSettingsTimeout = null;
 var saveAccStateTimeout = null;
@@ -36,22 +36,7 @@ const filename = path.join(userDataFolder, "ivpn-settings.json");
 const filenameAccState = path.join(userDataFolder, "acc-state.json");
 
 export function InitPersistentSettings() {
-  // SETTINGS
-  // importing persistent settings from an old app version (upgrade)
-
-  try {
-    let oldSettings = ReadAndDeleteOldSettingsIfExists();
-    if (oldSettings && Object.keys(oldSettings).length > 0) {
-      const mergedState = merge(store.state.settings, oldSettings, {
-        arrayMerge: combineMerge
-      });
-      store.commit("settings/replaceState", mergedState);
-    }
-  } catch (e) {
-    console.log("ERROR importing settings from old installation:", e);
-  }
-
-  // persistent settings
+  // persistent SETTINGS
   if (fs.existsSync(filename)) {
     try {
       // merge data from a settings file
@@ -69,6 +54,15 @@ export function InitPersistentSettings() {
     console.log(
       "Settings file not exist (probably, the first application start)"
     );
+
+    // importing persistent settings from an old app version (upgrade)
+    console.log("Checking old configuration to import ...");
+    ImportAndDeleteOldSettingsIfExists(importedSettings => {
+      const mergedState = merge(store.state.settings, importedSettings, {
+        arrayMerge: combineMerge
+      });
+      store.commit("settings/replaceState", mergedState);
+    });
   }
 
   // ACCOUNT STATE
@@ -87,25 +81,30 @@ export function InitPersistentSettings() {
     console.log("Account state file not exist (probably, not logged in)");
   }
 
-  // SETTINGS
-  // saves settings object each 2 seconds
-  // (in case if mutations happened in 'settings' named module)
+  // STORE EVENT SUBSCRIPTION
   store.subscribe(mutation => {
-    if (mutation.type.startsWith("settings/")) {
-      if (saveSettingsTimeout != null) clearTimeout(saveSettingsTimeout);
-      saveSettingsTimeout = setTimeout(() => {
-        SaveSettings();
-      }, 2000);
-    }
-  });
-
-  // ACCOUNT STATE
-  store.subscribe(mutation => {
-    if (mutation.type.startsWith("account/")) {
-      if (saveAccStateTimeout != null) clearTimeout(saveAccStateTimeout);
-      saveAccStateTimeout = setTimeout(() => {
-        SaveAccountState();
-      }, 2000);
+    try {
+      // SETTINGS
+      // saves settings object each 2 seconds
+      // (in case if mutations happened in 'settings' named module)
+      if (mutation.type.startsWith("settings/")) {
+        if (saveSettingsTimeout != null) clearTimeout(saveSettingsTimeout);
+        saveSettingsTimeout = setTimeout(() => {
+          SaveSettings();
+        }, 2000);
+      }
+      // ACCOUNT STATE
+      else if (mutation.type.startsWith("account/")) {
+        if (saveAccStateTimeout != null) clearTimeout(saveAccStateTimeout);
+        saveAccStateTimeout = setTimeout(() => {
+          SaveAccountState();
+        }, 2000);
+      }
+    } catch (e) {
+      console.error(
+        `Error in InitPersistentSettings (store.subscribe ${mutation.type}):`,
+        e
+      );
     }
   });
 }
