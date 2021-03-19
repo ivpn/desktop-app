@@ -18,8 +18,12 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
   let origSettings = store.state.settings;
   let settingsToMerge = {};
 
+  const pTypeBool = 1;
+  const pTypeBoolInvert = 2;
+  const pTypeString = 3;
+
   // copy value from `oldSettings` to `settingsToMerge` (only if destProp is exist in `origSettings`)
-  let copyProp = function(srcPropName, destPropName, isBool) {
+  let copyProp = function(srcPropName, destPropName, pType) {
     if (
       old[srcPropName] === undefined ||
       origSettings[destPropName] === undefined
@@ -27,38 +31,54 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
       console.debug("Parameter not exist:", srcPropName, "->", destPropName);
       return false;
     }
-    if (!isBool) settingsToMerge[destPropName] = old[srcPropName];
-    else {
-      if (old[srcPropName] == 0) settingsToMerge[destPropName] = false;
-      else settingsToMerge[destPropName] = true;
+
+    switch (pType) {
+      case pTypeBool:
+        if (old[srcPropName] == 0) settingsToMerge[destPropName] = false;
+        else settingsToMerge[destPropName] = true;
+        break;
+      case pTypeBoolInvert:
+        if (old[srcPropName] == 0) settingsToMerge[destPropName] = true;
+        else settingsToMerge[destPropName] = false;
+        break;
+      case pTypeString:
+        if (typeof myVar === "string")
+          settingsToMerge[destPropName] = old[srcPropName];
+        else settingsToMerge[destPropName] = `${old[srcPropName]}`;
+        break;
+      default:
+        settingsToMerge[destPropName] = old[srcPropName];
+        break;
     }
   };
 
-  const boolParam = true;
   copyProp("VpnProtocolType", "vpnType");
-  copyProp("IsMultiHop", "isMultiHop", boolParam);
-  copyProp("IsLoggingEnabled", "logging", boolParam);
-  copyProp("ServiceUseObfsProxy", "connectionUseObfsproxy", boolParam);
-  copyProp("FirewallAutoOnOff", "firewallActivateOnConnect", boolParam);
-  copyProp("FirewallAutoOnOff", "firewallDeactivateOnDisconnect", boolParam);
-  copyProp("IsAntiTracker", "isAntitracker", boolParam);
-  copyProp("IsAntiTrackerHardcore", "isAntitrackerHardcore", boolParam);
-  copyProp("IsCustomDns", "dnsIsCustom", boolParam);
-  copyProp("CustomDns", "dnsCustom");
-  copyProp("MacIsShowIconInSystemDock", "showAppInSystemDock", boolParam);
-  copyProp("DoNotShowDialogOnAppClose", "quitWithoutConfirmation", boolParam);
-  copyProp("DoNotShowDialogOnAppClose", "disconnectOnQuit", boolParam);
+  copyProp("IsMultiHop", "isMultiHop", pTypeBool);
+  copyProp("IsLoggingEnabled", "logging", pTypeBool);
+  copyProp("ServiceUseObfsProxy", "connectionUseObfsproxy", pTypeBool);
+  copyProp("FirewallAutoOnOff", "firewallActivateOnConnect", pTypeBool);
+  copyProp("FirewallAutoOnOff", "firewallDeactivateOnDisconnect", pTypeBool); //FirewallDisableAutoOnOff
+  copyProp("IsAntiTracker", "isAntitracker", pTypeBool);
+  copyProp("IsAntiTrackerHardcore", "isAntitrackerHardcore", pTypeBool);
+  copyProp("IsCustomDns", "dnsIsCustom", pTypeBool);
+  copyProp("CustomDns", "dnsCustom", pTypeString);
+  copyProp("MacIsShowIconInSystemDock", "showAppInSystemDock", pTypeBool);
+  copyProp("DoNotShowDialogOnAppClose", "quitWithoutConfirmation", pTypeBool);
+  copyProp("DoNotShowDialogOnAppClose", "disconnectOnQuit", pTypeBool);
 
   copyProp("ProxyPort", "ovpnProxyPort");
-  copyProp("ProxyUsername", "ovpnProxyUser"); // (ProxySafePassword (mac) + ProxyPassword (Windows) can not be imported because it is encrypted)
+  copyProp("ProxyUsername", "ovpnProxyUser", pTypeString); // (ProxySafePassword (mac) + ProxyPassword (Windows) can not be imported because it is encrypted)
 
   let _svrId = null;
   let _svrExitId = null;
   const wgType = VpnTypeEnum.WireGuard;
   // macos and windows use different name for some parameters
   if (Platform() === PlatformEnum.macOS) {
-    copyProp("ProxyServer", "ovpnProxyServer");
-    copyProp("AutoConnectOnStart", "autoConnectOnLaunch", boolParam);
+    copyProp("FirewallAutoOnOff", "firewallActivateOnConnect", pTypeBool);
+    copyProp("FirewallAutoOnOff", "firewallDeactivateOnDisconnect", pTypeBool);
+
+    copyProp("ProxyServer", "ovpnProxyServer", pTypeString);
+    copyProp("AutoConnectOnStart", "autoConnectOnLaunch", pTypeBool);
 
     // ovpnProxyType
     switch (old.ProxyType) {
@@ -84,8 +104,19 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
       if (old.LastUsedExitServerId) _svrExitId = old.LastUsedExitServerId;
     }
   } else if (Platform() === PlatformEnum.Windows) {
-    copyProp("ProxyAddress", "ovpnProxyServer");
-    copyProp("AutoConnectOnLaunch", "autoConnectOnLaunch", boolParam);
+    copyProp(
+      "FirewallDisableAutoOnOff",
+      "firewallActivateOnConnect",
+      pTypeBoolInvert
+    );
+    copyProp(
+      "FirewallDisableAutoOnOff",
+      "firewallDeactivateOnDisconnect",
+      pTypeBoolInvert
+    );
+
+    copyProp("ProxyAddress", "ovpnProxyServer", pTypeString);
+    copyProp("AutoConnectOnLaunch", "autoConnectOnLaunch", pTypeBool);
 
     // ovpnProxyType
     if (old.ProxyType === "http" || old.ProxyType === "socks")
@@ -291,7 +322,7 @@ function readOldSettingsMacOS() {
     output = output.replaceAll("\\\\", "\\");
 
     // remove old settings (to not import it next time)
-    fs.unlinkSync(settingsOldFile);
+    // fs.unlinkSync(settingsOldFile);
 
     const arrayOfLines = output.match(/[^\r\n]+/g);
     var re = new RegExp("([a-zA-Z0-9]+) = (.*);");
@@ -338,13 +369,7 @@ function readOldSettingsWindows() {
     const data = fs.readFileSync(settingsOldFile, "utf8");
 
     // remove old settings (to not import it next time)
-    fs.unlinkSync(settingsOldFile);
-
-    try {
-      fs.unlinkSync(fPathOldVer);
-    } catch {
-      // ignore exceptions
-    }
+    // fs.unlinkSync(settingsOldFile);
 
     var options = {
       ignoreAttributes: false,
