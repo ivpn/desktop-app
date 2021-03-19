@@ -326,7 +326,7 @@ export default {
   },
   computed: {
     IsAccountActive: function() {
-      return this.$store.state.account.accountStatus.Active;
+      return this.$store.state.account?.accountStatus?.Active === true;
     },
     port: {
       get() {
