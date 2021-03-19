@@ -448,7 +448,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if req.GetServersList == true {
 			serv, _ := p._service.ServersList()
-			p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, req.Idx)
+			if (serv!=nil) {
+				p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, req.Idx)
+			}
 		}
 
 		if req.GetStatus == true {
