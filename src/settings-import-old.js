@@ -1,5 +1,5 @@
 import { Platform, PlatformEnum } from "@/platform/platform";
-import { VpnTypeEnum } from "@/store/types";
+import { VpnTypeEnum, Ports } from "@/store/types";
 import store from "@/store";
 
 import path from "path";
@@ -10,9 +10,7 @@ const os = require("os");
 export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
   if (!mergeMethod) return;
   // NOTE: not importing parameters
-  // Fastest server settings
-  // Connection port
-  // OpenVPN proxy parameters
+  // OpenVPN proxyPassword (and 'Auto' proxy type)
 
   const old = readOldSettings();
   if (!old) return null;
@@ -51,13 +49,34 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
   copyProp("DoNotShowDialogOnAppClose", "quitWithoutConfirmation", boolParam);
   copyProp("DoNotShowDialogOnAppClose", "disconnectOnQuit", boolParam);
 
+  copyProp("ProxyPort", "ovpnProxyPort");
+  copyProp("ProxyUsername", "ovpnProxyUser"); // (ProxySafePassword (mac) + ProxyPassword (Windows) can not be imported because it is encrypted)
+
   let _svrId = null;
   let _svrExitId = null;
   const wgType = VpnTypeEnum.WireGuard;
   // macos and windows use different name for some parameters
   if (Platform() === PlatformEnum.macOS) {
+    copyProp("ProxyServer", "ovpnProxyServer");
     copyProp("AutoConnectOnStart", "autoConnectOnLaunch", boolParam);
 
+    // ovpnProxyType
+    switch (old.ProxyType) {
+      case 0: // None
+        break;
+      case 1: // Auto
+        break;
+      case 2: // Http
+        settingsToMerge.ovpnProxyType = "http";
+        break;
+      case 3: // Socks
+        settingsToMerge.ovpnProxyType = "socks";
+        break;
+      default:
+        break;
+    }
+
+    // selected servers
     if (settingsToMerge.vpnType === wgType) {
       if (old.LastUsedWgServerId) _svrId = old.LastUsedWgServerId;
     } else {
@@ -65,14 +84,33 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
       if (old.LastUsedExitServerId) _svrExitId = old.LastUsedExitServerId;
     }
   } else if (Platform() === PlatformEnum.Windows) {
+    copyProp("ProxyAddress", "ovpnProxyServer");
     copyProp("AutoConnectOnLaunch", "autoConnectOnLaunch", boolParam);
 
+    // ovpnProxyType
+    if (old.ProxyType === "http" || old.ProxyType === "socks")
+      settingsToMerge.ovpnProxyType = old.ProxyType;
+
+    // selected servers
     if (settingsToMerge.vpnType === wgType) {
       if (old.LastUsedWgServerId) _svrId = old.LastUsedWgServerId;
     } else {
       if (old.ServerId) _svrId = old.ServerId;
       if (old.ExitServerId) _svrExitId = old.ExitServerId;
     }
+  }
+
+  // selected port
+  try {
+    if (old.PreferredPortIndex && old.WireGuardPreferredPortIndex) {
+      const p = {
+        OpenVPN: Ports.OpenVPN[old.PreferredPortIndex],
+        WireGuard: Ports.WireGuard[old.WireGuardPreferredPortIndex]
+      };
+      settingsToMerge.port = p;
+    }
+  } catch (e) {
+    console.warn("Error importing port settings from old installation:", e);
   }
 
   // detect FastestServer selection
@@ -89,6 +127,36 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
   if (old["ServiceConnectOnInsecureWifi"] !== undefined) {
     newWifiConf.connectVPNOnInsecureNetwork =
       old["ServiceConnectOnInsecureWifi"] == 0 ? false : true;
+  }
+
+  let _fastestSvrList = {};
+  let _fastestSvrListSkipOvpn = true;
+  let _fastestSvrListSkipWg = true;
+  // fastest server list configuration
+  try {
+    if (old.ServersFilter) {
+      const sf = JSON.parse(old.ServersFilter);
+      const svrs = sf.__FastestServersInUse;
+      if (svrs) {
+        if (svrs.WireGuard && svrs.WireGuard.length > 0) {
+          _fastestSvrListSkipWg = false;
+          svrs.WireGuard.forEach(element => {
+            _fastestSvrList[element] = VpnTypeEnum.WireGuard;
+          });
+        }
+        if (svrs.OpenVPN && svrs.OpenVPN.length > 0) {
+          svrs.OpenVPN.forEach(element => {
+            _fastestSvrListSkipOvpn = false;
+            _fastestSvrList[element] = VpnTypeEnum.OpenVPN;
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn(
+      "Error importing FastestServer settings from old installation:",
+      e
+    );
   }
 
   // trusted networks config
@@ -153,11 +221,12 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
 
   // selected servers can not be imported immediately (because servers list still not initialized)
   // we keeping this properties locally until "vpnState/servers" will be updated
-  if (_svrId || _svrExitId) {
+  if (_svrId || _svrExitId || (_fastestSvrList && _fastestSvrList.length > 0)) {
     let unsubscribeMethod = store.subscribe(mutation => {
       try {
         if (mutation.type === "vpnState/servers" && (_svrId || _svrExitId)) {
           const hashedSvrs = store.state.vpnState.serversHashed;
+          // entry/exit servers
           if (_svrId) {
             let svr = hashedSvrs[_svrId];
             if (svr) store.commit("settings/serverEntry", svr);
@@ -166,8 +235,29 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
             if (svrEx) store.commit("settings/serverExit", svrEx);
           }
 
+          // fastest server list config
+          if (_fastestSvrList && Object.keys(_fastestSvrList).length > 0) {
+            let __excludeSvrs = [];
+
+            for (var prop in hashedSvrs) {
+              const isOvpnSvr = hashedSvrs[prop].hosts === undefined;
+              if (
+                (isOvpnSvr && _fastestSvrListSkipOvpn) ||
+                (!isOvpnSvr && _fastestSvrListSkipWg)
+              )
+                continue;
+
+              if (_fastestSvrList[prop] === undefined) {
+                __excludeSvrs.push(prop);
+              }
+            }
+            if (__excludeSvrs.length > 0)
+              store.commit("settings/serversFastestExcludeList", __excludeSvrs);
+          }
+
           _svrId = null;
           _svrExitId = null;
+          _fastestSvrList = null;
           // we do not need subscription anymore
           if (unsubscribeMethod) unsubscribeMethod();
         }
@@ -209,12 +299,12 @@ function readOldSettingsMacOS() {
     let retObj = {};
     arrayOfLines.forEach(element => {
       const match = re.exec(element);
-
       if (match && match[1] && match[2]) {
         try {
           retObj[match[1]] = JSON.parse(match[2]);
         } catch (e) {
           console.warn(`Old settings parameter "${element}" parsing error:`, e);
+          retObj[match[1]] = match[2];
         }
       }
     });
