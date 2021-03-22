@@ -418,7 +418,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command)
 
-	sendStateIfConnected := func(reqIdx int) {
+	sendState := func(reqIdx int, isOnlyIfConnected bool) {
 		vpnState := p._lastVPNState
 		if vpnState.State == vpn.CONNECTED {
 			p.sendResponse(conn, &types.ConnectedResp{
@@ -430,6 +430,12 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				ManualDNS:       dns.GetLastManualDNS(),
 				IsCanPause:      vpnState.IsCanPause},
 				reqIdx)
+		} else if (isOnlyIfConnected == false) {
+			if vpnState.State == vpn.DISCONNECTED {
+				p.sendResponse(conn, &types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqIdx)
+			} else {
+				p.sendResponse(conn, &types.VpnStateResp{StateVal: vpnState.State, State: vpnState.State.String()}, reqIdx)
+			}
 		}
 	}
 
@@ -455,7 +461,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if req.GetStatus == true {
 			// send VPN connection  state
-			sendStateIfConnected(req.Idx)
+			sendState(req.Idx, true)
 
 			// send Firewall state
 			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err == nil {
@@ -475,15 +481,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	case "GetVPNState":
 		// send VPN connection  state
-		vpnState := p._lastVPNState
-		if vpnState.State == vpn.CONNECTED {
-			sendStateIfConnected(reqCmd.Idx)
-		} else if vpnState.State == vpn.DISCONNECTED {
-			p.sendResponse(conn, &types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqCmd.Idx)
-		} else {
-			p.sendResponse(conn, &types.VpnStateResp{StateVal: vpnState.State, State: vpnState.State.String()}, reqCmd.Idx)
-		}
-
+		sendState(reqCmd.Idx, false);
 		break
 
 	case "GetServers":
