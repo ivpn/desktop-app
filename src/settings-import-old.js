@@ -133,7 +133,10 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
 
   // selected port
   try {
-    if (old.PreferredPortIndex && old.WireGuardPreferredPortIndex) {
+    if (
+      old.PreferredPortIndex !== undefined &&
+      old.WireGuardPreferredPortIndex != undefined
+    ) {
       const p = {
         OpenVPN: Ports.OpenVPN[old.PreferredPortIndex],
         WireGuard: Ports.WireGuard[old.WireGuardPreferredPortIndex]

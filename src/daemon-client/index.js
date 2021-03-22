@@ -163,16 +163,7 @@ function send(request, reqNo) {
   return request.Idx;
 }
 
-async function sendRecv(request, waitRespCommandsList, timeoutMs) {
-  requestNo += 1;
-
-  const waiter = {
-    responseNo: requestNo,
-    promiseResolve: null,
-    promiseReject: null,
-    waitForCommandsList: waitRespCommandsList
-  };
-
+function addWaiter(waiter, timeoutMs) {
   // create signaling promise
   const promise = new Promise((resolve, reject) => {
     // 'resolve' will be called in 'processResponse()'
@@ -199,6 +190,19 @@ async function sendRecv(request, waitRespCommandsList, timeoutMs) {
 
   // register new waiter
   waiters.push(waiter);
+
+  return promise;
+}
+
+function sendRecv(request, waitRespCommandsList, timeoutMs) {
+  requestNo += 1;
+
+  const waiter = {
+    responseNo: requestNo,
+    waitForCommandsList: waitRespCommandsList
+  };
+
+  let promise = addWaiter(waiter, timeoutMs);
 
   // send data
   send(request, requestNo);
@@ -501,22 +505,44 @@ async function ConnectToDaemon(setConnState) {
         };
 
         try {
+          const disconnectDaemonFunc = function(err) {
+            if (!err) return;
+            setConnState(DaemonConnectionType.NotConnected);
+
+            if (socket) {
+              socket.destroy();
+              socket = null;
+            }
+
+            log.error(err);
+            reject(err); // REJECT
+          };
+
+          let promiseWaiterServers = addWaiter(
+            {
+              waitForCommandsList: [daemonResponses.ServerListResp]
+            },
+            11000
+          );
+
           setConnState(DaemonConnectionType.Connecting);
           await sendRecv(helloReq, null, 10000);
 
           // the 'store.state.daemonVersion' and 'store.state.daemonIsOldVersionError' must be already initialized
           if (store.state.daemonIsOldVersionError === true) {
-            setConnState(DaemonConnectionType.NotConnected);
-
-            socket.destroy();
-            socket = null;
-
-            const err = new Error(
+            const err = Error(
               `Unsupported IVPN Daemon version: v${store.state.daemonVersion} (minimum required v${config.MinRequiredDaemonVer})`
             );
             err.unsupportedDaemonVersion = true;
-            log.error(err);
-            reject(err); // REJECT
+            disconnectDaemonFunc(err); // REJECT
+            return;
+          }
+
+          // waiting for all required responses
+          try {
+            await promiseWaiterServers;
+          } catch (e) {
+            disconnectDaemonFunc(Error(`Timeout: obtaining servers list`)); // REJECT
             return;
           }
 

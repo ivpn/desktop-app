@@ -408,7 +408,7 @@ export default {
     selectedServer(newVal, oldVal) {
       this.updateCities();
       this.updateAnimations();
-      if (oldVal && newVal && oldVal.gateway !== newVal.gateway)
+      if (!oldVal || (newVal && oldVal.gateway !== newVal.gateway))
         this.centerServer(this.selectedServer);
     },
     isFastestServer() {

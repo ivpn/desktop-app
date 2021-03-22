@@ -617,7 +617,7 @@ async function connectToDaemon(
         // check if we still need to install helper
         darwinDaemonInstaller.IsDaemonInstallationRequired(code => {
           if (code == 0) {
-            // error: the helper not installed (we still detection that helper must be installed (code == 0))
+            // error: the helper not installed (we still detecting that helper must be installed (code == 0))
             console.error(
               `Error installing helper [code1: ${exitCode}, code2: ${code}]`
             );
@@ -641,6 +641,10 @@ async function connectToDaemon(
             "daemonConnectionState",
             DaemonConnectionType.Connecting
           );
+
+          // show/activate application window
+          // (it can happen that app window is overlapped by another windows on a current moment)
+          menuOnShow();
 
           // wait some time to give Daemon chance to fully start
           setTimeout(async () => {

@@ -112,11 +112,10 @@ export default {
     },
 
     isMultihopAllowed: state => {
-      return !(
-        state.accountStatus == null ||
-        state.accountStatus.Capabilities == null ||
-        !state.accountStatus.Capabilities.includes("multihop")
-      );
+      // if no info about account status - let's believe that multihop is allowed
+      if (!state.accountStatus || !state.accountStatus.Capabilities)
+        return true;
+      return state.accountStatus.Capabilities.includes("multihop");
     },
 
     messageFreeTrial: state => {
@@ -159,6 +158,7 @@ export default {
       context.commit("accountStatus", val);
 
       if (context.getters.isMultihopAllowed === false)
+        // TODO: have to be removed from here (potential problem example: VPN is connected multihop but multihop not allowed)
         context.dispatch("settings/isMultiHop", false, { root: true });
     }
   },

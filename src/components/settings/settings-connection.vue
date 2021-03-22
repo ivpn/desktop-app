@@ -326,6 +326,12 @@ export default {
   },
   computed: {
     IsAccountActive: function() {
+      // if no info about account status - let's believe that account is active
+      if (
+        !this.$store.state.account ||
+        !this.$store.state.account.accountStatus
+      )
+        return true;
       return this.$store.state.account?.accountStatus?.Active === true;
     },
     port: {
