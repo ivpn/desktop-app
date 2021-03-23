@@ -996,12 +996,12 @@ async function ResumeConnection() {
   await sendRecv({
     Command: daemonRequests.ResumeConnection
   });
+  store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
 
   try {
     // switch back firewall into enabled state
     if (isFirewallEnabledBeforePause) await EnableFirewall(true);
   } finally {
-    store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
     requestGeoLookupAsync();
   }
 }
