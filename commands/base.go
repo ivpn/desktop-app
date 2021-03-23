@@ -125,7 +125,7 @@ func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN
 	fmt.Fprintln(w, fmt.Sprintf("Firewall\t:\t%v", fwState))
 	fmt.Fprintln(w, fmt.Sprintf("    Allow LAN\t:\t%v", isAllowLAN))
 	if isPersistent {
-		fmt.Fprintln(w, fmt.Sprintf("    Persistent\t:%v", isPersistent))
+		fmt.Fprintln(w, fmt.Sprintf("    Persistent\t:\t%v", isPersistent))
 	}
 
 	return w
