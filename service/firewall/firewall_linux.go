@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
@@ -40,6 +41,9 @@ var (
 	allowedLanIPs       []string
 	allowedForICMP      map[string]struct{}
 	connectedVpnLocalIP string
+
+	delayedAllowLanAllowed bool = true
+	delayedAllowLanStarted bool = false
 )
 
 const (
@@ -140,10 +144,47 @@ func implClientDisconnected() error {
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 	const persistant = true
 	const onlyForICMP = false
-	if isAllowLAN {
+
+	if !isAllowLAN {
+		delayedAllowLanAllowed = false
+	} else {
 		localIPs, err := getLanIPs()
 		if err != nil {
 			return fmt.Errorf("failed to get local IPs: %w", err)
+		}
+
+		if len(localIPs) == 0 {
+			// this can happen, for example, on system boot (when no network interfaces initialised)
+			log.Info("Local LAN addresses not detected: no data to apply the 'Allow LAN' rule")
+			if !delayedAllowLanStarted {
+				delayedAllowLanStarted = true
+				log.Info("Delayed 'Allow LAN': Will try to apply this rule few secons later...")
+				go func(allowLanMulticast bool) {
+					defer func() { delayedAllowLanAllowed = false }()
+					for i := 0; i < 15 && delayedAllowLanAllowed; i++ {
+						time.Sleep(time.Second)
+						ipList, err := getLanIPs()
+						if err != nil {
+							log.Warning(fmt.Errorf("Delayed 'Allow LAN': failed to get local IPs: %w", err))
+							return
+						}
+						if len(ipList) >= 0 {
+							time.Sleep(time.Second) // just to ensure that everything initialised
+							if delayedAllowLanAllowed {
+								log.Info("Delayed 'Allow LAN': apply ...")
+								err := implAllowLAN(true, allowLanMulticast)
+								if err != nil {
+									log.Warning(fmt.Errorf("Delayed 'Allow LAN' error: %w", err))
+								}
+							}
+							return
+						}
+					}
+					log.Info("Delayed 'Allow LAN': no LAN interfaces detected")
+				}(isAllowLanMulticast)
+			}
+		} else {
+			delayedAllowLanAllowed = false
 		}
 
 		if len(allowedLanIPs) <= 0 {
