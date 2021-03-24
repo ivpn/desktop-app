@@ -334,19 +334,6 @@ Section "${PRODUCT_NAME}" SecIVPN
   done:
   ; >>> Uninstall previous section END
 
-  ; <<<
-  ; Checking if AutoStart item has correct value
-  ReadRegStr $R0 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}"
-  StrCmp $R0 "" reg_autostart_done ; no AutoRun registry item
-  ${StrLoc} $R2 $R0 "${APP_RUN_PATH}" ">"
-  ; if correct path not found - it is bad value and we should fix it
-  StrCmp $R2 "" reg_autostart_update reg_autostart_done
-  reg_autostart_update:
-  DetailPrint "Fixing AutoStart registry item ..."  ; "C:\Program Files\IVPN Client\ui\IVPN Client.exe" --hidden
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}" '"${APP_RUN_PATH}" --hidden'
-  reg_autostart_done:
-  ; <<<
-
   ; Stop IVPN service
   stopservcice:
   Call StopService
@@ -405,6 +392,20 @@ Section "${PRODUCT_NAME}" SecIVPN
     FileWrite $9 "$R1.0" ; save old app version (x.x.x.0)
     FileClose $9 ;Closes the filled file
   ${EndIf}
+
+  ; <<<
+  ; Checking if AutoStart item has correct value
+  ReadRegStr $R0 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}"
+  StrCmp $R0 "" reg_autostart_done ; no AutoRun registry item
+  ${StrLoc} $R2 $R0 "${APP_RUN_PATH}" ">"
+  ; if correct path not found - it is bad value and we should fix it
+  StrCmp $R2 "" reg_autostart_update reg_autostart_done
+  reg_autostart_update:
+  DetailPrint "Fixing the AutoStart registry item ..."
+  ; "C:\Program Files\IVPN Client\ui\IVPN Client.exe" --hidden
+  WriteRegStr    HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCT_IDENTIFIER}" '"${APP_RUN_PATH}" --hidden'
+  reg_autostart_done:
+  ; <<<
 
   ; extract all files from source dir (it is important that IVPN Client Application must be stopped on this moment)
   File /r "${SOURCE_DIR}\*.*"
