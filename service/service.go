@@ -539,6 +539,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 	routingChangeChan := make(chan struct{}, 1)
 
+	destinationHostIP := vpnProc.DestinationIP()
+
 	// goroutine: process + forward VPN state change
 	connectRoutinesWaiter.Add(1)
 	go func() {
@@ -569,6 +571,14 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 				case vpn.RECONNECTING:
 					// Disable routing-change detector when reconnecting
 					s._netChangeDetector.Stop()
+					
+					// Add host IP to firewall exceptions
+					// Some OS-specific implementations (e.g. macOS) can remove server host from firewall rules after connection established
+					// We have to allow it's IP to be able to reconnect
+					err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, false)
+					if err != nil {
+						log.Error("Unable to add host to firewall exceptions:", err.Error())
+					}
 
 				case vpn.CONNECTED:
 					// since we are connected - keep connection (reconnect if unexpected disconnection)
@@ -675,7 +685,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 	// Add host IP to firewall exceptions
 	const onlyForICMP = false
-	err := firewall.AddHostsToExceptions([]net.IP{vpnProc.DestinationIP()}, onlyForICMP)
+	err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP)
 	if err != nil {
 		log.Error("Failed to start. Unable to add hosts to firewall exceptions:", err.Error())
 		return err
@@ -791,6 +801,9 @@ func (s *Service) Resume() error {
 	vpn := s._vpn
 	if vpn == nil {
 		return nil
+	}
+	if !vpn.IsPaused() {
+		return nil;
 	}
 
 	log.Info("Resuming...")
