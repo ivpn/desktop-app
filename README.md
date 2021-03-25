@@ -1,6 +1,6 @@
-# IVPN Client UI (beta)
+# IVPN Client UI
 
-**IVPN Client UI  (beta)** is a multi-platform UI for IVPN Client Desktop ([ivpn-desktop-daemon](https://github.com/ivpn/desktop-app-daemon)) built using [Electron](https://www.electronjs.org/) (supported platforms: macOS, Linux, Windows).
+**IVPN Client UI** is a multi-platform UI for IVPN Client Desktop ([ivpn-desktop-daemon](https://github.com/ivpn/desktop-app-daemon)) built using [Electron](https://www.electronjs.org/) (supported platforms: macOS, Linux, Windows).
 
 IVPN Client app is distributed on the official site [www.ivpn.net](https://www.ivpn.net).  
 
