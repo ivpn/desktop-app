@@ -69,6 +69,7 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 let win;
 let settingsWindow;
 let updateWindow;
+let isAppReadyToQuit = false;
 
 let isTrayInitialized = false;
 let lastRouteArgs = null; // last route arguments (requested by renderer process when window initialized)
@@ -173,29 +174,6 @@ if (gotTheLock) {
     Menu.setApplicationMenu(dockMenu);
   }
 
-  // Quit when all windows are closed.
-  app.on("window-all-closed", () => {
-    // if we are waiting to save settings - save it immediately
-    SaveSettings();
-    win = null;
-    lastRouteArgs = null;
-
-    // if Tray initialized - just to keep app in tray
-    if (
-      isTrayInitialized !== true ||
-      store.state.settings.minimizeToTray !== true
-    )
-      app.quit();
-  });
-
-  app.on("activate", () => {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (win === null) {
-      createWindow();
-    }
-  });
-
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
@@ -233,102 +211,39 @@ if (gotTheLock) {
     }
   });
 
+  app.on("activate", () => {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (win === null) {
+      createWindow();
+    }
+  });
+
+  // Quit when all windows are closed.
+  app.on("window-all-closed", async () => {
+    lastRouteArgs = null;
+
+    if (
+      isTrayInitialized == true &&
+      store.state.settings.minimizeToTray == true
+    )
+      return; // skip quit (stay in tray)
+
+    // the app 'before-quit' event will be raised
+    app.quit();
+  });
+
   app.on("before-quit", async event => {
-    // if disconnected -> close application immediately
-    if (store.getters["vpnState/isDisconnected"]) {
-      if (
-        store.state.vpnState.firewallState.IsPersistent == false &&
-        store.state.vpnState.firewallState.IsEnabled == true
-      ) {
-        let actionNo = dialog.showMessageBoxSync({
-          type: "question",
-          message: "Deactivate Firewall?",
-          detail:
-            "The IVPN Firewall is active.\nDo you want to deactivate it before exiting the application?",
-          buttons: [
-            "Cancel",
-            "Keep Firewall activated & Quit",
-            "Deactivate Firewall & Quit"
-          ]
-        });
+    // if we are waiting to save settings - save it immediately
+    SaveSettings();
 
-        switch (actionNo) {
-          case 0: // Cancel
-            // discard exiting
-            event.preventDefault();
-            // show app window back (if not minimizing to tray)
-            if (store.state.settings.minimizeToTray !== true)
-              setTimeout(menuOnShow, 0);
-            break;
+    if (isAppReadyToQuit == true) return; // quit
 
-          case 1: // Keep Firewall activate & Quit
-            // do nothing here
-            break;
-
-          case 2: // Deactivate Firewall & Quit
-            await daemonClient.EnableFirewall(false);
-            break;
-        }
-      }
-      return;
-    }
-
-    let actionNo = 0;
-    if (store.state.settings.quitWithoutConfirmation) {
-      actionNo = store.state.settings.disconnectOnQuit ? 0 : 1;
-    } else {
-      let msgBoxConfig = {
-        type: "question",
-        message: "Are you sure you want to quit?",
-        detail: "You are connected to the VPN.",
-        buttons: [
-          "Cancel",
-          "Disconnect VPN & Quit"
-          //"Keep VPN connected & Quit"
-        ]
-      };
-
-      // discard default event behavior
-      event.preventDefault();
-      // the Main window should be active (required for showMessageBox)
-      menuOnShow();
-      // temporary enable application icon in system dock
-      setAppDockVisibility(true);
-
-      // Using 'showMessageBox' not 'showMessageBoxSync' - this is required to not to block Tray menu items
-      let action = null;
-      if (win == null) action = await dialog.showMessageBox(msgBoxConfig);
-      else action = await dialog.showMessageBox(win, msgBoxConfig);
-      actionNo = action.response;
-
-      // restore default visibility of the application icon in system dock
-      updateAppDockVisibility();
-    }
-    switch (actionNo) {
-      case 0: // Cancel
-        // show app window back (if not minimizing to tray)
-        if (store.state.settings.minimizeToTray !== true)
-          setTimeout(menuOnShow, 0);
-        break;
-
-      case 1: // Exit & Disconnect VPN
-        // Quit application only after connection closed
-        setTimeout(async () => {
-          try {
-            if (
-              store.state.settings.firewallDeactivateOnDisconnect ||
-              store.state.settings.disconnectOnQuit
-            )
-              await daemonClient.EnableFirewall(false);
-
-            await daemonClient.Disconnect();
-          } catch (e) {
-            console.log(e);
-          } finally {
-            app.quit(); // QUIT anyway
-          }
-        }, 0);
-        break;
+    // discard exiting
+    event.preventDefault();
+    if ((await isCanQuit(event)) == true) {
+      isAppReadyToQuit = true;
+      app.quit();
     }
   });
 
@@ -403,6 +318,99 @@ if (gotTheLock) {
       console.error("Error in store subscriber:", e);
     }
   });
+}
+
+async function isCanQuit() {
+  // if disconnected -> close application immediately
+  if (store.getters["vpnState/isDisconnected"]) {
+    if (
+      store.state.vpnState.firewallState.IsPersistent == false &&
+      store.state.vpnState.firewallState.IsEnabled == true
+    ) {
+      let msgBoxConfig = {
+        type: "question",
+        message: "Deactivate Firewall?",
+        detail:
+          "The IVPN Firewall is active.\nDo you want to deactivate it before exiting the application?",
+        buttons: [
+          "Cancel",
+          "Keep Firewall activated & Quit",
+          "Deactivate Firewall & Quit"
+        ]
+      };
+
+      // the Main window should be active (required for showMessageBox)
+      menuOnShow();
+      // temporary enable application icon in system dock
+      setAppDockVisibility(true);
+
+      let action = null;
+      if (win == null) action = await dialog.showMessageBox(msgBoxConfig);
+      else action = await dialog.showMessageBox(win, msgBoxConfig);
+      actionNo = action.response;
+
+      switch (actionNo) {
+        case 0: // Cancel
+          return false;
+
+        case 1: // Keep Firewall activate & Quit
+          // do nothing here
+          break;
+
+        case 2: // Deactivate Firewall & Quit
+          await daemonClient.EnableFirewall(false);
+          break;
+      }
+    }
+    return true;
+  }
+
+  let actionNo = 0;
+  if (store.state.settings.quitWithoutConfirmation) {
+    actionNo = 1;
+  } else {
+    let msgBoxConfig = {
+      type: "question",
+      message: "Are you sure you want to quit?",
+      detail: "You are connected to the VPN.",
+      buttons: ["Cancel", "Disconnect VPN & Quit"]
+    };
+
+    // the Main window should be active (required for showMessageBox)
+    menuOnShow();
+    // temporary enable application icon in system dock
+    setAppDockVisibility(true);
+
+    // Using 'showMessageBox' not 'showMessageBoxSync' - this is required to not to block Tray menu items
+    let action = null;
+    if (win == null) action = await dialog.showMessageBox(msgBoxConfig);
+    else action = await dialog.showMessageBox(win, msgBoxConfig);
+    actionNo = action.response;
+
+    // restore default visibility of the application icon in system dock
+    updateAppDockVisibility();
+  }
+
+  switch (actionNo) {
+    case 0: // Cancel
+      return false;
+
+    case 1: // Exit & Disconnect VPN
+      // Quit application only after connection closed
+      try {
+        if (
+          !store.state.settings.quitWithoutConfirmation ||
+          store.state.settings.disconnectOnQuit
+        ) {
+          if (store.state.settings.firewallDeactivateOnDisconnect)
+            await daemonClient.EnableFirewall(false);
+          await daemonClient.Disconnect();
+        }
+      } catch (e) {
+        console.log(e);
+      }
+      return true;
+  }
 }
 
 function getWindowIcon() {
@@ -488,6 +496,25 @@ function createWindow() {
 
   win.once("ready-to-show", () => {
     win.show();
+  });
+
+  win.on("close", async event => {
+    if (isAppReadyToQuit == true) return;
+    if (
+      isTrayInitialized == true &&
+      store.state.settings.minimizeToTray == true
+    ) {
+      // 'window-all-closed' event will be raised
+      return; // close window
+    }
+
+    event.preventDefault();
+    if ((await isCanQuit()) == true) {
+      isAppReadyToQuit = true;
+      // application 'before-quit' event will be raised
+      app.quit();
+      return;
+    }
   });
 
   win.on("closed", () => {
