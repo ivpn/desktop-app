@@ -101,8 +101,17 @@ static inline void setWifiNotifier(void) {
 import "C"
 import (
 	"strings"
+	"time"
 	"unsafe"
+
+	"github.com/ivpn/desktop-app-daemon/logger"
 )
+
+var log *logger.Logger
+
+func init() {
+	log = logger.NewLogger("wifi")
+}
 
 var internalOnWifiChangedCb func(string)
 
@@ -165,6 +174,21 @@ func GetCurrentNetworkIsInsecure() bool {
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
 func SetWifiNotifier(cb func(string)) error {
 	internalOnWifiChangedCb = cb
-	go C.setWifiNotifier()
+	go func() {
+		log.Info("WiFi notifier enter")
+		defer log.Error("WiFi notifier exit")
+
+		for {
+			// Detection WiFi status change in infinite loop.
+			// C.setWifiNotifier() should never return.
+			//
+			// BUT! It can return in some corner cases (e.g. we call it on system boot when WiFi interface still not initialized)
+			// In this case - we waiting some delay and trying to call this function again
+			C.setWifiNotifier()
+			log.Info("Unexpected WiFi notifier exit")
+			time.Sleep(time.Second)
+			log.Info("WiFi notifier enter. Retry...")
+		}
+	}()
 	return nil
 }
