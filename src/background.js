@@ -344,6 +344,7 @@ async function isCanQuit() {
       // temporary enable application icon in system dock
       setAppDockVisibility(true);
 
+      let actionNo = 0;
       let action = null;
       if (win == null) action = await dialog.showMessageBox(msgBoxConfig);
       else action = await dialog.showMessageBox(win, msgBoxConfig);
