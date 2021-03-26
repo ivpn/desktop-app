@@ -7,13 +7,22 @@
     >
       Loading connection info ...
     </div>
-    <div v-if="!isRequestingLocation">
+    <div v-if="!isRequestingLocation" style="width: 100%">
       <div
         v-if="!isInfoAvailable"
         style="text-align: center"
         class="descriptipn"
       >
         Failed to load connection info
+        <div>
+          <button
+            class="noBordersBtn"
+            v-on:click="onRefreshCurrLocation"
+            style="pointer-events: auto;"
+          >
+            <img width="10" height="10" src="@/assets/refresh.svg" />
+          </button>
+        </div>
       </div>
       <div v-if="isInfoAvailable">
         <div class="flexRow row">
