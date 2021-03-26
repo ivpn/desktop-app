@@ -138,41 +138,88 @@ if (gotTheLock) {
     { scheme: "app", privileges: { secure: true, standard: true } }
   ]);
 
-  // suppress the default menu
-  Menu.setApplicationMenu(null);
-  if (process.env.IS_DEBUG) {
-    // DEBUG: TESTING MENU
-    const dockMenu = Menu.buildFromTemplate([
-      {
-        label: "TEST (development menu)",
-        submenu: [
+  const isMac = process.platform === "darwin";
+  const template = [
+    // { role: 'appMenu' }
+    ...(isMac
+      ? [
           {
-            label: "Open development tools",
-            click() {
-              if (win !== null) win.webContents.openDevTools();
-              if (updateWindow !== null)
-                updateWindow.webContents.openDevTools();
-            }
-          },
-          {
-            label: "Switch to test view",
-            click() {
-              if (win !== null)
-                win.webContents.send("main-change-view-request", "/test");
-            }
-          },
-          {
-            label: "Switch to main view",
-            click() {
-              if (win !== null)
-                win.webContents.send("main-change-view-request", "/");
-            }
+            label: app.name,
+            submenu: [
+              { type: "separator" },
+              { role: "hide" },
+              { role: "hideothers" },
+              { role: "unhide" },
+              { type: "separator" },
+              { role: "quit" }
+            ]
           }
         ]
-      }
-    ]);
-    Menu.setApplicationMenu(dockMenu);
+      : []),
+    // { role: 'fileMenu' }
+    {
+      label: "File",
+      submenu: [isMac ? { role: "close" } : { role: "quit" }]
+    },
+    // { role: 'windowMenu' }
+    {
+      label: "Window",
+      submenu: [
+        { role: "minimize" },
+        ...(isMac
+          ? [
+              { type: "separator" },
+              { role: "front" },
+              { type: "separator" },
+              { role: "window" }
+            ]
+          : [{ role: "close" }])
+      ]
+    },
+    {
+      role: "help",
+      submenu: [
+        {
+          label: "Learn More",
+          click: async () => {
+            const { shell } = require("electron");
+            await shell.openExternal("https://www.ivpn.net/knowledgebase");
+          }
+        }
+      ]
+    }
+  ];
+  if (process.env.IS_DEBUG) {
+    // DEBUG: TESTING MENU
+    template.push({
+      label: "TEST (dev. menu)",
+      submenu: [
+        {
+          label: "Open development tools",
+          click() {
+            if (win !== null) win.webContents.openDevTools();
+            if (updateWindow !== null) updateWindow.webContents.openDevTools();
+          }
+        },
+        {
+          label: "Switch to test view",
+          click() {
+            if (win !== null)
+              win.webContents.send("main-change-view-request", "/test");
+          }
+        },
+        {
+          label: "Switch to main view",
+          click() {
+            if (win !== null)
+              win.webContents.send("main-change-view-request", "/");
+          }
+        }
+      ]
+    });
   }
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
