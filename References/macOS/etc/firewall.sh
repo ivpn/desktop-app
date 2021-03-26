@@ -129,9 +129,18 @@ function disable_firewall {
 function client_connected {
 
     IFACE=$1
+
+    SRC_ADDR=$2
+    SRC_PORT=$3
+    DST_ADDR=$4
+    DST_PORT=$5
+    PROTOCOL=$6
+
+    # echo "CONNECTED IFACE=${IFACE} SRC_ADDR=${SRC_ADDR} SRC_PORT=${SRC_PORT} DST_ADDR=${DST_ADDR} DST_PORT=${DST_PORT} PROTOCOL=${PROTOCOL}"
     pfctl -a ${ANCHOR_NAME}/tunnel -f - <<_EOF
         pass out on ${IFACE} from any to any
         pass in on ${IFACE} from any to any 
+        pass out proto ${PROTOCOL} from port = ${SRC_PORT} to ${DST_ADDR}
 _EOF
 
 }
@@ -176,7 +185,14 @@ function main {
     elif [[ $1 = "-connected" ]]; then       
         
         IFACE=$2  
-        client_connected ${IFACE} 
+
+        SRC_ADDR=$3
+        SRC_PORT=$4
+        DST_ADDR=$5
+        DST_PORT=$6
+        PROTOCOL=$7
+
+        client_connected ${IFACE} ${SRC_ADDR} ${SRC_PORT} ${DST_ADDR} ${DST_PORT} ${PROTOCOL}
 
     elif [[ $1 = "-disconnected" ]]; then
         shift

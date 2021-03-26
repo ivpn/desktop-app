@@ -103,12 +103,17 @@ func implClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP n
 		return fmt.Errorf("failed to get local interface by IP: %w", err)
 	}
 
-	scriptArgs := fmt.Sprintf("-connected %s %s %d %s %d",
+	protocol := "udp"
+	if isTCP {
+		protocol = "tcp"
+	}
+	scriptArgs := fmt.Sprintf("-connected %s %s %d %s %d %s",
 		inf.Name,
 		clientLocalIPAddress,
 		clientPort,
 		serverIP,
-		serverPort)
+		serverPort,
+		protocol)
 	err = shell.Exec(nil, platform.FirewallScript(), scriptArgs)
 	if err != nil {
 		return fmt.Errorf("failed to add rule for current connection directions: %w", err)
