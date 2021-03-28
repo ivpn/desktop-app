@@ -1,6 +1,6 @@
 ---
 name: "Feature request"
-about: Suggest a feature for IVPN UI Beta
+about: Suggest a feature for IVPN UI2
 ---
 
 # Feature request

@@ -15,7 +15,7 @@ IVPN Client app is distributed on the official site [www.ivpn.net](https://www.i
 <a name="about-repo"></a>
 ## About this Repo
 
-This is the official Git repo of the [IVPN Client UI (beta)](https://github.com/ivpn/desktop-app-ui-beta).
+This is the official Git repo of the [IVPN Client UI2](https://github.com/ivpn/desktop-app-ui2).
 
 <a name="installation"></a>
 ## Installation
