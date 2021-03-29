@@ -315,7 +315,9 @@ async function processResponse(response) {
         IsCanPause: "IsCanPause" in obj ? obj.IsCanPause : null
       });
 
-      requestGeoLookupAsync();
+      if (store.state.vpnState.pauseState == PauseStateEnum.Paused)
+        await ApplyPauseConnection();
+      else requestGeoLookupAsync();
       break;
 
     case daemonResponses.DisconnectedResp:
@@ -961,25 +963,31 @@ async function Disconnect() {
 let isFirewallEnabledBeforePause = true;
 async function PauseConnection(pauseSeconds) {
   if (pauseSeconds == null) return;
+  const vpnState = store.state.vpnState;
+  if (vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
+
+  if (vpnState.pauseState !== PauseStateEnum.Paused) {
+    if (!vpnState.firewallState.IsPersistent) {
+      isFirewallEnabledBeforePause = vpnState.firewallState.IsEnabled;
+    }
+    await ApplyPauseConnection();
+  }
+
+  var pauseTill = new Date();
+  pauseTill.setSeconds(pauseTill.getSeconds() + pauseSeconds);
+  store.dispatch("uiState/pauseConnectionTill", pauseTill);
+}
+
+async function ApplyPauseConnection() {
   if (store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
-  if (store.state.vpnState.pauseState === PauseStateEnum.Paused) return;
 
   store.dispatch("vpnState/pauseState", PauseStateEnum.Pausing);
   await sendRecv({
     Command: daemonRequests.PauseConnection
   });
 
-  var pauseTill = new Date();
-  pauseTill.setSeconds(pauseTill.getSeconds() + pauseSeconds);
-  store.dispatch("uiState/pauseConnectionTill", pauseTill);
-
   try {
-    // disable kill-switch (if not in firewall-persistent mode)
-    if (!store.state.vpnState.firewallState.IsPersistent) {
-      isFirewallEnabledBeforePause =
-        store.state.vpnState.firewallState.IsEnabled;
-      if (isFirewallEnabledBeforePause) await EnableFirewall(false);
-    }
+    await EnableFirewall(false);
   } finally {
     store.dispatch("vpnState/pauseState", PauseStateEnum.Paused);
     requestGeoLookupAsync();

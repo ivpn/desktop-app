@@ -221,10 +221,11 @@ export default {
       connect(this, isConnect);
     },
     async onPauseResume(seconds) {
-      if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Resumed) {
+      if (seconds == null || seconds == 0) {
         // RESUME
-        await sender.ResumeConnection();
-      } else if (seconds != null) {
+        if (this.$store.state.vpnState.pauseState != PauseStateEnum.Resumed)
+          await sender.ResumeConnection();
+      } else {
         // PAUSE
         await sender.PauseConnection(seconds);
       }

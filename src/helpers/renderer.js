@@ -27,3 +27,20 @@ export function IsOsDarkColorScheme() {
   if (window.matchMedia("(prefers-color-scheme: dark)").matches) return true;
   return false;
 }
+
+export function GetTimeLeftText(endTime /*Date()*/) {
+  if (endTime == null) return "";
+
+  let secondsLeft = (endTime - new Date()) / 1000;
+  if (secondsLeft <= 0) return "";
+
+  function two(i) {
+    if (i < 10) i = "0" + i;
+    return i;
+  }
+
+  const h = Math.floor(secondsLeft / (60 * 60));
+  const m = Math.floor((secondsLeft - h * 60 * 60) / 60);
+  const s = Math.floor(secondsLeft - h * 60 * 60 - m * 60);
+  return `${two(h)} : ${two(m)} : ${two(s)}`;
+}

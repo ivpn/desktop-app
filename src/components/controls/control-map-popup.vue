@@ -53,6 +53,7 @@
 import serverNameControl from "@/components/controls/control-server-name.vue";
 import serverPingInfoControl from "@/components/controls/control-server-ping.vue";
 import { VpnStateEnum, PauseStateEnum } from "@/store/types";
+import { GetTimeLeftText } from "@/helpers/renderer";
 
 export default {
   props: ["location", "onConnect", "onDisconnect", "onMouseClick", "onResume"],
@@ -62,7 +63,7 @@ export default {
   },
   data: () => ({
     pauseTimeUpdateTimer: null,
-    pauseLeftSeconds: 0
+    pauseTimeLeftText: ""
   }),
   mounted() {
     this.startPauseTimer();
@@ -76,17 +77,6 @@ export default {
       if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Paused)
         return false;
       return this.pauseConnectionTill != null;
-    },
-    pauseTimeLeftText: function() {
-      if (this.pauseLeftSeconds === 0) return "";
-      function two(i) {
-        if (i < 10) i = "0" + i;
-        return i;
-      }
-      const h = Math.floor(this.pauseLeftSeconds / (60 * 60));
-      const m = Math.floor((this.pauseLeftSeconds - h * 60 * 60) / 60);
-      const s = Math.floor(this.pauseLeftSeconds - h * 60 * 60 - m * 60);
-      return `${two(h)} : ${two(m)} : ${two(s)}`;
     },
     isTheCurrentLocation: function() {
       return this.location === this.$store.state.location;
@@ -148,25 +138,23 @@ export default {
   },
   methods: {
     startPauseTimer() {
-      if (this.pauseConnectionTill != null && this.pauseTimeUpdateTimer == null)
-        this.pauseTimeUpdateTimer = setInterval(() => {
-          this.updatePauseTime();
-        }, 1000);
-      this.updatePauseTime();
-    },
-    updatePauseTime() {
-      if (
-        this.pauseConnectionTill == null &&
-        this.pauseTimeUpdateTimer != null
-      ) {
-        this.pauseLeftSeconds = 0;
-        clearInterval(this.pauseTimeUpdateTimer);
-        this.pauseTimeUpdateTimer = null;
-        return;
-      }
+      if (this.pauseTimeUpdateTimer) return;
+      if (!this.$store.state.uiState.pauseConnectionTill) return;
 
-      this.pauseLeftSeconds = (this.pauseConnectionTill - new Date()) / 1000;
-      if (this.pauseLeftSeconds < 0) this.pauseLeftSeconds = 0;
+      this.pauseTimeUpdateTimer = setInterval(() => {
+        this.pauseTimeLeftText = GetTimeLeftText(
+          this.$store.state.uiState.pauseConnectionTill
+        );
+
+        if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Paused) {
+          clearInterval(this.pauseTimeUpdateTimer);
+          this.pauseTimeUpdateTimer = null;
+        }
+      }, 1000);
+
+      this.pauseTimeLeftText = GetTimeLeftText(
+        this.$store.state.uiState.pauseConnectionTill
+      );
     }
   }
 };
