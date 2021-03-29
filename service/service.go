@@ -1126,6 +1126,11 @@ func (s *Service) logOut(needToDeleteOnBackend bool) error {
 
 	s._preferences.SetSession("", "", "", "", "", "", "")
 
+	// Disable firewall
+	s.SetKillSwitchState(false)
+	// Disconnect (if connected)
+	s.Disconnect()
+
 	// notify clients about session update
 	s._evtReceiver.OnServiceSessionChanged()
 
