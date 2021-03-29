@@ -571,7 +571,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 				case vpn.RECONNECTING:
 					// Disable routing-change detector when reconnecting
 					s._netChangeDetector.Stop()
-					
+
 					// Add host IP to firewall exceptions
 					// Some OS-specific implementations (e.g. macOS) can remove server host from firewall rules after connection established
 					// We have to allow it's IP to be able to reconnect
@@ -790,6 +790,9 @@ func (s *Service) Pause() error {
 	if vpn == nil {
 		return nil
 	}
+	if vpn.IsPaused() {
+		return nil
+	}
 
 	log.Info("Pausing...")
 	firewall.ClientPaused()
@@ -803,7 +806,7 @@ func (s *Service) Resume() error {
 		return nil
 	}
 	if !vpn.IsPaused() {
-		return nil;
+		return nil
 	}
 
 	log.Info("Resuming...")
