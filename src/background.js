@@ -719,7 +719,7 @@ async function connectToDaemon(
 
           // show/activate application window
           // (it can happen that app window is overlapped by another windows on a current moment)
-          menuOnShow();
+          if (store.state.settings.minimizeToTray != true) menuOnShow();
 
           // wait some time to give Daemon chance to fully start
           setTimeout(async () => {
