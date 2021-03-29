@@ -169,6 +169,8 @@ func checkStatus() error {
 	acc := stat.Account
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 
+	fmt.Fprintln(w, fmt.Sprintf("Account ID:\t%v", helloResp.Session.AccountID))
+
 	if acc.IsFreeTrial {
 		fmt.Fprintln(w, fmt.Sprintf("Plan:\tFree Trial"))
 	} else {
