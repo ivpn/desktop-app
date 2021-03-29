@@ -1,15 +1,15 @@
 ---
 name: "Bug report"
-about: Report a bug in IVPN UI Beta
+about: Report a bug in IVPN UI2
 ---
 
 # Bug report
 
 ## Describe your environment
 
-* Device: _____  
-* OS name and version: _____  
-* IVPN app version: _____  
+* Device: _____
+* OS name and version: _____
+* IVPN app version: _____
 
 ## Describe the problem
 
@@ -21,11 +21,11 @@ about: Report a bug in IVPN UI Beta
 
 ### Observed Results:
 
-* What happened? This could be a description, log output, etc.  
+* What happened? This could be a description, log output, etc.
 
 ### Expected Results:
 
-* What did you expect to happen?  
+* What did you expect to happen?
 
 ### Relevant Code:
 
