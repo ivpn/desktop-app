@@ -16,6 +16,7 @@
             class="noBordersBtn"
             style="padding: 0"
             v-on:click="onAddPauseTimeMenu"
+            v-click-outside="onPauseMenuClickOutside"
           >
             <div class="small_text" align="left" style="min-width:80px;">
               {{ pauseTimeLeftText }}
@@ -24,17 +25,17 @@
 
           <!-- Popup -->
           <div
-            style="background:red; margin-left:50px; margin-top:-5px"
+            style="background:red; margin-top:-5px"
             class="popup"
             v-bind:class="{
-              popupMin: true
+              popupMinShiftedRight: true
             }"
           >
             <div
               class="popuptext"
               v-bind:class="{
                 show: isPauseExtendMenuShow,
-                popuptextMin: true
+                popuptextMinShiftedRight: true
               }"
             >
               <div class="popup_menu_block">
@@ -80,6 +81,7 @@
             style="background: var(--background-color);"
             v-if="isCanPause"
             v-on:click="onPauseMenu"
+            v-click-outside="onPauseMenuClickOutside"
           >
             <imgPause />
           </button>
@@ -151,8 +153,12 @@ import SwitchProgress from "@/components/controls/control-switch.vue";
 import imgPause from "@/components/images/pause.vue";
 import { PauseStateEnum } from "@/store/types";
 import { GetTimeLeftText } from "@/helpers/renderer";
+import ClickOutside from "vue-click-outside";
 
 export default {
+  directives: {
+    ClickOutside
+  },
   components: {
     SwitchProgress,
     imgPause
@@ -226,6 +232,10 @@ export default {
     }
   },
   methods: {
+    onPauseMenuClickOutside() {
+      this.isPauseExtendMenuShow = false;
+      this.isPauseMenuAllowed = false;
+    },
     onPauseMenu() {
       if (this.isPauseMenuAllowed != true) this.onPauseResume(null);
       this.isPauseMenuAllowed = !this.isPauseMenuAllowed;

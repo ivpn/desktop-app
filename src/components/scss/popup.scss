@@ -46,6 +46,7 @@ div.buttonWithPopup {
   transform: rotate(45deg);
 }
 
+//------------------------------------------------------
 // in use for minimalistic UI 
 // (reduced width and position shifted left)
 .popupMin .popuptextMin  {
@@ -53,6 +54,7 @@ div.buttonWithPopup {
   max-width: 160px;
   margin-left: -80px;
 }
+//------------------------------------------------------
 // in use for minimalistic UI 
 // (reduced width and position shifted left)
 .popupMinShifted .popuptextMinShifted  {
@@ -64,6 +66,18 @@ div.buttonWithPopup {
 .popupMinShifted .popuptextMinShifted::after {
   margin-left: 32px;
 }
+//------------------------------------------------------
+// (reduced width and position shifted right)
+.popupMinShiftedRight .popuptextMinShiftedRight  {
+  min-width: 160px;
+  max-width: 160px;
+  margin-left: -30px;
+}
+// arrow location shifted left
+.popupMinShiftedRight .popuptextMinShiftedRight::after {
+  margin-left: -50px;
+}
+//------------------------------------------------------
 
 // Toggle this class - hide and show the popup
 .popup .show {

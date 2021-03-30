@@ -74,6 +74,7 @@
         <button
           class="noBordersBtn sortBtn sortBtnPlatform"
           v-on:click="onSortMenuClicked()"
+          v-click-outside="onSortMenuClickedOutside"
         >
           <img :src="sortImage" />
         </button>
@@ -270,7 +271,12 @@ import Image_check_thin from "@/assets/check-thin.svg";
 import Image_star_active from "@/assets/star-active.svg";
 import Image_star_inactive from "@/assets/star-inactive.svg";
 
+import ClickOutside from "vue-click-outside";
+
 export default {
+  directives: {
+    ClickOutside
+  },
   props: [
     "onBack",
     "onServerChanged",
@@ -465,6 +471,9 @@ export default {
 
       this.onServerChanged(server, this.isExitServer != null);
       this.onBack();
+    },
+    onSortMenuClickedOutside: function() {
+      this.isSortMenu = false;
     },
     onSortMenuClicked: function() {
       this.isSortMenu = !this.isSortMenu;
