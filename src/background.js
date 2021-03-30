@@ -624,8 +624,6 @@ function closeSettingsWindow() {
 }
 // UPDATE WINDOW
 function createUpdateWindow() {
-  if (win == null) createWindow();
-
   if (updateWindow != null) {
     closeUpdateWindow();
   }
@@ -642,14 +640,15 @@ function createUpdateWindow() {
     resizable: false,
     fullscreenable: false,
     maximizable: false,
-
-    parent: win,
+    minimizable: false,
 
     center: true,
     title: "IVPN Update",
 
     autoHideMenuBar: true
   };
+
+  if (win != null) windowConfig.parent = win;
 
   updateWindow = createBrowserWindow(windowConfig);
 
