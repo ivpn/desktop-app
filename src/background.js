@@ -834,7 +834,10 @@ function setAppDockVisibility(isShow) {
     }
   } else {
     // macOS
-    if (app != null && app.dock != null) app.dock.hide(); // remove from dock
+    if (app != null && app.dock != null) {
+      app.dock.hide(); // remove from dock
+      if (win) win.show(); // ensure window is still shown (sometimes on macOS window is jumping under other window)
+    }
 
     // Windows & Linux
     if (win != null) {
