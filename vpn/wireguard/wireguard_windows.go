@@ -181,6 +181,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 					}
 
 					// reconnected successfully
+					wg.internals.isPaused = false
 					log.Info("Resumed")
 					break
 				}

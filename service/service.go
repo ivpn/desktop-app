@@ -790,9 +790,6 @@ func (s *Service) Pause() error {
 	if vpn == nil {
 		return nil
 	}
-	if vpn.IsPaused() {
-		return nil
-	}
 
 	log.Info("Pausing...")
 	firewall.ClientPaused()
