@@ -386,8 +386,6 @@ async function isCanQuit() {
         ]
       };
 
-      // the Main window should be active (required for showMessageBox)
-      menuOnShow();
       // temporary enable application icon in system dock
       setAppDockVisibility(true);
 
@@ -424,8 +422,6 @@ async function isCanQuit() {
       buttons: ["Cancel", "Disconnect VPN & Quit"]
     };
 
-    // the Main window should be active (required for showMessageBox)
-    menuOnShow();
     // temporary enable application icon in system dock
     setAppDockVisibility(true);
 
