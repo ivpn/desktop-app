@@ -644,8 +644,6 @@ function createUpdateWindow() {
     autoHideMenuBar: true
   };
 
-  if (win != null) windowConfig.parent = win;
-
   updateWindow = createBrowserWindow(windowConfig);
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {

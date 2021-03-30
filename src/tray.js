@@ -225,9 +225,41 @@ function updateTrayMenu() {
     } else {
       // PAUSE\RESUME
       if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED) {
-        if (store.state.vpnState.pauseState === PauseStateEnum.Paused)
+        if (store.state.vpnState.pauseState === PauseStateEnum.Paused) {
           mainMenu.push({ label: "Resume", click: menuItemResume });
-        else if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) {
+          const pauseSubMenuTemplate = [
+            {
+              label: "Resume in 5 min",
+              click: () => {
+                menuItemPause(5 * 60);
+              }
+            },
+            {
+              label: "Resume in 30 min",
+              click: () => {
+                menuItemPause(30 * 60);
+              }
+            },
+            {
+              label: "Resume in 1 hour",
+              click: () => {
+                menuItemPause(1 * 60 * 60);
+              }
+            },
+            {
+              label: "Resume in 3 hours",
+              click: () => {
+                menuItemPause(3 * 60 * 60);
+              }
+            }
+          ];
+          mainMenu.push({
+            label: "Resume in",
+            type: "submenu",
+            submenu: Menu.buildFromTemplate(pauseSubMenuTemplate)
+          });
+          mainMenu.push({ type: "separator" });
+        } else if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) {
           const pauseSubMenuTemplate = [
             {
               label: "Pause for 5 min",
