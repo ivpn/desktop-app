@@ -143,76 +143,80 @@ func implClientDisconnected() error {
 
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 	const persistant = true
-	const onlyForICMP = false
+	const notOnlyForICMP = false
 
 	if !isAllowLAN {
+		// LAN NOT ALLOWED
 		delayedAllowLanAllowed = false
-	} else {
-		localIPs, err := getLanIPs()
-		if err != nil {
-			return fmt.Errorf("failed to get local IPs: %w", err)
-		}
-
-		if len(localIPs) == 0 {
-			// this can happen, for example, on system boot (when no network interfaces initialised)
-			log.Info("Local LAN addresses not detected: no data to apply the 'Allow LAN' rule")
-			if !delayedAllowLanStarted {
-				delayedAllowLanStarted = true
-				log.Info("Delayed 'Allow LAN': Will try to apply this rule few secons later...")
-				go func(allowLanMulticast bool) {
-					defer func() { delayedAllowLanAllowed = false }()
-					for i := 0; i < 15 && delayedAllowLanAllowed; i++ {
-						time.Sleep(time.Second)
-						ipList, err := getLanIPs()
-						if err != nil {
-							log.Warning(fmt.Errorf("Delayed 'Allow LAN': failed to get local IPs: %w", err))
-							return
-						}
-						if len(ipList) >= 0 {
-							time.Sleep(time.Second) // just to ensure that everything initialised
-							if delayedAllowLanAllowed {
-								log.Info("Delayed 'Allow LAN': apply ...")
-								err := implAllowLAN(true, allowLanMulticast)
-								if err != nil {
-									log.Warning(fmt.Errorf("Delayed 'Allow LAN' error: %w", err))
-								}
-							}
-							return
-						}
-					}
-					log.Info("Delayed 'Allow LAN': no LAN interfaces detected")
-				}(isAllowLanMulticast)
-			}
-		} else {
-			delayedAllowLanAllowed = false
-		}
-
 		if len(allowedLanIPs) <= 0 {
-			removeHostsFromExceptions(allowedLanIPs, persistant)
+			return nil
 		}
-
-		allowedLanIPs = localIPs
-
-		if isAllowLanMulticast {
-			// allow LAN + multicast
-			allowedLanIPs = append(allowedLanIPs, multicastIP)
-			return addHostsToExceptions(allowedLanIPs, persistant, onlyForICMP)
-		}
-
-		// disallow Multicast
-		removeHostsFromExceptions([]string{multicastIP}, persistant)
-		// allow LAN
-		return addHostsToExceptions(allowedLanIPs, persistant, onlyForICMP)
+		// disallow everything (LAN + multicast)
+		toRemove := allowedLanIPs
+		allowedLanIPs = nil
+		return removeHostsFromExceptions(toRemove, persistant)
 	}
 
-	// disallow everything (LAN + multicast)
-	if len(allowedLanIPs) <= 0 {
+	// LAN ALLOWED
+	localIPs, err := getLanIPs()
+	if err != nil {
+		return fmt.Errorf("failed to get local IPs: %w", err)
+	}
+
+	if len(localIPs) > 0 {
+		delayedAllowLanAllowed = false
+	} else {
+		// this can happen, for example, on system boot (when no network interfaces initialized)
+		log.Info("Local LAN addresses not detected: no data to apply the 'Allow LAN' rule")
+		go delayedAllowLAN(isAllowLanMulticast)
 		return nil
 	}
 
-	toRemove := allowedLanIPs
-	allowedLanIPs = nil
-	return removeHostsFromExceptions(toRemove, persistant)
+	if len(allowedLanIPs) > 0 {
+		removeHostsFromExceptions(allowedLanIPs, persistant)
+	}
+
+	allowedLanIPs = localIPs
+	if isAllowLanMulticast {
+		// allow LAN + multicast
+		allowedLanIPs = append(allowedLanIPs, multicastIP)
+		return addHostsToExceptions(allowedLanIPs, persistant, notOnlyForICMP)
+	}
+
+	// disallow Multicast
+	removeHostsFromExceptions([]string{multicastIP}, persistant)
+	// allow LAN
+	return addHostsToExceptions(allowedLanIPs, persistant, notOnlyForICMP)
+}
+
+func delayedAllowLAN(allowLanMulticast bool) {
+	if delayedAllowLanStarted || delayedAllowLanAllowed == false {
+		return
+	}
+	log.Info("Delayed 'Allow LAN': Will try to apply this rule few seconds later...")
+	delayedAllowLanStarted = true
+
+	defer func() { delayedAllowLanAllowed = false }()
+	for i := 0; i < 25 && delayedAllowLanAllowed; i++ {
+		time.Sleep(time.Second)
+		ipList, err := getLanIPs()
+		if err != nil {
+			log.Warning(fmt.Errorf("Delayed 'Allow LAN': failed to get local IPs: %w", err))
+			return
+		}
+		if len(ipList) >= 0 {
+			time.Sleep(time.Second) // just to ensure that everything initialized
+			if delayedAllowLanAllowed {
+				log.Info("Delayed 'Allow LAN': apply ...")
+				err := implAllowLAN(true, allowLanMulticast)
+				if err != nil {
+					log.Warning(fmt.Errorf("Delayed 'Allow LAN' error: %w", err))
+				}
+			}
+			return
+		}
+	}
+	log.Info("Delayed 'Allow LAN': no LAN interfaces detected")
 }
 
 // AddHostsToExceptions - allow comminication with this hosts

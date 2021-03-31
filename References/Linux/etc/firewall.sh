@@ -219,8 +219,9 @@ function add_exceptions {
   create_chain ${IPv4BIN} ${OUT_CH}
 
   #add new rule
-  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_CH} -s $@ -j ACCEPT
-  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_CH} -d $@ -j ACCEPT
+  # '-C' option is checking if the rule already exists (needed to avoid duplicates)
+  ${IPv4BIN} -w ${LOCKWAITTIME} -C ${IN_CH} -s $@ -j ACCEPT || ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_CH} -s $@ -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -C ${OUT_CH} -d $@ -j ACCEPT || ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_CH} -d $@ -j ACCEPT
 }
 
 function add_direction_exception {
