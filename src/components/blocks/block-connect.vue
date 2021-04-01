@@ -201,6 +201,14 @@ export default {
     isConnected: function() {
       return this.$store.getters["vpnState/isConnected"];
     },
+    pauseConnectionTill: function() {
+      return this.$store.state.uiState.pauseConnectionTill;
+    },
+    isPaused: function() {
+      if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Paused)
+        return false;
+      return this.pauseConnectionTill != null;
+    },
     isCanPause: function() {
       if (!this.isConnected) return false;
       if (this.isProgress === true) return false;
@@ -221,13 +229,10 @@ export default {
     },
     isCanShowPauseMenu: function() {
       return this.isCanPause && this.isPauseMenuAllowed;
-    },
-    pauseConnectionTill: function() {
-      return this.$store.state.uiState.pauseConnectionTill;
     }
   },
   watch: {
-    pauseConnectionTill() {
+    isPaused() {
       this.startPauseTimer();
     }
   },
