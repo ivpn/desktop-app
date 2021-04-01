@@ -392,6 +392,11 @@ func (i *ManagementInterface) miCommunication() {
 					}
 				}
 
+				// erase old routing commands
+				if state == vpn.RECONNECTING {
+					i.eraseRouteAddCommands()
+				}
+
 				// save current state info
 				state := vpn.StateInfo{
 					State:               state,
@@ -488,4 +493,13 @@ func (i *ManagementInterface) addRouteAddCommand(command string) {
 
 	i.routeAddCmds = append(i.routeAddCmds, command)
 	i.log.Debug("New route-add command (", len(i.routeAddCmds), "): ", command)
+}
+
+func (i *ManagementInterface) eraseRouteAddCommands() {
+	i.routeAddCmdsMutex.Lock()
+	defer i.routeAddCmdsMutex.Unlock()
+	if len(i.routeAddCmds) > 0 {
+		i.log.Info("Forgetting old routing commands")
+	}
+	i.routeAddCmds = nil
 }

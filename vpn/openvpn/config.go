@@ -221,7 +221,13 @@ func (c *ConnectionParams) generateConfiguration(
 	cfg = append(cfg, fmt.Sprintf("remote %s %d", c.hostIP, c.hostPort))
 
 	cfg = append(cfg, "resolv-retry infinite")
-	cfg = append(cfg, fmt.Sprintf("lport %d", localPort))
+	if localPort > 0 {
+		// NOTE:
+		// Specifying the local port can lead to losing connectivity after OpenVPN RECONNECTING (observed on macOS)
+		cfg = append(cfg, fmt.Sprintf("lport %d", localPort))
+	} else {
+		cfg = append(cfg, "nobind")
+	}
 	cfg = append(cfg, "persist-key")
 
 	if _, err := os.Stat(platform.OpenvpnCaKeyFile()); os.IsNotExist(err) {

@@ -35,7 +35,6 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/obfsproxy"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
 	"github.com/ivpn/desktop-app-daemon/shell"
@@ -307,11 +306,13 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		return nil
 	}
 
-	// local port to be used for connection (source port)
-	o.localPort, err = netinfo.GetFreePort(o.connectParams.tcp)
-	if err != nil {
-		return err
-	}
+	// Local port to be used for connection (source port)
+	// NOTE:
+	// Specifying the local port can lead to losing connectivity after OpenVPN RECONNECTING (observed on macOS)
+	// Therefore, here we not defining local port but triggering to use 'nobind' parameter in configuration.
+	//o.localPort, err = netinfo.GetFreePort(o.connectParams.tcp)
+	//if err != nil { return err }
+	o.localPort = 0
 
 	miIP, miPort, err := mi.ListenAddress()
 	if err != nil {

@@ -130,7 +130,7 @@ function client_connected {
 
     IFACE=$1
 
-    SRC_ADDR=$2
+    #SRC_ADDR=$2
     SRC_PORT=$3
     DST_ADDR=$4
     DST_PORT=$5
@@ -140,9 +140,9 @@ function client_connected {
     pfctl -a ${ANCHOR_NAME}/tunnel -f - <<_EOF
         pass out on ${IFACE} from any to any
         pass in on ${IFACE} from any to any 
-        pass out proto ${PROTOCOL} from port = ${SRC_PORT} to ${DST_ADDR}
+        pass out proto ${PROTOCOL} from any to ${DST_ADDR} port = ${DST_PORT}
 _EOF
-
+        # pass out proto ${PROTOCOL} from port = ${SRC_PORT} to ${DST_ADDR}
 }
 
 function client_disconnected {
