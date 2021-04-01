@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## Version 3.3.5 - 2020-04-01
+
+[IMPROVED] Overall stability 
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.5.exe)  
+SHA256: 922e1d3db02d2a791a03880771173e22997dceab4106c31e3dff66c76778a7f9   
+[Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.5.dmg)  
+SHA256: 106cef1f4034c0ba40d5c5d4155b77415dec073cdfc3b81e7272f7cb83aa698d  
+
 ## Version 3.3.1 - 2020-03-25
 
 [NEW] First official release of new UI for macOS and Windows  
