@@ -112,6 +112,11 @@ export function InitTray(
         case "account/session":
           updateTrayMenu();
           break;
+
+        case "location":
+          updateTrayMenu();
+          break;
+
         default:
       }
     } catch (e) {
@@ -204,19 +209,30 @@ function updateTrayMenu() {
   // MAIN MENU
   var connectToName = "";
   if (
-    !store.state.settings.isMultiHop &&
-    (store.state.settings.isFastestServer ||
-      store.state.settings.isRandomServer)
+    (!store.state.settings.isMultiHop &&
+      store.state.settings.isFastestServer) ||
+    store.state.settings.isRandomServer
   )
     connectToName = serverName();
   else connectToName = serverName(store.state.settings.serverEntry);
 
   const isLoggedIn = store.getters["account/isLoggedIn"];
-  // menuHandlerVersion
-  var mainMenu = [
-    { label: "Show IVPN", click: menuHandlerShow },
-    { type: "separator" }
-  ];
+
+  // MAIN MENU
+  var mainMenu = [];
+
+  const statusText = GetStatusText();
+  if (statusText) {
+    const lines = statusText.split("\n");
+    lines.forEach(l => {
+      if (l) mainMenu.push({ label: l, enabled: false });
+    });
+    mainMenu.push({ type: "separator" });
+  }
+
+  mainMenu.push({ label: "Show IVPN", click: menuHandlerShow });
+  mainMenu.push({ type: "separator" });
+
   if (isLoggedIn) {
     if (store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED) {
       mainMenu.push({
@@ -313,11 +329,41 @@ function updateTrayMenu() {
     }
     mainMenu.push({ type: "separator" });
   }
+
   mainMenu.push({ label: "Quit", click: menuItemQuit });
 
   const contextMenu = Menu.buildFromTemplate(mainMenu);
   tray.setToolTip("IVPN Client");
   tray.setContextMenu(contextMenu);
+}
+
+function GetStatusText() {
+  let retStr = "";
+  if (store.getters["vpnState/isConnecting"]) retStr += "Connecting...";
+  else if (store.getters["vpnState/isDisconnected"]) retStr += "Disconnected";
+  else if (store.getters["vpnState/isConnected"]) {
+    retStr += `Connected: ${serverName(store.state.settings.serverEntry)}`;
+    if (store.state.vpnState.pauseState === PauseStateEnum.Paused) {
+      retStr += ` (connection Paused)`;
+    }
+  }
+
+  let l = store.state.location;
+  let location = "";
+  if (l) {
+    if (l.city) location += `${l.city}`;
+    if (l.country) {
+      if (location) location += `, `;
+      location += `${l.country}`;
+    }
+
+    if (l.isp) location += ` (ISP: ${l.isp})`;
+  }
+
+  if (l.ip_address) retStr += `\nPublic IP: ${l.ip_address}`;
+  if (location) retStr += `\nLocation: ${location}`;
+
+  return retStr;
 }
 
 function serverName(entryServer, exitServer) {
