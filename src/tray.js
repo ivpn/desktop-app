@@ -204,8 +204,9 @@ function updateTrayMenu() {
   // MAIN MENU
   var connectToName = "";
   if (
-    store.state.settings.isFastestServer ||
-    store.state.settings.isRandomServer
+    !store.state.settings.isMultiHop &&
+    (store.state.settings.isFastestServer ||
+      store.state.settings.isRandomServer)
   )
     connectToName = serverName();
   else connectToName = serverName(store.state.settings.serverEntry);
