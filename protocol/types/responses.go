@@ -104,6 +104,7 @@ type SessionNewResp struct {
 	APIErrorMessage string
 	Session         SessionResp
 	Account         preferences.AccountStatus
+	RawResponse     string
 }
 
 // AccountStatusResp - information about account status (or error info)

@@ -174,6 +174,10 @@ type SessionNew struct {
 	CommandBase
 	AccountID  string
 	ForceLogin bool
+
+	CaptchaID       string
+	Captcha         string
+	Confirmation2FA string
 }
 
 // SessionDelete logout from current device

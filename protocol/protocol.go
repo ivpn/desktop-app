@@ -99,10 +99,11 @@ type Service interface {
 	Resume() error
 	IsPaused() bool
 
-	SessionNew(accountID string, forceLogin bool) (
+	SessionNew(accountID string, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
 		apiCode int,
 		apiErrorMsg string,
 		accountInfo preferences.AccountStatus,
+		rawResponse string,
 		err error)
 
 	SessionDelete() error
@@ -430,7 +431,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				ManualDNS:       dns.GetLastManualDNS(),
 				IsCanPause:      vpnState.IsCanPause},
 				reqIdx)
-		} else if (isOnlyIfConnected == false) {
+		} else if isOnlyIfConnected == false {
 			if vpnState.State == vpn.DISCONNECTED {
 				p.sendResponse(conn, &types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqIdx)
 			} else {
@@ -454,7 +455,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if req.GetServersList == true {
 			serv, _ := p._service.ServersList()
-			if (serv!=nil) {
+			if serv != nil {
 				p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, req.Idx)
 			}
 		}
@@ -481,7 +482,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	case "GetVPNState":
 		// send VPN connection  state
-		sendState(reqCmd.Idx, false);
+		sendState(reqCmd.Idx, false)
 		break
 
 	case "GetServers":
@@ -713,7 +714,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		var resp types.SessionNewResp
-		apiCode, apiErrMsg, accountInfo, err := p._service.SessionNew(req.AccountID, req.ForceLogin)
+		apiCode, apiErrMsg, accountInfo, rawResponse, err := p._service.SessionNew(req.AccountID, req.ForceLogin, req.CaptchaID, req.Captcha, req.Confirmation2FA)
 		if err != nil {
 			if apiCode == 0 {
 				// if apiCode == 0 - it is not API error. Sending error response
@@ -725,14 +726,16 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				APIStatus:       apiCode,
 				APIErrorMessage: apiErrMsg,
 				Session:         types.SessionResp{}, // empty session info
-				Account:         accountInfo}
+				Account:         accountInfo,
+				RawResponse:     rawResponse}
 		} else {
 			// Success. Sending session info
 			resp = types.SessionNewResp{
 				APIStatus:       apiCode,
 				APIErrorMessage: apiErrMsg,
 				Session:         types.CreateSessionResp(p._service.Preferences().Session),
-				Account:         accountInfo}
+				Account:         accountInfo,
+				RawResponse:     rawResponse}
 		}
 
 		// send response

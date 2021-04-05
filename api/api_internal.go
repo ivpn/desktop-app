@@ -194,6 +194,16 @@ func (a *API) doRequestAPIHost(urlPath string, method string, contentType string
 		// using certificate key pinning
 		DialTLS: makeDialer(APIIvpnHashes, false, _apiHost),
 	}
+	if len(APIIvpnHashes) == 0 {
+		log.Warning("No pinned certificates for ", _apiHost)
+		transCfg = &http.Transport{
+			// NOTE: TLSClientConfig not in use in case of DialTLS defined
+			TLSClientConfig: &tls.Config{
+				ServerName: _apiHost,
+			},
+		}
+	}
+
 	// configure http-client with preconfigured TLS transport
 	timeout := _defaultRequestTimeout
 	if timeoutMs > 0 {

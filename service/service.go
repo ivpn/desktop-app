@@ -1033,10 +1033,11 @@ func (s *Service) setCredentials(accountID, session, vpnUser, vpnPass, wgPublicK
 }
 
 // SessionNew creates new session
-func (s *Service) SessionNew(accountID string, forceLogin bool) (
+func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
 	apiCode int,
 	apiErrorMsg string,
 	accountInfo preferences.AccountStatus,
+	rawResponse string,
 	err error) {
 
 	// delete current session (if exists)
@@ -1059,7 +1060,8 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 
 		}
 	}()
-	successResp, errorLimitResp, apiErr, err := s._api.SessionNew(accountID, publicKey, forceLogin)
+	successResp, errorLimitResp, apiErr, rawRespStr, err := s._api.SessionNew(accountID, publicKey, forceLogin, captchaID, captcha, confirmation2FA)
+	rawResponse = rawRespStr
 
 	apiCode = 0
 	if apiErr != nil {
@@ -1070,20 +1072,20 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 		// if SessionsLimit response
 		if errorLimitResp != nil {
 			accountInfo = s.createAccountStatus(errorLimitResp.SessionLimitData)
-			return apiCode, apiErr.Message, accountInfo, err
+			return apiCode, apiErr.Message, accountInfo, rawResponse, err
 		}
 
 		// in case of other API error
 		if apiErr != nil {
-			return apiCode, apiErr.Message, accountInfo, err
+			return apiCode, apiErr.Message, accountInfo, rawResponse, err
 		}
 
 		// not API error
-		return apiCode, "", accountInfo, err
+		return apiCode, "", accountInfo, rawResponse, err
 	}
 
 	if successResp == nil {
-		return apiCode, "", accountInfo, fmt.Errorf("unexpected error when creating a new session")
+		return apiCode, "", accountInfo, rawResponse, fmt.Errorf("unexpected error when creating a new session")
 	}
 
 	// get account status info
@@ -1097,7 +1099,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool) (
 		privateKey,
 		successResp.WireGuard.IPAddress, 0)
 
-	return apiCode, "", accountInfo, nil
+	return apiCode, "", accountInfo, rawResponse, nil
 }
 
 // SessionDelete removes session info

@@ -161,48 +161,56 @@ func (a *API) DoRequestByAlias(apiAlias string) (responseData []byte, err error)
 }
 
 // SessionNew - try to register new session
-func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool) (
+func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
 	*types.SessionNewResponse,
 	*types.SessionNewErrorLimitResponse,
 	*types.APIErrorResponse,
+	string, // RAW response
 	error) {
 
 	var successResp types.SessionNewResponse
 	var errorLimitResp types.SessionNewErrorLimitResponse
 	var apiErr types.APIErrorResponse
 
+	rawResponse := ""
+
 	request := &types.SessionNewRequest{
-		AccountID:  accountID,
-		PublicKey:  wgPublicKey,
-		ForceLogin: forceLogin}
+		AccountID:       accountID,
+		PublicKey:       wgPublicKey,
+		ForceLogin:      forceLogin,
+		CaptchaID:       captchaID,
+		Captcha:         captcha,
+		Confirmation2FA: confirmation2FA}
 
 	data, err := a.requestRaw("", _sessionNewPath, "POST", "application/json", request, 0)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, rawResponse, err
 	}
+
+	rawResponse = string(data)
 
 	// Check is it API error
 	if err := json.Unmarshal(data, &apiErr); err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
+		return nil, nil, nil, rawResponse, fmt.Errorf("failed to deserialize API response: %w", err)
 	}
 
 	// success
 	if apiErr.Status == types.CodeSuccess {
 		if err := json.Unmarshal(data, &successResp); err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
+			return nil, nil, nil, rawResponse, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
-		return &successResp, nil, &apiErr, nil
+		return &successResp, nil, &apiErr, rawResponse, nil
 	}
 
 	// Session limit check
 	if apiErr.Status == types.CodeSessionsLimitReached {
 		if err := json.Unmarshal(data, &errorLimitResp); err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
+			return nil, nil, nil, rawResponse, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
-		return nil, &errorLimitResp, &apiErr, types.CreateAPIError(apiErr.Status, apiErr.Message)
+		return nil, &errorLimitResp, &apiErr, rawResponse, types.CreateAPIError(apiErr.Status, apiErr.Message)
 	}
 
-	return nil, nil, &apiErr, types.CreateAPIError(apiErr.Status, apiErr.Message)
+	return nil, nil, &apiErr, rawResponse, types.CreateAPIError(apiErr.Status, apiErr.Message)
 }
 
 // SessionStatus - get session status

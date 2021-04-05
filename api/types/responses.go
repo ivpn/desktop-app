@@ -56,6 +56,9 @@ type SessionNewResponse struct {
 	VpnUsername string `json:"vpn_username"`
 	VpnPassword string `json:"vpn_password"`
 
+	CaptchaID    string `json:"captcha_id"`
+	CaptchaImage string `json:"captcha_image"`
+
 	ServiceStatus ServiceStatusAPIResp `json:"service_status"`
 
 	WireGuard struct {
