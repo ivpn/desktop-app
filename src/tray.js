@@ -113,7 +113,7 @@ export function InitTray(
           updateTrayMenu();
           break;
 
-        case "location":
+        case "isRequestingLocation":
           updateTrayMenu();
           break;
 
@@ -339,18 +339,20 @@ function updateTrayMenu() {
 
 function GetStatusText() {
   let retStr = "";
-  if (store.getters["vpnState/isConnecting"]) retStr += "Connecting...";
-  else if (store.getters["vpnState/isDisconnected"]) retStr += "Disconnected";
-  else if (store.getters["vpnState/isConnected"]) {
+
+  if (store.getters["vpnState/isConnected"]) {
     retStr += `Connected: ${serverName(store.state.settings.serverEntry)}`;
     if (store.state.vpnState.pauseState === PauseStateEnum.Paused) {
       retStr += ` (connection Paused)`;
     }
-  }
+  } else if (store.getters["vpnState/isConnecting"]) retStr += "Connecting...";
+  else if (store.getters["vpnState/isDisconnecting"])
+    retStr += "Disconnecting...";
+  else retStr += "Disconnected";
 
-  let l = store.state.location;
   let location = "";
-  if (l) {
+  let l = store.state.location;
+  if (l && !store.state.isRequestingLocation) {
     if (l.city) location += `${l.city}`;
     if (l.country) {
       if (location) location += `, `;
@@ -358,10 +360,10 @@ function GetStatusText() {
     }
 
     if (l.isp) location += ` (ISP: ${l.isp})`;
-  }
 
-  if (l.ip_address) retStr += `\nPublic IP: ${l.ip_address}`;
-  if (location) retStr += `\nLocation: ${location}`;
+    if (l.ip_address) retStr += `\nPublic IP: ${l.ip_address}`;
+    if (location) retStr += `\nLocation: ${location}`;
+  }
 
   return retStr;
 }

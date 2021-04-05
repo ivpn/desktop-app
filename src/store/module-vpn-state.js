@@ -167,6 +167,9 @@ export default {
   },
 
   getters: {
+    isDisconnecting: state => {
+      return state.connectionState === VpnStateEnum.DISCONNECTING;
+    },
     isDisconnected: state => {
       return state.connectionState === VpnStateEnum.DISCONNECTED;
     },
