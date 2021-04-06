@@ -1,7 +1,9 @@
 <template>
   <div id="app">
-    <!-- ability to move by mouse when no title for window (macOS) -->
-    <div class="title" v-if="isShowDragableTitle"></div>
+    <!-- ability to move by mouse when no title for window -->
+    <div class="title">
+      <CustomTitleBar />
+    </div>
 
     <router-view />
   </div>
@@ -9,10 +11,13 @@
 
 <script>
 const sender = window.ipcSender;
-import { IsWindowHasTitle } from "@/platform/platform";
 import { InitDefaultCopyMenus } from "@/context-menu/renderer";
+import CustomTitleBar from "@/views/CustomTitleBar.vue";
 
 export default {
+  components: {
+    CustomTitleBar
+  },
   beforeCreate() {
     // function using to re-apply all mutations
     // This is required to send to renderer processes current storage state
@@ -21,10 +26,6 @@ export default {
   computed: {
     isLoggedIn: function() {
       return this.$store.getters["account/isLoggedIn"];
-    },
-    isShowDragableTitle: function() {
-      // macOS UI has no standart movable header (we are adding transparent movable line at the window top)
-      return !IsWindowHasTitle();
     }
   },
   watch: {

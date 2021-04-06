@@ -31,7 +31,13 @@
     </div>
 
     <!-- Buttons panel RIGHT-->
-    <div class="buttonsPanelTopRight" v-if="isBlured !== 'true'">
+    <div
+      class="buttonsPanelTopRight"
+      v-bind:class="{
+        buttonsPanelTopRightNoFrameWindow: !isWindowHasFrame
+      }"
+      v-if="isBlured !== 'true'"
+    >
       <button class="settingsBtn settingsBtnMarginLeft" v-on:click="onSettings">
         <img src="@/assets/settings.svg" />
       </button>
@@ -195,6 +201,7 @@ import { IsOsDarkColorScheme } from "@/helpers/renderer";
 const sender = window.ipcSender;
 import popupControl from "@/components/controls/control-map-popup.vue";
 import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
+import { IsWindowHasFrame } from "@/platform/platform";
 
 import Image_world_map_dark from "@/assets/world_map_dark.svg";
 import Image_world_map_light from "@/assets/world_map_light.svg";
@@ -281,6 +288,9 @@ export default {
   }),
 
   computed: {
+    isWindowHasFrame: function() {
+      return IsWindowHasFrame();
+    },
     mapImage: function() {
       if (this.isDarkTheme) return Image_world_map_dark;
       return Image_world_map_light;
@@ -1365,6 +1375,10 @@ $popup-background: var(--background-color);
   @extend .buttonsPanelTopBase;
   left: 100%;
   margin-left: -166px;
+}
+
+.buttonsPanelTopRightNoFrameWindow {
+  margin-left: -250px;
 }
 
 .buttonsPanelTopLeft {

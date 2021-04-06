@@ -51,7 +51,7 @@ import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
 import { InitConnectionResumer } from "./connection-resumer";
 import { InitTrustedNetworks } from "./trusted-wifi";
-import { IsWindowHasTitle } from "@/platform/platform";
+import { IsWindowHasFrame } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
 import path from "path";
@@ -498,9 +498,6 @@ function createBrowserWindow(config) {
 function createWindow() {
   // Create the browser window.
 
-  let titleBarStyle = "default";
-  if (!IsWindowHasTitle()) titleBarStyle = "hidden"; //"hiddenInset";
-
   let windowConfig = {
     backgroundColor: getBackgroundColor(),
     show: false,
@@ -519,7 +516,8 @@ function createWindow() {
     center: true,
     title: "IVPN",
 
-    titleBarStyle: titleBarStyle,
+    frame: IsWindowHasFrame(),
+    titleBarStyle: "hidden", // applicable only for macOS
     autoHideMenuBar: true
   };
 
@@ -590,7 +588,9 @@ function createSettingsWindow(viewName) {
     center: true,
     title: "Settings",
 
-    autoHideMenuBar: true
+    autoHideMenuBar: true,
+
+    frame: IsWindowHasFrame()
   };
 
   settingsWindow = createBrowserWindow(windowConfig);
@@ -641,7 +641,9 @@ function createUpdateWindow() {
     center: true,
     title: "IVPN Update",
 
-    autoHideMenuBar: true
+    autoHideMenuBar: true,
+
+    frame: IsWindowHasFrame()
   };
 
   updateWindow = createBrowserWindow(windowConfig);

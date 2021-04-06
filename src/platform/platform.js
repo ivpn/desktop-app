@@ -50,6 +50,6 @@ export function Platform() {
   }
 }
 
-export function IsWindowHasTitle() {
-  return Platform() !== PlatformEnum.macOS;
+export function IsWindowHasFrame() {
+  return Platform() === PlatformEnum.macOS;
 }
