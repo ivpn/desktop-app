@@ -6,6 +6,9 @@
           <div
             v-if="isMinimizedButtonsVisible"
             class="minimizedButtonsPanel leftPanelTopMinimizedButtonsPanel"
+            v-bind:class="{
+              minimizedButtonsPanelRightElements: isWindowHasFrame
+            }"
           >
             <button v-on:click="onAccountSettings()">
               <img src="@/assets/user.svg" />
@@ -50,7 +53,7 @@
 const sender = window.ipcSender;
 
 import { DaemonConnectionType } from "@/store/types";
-import { Platform, PlatformEnum } from "@/platform/platform";
+import { Platform, PlatformEnum, IsWindowHasFrame } from "@/platform/platform";
 import Init from "@/components/Init.vue";
 import Login from "@/components/Login.vue";
 import Control from "@/components/Control.vue";
@@ -69,6 +72,9 @@ export default {
     };
   },
   computed: {
+    isWindowHasFrame: function() {
+      return IsWindowHasFrame();
+    },
     isLoggedIn: function() {
       return this.$store.getters["account/isLoggedIn"];
     },
@@ -153,10 +159,15 @@ export default {
   flex-grow: 1;
 }
 
-div.minimizedButtonsPanel {
+div.minimizedButtonsPanelRightElements {
   display: flex;
   justify-content: flex-end;
+}
 
+div.minimizedButtonsPanel {
+  display: flex;
+
+  margin-left: 10px;
   margin-right: 10px;
   margin-top: 10px;
 }
@@ -164,12 +175,17 @@ div.minimizedButtonsPanel {
 div.minimizedButtonsPanel button {
   @extend .noBordersBtn;
 
-  z-index: 1;
+  -webkit-app-region: no-drag;
+  z-index: 101;
   cursor: pointer;
 
   padding: 0px;
   margin-left: 6px;
   margin-right: 6px;
+}
+
+div.minimizedButtonsPanel button:hover {
+  opacity: 80%;
 }
 
 div.minimizedButtonsPanel img {

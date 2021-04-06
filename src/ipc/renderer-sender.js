@@ -260,6 +260,12 @@ export default {
   closeCurrentWindow: () => {
     return invoke("renderer-request-close-current-window");
   },
+  minimizeCurrentWindow: () => {
+    return invoke("renderer-request-minimize-current-window");
+  },
+  getCurrentWindowProperties: () => {
+    return ipcRenderer.sendSync("renderer-request-properties-current-window");
+  },
   uiMinimize: isMinimize => {
     return invoke("renderer-request-UI-minimize", isMinimize);
   },

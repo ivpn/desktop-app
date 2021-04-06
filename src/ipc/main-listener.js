@@ -237,6 +237,21 @@ ipcMain.handle("renderer-request-UI-minimize", async (event, isMinimize) => {
 ipcMain.handle("renderer-request-close-current-window", async event => {
   return await event.sender.getOwnerBrowserWindow().close();
 });
+ipcMain.handle("renderer-request-minimize-current-window", async event => {
+  return await event.sender.getOwnerBrowserWindow().minimize();
+});
+
+ipcMain.on("renderer-request-properties-current-window", event => {
+  const wnd = event.sender.getOwnerBrowserWindow();
+  let retVal = null;
+  if (wnd)
+    retVal = {
+      closable: wnd.closable,
+      maximizable: wnd.maximizable,
+      minimizable: wnd.minimizable
+    };
+  event.returnValue = retVal;
+});
 
 // SHELL
 ipcMain.handle(
