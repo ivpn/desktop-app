@@ -601,12 +601,15 @@ async function ConnectToDaemon(setConnState) {
   });
 }
 
-async function Login(accountID, force) {
+async function Login(accountID, force, captchaID, captcha, confirmation2FA) {
   let resp = await sendRecv(
     {
       Command: daemonRequests.SessionNew,
       AccountID: accountID,
-      ForceLogin: force
+      ForceLogin: force,
+      CaptchaID: captchaID,
+      Captcha: captcha,
+      Confirmation2FA: confirmation2FA
     },
     null,
     30000

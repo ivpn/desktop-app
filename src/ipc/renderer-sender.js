@@ -95,8 +95,15 @@ export default {
     return invoke("renderer-request-refresh-storage");
   },
 
-  Login: async (accountID, force) => {
-    return await invoke("renderer-request-login", accountID, force);
+  Login: async (accountID, force, captchaID, captcha, confirmation2FA) => {
+    return await invoke(
+      "renderer-request-login",
+      accountID,
+      force,
+      captchaID,
+      captcha,
+      confirmation2FA
+    );
   },
   Logout: async () => {
     return await invoke("renderer-request-logout");

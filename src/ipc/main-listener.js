@@ -49,9 +49,18 @@ ipcMain.handle("renderer-request-refresh-storage", async () => {
   store.commit("replaceState", store.state);
 });
 
-ipcMain.handle("renderer-request-login", async (event, accountID, force) => {
-  return await client.Login(accountID, force);
-});
+ipcMain.handle(
+  "renderer-request-login",
+  async (event, accountID, force, captchaID, captcha, confirmation2FA) => {
+    return await client.Login(
+      accountID,
+      force,
+      captchaID,
+      captcha,
+      confirmation2FA
+    );
+  }
+);
 
 ipcMain.handle("renderer-request-logout", async () => {
   return await client.Logout();
