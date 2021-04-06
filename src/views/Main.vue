@@ -184,10 +184,6 @@ div.minimizedButtonsPanel button {
   margin-right: 6px;
 }
 
-div.minimizedButtonsPanel button:hover {
-  opacity: 80%;
-}
-
 div.minimizedButtonsPanel img {
   height: 18px;
 }
