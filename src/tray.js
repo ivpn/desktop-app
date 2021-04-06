@@ -359,7 +359,8 @@ function GetStatusText() {
       location += `${l.country}`;
     }
 
-    if (l.isp) location += ` (ISP: ${l.isp})`;
+    if (l.isIvpnServer == true) location += ` (ISP: IVPN)`;
+    else if (l.isp) location += ` (ISP: ${l.isp})`;
 
     if (l.ip_address) retStr += `\nPublic IP: ${l.ip_address}`;
     if (location) retStr += `\nLocation: ${location}`;
