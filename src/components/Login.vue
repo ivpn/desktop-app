@@ -14,7 +14,7 @@
             <div class="large_text">Captcha Required</div>
             <div style="height: 12px" />
             <div class="small_text">
-              Please enter number you see above
+              Please enter number you see below
             </div>
           </div>
 
@@ -166,6 +166,16 @@ export default {
           throw new Error(
             "Your account ID has to be in 'i-XXXX-XXXX-XXXX' or 'ivpnXXXXXXXX' format. You can find it on other devices where you are logged in and in the client area of the IVPN website."
           );
+        }
+
+        if (this.is2FATokenRequired && !this.confirmation2FA) {
+          sender.showMessageBoxSync({
+            type: "warning",
+            buttons: ["OK"],
+            message: "Failed to login",
+            detail: `Please enter 6-digit verification code`
+          });
+          return;
         }
 
         this.isProcessing = true;
