@@ -8,6 +8,7 @@ all:
 	mkdir bin
 
 	cc -m64 -framework Foundation \
+		-mmacosx-version-min=10.6 \
 		-D IS_INSTALLER=0 \
 		-framework ServiceManagement \
 		-framework Security \
@@ -16,6 +17,7 @@ all:
 		-o "bin/IVPN Uninstaller"
 
 	cc -m64 -framework Foundation \
+		-mmacosx-version-min=10.6 \
 		-D IS_INSTALLER=1 \
 		-framework ServiceManagement \
 		-framework Security \

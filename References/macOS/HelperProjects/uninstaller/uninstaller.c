@@ -174,7 +174,7 @@ int remove_helper_with_auth(AuthorizationRef authRef) {
     return 1;
   }
 
-  const char *filesToRemove[] = {HELPER_TO_REMOVE_PLIST_PATH, HELPER_TO_REMOVE_BIN_PATH, NULL};
+  char *filesToRemove[] = {HELPER_TO_REMOVE_PLIST_PATH, HELPER_TO_REMOVE_BIN_PATH, NULL};
   OSStatus err = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/rm", kAuthorizationFlagDefaults, filesToRemove, NULL);
   if (err)
   {
@@ -345,7 +345,7 @@ int uninstall() {
         return 1;
       }
 
-      const char *args0[] = {NULL};
+      char *args0[] = {NULL};
       // Hack to force "authentication required" window to pop-up;
       if (AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/echo", kAuthorizationFlagDefaults, args0, NULL))
       {
@@ -374,7 +374,7 @@ int uninstall() {
       snprintf(relFile1, 128, "%s/Library/Preferences/net.ivpn.client.IVPN.plist", homeDir); // old UI bundleID
       snprintf(relFile2, 128, "%s/Library/Preferences/com.electron.ivpn-ui.plist", homeDir);
 
-      const char *filesToRemove[] = {
+      char *filesToRemove[] = {
         "/Library/Logs/IVPN Agent.log",
         "/Library/Logs/IVPN Agent.log.0",
         "/Library/Logs/IVPN Agent CrashInfo.log",
@@ -400,7 +400,7 @@ int uninstall() {
       char relDir1[128], relDir2[128];
       snprintf(relDir1, 128, "%s/Library/Application Support/IVPN", homeDir);
 
-      const char *foldersToRemove[] = {
+      char *foldersToRemove[] = {
         "/Applications/IVPN.app",
         "/Library/Application Support/IVPN/OpenVPN",
         "/Library/Application Support/IVPN",
@@ -433,7 +433,7 @@ int uninstall() {
       return hasErrors;
 }
 
-int update(const char* dmgFile, const char* signatureFile) {
+int update(char* dmgFile, char* signatureFile) {
       logmes(LOG_INFO, "Updating IVPN ...");
 
       CFErrorRef error = NULL;
@@ -446,7 +446,7 @@ int update(const char* dmgFile, const char* signatureFile) {
         return 1;
       }
 
-      const char *args0[] = {NULL};
+      char *args0[] = {NULL};
       // Hack to force "authentication required" window to pop-up;
       if (AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/echo", kAuthorizationFlagDefaults, args0, NULL))
       {
@@ -458,7 +458,7 @@ int update(const char* dmgFile, const char* signatureFile) {
 
       char *args[] = {dmgFile, signatureFile, NULL};
       OSStatus ret = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/install.sh", kAuthorizationFlagDefaults, args, NULL);
-      
+
       if (ret)
       {
         logmes(LOG_ERR, "FAILED to get privileges");
@@ -514,7 +514,7 @@ int main(int argc, char **argv) {
             return start_helper();
         if (strcmp(argv[1], "--uninstall")==0)
             return uninstall();
-        if (strcmp(argv[1], "--update")==0) 
+        if (strcmp(argv[1], "--update")==0)
         {
             if (argc < 4 )
             {
