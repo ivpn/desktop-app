@@ -225,6 +225,26 @@ if (gotTheLock) {
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
   app.on("ready", async () => {
+    // MACOS: Check is application is located in correct place (path)
+    if (Platform() === PlatformEnum.macOS && !process.env.IS_DEBUG) {
+      let appPath = app.getAppPath();
+      if (!appPath.startsWith("/Applications/IVPN.app/")) {
+        console.log(`Failed to start. Wrong application path: ${appPath}`);
+
+        dialog.showMessageBoxSync({
+          type: "error",
+          message: "Unable to start IVPN Client",
+          detail:
+            "IVPN client can only run from the Applications folder. Please move the IVPN.app into the /Applications folder",
+          buttons: ["Quit"]
+        });
+
+        console.log(`Exiting ...`);
+        app.quit();
+        return;
+      }
+    }
+
     try {
       InitTray(menuOnShow, menuOnPreferences, menuOnAccount, () => {
         CheckUpdates();
