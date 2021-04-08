@@ -97,7 +97,6 @@
 </template>
 
 <script>
-import { Platform, PlatformEnum } from "@/platform/platform";
 const sender = window.ipcSender;
 
 function processError(e) {
