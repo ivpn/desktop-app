@@ -44,6 +44,8 @@ var (
 
 	delayedAllowLanAllowed bool = true
 	delayedAllowLanStarted bool = false
+
+	isPersistant bool = false
 )
 
 const (
@@ -83,11 +85,13 @@ func implSetEnabled(isEnabled bool) error {
 		return reApplyExceptions()
 	}
 
+	isPersistant = false
 	allowedForICMP = nil
 	return shell.Exec(nil, platform.FirewallScript(), "-disable")
 }
 
 func implSetPersistant(persistant bool) error {
+	isPersistant = persistant
 	if persistant {
 		// The persistence is based on such facts:
 		// 	- daemon is starting as on system boot
@@ -95,9 +99,40 @@ func implSetPersistant(persistant bool) error {
 		// This means we just have to ensure that firewall enabled.
 
 		// Just ensure that firewall is enabled
-		return implSetEnabled(true)
+		ret := implSetEnabled(true)
+
+		// Some Linux distributions erasing IVPN rules during system boot
+		// During some period of time (60 seconds should be enough)
+		// check if FW rules still exist (if not - re-apply them)
+		go ensurePersistant(60)
+
+		return ret
 	}
 	return nil
+}
+
+// Some Linux distributions erasing IVPN rules during system boot
+// During some period of time (60 seconds should be enough)
+// check if FW rules still exist (if not - re-apply them)
+func ensurePersistant(secondsToWait int) {
+	const delaySec = 5
+	log.Info("[ensurePersistant] started")
+	for i := 0; i <= secondsToWait/delaySec; i++ {
+		time.Sleep(time.Second * delaySec)
+		if isPersistant != true {
+			break
+		}
+		enabled, err := implGetEnabled()
+		if err != nil {
+			log.Error("[ensurePersistant] ", err)
+			continue
+		}
+		if isPersistant == true && enabled != true {
+			log.Warning("[ensurePersistant] Persistant FW rules not available. Retry to apply...")
+			implSetEnabled(true)
+		}
+	}
+	log.Info("[ensurePersistant] stopped.")
 }
 
 // ClientConnected - allow communication for local vpn/client IP address
