@@ -24,7 +24,7 @@
         established - see On-demand Firewall options below
       </div>
 
-      <div v-if="isCanBePersistent">
+      <div>
         <div class="settingsRadioBtn">
           <input
             ref="radioFWPersistent"
@@ -142,20 +142,6 @@ export default {
     }
   },
   computed: {
-    isCanBePersistent: function() {
-      var release = sender.osRelease();
-      if (release) {
-        // TODO: persistant firewall not working properly on Linux Fedora
-        // Here we are disabling this functionality in UI
-        // Looking for a string like: "5.6.0-0.rc5.git0.2.fc32.x86_64" <- Fedora 32
-        if (
-          Platform() === PlatformEnum.Linux &&
-          release.match(/.+\.fc[0-9]{2,3}\..+/)
-        )
-          return false;
-      }
-      return true;
-    },
     IsPersistent: function() {
       return this.$store.state.vpnState.firewallState.IsPersistent;
     },
