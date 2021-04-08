@@ -3,7 +3,18 @@
 All notable changes to this project will be documented in this file.
 
 
-## Version 3.3.5 - 2020-04-01
+## Version 3.3.7 - 2021-04-08
+
+[NEW] Added connection information to system tray menu  
+[NEW] (macOS) Application checks if it is installed to the correct path  
+[IMPROVED] (Windows\Linux) Title bar now matches app style  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.7.exe)  
+SHA256: bfc5bcc3dc77b12d18c6fb6f1c3862981bd70d937a1fa86f0245b1cae27b8481   
+[Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.7.dmg)  
+SHA256: 19a2d2e1a84c39ef68e3e92417779bc4bba8fad9d15152011b7610a0a5e14f26  
+
+## Version 3.3.5 - 2021-04-01
 
 [IMPROVED] Overall stability 
 
@@ -12,7 +23,7 @@ SHA256: 922e1d3db02d2a791a03880771173e22997dceab4106c31e3dff66c76778a7f9
 [Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.5.dmg)  
 SHA256: 106cef1f4034c0ba40d5c5d4155b77415dec073cdfc3b81e7272f7cb83aa698d  
 
-## Version 3.3.1 - 2020-03-25
+## Version 3.3.1 - 2021-03-25
 
 [NEW] First official release of new UI for macOS and Windows  
 [IMPROVED] Overall stability and security 
