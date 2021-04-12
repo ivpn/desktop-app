@@ -30,7 +30,8 @@ import {
   dialog,
   nativeImage,
   ipcMain,
-  nativeTheme
+  nativeTheme,
+  screen
 } from "electron";
 import {
   createProtocol
@@ -548,7 +549,20 @@ function createWindow() {
   // restore window position
   let lastPos = store.state.settings.windowRestorePosition;
   if (lastPos && lastPos.x && lastPos.y) {
-    win.setBounds({ x: lastPos.x, y: lastPos.y });
+    const displays = screen.getAllDisplays();
+    let isWindowVisibleOnScreen = false;
+    displays.forEach(display => {
+      if (
+        lastPos.x > display.workArea.x &&
+        lastPos.x + 50 < display.workArea.x + display.workArea.width &&
+        lastPos.y > display.workArea.y &&
+        lastPos.y + 50 < display.workArea.y + display.workArea.height
+      )
+        isWindowVisibleOnScreen = true;
+    });
+
+    if (isWindowVisibleOnScreen == true)
+      win.setBounds({ x: lastPos.x, y: lastPos.y });
   }
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
