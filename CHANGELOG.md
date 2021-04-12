@@ -9,9 +9,9 @@ All notable changes to this project will be documented in this file.
 [FIXED] (Linux) 'Allow LAN traffic' rules missing after system start  
 [FIXED] (Linux) Always-on Firewall issue on system boot  
 
-[Download IVPN Client .deb v. 2.12.16](https://repo.ivpn.net/stable/pool/ivpn_3.3.7_amd64.deb)  
+[Download IVPN Client .deb v. 3.3.7](https://repo.ivpn.net/stable/pool/ivpn_3.3.7_amd64.deb)  
 SHA256: 6b32903eaedd3e5b922d1eb16cb97a88132cc7cce7a7793f31c50edbdadb1458   
-[Download IVPN Client .rpm v. 2.12.16](https://repo.ivpn.net/stable/pool/ivpn-3.3.7-1.x86_64.rpm)  
+[Download IVPN Client .rpm v. 3.3.7](https://repo.ivpn.net/stable/pool/ivpn-3.3.7-1.x86_64.rpm)  
 SHA256: 49b3aabccb7a4324006b7de8607a0870dee34f84d98c8657809fbebe1fa5c6db  
 
 ## Version 2.12.16 - 2020-01-29
