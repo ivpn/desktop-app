@@ -301,6 +301,8 @@ if (gotTheLock) {
   });
 
   app.on("before-quit", async event => {
+    // save last window position in order to be able to restore it
+    if (win) store.commit("settings/windowRestorePosition", win.getBounds());
     // if we are waiting to save settings - save it immediately
     SaveSettings();
 
@@ -543,6 +545,12 @@ function createWindow() {
 
   win = createBrowserWindow(windowConfig);
 
+  // restore window position
+  let lastPos = store.state.settings.windowRestorePosition;
+  if (lastPos && lastPos.x && lastPos.y) {
+    win.setBounds({ x: lastPos.x, y: lastPos.y });
+  }
+
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
     win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
@@ -561,6 +569,9 @@ function createWindow() {
   });
 
   win.on("close", async event => {
+    // save last window position in order to be able to restore it
+    if (win) store.commit("settings/windowRestorePosition", win.getBounds());
+
     if (isAppReadyToQuit == true) return;
     if (
       isTrayInitialized == true &&

@@ -102,6 +102,7 @@ const getDefaultState = () => {
     serversSortType: ServersSortTypeEnum.City,
     colorTheme: ColorTheme.default,
     connectSelectedMapLocation: false,
+    windowRestorePosition: null, // {x=xxx, y=xxx}
 
     // updates
     skipAppUpdate: {
@@ -293,6 +294,9 @@ export default {
     },
     colorTheme(state, val) {
       state.colorTheme = val;
+    },
+    windowRestorePosition(state, val) {
+      state.windowRestorePosition = val;
     },
 
     // updates
