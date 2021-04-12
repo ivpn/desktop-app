@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 [NEW] Added connection information to system tray menu  
 [NEW] (macOS) Application checks if it is installed to the correct path  
 [IMPROVED] (Windows\Linux) Title bar now matches app style  
-[IMPROVED] AcountID now is shown in the output of the 'ivpn account' command  
+[IMPROVED] AccountID now is shown in the output of the 'ivpn account' command  
 [FIXED] (Linux) 'Allow LAN traffic' rules missing after system start  
 [FIXED] (Linux) Always-on Firewall issue on system boot  
 
