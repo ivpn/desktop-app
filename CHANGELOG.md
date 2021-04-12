@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## Version 3.3.7 - 2021-04-08
 
-[IMPROVED] AcountID now is shown in the output of the 'ivpn account' command  
+[IMPROVED] AccountID now is shown in the output of the 'ivpn account' command  
 [IMPROVED] Overall stability and security  
 [FIXED] (Linux) 'Allow LAN traffic' rules missing after system start  
 [FIXED] (Linux) Always-on Firewall issue on system boot  
