@@ -1,6 +1,12 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file.  
+
+## Version 3.3.7 - 2021-04-08
+
+[IMPROVED] Overall stability and security  
+[FIXED] (Linux) 'Allow LAN traffic' rules missing after system start  
+[FIXED] (Linux) Always-on Firewall issue on system boot  
 
 ## Version 2.12.10 - 2020-11-12
 [IMPROVED] (macOS) Сompatibility with macOS Big Sur  
