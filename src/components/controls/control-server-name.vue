@@ -1,6 +1,6 @@
 <template>
   <div class="main">
-    <div class="flexColumn">
+    <div class="flexColumn" style="min-width: 22px;">
       <img
         class="pic"
         v-bind:class="{
