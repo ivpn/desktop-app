@@ -41,10 +41,14 @@ const delayBeforeNotify = time.Second * 3
 // To avoid multiple notifications of multiple changes - the  'DelayBeforeNotify' is in use
 // (notification will occur after 'DelayBeforeNotify' elapsed since last detected change)
 type Detector struct {
-	delayBeforeNotify       time.Duration
-	timerNotifyAfterDelay   *time.Timer
+	delayBeforeNotify     time.Duration
+	timerNotifyAfterDelay *time.Timer
+	interfaceToProtect    *net.Interface
+
+	// Signaling when the default routing is NOT over the 'interfaceToProtect' anymore
 	routingChangeNotifyChan chan<- struct{}
-	interfaceToProtect      *net.Interface
+	// Signaling when there were some routing changes but 'interfaceToProtect' is still is the default route
+	routingUpdateNotifyChan chan<- struct{}
 
 	// Must be implemented (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	props osSpecificProperties
@@ -70,12 +74,15 @@ func Create() *Detector {
 }
 
 // Start - start route change detector (asynchronous)
-func (d *Detector) Start(routingChangeChan chan<- struct{}, currentDefaultInterface *net.Interface) {
+//    'routingChangeChan' is the channel for notifying when the default routing is NOT over the 'interfaceToProtect' anymore
+//    'routingUpdateChan' is the channel for notifying when there were some routing changes but 'interfaceToProtect' is still is the default route
+func (d *Detector) Start(routingChangeChan chan<- struct{}, routingUpdateChan chan<- struct{}, currentDefaultInterface *net.Interface) {
 	// Ensure that detector is stopped
 	d.Stop()
 
 	// set notification channel (it is important to do it after we are ensure that timer is stopped)
 	d.routingChangeNotifyChan = routingChangeChan
+	d.routingUpdateNotifyChan = routingUpdateChan
 
 	// save current default interface
 	d.interfaceToProtect = currentDefaultInterface
@@ -117,13 +124,17 @@ func (d *Detector) notifyRoutingChange() {
 		return
 	}
 
+	channelToNotify := d.routingUpdateNotifyChan // there were some routing changes but 'interfaceToProtect' is still is the default route
 	if changed {
-		select {
-		case d.routingChangeNotifyChan <- struct{}{}:
-			log.Info("Route change detected. Internet traffic is no longer being routed through the VPN.")
-			// notified
-		default:
-			// channel is full
-		}
+		log.Info("Route change detected. Internet traffic is no longer being routed through the VPN.")
+		channelToNotify = d.routingChangeNotifyChan //  the default routing is NOT over the 'interfaceToProtect' anymore
 	}
+
+	select {
+	case channelToNotify <- struct{}{}:
+		// notified
+	default:
+		// channel is full
+	}
+
 }

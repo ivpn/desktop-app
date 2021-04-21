@@ -506,3 +506,8 @@ func (o *OpenVPN) SetManualDNS(addr net.IP) error {
 func (o *OpenVPN) ResetManualDNS() error {
 	return o.implOnResetManualDNS()
 }
+
+func (o *OpenVPN) OnRoutingChanged() error {
+	// Nothing to do for OpenVPN
+	return nil
+}

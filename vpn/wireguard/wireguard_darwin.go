@@ -370,19 +370,22 @@ func (wg *WireGuard) setRoutes() error {
 	}
 
 	// Update main route
-	// example command: sudo route -n add -net 0/1 10.0.0.1
+	// example command:	route	-n	add	-net	0/1			10.0.0.1
+	// 					route	-n	add	-inet	0.0.0.0/1	-interface utun2
 	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-net", "0/1", wg.connectParams.hostLocalIP.String()); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
 	// Update routing to remote server (remote_server default_router 255.255.255)
-	// example command: sudo route -n add -net 145.239.239.55 192.168.1.1 255.255.255.255
+	// example command:	route	-n	add	-net	145.239.239.55	192.168.1.1	255.255.255.255
+	//					route	-n	add	-inet	51.77.91.106	-gateway	192.168.1.1
 	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-net", wg.connectParams.hostIP.String(), wg.internals.defGateway.String(), "255.255.255.255"); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
 	// Update routing table
-	// example command: sudo route -n add -net 128.0.0.0 10.0.0.1 128.0.0.0
+	// example command:	route	-n	add	-net	128.0.0.0	10.0.0.1	128.0.0.0
+	// 					route	-n	add	-inet	128.0.0.0/1	-interface	utun2
 	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String(), "128.0.0.0"); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
@@ -393,9 +396,26 @@ func (wg *WireGuard) setRoutes() error {
 func (wg *WireGuard) removeRoutes() error {
 	log.Info("Restoring routing table...")
 
-	shell.Exec(log, "/sbin/route", "-n", "delete", "0/1", wg.connectParams.hostIP.String())
+	shell.Exec(log, "/sbin/route", "-n", "delete", "0/1", wg.connectParams.hostLocalIP.String())
 	shell.Exec(log, "/sbin/route", "-n", "delete", wg.connectParams.hostIP.String())
-	shell.Exec(log, "/sbin/route", "-n", "delete", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String(), "128.0.0.0")
+	shell.Exec(log, "/sbin/route", "-n", "delete", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String())
+
+	return nil
+}
+
+func (wg *WireGuard) onRoutingChanged() error {
+	defGatewayIP, err := netinfo.DefaultGatewayIP()
+	if err != nil {
+		log.Warning(fmt.Sprintf("onRoutingChanged: %v", err))
+		return err
+	}
+
+	if defGatewayIP.String() != wg.internals.defGateway.String() {
+		log.Info(fmt.Sprintf("Default gateway chaged: %s -> %s. Updating routes...", wg.internals.defGateway.String(), defGatewayIP.String()))
+		wg.internals.defGateway = defGatewayIP
+		wg.removeRoutes()
+		wg.setRoutes()
+	}
 
 	return nil
 }

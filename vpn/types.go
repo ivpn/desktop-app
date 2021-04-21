@@ -187,6 +187,8 @@ type Process interface {
 	// DestinationIP -  Get destination IP (VPN host server or proxy server IP address)
 	// This information if required, for example, to allow this address in firewall
 	DestinationIP() net.IP
+
+	OnRoutingChanged() error
 }
 
 // ReconnectionRequiredError object can be returned by vpn.Process.Connect() function

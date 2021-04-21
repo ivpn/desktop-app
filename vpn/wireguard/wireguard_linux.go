@@ -245,3 +245,8 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 	peerCfg = append(peerCfg, "AllowedIPs = 0.0.0.0/0")
 	return interfaceCfg, peerCfg
 }
+
+func (wg *WireGuard) onRoutingChanged() error {
+	// do nothing for Linux
+	return nil
+}

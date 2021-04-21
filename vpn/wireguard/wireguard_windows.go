@@ -541,3 +541,8 @@ func (wg *WireGuard) uninstallService() error {
 	log.Info("Service uninstalled")
 	return nil
 }
+
+func (wg *WireGuard) onRoutingChanged() error {
+	// do nothing for Windows
+	return nil
+}

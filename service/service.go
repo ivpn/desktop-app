@@ -537,7 +537,10 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 		log.Info("VPN process stopped")
 	}()
 
+	// Signaling when the default routing is NOT over the 'interfaceToProtect' anymore
 	routingChangeChan := make(chan struct{}, 1)
+	// Signaling when there were some routing changes but 'interfaceToProtect' is still is the default route
+	routingUpdateChan := make(chan struct{}, 1)
 
 	destinationHostIP := vpnProc.DestinationIP()
 
@@ -592,7 +595,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 					} else {
 
 						log.Info("Starting route change detection")
-						s._netChangeDetector.Start(routingChangeChan, netInterface)
+						s._netChangeDetector.Start(routingChangeChan, routingUpdateChan, netInterface)
 					}
 
 					// Inform firewall about client local IP
@@ -620,7 +623,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 		for isRuning := true; isRuning; {
 			select {
-			case <-routingChangeChan: // routing changed
+			case <-routingChangeChan: // routing changed (the default routing is NOT over the 'interfaceToProtect' anymore)
 				if s._vpn.IsPaused() {
 					log.Info("Route change ignored due to Paused state.")
 				} else {
@@ -639,6 +642,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 					isRuning = false
 				}
+			case <-routingUpdateChan: // there were some routing changes but 'interfaceToProtect' is still is the default route
+				s._vpn.OnRoutingChanged()
 			case <-stopChannel: // triggered when the stopChannel is closed
 				isRuning = false
 			}

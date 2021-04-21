@@ -230,3 +230,7 @@ func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
 		wg.connectParams.hostPort,
 		isCanPause)
 }
+
+func (wg *WireGuard) OnRoutingChanged() error {
+	return wg.onRoutingChanged()
+}

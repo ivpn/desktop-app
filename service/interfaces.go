@@ -40,7 +40,10 @@ type IServersUpdater interface {
 
 // INetChangeDetector - object is detecting routing changes on a PC
 type INetChangeDetector interface {
-	Start(routingChangeChan chan<- struct{}, currentDefaultInterface *net.Interface)
+	// Start - start route change detector (asynchronous)
+	//    'routingChangeChan' is the channel for notifying when the default routing is NOT over the 'interfaceToProtect' anymore
+	//    'routingUpdateChan' is the channel for notifying when there were some routing changes but 'interfaceToProtect' is still is the default route
+	Start(routingChangeChan chan<- struct{}, routingUpdateChan chan<- struct{}, currentDefaultInterface *net.Interface)
 	Stop()
 	DelayBeforeNotify() time.Duration
 }
