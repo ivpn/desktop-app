@@ -274,17 +274,15 @@ if (gotTheLock) {
     if (store.state.settings.minimizeToTray && WasOpenedAtLogin()) {
       // do not show main application window when application was started automatically on login
       // (if enabled minimizeToTray)
+      const doNotShowWhenReady = true;
+      createWindow(doNotShowWhenReady);
     } else {
       createWindow();
     }
   });
 
   app.on("activate", () => {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (win === null) {
-      createWindow();
-    }
+    menuOnShow();
   });
 
   // Quit when all windows are closed.
@@ -518,7 +516,7 @@ function createBrowserWindow(config) {
 }
 
 // CREATE WINDOW
-function createWindow() {
+function createWindow(doNotShowWhenReady) {
   // Create the browser window.
 
   let windowConfig = {
@@ -575,12 +573,13 @@ function createWindow() {
     win.loadURL("app://./index.html");
   }
 
-  // show\hide app from system dock
-  updateAppDockVisibility();
-
-  win.once("ready-to-show", () => {
-    win.show();
-  });
+  if (doNotShowWhenReady != true) {
+    win.once("ready-to-show", () => {
+      win.show();
+      // show\hide app from system dock
+      updateAppDockVisibility();
+    });
+  }
 
   win.on("close", async event => {
     // save last window position in order to be able to restore it
@@ -591,8 +590,14 @@ function createWindow() {
       isTrayInitialized == true &&
       store.state.settings.minimizeToTray == true
     ) {
+      // Prevent closing the window to be able to show it back immediately.
+      // Just hide it.
+      win.hide();
+      event.preventDefault();
+      return;
+
       // 'window-all-closed' event will be raised
-      return; // close window
+      //return; // close window
     }
 
     event.preventDefault();
