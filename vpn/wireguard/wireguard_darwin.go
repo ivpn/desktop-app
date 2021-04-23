@@ -34,6 +34,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
 	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
@@ -44,7 +45,6 @@ import (
 //TODO: BE CAREFUL! Constant string! (can be changed after WireGuard update)
 const (
 	strTriggerSuccessInit      string = "UAPI listener started"
-	strTriggerInterfaceDown    string = "Interface set down"
 	strTriggerAddrAlreadyInUse string = "Address already in use"
 )
 
@@ -61,8 +61,11 @@ type internalVariables struct {
 	omResumedChan chan struct{} // channel for 'On Resume' events
 }
 
+var logWgOut *logger.Logger
+
 func (wg *WireGuard) init() error {
-	return nil // do nothing for macOS
+	logWgOut = logger.NewLogger("wg_out")
+	return nil
 }
 
 // connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
@@ -133,7 +136,10 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 	}
 
 	log.Info("Starting WireGuard in interface ", utunName)
+	// LOG_LEVEL=verbose
 	wg.internals.command = exec.Command(wg.binaryPath, "-f", utunName)
+	wg.internals.command.Env = os.Environ()
+	wg.internals.command.Env = append(wg.internals.command.Env, "LOG_LEVEL=verbose")
 
 	isStartedChannel := make(chan bool)
 
@@ -150,17 +156,11 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		isWaitingToStart := true
 		for outPipeScanner.Scan() {
 			text := outPipeScanner.Text()
-			log.Info("[out] ", text)
+			logWgOut.Info(text)
 
 			if isWaitingToStart && strings.Contains(text, strTriggerSuccessInit) {
 				isWaitingToStart = false
 				isStartedChannel <- true
-			}
-
-			// todo
-			if strings.Contains(text, strTriggerInterfaceDown) {
-				// TODO: detecting if an interface was down. It can happen, for example, when another tunnel was initialized (e.g. separate OpenVPN connection)
-				// Normally, we no not need it. netchange.Detector checking for routing changes (implemented on service level)
 			}
 		}
 	}()
@@ -176,7 +176,7 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		defer routineStopWaiter.Done()
 
 		for errPipeScanner.Scan() {
-			log.Info("[err] ", errPipeScanner.Text())
+			logWgOut.Info("[err] ", errPipeScanner.Text())
 		}
 	}()
 

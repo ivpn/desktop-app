@@ -3,8 +3,8 @@
 # ##############################################################################
 # Define here WireGuard-Go version
 # ##############################################################################
-WG_GO_VER=v0.0.20200121   # https://git.zx2c4.com/wireguard-go/
-WG_TOOLS_VER=0.0.20191219 # https://git.zx2c4.com/WireGuard/
+WG_GO_VER=0.0.20210323   # https://git.zx2c4.com/wireguard-go/
+WG_TOOLS_VER=v1.0.20210315 # https://git.zx2c4.com/wireguard-tools/
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
@@ -31,13 +31,13 @@ git checkout ${WG_GO_VER}
 echo "******** Compiling 'wireguard-go'..."
 make
 
-echo "******** Cloning WireGuard sources..."
+echo "******** Cloning wireguard-tools sources..."
 cd ${BUILD_DIR}
-git clone https://git.zx2c4.com/WireGuard/
-cd WireGuard/src/tools
+git clone https://git.zx2c4.com/wireguard-tools/
+cd wireguard-tools/src
 echo "******** Checkout wireguard-tools version (${WG_TOOLS_VER})..."
 git checkout ${WG_TOOLS_VER}
-echo "******** Compiling 'wireguard-go'..."
+echo "******** Compiling 'wireguard-tools'..."
 make
 
 echo "********************************"
@@ -47,4 +47,4 @@ echo "********************************"
 echo "******** Copying compiled binaries to '$BUILD_DIR"
 cd ${BUILD_DIR}
 cp ./wireguard-go/wireguard-go $INSTALL_DIR
-cp ./WireGuard/src/tools/wg $INSTALL_DIR
+cp ./wireguard-tools/src/wg $INSTALL_DIR
