@@ -66,7 +66,7 @@ func doGetDefaultRoutes(getAllDefRoutes bool) (routes []route, err error) {
 	//	Routing tables
 	//	Internet:
 	//	Destination        Gateway            Flags        Netif Expire
-	//  0/1                10.56.40.1         UGSc         	 utun
+	//	0/1                10.56.40.1         UGSc      	 utun
 	//	default            192.168.1.1        UGSc           en0
 	//	127                127.0.0.1          UCS            lo0
 	// ...
@@ -74,7 +74,7 @@ func doGetDefaultRoutes(getAllDefRoutes bool) (routes []route, err error) {
 	routes = make([]route, 0, 3)
 
 	log.Info("Checking default getaway info ...")
-	cmd := exec.Command("/usr/sbin/netstat", "-nr")
+	cmd := exec.Command("/usr/sbin/netstat", "-nr", "-f", "inet")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("unable to obtain default gateway IP: %w", err)

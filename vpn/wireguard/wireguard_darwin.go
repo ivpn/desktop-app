@@ -305,7 +305,8 @@ func (wg *WireGuard) initializeConfiguration(utunName string) error {
 	log.Info("Configuring ", utunName, " interface...")
 
 	// Configure WireGuard interface
-	// example command: ipconfig set utun7 MANUAL 10.0.0.121 255.255.255.0
+	// example command:	ipconfig set utun7 MANUAL 10.0.0.121 255.255.255.0
+	//				 	ifconfig utun2 inet 172.26.22.146/8 172.26.22.146 alias
 	if err := wg.initializeUnunInterface(utunName); err != nil {
 		return fmt.Errorf("failed to initialize interface: %w", err)
 	}
