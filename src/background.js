@@ -573,11 +573,12 @@ function createWindow(doNotShowWhenReady) {
     win.loadURL("app://./index.html");
   }
 
+  // show\hide app from system dock
+  updateAppDockVisibility();
+
   if (doNotShowWhenReady != true) {
     win.once("ready-to-show", () => {
       win.show();
-      // show\hide app from system dock
-      updateAppDockVisibility();
     });
   }
 
@@ -881,7 +882,7 @@ function setAppDockVisibility(isShow) {
     // macOS
     if (app != null && app.dock != null) {
       app.dock.hide(); // remove from dock
-      if (win) win.show(); // ensure window is still shown (sometimes on macOS window is jumping under other window)
+      if (win && win.isVisible()) win.show(); // ensure window is still shown (sometimes on macOS window is jumping under other window)
     }
 
     // Windows & Linux
