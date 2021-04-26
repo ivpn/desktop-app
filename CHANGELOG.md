@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 
 
+## Version 3.3.10 - 2021-04-026
+
+[NEW] Restore window position  
+[IMPROVED] No delay to redraw UI content when opening the application from the system tray  
+[IMPROVED] (macOS) Updated WireGuard binaries to latest versions (wireguard-go v0.0.20210323; wireguard-tools v1.0.20210315)  
+[FIXED] (macOS) WireGuard roaming does not work when switching networks  
+[FIXED] (macOS) Clicking the icon in Launchpad or System Dock does not open the app main window (if application started on system boot)  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.10.exe)  
+SHA256: 83b60f784decce42fea6698328edb07c2a80add86bd34ce9ab242e5d49dfa7e2   
+[Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.10.dmg)  
+SHA256: 388a4460f7a37dc6c306249fd0b74c000b17adc7d461e6617ff94e0f315471e5  
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.3.10_amd64.deb)  
+SHA256: 121bbd6fbe56e30bb5e0b8b29083838eea7ffb80133b6de2b8377d819f6a3453  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.3.10-1.x86_64.rpm)  
+SHA256: 6942ed6d18214b5767baa7145cdc05e6a2772d5eb2608c25e56ce4426224bd51  
+
 ## Version 3.3.7 - 2021-04-08
 
 [NEW] Added connection information to system tray menu  
