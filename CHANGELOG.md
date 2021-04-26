@@ -8,11 +8,18 @@ All notable changes to this project will be documented in this file.
 [NEW] Added connection information to system tray menu  
 [NEW] (macOS) Application checks if it is installed to the correct path  
 [IMPROVED] (Windows\Linux) Title bar now matches app style  
+[IMPROVED] AccountID now is shown in the output of the 'ivpn account' command  
+[FIXED] (Linux) 'Allow LAN traffic' rules missing after system start  
+[FIXED] (Linux) Always-on Firewall issue on system boot  
 
 [Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.7.exe)  
 SHA256: bfc5bcc3dc77b12d18c6fb6f1c3862981bd70d937a1fa86f0245b1cae27b8481   
 [Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.7.dmg)  
 SHA256: 19a2d2e1a84c39ef68e3e92417779bc4bba8fad9d15152011b7610a0a5e14f26  
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.3.7_amd64.deb)  
+SHA256: 9e66966a7d0655e8b3054082fa7dc79db5e470e1c3b4ceb6adebf1761c9903bc  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.3.7-1.x86_64.rpm)  
+SHA256: ae6ec9f24ccf0aed53bc7846723145da6b992cbf5a0b0bd13066c6766a4f26d5  
 
 ## Version 3.3.5 - 2021-04-01
 
