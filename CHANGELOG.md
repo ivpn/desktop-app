@@ -16,9 +16,9 @@ SHA256: 83b60f784decce42fea6698328edb07c2a80add86bd34ce9ab242e5d49dfa7e2
 [Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.10.dmg)  
 SHA256: 388a4460f7a37dc6c306249fd0b74c000b17adc7d461e6617ff94e0f315471e5  
 [Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.3.10_amd64.deb)  
-SHA256: 121bbd6fbe56e30bb5e0b8b29083838eea7ffb80133b6de2b8377d819f6a3453  
-[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.3.10-1.x86_64.rpm)  
 SHA256: 6942ed6d18214b5767baa7145cdc05e6a2772d5eb2608c25e56ce4426224bd51  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.3.10-1.x86_64.rpm)  
+SHA256: 98d897e5c988ca58f3195b542342bc0e8f0e5de5982713a190f4eab53b90f78e  
 
 ## Version 3.3.7 - 2021-04-08
 
