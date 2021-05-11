@@ -69,6 +69,8 @@ export default {
     this.Upgradable = this.$route.params.Upgradable;
     this.UpgradeToPlan = this.$route.params.UpgradeToPlan;
     this.UpgradeToURL = this.$route.params.UpgradeToURL;
+
+    this.extraArgs = this.$route.params.extraArgs; //{ confirmation2FA }
   },
   data: function() {
     return {
@@ -77,7 +79,9 @@ export default {
       CurrentPlan: null,
       Upgradable: null,
       UpgradeToPlan: null,
-      UpgradeToURL: null
+      UpgradeToURL: null,
+
+      extraArgs: null
     };
   },
   computed: {
@@ -96,7 +100,7 @@ export default {
     onForceLogout: async function() {
       this.$router.push({
         name: "Main",
-        params: { forceLoginAccount: this.accountID }
+        params: { forceLoginAccount: this.accountID, extraArgs: this.extraArgs }
       });
     },
     onUpgrade: function() {

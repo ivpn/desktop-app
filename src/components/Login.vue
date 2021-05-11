@@ -125,6 +125,7 @@ export default {
 
       capchaImageStyle: "",
 
+      isForceLogoutRequested: false,
       captcha: "",
       confirmation2FA: ""
     };
@@ -141,8 +142,13 @@ export default {
     if (this.$route.params.forceLoginAccount != null) {
       this.accountID = this.$route.params.forceLoginAccount;
 
+      let confirmation2FA = null;
+      if (this.$route.params.extraArgs) {
+        confirmation2FA = this.$route.params.extraArgs.confirmation2FA;
+      }
+
       const force = true;
-      this.Login(force);
+      this.Login(force, confirmation2FA);
     } else {
       if (this.$store.state.settings.isExpectedAccountToBeLoggedIn === true) {
         this.$store.dispatch("settings/isExpectedAccountToBeLoggedIn", false);
@@ -157,7 +163,7 @@ export default {
     }
   },
   methods: {
-    async Login(isForceLogout) {
+    async Login(isForceLogout, confirmation2FA) {
       try {
         // check accoundID
         var pattern = new RegExp("^(i-....-....-....)|(ivpn[a-zA-Z0-9]{7,8})$"); // fragment locator
@@ -181,12 +187,16 @@ export default {
         this.isProcessing = true;
         const resp = await sender.Login(
           this.accountID,
-          isForceLogout === true,
+          isForceLogout === true || this.isForceLogoutRequested === true
+            ? true
+            : false,
           this.captchaID,
           this.captcha,
-          this.confirmation2FA
+          confirmation2FA ? confirmation2FA : this.confirmation2FA
         );
+        this.isForceLogoutRequested = false;
 
+        const oldConfirmation2FA = this.confirmation2FA;
         this.captcha = "";
         this.confirmation2FA = "";
         this.apiResponseStatus = resp.APIStatus;
@@ -199,12 +209,14 @@ export default {
             throw new Error(`Invalid captcha, please try again`);
           } else if (resp.APIStatus === API_CAPTCHA_REQUIRED) {
             // UI should be updated automatically based on data from 'resp.RawResponse'
+            this.isForceLogoutRequested = isForceLogout;
           } else if (resp.APIStatus === API_2FA_TOKEN_NOT_VALID) {
             throw new Error(
               `Specified two-factor authentication token is not valid`
             );
           } else if (resp.APIStatus === API_2FA_REQUIRED) {
             // UI should be updated automatically based on data from 'resp.RawResponse'
+            this.isForceLogoutRequested = isForceLogout;
           } else if (
             resp.APIStatus === API_SESSION_LIMIT &&
             resp.Account != null
@@ -217,7 +229,10 @@ export default {
                 CurrentPlan: resp.Account.CurrentPlan,
                 Upgradable: resp.Account.Upgradable,
                 UpgradeToPlan: resp.Account.UpgradeToPlan,
-                UpgradeToURL: resp.Account.UpgradeToURL
+                UpgradeToURL: resp.Account.UpgradeToURL,
+                extraArgs: {
+                  confirmation2FA: oldConfirmation2FA
+                }
               }
             });
           } else throw new Error(`[${resp.APIStatus}] ${resp.APIErrorMessage}`);
@@ -248,6 +263,7 @@ export default {
       this.apiResponseStatus = 0;
       this.captcha = "";
       this.confirmation2FA = "";
+      this.isForceLogoutRequested = false;
     },
     keyup(event) {
       if (event.keyCode === 13) {
