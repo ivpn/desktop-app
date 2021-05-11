@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Version 3.3.10 - 2021-04-026
+## Version 3.3.10 - 2021-04-26
 
 [NEW] Restore window position  
 [IMPROVED] No delay to redraw UI content when opening the application from the system tray  
