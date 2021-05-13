@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 //
 //  UI for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-ui2
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
