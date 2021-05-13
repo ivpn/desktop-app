@@ -3,16 +3,40 @@
 All notable changes to this project will be documented in this file.
 
 
+## Version 3.3.10 - 2021-04-26
+
+[NEW] Restore window position  
+[IMPROVED] No delay to redraw UI content when opening the application from the system tray  
+[IMPROVED] (macOS) Updated WireGuard binaries to latest versions (wireguard-go v0.0.20210323; wireguard-tools v1.0.20210315)  
+[FIXED] (macOS) WireGuard roaming does not work when switching networks  
+[FIXED] (macOS) Clicking the icon in Launchpad or System Dock does not open the app main window (if application started on system boot)  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.10.exe)  
+SHA256: 83b60f784decce42fea6698328edb07c2a80add86bd34ce9ab242e5d49dfa7e2   
+[Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.10.dmg)  
+SHA256: 388a4460f7a37dc6c306249fd0b74c000b17adc7d461e6617ff94e0f315471e5  
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.3.10_amd64.deb)  
+SHA256: 6942ed6d18214b5767baa7145cdc05e6a2772d5eb2608c25e56ce4426224bd51  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.3.10-1.x86_64.rpm)  
+SHA256: 98d897e5c988ca58f3195b542342bc0e8f0e5de5982713a190f4eab53b90f78e  
+
 ## Version 3.3.7 - 2021-04-08
 
 [NEW] Added connection information to system tray menu  
 [NEW] (macOS) Application checks if it is installed to the correct path  
 [IMPROVED] (Windows\Linux) Title bar now matches app style  
+[IMPROVED] AccountID now is shown in the output of the 'ivpn account' command  
+[FIXED] (Linux) 'Allow LAN traffic' rules missing after system start  
+[FIXED] (Linux) Always-on Firewall issue on system boot  
 
 [Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.7.exe)  
 SHA256: bfc5bcc3dc77b12d18c6fb6f1c3862981bd70d937a1fa86f0245b1cae27b8481   
 [Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.7.dmg)  
 SHA256: 19a2d2e1a84c39ef68e3e92417779bc4bba8fad9d15152011b7610a0a5e14f26  
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.3.7_amd64.deb)  
+SHA256: 9e66966a7d0655e8b3054082fa7dc79db5e470e1c3b4ceb6adebf1761c9903bc  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.3.7-1.x86_64.rpm)  
+SHA256: ae6ec9f24ccf0aed53bc7846723145da6b992cbf5a0b0bd13066c6766a4f26d5  
 
 ## Version 3.3.5 - 2021-04-01
 
