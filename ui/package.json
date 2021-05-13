@@ -1,0 +1,73 @@
+{
+  "name": "ivpn-ui",
+  "version": "3.3.10",
+  "productName": "IVPN",
+  "description": "IVPN Client",
+  "author": "IVPN Limited",
+  "license": "GPL-3.0",
+  "private": true,
+  "scripts": {
+    "init": "node pre_build.js",
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint",
+    "electron:build": "node pre_build.js && vue-cli-service electron:build",
+    "electron:serve": "node pre_build.js && vue-cli-service electron:serve",
+    "postinstall": "electron-builder install-app-deps",
+    "postuninstall": "electron-builder install-app-deps"
+  },
+  "main": "background.js",
+  "dependencies": {
+    "@sentry/electron": "1.5.2",
+    "auto-launch": "5.0.5",
+    "core-js": "3.6.5",
+    "electron-fetch": "1.7.1",
+    "electron-log": "4.2.2",
+    "fast-xml-parser": "^3.19.0",
+    "qrcode-generator": "1.4.4",
+    "vue": "2.6.11",
+    "vue-click-outside": "^1.1.0",
+    "vue-router": "3.3.4",
+    "vuex": "3.5.1",
+    "vuex-electron": "1.0.3",
+    "winreg": "1.2.4"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-babel": "4.4.6",
+    "@vue/cli-plugin-eslint": "4.4.6",
+    "@vue/cli-plugin-router": "4.4.6",
+    "@vue/cli-plugin-vuex": "4.4.6",
+    "@vue/cli-service": "4.4.6",
+    "@vue/eslint-config-prettier": "6.0.0",
+    "babel-eslint": "10.1.0",
+    "electron": "12.0.2",
+    "eslint": "6.8.0",
+    "eslint-plugin-prettier": "3.1.4",
+    "eslint-plugin-vue": "6.2.2",
+    "prettier": "1.19.1",
+    "sass": "1.26.10",
+    "sass-loader": "8.0.2",
+    "vue-cli-plugin-electron-builder": "2.0.0-rc.4",
+    "vue-template-compiler": "2.6.11"
+  },
+  "eslintConfig": {
+    "root": true,
+    "env": {
+      "node": true
+    },
+    "extends": [
+      "plugin:vue/essential",
+      "eslint:recommended",
+      "@vue/prettier"
+    ],
+    "parserOptions": {
+      "parser": "babel-eslint"
+    },
+    "rules": {}
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

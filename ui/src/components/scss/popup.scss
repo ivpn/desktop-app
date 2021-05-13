@@ -1,0 +1,121 @@
+@import "constants";
+$popup-background: var(--background-color);
+
+div.buttonWithPopup {
+    display: flex;
+    flex-flow: column;
+    align-items: center;
+  }
+
+.popup {
+  //position: absolute;
+  z-index: 4;
+  user-select: none;
+}
+
+// The actual popup
+.popup .popuptext {
+  visibility: hidden;
+  background-color: $popup-background;
+  text-align: center;
+  border-radius: 14px;
+  position: absolute;
+
+  min-width: 216px;
+  max-width: 216px;
+
+  margin-left: -108px; // 216/2
+  margin-top: 23px;
+
+  box-shadow: 0px 0px 34px rgba(0, 0, 0, var(--shadow-opacity-koef));
+}
+
+// Popup arrow
+.popup .popuptext::after {
+   
+  content: "";
+  position: absolute;
+  top: -24px;
+  
+  margin-left: -12px;
+
+  margin-top: 12px;
+  border-width: 12px;
+  border-style: solid;
+  border-color: $popup-background transparent transparent $popup-background;
+  transform: rotate(45deg);
+}
+
+//------------------------------------------------------
+// in use for minimalistic UI 
+// (reduced width and position shifted left)
+.popupMin .popuptextMin  {
+  min-width: 160px;
+  max-width: 160px;
+  margin-left: -80px;
+}
+//------------------------------------------------------
+// in use for minimalistic UI 
+// (reduced width and position shifted left)
+.popupMinShifted .popuptextMinShifted  {
+  min-width: 160px;
+  max-width: 160px;
+  margin-left: -125px;
+}
+// in use for minimalistic UI (arrow location shifted right)
+.popupMinShifted .popuptextMinShifted::after {
+  margin-left: 32px;
+}
+//------------------------------------------------------
+// (reduced width and position shifted right)
+.popupMinShiftedRight .popuptextMinShiftedRight  {
+  min-width: 160px;
+  max-width: 160px;
+  margin-left: -30px;
+}
+// arrow location shifted left
+.popupMinShiftedRight .popuptextMinShiftedRight::after {
+  margin-left: -50px;
+}
+//------------------------------------------------------
+
+// Toggle this class - hide and show the popup
+.popup .show {
+  visibility: visible;
+  animation: fadeIn 0.5s;
+}
+
+.popup_menu_block {
+  min-height: 41px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.popup_menu_block > * {
+  // font
+  font-size: 13px;
+  line-height: 16px;
+  text-align: center;
+  letter-spacing: -0.078px;
+  color:  rgba(var(--text-color-rgb), 0.85);
+}
+
+.popup_menu_block > button {
+  @extend .noBordersBtn;
+}
+
+.popup_dividing_line {
+  background: var(--separator-line-color);
+  height: 1px;
+  border: 0px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

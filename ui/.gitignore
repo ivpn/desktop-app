@@ -1,0 +1,35 @@
+.DS_Store
+node_modules
+/dist
+
+# local env files
+.env.local
+.env.*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+#Electron-builder output
+/dist_electron
+/References/Linux/_out_bin/*
+/References/Linux/_tmp/*
+
+main_style.js
+References/macOS/_image
+net.ivpn.client.Helper
+IVPN Helper-Info.plist
+libivpn.dylib
+References/macOS/_compiled
+References/macOS/HelperProjects/uninstaller/bin
+References/Windows/bin/

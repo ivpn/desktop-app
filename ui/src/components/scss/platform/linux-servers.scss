@@ -1,0 +1,69 @@
+
+// buttons on\off state
+div.serversButtonsHeader {
+    margin-top: 23px;
+    margin-left: 20px;
+    margin-right: 20px;
+    margin-bottom: 6px;
+}
+
+div.serversButtonsSpace {
+    width: 9px;
+    margin: 0px;
+    padding: 0px;
+}
+
+img.serversButtonsBack {
+    vertical-align: middle;
+}
+
+button.sortBtnPlatform {
+    background: linear-gradient(0deg, var(--button-background-gradient-start) 0%, var(--button-background) 100%), var(--button-background);
+    border: 1px solid var(--input-border-color) !important;
+    box-sizing: border-box;
+    padding-left: 3px;
+    padding-right: 3px;
+    border-radius: 4px;
+    max-height: 27px;
+}
+
+button.stateButtonOff {
+    cursor: pointer;
+    outline: none;
+
+    text-transform: capitalize;
+    height: 28px;
+    background: linear-gradient(0deg, var(--button-background-gradient-start) 0%, var(--button-background) 100%), var(--button-background);
+    border: 1px solid var(--input-border-color);
+    box-sizing: border-box;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 20px;
+
+    color: #000000;
+}
+
+button.stateButtonOn {
+    cursor: pointer;
+    outline: none;
+
+    height: 28px;
+    background: linear-gradient(0deg, var(--button-on-background-gradient-start) 0%, var(--button-on-background) 100%), var(--button-on-background);
+    border: 1px solid var(--input-border-color);
+    box-sizing: border-box;
+
+
+    font-size: 14px;
+    line-height: 20px;
+
+    color: #FFFFFF;
+}
+
+button.stateButtonLeft{
+    border-radius: 4px 0px 0px 4px;
+    border-right: 0px;
+}
+
+button.stateButtonRight{
+    border-radius: 0px 4px 4px 0px;
+}

@@ -1,0 +1,176 @@
+@import "./settings";
+@import "./transitions";
+
+$base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
+
+:root {
+    --text-color-rgb: 42, 57, 75; // #2A394B
+    --text-color: rgba(var(--text-color-rgb));
+    --text-color-details: #2A394B7f; //rgba(#2A394B, 0.5);
+    --text-color-settings: #2A394Bda;   //rgba(#2A394B, 0.85);
+    --text-color-settings-menu: #2A394B;
+
+    // NOTE! the '--background-color-rgb' values should be synchronized with JS implementation
+    // (src/background.js : getBackgroundColor())
+    --background-color-rgb:255,255,255; // #ffffff;
+    --background-color: rgba(var(--background-color-rgb)); 
+    --background-color-alternate: #f2f3f6;
+
+    --shadow-opacity-koef: 0.15;
+    --separator-line-color: #e9e9e9;
+
+    --input-border-color-rgb: 139, 154, 171; // #8B9AAB;
+    --input-border-color: rgba(var(--input-border-color-rgb));
+    --input-background: #FBFBFB;
+
+    --map-background-color: #cbd2d3;
+    --map-text-color: #6b6b6b;
+    --map-point-color: #6b6b6b;
+
+    --shadow-color-rgb: 39, 72, 113;
+    --shadow-opacity: 0.3;
+
+    --flag-border-color-rgb: 203,210,211; // #cbd2d3;
+
+    @media (prefers-color-scheme: dark){
+         --text-color-rgb: 255, 255, 255;
+         --text-color:rgba(var(--text-color-rgb));
+         --text-color-details: #ffffff7f;   //rgba(#ffffff, 0.5); 
+         --text-color-settings:  #ffffffda;   //rgba(#ffffff, 0.85); 
+         --text-color-settings-menu:  #ffffff7f;    //rgba(#ffffff, 0.5);
+
+         --background-color-rgb:28,28,30; // #1c1c1e;
+         --background-color: rgba(var(--background-color-rgb)); 
+         --background-color-alternate: #000000;
+
+         --shadow-opacity-koef: 0.9;
+         --separator-line-color: #333333;
+
+         --input-border-color-rgb: 0,0,0;
+         --input-border-color:rgba(var(--input-border-color-rgb));
+         --input-background:rgba(211, 223, 230, 0.33);
+
+         --map-background-color: #292929;
+         --map-text-color: #a2a2a2;
+         --map-point-color: #d4d4d4;
+
+         --shadow-color-rgb: 0, 0, 0;
+         --shadow-opacity: 0.6;
+
+         --flag-border-color-rgb: 41,41,41; //#292929;
+    }
+}
+
+.left_panel_element {
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+.left_panel_block {
+    @extend .left_panel_element;
+    min-height: 72px;
+    max-height: 72px;
+}
+
+.flexColumn {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+}
+
+.flexRowRestSpace {
+    flex-grow: 1;
+}
+
+.flexRow {
+    display: flex;
+    align-items: center; // vertical alignment
+}
+
+.flexRowAlignTop {
+    display: flex;
+    align-items: normal;
+}
+
+.flexRowSpace {
+    @extend .flexRow;
+    justify-content: space-between;
+}
+
+button.noBordersBtn {
+    border: none;
+    background-color: inherit;
+    outline-width: 0;
+    cursor: pointer;
+}
+
+button.noBordersTextBtn {
+    border: none;
+    background-color: inherit;
+    outline-width: 0;
+    cursor: pointer;
+    padding: 0px;
+}
+
+button.link {
+    @extend .noBordersTextBtn;
+    color: #398FE6;
+  }
+
+  div.scrollableColumnContainer {
+    display: flex;
+    flex-flow: column;
+    overflow: scroll;
+  }
+
+div.scrollableColumnContainer::-webkit-scrollbar {
+    display: none; // do not show scroll-bars
+}
+
+div.arrowRightSimple {
+    border: solid #8b9aab;
+    border-width: 0 1px 1px 0;
+    display: inline-block;
+  
+    padding: 4px;
+    transform: rotate(-45deg);
+    -webkit-transform: rotate(-45deg);
+}
+
+label.selectable {
+    -webkit-user-select: text
+}
+
+// btnScrollDown
+button.btnScrollDown {
+    position: fixed;
+  
+    z-index: 7;
+  
+    bottom: 0;
+    margin-bottom: 8px;
+  
+    left: calc(320px / 2 - 12px);
+    //margin-left: calc(50% - 12px);
+  
+    width: 24px;
+    height: 24px;
+  
+    padding: 0px;
+    border: none;
+    border-radius: 50%;
+    
+    background-color: var(--background-color);
+    outline-width: 0;
+    cursor: pointer;
+  
+    box-shadow: 0px 3px 1px rgba(0,0,0, 0.06), 0px 3px 8px rgba(0,0,0, var(--shadow-opacity-koef));
+  
+    // centering content
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  button.btnScrollDown:hover {
+    background-color: var(--background-color-alternate);
+  }

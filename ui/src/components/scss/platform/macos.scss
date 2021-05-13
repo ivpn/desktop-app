@@ -1,0 +1,92 @@
+@import "base.scss";
+@import "macos-servers.scss";
+
+// GLOBAL DEFINITION FO ALL ELEMENTS 
+
+.leftPanelTopSpace {
+  min-height: 29px;
+}
+
+// === HOP BUTTONS ===
+div.hopButtons {
+    @extend .hopButtonsBase;
+}
+button.hopButton {
+    @extend .hopButtonBase;
+}
+button.hopButtonActive {
+    @extend .hopButtonActiveBase;
+}
+div.hopButtonsSeparator {
+    @extend .hopButtonActiveBase;
+}
+// === INPUT ===
+input.styled {
+    @extend .styledBase;
+    height: 36px;
+    border-radius: 8px;
+    border: 0;
+    background: rgba(211, 223, 230, 0.33);
+
+    font-size: 15px;
+    line-height: 18px;
+    letter-spacing: -0.3px;
+
+}
+input.styled::placeholder {
+    color: #6d849a;
+    opacity:0.5;
+  }
+
+
+input.styledBig { 
+    @extend .styled;
+    height: 56px;
+    font-size: 17px;
+    line-height: 18px;
+    letter-spacing: -0.4px;
+  }
+
+input.styled:focus {
+    outline: none;
+    //box-shadow: 0 0 1pt 1pt ;//#8fb3f4;
+  }  
+
+input.styledBig::placeholder {
+    opacity:1;
+  }
+
+// === BUTTONS ===
+button.master {
+    width: 100%;
+    height: 44px;
+    background: #398fe6;
+    border-radius: 10px;
+    border: 0;
+  
+    font-size: 15px;
+    line-height: 20px;
+    text-align: center;
+    letter-spacing: -0.4px;
+    color: #ffffff;
+  
+    cursor: pointer;
+  }
+
+button.master:hover {
+    opacity: 0.8;
+  }
+
+button.master:focus {
+    outline: none;
+    // box-shadow: 0 0 1pt 1pt #8fb3f4;
+  }  
+
+button.slave {
+    @extend .master;
+    background: #ffffff;
+    border: 1px solid #7d91a5;
+    color: #6d849a;
+
+  }
+

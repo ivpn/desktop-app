@@ -1,0 +1,30 @@
+// buttons on\off state
+img.serversButtonsBack {
+    padding-left: 15px;
+}
+
+button.stateButtonOff {
+    margin-top: 16px;
+    border: none;
+    background-color: inherit;
+    outline-width: 0;
+    cursor: pointer;
+  
+    width: 100%;
+    height: 38px;
+  
+    font-style: normal;
+    font-weight: 500;
+    font-size: 11px;
+    line-height: 13px;
+  
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  
+    border-bottom: 2px solid #d9e0e5;
+}
+
+button.stateButtonOn {
+    @extend .stateButtonOff;
+    border-bottom: 2px solid #449cf8;
+}

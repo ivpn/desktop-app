@@ -1,0 +1,94 @@
+@import "base.scss";
+@import "windows-servers.scss";
+@import "windows-settings.scss";
+
+
+:root {
+  --button-slave-background: rgba(0, 0, 0, 0.2);
+  @media (prefers-color-scheme: dark){
+    --button-slave-background: #777777;
+  }
+}
+
+// ===================================
+
+// === HOP BUTTONS ===
+div.hopButtons {
+    @extend .hopButtonsBase;
+    min-height: 36px;
+}
+div.hopButtonsSeparator {
+    @extend .hopButtonsSeparatorBase;
+    margin-left: 20px;
+    margin-right: 20px;
+}
+button.hopButton {
+    @extend .hopButtonBase;
+    text-transform: lowercase;
+    font-size: 14px;
+    line-height: 18px;
+    text-align: center;
+    letter-spacing: -0.375px;
+    color: #36495D;
+
+    opacity: 1;
+    font-weight: 400;
+}
+button.hopButtonActive {
+    @extend .hopButtonActiveBase;
+    color: #178FE6;
+    opacity: 1;
+    font-weight: 400;
+}
+// === INPUT ===
+input.styled {
+    @extend .styledBase;
+    height: 32px;
+    
+    border: 2px solid rgba(var(--input-border-color-rgb), 0.3);
+    box-sizing: border-box;
+    
+    border-radius: 0px;
+
+    //outline-color: #8fb3f4;
+    //outline-width: 2px;
+    //outline-style: solid;
+}
+input.styled::placeholder {
+    font-size: 14px;
+    line-height: 20px;
+    color: #8B9AAB;
+  }
+input.styledBig { 
+    @extend .styled;
+  }
+
+// === BUTTONS ===
+button.master {
+    width: 100%;
+    height: 32px;
+    background: #0078D7;
+
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    color: #FFFFFF;
+
+    border: 0px;
+    cursor: pointer;
+
+  }
+
+button.master:hover {
+    opacity: 0.8;
+  }
+
+button.slave {
+    @extend .master;
+    background: var(--button-slave-background);
+
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    color: #000000;
+  }

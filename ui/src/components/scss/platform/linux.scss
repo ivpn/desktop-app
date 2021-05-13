@@ -1,0 +1,77 @@
+@import "base.scss";
+@import "linux-servers.scss";
+@import "linux-settings.scss";
+
+
+:root {
+  --button-border-color: #CACACA;
+  --button-background: #FFFFFF;
+  --button-background-gradient-start: #EFEEED;
+  --button-on-background: #FAAE91;
+  --button-on-background-gradient-start: #F49572;
+
+  @media (prefers-color-scheme: dark){
+    --button-border-color:  #000000;
+    --button-background: #4A4A4A;
+    --button-background-gradient-start: #3A3A3A;
+    --button-on-background: #BA6E51;
+    --button-on-background-gradient-start: #B45532;
+  }
+}
+
+// === HOP BUTTONS ===
+div.hopButtons {
+    @extend .hopButtonsBase;
+}
+button.hopButton {
+    @extend .hopButtonBase;
+}
+button.hopButtonActive {
+    @extend .hopButtonActiveBase;
+}
+div.hopButtonsSeparator {
+    @extend .hopButtonActiveBase;
+}
+
+// === INPUT ===
+input.styled {
+    @extend .styledBase;
+    height: 27px;
+
+    border: 1px solid var(--input-border-color);
+    box-sizing: border-box;
+  
+    border-radius: 4px;
+}
+input.styled::placeholder {
+    font-size: 13px;
+    line-height: 17px;
+    letter-spacing: -0.208px;
+
+    color: #6d849a;
+  }
+input.styledBig { 
+    @extend .styled;
+  }
+
+// === BUTTONS ===
+button.master {
+    width: 100%;
+    height: 28px;
+
+    background: linear-gradient(0deg, #F49572 0%, #FAAE91 100%), #FFFFFF;
+    border: 1px solid var(--button-border-color);
+    box-sizing: border-box;
+    border-radius: 4px;
+
+    font-size: 15px;
+    line-height: 17px;
+    color: #FFFFFF;
+
+    cursor: pointer;
+  }
+button.slave {
+    @extend .master;
+    background: linear-gradient(0deg, #EFEEED 0%, #FFFFFF 100%), #FFFFFF;
+    color: #4C4C4C;
+  }
