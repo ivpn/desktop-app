@@ -40,7 +40,7 @@ export default {
   UpdateWindowWidth: 600,
 
   // shellOpenExternal(...) allows only URLs started with this prefix
-  URLsAllowedPrefix: "https://www.ivpn.net",
+  URLsAllowedPrefixes: ["https://www.ivpn.net", "https://ivpn.net"],
   URLApps: "https://www.ivpn.net/apps/",
 
   IsDebug,

@@ -272,13 +272,20 @@ ipcMain.handle(
 );
 ipcMain.handle("renderer-request-shell-open-external", async (event, uri) => {
   if (uri == null) return;
-  if (
-    uri != config.URLsAllowedPrefix &&
-    !uri.startsWith(config.URLsAllowedPrefix + "/")
-  ) {
-    throw Error(
-      `Not allowed to open links which are not starting from '${config.URLsAllowedPrefix}'`
-    );
+
+  let isAllowedUrl = false;
+
+  for (let p of config.URLsAllowedPrefixes) {
+    if (uri == p || uri.startsWith(p + "/")) {
+      isAllowedUrl = true;
+      break;
+    }
+  }
+
+  if (!isAllowedUrl) {
+    const errMsg = `Opening the link '${uri}' is blocked. Not allowed to open links which are not starting from: ${config.URLsAllowedPrefixes}`;
+    console.log(errMsg);
+    throw Error(errMsg);
   }
   return shell.openExternal(uri);
 });
