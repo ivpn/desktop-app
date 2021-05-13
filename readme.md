@@ -21,7 +21,7 @@ Table of Contents
 <a name="about-repo"></a>
 ## About this Repo
 
-This is the official Git repo of the [IVPN Daemon](https://github.com/ivpn/desktop-app-daemon).
+This is the official Git repo of the [IVPN for Desktop](https://github.com/ivpn/desktop-app).
 
 
 <a name="installation"></a>
