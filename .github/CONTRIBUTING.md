@@ -1,12 +1,11 @@
 # Contributing
 
-Thanks for your time and interest for contributing to the IVPN project!  
+Thanks for your time and interest for contributing to the IVPN Desktop app project!  
 As a contributor, here are the guidelines we would like you to follow:
 
 * [Contributing Code](#contributing)
 * [Creating an Issue](#issue)
 * [Pull Requests](#pr)
-* [Git Workflow](#git)
 
 <a name="contributing"></a>
 ## Contributing Code
