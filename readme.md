@@ -1,13 +1,14 @@
 # IVPN for Desktop (Windows/macOS/Linux)
 
-**IVPN for Desktop** is an IVPN software for desktop platforms (Windows, macOS, Linux). Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Multi-Hop, Trusted Networks, AntiTracker, Custom DNS, Dark mode, and more.  
+**IVPN for Desktop** is an IVPN software for desktop platforms. Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Multi-Hop, Trusted Networks, AntiTracker, Custom DNS, Dark mode, and more.  
 IVPN Client app is distributed on the official site [www.ivpn.net](https://www.ivpn.net).  
 
-The project is divided into three parts: Daemon, UI, and CLI.  
-*Daemon* is a core module of IVPN software built mostly using the Go language. It runs with privileged rights as a system service/daemon.  
-*UI* is a multi-platform UI built using Electron (supported platforms: macOS, Linux, Windows).  
-*CLI* is a Command Line Interface.  
+The project is divided into three parts:  
+- **Daemon** is a core module of IVPN software built mostly using the Go language. It runs with privileged rights as a system service/daemon.  
+- **UI** is a Graphical User Interface built using Electron.  
+- **CLI** is a Command Line Interface.  
 
+Table of Contents
 * [About this Repo](#about-repo)
 * [Installation](#installation)
 * [Versioning](#versioning)
