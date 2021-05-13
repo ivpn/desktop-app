@@ -79,7 +79,10 @@ export default {
       return this.pauseConnectionTill != null;
     },
     isTheCurrentLocation: function() {
-      return this.location === this.$store.state.location;
+      return (
+        this.location === this.$store.state.location ||
+        this.location === this.$store.state.locationIPv6
+      );
     },
 
     isExitServerCountrySameAsEntry: function() {

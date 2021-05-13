@@ -49,6 +49,20 @@ type ConnectionParams struct {
 	hostIP           net.IP
 	hostPublicKey    string
 	hostLocalIP      net.IP
+	ipv6Prefix       string
+}
+
+func (cp *ConnectionParams) GetIPv6ClientLocalIP() net.IP {
+	if len(cp.ipv6Prefix) <= 0 {
+		return nil
+	}
+	return net.ParseIP(cp.ipv6Prefix + cp.clientLocalIP.String())
+}
+func (cp *ConnectionParams) GetIPv6HostLocalIP() net.IP {
+	if len(cp.ipv6Prefix) <= 0 {
+		return nil
+	}
+	return net.ParseIP(cp.ipv6Prefix + cp.hostLocalIP.String())
 }
 
 // SetCredentials update WG credentials
@@ -62,13 +76,15 @@ func CreateConnectionParams(
 	hostPort int,
 	hostIP net.IP,
 	hostPublicKey string,
-	hostLocalIP net.IP) ConnectionParams {
+	hostLocalIP net.IP,
+	ipv6Prefix string) ConnectionParams {
 
 	return ConnectionParams{
 		hostPort:      hostPort,
 		hostIP:        hostIP,
 		hostPublicKey: hostPublicKey,
-		hostLocalIP:   hostLocalIP}
+		hostLocalIP:   hostLocalIP,
+		ipv6Prefix:    ipv6Prefix}
 }
 
 // WireGuard structure represents all data of wireguard connection
@@ -225,6 +241,7 @@ func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
 	stateChan <- vpn.NewStateInfoConnected(
 		isTCP,
 		wg.connectParams.clientLocalIP,
+		wg.connectParams.GetIPv6ClientLocalIP(),
 		wg.localPort,
 		wg.connectParams.hostIP,
 		wg.connectParams.hostPort,
@@ -233,4 +250,8 @@ func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
 
 func (wg *WireGuard) OnRoutingChanged() error {
 	return wg.onRoutingChanged()
+}
+
+func (wg *WireGuard) IsIPv6InTunnel() bool {
+	return len(wg.connectParams.GetIPv6ClientLocalIP()) > 0
 }

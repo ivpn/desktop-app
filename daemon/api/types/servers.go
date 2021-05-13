@@ -22,12 +22,18 @@
 
 package types
 
+type WireGuardServerHostInfoIPv6 struct {
+	Host    string `json:"host"`
+	LocalIP string `json:"local_ip"`
+}
+
 // WireGuardServerHostInfo contains info about WG server host
 type WireGuardServerHostInfo struct {
-	Hostname  string `json:"hostname"`
-	Host      string `json:"host"`
-	PublicKey string `json:"public_key"`
-	LocalIP   string `json:"local_ip"`
+	Hostname  string                      `json:"hostname"`
+	Host      string                      `json:"host"`
+	PublicKey string                      `json:"public_key"`
+	LocalIP   string                      `json:"local_ip"`
+	IPv6      WireGuardServerHostInfoIPv6 `json:"ipv6"`
 }
 
 // WireGuardServerInfo contains all info about WG server
@@ -70,7 +76,8 @@ type AntitrackerInfo struct {
 
 // InfoAPI contains API IP adresses
 type InfoAPI struct {
-	IPAddresses []string `json:"ips"`
+	IPAddresses   []string `json:"ips"`
+	IPv6Addresses []string `json:"ipv6s"`
 }
 
 // ConfigInfo contains different configuration info (Antitracker, API ...)

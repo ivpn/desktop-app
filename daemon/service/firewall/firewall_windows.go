@@ -131,7 +131,7 @@ func implSetPersistant(persistant bool) (retErr error) {
 }
 
 // ClientConnected - allow communication for local vpn/client IP address
-func implClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) (retErr error) {
+func implClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) (retErr error) {
 	// start / commit transaction
 	if err := manager.TransactionStart(); err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
@@ -149,7 +149,7 @@ func implClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP n
 	if err != nil {
 		log.Error("Failed to remove previously defined client IP filters: ", err)
 	}
-	return doAddClientIPFilters(clientLocalIPAddress)
+	return doAddClientIPFilters(clientLocalIPAddress, clientLocalIPv6Address)
 }
 
 // ClientDisconnected - Disable communication for local vpn/client IP address
@@ -240,7 +240,7 @@ func reEnable() (retErr error) {
 		return fmt.Errorf("failed to enable firewall: %w", err)
 	}
 
-	return doAddClientIPFilters(connectedClientInterfaceIP)
+	return doAddClientIPFilters(connectedClientInterfaceIP, connectedClientInterfaceIPv6)
 }
 
 func doEnable() (retErr error) {
@@ -438,7 +438,7 @@ func doDisable() error {
 	return nil
 }
 
-func doAddClientIPFilters(clientLocalIP net.IP) (retErr error) {
+func doAddClientIPFilters(clientLocalIP net.IP, clientLocalIPv6 net.IP) (retErr error) {
 	if clientLocalIP == nil {
 		return nil
 	}
@@ -459,6 +459,18 @@ func doAddClientIPFilters(clientLocalIP net.IP) (retErr error) {
 			return fmt.Errorf("failed to add filter : %w", err)
 		}
 		filters = append(filters, id)
+	}
+
+	// IPv6: allow IPv6 communication inside tunnel
+	if clientLocalIPv6 != nil {
+		for _, layer := range v6Layers {
+			f := winlib.NewFilterAllowLocalIPV6(providerKey, layer, sublayerKey, filterDName, "", clientLocalIPv6, byte(128), false)
+			id, err := manager.AddFilter(f)
+			if err != nil {
+				return fmt.Errorf("failed to add IPv6 filter : %w", err)
+			}
+			filters = append(filters, id)
+		}
 	}
 
 	clientLocalIPFilterIDs = filters

@@ -39,6 +39,7 @@ import (
 	"github.com/ivpn/desktop-app-daemon/helpers"
 	"github.com/ivpn/desktop-app-daemon/logger"
 	"github.com/ivpn/desktop-app-daemon/netinfo"
+	protocolTypes "github.com/ivpn/desktop-app-daemon/protocol/types"
 	"github.com/ivpn/desktop-app-daemon/service/dns"
 	"github.com/ivpn/desktop-app-daemon/service/firewall"
 	"github.com/ivpn/desktop-app-daemon/service/platform"
@@ -198,8 +199,17 @@ func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
 }
 
 // APIRequest do custom request to API
-func (s *Service) APIRequest(apiAlias string) (responseData []byte, err error) {
-	return s._api.DoRequestByAlias(apiAlias)
+func (s *Service) APIRequest(apiAlias string, ipTypeRequired protocolTypes.RequiredIPProtocol) (responseData []byte, err error) {
+
+	if ipTypeRequired == protocolTypes.IPv6 {
+		// IPV6-LOC-200 - IVPN Apps should request only IPv4 location information when connected  to the gateway, which doesn’t support IPv6
+		vpn := s._vpn
+		if vpn != nil && vpn.IsPaused() == false && vpn.IsIPv6InTunnel() == false {
+			return nil, fmt.Errorf("no IPv6 support inside tunnel for current connection")
+		}
+	}
+
+	return s._api.DoRequestByAlias(apiAlias, ipTypeRequired)
 }
 
 // GetDisabledFunctions returns info about functions which are disabled
@@ -600,7 +610,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 					// Inform firewall about client local IP
 					firewall.ClientConnected(
-						state.ClientIP, state.ClientPort,
+						state.ClientIP, state.ClientIPv6,
+						state.ClientPort,
 						state.ServerIP, state.ServerPort,
 						state.IsTCP)
 				default:

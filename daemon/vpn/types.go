@@ -128,6 +128,7 @@ type StateInfo struct {
 	Time         int64  // unix time (seconds)
 	IsTCP        bool   // applicable only for 'CONNECTED' state
 	ClientIP     net.IP // applicable only for 'CONNECTED' state
+	ClientIPv6   net.IP // applicable only for 'CONNECTED' state. Initialized only if protocol supports IPv6 inside tunnel
 	ClientPort   int    // applicable only for 'CONNECTED' state (source port)
 	ServerIP     net.IP // applicable only for 'CONNECTED' state
 	ServerPort   int    // applicable only for 'CONNECTED' state (destination port)
@@ -152,12 +153,13 @@ func NewStateInfo(state State, description string) StateInfo {
 }
 
 // NewStateInfoConnected - create new state object for CONNECTED state
-func NewStateInfoConnected(isTCP bool, clientIP net.IP, localPort int, serverIP net.IP, destPort int, isCanPause bool) StateInfo {
+func NewStateInfoConnected(isTCP bool, clientIP net.IP, clientIPv6 net.IP, localPort int, serverIP net.IP, destPort int, isCanPause bool) StateInfo {
 	return StateInfo{
 		State:       CONNECTED,
 		Description: "",
 		IsTCP:       isTCP,
 		ClientIP:    clientIP,
+		ClientIPv6:  clientIPv6,
 		ClientPort:  localPort,
 		ServerIP:    serverIP,
 		ServerPort:  destPort,
@@ -187,6 +189,8 @@ type Process interface {
 	// DestinationIP -  Get destination IP (VPN host server or proxy server IP address)
 	// This information if required, for example, to allow this address in firewall
 	DestinationIP() net.IP
+
+	IsIPv6InTunnel() bool
 
 	OnRoutingChanged() error
 }

@@ -83,13 +83,19 @@ export default {
 
           ping: ??? // property added after receiving ping info from daemon
           pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon
+          isIPv6: ??? // property calculated automatically after receiving servers data from the daemon (null - IPv6 not supported by this type of VPN)
 
           hosts: [
             {
               hostname: "",
               host: "",
               public_key: "",
-              local_ip: ""
+              local_ip: "",
+              ipv6: 
+              {                        
+                "local_ip": "",
+                "host": ""
+              }
             }
           ]
         }
@@ -113,7 +119,7 @@ export default {
           default: { ip: "", "multihop-ip": "" },
           hardcore: { ip: "", "multihop-ip": "" }
         },
-        api: { ips: [""] }
+        api: { ips: [""], ipv6s:[""] }
       }
     }*/
   },
@@ -195,7 +201,7 @@ export default {
       return enumValueName(VpnStateEnum, state.connectionState);
     },
     activeServers(state, getters, rootState) {
-      return getActiveServers(state, rootState.settings.vpnType);
+      return getActiveServers(state, rootState);
     },
     antitrackerIp(state, getters, rootState) {
       let atConfig = state.servers.config.antitracker;
@@ -213,7 +219,7 @@ export default {
       return isAntitrackerHardcoreActive(state);
     },
     fastestServer(state, getters, rootState) {
-      let servers = getActiveServers(state, rootState.settings.vpnType);
+      let servers = getActiveServers(state, rootState);
       if (servers == null || servers.length <= 0) return null;
 
       let skipSvrs = rootState.settings.serversFastestExcludeList;
@@ -277,11 +283,25 @@ export default {
   }
 };
 
-function getActiveServers(state, vpnType) {
+function getActiveServers(state, rootState) {
+  const vpnType = rootState.settings.vpnType;
+  const enableIPv6InTunnel = rootState.settings.enableIPv6InTunnel;
+  const showGatewaysWithoutIPv6 = rootState.settings.showGatewaysWithoutIPv6;
+
   if (vpnType === VpnTypeEnum.OpenVPN) {
+    // IPv6 in not implemented for OpenVPN
     return state.servers.openvpn;
   }
-  return state.servers.wireguard;
+
+  let wgServers = state.servers.wireguard;
+  if (enableIPv6InTunnel == true && showGatewaysWithoutIPv6 != true) {
+    // show only servers which support IPv6
+    return wgServers.filter(s => {
+      return s.isIPv6;
+    });
+  }
+
+  return wgServers;
 }
 
 function findServerByIp(servers, ip) {
@@ -354,6 +374,20 @@ function updateServersPings(state, pings) {
   });
 }
 
+function isServerSupportIPv6(server) {
+  if (!server) return null;
+
+  if (!server.hosts) return null; // non-WireGuard server
+  // TODO: implement same (IPv6) for OpenVPN
+  // IPv6 for OpenVPN if not implemented yet
+
+  // WireGuard
+  for (let h of server.hosts) {
+    if (h && h.ipv6 && h.ipv6.local_ip) return true;
+  }
+  return false;
+}
+
 function updateServers(state, newServers) {
   if (newServers == null) return;
 
@@ -366,7 +400,7 @@ function updateServers(state, newServers) {
         default: {},
         hardcore: {}
       },
-      api: { ips: [] }
+      api: { ips: [], ipv6s: [] }
     }
   };
   newServers = Object.assign(serversEmpty, newServers);
@@ -376,9 +410,11 @@ function updateServers(state, newServers) {
     let retObj = hashObj;
     if (retObj == null) retObj = {};
     for (let i = 0; i < servers.length; i++) {
-      servers[i].ping = null; // initialize 'ping' field to support VUE reactivity for it
-      servers[i].pingQuality = null;
-      retObj[servers[i].gateway] = servers[i]; // hash
+      let svr = servers[i];
+      svr.ping = null; // initialize 'ping' field to support VUE reactivity for it
+      svr.pingQuality = null;
+      svr.isIPv6 = isServerSupportIPv6(svr);
+      retObj[svr.gateway] = svr; // hash
     }
     return retObj;
   }

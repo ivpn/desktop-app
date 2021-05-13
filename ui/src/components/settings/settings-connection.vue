@@ -31,6 +31,33 @@
       </div>
     </div>
 
+    <!-- IPv6 -->
+    <div>
+      <div class="param">
+        <input
+          type="checkbox"
+          id="enableIPv6InTunnel"
+          v-model="enableIPv6InTunnel"
+          :disabled="!isCanUseIPv6InTunnel"
+        />
+        <label class="defColor" for="enableIPv6InTunnel"
+          >Enable IPv6 in VPN tunnel</label
+        >
+      </div>
+
+      <div class="param">
+        <input
+          type="checkbox"
+          id="showGatewaysWithoutIPv6"
+          v-model="showGatewaysWithoutIPv6"
+          :disabled="!isCanUseIPv6InTunnel || enableIPv6InTunnel === false"
+        />
+        <label class="defColor" for="showGatewaysWithoutIPv6"
+          >Show servers without IPv6 support</label
+        >
+      </div>
+    </div>
+
     <!-- OpenVPN -->
     <div v-if="isOpenVPN">
       <div class="settingsBoldFont">OpenVPN configuration:</div>
@@ -271,20 +298,28 @@ export default {
     };
   },
   methods: {
-    onVpnChange: function(e) {
+    isAbleToChangeVpnSettings: function() {
       if (
-        this.$store.state.vpnState.connectionState !== VpnStateEnum.DISCONNECTED
-      ) {
-        sender.showMessageBoxSync({
-          type: "info",
-          buttons: ["OK"],
-          message: "You are now connected to IVPN",
-          detail:
-            "You can change VPN protocol settings only when IVPN is disconnected."
-        });
+        this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
+      )
+        return true;
+
+      sender.showMessageBoxSync({
+        type: "info",
+        buttons: ["OK"],
+        message: "You are now connected to IVPN",
+        detail:
+          "You can change VPN protocol settings only when IVPN is disconnected."
+      });
+
+      return false;
+    },
+    onVpnChange: function(e) {
+      if (this.isAbleToChangeVpnSettings() != true) {
         e.preventDefault();
         return;
       }
+
       let type = VpnTypeEnum.OpenVPN;
       if (e.target.value === "wireguard") type = VpnTypeEnum.WireGuard;
       else type = VpnTypeEnum.OpenVPN;
@@ -325,6 +360,30 @@ export default {
     }
   },
   computed: {
+    isCanUseIPv6InTunnel: function() {
+      return this.$store.getters["isCanUseIPv6InTunnel"];
+    },
+    enableIPv6InTunnel: {
+      get() {
+        return this.$store.state.settings.enableIPv6InTunnel;
+      },
+      set(value) {
+        let isCanChange = this.isAbleToChangeVpnSettings();
+        this.$store.dispatch("settings/enableIPv6InTunnel", value);
+
+        if (isCanChange != true) {
+          this.$store.dispatch("settings/enableIPv6InTunnel", !value);
+        }
+      }
+    },
+    showGatewaysWithoutIPv6: {
+      get() {
+        return this.$store.state.settings.showGatewaysWithoutIPv6;
+      },
+      set(value) {
+        this.$store.dispatch("settings/showGatewaysWithoutIPv6", value);
+      }
+    },
     IsAccountActive: function() {
       // if no info about account status - let's believe that account is active
       if (
@@ -472,12 +531,12 @@ input:disabled + label {
 
 div.paramBlock {
   @extend .flexRow;
-  margin-top: 18px;
+  margin-top: 10px;
 }
 
 div.paramBlockDetailedConfig {
   @extend .flexRow;
-  margin-top: 10px;
+  margin-top: 5px;
 }
 div.detailedConfigBlock {
   margin-left: 22px;

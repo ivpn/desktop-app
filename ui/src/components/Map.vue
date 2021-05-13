@@ -135,7 +135,7 @@
             v-bind:class="{
               mapLocationPointCurrent: l.location === location,
               mapLocationPointConnected:
-                l.location === selectedServer && isConnected
+                l.location === connectedLocation && isConnected
             }"
             :style="{
               left: l.x - l.pointRadius + 'px',
@@ -155,7 +155,7 @@
             v-bind:class="{
               mapLocationNameCurrent: l.location === location,
               mapLocationNameConnected:
-                l.location === selectedServer && isConnected
+                l.location === connectedLocation && isConnected
             }"
             :style="{ left: l.left + 'px', top: l.top + 'px' }"
           >
@@ -308,13 +308,19 @@ export default {
     },
 
     location: function() {
-      if (
-        this.$store.state.location == null ||
-        this.$store.state.location.isRealLocation !== true
-      )
-        return null;
-      return this.$store.state.location;
+      let l = this.$store.state.location;
+
+      // IPv6
+      if (this.$store.getters["getIsIPv6View"]) {
+        let lv6 = this.$store.state.locationIPv6;
+        if (lv6 && lv6.isRealLocation) l = lv6;
+        if (!lv6) l = null;
+      }
+
+      if (l == null || l.isRealLocation !== true) return null;
+      return l;
     },
+
     isFastestServer: function() {
       return this.$store.state.settings.isFastestServer;
     },
@@ -326,26 +332,25 @@ export default {
       return this.$store.state.vpnState.pauseState === PauseStateEnum.Paused;
     },
 
-    currentPosition: function() {
-      if (this.isPaused) return this.location;
-      return this.isInProgress || this.isConnected
-        ? this.selectedServer
-        : this.location;
-    },
+    connectedLocation: function() {
+      if (!this.isConnected) return null;
+      /*
+      let l = this.$store.state.location;
 
-    currentPositionAbsoluteCoordinates: function() {
-      const cp = this.currentPosition;
-      if (cp == null) return { x: 0, y: 0 };
-      const point = this.getLocationXYCoordinates(cp);
-      if (point == null) return { x: 0, y: 0 };
-      return point;
-    },
+      // IPv6
+      if (
+        this.$store.getters["getIsIPv6View"] &&
+        this.$store.getters["getIsInfoAvailableIPv6"]
+      ) {
+        l = this.$store.state.locationIPv6;
+      }
 
-    currentPositionCircleRadius: function() {
-      const cp = this.currentPosition;
-      if (cp == null) return 0;
-      if (cp === this.selectedServer) return 44;
-      return 32;
+      if (!l || l.isRealLocation == true) {
+        l = this.selectedServer;
+      }
+
+      return l; //*/
+      return this.selectedServer;
     },
 
     // needed for watcher
@@ -415,6 +420,16 @@ export default {
   },
 
   watch: {
+    servers() {
+      this.updateCities();
+    },
+
+    connectedLocation() {
+      this.updateCities();
+      this.updateAnimations();
+      this.centerServer(this.connectedLocation);
+    },
+
     selectedServer(newVal, oldVal) {
       this.updateCities();
       this.updateAnimations();
@@ -725,9 +740,9 @@ export default {
 
     // ================= SCROLLING ====================
     centerCurrentLocation(noAnimation) {
-      if (!this.isConnected && this.location != null)
+      if (!this.isConnected && this.location != null) {
         this.centerServer(this.location, noAnimation, true);
-      else this.centerServer(this.selectedServer, noAnimation);
+      } else this.centerServer(this.connectedLocation, noAnimation);
     },
     centerServer(server, noAnimation, isPopupRequired) {
       if (server == null) return;
@@ -1013,6 +1028,7 @@ export default {
       let cities = [];
       const PointRadius = 3;
       const PointRadiusExitServer = 6;
+      const settings = this.$store.state.settings;
 
       // Selected servers and current location has highest priority to draw
       let city = null;
@@ -1021,24 +1037,17 @@ export default {
         city = this.createCity(this.location, cities, PointRadius);
         if (city != null) cities.push(city);
       }
-      // entry- exit- servers
-      const settings = this.$store.state.settings;
-      if (settings.isMultiHop) {
-        city = this.createCity(
-          settings.serverExit,
-          cities,
-          PointRadiusExitServer
-        );
-        if (city != null) cities.push(city);
 
-        city = this.createCity(settings.serverEntry, cities, PointRadius);
-        if (city != null) cities.push(city);
-      } else {
-        city = this.createCity(
-          settings.serverEntry,
-          cities,
-          PointRadiusExitServer
-        );
+      // show exit- and entry- servers
+      city = this.createCity(
+        this.connectedLocation,
+        cities,
+        PointRadiusExitServer
+      );
+      if (city != null) cities.push(city);
+      // if MultiHop - just ensure that entry- server vill be visible
+      if (settings.isMultiHop) {
+        let city = this.createCity(settings.serverEntry, cities, PointRadius);
         if (city != null) cities.push(city);
       }
 
@@ -1162,11 +1171,11 @@ export default {
       let obj = this.animSelCircles[0];
       if (this.isInProgress || this.isConnected) {
         //if (this.isConnecting || this.isConnected) {
-        const point = this.getLocationXYCoordinates(this.selectedServer);
+        const point = this.getLocationXYCoordinates(this.connectedLocation);
         if (point != null) {
           if (
             obj.IVPNLocationObj != null &&
-            obj.IVPNLocationObj.city != this.selectedServer.city
+            obj.IVPNLocationObj.city != this.connectedLocation.city
           ) {
             setDisconnectedObj(this);
             obj = this.animSelCircles[0];
@@ -1175,12 +1184,12 @@ export default {
           // set coordinates for selected server
           obj.style.left = `${point.x}px`;
           obj.style.top = `${point.y}px`;
-          obj.IVPNLocationObj = this.selectedServer;
+          obj.IVPNLocationObj = this.connectedLocation;
 
           // set coordinates for 'connected waves' animation object
           this.animConnectedWaves.style.left = `${point.x}px`;
           this.animConnectedWaves.style.top = `${point.y}px`;
-          this.animConnectedWaves.IVPNLocationObj = this.selectedServer;
+          this.animConnectedWaves.IVPNLocationObj = this.connectedLocation;
 
           // we are connected or connecting
           // Remove 'shrink' class

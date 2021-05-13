@@ -194,6 +194,9 @@ function addWaiter(waiter, timeoutMs) {
   return promise;
 }
 
+// If 'waitRespCommandsList' defined - the waiter will accept ANY response
+// which mach one of elements in 'waitRespCommandsList'.
+// Otherwise, waiter will accept only response with correspond response index.
 function sendRecv(request, waitRespCommandsList, timeoutMs) {
   requestNo += 1;
 
@@ -642,9 +645,7 @@ async function Logout() {
 }
 
 async function AccountStatus() {
-  return await sendRecv({ Command: daemonRequests.AccountStatus }, [
-    daemonResponses.AccountStatusResp
-  ]);
+  return await sendRecv({ Command: daemonRequests.AccountStatus });
 }
 
 async function GetAppUpdateInfo(doManualUpdateCheck) {
@@ -693,17 +694,17 @@ async function GetAppUpdateInfo(doManualUpdateCheck) {
       }
     }
 
-    let updateInfoResp = await sendRecv(
-      { Command: daemonRequests.APIRequest, APIPath: apiAlias },
-      [daemonResponses.APIResponse]
-    );
+    let updateInfoResp = await sendRecv({
+      Command: daemonRequests.APIRequest,
+      APIPath: apiAlias
+    });
 
     let updateInfoSignResp = null;
     if (apiAliasSign) {
-      updateInfoSignResp = await sendRecv(
-        { Command: daemonRequests.APIRequest, APIPath: apiAliasSign },
-        [daemonResponses.APIResponse]
-      );
+      updateInfoSignResp = await sendRecv({
+        Command: daemonRequests.APIRequest,
+        APIPath: apiAliasSign
+      });
     }
 
     let respRaw = null;
@@ -721,7 +722,37 @@ async function GetAppUpdateInfo(doManualUpdateCheck) {
   return null;
 }
 
-async function GeoLookup(isRetryTry) {
+var _geoLookupLastRequestId = 0;
+async function GeoLookup() {
+  // Save unique 'requestID'.
+  // If there are already any 'doGeoLookup()' in progress - they will be stopped due to new
+  _geoLookupLastRequestId += 1;
+
+  // mark 'Checking geolookup...'
+  store.commit("isRequestingLocation", true);
+  store.commit("isRequestingLocationIPv6", true);
+
+  // erase all known locations
+  store.commit("location", null);
+  store.commit("locationIPv6", null);
+
+  // IPv4 request...
+  doGeoLookup(_geoLookupLastRequestId);
+  // IPv6 request ...
+  doGeoLookup(_geoLookupLastRequestId, true);
+}
+
+async function doGeoLookup(requestID, isIPv6, isRetryTry) {
+  if (isIPv6 == undefined) isIPv6 = false;
+
+  let ipVerStr = isIPv6 ? "(IPv6)" : "(IPv4)";
+
+  // Determining the properties names (according to 'isIPv6' parameter)
+  let propName_Location = isIPv6 == true ? "locationIPv6" : "location";
+  let propName_IsRequestingLocation =
+    isIPv6 == true ? "isRequestingLocationIPv6" : "isRequestingLocation";
+
+  // Function returns 'true' then we received location info in disconnected state
   let isRealGeoLocationCheck = function() {
     return (
       store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED ||
@@ -732,54 +763,84 @@ async function GeoLookup(isRetryTry) {
   let retLocation = null;
   let isRealGeoLocationOnStart = isRealGeoLocationCheck();
 
-  store.commit("isRequestingLocation", true); // mark 'Checking geolookup...'
-  try {
-    let resp = await sendRecv(
-      { Command: daemonRequests.APIRequest, APIPath: "geo-lookup" },
-      [daemonResponses.APIResponse]
-    );
+  // mark 'Checking geolookup...'
+  store.commit(propName_IsRequestingLocation, true);
 
-    if (resp.Error !== "")
-      console.error("API 'geo-lookup' error: " + resp.Error);
-    else {
+  // To run new location request - the location info should be empty
+  // Otherwise - skip this request (since location already known)
+  if (store.state["propName_Location"] != null) {
+    // un-mark 'Checking geolookup...'
+    store.commit(propName_IsRequestingLocation, false);
+    log.info(`The ${ipVerStr} location already defined`);
+    return;
+  }
+  if (requestID != _geoLookupLastRequestId) {
+    // un-mark 'Checking geolookup...'
+    store.commit(propName_IsRequestingLocation, false);
+    log.info("New API 'geo-lookup' request detected. Skipping current.");
+    return;
+  }
+
+  let doNotRetry = false;
+  // DO REQUEST ...
+  try {
+    let resp = await sendRecv({
+      Command: daemonRequests.APIRequest,
+      APIPath: "geo-lookup",
+      IPProtocolRequired: isIPv6 ? 2 : 1 // IPvAny = 0, IPv4 = 1, IPv6 = 2
+    });
+
+    if (resp.Error !== "") {
+      log.warn(`API 'geo-lookup' error: ${ipVerStr} ${resp.Error}`);
+      if (resp.Error && resp.Error.toLowerCase().includes("no ipv6 support"))
+        doNotRetry = true;
+    } else {
       if (isRealGeoLocationOnStart != isRealGeoLocationCheck()) {
-        log.error(
-          `API ERROR: Unable to save geo-lookup result (connection state changed)`
-        );
+        log.warn(`Skip geo-lookup result ${ipVerStr} (conn. state changed)`);
       } else {
         // {"ip_address":"","isp":"","organization":"","country":"","country_code":"","city":"","latitude": 0.0,"longitude":0.0,"isIvpnServer":false}
         retLocation = JSON.parse(`${resp.ResponseData}`);
         if (!retLocation || !retLocation.latitude || !retLocation.longitude) {
-          log.error(`API ERROR: bad geo-lookup response`);
+          log.warn(`API ERROR: bad geo-lookup response`);
           retLocation = null;
         } else {
           retLocation.isRealLocation = isRealGeoLocationOnStart;
-          log.debug("API: 'geo-lookup' success.");
+          log.info("API: 'geo-lookup' success.");
+          store.commit(propName_Location, retLocation);
         }
       }
     }
   } catch (e) {
-    console.error("geo-lookup error", e);
+    log.warn(`geo-lookup error ${ipVerStr}`, e.toString());
   } finally {
-    store.commit("location", retLocation);
-    store.commit("isRequestingLocation", false); // un-mark 'Checking geolookup...'
+    store.commit(propName_IsRequestingLocation, false); // un-mark 'Checking geolookup...'
   }
 
-  if (retLocation == null && !isRetryTry) {
+  if (doNotRetry == false && retLocation == null && !isRetryTry) {
     for (let r = 1; r <= 3; r++) {
-      console.log(`Geo-lookup request failed. Retrying (${r})...`);
+      // if there already new request available - skip executing current request
+      if (requestID != _geoLookupLastRequestId) {
+        log.info("New API 'geo-lookup' request detected. Skipping current");
+        break;
+      }
+
+      log.warn(`Geo-lookup request failed ${ipVerStr}. Retrying (${r})...`);
 
       let promise = new Promise(resolve => {
-        store.commit("isRequestingLocation", true); // mark 'Checking geolookup...'
-        setTimeout(() => resolve(GeoLookup(true)), r * 1000);
+        store.commit(propName_IsRequestingLocation, true); // mark 'Checking geolookup...'
+        setTimeout(() => {
+          if (!requestID == _geoLookupLastRequestId) {
+            resolve(null);
+            return;
+          }
+          resolve(doGeoLookup(requestID, isIPv6, true));
+        }, r * 1000);
       });
 
       retLocation = await promise;
       if (retLocation != null) break;
     }
   }
-
-  return retLocation;
 }
 
 let pingServersPromise = null;
@@ -811,9 +872,7 @@ async function PingServers(RetryCount, TimeOutMs) {
 }
 
 async function GetDiagnosticLogs() {
-  let logs = await sendRecv({ Command: daemonRequests.GenerateDiagnostics }, [
-    daemonResponses.DiagnosticsGeneratedResp
-  ]);
+  let logs = await sendRecv({ Command: daemonRequests.GenerateDiagnostics });
 
   // remove internal protocol variables
   delete logs.Command;
@@ -943,7 +1002,14 @@ async function Connect(entryServer, exitServer) {
     VpnType: settings.vpnType,
     [vpnParamsPropName]: vpnParamsObj,
     CurrentDNS: currentDNS,
-    FirewallOn: store.state.settings.firewallActivateOnConnect === true
+    FirewallOn: store.state.settings.firewallActivateOnConnect === true,
+    // Can use IPv6 connection inside tunnel
+    // IPv6 has higher priority, if it supported by a server - we will use IPv6.
+    // If IPv6 does not supported by server - we will use IPv4
+    IPv6: settings.enableIPv6InTunnel,
+    // Use ONLY IPv6 hosts (use IPv6 connection inside tunnel)
+    // (ignored when IPv6!=true)
+    IPv6Only: settings.showGatewaysWithoutIPv6 != true
   });
 }
 

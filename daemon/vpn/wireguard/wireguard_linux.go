@@ -239,10 +239,18 @@ func (wg *WireGuard) resetManualDNS() error {
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
-	interfaceCfg = append(interfaceCfg, "Address = "+wg.connectParams.clientLocalIP.String()+"/32")
+	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
+	ipv6LocalIPStr := ""
+	allowedIPsV6 := ""
+	if ipv6LocalIP != nil {
+		ipv6LocalIPStr = ", " + ipv6LocalIP.String()
+		allowedIPsV6 = ", ::/0"
+	}
+
+	interfaceCfg = append(interfaceCfg, "Address = "+wg.connectParams.clientLocalIP.String()+"/32"+ipv6LocalIPStr)
 	interfaceCfg = append(interfaceCfg, "SaveConfig = true")
 
-	peerCfg = append(peerCfg, "AllowedIPs = 0.0.0.0/0")
+	peerCfg = append(peerCfg, "AllowedIPs = 0.0.0.0/0"+allowedIPsV6)
 	return interfaceCfg, peerCfg
 }
 

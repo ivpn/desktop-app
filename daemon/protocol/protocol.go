@@ -76,7 +76,7 @@ type Service interface {
 	PingServers(retryCount int, timeoutMs int) (map[string]int, error)
 	ServersUpdateNotifierChannel() chan struct{}
 
-	APIRequest(apiAlias string) (responseData []byte, err error)
+	APIRequest(apiAlias string, ipTypeRequired types.RequiredIPProtocol) (responseData []byte, err error)
 
 	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast bool, err error)
 	SetKillSwitchState(bool) error
@@ -526,7 +526,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		data, err := p._service.APIRequest(req.APIPath)
+		data, err := p._service.APIRequest(req.APIPath, req.IPProtocolRequired)
 		if err != nil {
 			p.sendResponse(conn, &types.APIResponse{APIPath: req.APIPath, Error: err.Error()}, req.Idx)
 			break

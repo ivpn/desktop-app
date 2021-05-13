@@ -36,6 +36,7 @@ const (
 	weightAllowRemoteIP    = 3
 	weightAllowRemoteIPV6  = 5
 	weightAllowLocalIP     = 10
+	weightAllowLocalIPV6   = 10
 	weightBlockAll         = 2
 	weightBlockDNS         = 4
 )
@@ -158,6 +159,33 @@ func NewFilterAllowLocalIP(
 	}
 
 	f.AddCondition(&ConditionIPLocalAddressV4{Match: FwpMatchEqual, IP: ip, Mask: mask})
+	return f
+}
+
+// NewFilterAllowLocalIPV6 creates a filter to allow local IP v6
+func NewFilterAllowLocalIPV6(
+	keyProvider syscall.GUID,
+	keyLayer syscall.GUID,
+	keySublayer syscall.GUID,
+	dispName string,
+	dispDescription string,
+	ip net.IP,
+	prefixLen byte,
+	isPersistent bool) Filter {
+
+	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
+	f.Weight = weightAllowLocalIPV6
+	f.Action = FwpActionPermit
+
+	f.Flags = FwpmFilterFlagClearActionRight
+	if isPersistent {
+		f.Flags = f.Flags | FwpmFilterFlagPersistent
+	}
+
+	var ipBytes [16]byte
+	copy(ipBytes[:], ip)
+
+	f.AddCondition(&ConditionIPLocalAddressV6{Match: FwpMatchEqual, IP: ipBytes, PrefixLen: prefixLen})
 	return f
 }
 

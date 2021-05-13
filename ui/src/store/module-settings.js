@@ -34,6 +34,7 @@ const getDefaultState = () => {
     isExpectedAccountToBeLoggedIn: false,
 
     // VPN
+    enableIPv6InTunnel: false,
     vpnType: VpnTypeEnum.WireGuard,
     isMultiHop: false,
     serverEntry: null,
@@ -96,6 +97,7 @@ const getDefaultState = () => {
     },
 
     // UI
+    showGatewaysWithoutIPv6: false,
     minimizedUI: false,
     minimizeToTray: true,
     showAppInSystemDock: false,
@@ -154,6 +156,9 @@ export default {
       state.isExpectedAccountToBeLoggedIn = val;
     },
 
+    enableIPv6InTunnel(state, val) {
+      state.enableIPv6InTunnel = val;
+    },
     vpnType(state, val) {
       state.vpnType = val;
       if (state.vpnType !== VpnTypeEnum.OpenVPN) state.isMultiHop = false;
@@ -277,6 +282,9 @@ export default {
     },
 
     //UI
+    showGatewaysWithoutIPv6(state, val) {
+      state.showGatewaysWithoutIPv6 = val;
+    },
     minimizedUI(state, val) {
       state.minimizedUI = val;
     },
@@ -331,6 +339,9 @@ export default {
       context.commit("isExpectedAccountToBeLoggedIn", val);
     },
 
+    enableIPv6InTunnel(context, val) {
+      context.commit("enableIPv6InTunnel", val);
+    },
     vpnType(context, val) {
       context.commit("vpnType", val);
       // selected servers should be of correct VPN type. Necessary to update them
@@ -435,6 +446,9 @@ export default {
     },
 
     //UI
+    showGatewaysWithoutIPv6(context, val) {
+      context.commit("showGatewaysWithoutIPv6", val);
+    },
     minimizedUI(context, val) {
       context.commit("minimizedUI", val);
     },
@@ -476,7 +490,7 @@ function updateSelectedServers(context) {
   // - update selected servers if VPN type changed (try to use vpnType-related servers from the same location [country\city])
   // - if multi-hop entry- and exit- servers are from same country -> use first default exit server from another country
   // - ensure if selected servers exists in a servers list and using latest data
-
+  // TODO: ensure IPv6 configuration
   if (
     context == null ||
     context.rootGetters == null ||

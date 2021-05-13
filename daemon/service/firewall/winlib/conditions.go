@@ -123,6 +123,23 @@ func (c *ConditionIPRemoteAddressV6) Apply(filter syscall.Handle, conditionIndex
 
 // ------------------------------------------------------------------------------------------------------
 
+// ConditionIPLocalAddressV6 - new condition type implementation
+type ConditionIPLocalAddressV6 struct {
+	Match     FwpMatchType
+	IP        [16]byte
+	PrefixLen byte
+}
+
+// Apply applies the filter
+func (c *ConditionIPLocalAddressV6) Apply(filter syscall.Handle, conditionIndex uint32) error {
+	if err := preApply(c.Match, filter, conditionIndex, FwpmConditionIPLocalAddress); err != nil {
+		return fmt.Errorf("condition pre-apply error: %w", err)
+	}
+	return FWPMFILTERSetConditionV6AddrMask(filter, conditionIndex, c.IP, c.PrefixLen)
+}
+
+// ------------------------------------------------------------------------------------------------------
+
 // ConditionIPRemotePort - new condition type implementation
 type ConditionIPRemotePort struct {
 	Match FwpMatchType

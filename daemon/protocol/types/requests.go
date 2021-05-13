@@ -22,7 +22,10 @@
 
 package types
 
-import "github.com/ivpn/desktop-app-daemon/vpn"
+import (
+	"github.com/ivpn/desktop-app-daemon/api/types"
+	"github.com/ivpn/desktop-app-daemon/vpn"
+)
 
 // Hello is an initial request
 type Hello struct {
@@ -107,16 +110,15 @@ type SetAlternateDns struct {
 	DNS string
 }
 
-// WGHost is a WireGuard host description
-type WGHost struct {
-	Host      string
-	PublicKey string `json:"public_key"`
-	LocalIP   string `json:"local_ip"`
-}
-
 // Connect request to establish new VPN connection
 type Connect struct {
 	CommandBase
+	// Can use IPv6 connection inside tunnel
+	// The hosts which support IPv6 have higher priority,
+	// but if there are no IPv6 hosts - we will use the IPv4 host.
+	IPv6 bool
+	// Use ONLY IPv6 hosts (ignored when IPv6!=true)
+	IPv6Only   bool
 	VpnType    vpn.Type
 	CurrentDNS string
 	// Enable firewall before connection
@@ -132,7 +134,7 @@ type Connect struct {
 		}
 
 		EntryVpnServer struct {
-			Hosts []WGHost
+			Hosts []types.WireGuardServerHostInfo
 		}
 	}
 
@@ -212,8 +214,18 @@ type WiFiCurrentNetwork struct {
 	CommandBase
 }
 
+// IPProtocol - VPN type
+type RequiredIPProtocol int
+
+const (
+	IPvAny RequiredIPProtocol = 0
+	IPv4   RequiredIPProtocol = 1
+	IPv6   RequiredIPProtocol = 2
+)
+
 // APIRequest do custom request to API
 type APIRequest struct {
 	CommandBase
-	APIPath string
+	APIPath            string
+	IPProtocolRequired RequiredIPProtocol
 }
