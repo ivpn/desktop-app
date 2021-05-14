@@ -1,6 +1,6 @@
 # IVPN for Desktop (Windows/macOS/Linux)
 
-**IVPN for Desktop** is an IVPN software for desktop platforms. Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Multi-Hop, Trusted Networks, AntiTracker, Custom DNS, Dark mode, and more.  
+**IVPN for Desktop** is the official IVPN app for desktop platforms. Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Multi-Hop, Trusted Networks, AntiTracker, Custom DNS, Dark mode, and more.  
 IVPN Client app is distributed on the official site [www.ivpn.net](https://www.ivpn.net).  
 ![IVPN application image](/.github/readme_images/ivpn_app.png)
 * [About this Repo](#about-repo)
@@ -26,7 +26,7 @@ IVPN Client app is distributed on the official site [www.ivpn.net](https://www.i
 <a name="about-repo"></a>
 ## About this Repo
 
-This is the official Git repo of the [IVPN for Desktop](https://github.com/ivpn/desktop-app).
+This is the official Git repo of the [IVPN for Desktop](https://github.com/ivpn/desktop-app) app.
 
 The project is divided into three parts:  
 - **Daemon** is a core module of IVPN software built mostly using the Go language. It runs with privileged rights as a system service/daemon.  
@@ -36,7 +36,7 @@ The project is divided into three parts:
 <a name="installation"></a>
 ## Installation
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+These instructions enable you to get the project up and running on your local machine for development and testing purposes.
 
 <a name="requirements"></a>
 ### Requirements
@@ -118,10 +118,10 @@ total 52
 1. Build the current project to get 'ivpn service' and 'ivpn cli' binaries.
 2. Create folder `/opt/ivpn/etc`
 3. Copy all required files (see above).  
-    **Note!** Files owner and access rights are important!
+    **Note!** Files owner and access rights are important.
 4. Now you can start compiled service binary from the command line (just to check if it works).  
-    **Note!** The service must be started under a privileged user!  
-    **Info!** You can use the command line parameter `--logging` to enable logging for service.  
+    **Note!** The service must be started under a privileged user.  
+    **Info** You can use the command line parameter `--logging` to enable logging for service.  
     4.1. Simply run compiled ivpn-cli binary to check if it successfully connects to the service (use separate terminal).
 5. If everything works - you can configure your environment to start ivpn-service automatically with the system boot (we are using systemd for such purposes)
 
