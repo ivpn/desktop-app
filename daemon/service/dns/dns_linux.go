@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/ivpn/desktop-app-daemon/helpers"
+	"github.com/ivpn/desktop-app/daemon/helpers"
 )
 
 var (

@@ -273,7 +273,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/ivpn/desktop-app-daemon/oshelpers/linux/netlink"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/linux/netlink"
 )
 
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks

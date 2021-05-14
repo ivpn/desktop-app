@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -27,7 +27,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/ivpn/desktop-app-daemon/shell"
+	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 // Prepare to start IVPN daemon for macOS

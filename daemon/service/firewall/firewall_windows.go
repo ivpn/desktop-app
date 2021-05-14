@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -29,9 +29,9 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/ivpn/desktop-app-daemon/netinfo"
-	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/service/firewall/winlib"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 var (

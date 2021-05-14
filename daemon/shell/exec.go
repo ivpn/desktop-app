@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -29,7 +29,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/logger"
 )
 
 // Exec - execute external process

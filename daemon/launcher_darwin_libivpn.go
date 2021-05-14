@@ -2,10 +2,9 @@
 
 package main
 
-
 import (
-	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/oshelpers/macos/libivpn"
+	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/macos/libivpn"
 )
 
 // inform OS-specific implementation about listener port

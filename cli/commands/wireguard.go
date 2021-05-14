@@ -1,6 +1,6 @@
 //
 //  IVPN command line interface (CLI)
-//  https://github.com/ivpn/desktop-app-cli
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -28,8 +28,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/ivpn/desktop-app-cli/flags"
-	"github.com/ivpn/desktop-app-daemon/service"
+	"github.com/ivpn/desktop-app/cli/flags"
+	"github.com/ivpn/desktop-app/daemon/service"
 )
 
 type CmdWireGuard struct {

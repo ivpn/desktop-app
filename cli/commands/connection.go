@@ -1,6 +1,6 @@
 //
 //  IVPN command line interface (CLI)
-//  https://github.com/ivpn/desktop-app-cli
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -28,12 +28,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ivpn/desktop-app-cli/commands/config"
-	"github.com/ivpn/desktop-app-cli/flags"
-	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/protocol/types"
-	"github.com/ivpn/desktop-app-daemon/service"
-	"github.com/ivpn/desktop-app-daemon/vpn"
+	"github.com/ivpn/desktop-app/cli/commands/config"
+	"github.com/ivpn/desktop-app/cli/flags"
+	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 type port struct {

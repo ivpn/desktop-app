@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -25,9 +25,9 @@ package protocol
 import (
 	"net"
 
-	"github.com/ivpn/desktop-app-daemon/protocol/types"
-	"github.com/ivpn/desktop-app-daemon/service/preferences"
-	"github.com/ivpn/desktop-app-daemon/version"
+	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/version"
 )
 
 // OnServiceSessionChanged - SessionChanged handler

@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -40,8 +40,8 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 
 	// When running tests, the installDir is detected as a dir where test located
 	// we need to point installDir to project root
-	// Therefore, we cutting rest after "desktop-app-daemon"
-	rootDir := "desktop-app-daemon"
+	// Therefore, we cutting rest after "desktop-app/daemon"
+	rootDir := "desktop-app/daemon"
 	if idx := strings.LastIndex(installDir, rootDir); idx > 0 {
 		installDir = installDir[:idx+len(rootDir)]
 	}

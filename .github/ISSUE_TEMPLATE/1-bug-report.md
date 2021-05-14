@@ -1,6 +1,6 @@
 ---
 name: "Bug report"
-about: Report a bug in IVPN Daemon for IVPN Client Desktop app
+about: Report a bug in IVPN Desktop app
 ---
 
 # Bug report

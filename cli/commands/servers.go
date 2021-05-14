@@ -1,6 +1,6 @@
 //
 //  IVPN command line interface (CLI)
-//  https://github.com/ivpn/desktop-app-cli
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -29,10 +29,10 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/vpn"
+	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 
-	"github.com/ivpn/desktop-app-cli/flags"
+	"github.com/ivpn/desktop-app/cli/flags"
 )
 
 const (

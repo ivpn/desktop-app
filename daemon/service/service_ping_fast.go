@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/ping"
+	"github.com/ivpn/desktop-app/daemon/ping"
 )
 
 // PingServers ping vpn servers

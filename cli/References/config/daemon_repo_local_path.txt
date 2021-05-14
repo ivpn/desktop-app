@@ -1,1 +1,1 @@
-../../../desktop-app-daemon
+../../../daemon

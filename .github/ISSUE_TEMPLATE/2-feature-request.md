@@ -1,6 +1,6 @@
 ---
 name: "Feature request"
-about: Suggest a feature for IVPN Daemon for IVPN Client Desktop app
+about: Suggest a feature for IVPN Desktop app
 ---
 
 # Feature request

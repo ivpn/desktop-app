@@ -3,7 +3,7 @@
 package acl
 
 import (
-	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/go-acl/api"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/windows/go-acl/api"
 	"golang.org/x/sys/windows"
 
 	"unsafe"

@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -25,7 +25,7 @@ package service
 import (
 	"net"
 
-	"github.com/ivpn/desktop-app-daemon/service/firewall"
+	"github.com/ivpn/desktop-app/daemon/service/firewall"
 )
 
 func (s *Service) implIsGoingToPingServers(hosts []net.IP) error {

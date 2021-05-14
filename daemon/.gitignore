@@ -19,7 +19,6 @@ References/Windows/etc/port.txt
 References/Windows/log/
 References/Windows/etc/settings.json
 __debug_bin
-desktop-app-daemon
 References/Windows/etc/openvpn.cfg
 /References/linux/tmp/*
 /References/linux/etc/settings.json
@@ -30,6 +29,5 @@ References/Windows/etc/openvpn.cfg
 *.pyc
 References/Windows/mutable/ovpn_extra_params.txt
 References/Windows/Native Projects/.vs/
-desktop-app-daemon.exe
 References/Windows/Native Projects/IVPN Firewall Native/IVPN Firewall Native.vcxproj.user
 References/Windows/Native Projects/IVPN Helpers Native/IVPN Helpers Native.vcxproj.user

@@ -1,6 +1,6 @@
 //
 //  IVPN command line interface (CLI)
-//  https://github.com/ivpn/desktop-app-cli
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -22,7 +22,7 @@
 
 package commands
 
-import "github.com/ivpn/desktop-app-cli/flags"
+import "github.com/ivpn/desktop-app/cli/flags"
 
 type CmdFirewall struct {
 	flags.CmdInfo

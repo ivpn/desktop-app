@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -25,7 +25,7 @@ package openvpn
 import (
 	"net"
 
-	"github.com/ivpn/desktop-app-daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 )
 
 type platformSpecificProperties struct {

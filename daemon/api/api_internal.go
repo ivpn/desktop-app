@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -37,7 +37,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
 func getURL(host string, urlpath string) string {

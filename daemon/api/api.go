@@ -29,8 +29,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/logger"
+	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
 // API URLs
@@ -85,9 +86,11 @@ type IConnectivityInfo interface {
 
 // API contains data about IVPN API servers
 type API struct {
-	mutex               sync.Mutex
-	alternateIPs        []net.IP
-	lastGoodAlternateIP net.IP
+	mutex                 sync.Mutex
+	alternateIPsV4        []net.IP
+	lastGoodAlternateIPv4 net.IP
+	alternateIPsV6        []net.IP
+	lastGoodAlternateIPv6 net.IP
 }
 
 // CreateAPI creates new API object
@@ -96,21 +99,59 @@ func CreateAPI() (*API, error) {
 }
 
 // IsAlternateIPsInitialized - checks if the alternate IP initialized
-func (a *API) IsAlternateIPsInitialized() bool {
+func (a *API) IsAlternateIPsInitialized(IPv6 bool) bool {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
-	return len(a.alternateIPs) > 0
+	if IPv6 {
+		return len(a.alternateIPsV6) > 0
+	}
+	return len(a.alternateIPsV4) > 0
+}
+
+func (a *API) GetLastGoodAlternateIP(IPv6 bool) net.IP {
+	if IPv6 {
+		return a.lastGoodAlternateIPv6
+	}
+	return a.lastGoodAlternateIPv4
+}
+
+func (a *API) SetLastGoodAlternateIP(IPv6 bool, ip net.IP) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	if IPv6 {
+		a.lastGoodAlternateIPv6 = ip
+	}
+	a.lastGoodAlternateIPv4 = ip
+}
+
+func (a *API) getAlternateIPs(IPv6 bool) []net.IP {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	if IPv6 {
+		return a.alternateIPsV6
+	}
+	return a.alternateIPsV4
 }
 
 // SetAlternateIPs save info about alternate servers IP addresses
-func (a *API) SetAlternateIPs(IPs []string) error {
+func (a *API) SetAlternateIPs(IPv4List []string, IPv6List []string) error {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	a.doSetAlternateIPs(false, IPv4List)
+	a.doSetAlternateIPs(true, IPv6List)
+	return nil
+}
+
+func (a *API) doSetAlternateIPs(IPv6 bool, IPs []string) error {
 	if len(IPs) == 0 {
 		log.Warning("Unable to set alternate API IP list. List is empty")
 	}
 
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
+	lastGoodIP := a.GetLastGoodAlternateIP(IPv6)
 
 	ipList := make([]net.IP, 0, len(IPs))
 
@@ -123,17 +164,25 @@ func (a *API) SetAlternateIPs(IPs []string) error {
 
 		ipList = append(ipList, ip)
 
-		if ip.Equal(a.lastGoodAlternateIP) {
+		if ip.Equal(lastGoodIP) {
 			isLastIPExists = true
 		}
 	}
 
 	if isLastIPExists == false {
-		a.lastGoodAlternateIP = nil
+		if IPv6 {
+			a.lastGoodAlternateIPv6 = nil
+		} else {
+			a.lastGoodAlternateIPv4 = nil
+		}
 	}
 
 	// set new alternate IP list
-	a.alternateIPs = ipList
+	if IPv6 {
+		a.alternateIPsV6 = ipList
+	} else {
+		a.alternateIPsV4 = ipList
+	}
 
 	return nil
 }
@@ -146,17 +195,17 @@ func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 	}
 
 	// save info about alternate API hosts
-	a.SetAlternateIPs(servers.Config.API.IPAddresses)
+	a.SetAlternateIPs(servers.Config.API.IPAddresses, servers.Config.API.IPv6Addresses)
 	return servers, nil
 }
 
 // DoRequestByAlias do API request (by API endpoint alias). Returns raw data of response
-func (a *API) DoRequestByAlias(apiAlias string) (responseData []byte, err error) {
+func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.RequiredIPProtocol) (responseData []byte, err error) {
 	alias, ok := APIAliases[apiAlias]
 	if ok != true {
 		return nil, fmt.Errorf("Unexpected request alias")
 	}
-	retData, retErr := a.requestRaw(alias.host, alias.path, "", "", nil, 0)
+	retData, retErr := a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0)
 	return retData, retErr
 }
 
@@ -182,7 +231,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool, 
 		Captcha:         captcha,
 		Confirmation2FA: confirmation2FA}
 
-	data, err := a.requestRaw("", _sessionNewPath, "POST", "application/json", request, 0)
+	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, 0)
 	if err != nil {
 		return nil, nil, nil, rawResponse, err
 	}
@@ -224,7 +273,7 @@ func (a *API) SessionStatus(session string) (
 
 	request := &types.SessionStatusRequest{Session: session}
 
-	data, err := a.requestRaw("", _sessionStatusPath, "POST", "application/json", request, 0)
+	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionStatusPath, "POST", "application/json", request, 0)
 	if err != nil {
 		return nil, nil, err
 	}

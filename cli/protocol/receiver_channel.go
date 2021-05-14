@@ -1,6 +1,6 @@
 //
 //  IVPN command line interface (CLI)
-//  https://github.com/ivpn/desktop-app-cli
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
 func createReceiver(waitingIdx int, waitingObjectsList ...interface{}) *receiverChannel {

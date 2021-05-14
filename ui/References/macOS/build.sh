@@ -60,8 +60,8 @@ else
   echo "    Apple DevID certificate: '${_SIGN_CERT}'"
 fi
 
-_PATH_REL_REPO_DAEMON="./../../../desktop-app-daemon"
-_PATH_REL_REPO_CLI="./../../../desktop-app-cli"
+_PATH_REL_REPO_DAEMON="./../../../daemon"
+_PATH_REL_REPO_CLI="./../../../cli"
 _PATH_REL_REPO_UI="./../.."
 _PATH_ABS_REPO_DAEMON=""
 _PATH_ABS_REPO_CLI=""

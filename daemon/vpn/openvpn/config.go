@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -30,10 +30,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/netinfo"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
-	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
+	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 )
 
 // ConnectionParams represents OpenVPN connection parameters

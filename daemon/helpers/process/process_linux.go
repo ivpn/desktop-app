@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -30,7 +30,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ivpn/desktop-app-daemon/shell"
+	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 // doGetPortOwnerPID returns PID of a process which is an owning of local TCP port

@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -29,7 +29,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
+	"github.com/ivpn/desktop-app/daemon/service/firewall/winlib"
 )
 
 func TestFuncsCall(t *testing.T) {

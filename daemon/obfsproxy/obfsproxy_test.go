@@ -1,6 +1,6 @@
 //
 //  Daemon for IVPN Client Desktop
-//  https://github.com/ivpn/desktop-app-daemon
+//  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
 //  Copyright (c) 2020 Privatus Limited.
@@ -27,8 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/obfsproxy"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 func TestStart(t *testing.T) {
