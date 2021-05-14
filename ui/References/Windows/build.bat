@@ -12,8 +12,8 @@ set INSTALLER_TMP_DIR=%INSTALLER_OUT_DIR%\temp
 SET FILE_LIST=%SCRIPTDIR%Installer\release-files.txt
 
 set APPVER=???
-set SERVICE_REPO=%SCRIPTDIR%..\..\..\desktop-app-daemon
-set CLI_REPO=%SCRIPTDIR%..\..\..\desktop-app-cli
+set SERVICE_REPO=%SCRIPTDIR%..\..\..\daemon
+set CLI_REPO=%SCRIPTDIR%..\..\..\cli
 
 rem Checking if msbuild available
 WHERE msbuild >nul 2>&1

@@ -30,13 +30,13 @@ import (
 // Package provides information about current binary
 // In order to integrate version info, use '-ldflags' with a build.
 // Example:
-// 	go build -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=v1.0.0 -X github.com/ivpn/desktop-app-daemon/version._time=$(date)"
+// 	go build -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=v1.0.0 -X github.com/ivpn/desktop-app/daemon/version._time=$(date)"
 //
 // Example 2:
 // 	VERSION="v1.0.0"
 //	DATE="$(date "+%Y-%m-%d")"
 //	COMMIT="$(git rev-list -1 HEAD)"
-//	go build -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=$VERSION -X github.com/ivpn/desktop-app-daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app-daemon/version._time=$DATE"
+//	go build -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
 
 // // application version
 var _version string

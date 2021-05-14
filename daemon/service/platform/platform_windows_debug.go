@@ -67,15 +67,16 @@ func getInstallDir() string {
 		panic(fmt.Sprintf("Failed to obtain folder of current binary: %s", err.Error()))
 	}
 
+	installDir = strings.ReplaceAll(installDir, `\`, `/`)
+
 	// When running tests, the installDir is detected as a dir where test located
 	// we need to point installDir to project root
-	// Therefore, we cutting rest after "desktop-app-daemon"
-	rootDir := "desktop-app-daemon"
+	// Therefore, we cutting rest after "desktop-app/daemon"
+	rootDir := "desktop-app/daemon"
 	if idx := strings.LastIndex(installDir, rootDir); idx > 0 {
 		installDir = installDir[:idx+len(rootDir)]
 	}
 
 	installDir = path.Join(installDir, "References/Windows")
-
-	return strings.ReplaceAll(installDir, `\`, `/`)
+	return installDir
 }

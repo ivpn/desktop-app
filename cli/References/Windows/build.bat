@@ -42,11 +42,11 @@ goto :success
 	echo [ ] x86 ...
 	set GOARCH=386
 
-	go build -tags release -o "bin\x86\cli\ivpn.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app-daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app-daemon/version._time=%DATE%" || exit /b 1
+	go build -tags release -o "bin\x86\cli\ivpn.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
 
 	echo [ ] x86_64 ...
 	set GOARCH=amd64
-	go build -tags release -o "bin\x86_64\cli\ivpn.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app-daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app-daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app-daemon/version._time=%DATE%" || exit /b 1
+	go build -tags release -o "bin\x86_64\cli\ivpn.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
 
 	goto :eof
 
