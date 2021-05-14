@@ -29,7 +29,7 @@ cd wireguard-go
 echo "******** Checkout wireguard-go version (${WG_GO_VER})..."
 git checkout ${WG_GO_VER}
 echo "******** Compiling 'wireguard-go'..."
-make
+CGO_CFLAGS=-mmacosx-version-min=10.10 CGO_LDFLAGS=-mmacosx-version-min=10.10 make
 
 echo "******** Cloning wireguard-tools sources..."
 cd ${BUILD_DIR}
@@ -38,7 +38,7 @@ cd wireguard-tools/src
 echo "******** Checkout wireguard-tools version (${WG_TOOLS_VER})..."
 git checkout ${WG_TOOLS_VER}
 echo "******** Compiling 'wireguard-tools'..."
-make
+CFLAGS=-mmacosx-version-min=10.10 LDFLAGS=-mmacosx-version-min=10.10 make
 
 echo "********************************"
 echo "******** BUILD COMPLETE ********"
