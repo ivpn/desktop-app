@@ -28,7 +28,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/ivpn/desktop-app-daemon/shell"
+	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 // doDefaultGatewayIP - returns: default gateway

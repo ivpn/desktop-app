@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
 func createReceiver(waitingIdx int, waitingObjectsList ...interface{}) *receiverChannel {

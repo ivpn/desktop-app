@@ -29,8 +29,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/logger"
 )
 
 // API URLs

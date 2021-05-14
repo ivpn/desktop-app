@@ -29,7 +29,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/logger"
 )
 
 // Exec - execute external process

@@ -31,9 +31,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/service/dns"
-	"github.com/ivpn/desktop-app-daemon/shell"
-	"github.com/ivpn/desktop-app-daemon/vpn"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/shell"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"

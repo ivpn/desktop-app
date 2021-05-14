@@ -26,9 +26,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/service/preferences"
-	"github.com/ivpn/desktop-app-daemon/service/wgkeys"
+	"github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/service/wgkeys"
 )
 
 // IServersUpdater - interface for updating server info mechanism

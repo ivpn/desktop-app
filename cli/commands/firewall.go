@@ -22,7 +22,7 @@
 
 package commands
 
-import "github.com/ivpn/desktop-app-cli/flags"
+import "github.com/ivpn/desktop-app/cli/flags"
 
 type CmdFirewall struct {
 	flags.CmdInfo

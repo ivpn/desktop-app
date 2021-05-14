@@ -30,7 +30,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ivpn/desktop-app-daemon/shell"
+	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 // doGetPortOwnerPID returns PID of a process which is an owning of local TCP port

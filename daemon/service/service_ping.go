@@ -28,8 +28,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/ping"
+	"github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/ping"
 )
 
 // PingServers ping vpn servers.

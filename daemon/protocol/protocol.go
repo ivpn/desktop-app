@@ -36,17 +36,17 @@ import (
 	"sync"
 	"time"
 
-	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/helpers/process"
-	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/protocol/types"
-	"github.com/ivpn/desktop-app-daemon/service/dns"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
-	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
-	"github.com/ivpn/desktop-app-daemon/service/preferences"
-	"github.com/ivpn/desktop-app-daemon/vpn"
-	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
-	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
+	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/helpers/process"
+	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/vpn"
+	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
+	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 )
 
 var log *logger.Logger

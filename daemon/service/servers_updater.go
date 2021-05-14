@@ -30,10 +30,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/api"
-	"github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
-	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
+	"github.com/ivpn/desktop-app/daemon/api"
+	"github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 )
 
 type serversUpdater struct {

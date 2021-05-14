@@ -32,9 +32,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/service/dns"
-	"github.com/ivpn/desktop-app-daemon/shell"
-	"github.com/ivpn/desktop-app-daemon/vpn"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/shell"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 type operation int

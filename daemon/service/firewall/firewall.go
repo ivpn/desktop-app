@@ -27,7 +27,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/logger"
 )
 
 var log *logger.Logger

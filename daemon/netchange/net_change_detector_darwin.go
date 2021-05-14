@@ -26,7 +26,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/ivpn/desktop-app-daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/netinfo"
 
 	"golang.org/x/net/route"
 )

@@ -25,10 +25,10 @@ package commands
 import (
 	"strings"
 
-	"github.com/ivpn/desktop-app-cli/flags"
-	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/service"
-	"github.com/ivpn/desktop-app-daemon/vpn"
+	"github.com/ivpn/desktop-app/cli/flags"
+	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/service"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 type CmdState struct {

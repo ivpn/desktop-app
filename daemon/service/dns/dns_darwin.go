@@ -26,8 +26,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/ivpn/desktop-app-daemon/service/platform"
-	"github.com/ivpn/desktop-app-daemon/shell"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 // implInitialize doing initialization stuff (called on application start)

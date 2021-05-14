@@ -31,15 +31,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/api"
-	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/netchange"
-	"github.com/ivpn/desktop-app-daemon/protocol"
-	"github.com/ivpn/desktop-app-daemon/service"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
-	"github.com/ivpn/desktop-app-daemon/service/preferences"
-	"github.com/ivpn/desktop-app-daemon/service/wgkeys"
-	"github.com/ivpn/desktop-app-daemon/version"
+	"github.com/ivpn/desktop-app/daemon/api"
+	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/netchange"
+	"github.com/ivpn/desktop-app/daemon/protocol"
+	"github.com/ivpn/desktop-app/daemon/service"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/service/wgkeys"
+	"github.com/ivpn/desktop-app/daemon/version"
 )
 
 var log *logger.Logger

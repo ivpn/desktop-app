@@ -27,10 +27,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/api"
-	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/vpn"
-	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
+	"github.com/ivpn/desktop-app/daemon/api"
+	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/vpn"
+	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 )
 
 var log *logger.Logger

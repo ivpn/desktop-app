@@ -22,7 +22,7 @@
 
 package types
 
-import "github.com/ivpn/desktop-app-daemon/vpn"
+import "github.com/ivpn/desktop-app/daemon/vpn"
 
 // Hello is an initial request
 type Hello struct {

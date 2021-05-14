@@ -26,7 +26,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/logger"
 )
 
 var log *logger.Logger

@@ -25,7 +25,7 @@ package service
 import (
 	"net"
 
-	"github.com/ivpn/desktop-app-daemon/service/firewall"
+	"github.com/ivpn/desktop-app/daemon/service/firewall"
 )
 
 func (s *Service) implIsGoingToPingServers(hosts []net.IP) error {

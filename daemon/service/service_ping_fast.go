@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/ping"
+	"github.com/ivpn/desktop-app/daemon/ping"
 )
 
 // PingServers ping vpn servers

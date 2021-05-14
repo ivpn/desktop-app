@@ -31,12 +31,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/helpers"
-	"github.com/ivpn/desktop-app-daemon/protocol/types"
-	"github.com/ivpn/desktop-app-daemon/version"
-	"github.com/ivpn/desktop-app-daemon/vpn"
-	"github.com/ivpn/desktop-app-daemon/vpn/openvpn"
-	"github.com/ivpn/desktop-app-daemon/vpn/wireguard"
+	"github.com/ivpn/desktop-app/daemon/helpers"
+	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/version"
+	"github.com/ivpn/desktop-app/daemon/vpn"
+	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
+	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 )
 
 // connID returns connection info (required to distinguish communication between several connections in log)

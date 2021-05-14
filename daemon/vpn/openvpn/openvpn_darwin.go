@@ -25,7 +25,7 @@ package openvpn
 import (
 	"net"
 
-	"github.com/ivpn/desktop-app-daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 )
 
 type platformSpecificProperties struct {

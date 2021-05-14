@@ -32,8 +32,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/ivpn/desktop-app-daemon/netinfo"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 var (

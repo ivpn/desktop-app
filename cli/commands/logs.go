@@ -27,8 +27,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/ivpn/desktop-app-cli/flags"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
+	"github.com/ivpn/desktop-app/cli/flags"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 type CmdLogs struct {

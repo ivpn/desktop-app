@@ -29,10 +29,10 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/vpn"
+	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 
-	"github.com/ivpn/desktop-app-cli/flags"
+	"github.com/ivpn/desktop-app/cli/flags"
 )
 
 const (

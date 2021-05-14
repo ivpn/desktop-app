@@ -31,8 +31,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/logger"
-	"github.com/ivpn/desktop-app-daemon/shell"
+	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 var log *logger.Logger

@@ -32,7 +32,7 @@ import (
 )
 
 import (
-	"github.com/ivpn/desktop-app-daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/logger"
 )
 
 // TODO: reimplement accessing libivpn using syscall.NewLazyDLL+NewProc (avoid using CGO)

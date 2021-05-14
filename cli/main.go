@@ -32,11 +32,11 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/ivpn/desktop-app-cli/commands"
-	"github.com/ivpn/desktop-app-cli/flags"
-	"github.com/ivpn/desktop-app-cli/protocol"
-	"github.com/ivpn/desktop-app-daemon/service/platform"
-	"github.com/ivpn/desktop-app-daemon/version"
+	"github.com/ivpn/desktop-app/cli/commands"
+	"github.com/ivpn/desktop-app/cli/flags"
+	"github.com/ivpn/desktop-app/cli/protocol"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/version"
 )
 
 // ICommand interface for command line command

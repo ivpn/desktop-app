@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/ivpn/desktop-app-daemon/helpers"
+	"github.com/ivpn/desktop-app/daemon/helpers"
 )
 
 var (

@@ -27,7 +27,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/ivpn/desktop-app-daemon/shell"
+	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 // Prepare to start IVPN daemon for macOS

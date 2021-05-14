@@ -31,7 +31,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/ivpn/desktop-app-daemon/service/platform/filerights"
+	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 )
 
 func doOsInitForBuild() (warnings []string, errors []error) {

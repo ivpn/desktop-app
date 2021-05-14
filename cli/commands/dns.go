@@ -28,10 +28,10 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/ivpn/desktop-app-cli/commands/config"
-	"github.com/ivpn/desktop-app-cli/flags"
-	apitypes "github.com/ivpn/desktop-app-daemon/api/types"
-	"github.com/ivpn/desktop-app-daemon/vpn"
+	"github.com/ivpn/desktop-app/cli/commands/config"
+	"github.com/ivpn/desktop-app/cli/flags"
+	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 type CmdDns struct {

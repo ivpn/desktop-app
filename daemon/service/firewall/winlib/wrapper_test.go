@@ -29,7 +29,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/ivpn/desktop-app-daemon/service/firewall/winlib"
+	"github.com/ivpn/desktop-app/daemon/service/firewall/winlib"
 )
 
 func TestFuncsCall(t *testing.T) {

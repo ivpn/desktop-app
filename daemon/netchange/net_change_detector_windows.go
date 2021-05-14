@@ -28,10 +28,10 @@ import (
 	"net"
 	"syscall"
 
-	"github.com/ivpn/desktop-app-daemon/netinfo"
-	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/iphlpapi"
-	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/kernel32"
-	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/winsock2"
+	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/windows/iphlpapi"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/windows/kernel32"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/windows/winsock2"
 )
 
 // structure contains properties required for for macOS implementation

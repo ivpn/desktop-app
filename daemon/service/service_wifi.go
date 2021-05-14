@@ -25,7 +25,7 @@ package service
 import (
 	"time"
 
-	"github.com/ivpn/desktop-app-daemon/wifiNotifier"
+	"github.com/ivpn/desktop-app/daemon/wifiNotifier"
 )
 
 type wifiInfo struct {

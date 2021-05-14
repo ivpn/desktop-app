@@ -29,7 +29,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/ivpn/desktop-app-daemon/oshelpers/windows/iphlpapi"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/windows/iphlpapi"
 	"golang.org/x/sys/windows"
 )
 
