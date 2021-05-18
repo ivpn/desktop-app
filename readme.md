@@ -156,7 +156,7 @@ So we have: `Major.Minor.Patch`
 <a name="contributing"></a>
 ## Contributing
 
-If you are interested in contributing to IVPN Daemon for IVPN Client Desktop project, please read our [Contributing Guidelines](/.github/CONTRIBUTING.md).
+If you are interested in contributing to IVPN for Desktop project, please read our [Contributing Guidelines](/.github/CONTRIBUTING.md).
 
 <a name="security"></a>
 ## Security Policy
