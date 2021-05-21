@@ -32,6 +32,8 @@ import config from "@/config";
 import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { GetPortInfoFilePath } from "@/helpers/main_platform";
 
+import { IsCanAutoConnectForCurrentSSID } from "@/trusted-wifi";
+
 import {
   VpnTypeEnum,
   VpnStateEnum,
@@ -559,6 +561,7 @@ async function ConnectToDaemon(setConnState) {
             // Till this time we already must receive 'connected' info (if we are connected)
             // If we are in disconnected state and 'settings.autoConnectOnLaunch' enabled => start connection
             if (
+              IsCanAutoConnectForCurrentSSID() == true &&
               store.state.settings.autoConnectOnLaunch &&
               store.getters["vpnState/isDisconnected"]
             ) {
@@ -822,9 +825,15 @@ async function GetDiagnosticLogs() {
   return logs;
 }
 
+// The 'Connect' method increasing this value on the method beginning and then checks this value before sending request to a daemon:
+//  if the value is not equal to the value on method beginning - do not send 'Connect' request to the daemon.
+// (this can happen when 'Disconnect' called OR new call of 'Connect' method)
+let connectionRequestId = 0;
+
 async function Connect(entryServer, exitServer) {
   // if entryServer or exitServer is null -> will be used current selected servers
   // otherwise -> current selected servers will be replaced by a new values before connect
+  const connectID = ++connectionRequestId;
 
   let vpnParamsPropName = "";
   let vpnParamsObj = {};
@@ -938,6 +947,11 @@ async function Connect(entryServer, exitServer) {
     return;
   }
 
+  if (connectID != connectionRequestId) {
+    console.log("Connection request cancelled")
+    return;
+  }
+
   send({
     Command: daemonRequests.Connect,
     VpnType: settings.vpnType,
@@ -948,6 +962,9 @@ async function Connect(entryServer, exitServer) {
 }
 
 async function Disconnect() {
+  // Just to cancel current connection request (if we are preparing to connection now)
+  ++connectionRequestId;
+
   // Disconnect command will automatically 'resume' on daemon side (if necessary)
   // Do not send 'Resume' command in case of 'Disconnect' (in order to avoid unexpected re-connections)
   // Here we just saving 'Resumed' state
