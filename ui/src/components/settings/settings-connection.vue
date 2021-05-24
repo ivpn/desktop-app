@@ -304,7 +304,7 @@ export default {
           type: "error",
           buttons: ["OK"],
           message: "Error generating WireGuard keys",
-          detail: `${e.message}`
+          detail: "Please check your internet connection"
         });
       } finally {
         this.isProcessing = false;
