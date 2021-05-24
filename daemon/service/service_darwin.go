@@ -30,5 +30,6 @@ import (
 
 func (s *Service) implIsGoingToPingServers(hosts []net.IP) error {
 	const onlyForICMP = true
-	return firewall.AddHostsToExceptions(hosts, onlyForICMP)
+	const isPersistent = false
+	return firewall.AddHostsToExceptions(hosts, onlyForICMP, isPersistent)
 }

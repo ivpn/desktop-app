@@ -74,7 +74,6 @@ type Service interface {
 
 	ServersList() (*apitypes.ServersInfoResponse, error)
 	PingServers(retryCount int, timeoutMs int) (map[string]int, error)
-	ServersUpdateNotifierChannel() chan struct{}
 
 	APIRequest(apiAlias string) (responseData []byte, err error)
 
@@ -273,11 +272,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 	clientRemoteAddr := conn.RemoteAddr()
 	log.Info("Client connected: ", clientRemoteAddr)
 
-	stopChannel := make(chan struct{}, 1)
 	defer func() {
-		// notify routines to stop
-		close(stopChannel)
-
 		if r := recover(); r != nil {
 			log.Error("PANIC during client communication!: ", r)
 			if err, ok := r.(error); ok {
@@ -326,27 +321,6 @@ func (p *Protocol) processClient(conn net.Conn) {
 		return
 	}
 
-	// service changes notifier
-	startChangesNotifier := func() {
-		if r := recover(); r != nil {
-			log.Error("PANIC in client notifier!: ", r)
-			if err, ok := r.(error); ok {
-				log.ErrorTrace(err)
-			}
-		}
-
-		for {
-			select {
-			case <-p._service.ServersUpdateNotifierChannel():
-				// servers update notifier
-				serv, _ := p._service.ServersList()
-				p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, 0)
-			case <-stopChannel:
-				return // stop loop
-			}
-		}
-	}
-
 	reader := bufio.NewReader(conn)
 	// run loop forever (or until ctrl-c)
 	for {
@@ -389,7 +363,6 @@ func (p *Protocol) processClient(conn net.Conn) {
 			keepAlone = hello.KeepDaemonAlone
 			isAuthenticated = true
 			p.clientConnected(conn)
-			go startChangesNotifier()
 		}
 
 		// Processing requests from client (in separate routine)

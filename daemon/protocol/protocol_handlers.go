@@ -25,6 +25,7 @@ package protocol
 import (
 	"net"
 
+	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/version"
@@ -90,4 +91,11 @@ func (p *Protocol) OnPingStatus(retMap map[string]int) {
 		results = append(results, types.PingResultType{Host: k, Ping: v})
 	}
 	p.notifyClients(&types.PingServersResp{PingResults: results})
+}
+
+func (p *Protocol) OnServersUpdated(serv *apitypes.ServersInfoResponse) {
+	if serv == nil {
+		return
+	}
+	p.notifyClients(&types.ServerListResp{VpnServers: *serv})
 }

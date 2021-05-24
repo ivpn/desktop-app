@@ -170,11 +170,11 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 
 	// Check update configuration
 	// (not blocked by mutex because in order to return immediately if nothing to do)
-	session, activePublicKey, _, _, lastUpdate, interval := m.service.WireGuardGetKeys()
+	_, activePublicKey, _, _, lastUpdate, interval := m.service.WireGuardGetKeys()
 
 	// function to check if update required
 	isNecessaryUpdate := func() (bool, error) {
-		if onlyUpdateIfNecessary == false {
+		if !onlyUpdateIfNecessary {
 			return true, nil
 		}
 		if interval <= 0 {
@@ -191,7 +191,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		return true, nil
 	}
 
-	if haveToUpdate, err := isNecessaryUpdate(); haveToUpdate == false || err != nil {
+	if haveToUpdate, err := isNecessaryUpdate(); !haveToUpdate || err != nil {
 		return err
 	}
 
@@ -199,8 +199,8 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	defer m.mutex.Unlock()
 
 	// Check update configuration second time (locked by mutex)
-	session, activePublicKey, _, _, lastUpdate, interval = m.service.WireGuardGetKeys()
-	if haveToUpdate, err := isNecessaryUpdate(); haveToUpdate == false || err != nil {
+	session, activePublicKey, _, _, lastUpdate, interval := m.service.WireGuardGetKeys()
+	if haveToUpdate, err := isNecessaryUpdate(); !haveToUpdate || err != nil {
 		return err
 	}
 
@@ -218,15 +218,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 
 	isVPNConnected, connectedVpnType := m.service.ConnectedType()
 
-	if isVPNConnected == false {
-		if fw, _ := m.service.FirewallEnabled(); fw == true {
-			// VPN is disconnected and Firewall enabled -> all communications blocked by Firewall
-			// No sense to make API requests
-			return fmt.Errorf("unable to update WireGuard keys (API calls are blocked by Firewall)")
-		}
-	}
-
-	if isVPNConnected == false || connectedVpnType != vpn.WireGuard {
+	if !isVPNConnected || connectedVpnType != vpn.WireGuard {
 		// use 'activePublicKey' ONLY if WireGuard is connected
 		activePublicKey = ""
 	}
