@@ -349,11 +349,10 @@ async function processResponse(response) {
       store.commit(`vpnState/firewallState`, obj);
 
       if (
-        store.state.vpnState.firewallState.IsEnabled === false &&
         store.state.location == null &&
         store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
       ) {
-        // if FW disabled and no geolocation info - request geolocation
+        // if no geolocation info available - request geolocation
         requestGeoLookupAsync();
       }
       break;
