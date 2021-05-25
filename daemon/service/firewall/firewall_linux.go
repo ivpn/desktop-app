@@ -161,7 +161,7 @@ func implClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net
 
 	// Connection already established. The rule for VPN interface is defined.
 	// Removing host IP from exceptions
-	return removeHostsFromExceptions([]string{serverIP.String()}, false)
+	return removeHostsFromExceptions([]string{serverIP.String()}, false, false)
 }
 
 // ClientDisconnected - Disable communication for local vpn/client IP address
@@ -189,7 +189,7 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 		// disallow everything (LAN + multicast)
 		toRemove := allowedLanIPs
 		allowedLanIPs = nil
-		return removeHostsFromExceptions(toRemove, persistant)
+		return removeHostsFromExceptions(toRemove, persistant, false)
 	}
 
 	// LAN ALLOWED
@@ -208,7 +208,7 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 	}
 
 	if len(allowedLanIPs) > 0 {
-		removeHostsFromExceptions(allowedLanIPs, persistant)
+		removeHostsFromExceptions(allowedLanIPs, persistant, false)
 	}
 
 	allowedLanIPs = localIPs
@@ -219,7 +219,7 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 	}
 
 	// disallow Multicast
-	removeHostsFromExceptions([]string{multicastIP}, persistant)
+	removeHostsFromExceptions([]string{multicastIP}, persistant, false)
 	// allow LAN
 	return addHostsToExceptions(allowedLanIPs, persistant, notOnlyForICMP)
 }
@@ -261,13 +261,6 @@ func delayedAllowLAN(allowLanMulticast bool) {
 //	* onlyForICMP	-	try add rule to allow only ICMP protocol for this IP
 //	* isPersistent	-	keep rule enabled even if VPN disconnected
 func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
-	if onlyForICMP {
-		// no sense to add exception if firewall not enabled
-		if enabled, err := implGetEnabled(); err != nil || enabled == false {
-			return nil
-		}
-	}
-
 	IPsStr := make([]string, 0, len(IPs))
 	for _, ip := range IPs {
 		IPsStr = append(IPsStr, ip.String())
@@ -282,7 +275,7 @@ func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent 
 		IPsStr = append(IPsStr, ip.String())
 	}
 
-	return applyRemoveHostsFromExceptions(IPsStr, isPersistent, onlyForICMP)
+	return removeHostsFromExceptions(IPsStr, isPersistent, onlyForICMP)
 }
 
 // SetManualDNS - configure firewall to allow DNS which is out of VPN tunnel
@@ -318,9 +311,8 @@ func applyAddHostsToExceptions(hostsIPs []string, isPersistant bool, onlyForICMP
 	return nil
 }
 
-func applyRemoveHostsFromExceptions(hostsIPs []string, isPersistant bool) error {
-	var ipList string
-	ipList = strings.Join(hostsIPs, ",")
+func applyRemoveHostsFromExceptions(hostsIPs []string, isPersistant bool, onlyForICMP bool) error {
+	ipList := strings.Join(hostsIPs, ",")
 
 	if len(ipList) > 0 {
 		scriptCommand := "-remove_exceptions"
@@ -431,19 +423,28 @@ func addHostsToExceptions(IPs []string, isPersistant bool, onlyForICMP bool) err
 }
 
 // Deprecate communication with this hosts
-func removeHostsFromExceptions(IPs []string, isPersistant bool) error {
+func removeHostsFromExceptions(IPs []string, isPersistant bool, onlyForICMP bool) error {
 	if len(IPs) == 0 {
 		return nil
 	}
 
 	toRemoveIPs := make([]string, 0, len(IPs))
-	for persVal, ip := range IPs {
-		if _, exists := allowedHosts[ip]; exists {
-			if persVal != isPersistant {
-				continue
+	if !onlyForICMP {
+		for _, ip := range IPs {
+			if persVal, exists := allowedHosts[ip]; exists {
+				if persVal != isPersistant {
+					continue
+				}
+				delete(allowedHosts, ip) // remove from map
+				toRemoveIPs = append(toRemoveIPs, ip)
 			}
-			delete(allowedHosts, ip) // remove from map
-			toRemoveIPs = append(toRemoveIPs, ip)
+		}
+	} else if (allowedForICMP != nil){
+		for _, ip := range IPs {
+			if _, exists := allowedForICMP[ip]; exists {
+				delete(allowedForICMP, ip) // remove from map
+				toRemoveIPs = append(toRemoveIPs, ip)
+			}
 		}
 	}
 
@@ -451,7 +452,7 @@ func removeHostsFromExceptions(IPs []string, isPersistant bool) error {
 		return nil
 	}
 
-	err := applyRemoveHostsFromExceptions(toRemoveIPs, isPersistant)
+	err := applyRemoveHostsFromExceptions(toRemoveIPs, isPersistant, onlyForICMP)
 	if err != nil {
 		log.Error(err)
 	}
@@ -467,7 +468,7 @@ func removeAllHostsFromExceptions() error {
 		toRemoveIPs = append(toRemoveIPs, ipStr)
 	}
 	isPersistant := false
-	return removeHostsFromExceptions(toRemoveIPs, isPersistant)
+	return removeHostsFromExceptions(toRemoveIPs, isPersistant, false)
 }
 
 //---------------------------------------------------------------------

@@ -285,9 +285,6 @@ function remove_exceptions_icmp {
   shift 2
   EXP=$@
 
-  create_chain ${IPv4BIN} ${IN_CH}
-  create_chain ${IPv4BIN} ${OUT_CH}
-
   ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_CH} -p icmp --icmp-type 0 -s $@ -m state --state ESTABLISHED,RELATED -j ACCEPT
   ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_CH} -p icmp --icmp-type 8 -d $@ -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 }
