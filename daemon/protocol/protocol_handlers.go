@@ -25,6 +25,7 @@ package protocol
 import (
 	"net"
 
+	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/version"
@@ -69,10 +70,10 @@ func (p *Protocol) OnDNSChanged(dns net.IP) {
 // OnKillSwitchStateChanged - Firewall change handler
 func (p *Protocol) OnKillSwitchStateChanged() {
 	// notify all clients about KillSwitch status
-	if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
+	if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, err := p._service.KillSwitchState(); err != nil {
 		log.Error(err)
 	} else {
-		p.notifyClients(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast})
+		p.notifyClients(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast, IsAllowApiServers: isAllowApiServers})
 	}
 }
 
@@ -90,4 +91,11 @@ func (p *Protocol) OnPingStatus(retMap map[string]int) {
 		results = append(results, types.PingResultType{Host: k, Ping: v})
 	}
 	p.notifyClients(&types.PingServersResp{PingResults: results})
+}
+
+func (p *Protocol) OnServersUpdated(serv *apitypes.ServersInfoResponse) {
+	if serv == nil {
+		return
+	}
+	p.notifyClients(&types.ServerListResp{VpnServers: *serv})
 }

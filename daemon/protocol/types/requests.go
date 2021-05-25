@@ -80,6 +80,11 @@ type KillSwitchSetAllowLAN struct {
 	Synchronously bool
 }
 
+type KillSwitchSetAllowApiServers struct {
+	CommandBase
+	IsAllowApiServers bool
+}
+
 // KillSwitchSetEnabled request to enable\disable kill-switch
 type KillSwitchSetEnabled struct {
 	CommandBase

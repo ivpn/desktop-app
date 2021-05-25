@@ -106,11 +106,15 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 	}
 
 	serv := &Service{
+		_preferences:       *preferences.Create(),
 		_evtReceiver:       evtReceiver,
 		_api:               api,
 		_serversUpdater:    updater,
 		_netChangeDetector: netChDetector,
 		_wgKeysMgr:         wgKeysMgr}
+
+	// register the current service as a 'Connectivity checker' for API object
+	serv._api.SetConnectivityChecker(serv)
 
 	if err := serv.init(); err != nil {
 		return nil, fmt.Errorf("service initialization error : %w", err)
@@ -169,7 +173,65 @@ func (s *Service) init() error {
 	// Start session status checker
 	s.startSessionChecker()
 
+	s.updateAPIAddrInFWExceptions()
+	// servers updated notifier
+	go func() {
+		if r := recover(); r != nil {
+			log.Error("PANIC in Servers update notifier!: ", r)
+			if err, ok := r.(error); ok {
+				log.ErrorTrace(err)
+			}
+		}
+
+		log.Info("Servers update notifier started")
+		for {
+			// wait for 'servers updated' event
+			<-s._serversUpdater.UpdateNotifierChannel()
+			// notify clients
+			svrs, _ := s.ServersList()
+			s._evtReceiver.OnServersUpdated(svrs)
+			// update firewall rules: notify firewall about new IP addresses of IVPN API
+			s.updateAPIAddrInFWExceptions()
+		}
+	}()
+
 	return nil
+}
+
+func (s *Service) IsConnectivityBlocked() (isBlocked bool, reasonDescription string, err error) {
+	preferences := s._preferences
+	if !preferences.IsFwAllowApiServers &&
+		preferences.Session.IsLoggedIn() &&
+		(!s.Connected() || s.IsPaused()) {
+		enabled, err := s.FirewallEnabled()
+		if err == nil && enabled {
+			return true, "Access to IVPN servers is blocked (check IVPN Firewall settings)", nil
+		}
+	}
+	return false, "", nil
+}
+
+func (s *Service) updateAPIAddrInFWExceptions() {
+	svrs, _ := s.ServersList()
+	ivpnAPIAddr := svrs.Config.API.IPAddresses
+
+	if len(ivpnAPIAddr) <= 0 {
+		return
+	}
+
+	apiAddrs := make([]net.IP, 0, len(ivpnAPIAddr))
+	for _, ipStr := range ivpnAPIAddr {
+		apiIP := net.ParseIP(ipStr)
+		if apiIP != nil {
+			apiAddrs = append(apiAddrs, apiIP)
+		}
+	}
+
+	if len(apiAddrs) > 0 {
+		const onlyForICMP = false
+		const isPersistent = true
+		firewall.AddHostsToExceptions(apiAddrs, onlyForICMP, isPersistent)
+	}
 }
 
 // OnControlConnectionClosed - Perform reqired operations when protocol (controll channel with UI application) was closed
@@ -191,11 +253,6 @@ func (s *Service) OnControlConnectionClosed() (isServiceMustBeClosed bool, err e
 // ServersList - get VPN servers info
 func (s *Service) ServersList() (*types.ServersInfoResponse, error) {
 	return s._serversUpdater.GetServers()
-}
-
-// ServersUpdateNotifierChannel returns channel which is notifying when servers was updated
-func (s *Service) ServersUpdateNotifierChannel() chan struct{} {
-	return s._serversUpdater.UpdateNotifierChannel()
 }
 
 // APIRequest do custom request to API
@@ -588,7 +645,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 					// Add host IP to firewall exceptions
 					// Some OS-specific implementations (e.g. macOS) can remove server host from firewall rules after connection established
 					// We have to allow it's IP to be able to reconnect
-					err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, false)
+					const onlyForICMP = false
+					const isPersistent = false
+					err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP, isPersistent)
 					if err != nil {
 						log.Error("Unable to add host to firewall exceptions:", err.Error())
 					}
@@ -701,7 +760,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 	// Add host IP to firewall exceptions
 	const onlyForICMP = false
-	err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP)
+	const isPersistent = false
+	err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP, isPersistent)
 	if err != nil {
 		log.Error("Failed to start. Unable to add hosts to firewall exceptions:", err.Error())
 		return err
@@ -939,10 +999,10 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 }
 
 // KillSwitchState returns killswitch state
-func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast bool, err error) {
+func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, err error) {
 	prefs := s._preferences
 	enabled, err := firewall.GetEnabled()
-	return enabled, prefs.IsFwPersistant, prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast, err
+	return enabled, prefs.IsFwPersistant, prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast, prefs.IsFwAllowApiServers, err
 }
 
 // SetKillSwitchIsPersistent change kill-switch value
@@ -979,6 +1039,14 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 		s._evtReceiver.OnKillSwitchStateChanged()
 	}
 	return err
+}
+
+func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
+	prefs := s._preferences
+	prefs.IsFwAllowApiServers = isAllowAPIServers
+	s.setPreferences(prefs)
+	s._evtReceiver.OnKillSwitchStateChanged()
+	return nil
 }
 
 // SetPreference set preference value

@@ -71,6 +71,7 @@ const daemonRequests = Object.freeze({
 
   KillSwitchGetStatus: "KillSwitchGetStatus",
   KillSwitchSetEnabled: "KillSwitchSetEnabled",
+  KillSwitchSetAllowApiServers: "KillSwitchSetAllowApiServers",
   KillSwitchSetAllowLANMulticast: "KillSwitchSetAllowLANMulticast",
   KillSwitchSetAllowLAN: "KillSwitchSetAllowLAN",
   KillSwitchSetIsPersistent: "KillSwitchSetIsPersistent",
@@ -354,11 +355,10 @@ async function processResponse(response) {
       store.commit(`vpnState/firewallState`, obj);
 
       if (
-        store.state.vpnState.firewallState.IsEnabled === false &&
         store.state.location == null &&
         store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
       ) {
-        // if FW disabled and no geolocation info - request geolocation
+        // if no geolocation info available - request geolocation
         requestGeoLookupAsync();
       }
       break;
@@ -1125,6 +1125,12 @@ async function KillSwitchGetStatus() {
     Command: daemonRequests.KillSwitchGetStatus
   });
 }
+async function KillSwitchSetAllowApiServers(IsAllowApiServers) {
+  await sendRecv({
+    Command: daemonRequests.KillSwitchSetAllowApiServers,
+    IsAllowApiServers
+  });
+}
 
 async function KillSwitchSetAllowLANMulticast(AllowLANMulticast) {
   const Synchronously = true;
@@ -1239,6 +1245,7 @@ export default {
   ResumeConnection,
 
   EnableFirewall,
+  KillSwitchSetAllowApiServers,
   KillSwitchSetAllowLANMulticast,
   KillSwitchSetAllowLAN,
   KillSwitchSetIsPersistent,

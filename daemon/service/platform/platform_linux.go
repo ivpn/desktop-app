@@ -34,6 +34,7 @@ var (
 
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
+	fwInitialValueAllowApiServers = false
 	servicePortFile = path.Join(tmpDir, "port.txt")
 
 	logFile = path.Join(logDir, "IVPN_Agent.log")

@@ -76,7 +76,7 @@ func SetEnabled(enable bool) error {
 		// We must not do it in Paused state!
 		clientAddr := connectedClientInterfaceIP
 		clientAddrIPv6 := connectedClientInterfaceIPv6
-		if clientAddr != nil && isClientPaused == false {
+		if clientAddr != nil && !isClientPaused {
 			e := implClientConnected(clientAddr, clientAddrIPv6, connectedClientPort, connectedHostIP, connectedHostPort, connectedIsTCP)
 			if e != nil {
 				log.Error(e)
@@ -169,12 +169,16 @@ func ClientDisconnected() error {
 }
 
 // AddHostsToExceptions - allow comminication with this hosts
-// Note!: all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
-func AddHostsToExceptions(IPs []net.IP, onlyForICMP bool) error {
+// Note: if isPersistent == false -> all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
+// Arguments:
+//	* IPs			-	list of IP addresses to ba allowed
+//	* onlyForICMP	-	(applicable only for Linux) try add rule to allow only ICMP protocol for this IP
+//	* isPersistent	-	keep rule enabled even if VPN disconnected
+func AddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	err := implAddHostsToExceptions(IPs, onlyForICMP)
+	err := implAddHostsToExceptions(IPs, onlyForICMP, isPersistent)
 	if err != nil {
 		log.Error("Failed to add hosts to exceptions:", err)
 	}

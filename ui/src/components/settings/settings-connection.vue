@@ -339,7 +339,7 @@ export default {
           type: "error",
           buttons: ["OK"],
           message: "Error generating WireGuard keys",
-          detail: "Please check your internet connection"
+          detail: e
         });
       } finally {
         this.isProcessing = false;

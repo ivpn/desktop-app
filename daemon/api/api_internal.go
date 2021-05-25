@@ -128,6 +128,13 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string)
 }
 
 func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+	connectivityChecker := a.connectivityChecker
+	if connectivityChecker != nil {
+		if isBlocked, reasonDescription, err := connectivityChecker.IsConnectivityBlocked(); err == nil && isBlocked {
+			return nil, fmt.Errorf("%s", reasonDescription)
+		}
+	}
+
 	if len(host) == 0 || host == _apiHost {
 		if ipTypeRequired != types.IPvAny {
 			// The specific IP version required to use

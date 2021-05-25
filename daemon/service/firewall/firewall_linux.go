@@ -254,9 +254,13 @@ func delayedAllowLAN(allowLanMulticast bool) {
 	log.Info("Delayed 'Allow LAN': no LAN interfaces detected")
 }
 
-// AddHostsToExceptions - allow comminication with this hosts
-// Note!: all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
-func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool) error {
+// implAddHostsToExceptions - allow comminication with this hosts
+// Note: if isPersistent == false -> all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
+// Arguments:
+//	* IPs			-	list of IP addresses to ba allowed
+//	* onlyForICMP	-	try add rule to allow only ICMP protocol for this IP
+//	* isPersistent	-	keep rule enabled even if VPN disconnected
+func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
 	if onlyForICMP {
 		// no sense to add exception if firewall not enabled
 		if enabled, err := implGetEnabled(); err != nil || enabled == false {
@@ -269,8 +273,7 @@ func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool) error {
 		IPsStr = append(IPsStr, ip.String())
 	}
 
-	const persistant = false
-	return addHostsToExceptions(IPsStr, persistant, onlyForICMP)
+	return addHostsToExceptions(IPsStr, isPersistent, onlyForICMP)
 }
 
 // SetManualDNS - configure firewall to allow DNS which is out of VPN tunnel

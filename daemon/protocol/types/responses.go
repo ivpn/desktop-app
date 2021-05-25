@@ -119,10 +119,11 @@ type AccountStatusResp struct {
 // KillSwitchStatusResp returns kill-switch status
 type KillSwitchStatusResp struct {
 	CommandBase
-	IsEnabled        bool
-	IsPersistent     bool
-	IsAllowLAN       bool
-	IsAllowMulticast bool
+	IsEnabled         bool
+	IsPersistent      bool
+	IsAllowLAN        bool
+	IsAllowMulticast  bool
+	IsAllowApiServers bool
 }
 
 // KillSwitchGetIsPestistentResp returns kill-switch persistance status

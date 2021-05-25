@@ -65,4 +65,5 @@ type IServiceEventsReceiver interface {
 	OnKillSwitchStateChanged()
 	OnWiFiChanged(ssid string, isInsecureNetwork bool)
 	OnPingStatus(retMap map[string]int)
+	OnServersUpdated(*types.ServersInfoResponse)
 }

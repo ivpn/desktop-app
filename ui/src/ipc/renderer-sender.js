@@ -136,6 +136,13 @@ export default {
   EnableFirewall: async isEnable => {
     return await invoke("renderer-request-firewall", isEnable);
   },
+
+  KillSwitchSetAllowApiServers: async isEnable => {
+    return await invoke(
+      "renderer-request-KillSwitchSetAllowApiServers",
+      isEnable
+    );
+  },
   KillSwitchSetAllowLANMulticast: async isEnable => {
     return await invoke(
       "renderer-request-KillSwitchSetAllowLANMulticast",

@@ -54,7 +54,8 @@ export default {
       IsEnabled: null,
       IsPersistent: null,
       IsAllowLAN: null,
-      IsAllowMulticast: null
+      IsAllowMulticast: null,
+      IsAllowApiServers: null
     },
 
     dns: "",

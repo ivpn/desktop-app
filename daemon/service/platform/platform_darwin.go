@@ -33,6 +33,7 @@ var (
 
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
+	fwInitialValueAllowApiServers = false
 	servicePortFile = "/Library/Application Support/IVPN/port.txt"
 	openvpnUserParamsFile = "/Library/Application Support/IVPN/OpenVPN/ovpn_extra_params.txt"
 
