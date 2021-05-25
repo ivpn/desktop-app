@@ -40,21 +40,35 @@ export function InitTrustedNetworks() {
   });
 }
 
+// returns 'false' when not allowed to perform automatic VPN connection (e.g. on application startup):
+//    - 'trustedNetworksControl' is enabled 
+//       AND the current WIFI is 'trusted' 
+//       AND 'disconnect VPN for trusted networks' action is enabled
+export function IsCanAutoConnectForCurrentSSID() {
+  let wifi = store.state.settings.wifi;
+  if (!wifi || !wifi.actions || wifi.trustedNetworksControl != true) return true;
+
+  let currentWiFiInfo = store.state.vpnState.currentWiFiInfo;
+  if (!currentWiFiInfo || !currentWiFiInfo.SSID ) return true;
+
+  const isTrusted = getTrustRuleForConfiguredNetwork(
+    currentWiFiInfo.SSID,
+    wifi.networks
+  );
+
+  if (isTrusted == true && wifi.actions.trustedDisconnectVpn == true) return false;
+  return true;
+}
+
 async function processWifiChange() {
   // 1. trying to apply rules (if network is configured)
   // 2. if network not configured -> apply rules for default trust status
   // 3. if default trust status not defined -> for insecure network: connect VPN
+  // Returns 'true' if a rule was applied for current WIFI network (including rule for 'connectVPNOnInsecureNetwork') 
 
   // trusted networks config
   let wifi = store.state.settings.wifi;
-  let networks = null;
-  let actions = null;
-  let trustedNetworksControl = false;
-  if (wifi != null) {
-    networks = wifi.networks;
-    actions = wifi.actions;
-    trustedNetworksControl = wifi.trustedNetworksControl;
-  }
+  if (!wifi) return false;
 
   // current network
   let currentWiFiInfo = store.state.vpnState.currentWiFiInfo;
@@ -67,17 +81,17 @@ async function processWifiChange() {
 
   if (!currSSID) {
     lastProcessedRule = null;
-    return;
+    return false;
   }
 
   // if trusted network control is enabled
-  if (trustedNetworksControl == true) {
+  if (wifi.trustedNetworksControl == true && wifi.actions) {
     // get configuration for current network
     let trustRule = getTrustRuleForConfiguredNetwork(
       currSSID,
-      networks,
-      actions
+      wifi.networks
     );
+
     // if network not configured - get default trust operation for not configured networks
     if (trustRule == null) trustRule = wifi.defaultTrustStatusTrusted;
 
@@ -89,15 +103,15 @@ async function processWifiChange() {
         lastProcessedRule.SSID == currSSID &&
         lastProcessedRule.isTrusted == trustRule
       )
-        return;
+        return false;
 
       // apply rule
-      await applyTrustRule(trustRule, actions);
+      await applyTrustRule(trustRule, wifi.actions);
       lastProcessedRule = {
         SSID: currSSID,
         isTrusted: trustRule
       };
-      return;
+      return true;
     }
   }
 
@@ -116,7 +130,7 @@ async function processWifiChange() {
       lastProcessedRule.SSID != null &&
       lastProcessedRule.SSID == currSSID
     )
-      return;
+      return false;
 
     console.log(
       "Joined insecure network. Connecting (according to preferences) ..."
@@ -126,14 +140,15 @@ async function processWifiChange() {
       SSID: currSSID,
       isTrusted: null
     };
-    return;
+    return true;
   }
 
   lastProcessedRule = null;
+  return false;
 }
 
-function getTrustRuleForConfiguredNetwork(currSSID, networks, actions) {
-  if (!currSSID || networks == null || actions == null) return null;
+function getTrustRuleForConfiguredNetwork(currSSID, networks) {
+  if (!currSSID || networks == null) return null;
 
   // check configuration for current network
   let networkConfigArr = networks.filter(wifi => wifi.ssid == currSSID);
