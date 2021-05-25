@@ -321,6 +321,15 @@ export default {
       return l;
     },
 
+    isRequestingLocation: function() {
+      let isInProcess = this.$store.state.isRequestingLocation;
+      // IPv6
+      if (this.$store.getters["getIsIPv6View"]) {
+        isInProcess = this.$store.state.isRequestingLocationIPv6;
+      }
+      return isInProcess;
+    },
+
     isFastestServer: function() {
       return this.$store.state.settings.isFastestServer;
     },
@@ -334,22 +343,6 @@ export default {
 
     connectedLocation: function() {
       if (!this.isConnected) return null;
-      /*
-      let l = this.$store.state.location;
-
-      // IPv6
-      if (
-        this.$store.getters["getIsIPv6View"] &&
-        this.$store.getters["getIsInfoAvailableIPv6"]
-      ) {
-        l = this.$store.state.locationIPv6;
-      }
-
-      if (!l || l.isRealLocation == true) {
-        l = this.selectedServer;
-      }
-
-      return l; //*/
       return this.selectedServer;
     },
 
@@ -742,7 +735,9 @@ export default {
     centerCurrentLocation(noAnimation) {
       if (!this.isConnected && this.location != null) {
         this.centerServer(this.location, noAnimation, true);
-      } else this.centerServer(this.connectedLocation, noAnimation);
+      } else if (!this.isRequestingLocation){
+          this.centerServer(this.selectedServer, noAnimation);
+      }
     },
     centerServer(server, noAnimation, isPopupRequired) {
       if (server == null) return;

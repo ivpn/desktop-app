@@ -763,6 +763,16 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
     );
   };
 
+  // Set correct geo-lookup IPvX view based on the data which is already exists
+  // (e.g. if there is no IPv6 data but IPv4 is already exists -> switch to IPv4 view)
+  let setCorrectGeoIPView = function() {
+    const isIPv6View = store.state.uiState.isIPv6View;
+    if (isIPv6View === true && !store.state.locationIPv6 && store.state.location)
+      store.commit("uiState/isIPv6View", false)
+    else if (isIPv6View === false && !store.state.location && store.state.locationIPv6) 
+      store.commit("uiState/isIPv6View", true)
+  }
+
   let retLocation = null;
   let isRealGeoLocationOnStart = isRealGeoLocationCheck();
 
@@ -795,8 +805,12 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
 
     if (resp.Error !== "") {
       log.warn(`API 'geo-lookup' error: ${ipVerStr} ${resp.Error}`);
+      
+      setCorrectGeoIPView();
+
       if (resp.Error && resp.Error.toLowerCase().includes("no ipv6 support"))
         doNotRetry = true;
+
     } else {
       if (isRealGeoLocationOnStart != isRealGeoLocationCheck()) {
         log.warn(`Skip geo-lookup result ${ipVerStr} (conn. state changed)`);
@@ -810,11 +824,14 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
           retLocation.isRealLocation = isRealGeoLocationOnStart;
           log.info("API: 'geo-lookup' success.");
           store.commit(propName_Location, retLocation);
+
+          setTimeout(() => { setCorrectGeoIPView(); }, 2000);
         }
       }
     }
   } catch (e) {
     log.warn(`geo-lookup error ${ipVerStr}`, e.toString());
+    setCorrectGeoIPView();
   } finally {
     store.commit(propName_IsRequestingLocation, false); // un-mark 'Checking geolookup...'
   }
