@@ -48,6 +48,14 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 		return nil, nil
 	}
 
+	// TODO: (to discuss) do we need to block pinging when IVPNServersAccess==blocked
+	/*
+		if isBlocked, reasonDescription, err := s.IsConnectivityBlocked(); err == nil && isBlocked {
+			log.Info("Servers pinging skipped: ", reasonDescription)
+			return nil, nil
+		}
+	*/
+
 	timeoutTime := time.Now().Add(time.Millisecond * time.Duration(timeoutMs))
 
 	var geoLocation *types.GeoLookupResponse = nil
@@ -66,12 +74,6 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 	hosts, err := s.getHostsToPing(geoLocation)
 	if err != nil {
 		log.Info("Servers ping failed: " + err.Error())
-		return nil, err
-	}
-
-	// OS-specific preparations (e.g. we need to add servers IPs to firewall exceptions list)
-	if err := s.implIsGoingToPingServers(hosts); err != nil {
-		log.Info("Servers ping failed : " + err.Error())
 		return nil, err
 	}
 
@@ -134,6 +136,11 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 	}
 	s._isServersPingInProgress = true
 
+	// OS-specific preparations (e.g. we need to add servers IPs to firewall exceptions list)
+	if err := s.implPingServersStarting(hosts); err != nil {
+		log.Error("implPingServersStarting failed: " + err.Error())
+	}
+
 	// First ping iteration. Doing it fast. 300ms max for each server
 	result = funcPingIteration(300, &timeoutTime)
 
@@ -141,14 +148,18 @@ func (s *Service) PingServers(retryCount int, timeoutMs int) (map[string]int, er
 	// So, now there is no rush to do second ping iteration. Doing it in background.
 	go func() {
 		defer func() {
-			s._isServersPingInProgress = false
-
 			if r := recover(); r != nil {
 				log.Error("Panic in background ping: ", r)
 				if err, ok := r.(error); ok {
 					log.ErrorTrace(err)
 				}
 			}
+
+			if err := s.implPingServersStopped(hosts); err != nil {
+				log.Error("implPingServersStopped failed: " + err.Error())
+			}
+
+			s._isServersPingInProgress = false
 		}()
 
 		ret := funcPingIteration(1000, nil)

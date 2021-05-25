@@ -186,6 +186,18 @@ func AddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) err
 	return err
 }
 
+func RemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	err := implRemoveHostsFromExceptions(IPs, onlyForICMP, isPersistent)
+	if err != nil {
+		log.Error("Failed to remove hosts from exceptions:", err)
+	}
+
+	return err
+}
+
 // AllowLAN - allow/forbid LAN communication
 func AllowLAN(allowLan bool, allowLanMulticast bool) error {
 	mutex.Lock()

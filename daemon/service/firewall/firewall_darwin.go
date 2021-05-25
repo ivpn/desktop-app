@@ -131,7 +131,8 @@ func implClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net
 
 	// Connection already established. The rule for VPN interface is defined.
 	// Removing host IP from exceptions
-	return removeHostsFromExceptions([]string{serverIP.String()})
+	isPersistent := false
+	return removeHostsFromExceptions([]string{serverIP.String()}, isPersistent)
 }
 
 // ClientDisconnected - Disable communication for local vpn/client IP address
@@ -151,11 +152,14 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 		return fmt.Errorf("failed to get local IPs: %w", err)
 	}
 
+	// the rule should stay unchanged independently from VPN connection state
+	isPersistent := true
+
 	if !isAllowLAN {
 		// LAN NOT ALLOWED
 		delayedAllowLanAllowed = false
 		// disallow everything (LAN + multicast)
-		return removeHostsFromExceptions(append(localIPs, multicastIP))
+		return removeHostsFromExceptions(append(localIPs, multicastIP), isPersistent)
 	}
 
 	// LAN ALLOWED
@@ -176,17 +180,17 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 
 	if isAllowLanMulticast {
 		// allow LAN + multicast
-		return addHostsToExceptions(append(localIPs, multicastIP), true)
+		return addHostsToExceptions(append(localIPs, multicastIP), isPersistent)
 	}
 
 	// disallow Multicast
-	removeHostsFromExceptions([]string{multicastIP})
+	removeHostsFromExceptions([]string{multicastIP}, isPersistent)
 	// allow LAN
-	return addHostsToExceptions(localIPs, true)
+	return addHostsToExceptions(localIPs, isPersistent)
 }
 
 func delayedAllowLAN(isAllowLanMulticast bool) {
-	if delayedAllowLanStarted || delayedAllowLanAllowed == false {
+	if delayedAllowLanStarted || !delayedAllowLanAllowed {
 		return
 	}
 	log.Info("Delayed 'Allow LAN': Will try to apply this rule few seconds later...")
@@ -197,7 +201,7 @@ func delayedAllowLAN(isAllowLanMulticast bool) {
 		time.Sleep(time.Second)
 		ipList, err := getLanIPs()
 		if err != nil {
-			log.Warning(fmt.Errorf("Delayed 'Allow LAN': failed to get local IPs: %w", err))
+			log.Warning(fmt.Errorf("delayed 'Allow LAN': failed to get local IPs: %w", err))
 			return
 		}
 		if len(ipList) > 0 {
@@ -206,7 +210,7 @@ func delayedAllowLAN(isAllowLanMulticast bool) {
 				log.Info("Delayed 'Allow LAN': apply ...")
 				err := implAllowLAN(true, isAllowLanMulticast)
 				if err != nil {
-					log.Warning(fmt.Errorf("Delayed 'Allow LAN' error: %w", err))
+					log.Warning(fmt.Errorf("delayed 'Allow LAN' error: %w", err))
 				}
 			}
 			return
@@ -230,6 +234,15 @@ func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool)
 	return addHostsToExceptions(IPsStr, isPersistent)
 }
 
+func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
+	IPsStr := make([]string, 0, len(IPs))
+	for _, ip := range IPs {
+		IPsStr = append(IPsStr, ip.String())
+	}
+
+	return removeHostsFromExceptions(IPsStr, isPersistent)
+}
+
 // SetManualDNS - configure firewall to allow DNS which is out of VPN tunnel
 // Applicable to Windows implementation (to allow custom DNS from local network)
 func implSetManualDNS(addr net.IP) error {
@@ -240,22 +253,28 @@ func implSetManualDNS(addr net.IP) error {
 //---------------------------------------------------------------------
 
 func applyAddHostsToExceptions(hostsIPs []string) error { //
-	var ipList string
-	ipList = strings.Join(hostsIPs, " ")
+	ipList := strings.Join(hostsIPs, " ")
 
 	if len(ipList) > 0 {
-		log.Info("-add_exceptions ", ipList)
+		if len(ipList) > 250 {
+			log.Info("-add_exceptions <...multiple addresses...>")
+		} else {
+			log.Info("-add_exceptions ", ipList)
+		}
 		return shell.Exec(nil, platform.FirewallScript(), "-add_exceptions", ipList)
 	}
 	return nil
 }
 
 func applyRemoveHostsFromExceptions(hostsIPs []string) error {
-	var ipList string
-	ipList = strings.Join(hostsIPs, " ")
+	ipList := strings.Join(hostsIPs, " ")
 
 	if len(ipList) > 0 {
-		log.Info("-remove_exceptions ", ipList)
+		if len(ipList) > 250 {
+			log.Info("-remove_exceptions <...multiple addresses...>")
+		} else {
+			log.Info("-remove_exceptions ", ipList)
+		}
 		return shell.Exec(nil, platform.FirewallScript(), "-remove_exceptions", ipList)
 	}
 	return nil
@@ -292,7 +311,7 @@ func addHostsToExceptions(IPs []string, isPersistant bool) error {
 	newIPs := make([]string, 0, len(IPs))
 	for _, ip := range IPs {
 		// do not add new IP if it already in exceptions
-		if _, exists := allowedHosts[ip]; exists == false {
+		if _, exists := allowedHosts[ip]; !exists {
 			allowedHosts[ip] = isPersistant // add to map
 			newIPs = append(newIPs, ip)
 		}
@@ -310,14 +329,17 @@ func addHostsToExceptions(IPs []string, isPersistant bool) error {
 }
 
 // Deprecate comminication with this hosts
-func removeHostsFromExceptions(IPs []string) error {
+func removeHostsFromExceptions(IPs []string, isPersistant bool) error {
 	if len(IPs) == 0 {
 		return nil
 	}
 
 	toRemoveIPs := make([]string, 0, len(IPs))
 	for _, ip := range IPs {
-		if _, exists := allowedHosts[ip]; exists {
+		if persVal, exists := allowedHosts[ip]; exists {
+			if persVal != isPersistant {
+				continue
+			}
 			delete(allowedHosts, ip) // remove from map
 			toRemoveIPs = append(toRemoveIPs, ip)
 		}
@@ -339,15 +361,11 @@ func removeHostsFromExceptions(IPs []string) error {
 //		(has 'true' value in allowedHosts; eg.: LAN and Multicast connectivity)
 func removeAllHostsFromExceptions() error {
 	toRemoveIPs := make([]string, 0, len(allowedHosts))
-	for ipStr, isPersistant := range allowedHosts {
-		if isPersistant {
-			continue
-		}
+	for ipStr := range allowedHosts {
 		toRemoveIPs = append(toRemoveIPs, ipStr)
-		delete(allowedHosts, ipStr) // erase map
 	}
-
-	return removeHostsFromExceptions(toRemoveIPs)
+	isPersistant := false
+	return removeHostsFromExceptions(toRemoveIPs, isPersistant)
 }
 
 //---------------------------------------------------------------------

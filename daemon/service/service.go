@@ -213,6 +213,7 @@ func (s *Service) IsConnectivityBlocked() (isBlocked bool, reasonDescription str
 
 func (s *Service) updateAPIAddrInFWExceptions() {
 	svrs, _ := s.ServersList()
+
 	ivpnAPIAddr := svrs.Config.API.IPAddresses
 
 	if len(ivpnAPIAddr) <= 0 {
@@ -230,7 +231,12 @@ func (s *Service) updateAPIAddrInFWExceptions() {
 	if len(apiAddrs) > 0 {
 		const onlyForICMP = false
 		const isPersistent = true
-		firewall.AddHostsToExceptions(apiAddrs, onlyForICMP, isPersistent)
+		prefs := s.Preferences()
+		if prefs.IsFwAllowApiServers {
+			firewall.AddHostsToExceptions(apiAddrs, onlyForICMP, isPersistent)
+		} else {
+			firewall.RemoveHostsFromExceptions(apiAddrs, onlyForICMP, isPersistent)
+		}
 	}
 }
 
@@ -1046,6 +1052,7 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 	prefs.IsFwAllowApiServers = isAllowAPIServers
 	s.setPreferences(prefs)
 	s._evtReceiver.OnKillSwitchStateChanged()
+	s.updateAPIAddrInFWExceptions()
 	return nil
 }
 

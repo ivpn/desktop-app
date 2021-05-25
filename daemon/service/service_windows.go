@@ -26,7 +26,12 @@ import (
 	"net"
 )
 
-func (s *Service) implIsGoingToPingServers(hosts []net.IP) error {
+func (s *Service) implPingServersStarting(hosts []net.IP) error {
+	// nothing to do for Windows implementation
+	// firewall configured to allow all connectivity for service
+	return nil
+}
+func (s *Service) implPingServersStopped(hosts []net.IP) error {
 	// nothing to do for Windows implementation
 	// firewall configured to allow all connectivity for service
 	return nil

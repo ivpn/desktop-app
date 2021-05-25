@@ -279,6 +279,19 @@ function remove_exceptions {
   ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_CH} -d $@ -j ACCEPT
 }
 
+function remove_exceptions_icmp {
+  IN_CH=$1
+  OUT_CH=$2
+  shift 2
+  EXP=$@
+
+  create_chain ${IPv4BIN} ${IN_CH}
+  create_chain ${IPv4BIN} ${OUT_CH}
+
+  ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_CH} -p icmp --icmp-type 0 -s $@ -m state --state ESTABLISHED,RELATED -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_CH} -p icmp --icmp-type 8 -d $@ -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+}
+
 function add_exceptions_icmp {
   IN_CH=$1
   OUT_CH=$2
@@ -343,6 +356,11 @@ function main {
 
       shift
       add_exceptions_icmp ${IN_IVPN_ICMP_EXP} ${OUT_IVPN_ICMP_EXP} $@
+
+    elif [[ $1 = "-remove_exceptions_icmp" ]]; then
+
+      shift
+      remove_exceptions_icmp ${IN_IVPN_ICMP_EXP} ${OUT_IVPN_ICMP_EXP} $@
 
     elif [[ $1 = "-connected" ]]; then
         IFACE=$2

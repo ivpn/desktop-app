@@ -175,6 +175,11 @@ func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool)
 	return nil
 }
 
+func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
+	// nothing to do for windows implementation
+	return nil
+}
+
 // AllowLAN - allow/forbid LAN communication
 func implAllowLAN(allowLan bool, allowLanMulticast bool) error {
 
