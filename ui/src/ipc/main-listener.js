@@ -98,6 +98,12 @@ ipcMain.handle("renderer-request-firewall", async (event, enable) => {
   return await client.EnableFirewall(enable);
 });
 ipcMain.handle(
+  "renderer-request-KillSwitchSetAllowApiServers",
+  async (event, enable) => {
+    return await client.KillSwitchSetAllowApiServers(enable);
+  }
+);
+ipcMain.handle(
   "renderer-request-KillSwitchSetAllowLANMulticast",
   async (event, enable) => {
     return await client.KillSwitchSetAllowLANMulticast(enable);

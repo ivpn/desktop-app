@@ -80,7 +80,7 @@ func init() {
 
 // IConnectivityInfo information about connectivity
 type IConnectivityInfo interface {
-	IsConnectivityBlocked() bool
+	IsConnectivityBlocked() (isBlocked bool, reasonDescription string, err error)
 }
 
 // API contains data about IVPN API servers
@@ -88,11 +88,19 @@ type API struct {
 	mutex               sync.Mutex
 	alternateIPs        []net.IP
 	lastGoodAlternateIP net.IP
+	connectivityChecker IConnectivityInfo
 }
 
 // CreateAPI creates new API object
 func CreateAPI() (*API, error) {
 	return &API{}, nil
+}
+
+func (a *API) SetConnectivityChecker(connectivityChecker IConnectivityInfo) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	a.connectivityChecker = connectivityChecker
 }
 
 // IsAlternateIPsInitialized - checks if the alternate IP initialized

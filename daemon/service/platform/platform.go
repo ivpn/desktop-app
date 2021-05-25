@@ -35,6 +35,10 @@ import (
 )
 
 var (
+	// The INITIAL value (AFTER APPLICATION UPGRADE) for AllowApiServers parameter is platform dependend
+	// Due to historical reasons it has value 'true' for Windows but 'false' for macOS and Linux
+	fwInitialValueAllowApiServers bool
+
 	// list of clients which are allowed to connect to daemon
 	// (list of absolute paths to binaries)
 	allowedClients []string
@@ -225,10 +229,13 @@ func makeDir(description string, dirpath string) error {
 
 // Is64Bit - returns 'true' if binary compiled in 64-bit architecture
 func Is64Bit() bool {
-	if strconv.IntSize == 64 {
-		return true
-	}
-	return false
+	return strconv.IntSize == 64
+}
+
+// The INITIAL value (AFTER APPLICATION UPGRADE) for AllowApiServers parameter is platform dependend
+// Due to historical reasons it has value 'true' for Windows but 'false' for macOS and Linux
+func FwInitialValueAllowApiServers() bool {
+	return fwInitialValueAllowApiServers
 }
 
 // AllowedClients returns list of clients which are allowed to connect to daemon

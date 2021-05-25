@@ -48,6 +48,7 @@ type IWgKeysChangeReceiver interface {
 	FirewallEnabled() (bool, error)
 	Connected() bool
 	ConnectedType() (isConnected bool, connectedVpnType vpn.Type)
+	IsConnectivityBlocked() (isBlocked bool, reasonDescription string, err error)
 }
 
 // CreateKeysManager create WireGuard keys manager
@@ -211,6 +212,11 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 
 	log.Info("Updating WG keys...")
 
+	if isBlocked, reasonDescription, err := m.service.IsConnectivityBlocked(); err == nil && isBlocked {
+		// Connectivity with API servers is blocked. No sense to make API requests
+		return fmt.Errorf(`%s`, reasonDescription)
+	}
+
 	pub, priv, err := wireguard.GenerateKeys(m.wgToolBinPath)
 	if err != nil {
 		return err
@@ -232,7 +238,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 			m.service.WireGuardSaveNewKeys("", "", "")
 		}
 		log.Info("WG keys not updated: ", err)
-		return err
+		return fmt.Errorf("WG keys not updated. Please check your internet connection")
 	}
 
 	log.Info(fmt.Sprintf("WG keys updated (%s:%s) ", localIP.String(), pub))

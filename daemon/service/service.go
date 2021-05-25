@@ -105,11 +105,15 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 	}
 
 	serv := &Service{
+		_preferences:       *preferences.Create(),
 		_evtReceiver:       evtReceiver,
 		_api:               api,
 		_serversUpdater:    updater,
 		_netChangeDetector: netChDetector,
 		_wgKeysMgr:         wgKeysMgr}
+
+	// register the current service as a 'Connectivity checker' for API object
+	serv._api.SetConnectivityChecker(serv)
 
 	if err := serv.init(); err != nil {
 		return nil, fmt.Errorf("service initialization error : %w", err)
@@ -191,6 +195,19 @@ func (s *Service) init() error {
 	}()
 
 	return nil
+}
+
+func (s *Service) IsConnectivityBlocked() (isBlocked bool, reasonDescription string, err error) {
+	preferences := s._preferences
+	if !preferences.IsFwAllowApiServers &&
+		preferences.Session.IsLoggedIn() &&
+		(!s.Connected() || s.IsPaused()) {
+		enabled, err := s.FirewallEnabled()
+		if err == nil && enabled {
+			return true, "Access to IVPN servers is blocked (check IVPN Firewall settings)", nil
+		}
+	}
+	return false, "", nil
 }
 
 func (s *Service) updateAPIAddrInFWExceptions() {
@@ -971,10 +988,10 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 }
 
 // KillSwitchState returns killswitch state
-func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast bool, err error) {
+func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, err error) {
 	prefs := s._preferences
 	enabled, err := firewall.GetEnabled()
-	return enabled, prefs.IsFwPersistant, prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast, err
+	return enabled, prefs.IsFwPersistant, prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast, prefs.IsFwAllowApiServers, err
 }
 
 // SetKillSwitchIsPersistent change kill-switch value
@@ -1011,6 +1028,14 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 		s._evtReceiver.OnKillSwitchStateChanged()
 	}
 	return err
+}
+
+func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
+	prefs := s._preferences
+	prefs.IsFwAllowApiServers = isAllowAPIServers
+	s.setPreferences(prefs)
+	s._evtReceiver.OnKillSwitchStateChanged()
+	return nil
 }
 
 // SetPreference set preference value

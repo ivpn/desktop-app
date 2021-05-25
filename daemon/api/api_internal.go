@@ -133,6 +133,13 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string)
 }
 
 func (a *API) doRequest(host string, urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+	connectivityChecker := a.connectivityChecker
+	if connectivityChecker != nil {
+		if isBlocked, reasonDescription, err := connectivityChecker.IsConnectivityBlocked(); err == nil && isBlocked {
+			return nil, fmt.Errorf("%s", reasonDescription)
+		}
+	}
+
 	if len(host) == 0 || host == _apiHost {
 		return a.doRequestAPIHost(urlPath, method, contentType, request, timeoutMs)
 	} else if host == _updateHost {

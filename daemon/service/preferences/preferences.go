@@ -51,11 +51,19 @@ type Preferences struct {
 	IsFwPersistant           bool
 	IsFwAllowLAN             bool
 	IsFwAllowLANMulticast    bool
+	IsFwAllowApiServers      bool
 	IsStopOnClientDisconnect bool
 	IsObfsproxy              bool
 
 	// last known account status
 	Session SessionStatus
+}
+
+func Create() *Preferences {
+	// init default values
+	return &Preferences{
+		IsFwAllowApiServers: true,
+	}
 }
 
 // SetSession save account credentials
@@ -133,11 +141,34 @@ func (p *Preferences) LoadPreferences() error {
 		return nil
 	}
 
+	//	We need to determine if some of variables are present in json at all.
+	//	After the app upgrade new configuration parameters will not be saved in JSON jet.
+	// 	In this case we will understand that we are able to set initial parameters for this values (e.g. platform-specific values)
+	//
+	//	The 'PreferencesValsCheck' contains SAME PROPERTIES NAMES which original properties object, but fields is pointers
+	//	If field==nil => it is not exists in json.
+	type PreferencesValsCheck struct {
+		IsFwAllowApiServers *bool
+	}
+	var testJsonObj PreferencesValsCheck
+	err = json.Unmarshal(data, &testJsonObj)
+	if err != nil {
+		return err
+	}
+
+	// Parse json onto preferences object
 	err = json.Unmarshal(data, p)
 	if err != nil {
 		return err
 	}
 
+	// set initial values for a properties (if necessary)
+	if testJsonObj.IsFwAllowApiServers == nil {
+		// IsFwAllowApiServers was not initialized (it is a first start after application update)
+		p.IsFwAllowApiServers = platform.FwInitialValueAllowApiServers()
+	}
+
+	// init WG properties
 	if len(p.Session.WGPublicKey) == 0 || len(p.Session.WGPrivateKey) == 0 || len(p.Session.WGLocalIP) == 0 {
 		p.Session.WGKeyGenerated = time.Time{}
 	}

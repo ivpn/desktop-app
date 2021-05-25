@@ -44,6 +44,17 @@
       </div>
     </div>
 
+    <div class="param">
+      <input
+        type="checkbox"
+        id="firewallAllowApiServers"
+        v-model="firewallAllowApiServers"
+      />
+      <label class="defColor" for="firewallAllowApiServers"
+        >Allow access to IVPN servers when Firewall is enabled</label
+      >
+    </div>
+
     <!-- On-demand Firewall -->
     <div class="settingsBoldFont">
       On-demand Firewall:
@@ -143,6 +154,14 @@ export default {
   computed: {
     IsPersistent: function() {
       return this.$store.state.vpnState.firewallState.IsPersistent;
+    },
+    firewallAllowApiServers: {
+      get() {
+        return this.$store.state.vpnState.firewallState.IsAllowApiServers;
+      },
+      async set(value) {
+        await sender.KillSwitchSetAllowApiServers(value);
+      }
     },
     firewallAllowLan: {
       get() {

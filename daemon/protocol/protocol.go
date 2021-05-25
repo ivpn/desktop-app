@@ -77,11 +77,12 @@ type Service interface {
 
 	APIRequest(apiAlias string) (responseData []byte, err error)
 
-	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast bool, err error)
+	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, err error)
 	SetKillSwitchState(bool) error
 	SetKillSwitchIsPersistent(isPersistant bool) error
 	SetKillSwitchAllowLANMulticast(isAllowLanMulticast bool) error
 	SetKillSwitchAllowLAN(isAllowLan bool) error
+	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
 
 	Preferences() preferences.Preferences
 	SetPreference(key string, val string) error
@@ -179,7 +180,7 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 		p._service.Disconnect()
 	}()
 
-	addr := fmt.Sprintf("127.0.0.1:0")
+	addr := "127.0.0.1:0"
 	// Initializing listener
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", addr)
 	if err != nil {
@@ -244,13 +245,13 @@ func (p *Protocol) isNewConnectionAllowed(clientRemoteAddrTCP *net.TCPAddr) erro
 		isClientAllowed = true // if 'allowedClients' not defined - skip checking connected client path
 	} else {
 		for _, allowedBinPath := range allowedClients {
-			if strings.ToLower(allowedBinPath) == strings.ToLower(binPath) {
+			if strings.EqualFold(allowedBinPath, binPath) {
 				isClientAllowed = true
 				break
 			}
 		}
 	}
-	if isClientAllowed != true {
+	if !isClientAllowed {
 		return fmt.Errorf("not known client binary (%s)", binPath)
 	}
 	// check is connected binary has correct properties (owner, access rights, location)
@@ -283,7 +284,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 		p.clientDisconnected(conn)
 		log.Info("Client disconnected: ", conn.RemoteAddr())
 
-		if isAuthenticated && keepAlone == false {
+		if isAuthenticated && !keepAlone {
 			stopService, err := p._service.OnControlConnectionClosed()
 			if err != nil {
 				log.Error(err)
@@ -334,7 +335,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 		}
 
 		// CONNECTION AUTHENTICATION: First request should be 'Hello' with correct authentication secret
-		if isAuthenticated == false {
+		if !isAuthenticated {
 			messageData := []byte(message)
 
 			cmd, err := types.GetCommandBase(messageData)
@@ -354,7 +355,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 				return
 			}
 			if hello.Secret != p._secret {
-				log.Warning(fmt.Errorf("Refusing connection: secret verification error"))
+				log.Warning(fmt.Errorf("refusing connection: secret verification error"))
 				p.sendErrorResponse(conn, cmd, fmt.Errorf("secret verification error"))
 				return
 			}
@@ -404,7 +405,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				ManualDNS:       dns.GetLastManualDNS(),
 				IsCanPause:      vpnState.IsCanPause},
 				reqIdx)
-		} else if isOnlyIfConnected == false {
+		} else if !isOnlyIfConnected {
 			if vpnState.State == vpn.DISCONNECTED {
 				p.sendResponse(conn, &types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqIdx)
 			} else {
@@ -426,20 +427,20 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// send back Hello message with account session info
 		p.sendResponse(conn, p.createHelloResponse(), req.Idx)
 
-		if req.GetServersList == true {
+		if req.GetServersList {
 			serv, _ := p._service.ServersList()
 			if serv != nil {
 				p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, req.Idx)
 			}
 		}
 
-		if req.GetStatus == true {
+		if req.GetStatus {
 			// send VPN connection  state
 			sendState(req.Idx, true)
 
 			// send Firewall state
-			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err == nil {
-				p.sendResponse(conn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast}, reqCmd.Idx)
+			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, err := p._service.KillSwitchState(); err == nil {
+				p.sendResponse(conn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast, IsAllowApiServers: isAllowApiServers}, reqCmd.Idx)
 			}
 		}
 
@@ -451,12 +452,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// sending WIFI info
 		p.OnWiFiChanged(p._service.GetWiFiCurrentState())
-		break
 
 	case "GetVPNState":
 		// send VPN connection  state
 		sendState(reqCmd.Idx, false)
-		break
 
 	case "GetServers":
 		serv, err := p._service.ServersList()
@@ -469,7 +468,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 		p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, reqCmd.Idx)
-		break
 
 	case "PingServers":
 		var req types.PingServers
@@ -490,7 +488,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p.sendResponse(conn, &types.PingServersResp{PingResults: results}, req.Idx)
-		break
 
 	case "APIRequest":
 		var req types.APIRequest
@@ -505,7 +502,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 		p.sendResponse(conn, &types.APIResponse{APIPath: req.APIPath, ResponseData: string(data)}, req.Idx)
-		break
 
 	case "WiFiAvailableNetworks":
 		networks := p._service.GetWiFiAvailableNetworks()
@@ -516,15 +512,13 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		p.notifyClients(&types.WiFiAvailableNetworksResp{
 			Networks: nets})
-		break
 
 	case "KillSwitchGetStatus":
-		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
+		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, err := p._service.KillSwitchState(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
-			p.sendResponse(conn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast}, reqCmd.Idx)
+			p.sendResponse(conn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast, IsAllowApiServers: isAllowApiServers}, reqCmd.Idx)
 		}
-		break
 
 	case "KillSwitchSetEnabled":
 		var req types.KillSwitchSetEnabled
@@ -542,8 +536,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 
-		break
-
 	case "KillSwitchSetAllowLANMulticast":
 		var req types.KillSwitchSetAllowLANMulticast
 		if err := json.Unmarshal(messageData, &req); err != nil {
@@ -556,7 +548,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
-		break
 
 	case "KillSwitchSetAllowLAN":
 		var req types.KillSwitchSetAllowLAN
@@ -570,7 +561,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
-		break
 
 	case "KillSwitchSetIsPersistent":
 		var req types.KillSwitchSetIsPersistent
@@ -587,13 +577,26 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// send the response to the requestor
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
-		break
+
+	case "KillSwitchSetAllowApiServers":
+		var req types.KillSwitchSetAllowApiServers
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		if err := p._service.SetKillSwitchAllowAPIServers(req.IsAllowApiServers); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+
+		// send the response to the requestor
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
+		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 
 	// TODO: can be fully replaced by 'KillSwitchGetStatus'
 	case "KillSwitchGetIsPestistent":
 		isPersistant := p._service.Preferences().IsFwPersistant
 		p.sendResponse(conn, &types.KillSwitchGetIsPestistentResp{IsPersistent: isPersistant}, reqCmd.Idx)
-		break
 
 	// TODO: must return response
 	// TODO: avoid using raw key as a string
@@ -607,7 +610,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err := p._service.SetPreference(req.Key, req.Value); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
-		break
 
 	case "GenerateDiagnostics":
 		if log, log0, err := logger.GetLogText(1024 * 64); err != nil {
@@ -615,7 +617,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		} else {
 			p.sendResponse(conn, &types.DiagnosticsGeneratedResp{ServiceLog: log, ServiceLog0: log0}, reqCmd.Idx)
 		}
-		break
 
 	case "SetAlternateDns":
 		var req types.SetAlternateDns
@@ -648,7 +649,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.DNS}, req.Idx)
 			// all clients will be notified in case of successfull change by OnDNSChanged() handler
 		}
-		break
 
 	case "PauseConnection":
 		if err := p._service.Pause(); err != nil {
@@ -657,7 +657,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
-		break
 
 	case "ResumeConnection":
 		if err := p._service.Resume(); err != nil {
@@ -666,7 +665,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
-		break
 
 	case "SessionNew":
 		var req types.SessionNew
@@ -716,7 +714,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// notify all clients about changed session status
 		p.notifyClients(p.createHelloResponse())
-		break
 
 	case "SessionDelete":
 		err := p._service.SessionDelete()
@@ -728,7 +725,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// notify all clients about changed session status
 		p.notifyClients(p.createHelloResponse())
-		break
 
 	case "AccountStatus":
 		var resp types.AccountStatusResp
@@ -747,7 +743,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// send response
 		p.sendResponse(conn, &resp, reqCmd.Idx)
-		break
 
 	case "WireGuardGenerateNewKeys":
 		var req types.WireGuardGenerateNewKeys
@@ -760,7 +755,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
-		break
 
 	case "WireGuardSetKeysRotationInterval":
 		var req types.WireGuardSetKeysRotationInterval
@@ -771,12 +765,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		p._service.WireGuardSetKeysRotationInterval(req.Interval)
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
-		break
 
 	case "Disconnect":
 		p._disconnectRequested = true
 
-		if p._service.Connected() == false {
+		if !p._service.Connected() {
 			p.sendResponse(conn, &types.DisconnectedResp{Reason: types.DisconnectRequested}, reqCmd.Idx)
 			break
 		}
@@ -784,7 +777,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err := p._service.Disconnect(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
-		break
 
 	case "Connect":
 		p._disconnectRequested = false
@@ -806,7 +798,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		defer p.vpnConnectReqCounterDecrease()
 
 		// skip this request if new connection request available
-		if _, lastRequestTime := p.vpnConnectReqCounter(); requestTime.Equal(lastRequestTime) == false {
+		if _, lastRequestTime := p.vpnConnectReqCounter(); !requestTime.Equal(lastRequestTime) {
 			log.Info("Skipping connection request. Newest request received.")
 			return
 		}
@@ -825,7 +817,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 				// Sending "Disconnected" only in one place (after VPN process stopped)
 				disconnectionReason := types.Unknown
-				if disconnectAuthError == true {
+				if disconnectAuthError {
 					disconnectionReason = types.AuthenticationError
 					if connectionError == nil {
 						connectionError = fmt.Errorf("authentication failure")
@@ -909,8 +901,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if connectionError = p.processConnectRequest(messageData, stateChan); connectionError != nil {
 			log.ErrorTrace(connectionError)
 		}
-
-		break
 
 	default:
 		log.Warning("!!! Unsupported request type !!! ", reqCmd.Command)

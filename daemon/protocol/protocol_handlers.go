@@ -70,10 +70,10 @@ func (p *Protocol) OnDNSChanged(dns net.IP) {
 // OnKillSwitchStateChanged - Firewall change handler
 func (p *Protocol) OnKillSwitchStateChanged() {
 	// notify all clients about KillSwitch status
-	if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, err := p._service.KillSwitchState(); err != nil {
+	if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, err := p._service.KillSwitchState(); err != nil {
 		log.Error(err)
 	} else {
-		p.notifyClients(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast})
+		p.notifyClients(&types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast, IsAllowApiServers: isAllowApiServers})
 	}
 }
 
