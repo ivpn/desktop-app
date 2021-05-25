@@ -24,6 +24,8 @@
         {{ multilineFirstLine }}
       </div>
       <div class="text secondLine">
+        <div v-if="isShowIPVersionBage && isIPv6" class="bage">IPv6</div>
+        <!--<div v-else-if="isShowIPVersionBage && !isIPv6" class="bage">IPv4</div>-->
         {{ multilineSecondLine }}
       </div>
     </div>
@@ -94,6 +96,17 @@ export default {
     },
     isCountryFlagInUse: function() {
       return this.isFastestServer !== true && this.isRandomServer !== true;
+    },
+    isShowIPVersionBage: function() {
+      return (
+        this.$store.state.settings.enableIPv6InTunnel && // IPv6 enabled
+        this.$store.state.settings.showGatewaysWithoutIPv6 && // and we show both types of servers (IPv4 and IPv6)
+        this.server.isIPv6 != null &&
+        this.server.isIPv6 != undefined
+      );
+    },
+    isIPv6: function() {
+      return this.server.isIPv6 == true;
     },
     serverImage: function() {
       if (this.isFastestServer === true) return Image_speedometer;
@@ -176,6 +189,17 @@ div.secondLine {
   text-align: left;
   font-size: 12px;
   color: grey;
+}
+
+div.bage {
+  font-size: 10px;
+  line-height: 14px;
+  color: grey;
+  display: inline-block;
+  padding-left: 4px;
+  padding-right: 4px;
+  border: 1px solid #777777;
+  border-radius: 4px;
 }
 
 .flexRow {

@@ -107,6 +107,7 @@ type CmdConnect struct {
 	dns             string
 	antitracker     bool
 	antitrackerHard bool
+	isIPv6Tunnel    bool
 
 	filter_proto       string
 	filter_location    bool
@@ -141,6 +142,7 @@ func (c *CmdConnect) Init() {
 
 	c.BoolVar(&c.antitracker, "antitracker", false, "Enable AntiTracker for this connection")
 	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'Hard Core' AntiTracker for this connection")
+	c.BoolVar(&c.isIPv6Tunnel, "ipv6tunnel", false, "Enable IPv6 in VPN tunnel (WireGuard connections only)\n(IPv6 addresses are preferred when a host has a dual stack IPv6/IPv4; IPv4-only hosts are unaffected)")
 
 	// filters
 	c.StringVar(&c.filter_proto, "p", "", "PROTOCOL", "Protocol type OpenVPN|ovpn|WireGuard|wg")
@@ -240,6 +242,7 @@ func (c *CmdConnect) Run() (retError error) {
 		c.antitracker = ci.Antitracker
 		c.antitrackerHard = ci.AntitrackerHard
 		c.multihopExitSvr = ci.MultiopExitSvr
+		c.isIPv6Tunnel = ci.IPv6Tunnel
 	}
 
 	if c.obfsproxy && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
@@ -409,7 +412,8 @@ func (c *CmdConnect) Run() (retError error) {
 			serverFound = true
 			host := s.Hosts[0]
 			req.VpnType = vpn.WireGuard
-			req.WireGuardParameters.EntryVpnServer.Hosts = []types.WGHost{{Host: host.Host, PublicKey: host.PublicKey, LocalIP: host.LocalIP}}
+			req.WireGuardParameters.EntryVpnServer.Hosts = []apitypes.WireGuardServerHostInfo{host}
+			req.IPv6 = c.isIPv6Tunnel
 
 			// port
 			p, err := getPort(vpn.WireGuard, c.port)
@@ -516,6 +520,7 @@ func (c *CmdConnect) Run() (retError error) {
 		DNS:             c.dns,
 		Antitracker:     c.antitracker,
 		AntitrackerHard: c.antitrackerHard,
+		IPv6Tunnel:      c.isIPv6Tunnel,
 		MultiopExitSvr:  c.multihopExitSvr})
 
 	return nil

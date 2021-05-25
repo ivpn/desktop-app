@@ -114,6 +114,7 @@ export function InitTray(
           break;
 
         case "isRequestingLocation":
+        case "isRequestingLocationIPv6":
           updateTrayMenu();
           break;
 
@@ -225,7 +226,8 @@ function updateTrayMenu() {
   if (statusText) {
     const lines = statusText.split("\n");
     lines.forEach(l => {
-      if (l) mainMenu.push({ label: l, enabled: false });
+      if (l == "separator") mainMenu.push({ type: "separator" });
+      else if (l) mainMenu.push({ label: l, enabled: false });
     });
     mainMenu.push({ type: "separator" });
   }
@@ -350,6 +352,7 @@ function GetStatusText() {
     retStr += "Disconnecting...";
   else retStr += "Disconnected";
 
+  // IPv4 location info
   let location = "";
   let l = store.state.location;
   if (l && !store.state.isRequestingLocation) {
@@ -364,6 +367,26 @@ function GetStatusText() {
 
     if (l.ip_address) retStr += `\nPublic IP: ${l.ip_address}`;
     if (location) retStr += `\nLocation: ${location}`;
+  }
+
+  // IPv6 location info
+  let locationV6 = "";
+  let l6 = store.state.locationIPv6;
+  if (l6 && !store.state.isRequestingLocationIPv6 && l6.ip_address) {
+    if (!store.getters["isIPv4andIPv6LocationsEqual"]) {
+      if (l6.city) locationV6 += `${l6.city}`;
+      if (l6.country) {
+        if (locationV6) locationV6 += `, `;
+        locationV6 += `${l6.country}`;
+      }
+
+      if (l6.isIvpnServer == true) locationV6 += ` (ISP: IVPN)`;
+      else if (l6.isp) locationV6 += ` (ISP: ${l6.isp})`;
+    }
+
+    retStr += `\nseparator`;
+    retStr += `\nPublic IPv6: ${l6.ip_address}`;
+    if (locationV6) retStr += `\nLocation IPv6: ${locationV6}`;
   }
 
   return retStr;

@@ -36,24 +36,19 @@ import (
 	"net/http"
 	"path"
 	"time"
+
+	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
-
-func (a *API) getAlternateIPs() (lastGoodIP net.IP, ipList []net.IP) {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
-
-	return a.lastGoodAlternateIP, a.alternateIPs
-}
-
-func (a *API) saveLastGoodAlternateIP(lastGoodIP net.IP) {
-	a.mutex.Lock()
-	defer a.mutex.Unlock()
-
-	a.lastGoodAlternateIP = lastGoodIP
-}
 
 func getURL(host string, urlpath string) string {
 	return "https://" + path.Join(host, urlpath)
+}
+
+func getURL_IPHost(ip net.IP, isIPv6 bool, urlpath string) string {
+	if isIPv6 {
+		return "https://" + path.Join("["+ip.String()+"]", urlpath)
+	}
+	return "https://" + path.Join(ip.String(), urlpath)
 }
 
 func newRequest(urlPath string, method string, contentType string, body io.Reader) (*http.Request, error) {
@@ -132,9 +127,25 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string)
 	}
 }
 
-func (a *API) doRequest(host string, urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
 	if len(host) == 0 || host == _apiHost {
-		return a.doRequestAPIHost(urlPath, method, contentType, request, timeoutMs)
+		if ipTypeRequired != types.IPvAny {
+			// The specific IP version required to use
+			return a.doRequestAPIHost(ipTypeRequired, false, urlPath, method, contentType, request, timeoutMs)
+		} else {
+			// No specific IP version required to use
+			// Trying first to use IPv4, as fallback - try to use IPv6
+			resp4, err4 := a.doRequestAPIHost(types.IPv4, true, urlPath, method, contentType, request, timeoutMs)
+			if err4 != nil {
+				log.Info("Failed to access API server using IPv4. Trying IPv6 ...")
+				resp6, err6 := a.doRequestAPIHost(types.IPv6, true, urlPath, method, contentType, request, timeoutMs)
+				if err6 == nil {
+					return resp6, err6
+				}
+			}
+			return resp4, err4
+		}
+
 	} else if host == _updateHost {
 		return a.doRequestUpdateHost(urlPath, method, contentType, request, timeoutMs)
 	}
@@ -179,8 +190,8 @@ func (a *API) doRequestUpdateHost(urlPath string, method string, contentType str
 	return resp, nil
 }
 
-func (a *API) doRequestAPIHost(urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
-	lastIP, ips := a.getAlternateIPs()
+func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUseDNS bool, urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+	isIPv6 := ipTypeRequired == types.IPv6
 
 	// When trying to access API server by alternate IPs (not by DNS name)
 	// we need to configure TLS to use api.ivpn.net hostname
@@ -222,8 +233,9 @@ func (a *API) doRequestAPIHost(urlPath string, method string, contentType string
 	bodyBuffer := bytes.NewBuffer(data)
 
 	// access API by last good IP (if defined)
+	lastIP := a.GetLastGoodAlternateIP(isIPv6)
 	if lastIP != nil {
-		req, err := newRequest(getURL(lastIP.String(), urlPath), method, contentType, bodyBuffer)
+		req, err := newRequest(getURL_IPHost(lastIP, isIPv6, urlPath), method, contentType, bodyBuffer)
 		if err != nil {
 			return nil, err
 		}
@@ -235,45 +247,56 @@ func (a *API) doRequestAPIHost(urlPath string, method string, contentType string
 	}
 
 	// try to access API server by host DNS
-	req, err := newRequest(getURL(_apiHost, urlPath), method, contentType, bodyBuffer)
-	if err != nil {
-		return nil, err
+	var firstResp *http.Response
+	var firstErr error
+	if isCanUseDNS {
+		req, err := newRequest(getURL(_apiHost, urlPath), method, contentType, bodyBuffer)
+		if err != nil {
+			return nil, err
+		}
+		firstResp, firstErr = client.Do(req)
+		if firstErr == nil {
+			// save last good IP
+			a.SetLastGoodAlternateIP(isIPv6, nil)
+			return firstResp, firstErr
+		}
+		log.Warning("Failed to access " + _apiHost)
 	}
-	firstResp, firstErr := client.Do(req)
-	if firstErr == nil {
-		// save last good IP
-		a.saveLastGoodAlternateIP(nil)
-		return firstResp, firstErr
-	}
-	log.Warning("Failed to access " + _apiHost)
 
 	// try to access API server by alternate IP
+	ips := a.getAlternateIPs(isIPv6)
 	for i, ip := range ips {
-		log.Info(fmt.Sprintf("Trying to use alternate API IP #%d...", i))
+		ipVerStr := ""
+		if ipTypeRequired == types.IPv6 {
+			ipVerStr = "(IPv6)"
+		}
+		log.Info(fmt.Sprintf("Trying to use alternate API IP #%d %s...", i, ipVerStr))
 
-		req, err := newRequest(getURL(ip.String(), urlPath), method, contentType, bodyBuffer)
+		req, err := newRequest(getURL_IPHost(ip, isIPv6, urlPath), method, contentType, bodyBuffer)
 		if err != nil {
 			return nil, err
 		}
 		resp, err := client.Do(req)
 
 		if err != nil {
-			fmt.Println("Failed: ", err.Error())
+			if firstErr == nil {
+				firstErr = err
+			}
 			continue
 		}
 
 		// save last good IP
-		a.saveLastGoodAlternateIP(ip)
+		a.SetLastGoodAlternateIP(isIPv6, ip)
 
 		log.Info(fmt.Sprintf("Success!"))
 		return resp, err
 	}
 
-	return firstResp, fmt.Errorf("Unable to access IVPN API server: %w", firstErr)
+	return nil, fmt.Errorf("Unable to access IVPN API server: %w", firstErr)
 }
 
-func (a *API) requestRaw(host string, urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int) (responseData []byte, err error) {
-	resp, err := a.doRequest(host, urlPath, method, contentType, requestObject, timeoutMs)
+func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int) (responseData []byte, err error) {
+	resp, err := a.doRequest(ipTypeRequired, host, urlPath, method, contentType, requestObject, timeoutMs)
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}
@@ -291,7 +314,7 @@ func (a *API) request(host string, urlPath string, method string, contentType st
 }
 
 func (a *API) requestEx(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}, timeoutMs int) error {
-	body, err := a.requestRaw(host, urlPath, method, contentType, requestObject, timeoutMs)
+	body, err := a.requestRaw(types.IPvAny, host, urlPath, method, contentType, requestObject, timeoutMs)
 	if err != nil {
 		return err
 	}

@@ -29,18 +29,19 @@ export default {
     pauseConnectionTill: null, // Date()
 
     currentSettingsViewName: null, // 'account', 'general', 'version' ...
-    /*
-    {
-      state: AppUpdaterStageEnum.Downloading,
-      error: null,
-      readyToInstallBinary: "",
-      readyToInstallSignatureFile: "",
-      downloadStatus: { 
-        contentLength: 0,
-        downloaded:    0
-      }
-    }
-    */
+
+    isIPv6View: false,
+    
+    //{
+    //  state: AppUpdaterStageEnum.Downloading,
+    //  error: null,
+    //  readyToInstallBinary: "",
+    //  readyToInstallSignatureFile: "",
+    //  downloadStatus: { 
+    //    contentLength: 0,
+    //    downloaded:    0
+    //  }
+    //}
     appUpdateProgress: null
   },
 
@@ -56,6 +57,9 @@ export default {
     },
     currentSettingsViewName(state, value) {
       state.currentSettingsViewName = value;
+    },
+    isIPv6View(state, value) {
+      state.isIPv6View = value;
     }
   },
 
@@ -69,6 +73,9 @@ export default {
     },
     currentSettingsViewName(context, value) {
       context.commit("currentSettingsViewName", value);
+    },
+    isIPv6View(context, value) {
+      context.commit("isIPv6View", value);
     }
   }
 };

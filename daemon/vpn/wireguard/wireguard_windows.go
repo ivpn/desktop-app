@@ -302,14 +302,27 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 		interfaceCfg = append(interfaceCfg, "DNS = "+wg.connectParams.hostLocalIP.String())
 	}
 
-	interfaceCfg = append(interfaceCfg, "Address = "+wg.connectParams.clientLocalIP.String())
+	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
+	ipv6LocalIPStr := ""
+	allowedIPsV6 := ""
+	if ipv6LocalIP != nil {
+		ipv6LocalIPStr = ", " + ipv6LocalIP.String()
+		// "8000::/1, ::/1" is the same as "::/0" but such type of configuration is disabling internal WireGuard-s Firewall
+		// (which blocks everything except WireGuard traffic)
+		// We need to disable WireGuard-s firewall because we have our own implementation of firewall.
+		// For example, we have to control 'Allow LAN' functionality
+		//  For details, refer to WireGuard-windows sources: https://git.zx2c4.com/wireguard-windows/tree/tunnel/addressconfig.go (enableFirewall(...) method)
+		allowedIPsV6 = ", 8000::/1, ::/1"
+	}
 
-	// TODO: check if we need it for this platform
-	// Same as "0.0.0.0/0" but such type of configuration is disabling internal WireGuard-s Firewall
-	// It blocks everything except WireGuard traffic.
+	interfaceCfg = append(interfaceCfg, "Address = "+wg.connectParams.clientLocalIP.String()+ipv6LocalIPStr)
+
+	// "128.0.0.0/1, 0.0.0.0/1" is the same as "0.0.0.0/0" but such type of configuration is disabling internal WireGuard-s Firewall
+	// (which blocks everything except WireGuard traffic)
 	// We need to disable WireGuard-s firewall because we have our own implementation of firewall.
-	//  For details, refer to WireGuard-windows sources: tunnel\ifaceconfig.go (enableFirewall(...) method)
-	peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1")
+	// For example, we have to control 'Allow LAN' functionality
+	//  For details, refer to WireGuard-windows sources: https://git.zx2c4.com/wireguard-windows/tree/tunnel/addressconfig.go (enableFirewall(...) method)
+	peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1"+allowedIPsV6)
 
 	return interfaceCfg, peerCfg
 }

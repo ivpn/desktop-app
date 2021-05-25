@@ -511,3 +511,7 @@ func (o *OpenVPN) OnRoutingChanged() error {
 	// Nothing to do for OpenVPN
 	return nil
 }
+
+func (o *OpenVPN) IsIPv6InTunnel() bool {
+	return false
+}

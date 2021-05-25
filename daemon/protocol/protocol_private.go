@@ -254,18 +254,45 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		return p._service.ConnectOpenVPN(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
 
 	} else if vpn.Type(r.VpnType) == vpn.WireGuard {
-		hostValue := r.WireGuardParameters.EntryVpnServer.Hosts[rand.Intn(len(r.WireGuardParameters.EntryVpnServer.Hosts))]
+		hosts := r.WireGuardParameters.EntryVpnServer.Hosts
+
+		// filter hosts: use IPv6 hosts
+		if r.IPv6 {
+			ipv6Hosts := append(hosts[:0:0], hosts...)
+			n := 0
+			for _, h := range ipv6Hosts {
+				if h.IPv6.LocalIP != "" {
+					ipv6Hosts[n] = h
+					n++
+				}
+			}
+			if n == 0 {
+				if r.IPv6Only {
+					return fmt.Errorf("Unable to make IPv6 connection inside tunnel. Server does not support IPv6")
+				}
+			} else {
+				hosts = ipv6Hosts[:n]
+			}
+		}
+		hostValue := hosts[rand.Intn(len(hosts))]
 
 		// prevent user-defined data injection: ensure that nothing except the base64 public key will be stored in the configuration
 		if !helpers.ValidateBase64(hostValue.PublicKey) {
 			return fmt.Errorf("WG public key is not base64 string")
 		}
 
+		hostLocalIP := net.ParseIP(strings.Split(hostValue.LocalIP, "/")[0])
+		ipv6Prefix := ""
+		if r.IPv6 {
+			ipv6Prefix = strings.Split(hostValue.IPv6.LocalIP, "/")[0]
+		}
+
 		connectionParams := wireguard.CreateConnectionParams(
 			r.WireGuardParameters.Port.Port,
 			net.ParseIP(hostValue.Host),
 			hostValue.PublicKey,
-			net.ParseIP(strings.Split(hostValue.LocalIP, "/")[0]))
+			hostLocalIP,
+			ipv6Prefix)
 
 		return p._service.ConnectWireGuard(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
 

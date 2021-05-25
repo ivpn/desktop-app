@@ -49,6 +49,7 @@ const (
 )
 
 const subnetMask string = "255.0.0.0"
+const subnetMaskPrefixLenIPv6 string = "64"
 
 // internalVariables of wireguard implementation for macOS
 type internalVariables struct {
@@ -316,9 +317,21 @@ func (wg *WireGuard) initializeConfiguration(utunName string) error {
 }
 
 // Configure WireGuard interface
-// example command: ipconfig set utun7 MANUAL 10.0.0.121 255.255.255.0
+// example command: ipconfig set utun7 MANUAL 10.0.0.121 12
+// example command: ipconfig set utun7 MANUAL-V6 fd00:4956:504e:ffff::ac1a:704b 96
 func (wg *WireGuard) initializeUnunInterface(utunName string) error {
-	return shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask)
+	// initialize IPv4 interface for tunnel
+	err := shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask)
+	if err != nil {
+		return err
+	}
+
+	// initialize IPv6 interface for tunnel
+	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
+	if ipv6LocalIP != nil {
+		return shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL-V6", ipv6LocalIP.String(), subnetMaskPrefixLenIPv6)
+	}
+	return err
 }
 
 // WireGuard configuration
@@ -373,22 +386,35 @@ func (wg *WireGuard) setRoutes() error {
 	// Update main route
 	// example command:	route	-n	add	-net	0/1			10.0.0.1
 	// 					route	-n	add	-inet	0.0.0.0/1	-interface utun2
-	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-net", "0/1", wg.connectParams.hostLocalIP.String()); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "-net", "0/1", wg.connectParams.hostLocalIP.String()); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
 	// Update routing to remote server (remote_server default_router 255.255.255)
 	// example command:	route	-n	add	-net	145.239.239.55	192.168.1.1	255.255.255.255
 	//					route	-n	add	-inet	51.77.91.106	-gateway	192.168.1.1
-	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-net", wg.connectParams.hostIP.String(), wg.internals.defGateway.String(), "255.255.255.255"); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "-net", wg.connectParams.hostIP.String(), wg.internals.defGateway.String(), "255.255.255.255"); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
 	// Update routing table
 	// example command:	route	-n	add	-net	128.0.0.0	10.0.0.1	128.0.0.0
 	// 					route	-n	add	-inet	128.0.0.0/1	-interface	utun2
-	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String(), "128.0.0.0"); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String(), "128.0.0.0"); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
+	}
+
+	ipv6HostLocalIP := wg.connectParams.GetIPv6HostLocalIP()
+	if ipv6HostLocalIP != nil {
+		// Using the default gateway (a ::/0 netmask) as two /1 networks: ::/1 and 8000::/1.
+		// Since a more specific route always wins, this forces traffic to be routed via the VPN instead of over the default gateway.
+		// Additionally, this does not change the current 'default' route (do not break users configuration after disconnection).
+		if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet6", "-net", "::/1", ipv6HostLocalIP.String()); err != nil {
+			return fmt.Errorf("adding route shell comand error : %w", err)
+		}
+		if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet6", "-net", "8000::/1", ipv6HostLocalIP.String()); err != nil {
+			return fmt.Errorf("adding route shell comand error : %w", err)
+		}
 	}
 
 	return nil
@@ -397,10 +423,18 @@ func (wg *WireGuard) setRoutes() error {
 func (wg *WireGuard) removeRoutes() error {
 	log.Info("Restoring routing table...")
 
-	shell.Exec(log, "/sbin/route", "-n", "delete", "0/1", wg.connectParams.hostLocalIP.String())
-	shell.Exec(log, "/sbin/route", "-n", "delete", wg.connectParams.hostIP.String())
-	shell.Exec(log, "/sbin/route", "-n", "delete", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String())
+	shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "-net", "0/1", wg.connectParams.hostLocalIP.String())
+	shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "-net", wg.connectParams.hostIP.String())
+	shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "-net", "128.0.0.0", wg.connectParams.hostLocalIP.String())
 
+	ipv6HostLocalIP := wg.connectParams.GetIPv6HostLocalIP()
+	if ipv6HostLocalIP != nil {
+		// Using the default gateway (a ::/0 netmask) as two /1 networks: ::/1 and 8000::/1.
+		// Since a more specific route always wins, this forces traffic to be routed via the VPN instead of over the default gateway.
+		// Additionally, this does not change the current 'default' route (do not break users configuration after disconnection).
+		shell.Exec(log, "/sbin/route", "-n", "delete", "-inet6", "-net", "::/1", ipv6HostLocalIP.String())
+		shell.Exec(log, "/sbin/route", "-n", "delete", "-inet6", "-net", "8000::/1", ipv6HostLocalIP.String())
+	}
 	return nil
 }
 
@@ -469,7 +503,12 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 	// It blocks everything except WireGuard traffic.
 	// We need to disable WireGuard-s firewall because we have our own implementation of firewall.
 	//  For details, refer to WireGuard-windows sources: tunnel\ifaceconfig.go (enableFirewall(...) method)
-	peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1")
+
+	if len(wg.connectParams.GetIPv6HostLocalIP()) > 0 {
+		peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1, ::/0")
+	} else {
+		peerCfg = append(peerCfg, "AllowedIPs = 128.0.0.0/1, 0.0.0.0/1")
+	}
 
 	return interfaceCfg, peerCfg
 }

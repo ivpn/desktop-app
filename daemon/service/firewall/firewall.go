@@ -37,13 +37,14 @@ func init() {
 }
 
 var (
-	connectedClientInterfaceIP net.IP
-	connectedClientPort        int
-	connectedHostIP            net.IP
-	connectedHostPort          int
-	connectedIsTCP             bool
-	mutex                      sync.Mutex
-	isClientPaused             bool
+	connectedClientInterfaceIP   net.IP
+	connectedClientInterfaceIPv6 net.IP
+	connectedClientPort          int
+	connectedHostIP              net.IP
+	connectedHostPort            int
+	connectedIsTCP               bool
+	mutex                        sync.Mutex
+	isClientPaused               bool
 )
 
 // Initialize is doing initialization stuff
@@ -74,8 +75,9 @@ func SetEnabled(enable bool) error {
 		// Here we should notify that client is still connected
 		// We must not do it in Paused state!
 		clientAddr := connectedClientInterfaceIP
+		clientAddrIPv6 := connectedClientInterfaceIPv6
 		if clientAddr != nil && isClientPaused == false {
-			e := implClientConnected(clientAddr, connectedClientPort, connectedHostIP, connectedHostPort, connectedIsTCP)
+			e := implClientConnected(clientAddr, clientAddrIPv6, connectedClientPort, connectedHostIP, connectedHostPort, connectedIsTCP)
 			if e != nil {
 				log.Error(e)
 			}
@@ -125,7 +127,7 @@ func ClientResumed() {
 }
 
 // ClientConnected - allow communication for local vpn/client IP address
-func ClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) error {
+func ClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 	ClientResumed()
@@ -133,12 +135,13 @@ func ClientConnected(clientLocalIPAddress net.IP, clientPort int, serverIP net.I
 	log.Info("Client connected: ", clientLocalIPAddress)
 
 	connectedClientInterfaceIP = clientLocalIPAddress
+	connectedClientInterfaceIPv6 = clientLocalIPv6Address
 	connectedClientPort = clientPort
 	connectedHostIP = serverIP
 	connectedHostPort = serverPort
 	connectedIsTCP = isTCP
 
-	err := implClientConnected(clientLocalIPAddress, clientPort, serverIP, serverPort, isTCP)
+	err := implClientConnected(clientLocalIPAddress, clientLocalIPv6Address, clientPort, serverIP, serverPort, isTCP)
 	if err != nil {
 		log.Error(err)
 	}
@@ -154,6 +157,7 @@ func ClientDisconnected() error {
 	// Remove client interface from exceptions
 	if connectedClientInterfaceIP != nil {
 		connectedClientInterfaceIP = nil
+		connectedClientInterfaceIPv6 = nil
 		log.Info("Client disconnected")
 		err := implClientDisconnected()
 		if err != nil {

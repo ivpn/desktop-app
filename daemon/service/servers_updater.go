@@ -51,7 +51,7 @@ func CreateServersUpdater(apiObj *api.API) (IServersUpdater, error) {
 	servers, err := updater.GetServers()
 	if err == nil && servers != nil {
 		// save alternate API IP's
-		apiObj.SetAlternateIPs(servers.Config.API.IPAddresses)
+		apiObj.SetAlternateIPs(servers.Config.API.IPAddresses, servers.Config.API.IPv6Addresses)
 	}
 
 	// update servers list in background
@@ -69,16 +69,16 @@ func (s *serversUpdater) GetServers() (*types.ServersInfoResponse, error) {
 		return s.servers, nil
 	}
 
-	servers, apiIPs, err := readServersFromCache()
+	servers, apiIPsV4, apiIPsV6, err := readServersFromCache()
 	if err != nil {
 		log.Warning(err)
 
-		if s.api.IsAlternateIPsInitialized() == false {
-			// Probably we can not use servers info because servers.json has wrong privileges (blocking potential vulnerability)
+		if s.api.IsAlternateIPsInitialized(false) == false && s.api.IsAlternateIPsInitialized(true) == false {
+			// Probably we can not use servers info because servers.json has wrong privileges (potential vulnerability)
 			// Trying to initialize only API IP addresses
 			// It is safe, because we are checking TLS server name for "api.ivpn.net" when accessing API (https)
-			if apiIPs != nil && len(apiIPs) > 0 {
-				s.api.SetAlternateIPs(apiIPs)
+			if (apiIPsV4 != nil && len(apiIPsV4) > 0) || (apiIPsV6 != nil && len(apiIPsV6) > 0) {
+				s.api.SetAlternateIPs(apiIPsV4, apiIPsV6)
 			}
 		}
 	}
@@ -141,26 +141,26 @@ func (s *serversUpdater) UpdateNotifierChannel() chan struct{} {
 	return s.updatedNotifyChan
 }
 
-func readServersFromCache() (svrs *types.ServersInfoResponse, apiIPs []string, e error) {
+func readServersFromCache() (svrs *types.ServersInfoResponse, apiIPsV4 []string, apiIPsV6 []string, e error) {
 
 	serversFile := platform.ServersFile()
 
 	_, err := os.Stat(serversFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil, fmt.Errorf("failed to read servers cache file: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to read servers cache file: %w", err)
 		}
-		return nil, nil, fmt.Errorf("failed to info about servers cache file: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to info about servers cache file: %w", err)
 	}
 
 	data, err := ioutil.ReadFile(serversFile)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read servers cache file: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to read servers cache file: %w", err)
 	}
 
 	servers := new(types.ServersInfoResponse)
 	if err := json.Unmarshal(data, servers); err != nil {
-		return nil, nil, fmt.Errorf("failed to unmarshal servers cache file: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to unmarshal servers cache file: %w", err)
 	}
 
 	// check servers.json file has correct access rights (can we use it's data?)
@@ -169,10 +169,10 @@ func readServersFromCache() (svrs *types.ServersInfoResponse, apiIPs []string, e
 		// we can not use servers info from this file
 		// but we can try to get IP addresses of alternate IP's
 		// It is safe, because we are checking TLS server name for "api.ivpn.net" when accessing API (https)
-		return nil, servers.Config.API.IPAddresses, fmt.Errorf("skip reading servers cache file: %w", err)
+		return nil, servers.Config.API.IPAddresses, servers.Config.API.IPv6Addresses, fmt.Errorf("skip reading servers cache file: %w", err)
 	}
 
-	return servers, servers.Config.API.IPAddresses, nil
+	return servers, servers.Config.API.IPAddresses, servers.Config.API.IPv6Addresses, nil
 }
 
 func writeServersToCache(servers *types.ServersInfoResponse) error {
