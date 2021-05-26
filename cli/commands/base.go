@@ -112,7 +112,7 @@ func printDNSState(w *tabwriter.Writer, dns string, servers *apitypes.ServersInf
 	return w
 }
 
-func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN, isAllowMulticast bool) *tabwriter.Writer {
+func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN, isAllowMulticast, isAllowApiServers bool) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
@@ -122,6 +122,7 @@ func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN
 		fwState = "Enabled"
 	}
 
+	fmt.Fprintln(w, fmt.Sprintf("Allow IVPN access\t:\t%v", isAllowApiServers))
 	fmt.Fprintln(w, fmt.Sprintf("Firewall\t:\t%v", fwState))
 	fmt.Fprintln(w, fmt.Sprintf("    Allow LAN\t:\t%v", isAllowLAN))
 	if isPersistent {

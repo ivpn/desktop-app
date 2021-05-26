@@ -90,9 +90,9 @@ func (c *CmdServers) Run() error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight|tabwriter.Debug)
 
 	if c.ping {
-		fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tPING\t")
+		fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\tPING\t")
 	} else {
-		fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\t")
+		fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\t")
 	}
 
 	helloResp := _proto.GetHelloResponse()
@@ -103,14 +103,19 @@ func (c *CmdServers) Run() error {
 		slist, c.filter, c.proto, c.location, c.city, c.countryCode, c.country, c.filterInvert)
 	for _, s := range svrs {
 		str := ""
+		IPvInfo := "IPv4"
+		if s.isIPv6Tunnel == true {
+			IPvInfo = "IPv4/IPv6"
+		}
 		if c.ping {
 			pingStr := " ?  "
 			if s.pingMs > 0 {
 				pingStr = fmt.Sprintf("%dms", s.pingMs)
 			}
-			str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t", s.protocol, s.gateway, s.city, s.countryCode, s.country, pingStr)
+
+			str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s\t", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo, pingStr)
 		} else {
-			str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t", s.protocol, s.gateway, s.city, s.countryCode, s.country)
+			str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo)
 		}
 		fmt.Fprintln(w, str)
 	}
@@ -160,11 +165,16 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 		ret = make([]serverDesc, 0, len(servers.WireguardServers))
 
 		for _, s := range servers.WireguardServers {
+
 			hosts := make(map[string]struct{}, len(s.Hosts))
+			isIPv6Tunnel := false
 			for _, h := range s.Hosts {
+				if len(h.IPv6.LocalIP) > 0 {
+					isIPv6Tunnel = true
+				}
 				hosts[strings.ToLower(strings.TrimSpace(h.Host))] = struct{}{}
 			}
-			ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
+			ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts, isIPv6Tunnel: isIPv6Tunnel})
 		}
 	} else {
 		ret = make([]serverDesc, 0, len(servers.OpenvpnServers))
@@ -277,13 +287,14 @@ func serversPing(servers []serverDesc, needSort bool) error {
 }
 
 type serverDesc struct {
-	protocol    string
-	gateway     string
-	city        string
-	countryCode string
-	country     string
-	hosts       map[string]struct{}
-	pingMs      int
+	protocol     string
+	gateway      string
+	city         string
+	countryCode  string
+	country      string
+	hosts        map[string]struct{}
+	pingMs       int
+	isIPv6Tunnel bool
 }
 
 func (s *serverDesc) String() string {

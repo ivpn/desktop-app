@@ -26,11 +26,13 @@ import "github.com/ivpn/desktop-app/cli/flags"
 
 type CmdFirewall struct {
 	flags.CmdInfo
-	status   bool
-	on       bool
-	off      bool
-	allowLan bool
-	blockLan bool
+	status             bool
+	on                 bool
+	off                bool
+	allowLan           bool
+	blockLan           bool
+	ivpnSvrAccessAllow bool
+	ivpnSvrAccessBlock bool
 	//allowLanMulticast bool
 	//blockLanMulticast bool
 }
@@ -42,6 +44,9 @@ func (c *CmdFirewall) Init() {
 	c.BoolVar(&c.on, "on", false, "Switch-on firewall")
 	c.BoolVar(&c.allowLan, "lan_allow", false, "Set configuration: allow LAN communication (take effect when firewall enabled)")
 	c.BoolVar(&c.blockLan, "lan_block", false, "Set configuration: block LAN communication (take effect when firewall enabled)")
+	c.BoolVar(&c.ivpnSvrAccessAllow, "ivpn_access_allow", false, "Allow access to IVPN servers when Firewall is enabled")
+	c.BoolVar(&c.ivpnSvrAccessBlock, "ivpn_access_block", false, "Block access to IVPN servers when Firewall is enabled")
+
 	//c.BoolVar(&c.allowLanMulticast, "lan_multicast_allow", false, "Same as 'lan_allow' + allow multicast communication ")
 	//c.BoolVar(&c.blockLanMulticast, "lan_multicast_block", false, "Same as 'lan_block' + block multicast communication")
 }
@@ -57,6 +62,16 @@ func (c *CmdFirewall) Run() error {
 	//if c.allowLanMulticast && c.blockLanMulticast {
 	//	return flags.BadParameter{}
 	//}
+
+	if c.ivpnSvrAccessAllow {
+		if err := _proto.FirewallAllowApiServers(true); err != nil {
+			return err
+		}
+	} else if c.ivpnSvrAccessBlock {
+		if err := _proto.FirewallAllowApiServers(false); err != nil {
+			return err
+		}
+	}
 
 	if c.allowLan {
 		if err := _proto.FirewallAllowLan(true); err != nil {
@@ -93,7 +108,7 @@ func (c *CmdFirewall) Run() error {
 		return err
 	}
 
-	w := printFirewallState(nil, state.IsEnabled, state.IsPersistent, state.IsAllowLAN, state.IsAllowMulticast)
+	w := printFirewallState(nil, state.IsEnabled, state.IsPersistent, state.IsAllowLAN, state.IsAllowMulticast, state.IsAllowApiServers)
 	w.Flush()
 
 	// TIPS
