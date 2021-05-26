@@ -97,7 +97,7 @@ const getDefaultState = () => {
     },
 
     // UI
-    showGatewaysWithoutIPv6: false,
+    showGatewaysWithoutIPv6: true,
     minimizedUI: false,
     minimizeToTray: true,
     showAppInSystemDock: false,
