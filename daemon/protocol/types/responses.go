@@ -155,6 +155,7 @@ type ConnectedResp struct {
 	VpnType         vpn.Type
 	TimeSecFrom1970 int64
 	ClientIP        string
+	ClientIPv6      string
 	ServerIP        string
 	ExitServerID    string
 	ManualDNS       string
