@@ -614,6 +614,12 @@ function createWindow(doNotShowWhenReady) {
     win = null;
   });
 }
+
+function onDaemonExiting() {
+  isAppReadyToQuit = true;
+  app.quit();
+}
+
 // SETTINGS WINDOW
 function createSettingsWindow(viewName) {
   if (win == null) createWindow();
@@ -802,7 +808,7 @@ async function connectToDaemon(
   setConnState(DaemonConnectionType.Connecting);
   let connect = async function(retryNo) {
     try {
-      await daemonClient.ConnectToDaemon(onSetConnState);
+      await daemonClient.ConnectToDaemon(onSetConnState, onDaemonExiting);
 
       // initialize app updater
       StartUpdateChecker(OnAppUpdateAvailable);

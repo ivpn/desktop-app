@@ -153,16 +153,18 @@ type Protocol struct {
 func (p *Protocol) Stop() {
 	log.Info("Stopping")
 
-	listener := p._connListener
-	if listener != nil {
-		// do not accept new incoming connections
-		listener.Close()
-	}
-
 	// Notifying clients "service is going to stop" (client application (UI) will close)
 	// Closing and erasing all clients connections
 	// (do it only if stopping was requested by Stop() )
 	p.notifyClientsDaemonExiting()
+
+	listener := p._connListener
+	if listener != nil {
+		// do not accept new incoming connections
+		listener.Close()
+
+		// Do not use any send\receive communications with connected clients after listener stopped
+	}
 }
 
 // Start - starts TCP interface to communicate with IVPN application (server to listen incoming connections)
@@ -207,7 +209,7 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 	log.Info(fmt.Sprintf("IVPN service started: %d [...%s]", openedPort, fmt.Sprintf("%016x", secret)[12:]))
 	defer func() {
 		listener.Close()
-		log.Info("IVPN service stopped")
+		log.Info("Listener closed")
 	}()
 
 	// infinite loop of processing IVPN client connection

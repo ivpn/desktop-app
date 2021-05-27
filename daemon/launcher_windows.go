@@ -143,13 +143,14 @@ func (m *ivpnservice) Execute(args []string, r <-chan svc.ChangeRequest, changes
 	log.Info("Service handler started")
 	defer func() {
 		changes <- svc.Status{State: svc.StopPending}
-		log.Info("Service handler stopped")
-
-		changes <- svc.Status{State: svc.Stopped}
+		log.Info("Service handler: StopPending")
 
 		// Stop the service (if not stopped yet)
 		// This call should be performed at the end. Application will fully stop after that
 		Stop()
+
+		changes <- svc.Status{State: svc.Stopped}
+		log.Info("Service handler: Stopped")
 	}()
 
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown

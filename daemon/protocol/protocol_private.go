@@ -79,9 +79,7 @@ func (p *Protocol) clientConnected(c net.Conn) {
 func (p *Protocol) clientDisconnected(c net.Conn) {
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
-	if _, ok := p._connections[c]; ok {
-		delete(p._connections, c)
-	}
+	delete(p._connections, c)
 	c.Close()
 }
 
@@ -268,7 +266,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 			}
 			if n == 0 {
 				if r.IPv6Only {
-					return fmt.Errorf("Unable to make IPv6 connection inside tunnel. Server does not support IPv6")
+					return fmt.Errorf("unable to make IPv6 connection inside tunnel. Server does not support IPv6")
 				}
 			} else {
 				hosts = ipv6Hosts[:n]

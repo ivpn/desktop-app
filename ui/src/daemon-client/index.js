@@ -104,7 +104,8 @@ const daemonResponses = Object.freeze({
   WiFiAvailableNetworksResp: "WiFiAvailableNetworksResp",
   WiFiCurrentNetworkResp: "WiFiCurrentNetworkResp",
 
-  ErrorResp: "ErrorResp"
+  ErrorResp: "ErrorResp",
+  ServiceExitingResp: "ServiceExitingResp"
 });
 
 // JavaScript does not support int64 (and do not know how to serialize it)
@@ -372,6 +373,11 @@ async function processResponse(response) {
       store.commit(`vpnState/availableWiFiNetworks`, obj.Networks);
       break;
 
+    case daemonResponses.ServiceExitingResp:
+      if (_onDaemonExitingCallback)
+        _onDaemonExitingCallback();
+      break
+
     case daemonResponses.ErrorResp:
       console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
       console.log("!!!!!!!!!!!!!!!!!!!!!! ERROR RESP !!!!!!!!!!!!!!!!!!!!");
@@ -450,7 +456,12 @@ function onDataReceived(received) {
 //////////////////////////////////////////////////////////////////////////////////////////
 /// PUBLIC METHODS
 //////////////////////////////////////////////////////////////////////////////////////////
-async function ConnectToDaemon(setConnState) {
+
+var _onDaemonExitingCallback = null
+
+async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
+  _onDaemonExitingCallback = onDaemonExitingCallback;
+
   if (socket != null) {
     socket.destroy();
     socket = null;
