@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "[*] Before install (<%= pkg %>)"
+echo "[*] Before install (<%= version %> : <%= pkg %> : $1)"
 
 PKG_TYPE=<%= pkg %>
 if [ "$PKG_TYPE" = "rpm" ]; then
@@ -18,8 +18,15 @@ if [ "$PKG_TYPE" = "rpm" ]; then
 
     # Skip running 'remove' scripts when upgrading
     mkdir -p /opt/ivpn/mutable
-    echo "upgrading" > /opt/ivpn/mutable/rpm_upgrade.lock || echo "[-] Failed to save rpm_upgrade.lock"
-  fi 
+    echo "upgrade" > /opt/ivpn/mutable/rpm_upgrade.lock || echo "[-] Failed to save rpm_upgrade.lock"
+  fi
+fi
+
+# DEB argument on upgrade - 'upgrade' (or 'configure' for after-install script); RPM - '1'
+if [ "$1" = "upgrade" ] || [ "$1" = "1" ] ; then
+  # let after-install script know that it is upgrade
+  mkdir -p /opt/ivpn/mutable
+  echo "upgrade" > /opt/ivpn/upgrade.lock || echo "[-] Failed to save upgrade.lock"
 fi
 
 if [ -f /opt/ivpn/mutable/upgradeID.tmp ]; then

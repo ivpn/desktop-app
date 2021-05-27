@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "[*] Before remove (<%= pkg %>)"
+echo "[*] Before remove (<%= version %> : <%= pkg %> : $1)"
 
 PKG_TYPE=<%= pkg %>
 

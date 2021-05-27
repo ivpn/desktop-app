@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "[*] After install (<%= pkg %>)"
+echo "[*] After install (<%= version %> : <%= pkg %> : $1)"
 
 NEED_TO_SAVE_INSTRUCTIONS=true
 IVPN_ETC="/opt/ivpn/etc"
@@ -50,6 +50,17 @@ IVPN_SAVED_DNS_FILE="/etc/resolv.conf.ivpnsave"
 if [ -f $IVPN_SAVED_DNS_FILE ]; then
   echo "[+] restoring DNS configuration from previous installation"
   mv $IVPN_SAVED_DNS_FILE /etc/resolv.conf || echo "[-] Restoring DNS failed"
+fi
+
+if [ -f /opt/ivpn/upgrade.lock ]; then
+  rm /opt/ivpn/upgrade.lock
+  echo "[ ] Upgrade detected"
+  # let daemon know that it is an upgrade (settings.json should exists for that)
+  if [ ! -f "$IVPN_TMP/settings.json" ]; then
+    echo "[+] Creating empty '$IVPN_TMP/settings.json'"
+    mkdir -p $IVPN_TMP
+    echo "{}" > "$IVPN_TMP/settings.json"
+  fi
 fi
 
 echo "[+] Service install start (pleaserun) ..."

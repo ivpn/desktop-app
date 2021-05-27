@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "[*] After remove (<%= pkg %>)"
+echo "[*] After remove (<%= version %> : <%= pkg %> : $1)"
 
 PKG_TYPE=<%= pkg %>
 if [ "$PKG_TYPE" = "rpm" ]; then
@@ -23,13 +23,13 @@ has_systemd() {
 try_systemd_stop() {
     if has_systemd ; then
         echo "[ ] systemd detected. Trying to stop service ..."
-        
+
         echo "[+] Stopping service"
         silent systemctl stop ivpn-service
 
         echo "[+] Disabling service"
-        silent systemctl disable ivpn-service   
-        
+        silent systemctl disable ivpn-service
+
         if [ -f "/etc/systemd/system/ivpn-service.service" ]; then
             echo "[+] Removing service"
             silent rm /etc/systemd/system/ivpn-service.service
@@ -37,7 +37,7 @@ try_systemd_stop() {
         if [ -f "/usr/lib/systemd/system/ivpn-service.service" ]; then
             echo "[+] Removing service"
             silent rm /usr/lib/systemd/system/ivpn-service.service
-        fi       
+        fi
     fi
 }
 
@@ -65,7 +65,7 @@ if [ -d $IVPN_TMP ] ; then
   #rm -rf $IVPN_DIR|| echo "[-] Removing '$IVPN_DIR' folder failed"
   #remove 'ivpn' folder (if empy)
   silent sudo rmdir $IVPN_DIR
-fi 
+fi
 
 if [ ! -z "$ACCID" ]; then
   # It is an upgrade.
@@ -78,9 +78,9 @@ if [ ! -z "$ACCID" ]; then
   fi
 
 IVPN_SAVED_DNS_FILE="/etc/resolv.conf.ivpnsave"
-if [ -f $IVPN_SAVED_DNS_FILE ]; then 
+if [ -f $IVPN_SAVED_DNS_FILE ]; then
   echo "[+] restoring DNS configuration"
-  mv $IVPN_SAVED_DNS_FILE /etc/resolv.conf || echo "[-] Restoring DNS failed" 
+  mv $IVPN_SAVED_DNS_FILE /etc/resolv.conf || echo "[-] Restoring DNS failed"
 fi
 
 try_systemd_stop
