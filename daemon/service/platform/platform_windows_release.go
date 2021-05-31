@@ -44,9 +44,6 @@ func doOsInitForBuild() {
 		wfpDllPath = path.Join(installDir, "IVPN Firewall Native.dll")
 		nativeHelpersDllPath = path.Join(installDir, "IVPN Helpers Native.dll")
 	}
-
-	// allow connection only for IVPN UI and IVPN CLI
-	allowedClients = []string{strings.ReplaceAll(path.Join(installDir, "ui/IVPN Client.exe"), "/", "\\"), strings.ReplaceAll(path.Join(installDir, "cli/ivpn.exe"), "/", "\\")}
 }
 
 func getInstallDir() string {
