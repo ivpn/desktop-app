@@ -120,11 +120,19 @@ func runWindowsService() {
 	var err error
 	_evtlog, err = eventlog.Open(_serviceName)
 	if err != nil {
-		return
+		log.Warning(fmt.Sprintf("Unable to initialize windows event log: %v", err))
+		_evtlog = nil
 	}
-	defer _evtlog.Close()
+	defer func() {
+		if _evtlog != nil {
+			_evtlog.Close()
+		}
+	}()
 
-	_evtlog.Info(1, fmt.Sprintf("starting %s service", _serviceName))
+	log.Info(fmt.Sprintf("starting %s service", _serviceName))
+	if _evtlog != nil {
+		_evtlog.Info(1, fmt.Sprintf("starting %s service", _serviceName))
+	}
 
 	// create stop-detection channel
 	_stopped = make(chan struct{}, 1)
@@ -132,11 +140,17 @@ func runWindowsService() {
 	// run windows-service-handler (func (m *ivpnservice) Execute(...))
 	err = svc.Run(_serviceName, &ivpnservice{})
 	if err != nil {
-		_evtlog.Error(1, fmt.Sprintf("%s service failed: %v", _serviceName, err))
+		log.Error(fmt.Sprintf("%s service failed: %v", _serviceName, err))
+		if _evtlog != nil {
+			_evtlog.Error(1, fmt.Sprintf("%s service failed: %v", _serviceName, err))
+		}
 		return
 	}
 
-	_evtlog.Info(1, fmt.Sprintf("%s service stopped", _serviceName))
+	log.Info(fmt.Sprintf("%s service stopped", _serviceName))
+	if _evtlog != nil {
+		_evtlog.Info(1, fmt.Sprintf("%s service stopped", _serviceName))
+	}
 }
 
 func (m *ivpnservice) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
@@ -183,13 +197,16 @@ loop:
 
 			case svc.Stop, svc.Shutdown:
 				log.Info("Service control request: ", "Stop|Shutdown", c.Cmd)
-				_evtlog.Info(1, fmt.Sprintf("Service control request: Stop|Shutdown %d", c.Cmd))
+				if _evtlog != nil {
+					_evtlog.Info(1, fmt.Sprintf("Service control request: Stop|Shutdown %d", c.Cmd))
+				}
 				break loop
 
 			default:
-				log.Info("Unexpected service control request: ", c.Cmd)
-
-				_evtlog.Error(1, fmt.Sprintf("unexpected control request #%d", c))
+				log.Warning("Unexpected service control request: ", c.Cmd)
+				if _evtlog != nil {
+					_evtlog.Error(1, fmt.Sprintf("unexpected control request #%d", c))
+				}
 			}
 		}
 	}
