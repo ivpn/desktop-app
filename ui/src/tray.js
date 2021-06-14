@@ -28,6 +28,7 @@ import { PauseStateEnum } from "@/store/types";
 import { VpnStateEnum } from "@/store/types";
 import daemonClient from "@/daemon-client";
 import { Platform, PlatformEnum } from "@/platform/platform";
+const { nativeTheme } = require("electron");
 
 let tray = null;
 let menuHandlerShow = null;
@@ -41,6 +42,25 @@ let iconPaused = null;
 let iconsConnecting = [];
 let iconConnectingIdx = 0;
 let iconConnectingIdxChanged = new Date().getTime();
+
+let iconConnected_ForLightTheme = null; // (Windows-only) Black icon for light background
+let iconDisconnected_ForLightTheme = null; // (Windows-only) Black icon for light background
+let iconPaused_ForLightTheme = null; // (Windows-only) Black icon for light background
+let iconsConnecting_ForLightTheme = []; // (Windows-only) Black icon for light background
+
+// (Windows) We have to know information about the system theme (not the application theme)
+// This is needed for determining the required color for the tray icons (white on a dark or black on a light)
+// There is no possibility to detect the change of system theme! Therefore we are relying ONLY on the system theme at the application start!
+// This property have to be initialized before any change of 'nativeTheme'
+let useIconsForDarkTheme = true; // default - true: white icons
+// Saving system theme before any changes of nativeTheme
+try {
+  if (Platform() == PlatformEnum.Windows) {
+    useIconsForDarkTheme = nativeTheme.shouldUseDarkColors;
+  }
+} catch (e) {
+  console.error(e);
+}
 
 export function InitTray(
   menuItemShow,
@@ -57,11 +77,34 @@ export function InitTray(
   switch (Platform()) {
     case PlatformEnum.Windows:
       {
+        nativeTheme.on("updated", () => {
+          // the only way to detect real OS theme is when 'nativeTheme.themeSource == "system"'
+          if (nativeTheme.themeSource == "system") {
+            if (useIconsForDarkTheme != nativeTheme.shouldUseDarkColors) {
+              useIconsForDarkTheme = nativeTheme.shouldUseDarkColors;
+              updateTrayIcon();
+            }
+          }
+        });
+
         const f = __static + "/tray/windows/";
         iconConnected = nativeImage.createFromPath(f + "connected.ico");
         iconDisconnected = nativeImage.createFromPath(f + "disconnected.ico");
         iconPaused = nativeImage.createFromPath(f + "paused.ico");
         iconsConnecting.push(nativeImage.createFromPath(f + "connecting.ico"));
+        // lightTheme
+        iconConnected_ForLightTheme = nativeImage.createFromPath(
+          f + "connected_lt.ico"
+        );
+        iconDisconnected_ForLightTheme = nativeImage.createFromPath(
+          f + "disconnected_lt.ico"
+        );
+        iconPaused_ForLightTheme = nativeImage.createFromPath(
+          f + "paused_lt.ico"
+        );
+        iconsConnecting_ForLightTheme.push(
+          nativeImage.createFromPath(f + "connecting_lt.ico")
+        );
       }
       break;
     case PlatformEnum.Linux:
@@ -132,8 +175,11 @@ export function InitTray(
 function updateTrayIcon() {
   if (tray == null) return;
   if (store.getters["vpnState/isConnecting"]) {
-    tray.setImage(iconsConnecting[iconConnectingIdx % iconsConnecting.length]);
-    if (iconsConnecting.length > 1) {
+    let icons = iconsConnecting;
+    if (useIconsForDarkTheme === false) icons = iconsConnecting_ForLightTheme;
+
+    tray.setImage(icons[iconConnectingIdx % icons.length]);
+    if (icons.length > 1) {
       setTimeout(() => {
         let now = new Date().getTime();
         if (now - iconConnectingIdxChanged >= 200) {
@@ -147,15 +193,26 @@ function updateTrayIcon() {
   }
 
   iconConnectingIdx = 0;
+
   if (
     store.state.vpnState.pauseState === PauseStateEnum.Paused &&
     iconPaused != null
   )
-    tray.setImage(iconPaused);
+    tray.setImage(
+      useIconsForDarkTheme === false ? iconPaused_ForLightTheme : iconPaused
+    );
   else if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED) {
-    tray.setImage(iconConnected);
+    tray.setImage(
+      useIconsForDarkTheme === false
+        ? iconConnected_ForLightTheme
+        : iconConnected
+    );
   } else {
-    tray.setImage(iconDisconnected);
+    tray.setImage(
+      useIconsForDarkTheme === false
+        ? iconDisconnected_ForLightTheme
+        : iconDisconnected
+    );
   }
 }
 
