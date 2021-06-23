@@ -287,6 +287,13 @@ func (wg *WireGuard) resetManualDNS() error {
 }
 
 func (wg *WireGuard) initialize(utunName string) error {
+
+	// Init IPv6 DNS resolver (if necessary);
+	// It should be done before initialization of the tunnel interface
+	if err := wg.initIPv6DNSResolver(utunName); err != nil {
+		log.Error(fmt.Errorf("failed to initialize IPv6 DNS resolver: %w", err))
+	}
+
 	if err := wg.initializeConfiguration(utunName); err != nil {
 		return fmt.Errorf("failed to initialize configuration: %w", err)
 	}
@@ -461,7 +468,18 @@ func (wg *WireGuard) setDNS() error {
 	if err != nil {
 		return fmt.Errorf("failed to change DNS: %w", err)
 	}
+	return nil
+}
 
+func (wg *WireGuard) initIPv6DNSResolver(utunName string) error {
+	// required to be able to resolve IPv6 DNS addresses by the default macOS's domain name resolver
+	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
+	if ipv6LocalIP != nil && len(utunName) > 0 {
+		err := shell.Exec(log, platform.DNSScript(), "-up_init_ipv6_resolver", ipv6LocalIP.String(), utunName)
+		if err != nil {
+			return fmt.Errorf("failed to change DNS: %w", err)
+		}
+	}
 	return nil
 }
 

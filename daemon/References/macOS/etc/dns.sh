@@ -212,6 +212,29 @@ function define_ivpn_dns {
 _EOF
 }
 
+function ipv6_resolver_init {
+    LOCAL_IPV6_ADDR=$1
+    TUN_INTERFACE_NAME=$2
+
+    scutil <<_EOF
+        d.init
+        d.add Addresses * ${LOCAL_IPV6_ADDR}
+        d.add DestAddresses * ::ffff:ffff:ffff:ffff:0:0 ::
+        d.add InterfaceName ${TUN_INTERFACE_NAME}
+        set State:/Network/Service/ivpn_tunnel/IPv6
+        set Setup:/Network/Service/ivpn_tunnel/IPv6
+        quit
+_EOF
+}
+
+#function ipv6_resolver_destroy {
+#    scutil <<_EOF
+#        remove State:/Network/Service/ivpn_tunnel/IPv6
+#        remove Setup:/Network/Service/ivpn_tunnel/IPv6
+#        quit
+#_EOF
+#}
+
 ################### PROCESSING ARGUMENTS #######################################
 
 # '-up' is in use by OpenVPN server
@@ -248,6 +271,14 @@ elif [ "$1" = "-up_set_dns" ] ; then
 
         store_and_update "Setup"
         store_and_update "State"
+
+# required to be able to resolve IPv6 DNS addresses by the default macOS's domain name resolver
+elif [ "$1" = "-up_init_ipv6_resolver" ] ; then
+    
+    LOCAL_IPV6_ADDR=$2
+    TUN_INTERFACE_NAME=$3
+
+    ipv6_resolver_init $LOCAL_IPV6_ADDR $TUN_INTERFACE_NAME
 
 elif [ "$1" = "-update" ] ; then
 
@@ -320,10 +351,14 @@ elif [ "$1" = "-down" ] ; then
         restore_user_setting "Setup"
     fi
 
+    # not necessary to call 'ipv6_resolver_destroy' since it's commands available in the next lines
     scutil <<_EOF
         remove State:/Network/IVPN/Original/DNS/Setup
         remove State:/Network/IVPN/Original/DNS/State
         remove State:/Network/IVPN/DNSBase
+
+        remove State:/Network/Service/ivpn_tunnel/IPv6
+        remove Setup:/Network/Service/ivpn_tunnel/IPv6
 
         quit
 _EOF
