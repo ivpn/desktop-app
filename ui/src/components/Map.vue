@@ -735,8 +735,11 @@ export default {
     centerCurrentLocation(noAnimation) {
       if (!this.isConnected && this.location != null) {
         this.centerServer(this.location, noAnimation, true);
-      } else if (!this.isRequestingLocation){
-          this.centerServer(this.selectedServer, noAnimation);
+      } else if (
+        !this.isRequestingLocation ||
+        (this.combinedDiv.scrollLeft == 0 && this.combinedDiv.scrollTop == 0)
+      ) {
+        this.centerServer(this.selectedServer, noAnimation);
       }
     },
     centerServer(server, noAnimation, isPopupRequired) {
