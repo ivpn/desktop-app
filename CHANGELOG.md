@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 [FIXED] VPN was active after reboot when connected to Trusted WIFI  
 [FIXED] Sometimes application was failing to connect to IVPN daemon  
 [FIXED] (Windows) The daemon service was not starting when the 'Windows Events Logs' service is not running  
-[FIXED] (nacOS) WireGuard compatibility with old macOS versions  
+[FIXED] (macOS) WireGuard compatibility with old macOS versions  
 
 [Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.20.exe)  
 SHA256: 83b60f784decce42fea6698328edb07c2a80add86bd34ce9ab242e5d49dfa7e2   
