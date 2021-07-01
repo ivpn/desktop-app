@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.  
 
 
-## Version 3.3.20 - 2021-04-29
+## Version 3.3.20 - 2021-06-29
 
 [NEW] IPv6 inside WireGuard tunnel  
 [NEW] IPv6 connection info  
