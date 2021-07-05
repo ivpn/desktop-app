@@ -15,11 +15,11 @@ All notable changes to this project will be documented in this file.
 [FIXED] (macOS) WireGuard compatibility with old macOS versions  
 
 [Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.20.exe)  
-SHA256: 83b60f784decce42fea6698328edb07c2a80add86bd34ce9ab242e5d49dfa7e2   
+SHA256: 02b312a0edf21765229c1e8f12e48bec2539b241e05afcda65b90c4f9730d950   
 
 
 [Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.20.dmg)  
-SHA256: 388a4460f7a37dc6c306249fd0b74c000b17adc7d461e6617ff94e0f315471e5  
+SHA256: 14d4f51e2167a9c07e56d35de7632570168c69ed93beb4711128e5ddd04ca67f  
 
 [Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.3.20_amd64.deb)  
 SHA256: 9972a0b55e1383df67357d046db238b29c70b7865dcba959037da17b7439f20a   
