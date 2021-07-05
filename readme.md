@@ -44,16 +44,16 @@ These instructions enable you to get the project up and running on your local ma
 <a name="requirements_windows"></a>
 #### Windows
 
-[npm](https://www.npmjs.com/get-npm); [nsis2](https://nsis.sourceforge.io/Download); Build Tools for Visual Studio 2019 ('Windows SDK 10.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools'); gcc compiler e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/); Go 1.13+; Git
+[npm](https://www.npmjs.com/get-npm); [nsis2](https://nsis.sourceforge.io/Download); Build Tools for Visual Studio 2019 ('Windows SDK 10.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools'); gcc compiler e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/); [Go 1.13+](https://golang.org/); Git
 
 <a name="requirements_macos"></a>
 #### macOS
 
-[npm](https://www.npmjs.com/get-npm); Xcode Command Line Tools; Go 1.13+; Git
+[npm](https://www.npmjs.com/get-npm); Xcode Command Line Tools; [Go 1.13+](https://golang.org/); Git
 
 <a name="requirements_linux"></a>
 #### Linux
-[npm](https://www.npmjs.com/get-npm); packages: [FPM](https://fpm.readthedocs.io/en/latest/installing.html), curl, rpm, libiw-dev; Go 1.13+; Git
+[npm](https://www.npmjs.com/get-npm); packages: [FPM](https://fpm.readthedocs.io/en/latest/installing.html), curl, rpm, libiw-dev; [Go 1.13+](https://golang.org/); Git
 
 <a name="compilation"></a>
 ### Compilation
