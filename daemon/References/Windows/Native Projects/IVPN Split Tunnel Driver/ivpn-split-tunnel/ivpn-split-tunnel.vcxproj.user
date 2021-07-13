@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DbgengKernelMachineName>SSD VM WIN10 192.168.1.186</DbgengKernelMachineName>
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <RemoveDriver>True</RemoveDriver>
+    <InstallMode>HardwareId</InstallMode>
+    <HardwareIdString>Root\ivpn-split-tunnel</HardwareIdString>
+    <CommandLine />
+    <ScriptPath>C:\Program Files (x86)\Windows Kits\10\Testing\Tests\Utilities\DefaultDriverPackageInstallationTask.dll</ScriptPath>
+    <DbgengRemoteMachineName>SSD VM WIN10 192.168.1.186</DbgengRemoteMachineName>
+    <DeployFiles />
+    <ScriptName>Microsoft.DriverKit.DefaultDriverPackageInstallationClass.PerformDefaultDriverPackageInstallation</ScriptName>
+    <ScriptDeviceQuery />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+  </PropertyGroup>
+</Project>

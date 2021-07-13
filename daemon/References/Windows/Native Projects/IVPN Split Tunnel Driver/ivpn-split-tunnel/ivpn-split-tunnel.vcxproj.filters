@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Driver Files">
+      <UniqueIdentifier>{8E41214B-6785-4CFE-B992-037D68949A14}</UniqueIdentifier>
+      <Extensions>inf;inv;inx;mof;mc;</Extensions>
+    </Filter>
+    <Filter Include="ProcessMonitor">
+      <UniqueIdentifier>{d742f5f0-36e1-47ff-b800-9ee2902fc5a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Driver">
+      <UniqueIdentifier>{64ed01d5-a5e9-42a7-afea-a0164e1fa77d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{894a4d32-532d-47d2-a93a-f5c0a64f0a5d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WFP">
+      <UniqueIdentifier>{f12e7b3e-7a27-44f7-bd24-ecf15432f0f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QueueIoctlProtocol">
+      <UniqueIdentifier>{774a2cd3-e02e-45d2-b388-f80a909fcb2b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Config">
+      <UniqueIdentifier>{aa844d54-8634-43e5-8828-56f7f3ba1aad}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Inf Include="ivpn-split-tunnel.inf">
+      <Filter>Driver Files</Filter>
+    </Inf>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="QueueIoctlProtocol\Requests.h">
+      <Filter>QueueIoctlProtocol</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcessMonitor\ProcessMonitor.h">
+      <Filter>ProcessMonitor</Filter>
+    </ClInclude>
+    <ClInclude Include="Trace.h">
+      <Filter>Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceContext.h">
+      <Filter>Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Driver.h">
+      <Filter>Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Public.h">
+      <Filter>Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Queue.h">
+      <Filter>Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\Timer.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="WFP\Firewall.h">
+      <Filter>WFP</Filter>
+    </ClInclude>
+    <ClInclude Include="WFP\Callouts.h">
+      <Filter>WFP</Filter>
+    </ClInclude>
+    <ClInclude Include="WFP\Keys.h">
+      <Filter>WFP</Filter>
+    </ClInclude>
+    <ClInclude Include="WFP\Headers.h">
+      <Filter>WFP</Filter>
+    </ClInclude>
+    <ClInclude Include="WFP\Filters.h">
+      <Filter>WFP</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcessMonitor\ProcessTree.h">
+      <Filter>ProcessMonitor</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\Strings.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\Locker.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="QueueIoctlProtocol\Types.h">
+      <Filter>QueueIoctlProtocol</Filter>
+    </ClInclude>
+    <ClInclude Include="Config\GlobalConfig.h">
+      <Filter>Config</Filter>
+    </ClInclude>
+    <ClInclude Include="Config\GlobalConfigC.h">
+      <Filter>Config</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="QueueIoctlProtocol\Requests.cpp">
+      <Filter>QueueIoctlProtocol</Filter>
+    </ClCompile>
+    <ClCompile Include="ProcessMonitor\ProcessMonitor.cpp">
+      <Filter>ProcessMonitor</Filter>
+    </ClCompile>
+    <ClCompile Include="Driver.c">
+      <Filter>Driver</Filter>
+    </ClCompile>
+    <ClCompile Include="Queue.c">
+      <Filter>Driver</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\Timer.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="WFP\Firewall.cpp">
+      <Filter>WFP</Filter>
+    </ClCompile>
+    <ClCompile Include="WFP\Callouts.cpp">
+      <Filter>WFP</Filter>
+    </ClCompile>
+    <ClCompile Include="WFP\Filters.cpp">
+      <Filter>WFP</Filter>
+    </ClCompile>
+    <ClCompile Include="ProcessMonitor\ProcessTree.cpp">
+      <Filter>ProcessMonitor</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\Strings.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\Locker.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Config\GlobalConfig.cpp">
+      <Filter>Config</Filter>
+    </ClCompile>
+    <ClCompile Include="Config\GlobalConfigC.cpp">
+      <Filter>Config</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
