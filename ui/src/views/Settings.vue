@@ -57,6 +57,16 @@
                 IVPN Firewall
               </button>
               <button
+                v-if="isLoggedIn && isSplitTunnelVisible"
+                class="noBordersBtn tabTitleBtn"
+                v-on:click="onView('splittunnel')"
+                v-bind:class="{
+                  activeBtn: view === 'splittunnel'
+                }"
+              >
+                Split Tunnel
+              </button>
+              <button
                 v-if="isLoggedIn"
                 class="noBordersBtn tabTitleBtn"
                 v-on:click="onView('networks')"
@@ -103,10 +113,7 @@
 
           <!-- VERSION -->
           <div class="flexRow" style="flex-grow: 1">
-            <div
-              class="flexRow"
-              style="margin: 20px; flex-grow: 1;"
-            >
+            <div class="flexRow" style="margin: 20px; flex-grow: 1;">
               <div style="flex-grow: 1; text-align: center;">
                 <div v-if="versionSingle" class="version">
                   <!-- single version -->
@@ -137,6 +144,9 @@
         <div class="flexColumn" v-else-if="view === 'firewall'">
           <firewallView />
         </div>
+        <div class="flexColumn" v-else-if="view === 'splittunnel'">
+          <splittunnelView />
+        </div>
         <div class="flexColumn" v-else-if="view === 'networks'">
           <networksView />
         </div>
@@ -147,7 +157,7 @@
           <dnsView />
         </div>
         <div class="flexColumn" v-else>
-          <img src="@/assets/temp/under-construction.jpg" />
+          <!-- no view defined -->
         </div>
       </div>
     </div>
@@ -162,6 +172,7 @@ import connectionView from "@/components/settings/settings-connection.vue";
 import accountView from "@/components/settings/settings-account.vue";
 import generalView from "@/components/settings/settings-general.vue";
 import firewallView from "@/components/settings/settings-firewall.vue";
+import splittunnelView from "@/components/settings/settings-splittunnel.vue";
 import networksView from "@/components/settings/settings-networks.vue";
 import antitrackerView from "@/components/settings/settings-antitracker.vue";
 import dnsView from "@/components/settings/settings-dns.vue";
@@ -173,6 +184,7 @@ export default {
     accountView,
     generalView,
     firewallView,
+    splittunnelView,
     networksView,
     antitrackerView,
     dnsView,
@@ -191,11 +203,8 @@ export default {
     isLoggedIn: function() {
       return this.$store.getters["account/isLoggedIn"];
     },
-    PlatformEnum: function() {
-      return PlatformEnum;
-    },
-    platform: function() {
-      return Platform();
+    isSplitTunnelVisible() {
+      return Platform() === PlatformEnum.Windows;
     },
     versionSingle: function() {
       if (this.versionDaemon === this.versionUI) return this.versionDaemon;

@@ -96,6 +96,12 @@ const getDefaultState = () => {
       }
     },
 
+    // Split-Tunnelling
+    splitTunnelling: {
+      enabled: false,
+      apps: null // []string
+    },
+
     // UI
     showGatewaysWithoutIPv6: true,
     minimizedUI: false,
@@ -281,7 +287,12 @@ export default {
       state.wifi = val;
     },
 
-    //UI
+    // Split-Tunnelling
+    splitTunnelling(state, val) {
+      state.splitTunnelling = val;
+    },
+
+    // UI
     showGatewaysWithoutIPv6(state, val) {
       state.showGatewaysWithoutIPv6 = val;
     },
@@ -445,7 +456,12 @@ export default {
       context.commit("wifi", val);
     },
 
-    //UI
+    // Split-Tunnelling
+    splitTunnelling(context, val) {
+      context.commit("splitTunnelling", val);
+    },
+
+    // UI
     showGatewaysWithoutIPv6(context, val) {
       context.commit("showGatewaysWithoutIPv6", val);
     },

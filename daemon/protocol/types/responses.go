@@ -126,6 +126,13 @@ type KillSwitchStatusResp struct {
 	IsAllowApiServers bool
 }
 
+// SplitTunnelConfiguration returns the split-tunnelling configuration
+type SplitTunnelStatus struct {
+	CommandBase
+	IsEnabled       bool // is ST enabled (will be automatically activated on VPN connect)
+	SplitTunnelApps []string
+}
+
 // KillSwitchGetIsPestistentResp returns kill-switch persistance status
 type KillSwitchGetIsPestistentResp struct {
 	CommandBase

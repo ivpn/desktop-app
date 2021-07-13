@@ -102,6 +102,13 @@ type KillSwitchSetIsPersistent struct {
 	IsPersistent bool
 }
 
+// SplitTunnelSet sets the split-tunnelling configuration
+type SplitTunnelSetConfig struct {
+	CommandBase
+	IsEnabled       bool // is ST enabled (will be automatically activated on VPN connect)
+	SplitTunnelApps []string
+}
+
 // SetPreference sets daemon configuration parameter
 type SetPreference struct {
 	CommandBase

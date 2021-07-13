@@ -122,6 +122,13 @@ ipcMain.handle(
   }
 );
 
+ipcMain.handle(
+  "renderer-request-SplitTunnelSetConfig",
+  async (event, enabled, apps) => {
+    return await client.SplitTunnelSetConfig(enabled, apps);
+  }
+);
+
 ipcMain.handle("renderer-request-set-logging", async () => {
   return await client.SetLogging();
 });
@@ -237,6 +244,19 @@ ipcMain.handle("renderer-request-showmsgbox", async (event, diagConfig) => {
   return await dialog.showMessageBox(
     event.sender.getOwnerBrowserWindow(),
     diagConfig
+  );
+});
+
+ipcMain.on("renderer-request-showOpenDialogSync", (event, options) => {
+  event.returnValue = dialog.showOpenDialogSync(
+    event.sender.getOwnerBrowserWindow(),
+    options
+  );
+});
+ipcMain.handle("renderer-request-showOpenDialog", async (event, options) => {
+  return await dialog.showOpenDialog(
+    event.sender.getOwnerBrowserWindow(),
+    options
   );
 });
 

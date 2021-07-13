@@ -55,6 +55,10 @@ type Preferences struct {
 	IsStopOnClientDisconnect bool
 	IsObfsproxy              bool
 
+	// split-tunnelling
+	IsSplitTunnel   bool
+	SplitTunnelApps []string
+
 	// last known account status
 	Session SessionStatus
 }
@@ -115,6 +119,7 @@ func (p *Preferences) LoadPreferences() error {
 
 	dataStr := string(data)
 	if strings.Contains(dataStr, `"firewall_is_persistent"`) {
+		// TODO: remove this old code
 		// It is a first time loading preferences after IVPN Client upgrade from old version (<= v2.10.9)
 		// Loading preferences with an old parameter names and types:
 		type PreferencesOld struct {

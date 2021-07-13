@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -267,7 +268,7 @@ func (s *Service) APIRequest(apiAlias string, ipTypeRequired protocolTypes.Requi
 	if ipTypeRequired == protocolTypes.IPv6 {
 		// IPV6-LOC-200 - IVPN Apps should request only IPv4 location information when connected  to the gateway, which doesn’t support IPv6
 		vpn := s._vpn
-		if vpn != nil && vpn.IsPaused() == false && vpn.IsIPv6InTunnel() == false {
+		if vpn != nil && !vpn.IsPaused() && !vpn.IsIPv6InTunnel() {
 			return nil, fmt.Errorf("no IPv6 support inside tunnel for current connection")
 		}
 	}
@@ -320,7 +321,7 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		if ovpnErr != nil {
 			return nil, ovpnErr
 		}
-		if prefs.IsObfsproxy == true && obfspErr != nil {
+		if prefs.IsObfsproxy && obfspErr != nil {
 			return nil, obfspErr
 		}
 
@@ -414,7 +415,7 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 		// Return error only if the keys had to be regenerated more than 3 days ago.
 		_, activePublicKey, _, _, lastUpdate, interval := s.WireGuardGetKeys()
 
-		if len(activePublicKey) > 0 && lastUpdate.Add(interval).Add(time.Hour*24*3).After(time.Now()) == true {
+		if len(activePublicKey) > 0 && lastUpdate.Add(interval).Add(time.Hour*24*3).After(time.Now()) {
 			// continue connection
 			log.Warning(fmt.Errorf("WG KEY generation failed (%w). But we keep connecting (will try to regenerate it next 3 days)", err))
 		} else {
@@ -425,7 +426,7 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		session := s.Preferences().Session
 
-		if session.IsWGCredentialsOk() == false {
+		if !session.IsWGCredentialsOk() {
 			return nil, fmt.Errorf("WireGuard credentials are not defined (please, regenerate WG credentials or re-login)")
 		}
 
@@ -452,7 +453,7 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 
 func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	prefs := s.Preferences()
-	if prefs.Session.IsLoggedIn() == false {
+	if !prefs.Session.IsLoggedIn() {
 		return ErrorNotLoggedIn{}
 	}
 
@@ -587,7 +588,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 		// when we were requested to enable firewall for this connection
 		// And initial FW state was disabled - we have to disable it back
-		if firewallDuringConnection == true && fwInitState == false {
+		if firewallDuringConnection && !fwInitState {
 			if err = s.SetKillSwitchState(false); err != nil {
 				log.Error("(stopping) failed to disable firewall:", err)
 			}
@@ -734,19 +735,19 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 	log.Info("Initializing firewall")
 	// firewallOn - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored)
 	// firewallDuringConnection - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
-	if firewallOn == true {
+	if firewallOn {
 		fw, err := firewall.GetEnabled()
 		if err != nil {
 			log.Error("Failed to check firewall state:", err.Error())
 			return err
 		}
-		if fw == false {
+		if !fw {
 			if err := s.SetKillSwitchState(true); err != nil {
 				log.Error("Failed to enable firewall:", err.Error())
 				return err
 			}
 		}
-	} else if firewallDuringConnection == true {
+	} else if firewallDuringConnection {
 		// in case to enable FW for this connection parameter:
 		// - check initial FW state
 		// - if it disabled - enable it (will be disabled on disconnect)
@@ -756,7 +757,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 			return err
 		}
 		fwInitState = fw
-		if fwInitState == false {
+		if !fwInitState {
 			if err := s.SetKillSwitchState(true); err != nil {
 				log.Error("Failed to enable firewall:", err.Error())
 				return err
@@ -845,10 +846,7 @@ func (s *Service) disconnect() error {
 
 // Connected returns 'true' if VPN connected
 func (s *Service) Connected() bool {
-	if s._vpn == nil {
-		return false
-	}
-	return true
+	return s._vpn != nil
 }
 
 // ConnectedType returns connected VPN type (only if VPN connected!)
@@ -1056,6 +1054,15 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 	return nil
 }
 
+func (s *Service) SetSplitTunnellingConfig(isEnabled bool, appsToSplit []string) error {
+	prefs := s._preferences
+	prefs.IsSplitTunnel = isEnabled
+	prefs.SplitTunnelApps = appsToSplit
+	s.setPreferences(prefs)
+	s._evtReceiver.OnSplitTunnelConfigChanged()
+	return nil
+}
+
 // SetPreference set preference value
 func (s *Service) SetPreference(key string, val string) error {
 	prefs := s._preferences
@@ -1066,20 +1073,16 @@ func (s *Service) SetPreference(key string, val string) error {
 			prefs.IsLogging = val
 			logger.Enable(val)
 		}
-		break
 	case "is_stop_server_on_client_disconnect":
 		if val, err := strconv.ParseBool(val); err == nil {
 			prefs.IsStopOnClientDisconnect = val
 		}
-		break
 	case "enable_obfsproxy":
 		if val, err := strconv.ParseBool(val); err == nil {
 			prefs.IsObfsproxy = val
 		}
-		break
 	case "firewall_is_persistent":
 		log.Debug("Skipping 'firewall_is_persistent' value. IVPNKillSwitchSetIsPersistentRequest should be used")
-		break
 	default:
 		log.Warning(fmt.Sprintf("Preference key '%s' not supported", key))
 	}
@@ -1239,7 +1242,7 @@ func (s *Service) RequestSessionStatus() (
 	err error) {
 
 	session := s.Preferences().Session
-	if session.IsLoggedIn() == false {
+	if !session.IsLoggedIn() {
 		return apiCode, "", "", accountInfo, ErrorNotLoggedIn{}
 	}
 
@@ -1318,7 +1321,7 @@ func (s *Service) startSessionChecker() {
 	s.stopSessionChecker()
 
 	session := s.Preferences().Session
-	if session.IsLoggedIn() == false {
+	if !session.IsLoggedIn() {
 		return
 	}
 
@@ -1334,7 +1337,6 @@ func (s *Service) startSessionChecker() {
 			case <-stopChn:
 				return
 			case <-time.After(SessionCheckInterval):
-				break
 			}
 
 			// check status
@@ -1342,7 +1344,7 @@ func (s *Service) startSessionChecker() {
 
 			// if not logged-in - no sense to check status anymore
 			session := s.Preferences().Session
-			if session.IsLoggedIn() == false {
+			if !session.IsLoggedIn() {
 				return
 			}
 		}
@@ -1377,7 +1379,7 @@ func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, 
 		if vpnObj.Type() != vpn.WireGuard {
 			return
 		}
-		if s.Connected() == false {
+		if !s.Connected() {
 			return
 		}
 		log.Info("Reconnecting WireGuard connection with new credentials...")
@@ -1422,7 +1424,7 @@ func (s *Service) WireGuardGetKeys() (session, wgPublicKey, wgPrivateKey, wgLoca
 
 // WireGuardGenerateKeys - generate new wireguard keys
 func (s *Service) WireGuardGenerateKeys(updateIfNecessary bool) error {
-	if s._preferences.Session.IsLoggedIn() == false {
+	if !s._preferences.Session.IsLoggedIn() {
 		return ErrorNotLoggedIn{}
 	}
 
@@ -1445,8 +1447,8 @@ func (s *Service) WireGuardGenerateKeys(updateIfNecessary bool) error {
 //////////////////////////////////////////////////////////
 
 func (s *Service) setPreferences(p preferences.Preferences) {
-	//if reflect.DeepEqual(s._preferences, p) == false {
-	if s._preferences != p {
+	if !reflect.DeepEqual(s._preferences, p) {
+		//if s._preferences != p {
 		s._preferences = p
 		s._preferences.SavePreferences()
 	}

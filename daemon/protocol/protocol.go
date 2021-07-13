@@ -81,6 +81,7 @@ type Service interface {
 	SetKillSwitchAllowLANMulticast(isAllowLanMulticast bool) error
 	SetKillSwitchAllowLAN(isAllowLan bool) error
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
+	SetSplitTunnellingConfig(isEnabled bool, appsToSplit []string) error
 
 	Preferences() preferences.Preferences
 	SetPreference(key string, val string) error
@@ -407,6 +408,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// sending WIFI info
 		p.OnWiFiChanged(p._service.GetWiFiCurrentState())
 
+		// sending split-tunnelling configuration
+		p.OnSplitTunnelConfigChanged()
+
 	case "GetVPNState":
 		// send VPN connection  state
 		sendState(reqCmd.Idx, false)
@@ -564,6 +568,18 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err := p._service.SetPreference(req.Key, req.Value); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
+
+	case "SplitTunnelSetConfig":
+		var req types.SplitTunnelSetConfig
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		if err := p._service.SetSplitTunnellingConfig(req.IsEnabled, req.SplitTunnelApps); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		// all clients will be notified in case of successfull change by OnSplitTunnelConfigChanged() handler
 
 	case "GenerateDiagnostics":
 		if log, log0, err := logger.GetLogText(1024 * 64); err != nil {

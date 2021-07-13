@@ -156,6 +156,10 @@ export default {
     return await invoke("renderer-request-KillSwitchSetIsPersistent", isEnable);
   },
 
+  SplitTunnelSetConfig: async (enabled, apps) => {
+    return await invoke("renderer-request-SplitTunnelSetConfig", enabled, apps);
+  },
+
   SetLogging: async () => {
     return await invoke("renderer-request-set-logging");
   },
@@ -268,6 +272,13 @@ export default {
   },
   showMessageBox: diagConfig => {
     return invoke("renderer-request-showmsgbox", diagConfig);
+  },
+
+  showOpenDialogSync: options => {
+    return ipcRenderer.sendSync("renderer-request-showOpenDialogSync", options);
+  },
+  showOpenDialog: options => {
+    return invoke("renderer-request-showOpenDialog", options);
   },
 
   // WINDOW

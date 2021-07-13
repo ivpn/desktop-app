@@ -99,3 +99,8 @@ func (p *Protocol) OnServersUpdated(serv *apitypes.ServersInfoResponse) {
 	}
 	p.notifyClients(&types.ServerListResp{VpnServers: *serv})
 }
+
+func (p *Protocol) OnSplitTunnelConfigChanged() {
+	var prefs = p._service.Preferences()
+	p.notifyClients(&types.SplitTunnelStatus{IsEnabled: prefs.IsSplitTunnel, SplitTunnelApps: prefs.SplitTunnelApps})
+}

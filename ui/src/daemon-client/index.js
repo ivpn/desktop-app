@@ -76,6 +76,8 @@ const daemonRequests = Object.freeze({
   KillSwitchSetAllowLAN: "KillSwitchSetAllowLAN",
   KillSwitchSetIsPersistent: "KillSwitchSetIsPersistent",
 
+  SplitTunnelSetConfig: "SplitTunnelSetConfig",
+
   SetAlternateDns: "SetAlternateDns",
   WireGuardGenerateNewKeys: "WireGuardGenerateNewKeys",
   SetPreference: "SetPreference",
@@ -100,6 +102,8 @@ const daemonResponses = Object.freeze({
   SetAlternateDNSResp: "SetAlternateDNSResp",
   KillSwitchStatusResp: "KillSwitchStatusResp",
   AccountStatusResp: "AccountStatusResp",
+
+  SplitTunnelStatus: "SplitTunnelStatus",
 
   WiFiAvailableNetworksResp: "WiFiAvailableNetworksResp",
   WiFiCurrentNetworkResp: "WiFiCurrentNetworkResp",
@@ -373,10 +377,16 @@ async function processResponse(response) {
       store.commit(`vpnState/availableWiFiNetworks`, obj.Networks);
       break;
 
+    case daemonResponses.SplitTunnelStatus:
+      store.commit(`settings/splitTunnelling`, {
+        enabled: obj.IsEnabled,
+        apps: obj.SplitTunnelApps
+      });
+      break;
+
     case daemonResponses.ServiceExitingResp:
-      if (_onDaemonExitingCallback)
-        _onDaemonExitingCallback();
-      break
+      if (_onDaemonExitingCallback) _onDaemonExitingCallback();
+      break;
 
     case daemonResponses.ErrorResp:
       console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
@@ -457,7 +467,7 @@ function onDataReceived(received) {
 /// PUBLIC METHODS
 //////////////////////////////////////////////////////////////////////////////////////////
 
-var _onDaemonExitingCallback = null
+var _onDaemonExitingCallback = null;
 
 async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
   _onDaemonExitingCallback = onDaemonExitingCallback;
@@ -778,11 +788,19 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
   // (e.g. if there is no IPv6 data but IPv4 is already exists -> switch to IPv4 view)
   let setCorrectGeoIPView = function() {
     const isIPv6View = store.state.uiState.isIPv6View;
-    if (isIPv6View === true && !store.state.locationIPv6 && store.state.location)
-      store.commit("uiState/isIPv6View", false)
-    else if (isIPv6View === false && !store.state.location && store.state.locationIPv6) 
-      store.commit("uiState/isIPv6View", true)
-  }
+    if (
+      isIPv6View === true &&
+      !store.state.locationIPv6 &&
+      store.state.location
+    )
+      store.commit("uiState/isIPv6View", false);
+    else if (
+      isIPv6View === false &&
+      !store.state.location &&
+      store.state.locationIPv6
+    )
+      store.commit("uiState/isIPv6View", true);
+  };
 
   let retLocation = null;
   let isRealGeoLocationOnStart = isRealGeoLocationCheck();
@@ -816,12 +834,11 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
 
     if (resp.Error !== "") {
       log.warn(`API 'geo-lookup' error: ${ipVerStr} ${resp.Error}`);
-      
+
       setCorrectGeoIPView();
 
       if (resp.Error && resp.Error.toLowerCase().includes("no ipv6 support"))
         doNotRetry = true;
-
     } else {
       if (isRealGeoLocationOnStart != isRealGeoLocationCheck()) {
         log.warn(`Skip geo-lookup result ${ipVerStr} (conn. state changed)`);
@@ -836,7 +853,9 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
           log.info("API: 'geo-lookup' success.");
           store.commit(propName_Location, retLocation);
 
-          setTimeout(() => { setCorrectGeoIPView(); }, 2000);
+          setTimeout(() => {
+            setCorrectGeoIPView();
+          }, 2000);
         }
       }
     }
@@ -1035,7 +1054,7 @@ async function Connect(entryServer, exitServer) {
   }
 
   if (connectID != connectionRequestId) {
-    console.log("Connection request cancelled")
+    console.log("Connection request cancelled");
     return;
   }
 
@@ -1186,6 +1205,17 @@ async function KillSwitchSetIsPersistent(IsPersistent) {
   });
 }
 
+async function SplitTunnelSetConfig(IsEnabled, SplitTunnelApps) {
+  await sendRecv(
+    {
+      Command: daemonRequests.SplitTunnelSetConfig,
+      IsEnabled,
+      SplitTunnelApps
+    },
+    [daemonResponses.SplitTunnelStatus]
+  );
+}
+
 async function SetDNS(antitrackerIsEnabled) {
   let DNS = "";
   if (store.state.settings.dnsIsCustom) DNS = store.state.settings.dnsCustom;
@@ -1277,6 +1307,8 @@ export default {
   KillSwitchSetAllowLANMulticast,
   KillSwitchSetAllowLAN,
   KillSwitchSetIsPersistent,
+
+  SplitTunnelSetConfig,
 
   SetDNS,
   SetLogging,
