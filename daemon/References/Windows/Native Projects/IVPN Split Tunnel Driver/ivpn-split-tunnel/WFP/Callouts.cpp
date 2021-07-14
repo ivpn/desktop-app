@@ -431,7 +431,7 @@ namespace wfp
 
 		if (!NT_SUCCESS(status))
 		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V4':  %!STATUS!", status);
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V6':  %!STATUS!", status);
 			return status;
 		}
 
@@ -447,7 +447,7 @@ namespace wfp
 
 		if (!NT_SUCCESS(status))
 		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4':  %!STATUS!", status);
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6':  %!STATUS!", status);
 			return status;
 		}
 		 
@@ -456,20 +456,37 @@ namespace wfp
 
 	NTSTATUS UnRegisterCallouts(void)
 	{
-		NTSTATUS s1 = UnregisterCallout(&KEY_CALLOUT_ALE_BIND_REDIRECT_V4);
-		NTSTATUS s2 = UnregisterCallout(&KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4);
+		NTSTATUS ret = STATUS_SUCCESS;
+		NTSTATUS s = STATUS_SUCCESS;
 
-		if (!NT_SUCCESS(s1)) 
+		s = UnregisterCallout(&KEY_CALLOUT_ALE_BIND_REDIRECT_V4);
+		if (!NT_SUCCESS(s))
 		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V4':  %!STATUS!", s1);
-			return s1;
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V4':  %!STATUS!", s);
+			ret = s;
 		}
-		if (!NT_SUCCESS(s2)) 
+
+		s = UnregisterCallout(&KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4);
+		if (!NT_SUCCESS(s))
 		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4':  %!STATUS!", s1);
-			return s2;
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4':  %!STATUS!", s);
+			ret = s;
 		}
-				
-		return STATUS_SUCCESS;
+
+		s = UnregisterCallout(&KEY_CALLOUT_ALE_BIND_REDIRECT_V6);
+		if (!NT_SUCCESS(s))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_BIND_REDIRECT_V6':  %!STATUS!", s);
+			ret = s;
+		}
+
+		s = UnregisterCallout(&KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6);
+		if (!NT_SUCCESS(s))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6':  %!STATUS!", s);
+			ret = s;
+		}
+						
+		return ret;
 	}
 }
