@@ -46,6 +46,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/splittun"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
@@ -138,6 +139,10 @@ func (s *Service) init() error {
 
 	if err := firewall.Initialize(); err != nil {
 		return fmt.Errorf("service initialization error : %w", err)
+	}
+
+	if err := splittun.Initialize(); err != nil {
+		log.Warning(fmt.Errorf("Split-Tunnelling initialization error : %w", err))
 	}
 
 	// Logging mus be already initialized (by launcher). Do nothing here.
@@ -280,7 +285,7 @@ func (s *Service) APIRequest(apiAlias string, ipTypeRequired protocolTypes.Requi
 // Some functionality can be not accessible
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGuard on Linux)
-func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
+func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr error) {
 	if err := filerights.CheckFileAccessRightsExecutable(platform.OpenVpnBinaryPath()); err != nil {
 		ovpnErr = fmt.Errorf("OpenVPN binary: %w", err)
 	}
@@ -297,6 +302,9 @@ func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
 		}
 	}
 
+	// returns nil if already connected or connected successfully
+	splitTunErr = splittun.Connect()
+
 	if errors.Is(ovpnErr, os.ErrNotExist) {
 		ovpnErr = fmt.Errorf("%w. Please install OpenVPN", ovpnErr)
 	}
@@ -307,7 +315,7 @@ func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error) {
 		wgErr = fmt.Errorf("%w. Please install WireGuard", wgErr)
 	}
 
-	return wgErr, ovpnErr, obfspErr
+	return wgErr, ovpnErr, obfspErr, splitTunErr
 }
 
 // ConnectOpenVPN start OpenVPN connection
@@ -317,7 +325,7 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		prefs := s.Preferences()
 
 		// checking if functionality accessible
-		_, ovpnErr, obfspErr := s.GetDisabledFunctions()
+		_, ovpnErr, obfspErr, _ := s.GetDisabledFunctions()
 		if ovpnErr != nil {
 			return nil, ovpnErr
 		}
@@ -402,7 +410,7 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 	}
 
 	// checking if functionality accessible
-	wgErr, _, _ := s.GetDisabledFunctions()
+	wgErr, _, _, _ := s.GetDisabledFunctions()
 	if wgErr != nil {
 		return wgErr
 	}

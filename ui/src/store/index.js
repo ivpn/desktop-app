@@ -62,7 +62,8 @@ export default new Vuex.Store({
     disabledFunctions: {
       WireGuardError: "",
       OpenVPNError: "",
-      ObfsproxyError: ""
+      ObfsproxyError: "",
+      SplitTunnelError: ""
     },
 
     // true when we are requesting geo-lookup info on current moment
@@ -179,7 +180,9 @@ export default new Vuex.Store({
     isOpenVPNEnabled: state =>
       isStrNullOrEmpty(state.disabledFunctions.OpenVPNError),
     isObfsproxyEnabled: state =>
-      isStrNullOrEmpty(state.disabledFunctions.ObfsproxyError)
+      isStrNullOrEmpty(state.disabledFunctions.ObfsproxyError),
+    isSplitTunnelEnabled: state =>
+      isStrNullOrEmpty(state.disabledFunctions.SplitTunnelError)
   },
 
   // can be called from main process

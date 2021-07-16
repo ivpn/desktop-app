@@ -260,7 +260,7 @@ NTSTATUS Process_IOCTL_CFG_GET_IMAGES_TO_SPLIT_BUFF_SIZE(
 
     PVOID   outBuf = NULL;
     size_t  len = 0;
-    NTSTATUS status = WdfRequestRetrieveOutputBuffer(Request, sizeof(size_t), &outBuf, &len);
+    NTSTATUS status = WdfRequestRetrieveOutputBuffer(Request, sizeof(DWORD), &outBuf, &len);
     if (!NT_SUCCESS(status)) {
         return status;
     }
@@ -268,11 +268,11 @@ NTSTATUS Process_IOCTL_CFG_GET_IMAGES_TO_SPLIT_BUFF_SIZE(
     DWORD minBufSize = 0;
     cfg::GetImagesToSplit(NULL, &minBufSize);
 
-    *(size_t*)outBuf = (size_t)minBufSize;
+    *(DWORD*)outBuf = (DWORD)minBufSize;
 
     // Assign the length of the data copied to IoStatus.Information
     // of the request and complete the request.
-    WdfRequestSetInformation(Request, sizeof(size_t));
+    WdfRequestSetInformation(Request, sizeof(DWORD));
 
     // When the request is completed the content of the SystemBuffer
     // is copied to the User output buffer and the SystemBuffer is

@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Firewall.cpp" />
+    <ClCompile Include="SplitTunnelling.cpp" />
+    <ClCompile Include="WfpFilter.cpp" />
+    <ClCompile Include="WfpSubLayer.cpp" />
+    <ClCompile Include="WfpProvider.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="..\IVPN Split Tunnel Driver\others\common\SplitTunDrvControl\ivpnSplitTunDrvControl.cpp">
+      <Filter>SplitTunCommon</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Firewall.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="..\IVPN Split Tunnel Driver\others\common\SplitTunDrvControl\ivpnSplitTunDrvControl.h">
+      <Filter>SplitTunCommon</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="SplitTunCommon">
+      <UniqueIdentifier>{26f50c89-7f32-4e3b-bf8c-990fabe2ad0b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

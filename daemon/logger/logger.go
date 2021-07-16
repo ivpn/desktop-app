@@ -223,6 +223,16 @@ func (l *Logger) Error(v ...interface{}) {
 	_error(l.pref, v...)
 }
 
+// ErrorE - Log Error and return same error object
+// (useful in constrictions: " return log.ErrorE(err) " )
+func (l *Logger) ErrorE(err error) error {
+	if l.isDisabled {
+		return err
+	}
+	_error(l.pref, err)
+	return err
+}
+
 // ErrorTrace - Log error with trace
 func (l *Logger) ErrorTrace(e error) {
 	if l.isDisabled {

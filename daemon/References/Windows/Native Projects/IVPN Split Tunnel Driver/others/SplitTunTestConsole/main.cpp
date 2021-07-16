@@ -114,10 +114,11 @@ void doConfigSetSplitApp()
 	std::vector<std::wstring> paths;
 
 	std::wstring appPath;
-
+	
+	std::wcout << L" Applications to split (press Enter to finish)\n";
 	for (;;)
 	{
-		std::wcout << L" Application path to split: ";
+		std::wcout << L"   application path: ";
 		std::getline(std::wcin, appPath);
 		if (appPath.length() <= 0)
 			break;

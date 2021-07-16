@@ -164,12 +164,14 @@ func (p *Protocol) vpnConnectReqCounterDecrease() {
 func (p *Protocol) createHelloResponse() *types.HelloResp {
 	prefs := p._service.Preferences()
 
-	wg, ovpn, obfsp := p._service.GetDisabledFunctions()
+	wg, ovpn, obfsp, splitTun := p._service.GetDisabledFunctions()
 	var (
 		wgErr    string
 		ovpnErr  string
 		obfspErr string
+		stErr    string
 	)
+
 	if wg != nil {
 		wgErr = wg.Error()
 	}
@@ -179,14 +181,19 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 	if obfsp != nil {
 		obfspErr = obfsp.Error()
 	}
+	if splitTun != nil {
+		stErr = splitTun.Error()
+	}
+
 	// send back Hello message with account session info
 	helloResp := types.HelloResp{
 		Version: version.Version(),
 		Session: types.CreateSessionResp(prefs.Session),
 		DisabledFunctions: types.DisabledFunctionality{
-			WireGuardError: wgErr,
-			OpenVPNError:   ovpnErr,
-			ObfsproxyError: obfspErr}}
+			WireGuardError:   wgErr,
+			OpenVPNError:     ovpnErr,
+			ObfsproxyError:   obfspErr,
+			SplitTunnelError: stErr}}
 	return &helloResp
 }
 

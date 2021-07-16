@@ -166,7 +166,6 @@
 
 <script>
 const sender = window.ipcSender;
-import { Platform, PlatformEnum } from "@/platform/platform";
 
 import connectionView from "@/components/settings/settings-connection.vue";
 import accountView from "@/components/settings/settings-account.vue";
@@ -204,7 +203,7 @@ export default {
       return this.$store.getters["account/isLoggedIn"];
     },
     isSplitTunnelVisible() {
-      return Platform() === PlatformEnum.Windows;
+      return this.$store.getters["isSplitTunnelEnabled"];
     },
     versionSingle: function() {
       if (this.versionDaemon === this.versionUI) return this.versionDaemon;

@@ -85,12 +85,12 @@ namespace splittun
 		return bRc;
 	}
 
-	char* _splitAppMakeRequestData(std::vector<std::wstring> paths, size_t* createdBuffSize)
+	unsigned char* _splitAppMakeRequestData(std::vector<std::wstring> paths, DWORD* createdBuffSize)
 	{
-		//	size_t common size bytes
-		//	size_t strings cnt
-		//	size_t str1Len
-		//	size_t str2Len
+		//	DWORD common size bytes
+		//	DWORD strings cnt
+		//	DWORD str1Len
+		//	DWORD str2Len
 		//	...
 		//	WCHAR[] str1 
 		//	WCHAR[] str2
@@ -100,8 +100,8 @@ namespace splittun
 		if (paths.size() > 0xffff)
 			return NULL; // too much strings
 
-		size_t buffSize = sizeof(size_t) + sizeof(size_t) * (1 + paths.size());
-		size_t headerOffset = (size_t)buffSize;
+		size_t buffSize = sizeof(DWORD) + sizeof(DWORD) * (1 + paths.size());
+		DWORD headerOffset = (DWORD)buffSize;
 		for (const std::wstring& path : paths)
 		{
 			if (path.size() > 0xffff)
@@ -113,32 +113,32 @@ namespace splittun
 		if (buffSize > 0xffffffff)
 			return NULL; // too much data
 
-		char* buff = new char[buffSize];
+		unsigned char* buff = new unsigned char[buffSize];
 
-		*(size_t*)buff = (size_t)buffSize;
-		*(size_t*)(buff + sizeof(size_t)) = (size_t)paths.size();
+		*(DWORD*)buff = (DWORD)buffSize;
+		*(DWORD*)(buff + sizeof(DWORD)) = (DWORD)paths.size();
 
-		char* sptr = buff + headerOffset;
+		unsigned char* sptr = buff + headerOffset;
 		for (size_t i = 0; i < paths.size(); i++)// const std::wstring& path : paths)
 		{
 			// string size
-			*(size_t*)(buff + sizeof(size_t) + sizeof(size_t) + sizeof(size_t) * i) = (size_t)paths[i].length();
+			*(DWORD*)(buff + sizeof(DWORD) + sizeof(DWORD) + sizeof(DWORD) * i) = (DWORD)paths[i].length();
 
 			// string data
 			size_t strBSize = paths[i].length() * sizeof(wchar_t);
 			memcpy(sptr, paths[i].c_str(), strBSize);
 			sptr += strBSize;
 		}
-		*createdBuffSize = (size_t)buffSize;
+		*createdBuffSize = (DWORD)buffSize;
 		return buff;
 	}
 
-	bool _splitAppParseData(char* buff, size_t bufSize, std::vector<std::wstring>* appImages)
+	bool _splitAppParseData(unsigned char* buff, DWORD bufSize, std::vector<std::wstring>* appImages)
 	{
-		//	size_t common size bytes
-		//	size_t strings cnt
-		//	size_t str1Len
-		//	size_t str2Len
+		//	DWORD common size bytes
+		//	DWORD strings cnt
+		//	DWORD str1Len
+		//	DWORD str2Len
 		//	...
 		//	WCHAR[] str1 
 		//	WCHAR[] str2
@@ -147,9 +147,9 @@ namespace splittun
 		if (appImages != NULL)
 			appImages->clear();
 
-		if (bufSize == sizeof(size_t) + sizeof(size_t))
+		if (bufSize == sizeof(DWORD) + sizeof(DWORD))
 		{
-			size_t stringsCnt = *(size_t*)(buff + sizeof(size_t));
+			DWORD stringsCnt = *(DWORD*)(buff + sizeof(DWORD));
 			if (stringsCnt == 0)
 			{
 				_sendToLog(L"App configuration is empty\n");
@@ -160,13 +160,13 @@ namespace splittun
 			return false; // buffer is too small
 		}
 
-		if (bufSize < sizeof(size_t) + sizeof(size_t) * 2 + sizeof(wchar_t) * 1)
+		if (bufSize < sizeof(DWORD) + sizeof(DWORD) * 2 + sizeof(wchar_t) * 1)
 		{
 			_sendToLog(L"Bad data: buffer is too small\n");
 			return false; // buffer is too small
 		}
 
-		if (*(size_t*)buff != bufSize)
+		if (*(DWORD*)buff != bufSize)
 		{
 			_sendToLog (L"Bad data: buffer size error\n");
 			return false; // bad data
@@ -174,13 +174,13 @@ namespace splittun
 
 		bool isOK = true;
 
-		size_t stringsCnt = *(size_t*)(buff + sizeof(size_t));
-		size_t headerSize = sizeof(size_t) + sizeof(size_t) + sizeof(size_t) * stringsCnt;
-		char* strPtr = buff + headerSize;
+		DWORD stringsCnt = *(DWORD*)(buff + sizeof(DWORD));
+		DWORD headerSize = sizeof(DWORD) + sizeof(DWORD) + sizeof(DWORD) * stringsCnt;
+		unsigned char* strPtr = buff + headerSize;
 
-		for (auto i = 0; i < stringsCnt; i++)
+		for (DWORD i = 0; i < stringsCnt; i++)
 		{
-			size_t strLen = *(size_t*)(buff + sizeof(size_t) + sizeof(size_t) + sizeof(size_t) * i);
+			DWORD strLen = *(DWORD*)(buff + sizeof(DWORD) + sizeof(DWORD) + sizeof(DWORD) * i);
 			std::wstring str = std::wstring((wchar_t*)strPtr, (wchar_t*)(strPtr + strLen * sizeof(wchar_t)));
 			strPtr += strLen * sizeof(wchar_t);
 						
@@ -339,7 +339,17 @@ namespace splittun
 			FILE_ATTRIBUTE_NORMAL,
 			NULL);
 
-		return hDevice != INVALID_HANDLE_VALUE;
+		bool isSuccess = hDevice != INVALID_HANDLE_VALUE;
+		
+		if (cbLog != NULL)
+		{
+			if (isSuccess)
+				_sendToLog(L"Success: connected\n");
+			else
+				_sendToLog(L"Error: " + _getLastErrorStr() + L"\n");
+		}
+
+		return isSuccess;
 	}
 
 	bool Disconnect()
@@ -349,6 +359,15 @@ namespace splittun
 
 		bool ret = CloseHandle(hDevice);
 		hDevice = INVALID_HANDLE_VALUE;
+		
+		if (cbLog != NULL)
+		{
+			if (ret)
+				_sendToLog(L"Success: disconnected\n");
+			else
+				_sendToLog(L"Error: " + _getLastErrorStr() + L"\n");
+		}
+
 		return ret;
 	}
 
@@ -379,14 +398,10 @@ namespace splittun
 	bool ConfigSetSplitApp(std::vector<std::wstring> appPaths)
 	{
 		bool ret = false;
-		size_t bufSize;
-		char* buff = _splitAppMakeRequestData(appPaths, &bufSize);
-
-		if (_splitAppParseData(buff, bufSize, NULL) == false)
-			_sendToLog(L"Request not sent due to errors in prepared buffer\n");
-		else
-			ret = _sendIoctl(IOCTL_CFG_SET_IMAGES_TO_SPLIT, buff, (DWORD)bufSize, nullptr, 0, NULL);
-
+		DWORD bufSize;
+		
+		unsigned char* buff = _splitAppMakeRequestData(appPaths, &bufSize);
+		ret = ConfigSetSplitAppRaw(buff, bufSize);
 		delete[] buff;
 
 		return ret;
@@ -395,7 +410,7 @@ namespace splittun
 	bool ConfigGetSplitApp(std::vector<std::wstring> &retAppImages)
 	{
 		DWORD bytesRead = 0;
-		size_t buffSize = 0;
+		DWORD buffSize = 0;
 
 		if (!_sendIoctl(IOCTL_CFG_GET_IMAGES_TO_SPLIT_BUFF_SIZE, NULL, 0, &buffSize, sizeof(buffSize), &bytesRead)
 			|| bytesRead != sizeof(buffSize))
@@ -404,10 +419,10 @@ namespace splittun
 			return false;
 		}
 
-		char* buff = new char[buffSize];
+		unsigned char* buff = new unsigned char[buffSize];
 
 		bool ret = false;
-		if (!_sendIoctl(IOCTL_CFG_GET_IMAGES_TO_SPLIT, NULL, 0, buff, (DWORD)buffSize, &bytesRead))
+		if (!_sendIoctl(IOCTL_CFG_GET_IMAGES_TO_SPLIT, NULL, 0, buff, (DWORD)buffSize, &bytesRead) || bytesRead != buffSize)
 			_sendToLog(L"IOCTL_CFG_GET_IMAGES_TO_SPLIT failed");
 		else
 		{
@@ -419,6 +434,46 @@ namespace splittun
 		delete[] buff;
 
 		return ret;
+	}
+
+	bool ConfigSetSplitAppRaw(unsigned char* buff, DWORD _in_buffSize)
+	{
+		bool ret = false;
+
+		if (_splitAppParseData(buff, _in_buffSize, NULL) == false)
+			_sendToLog(L"Request not sent due to errors in prepared buffer\n");
+		else
+			ret = _sendIoctl(IOCTL_CFG_SET_IMAGES_TO_SPLIT, buff, (DWORD)_in_buffSize, nullptr, 0, NULL);
+
+		return ret;
+	}
+	bool ConfigGetSplitAppRaw(unsigned char* buff, DWORD* _in_out_buffSize)
+	{
+		DWORD bytesRead = 0;
+		DWORD buffSize = 0;
+
+		if (!_sendIoctl(IOCTL_CFG_GET_IMAGES_TO_SPLIT_BUFF_SIZE, NULL, 0, &buffSize, sizeof(buffSize), &bytesRead)
+			|| bytesRead != sizeof(buffSize))
+		{
+			_sendToLog(L"IOCTL_CFG_GET_IMAGES_TO_SPLIT_BUFF_SIZE failed");
+			return false;
+		}
+
+		if (*_in_out_buffSize < buffSize)
+		{
+			*_in_out_buffSize = buffSize;
+			return false;
+		}
+		*_in_out_buffSize = buffSize;
+				
+		bool ret = false;
+		if (!_sendIoctl(IOCTL_CFG_GET_IMAGES_TO_SPLIT, NULL, 0, buff, (DWORD)buffSize, &bytesRead) || bytesRead != buffSize)
+		{
+			_sendToLog(L"IOCTL_CFG_GET_IMAGES_TO_SPLIT failed");
+			return false;
+		}
+
+		return true;
 	}
 
 	bool ProcMonStart()

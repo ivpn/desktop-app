@@ -34,7 +34,10 @@ Environment:
 // The IOCTL function codes.
 //
 
-// stop process monitor and splitting
+// Stop and clean everything:
+//		Stop splitting
+//		Stop processes monitoring 
+//		Clean all configuration/statuses
 #define IOCTL_STOP_ALL_AND_CFG_CLEAN            0x100 
 
 // Get state of process monitor and splitting (enabled\disabled?) 
@@ -44,12 +47,20 @@ Environment:
 #define IOCTL_PROCMON_START                     0x300 
 // stop process monitor (splitting also will be stopped)
 #define IOCTL_PROCMON_STOP                      0x301
-// initialize process monitor about PID+PPID+IMAGE info of running processes
+// Set application PID\PPIDs which have to be splitted.
+// It adds new info to internal process tree but not erasing current known PID\PPIDs.
+// Operaion fails when 'process monitor' not running
 #define IOCTL_PROCMON_SET_PID_DATA              0x302
 
-// Start splitting 
-// If the process monitor is not running - it will be also started
-// The configuration have to be already initialised
+// Start splitting.
+// If "process monitor" not running - it will be started.
+//	
+// Operation fails when configuration not complete:
+//		- no splitting apps defined
+//		- no IP configuration (IP-public + IP-tunnel) defined at least for one protocol type (IPv4\IPv6)
+// 
+// If only IPv4 configuration defined - splitting will work only for IPv4
+// If only IPv6 configuration defined - splitting will work only for IPv6
 #define IOCTL_SPLITTING_START                   0x400
 // stop splitting
 #define IOCTL_SPLITTING_STOP                    0x401
@@ -58,7 +69,8 @@ Environment:
 #define IOCTL_CFG_SET_ADDRESSES                 0x500
 #define IOCTL_CFG_GET_ADDRESSES                 0x501
 
-// Set/Get configuration: applications path to split
+// Update applications (full paths) which have to be monitored (splitted).
+// The current configuration will remain unchanged. Will be added only new elements.
 #define IOCTL_CFG_SET_IMAGES_TO_SPLIT           0x600
 #define IOCTL_CFG_GET_IMAGES_TO_SPLIT           0x601
 #define IOCTL_CFG_GET_IMAGES_TO_SPLIT_BUFF_SIZE 0x602

@@ -55,9 +55,10 @@ type ServiceExitingResp struct {
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGaurd on Linux)
 type DisabledFunctionality struct {
-	WireGuardError string
-	OpenVPNError   string
-	ObfsproxyError string
+	WireGuardError   string
+	OpenVPNError     string
+	ObfsproxyError   string
+	SplitTunnelError string
 }
 
 // HelloResp response on initial request

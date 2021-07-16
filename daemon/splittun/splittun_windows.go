@@ -1,0 +1,406 @@
+//
+//  Daemon for IVPN Client Desktop
+//  https://github.com/ivpn/desktop-app
+//
+//  Created by Stelnykovych Alexandr.
+//  Copyright (c) 2021 Privatus Limited.
+//
+//  This file is part of the Daemon for IVPN Client Desktop.
+//
+//  The Daemon for IVPN Client Desktop is free software: you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License as published by the Free
+//  Software Foundation, either version 3 of the License, or (at your option) any later version.
+//
+//  The Daemon for IVPN Client Desktop is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+//  details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
+//
+
+package splittun
+
+import (
+	"bytes"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"os"
+	"syscall"
+	"unsafe"
+
+	"github.com/ivpn/desktop-app/daemon/service/platform"
+)
+
+var (
+	fSplitTun_Connect                *syscall.LazyProc
+	fSplitTun_Disconnect             *syscall.LazyProc
+	fSplitTun_StopAndClean           *syscall.LazyProc
+	fSplitTun_SplitStart             *syscall.LazyProc
+	fSplitTun_SplitStop              *syscall.LazyProc
+	fSplitTun_GetState               *syscall.LazyProc
+	fSplitTun_ConfigSetAddresses     *syscall.LazyProc
+	fSplitTun_ConfigGetAddresses     *syscall.LazyProc
+	fSplitTun_ConfigSetSplitAppRaw   *syscall.LazyProc
+	fSplitTun_ConfigGetSplitAppRaw   *syscall.LazyProc
+	fSplitTun_ProcMonInitRunningApps *syscall.LazyProc
+	fSplitTun_ProcMonStop            *syscall.LazyProc
+	//fSplitTun_ProcMonStart           *syscall.LazyProc
+)
+
+const STOpErrorTxt = "Split-Tunnelling operation failed"
+
+// Initialize doing initialization stuff (called on application start)
+func implInitialize() error {
+	wfpDllPath := platform.WindowsWFPDllPath()
+	if len(wfpDllPath) == 0 {
+		return fmt.Errorf("unable to initialize split-tunnelling wrapper: firewall dll path not initialized")
+	}
+	if _, err := os.Stat(wfpDllPath); err != nil {
+		return fmt.Errorf("unable to initialize split-tunnelling wrapper (firewall dll not found) : '%s'", wfpDllPath)
+	}
+
+	dll := syscall.NewLazyDLL(wfpDllPath)
+
+	fSplitTun_Connect = dll.NewProc("SplitTun_Connect")
+	fSplitTun_Disconnect = dll.NewProc("SplitTun_Disconnect")
+	fSplitTun_StopAndClean = dll.NewProc("SplitTun_StopAndClean")
+	//fSplitTun_ProcMonStart = dll.NewProc("SplitTun_ProcMonStart")
+	fSplitTun_ProcMonStop = dll.NewProc("SplitTun_ProcMonStop")
+	fSplitTun_ProcMonInitRunningApps = dll.NewProc("SplitTun_ProcMonInitRunningApps")
+	fSplitTun_SplitStart = dll.NewProc("SplitTun_SplitStart")
+	fSplitTun_SplitStop = dll.NewProc("SplitTun_SplitStop")
+	fSplitTun_GetState = dll.NewProc("SplitTun_GetState")
+	fSplitTun_ConfigSetAddresses = dll.NewProc("SplitTun_ConfigSetAddresses")
+	fSplitTun_ConfigGetAddresses = dll.NewProc("SplitTun_ConfigGetAddresses")
+	fSplitTun_ConfigSetSplitAppRaw = dll.NewProc("fSplitTun_ConfigSetSplitAppRaw")
+	fSplitTun_ConfigGetSplitAppRaw = dll.NewProc("fSplitTun_ConfigGetSplitAppRaw")
+	return nil
+}
+
+func catchPanic(err *error) {
+	if r := recover(); r != nil {
+		log.Error("PANIC (recovered): ", r)
+		if e, ok := r.(error); ok {
+			*err = e
+		} else {
+			*err = errors.New(fmt.Sprint(r))
+		}
+	}
+}
+
+func implConnect() (err error) {
+	defer catchPanic(&err)
+	retval, _, err := fSplitTun_Connect.Call()
+	if err != syscall.Errno(0) {
+		if err == syscall.ERROR_FILE_NOT_FOUND {
+			err = fmt.Errorf("%w (check if IVPN Split-Tunnelling driver installed)", err)
+		}
+		return err
+	}
+	if retval != 1 {
+		return fmt.Errorf(STOpErrorTxt + " (SplitTun_Connect)")
+	}
+	return nil
+}
+func implDisconnect() (err error) {
+	defer catchPanic(&err)
+	retval, _, err := fSplitTun_Disconnect.Call()
+	if err != syscall.Errno(0) {
+		return log.ErrorE(err)
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_Disconnect)"))
+	}
+	return nil
+}
+
+func implStopAndClean() (err error) {
+	defer catchPanic(&err)
+	retval, _, err := fSplitTun_StopAndClean.Call()
+	if err != syscall.Errno(0) {
+		return log.ErrorE(err)
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_StopAndClean)"))
+	}
+	return nil
+}
+
+func implStart() (err error) {
+	defer catchPanic(&err)
+
+	/// Start splitting.
+	/// If "process monitor" not running - it will be started.
+	///
+	/// Operation fails when configuration not complete:
+	///		- no splitting apps defined
+	///		- no IP configuration (IP-public + IP-tunnel) defined at least for one protocol type (IPv4\IPv6)
+	///
+	/// If only IPv4 configuration defined - splitting will work only for IPv4
+	/// If only IPv6 configuration defined - splitting will work only for IPv6
+	retval, _, err := fSplitTun_SplitStart.Call()
+	if err != syscall.Errno(0) {
+		return log.ErrorE(err)
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_SplitStart)"))
+	}
+
+	// Initialize already running apps info
+	/// Set application PID\PPIDs which have to be splitted.
+	/// It adds new info to internal process tree but not erasing current known PID\PPIDs.
+	/// Operaion fails when 'process monitor' not running
+	retval, _, err = fSplitTun_ProcMonInitRunningApps.Call()
+	if err != syscall.Errno(0) {
+		return log.ErrorE(err)
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ProcMonInitRunningApps)"))
+	}
+
+	return nil
+}
+func implStop() (err error) {
+	defer catchPanic(&err)
+
+	// stop splitting
+	retval, _, err := fSplitTun_SplitStop.Call()
+	if err != syscall.Errno(0) {
+		return log.ErrorE(err)
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_SplitStop)"))
+	}
+
+	// stop process monitor
+	retval, _, err = fSplitTun_ProcMonStop.Call()
+	if err != syscall.Errno(0) {
+		return log.ErrorE(err)
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ProcMonStop)"))
+	}
+
+	return nil
+}
+
+func implGetState() (state State, err error) {
+	defer catchPanic(&err)
+
+	var isConfigOk uint32
+	var isEnabledProcessMonitor uint32
+	var isEnabledSplitting uint32
+
+	retval, _, err := fSplitTun_GetState.Call(
+		uintptr(unsafe.Pointer(&isConfigOk)),
+		uintptr(unsafe.Pointer(&isEnabledProcessMonitor)),
+		uintptr(unsafe.Pointer(&isEnabledSplitting)))
+
+	if err != syscall.Errno(0) {
+		return State{}, log.ErrorE(err)
+	}
+	if retval != 1 {
+		return State{}, log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ProcMonStop)"))
+	}
+
+	return State{IsConfigOk: isConfigOk != 0, IsEnabledSplitting: isEnabledSplitting != 0}, nil
+}
+
+func implSetConfig(config Config) (err error) {
+	defer catchPanic(&err)
+
+	// SET IP ADDRESSES
+	IPv4Public := config.Addr.IPv4Public.To4()
+	IPv4Tunnel := config.Addr.IPv4Tunnel.To4()
+	IPv6Public := config.Addr.IPv6Public.To16()
+	IPv6Tunnel := config.Addr.IPv6Tunnel.To16()
+
+	retval, _, err := fSplitTun_ConfigSetAddresses.Call(
+		uintptr(unsafe.Pointer(&IPv4Public[0])),
+		uintptr(unsafe.Pointer(&IPv4Tunnel[0])),
+		uintptr(unsafe.Pointer(&IPv6Public[0])),
+		uintptr(unsafe.Pointer(&IPv6Tunnel[0])))
+
+	if err != syscall.Errno(0) {
+		return log.ErrorE(err)
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigSetAddresses)"))
+	}
+
+	// SET APPS TO SPLIT
+	buff, err := makeRawBuffAppsConfig(config.Apps)
+	if err != nil {
+		return log.ErrorE(fmt.Errorf("failed to set split-tinnelling configuration (apps): %w", err))
+	}
+
+	var bufSize uint32 = uint32(len(buff))
+	retval, _, err = fSplitTun_ConfigSetSplitAppRaw.Call(
+		uintptr(unsafe.Pointer(&buff[0])),
+		uintptr(bufSize))
+
+	if err != syscall.Errno(0) {
+		return log.ErrorE(err)
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigSetSplitAppRaw)"))
+	}
+
+	return nil
+}
+func implGetConfig() (cfg Config, err error) {
+	defer catchPanic(&err)
+
+	// ADDRESSES
+	IPv4Public := make([]byte, 4)
+	IPv4Tunnel := make([]byte, 4)
+	IPv6Public := make([]byte, 16)
+	IPv6Tunnel := make([]byte, 16)
+
+	retval, _, err := fSplitTun_ConfigGetAddresses.Call(
+		uintptr(unsafe.Pointer(&IPv4Public[0])),
+		uintptr(unsafe.Pointer(&IPv4Tunnel[0])),
+		uintptr(unsafe.Pointer(&IPv6Public[0])),
+		uintptr(unsafe.Pointer(&IPv6Tunnel[0])))
+
+	if err != syscall.Errno(0) {
+		return Config{}, log.ErrorE(err)
+	}
+	if retval != 1 {
+		return Config{}, log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigGetAddresses)"))
+	}
+
+	addr := ConfigAddresses{IPv4Public: IPv4Public, IPv4Tunnel: IPv4Tunnel, IPv6Public: IPv6Public, IPv6Tunnel: IPv6Tunnel}
+
+	// APPS
+
+	// get required buffer size
+	var buffSize uint32 = 0
+	var emptyBuff []byte
+	_, _, err = fSplitTun_ConfigGetSplitAppRaw.Call(
+		uintptr(unsafe.Pointer(&emptyBuff)),
+		uintptr(unsafe.Pointer(&buffSize)))
+	if err != syscall.Errno(0) {
+		return Config{}, log.ErrorE(err)
+	}
+	if buffSize == 0 {
+		return Config{}, log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigGetSplitAppRaw)"))
+	}
+
+	// get data
+	buff := make([]byte, buffSize)
+	retval, _, err = fSplitTun_ConfigGetSplitAppRaw.Call(
+		uintptr(unsafe.Pointer(&buff[0])),
+		uintptr(unsafe.Pointer(&buffSize)))
+	if err != syscall.Errno(0) {
+		return Config{}, log.ErrorE(err)
+	}
+	if retval != 1 {
+		return Config{}, log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigGetSplitAppRaw)"))
+	}
+
+	apps, err := parseRawBuffAppsConfig(buff)
+	if err != nil {
+		return Config{}, log.ErrorE(fmt.Errorf("failed to obtain split-tinnelling configuration (apps): %w", err))
+	}
+
+	return Config{Addr: addr, Apps: apps}, nil
+}
+
+func makeRawBuffAppsConfig(apps ConfigApps) (bytesArr []byte, err error) {
+	//	DWORD common size bytes
+	//	DWORD strings cnt
+	//	DWORD str1Len
+	//	DWORD str2Len
+	//	...
+	//	WCHAR[] str1
+	//	WCHAR[] str2
+	//	...
+
+	sizesBuff := new(bytes.Buffer)
+	stringsBuff := new(bytes.Buffer)
+
+	var strLen uint32 = 0
+	for _, path := range apps.ImagesPathToSplit {
+		uint16arr, _ := syscall.UTF16FromString(path)
+		// remove NULL-termination
+		uint16arr = uint16arr[:len(uint16arr)-1]
+
+		strLen = uint32(len(uint16arr))
+		if err := binary.Write(sizesBuff, binary.LittleEndian, strLen); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(stringsBuff, binary.LittleEndian, uint16arr); err != nil {
+			return nil, err
+		}
+	}
+
+	var totalSize uint32 = uint32(4 + 4 + sizesBuff.Len() + stringsBuff.Len())
+	var stringsCnt uint32 = uint32(len(apps.ImagesPathToSplit))
+
+	buff := new(bytes.Buffer)
+	if err := binary.Write(buff, binary.LittleEndian, totalSize); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buff, binary.LittleEndian, stringsCnt); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buff, binary.LittleEndian, sizesBuff.Bytes()); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(buff, binary.LittleEndian, stringsBuff.Bytes()); err != nil {
+		return nil, err
+	}
+
+	return buff.Bytes(), nil
+}
+
+func parseRawBuffAppsConfig(bytesArr []byte) (apps ConfigApps, err error) {
+	//	DWORD common size bytes
+	//	DWORD strings cnt
+	//	DWORD str1Len
+	//	DWORD str2Len
+	//	...
+	//	WCHAR[] str1
+	//	WCHAR[] str2
+	//	...
+
+	var totalSize uint32
+	var stringsCnt uint32
+	files := make([]string, 0)
+
+	buff := bytes.NewReader(bytesArr)
+	if err := binary.Read(buff, binary.LittleEndian, &totalSize); err != nil {
+		return ConfigApps{}, err
+	}
+	if err := binary.Read(buff, binary.LittleEndian, &stringsCnt); err != nil {
+		return ConfigApps{}, err
+	}
+
+	if int(totalSize) != len(bytesArr) {
+		return ConfigApps{}, fmt.Errorf("failed to parse split-tun configuration (applications)")
+	}
+
+	buffSizes := bytes.NewReader(bytesArr[4+4 : 4+4+stringsCnt*4])
+	buffStrings := bytes.NewReader(bytesArr[4+4+stringsCnt*4:])
+
+	var i uint32
+	var strBytesSize uint32
+	for i = 0; i < stringsCnt; i++ {
+		if err := binary.Read(buffSizes, binary.LittleEndian, &strBytesSize); err != nil {
+			return ConfigApps{}, err
+		}
+
+		uint16str := make([]uint16, strBytesSize)
+		if err := binary.Read(buffStrings, binary.LittleEndian, &uint16str); err != nil {
+			return ConfigApps{}, err
+		}
+
+		files = append(files, syscall.UTF16ToString(uint16str))
+	}
+
+	return ConfigApps{ImagesPathToSplit: files}, nil
+}

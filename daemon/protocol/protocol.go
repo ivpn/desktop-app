@@ -68,7 +68,7 @@ type Service interface {
 	// Some functionality can be not accessible
 	// It can happen, for example, if some external binaries not installed
 	// (e.g. obfsproxy or WireGuard on Linux)
-	GetDisabledFunctions() (wgErr, ovpnErr, obfspErr error)
+	GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr error)
 
 	ServersList() (*apitypes.ServersInfoResponse, error)
 	PingServers(retryCount int, timeoutMs int) (map[string]int, error)

@@ -169,35 +169,38 @@ namespace cfg
 	{
 		utils::Locker l(_cfg_ImagesLock);
 
-		//	size_t common size bytes
-		//	size_t strings cnt
-		//	size_t str1Len
-		//	size_t str2Len
+		//	DWORD common size bytes
+		//	DWORD strings cnt
+		//	DWORD str1Len
+		//	DWORD str2Len
 		//	...
 		//	WCHAR[] str1 
 		//	WCHAR[] str2
 		//	...
 
-		if (bufSize < sizeof(size_t) + sizeof(size_t) * 2 + sizeof(wchar_t) * 1)
+		if (bufSize < sizeof(DWORD) + sizeof(DWORD) * 2 + sizeof(wchar_t) * 1)
 			return STATUS_INVALID_PARAMETER; // buffer is too small
 
-		if (*(size_t*)buff != bufSize)
+		if (*(DWORD*)buff != bufSize)
 			return STATUS_INVALID_PARAMETER; // bad data
 
-		size_t stringsCnt = *(size_t*)(buff + sizeof(size_t));
-		size_t headerSize = sizeof(size_t) + sizeof(size_t) + sizeof(size_t) * stringsCnt;
+		DWORD stringsCnt = *(DWORD*)(buff + sizeof(DWORD));
+		DWORD headerSize = sizeof(DWORD) + sizeof(DWORD) + sizeof(DWORD) * stringsCnt;
 		const char* strPtr = buff + headerSize;
 
-		for (auto i = 0; i < stringsCnt; i++)
+		for (DWORD i = 0; i < stringsCnt; i++)
 		{
-			size_t strLen = *(size_t*)(buff + sizeof(size_t) + sizeof(size_t) + sizeof(size_t) * i);
+			DWORD strLen = *(DWORD*)(buff + sizeof(DWORD) + sizeof(DWORD) + sizeof(DWORD) * i);
 			
 			ImageInfo ii = {};
 			
 			ii.ImagePath.Length = (USHORT) strLen * sizeof(WCHAR);
 			ii.ImagePath.MaximumLength = ii.ImagePath.Length;
 			ii.ImagePath.Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(NonPagedPool, ii.ImagePath.Length, POOL_TAG));
-			RtlCopyMemory(ii.ImagePath.Buffer, strPtr, ii.ImagePath.Length);
+			if (ii.ImagePath.Buffer != NULL)
+				RtlCopyMemory(ii.ImagePath.Buffer, strPtr, ii.ImagePath.Length);
+			else
+				return STATUS_INSUFFICIENT_RESOURCES;
 
 			strPtr += strLen * sizeof(wchar_t);
 
@@ -224,10 +227,10 @@ namespace cfg
 	{
 		utils::Locker l(_cfg_ImagesLock);
 
-		//	size_t common size bytes
-		//	size_t strings cnt
-		//	size_t str1Len
-		//	size_t str2Len
+		//	DWORD common size bytes
+		//	DWORD strings cnt
+		//	DWORD str1Len
+		//	DWORD str2Len
 		//	...
 		//	WCHAR[] str1 
 		//	WCHAR[] str2
@@ -236,10 +239,16 @@ namespace cfg
 		if (bufSize_inOut == NULL)
 			return STATUS_INVALID_PARAMETER;
 
-		ULONG elementsCnt = RtlNumberGenericTableElementsAvl(&_cfg_Images);
-
-		size_t buffSize = sizeof(size_t) + sizeof(size_t) * (1 + (size_t)elementsCnt);
-		size_t headerOffset = (size_t)buffSize;
+		ULONG elCntUL = RtlNumberGenericTableElementsAvl(&_cfg_Images);
+		if (elCntUL > 0xffffffff)
+		{
+			*bufSize_inOut = (DWORD)0;
+			return STATUS_INTERNAL_ERROR;
+		}
+		DWORD elementsCnt = elCntUL;
+		
+		size_t buffSize = sizeof(DWORD) +sizeof(DWORD) * ((size_t)1 + elementsCnt);
+		DWORD headerOffset = (DWORD)buffSize;
 
 		for (ImageInfo* p = (ImageInfo*)RtlEnumerateGenericTableAvl(&_cfg_Images, TRUE); p != NULL; p = (ImageInfo*)RtlEnumerateGenericTableAvl(&_cfg_Images, FALSE))
 			buffSize += p->ImagePath.Length;
@@ -254,15 +263,15 @@ namespace cfg
 		if (buff_inOut == NULL)
 			return STATUS_INVALID_PARAMETER;
 
-		*(size_t*)buff_inOut = (size_t)buffSize;
-		*(size_t*)(buff_inOut + sizeof(size_t)) = (size_t)elementsCnt;
+		*(DWORD*)buff_inOut = (DWORD)buffSize;
+		*(DWORD*)(buff_inOut + sizeof(DWORD)) = (DWORD)elementsCnt;
 
 		char* sptr = buff_inOut + headerOffset;
-		size_t i = 0;
+		DWORD i = 0;
 		for (ImageInfo* p = (ImageInfo*)RtlEnumerateGenericTableAvl(&_cfg_Images, TRUE); p != NULL; i++, p = (ImageInfo*)RtlEnumerateGenericTableAvl(&_cfg_Images, FALSE))
 		{
 			// string size (characters count)
-			*(size_t*)(buff_inOut + sizeof(size_t) + sizeof(size_t) + sizeof(size_t) * i) = (size_t)p->ImagePath.Length/sizeof(wchar_t); 
+			*(DWORD*)(buff_inOut + sizeof(DWORD) + sizeof(DWORD) + sizeof(DWORD) * i) = (DWORD)p->ImagePath.Length/sizeof(wchar_t);
 
 			// string data
 			size_t strBSize = p->ImagePath.Length;
