@@ -24,16 +24,21 @@ package splittun
 
 import (
 	"net"
+	"sync"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 )
 
 var log *logger.Logger
-var isConnected bool
 
 func init() {
 	log = logger.NewLogger("spltun")
 }
+
+var (
+	isConnected bool
+	mutex       sync.Mutex
+)
 
 type State struct {
 	IsConfigOk         bool
@@ -55,13 +60,29 @@ type Config struct {
 	Apps ConfigApps
 }
 
+func IsConnectted() bool {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	return isConnected
+}
+
 func Initialize() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	log.Info("Initializing Split-Tunnelling")
 	err := implInitialize()
 	if err != nil {
 		return err
 	}
 
-	err = Connect()
+	err = doConnect()
+	if err != nil {
+		return err
+	}
+
+	err = implStopAndClean()
 	if err != nil {
 		return err
 	}
@@ -69,38 +90,73 @@ func Initialize() error {
 	return nil
 }
 
-func Connect() error {
+func doConnect() error {
 	if isConnected {
 		return nil
 	}
 	ret := implConnect()
 	if ret == nil {
 		isConnected = true
+		log.Info("Split-Tunnelling ready")
 	}
 	return ret
 }
+
+func Connect() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	return doConnect()
+}
 func Disconnect() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	log.Info("Split-Tunnelling: disconnecting")
+	isConnected = false
 	return implDisconnect()
 }
 
 func StopAndClean() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	log.Info("Split-Tunnelling: disabling")
 	return implStopAndClean()
 }
 
 func GetState() (State, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	return implGetState()
 }
 
 func SetConfig(config Config) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	log.Info("Split-Tunnelling: setting configuration")
 	return implSetConfig(config)
 }
 func GetConfig() (Config, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	return implGetConfig()
 }
 
 func Start() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	log.Info("Split-Tunnelling: starting")
 	return implStart()
 }
 func Stop() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	log.Info("Split-Tunnelling: stopping")
 	return implStop()
 }

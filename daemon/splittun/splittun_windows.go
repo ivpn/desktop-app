@@ -50,8 +50,6 @@ var (
 	//fSplitTun_ProcMonStart           *syscall.LazyProc
 )
 
-const STOpErrorTxt = "Split-Tunnelling operation failed"
-
 // Initialize doing initialization stuff (called on application start)
 func implInitialize() error {
 	wfpDllPath := platform.WindowsWFPDllPath()
@@ -91,6 +89,16 @@ func catchPanic(err *error) {
 	}
 }
 
+func checkCallErrResp(retval uintptr, err error, mName string) error {
+	if err != syscall.Errno(0) {
+		return log.ErrorE(fmt.Errorf("%s:  %w", mName, err))
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf("Split-Tunnelling operation failed (%s)", mName))
+	}
+	return nil
+}
+
 func implConnect() (err error) {
 	defer catchPanic(&err)
 	retval, _, err := fSplitTun_Connect.Call()
@@ -101,31 +109,31 @@ func implConnect() (err error) {
 		return err
 	}
 	if retval != 1 {
-		return fmt.Errorf(STOpErrorTxt + " (SplitTun_Connect)")
+		return fmt.Errorf("Split-Tunnelling operation failed (SplitTun_Connect)")
 	}
 	return nil
 }
 func implDisconnect() (err error) {
 	defer catchPanic(&err)
 	retval, _, err := fSplitTun_Disconnect.Call()
-	if err != syscall.Errno(0) {
-		return log.ErrorE(err)
+	if err := checkCallErrResp(retval, err, "SplitTun_Disconnect"); err != nil {
+		return err
 	}
-	if retval != 1 {
-		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_Disconnect)"))
-	}
+
 	return nil
 }
 
 func implStopAndClean() (err error) {
 	defer catchPanic(&err)
+	/// Stop and clean everything:
+	///		Stop splitting
+	///		Stop processes monitoring
+	///		Clean all configuration/statuses
 	retval, _, err := fSplitTun_StopAndClean.Call()
-	if err != syscall.Errno(0) {
-		return log.ErrorE(err)
+	if err := checkCallErrResp(retval, err, "SplitTun_StopAndClean"); err != nil {
+		return err
 	}
-	if retval != 1 {
-		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_StopAndClean)"))
-	}
+
 	return nil
 }
 
@@ -142,11 +150,8 @@ func implStart() (err error) {
 	/// If only IPv4 configuration defined - splitting will work only for IPv4
 	/// If only IPv6 configuration defined - splitting will work only for IPv6
 	retval, _, err := fSplitTun_SplitStart.Call()
-	if err != syscall.Errno(0) {
-		return log.ErrorE(err)
-	}
-	if retval != 1 {
-		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_SplitStart)"))
+	if err := checkCallErrResp(retval, err, "SplitTun_SplitStart"); err != nil {
+		return err
 	}
 
 	// Initialize already running apps info
@@ -154,11 +159,8 @@ func implStart() (err error) {
 	/// It adds new info to internal process tree but not erasing current known PID\PPIDs.
 	/// Operaion fails when 'process monitor' not running
 	retval, _, err = fSplitTun_ProcMonInitRunningApps.Call()
-	if err != syscall.Errno(0) {
-		return log.ErrorE(err)
-	}
-	if retval != 1 {
-		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ProcMonInitRunningApps)"))
+	if err := checkCallErrResp(retval, err, "SplitTun_ProcMonInitRunningApps"); err != nil {
+		return err
 	}
 
 	return nil
@@ -168,20 +170,14 @@ func implStop() (err error) {
 
 	// stop splitting
 	retval, _, err := fSplitTun_SplitStop.Call()
-	if err != syscall.Errno(0) {
-		return log.ErrorE(err)
-	}
-	if retval != 1 {
-		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_SplitStop)"))
+	if err := checkCallErrResp(retval, err, "SplitTun_SplitStop"); err != nil {
+		return err
 	}
 
 	// stop process monitor
 	retval, _, err = fSplitTun_ProcMonStop.Call()
-	if err != syscall.Errno(0) {
-		return log.ErrorE(err)
-	}
-	if retval != 1 {
-		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ProcMonStop)"))
+	if err := checkCallErrResp(retval, err, "SplitTun_ProcMonStop"); err != nil {
+		return err
 	}
 
 	return nil
@@ -198,12 +194,8 @@ func implGetState() (state State, err error) {
 		uintptr(unsafe.Pointer(&isConfigOk)),
 		uintptr(unsafe.Pointer(&isEnabledProcessMonitor)),
 		uintptr(unsafe.Pointer(&isEnabledSplitting)))
-
-	if err != syscall.Errno(0) {
-		return State{}, log.ErrorE(err)
-	}
-	if retval != 1 {
-		return State{}, log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ProcMonStop)"))
+	if err := checkCallErrResp(retval, err, "fSplitTun_GetState"); err != nil {
+		return State{}, err
 	}
 
 	return State{IsConfigOk: isConfigOk != 0, IsEnabledSplitting: isEnabledSplitting != 0}, nil
@@ -218,17 +210,26 @@ func implSetConfig(config Config) (err error) {
 	IPv6Public := config.Addr.IPv6Public.To16()
 	IPv6Tunnel := config.Addr.IPv6Tunnel.To16()
 
+	if IPv4Public == nil {
+		IPv4Public = make([]byte, 4)
+	}
+	if IPv4Tunnel == nil {
+		IPv4Tunnel = make([]byte, 4)
+	}
+	if IPv6Public == nil {
+		IPv6Public = make([]byte, 16)
+	}
+	if IPv6Tunnel == nil {
+		IPv6Tunnel = make([]byte, 16)
+	}
+
 	retval, _, err := fSplitTun_ConfigSetAddresses.Call(
 		uintptr(unsafe.Pointer(&IPv4Public[0])),
 		uintptr(unsafe.Pointer(&IPv4Tunnel[0])),
 		uintptr(unsafe.Pointer(&IPv6Public[0])),
 		uintptr(unsafe.Pointer(&IPv6Tunnel[0])))
-
-	if err != syscall.Errno(0) {
-		return log.ErrorE(err)
-	}
-	if retval != 1 {
-		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigSetAddresses)"))
+	if err := checkCallErrResp(retval, err, "SplitTun_ConfigSetAddresses"); err != nil {
+		return err
 	}
 
 	// SET APPS TO SPLIT
@@ -241,12 +242,8 @@ func implSetConfig(config Config) (err error) {
 	retval, _, err = fSplitTun_ConfigSetSplitAppRaw.Call(
 		uintptr(unsafe.Pointer(&buff[0])),
 		uintptr(bufSize))
-
-	if err != syscall.Errno(0) {
-		return log.ErrorE(err)
-	}
-	if retval != 1 {
-		return log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigSetSplitAppRaw)"))
+	if err := checkCallErrResp(retval, err, "SplitTun_ConfigSetSplitAppRaw"); err != nil {
+		return err
 	}
 
 	return nil
@@ -265,12 +262,8 @@ func implGetConfig() (cfg Config, err error) {
 		uintptr(unsafe.Pointer(&IPv4Tunnel[0])),
 		uintptr(unsafe.Pointer(&IPv6Public[0])),
 		uintptr(unsafe.Pointer(&IPv6Tunnel[0])))
-
-	if err != syscall.Errno(0) {
-		return Config{}, log.ErrorE(err)
-	}
-	if retval != 1 {
-		return Config{}, log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigGetAddresses)"))
+	if err := checkCallErrResp(retval, err, "SplitTun_ConfigGetAddresses"); err != nil {
+		return Config{}, err
 	}
 
 	addr := ConfigAddresses{IPv4Public: IPv4Public, IPv4Tunnel: IPv4Tunnel, IPv6Public: IPv6Public, IPv6Tunnel: IPv6Tunnel}
@@ -283,11 +276,8 @@ func implGetConfig() (cfg Config, err error) {
 	_, _, err = fSplitTun_ConfigGetSplitAppRaw.Call(
 		uintptr(unsafe.Pointer(&emptyBuff)),
 		uintptr(unsafe.Pointer(&buffSize)))
-	if err != syscall.Errno(0) {
-		return Config{}, log.ErrorE(err)
-	}
-	if buffSize == 0 {
-		return Config{}, log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigGetSplitAppRaw)"))
+	if err := checkCallErrResp(retval, err, "SplitTun_ConfigGetSplitAppRaw"); err != nil {
+		return Config{}, err
 	}
 
 	// get data
@@ -295,11 +285,8 @@ func implGetConfig() (cfg Config, err error) {
 	retval, _, err = fSplitTun_ConfigGetSplitAppRaw.Call(
 		uintptr(unsafe.Pointer(&buff[0])),
 		uintptr(unsafe.Pointer(&buffSize)))
-	if err != syscall.Errno(0) {
-		return Config{}, log.ErrorE(err)
-	}
-	if retval != 1 {
-		return Config{}, log.ErrorE(fmt.Errorf(STOpErrorTxt + " (SplitTun_ConfigGetSplitAppRaw)"))
+	if err := checkCallErrResp(retval, err, "SplitTun_ConfigGetSplitAppRaw"); err != nil {
+		return Config{}, err
 	}
 
 	apps, err := parseRawBuffAppsConfig(buff)

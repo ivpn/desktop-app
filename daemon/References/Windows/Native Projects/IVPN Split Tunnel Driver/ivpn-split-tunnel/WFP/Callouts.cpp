@@ -136,6 +136,8 @@ namespace wfp
 			case FWPS_LAYER_ALE_BIND_REDIRECT_V4:
 			case FWPS_LAYER_ALE_CONNECT_REDIRECT_V4:
 			{
+				bool isConnect = inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4;
+
 				if (IN4_IS_ADDR_UNSPECIFIED(&config.IPv4Public) || IN4_IS_ADDR_UNSPECIFIED(&config.IPv4Tunnel))
 				{
 					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) IPv4 configuration unspecified. SKIPPING.");
@@ -153,14 +155,14 @@ namespace wfp
 
 				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (on-%s) src:%d.%d.%d.%d dst:%d.%d.%d.%d",
 					inMetaValues->processId,
-					(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4) ? "CONNECT" : "BIND",
+					isConnect ? "CONNECT" : "BIND",
 					srcAddr->S_un.S_un_b.s_b1, srcAddr->S_un.S_un_b.s_b2, srcAddr->S_un.S_un_b.s_b3, srcAddr->S_un.S_un_b.s_b4,
 					dstAddr->S_un.S_un_b.s_b1, dstAddr->S_un.S_un_b.s_b2, dstAddr->S_un.S_un_b.s_b3, dstAddr->S_un.S_un_b.s_b4
 					);
 
 				bool isSrcTun = srcAddr->S_un.S_addr == config.IPv4Tunnel.S_un.S_addr;
 
-				if (inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4)  
+				if (isConnect)
 				{	// CONNECT
 					bool isDestLocal = LocalAddress(dstAddr);
 
@@ -220,7 +222,7 @@ namespace wfp
 				FwpsReleaseClassifyHandle0(classifyHandle);
 
 				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) REDIRECTED PID: 0x%llX (%s [IPv4])", inMetaValues->processId,
-					(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4) ? "CONNECT" : "BIND");
+					isConnect ? "CONNECT" : "BIND");
 
 				break;
 			}
@@ -228,6 +230,8 @@ namespace wfp
 			case FWPS_LAYER_ALE_BIND_REDIRECT_V6:
 			case FWPS_LAYER_ALE_CONNECT_REDIRECT_V6:
 			{
+				bool isConnect = inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6;
+
 				static const IN6_ADDR IN6_ADDR_ZERO = { 0 };
 				if (IN6_ADDR_EQUAL(&config.IPv6Public, &IN6_ADDR_ZERO) || IN6_ADDR_EQUAL(&config.IPv6Tunnel, &IN6_ADDR_ZERO))
 				{
@@ -242,8 +246,17 @@ namespace wfp
 					FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_REMOTE_ADDRESS].value.byteArray16);
 
 				bool isSrcTun = IN6_ADDR_EQUAL(srcAddr, &config.IPv6Tunnel);
-												
-				if (inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4) 
+							
+				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (on-%s) src:%x:%x:%x:%x:%x:%x:%x:%x dst:%x:%x:%x:%x:%x:%x:%x:%x",
+					inMetaValues->processId,
+					isConnect ? "CONNECT" : "BIND",
+					(srcAddr) ? srcAddr->u.Word[0] : 0, (srcAddr) ? srcAddr->u.Word[1] : 0, (srcAddr) ? srcAddr->u.Word[2] : 0, (srcAddr) ? srcAddr->u.Word[3] : 0,
+					(srcAddr) ? srcAddr->u.Word[4] : 0, (srcAddr) ? srcAddr->u.Word[5] : 0, (srcAddr) ? srcAddr->u.Word[6] : 0, (srcAddr) ? srcAddr->u.Word[7] : 0,
+					(dstAddr) ? dstAddr->u.Word[0] : 0, (dstAddr) ? dstAddr->u.Word[1] : 0, (dstAddr) ? dstAddr->u.Word[2] : 0, (dstAddr) ? dstAddr->u.Word[3] : 0,
+					(dstAddr) ? dstAddr->u.Word[4] : 0, (dstAddr) ? dstAddr->u.Word[5] : 0, (dstAddr) ? dstAddr->u.Word[6] : 0, (dstAddr) ? dstAddr->u.Word[7] : 0
+				);
+
+				if (isConnect)
 				{ // CONNECT
 					bool isDestLocal = LocalAddress(dstAddr);
 
@@ -301,7 +314,7 @@ namespace wfp
 				FwpsReleaseClassifyHandle0(classifyHandle);
 
 				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) REDIRECTED PID: 0x%llX (%s [IPv6])", inMetaValues->processId,
-					(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6) ? "CONNECT" : "BIND");
+					isConnect ? "CONNECT" : "BIND");
 				
 				break;
 			}

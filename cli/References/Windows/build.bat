@@ -39,10 +39,9 @@ goto :success
 
 	set GOOS=windows
 
-	echo [ ] x86 ...
-	set GOARCH=386
-
-	go build -tags release -o "bin\x86\cli\ivpn.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
+	rem echo [ ] x86 ...
+	rem set GOARCH=386
+	rem go build -tags release -o "bin\x86\cli\ivpn.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
 
 	echo [ ] x86_64 ...
 	set GOARCH=amd64

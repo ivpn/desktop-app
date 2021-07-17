@@ -42,6 +42,22 @@ func DefaultGatewayIP() (defGatewayIP net.IP, err error) {
 	return doDefaultGatewayIP()
 }
 
+func GetOutboundIP(isIPv6 bool) (net.IP, error) {
+	addrStr := "8.8.8.8:80"
+	if isIPv6 {
+		addrStr = "[2a00:1450:400d:80a::200e]:80"
+	}
+
+	conn, err := net.Dial("udp", addrStr)
+	if err != nil {
+		return net.IP{}, err
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP, nil
+}
+
 // InterfaceByIPAddr - Get network interface object by it's local IP address
 func InterfaceByIPAddr(localAddr net.IP) (*net.Interface, error) {
 	ifaces, err := net.Interfaces()

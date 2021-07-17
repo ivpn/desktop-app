@@ -568,7 +568,27 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 		}
 	}()
 
+	var err error
+
 	log.Info("Connecting...")
+
+	prefs := s._preferences
+
+	// checking default outbound IPs
+	// It is necessary for Split-Tunnelling configuration
+	var outboundIPv4 net.IP = nil
+	var outboundIPv6 net.IP = nil
+	if prefs.IsSplitTunnel {
+		outboundIPv4, err = netinfo.GetOutboundIP(false)
+		if err != nil {
+			log.Warning(fmt.Errorf("failed to detect outbound IPv4 address: %w", err))
+		}
+		outboundIPv6, err = netinfo.GetOutboundIP(true)
+		if err != nil {
+			log.Warning(fmt.Errorf("failed to detect outbound IPv6 address: %w", err))
+		}
+	}
+
 	// save vpn object
 	s._vpn = vpnProc
 
@@ -592,6 +612,13 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 		err := firewall.ClientDisconnected()
 		if err != nil {
 			log.Error("(stopping) error on notifying FW about disconnected client:", err)
+		}
+
+		if splittun.IsConnectted() {
+			err := splittun.StopAndClean()
+			if err != nil {
+				log.Error("(stopping) error on stopping Split-Tunnelling:", err)
+			}
 		}
 
 		// when we were requested to enable firewall for this connection
@@ -688,6 +715,39 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 						state.ClientPort,
 						state.ServerIP, state.ServerPort,
 						state.IsTCP)
+
+					// enable Split-Tunnelling (if necessary)
+					if prefs.IsSplitTunnel && splittun.IsConnectted() && len(prefs.SplitTunnelApps) > 0 {
+						if (state.ClientIP == nil || outboundIPv4 == nil) && (state.ClientIPv6 == nil || outboundIPv6 == nil) {
+							log.Error("unable to initialize Split-Tunnelling because of no IP info")
+						} else {
+							cfg := splittun.Config{}
+							cfg.Apps = splittun.ConfigApps{ImagesPathToSplit: prefs.SplitTunnelApps}
+							cfg.Addr = splittun.ConfigAddresses{
+								IPv4Tunnel: state.ClientIP,
+								IPv6Tunnel: state.ClientIPv6,
+								IPv4Public: outboundIPv4,
+								IPv6Public: outboundIPv6,
+							}
+							if err := splittun.SetConfig(cfg); err != nil {
+								log.Error(fmt.Errorf("error on configuring Split-Tunnelling: %w", err))
+							} else {
+								if err := splittun.Start(); err != nil {
+									log.Error(fmt.Errorf("error on start Split-Tunnelling: %w", err))
+								} else {
+									// Just preparing test for logging
+									logStr := ""
+									if state.ClientIP != nil && outboundIPv4 != nil {
+										logStr += fmt.Sprintf(" IPv4: %s=>%s", state.ClientIP, outboundIPv4)
+									}
+									if state.ClientIPv6 != nil && outboundIPv6 != nil {
+										logStr += fmt.Sprintf(" IPv6: %s=>%s", state.ClientIPv6, outboundIPv6)
+									}
+									log.Info("Split-Tunnelling started:", logStr)
+								}
+							}
+						}
+					}
 				default:
 				}
 
@@ -776,7 +836,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 	// Add host IP to firewall exceptions
 	const onlyForICMP = false
 	const isPersistent = false
-	err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP, isPersistent)
+	err = firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP, isPersistent)
 	if err != nil {
 		log.Error("Failed to start. Unable to add hosts to firewall exceptions:", err.Error())
 		return err
