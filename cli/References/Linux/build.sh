@@ -164,7 +164,7 @@ echo "RPM package..."
 CreatePackage "rpm"
 
 echo '---------------------------'
-echo "Copying compiled pachages to '$OUT_DIR'..."
+echo "Copying compiled packages to '$OUT_DIR'..."
 mkdir -p $OUT_DIR
 yes | cp -f $TMPDIR/*.* $OUT_DIR
 
