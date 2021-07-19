@@ -84,6 +84,11 @@ type Service struct {
 	_preferences       preferences.Preferences
 	_connectMutex      sync.Mutex
 
+	// Additional information about current VPN connection
+	// Use GetVpnSessionInfo()/SetVpnSessionInfo() to access this data
+	_vpnSessionInfo      VpnSessionInfo
+	_vpnSessionInfoMutex sync.Mutex
+
 	// manual DNS value (if not defined - nil)
 	_manualDNS net.IP
 
@@ -99,6 +104,16 @@ type Service struct {
 	// nil - when session checker stopped
 	// to stop -> write to channel (it is synchronous channel)
 	_sessionCheckerStopChn chan struct{}
+}
+
+// VpnSessionInfo - Additional information about current VPN connection
+type VpnSessionInfo struct {
+	// The outbound IP addresses on the moment BEFORE the VPN connection
+	OutboundIPv4 net.IP
+	OutboundIPv6 net.IP
+	// local VPN addresses (outbound IPs)
+	VpnLocalIPv4 net.IP
+	VpnLocalIPv6 net.IP
 }
 
 // CreateService - service constructor
@@ -215,6 +230,18 @@ func (s *Service) IsConnectivityBlocked() (isBlocked bool, reasonDescription str
 		}
 	}
 	return false, "", nil
+}
+
+func (s *Service) GetVpnSessionInfo() VpnSessionInfo {
+	s._vpnSessionInfoMutex.Lock()
+	defer s._vpnSessionInfoMutex.Unlock()
+	return s._vpnSessionInfo
+}
+
+func (s *Service) SetVpnSessionInfo(i VpnSessionInfo) {
+	s._vpnSessionInfoMutex.Lock()
+	defer s._vpnSessionInfoMutex.Unlock()
+	s._vpnSessionInfo = i
 }
 
 func (s *Service) updateAPIAddrInFWExceptions() {
@@ -572,22 +599,18 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 	log.Info("Connecting...")
 
-	prefs := s._preferences
-
 	// checking default outbound IPs
 	// It is necessary for Split-Tunnelling configuration
-	var outboundIPv4 net.IP = nil
-	var outboundIPv6 net.IP = nil
-	if prefs.IsSplitTunnel {
-		outboundIPv4, err = netinfo.GetOutboundIP(false)
-		if err != nil {
-			log.Warning(fmt.Errorf("failed to detect outbound IPv4 address: %w", err))
-		}
-		outboundIPv6, err = netinfo.GetOutboundIP(true)
-		if err != nil {
-			log.Warning(fmt.Errorf("failed to detect outbound IPv6 address: %w", err))
-		}
+	var sInfo VpnSessionInfo
+	sInfo.OutboundIPv4, err = netinfo.GetOutboundIP(false)
+	if err != nil {
+		log.Warning(fmt.Errorf("failed to detect outbound IPv4 address: %w", err))
 	}
+	sInfo.OutboundIPv6, err = netinfo.GetOutboundIP(true)
+	if err != nil {
+		log.Warning(fmt.Errorf("failed to detect outbound IPv6 address: %w", err))
+	}
+	s.SetVpnSessionInfo(sInfo)
 
 	// save vpn object
 	s._vpn = vpnProc
@@ -716,38 +739,14 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 						state.ServerIP, state.ServerPort,
 						state.IsTCP)
 
+					// save ClientIP/ClientIPv6 into vpn-session-info
+					sInfo := s.GetVpnSessionInfo()
+					sInfo.VpnLocalIPv4 = state.ClientIP
+					sInfo.VpnLocalIPv6 = state.ClientIPv6
+					s.SetVpnSessionInfo(sInfo)
+
 					// enable Split-Tunnelling (if necessary)
-					if prefs.IsSplitTunnel && splittun.IsConnectted() && len(prefs.SplitTunnelApps) > 0 {
-						if (state.ClientIP == nil || outboundIPv4 == nil) && (state.ClientIPv6 == nil || outboundIPv6 == nil) {
-							log.Error("unable to initialize Split-Tunnelling because of no IP info")
-						} else {
-							cfg := splittun.Config{}
-							cfg.Apps = splittun.ConfigApps{ImagesPathToSplit: prefs.SplitTunnelApps}
-							cfg.Addr = splittun.ConfigAddresses{
-								IPv4Tunnel: state.ClientIP,
-								IPv6Tunnel: state.ClientIPv6,
-								IPv4Public: outboundIPv4,
-								IPv6Public: outboundIPv6,
-							}
-							if err := splittun.SetConfig(cfg); err != nil {
-								log.Error(fmt.Errorf("error on configuring Split-Tunnelling: %w", err))
-							} else {
-								if err := splittun.Start(); err != nil {
-									log.Error(fmt.Errorf("error on start Split-Tunnelling: %w", err))
-								} else {
-									// Just preparing test for logging
-									logStr := ""
-									if state.ClientIP != nil && outboundIPv4 != nil {
-										logStr += fmt.Sprintf(" IPv4: %s=>%s", state.ClientIP, outboundIPv4)
-									}
-									if state.ClientIPv6 != nil && outboundIPv6 != nil {
-										logStr += fmt.Sprintf(" IPv6: %s=>%s", state.ClientIPv6, outboundIPv6)
-									}
-									log.Info("Split-Tunnelling started:", logStr)
-								}
-							}
-						}
-					}
+					s.SplitTunnelling_ApplyConfig()
 				default:
 				}
 
@@ -1122,12 +1121,50 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 	return nil
 }
 
-func (s *Service) SetSplitTunnellingConfig(isEnabled bool, appsToSplit []string) error {
+func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string) error {
 	prefs := s._preferences
 	prefs.IsSplitTunnel = isEnabled
 	prefs.SplitTunnelApps = appsToSplit
 	s.setPreferences(prefs)
 	s._evtReceiver.OnSplitTunnelConfigChanged()
+
+	return s.SplitTunnelling_ApplyConfig()
+}
+func (s *Service) SplitTunnelling_ApplyConfig() error {
+	if !splittun.IsConnectted() {
+		// Split-Tunneling not accessable (not connected to a driver or not implemented for current platform)
+		return nil
+	}
+
+	prefs := s.Preferences()
+	sInf := s.GetVpnSessionInfo()
+
+	stopErr := splittun.StopAndClean()
+	if stopErr != nil {
+		stopErr = log.ErrorE(fmt.Errorf("failed to stop split-tunnelling: %w", stopErr), 0)
+	}
+
+	if !prefs.IsSplitTunnel || len(prefs.SplitTunnelApps) == 0 || ((sInf.OutboundIPv4 == nil || sInf.VpnLocalIPv4 == nil) && (sInf.OutboundIPv6 == nil || sInf.VpnLocalIPv6 == nil)) {
+		return stopErr
+	}
+
+	cfg := splittun.Config{}
+	cfg.Apps = splittun.ConfigApps{ImagesPathToSplit: prefs.SplitTunnelApps}
+	cfg.Addr = splittun.ConfigAddresses{
+		IPv4Tunnel: sInf.VpnLocalIPv4,
+		IPv6Tunnel: sInf.VpnLocalIPv6,
+		IPv4Public: sInf.OutboundIPv4,
+		IPv6Public: sInf.OutboundIPv6}
+
+	if err := splittun.SetConfig(cfg); err != nil {
+		log.Error(fmt.Errorf("error on configuring Split-Tunnelling: %w", err))
+	} else {
+		if err := splittun.Start(); err != nil {
+			log.Error(fmt.Errorf("error on start Split-Tunnelling: %w", err))
+		} else {
+			log.Info(fmt.Sprintf("Split-Tunnelling started: IPv4: (%s) => (%s) IPv6: (%s) => (%s)", sInf.VpnLocalIPv4, sInf.OutboundIPv4, sInf.VpnLocalIPv6, sInf.OutboundIPv6))
+		}
+	}
 	return nil
 }
 

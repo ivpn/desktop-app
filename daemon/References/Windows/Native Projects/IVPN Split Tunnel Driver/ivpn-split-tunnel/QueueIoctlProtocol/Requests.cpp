@@ -166,10 +166,14 @@ NTSTATUS Process_IOCTL_CFG_SET_ADDRESSES(
 
     IPAddrConfig ipCfg;
     RtlCopyMemory(&ipCfg, buffer, bufferLength);
-
-    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) IPv4 pub:%d.%d.%d.%d tun:%d.%d.%d.%d",
+        
+    TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) IPv4: pub(%d.%d.%d.%d) tun(%d.%d.%d.%d) IPv6: pub(%x:%x:%x:%x:%x:%x:%x:%x) tun(%x:%x:%x:%x:%x:%x:%x:%x)",
         ipCfg.IPv4Public.S_un.S_un_b.s_b1, ipCfg.IPv4Public.S_un.S_un_b.s_b2, ipCfg.IPv4Public.S_un.S_un_b.s_b3, ipCfg.IPv4Public.S_un.S_un_b.s_b4,
-        ipCfg.IPv4Tunnel.S_un.S_un_b.s_b1, ipCfg.IPv4Tunnel.S_un.S_un_b.s_b2, ipCfg.IPv4Tunnel.S_un.S_un_b.s_b3, ipCfg.IPv4Tunnel.S_un.S_un_b.s_b4
+        ipCfg.IPv4Tunnel.S_un.S_un_b.s_b1, ipCfg.IPv4Tunnel.S_un.S_un_b.s_b2, ipCfg.IPv4Tunnel.S_un.S_un_b.s_b3, ipCfg.IPv4Tunnel.S_un.S_un_b.s_b4,
+        ipCfg.IPv6Public.u.Word[0], ipCfg.IPv6Public.u.Word[1], ipCfg.IPv6Public.u.Word[2], ipCfg.IPv6Public.u.Word[3],
+        ipCfg.IPv6Public.u.Word[4], ipCfg.IPv6Public.u.Word[5], ipCfg.IPv6Public.u.Word[6], ipCfg.IPv6Public.u.Word[7],
+        ipCfg.IPv6Tunnel.u.Word[0], ipCfg.IPv6Tunnel.u.Word[1], ipCfg.IPv6Tunnel.u.Word[2], ipCfg.IPv6Tunnel.u.Word[3],
+        ipCfg.IPv6Tunnel.u.Word[4], ipCfg.IPv6Tunnel.u.Word[5], ipCfg.IPv6Tunnel.u.Word[6], ipCfg.IPv6Tunnel.u.Word[7]
     );
 
     cfg::SetIPs(ipCfg);

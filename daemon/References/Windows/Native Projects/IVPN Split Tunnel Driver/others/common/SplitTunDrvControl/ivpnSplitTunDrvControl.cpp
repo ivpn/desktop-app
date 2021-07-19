@@ -191,13 +191,7 @@ namespace splittun
 			}
 
 			if (appImages != NULL)
-			{
-				std::wstring prefix = L"\\??\\";
-				if (str.find(prefix) != std::string::npos)
-					str = str.substr(prefix.length());
-
 				appImages->push_back(str);
-			}
 		}
 
 		return isOK;
@@ -400,8 +394,14 @@ namespace splittun
 		bool ret = false;
 		DWORD bufSize;
 		
+		for (size_t i = 0; i < appPaths.size(); i++)
+		{
+			if (appPaths[i].find(L"\\??\\") != 0)
+				appPaths[i] = L"\\??\\" + appPaths[i];
+		}
+
 		unsigned char* buff = _splitAppMakeRequestData(appPaths, &bufSize);
-		ret = ConfigSetSplitAppRaw(buff, bufSize);
+		ret = _sendIoctl(IOCTL_CFG_SET_IMAGES_TO_SPLIT, buff, (DWORD)bufSize, nullptr, 0, NULL);
 		delete[] buff;
 
 		return ret;
@@ -433,6 +433,16 @@ namespace splittun
 		}
 		delete[] buff;
 
+		if (ret == true) 
+		{
+			const std::wstring prefix = L"\\??\\";
+			for (size_t i = 0; i < retAppImages.size(); i++)
+			{
+				if(retAppImages[i].find(prefix) != std::string::npos)
+					retAppImages[i] = retAppImages[i].substr(prefix.length());
+			}
+		}
+
 		return ret;
 	}
 
@@ -440,10 +450,16 @@ namespace splittun
 	{
 		bool ret = false;
 
-		if (_splitAppParseData(buff, _in_buffSize, NULL) == false)
+		std::vector<std::wstring> appImages;
+		if (_splitAppParseData(buff, _in_buffSize, &appImages) == false)
 			_sendToLog(L"Request not sent due to errors in prepared buffer\n");
 		else
-			ret = _sendIoctl(IOCTL_CFG_SET_IMAGES_TO_SPLIT, buff, (DWORD)_in_buffSize, nullptr, 0, NULL);
+		{
+			// We should ensure that app images starts from  L"\\??\\"
+			// Therefore we are not calling IOCTL_CFG_SET_IMAGES_TO_SPLIT directly
+			// ret = _sendIoctl(IOCTL_CFG_SET_IMAGES_TO_SPLIT, buff, (DWORD)_in_buffSize, nullptr, 0, NULL);
+			ret = ConfigSetSplitApp(appImages);
+		}
 
 		return ret;
 	}
@@ -503,7 +519,7 @@ namespace splittun
 		if (pl.size() == 0)
 		{
 			_sendToLog(L"Nothing to send. No processes is running (which we are interesting)\n");
-			return false;
+			return true;
 		}
 
 		// DWORD PID

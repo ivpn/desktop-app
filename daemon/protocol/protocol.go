@@ -81,7 +81,7 @@ type Service interface {
 	SetKillSwitchAllowLANMulticast(isAllowLanMulticast bool) error
 	SetKillSwitchAllowLAN(isAllowLan bool) error
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
-	SetSplitTunnellingConfig(isEnabled bool, appsToSplit []string) error
+	SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string) error
 
 	Preferences() preferences.Preferences
 	SetPreference(key string, val string) error
@@ -575,7 +575,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
-		if err := p._service.SetSplitTunnellingConfig(req.IsEnabled, req.SplitTunnelApps); err != nil {
+		if err := p._service.SplitTunnelling_SetConfig(req.IsEnabled, req.SplitTunnelApps); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}

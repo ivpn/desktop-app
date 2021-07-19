@@ -128,7 +128,7 @@ type KillSwitchStatusResp struct {
 }
 
 // SplitTunnelConfiguration returns the split-tunnelling configuration
-type SplitTunnelStatus struct {
+type SplitTunnelConfig struct {
 	CommandBase
 	IsEnabled       bool // is ST enabled (will be automatically activated on VPN connect)
 	SplitTunnelApps []string

@@ -114,10 +114,8 @@ func Enable(isEnabled bool) {
 	switch isEnabled {
 	case true:
 		infoText = "Logging enabled"
-		break
 	case false:
 		infoText = "Logging disabled"
-		break
 	}
 
 	if isLoggingEnabled {
@@ -147,7 +145,7 @@ func Warning(v ...interface{}) { _warning("", v...) }
 func Trace(v ...interface{}) { _trace("", v...) }
 
 // Error - Log Error message
-func Error(v ...interface{}) { _error("", v...) }
+func Error(v ...interface{}) { _error("", 0, v...) }
 
 // ErrorTrace - Log error with trace
 func ErrorTrace(e error) { _errorTrace("", e) }
@@ -220,16 +218,16 @@ func (l *Logger) Error(v ...interface{}) {
 	if l.isDisabled {
 		return
 	}
-	_error(l.pref, v...)
+	_error(l.pref, 0, v...)
 }
 
 // ErrorE - Log Error and return same error object
 // (useful in constrictions: " return log.ErrorE(err) " )
-func (l *Logger) ErrorE(err error) error {
+func (l *Logger) ErrorE(err error, callerStackOffset int) error {
 	if l.isDisabled {
 		return err
 	}
-	_error(l.pref, err)
+	_error(l.pref, callerStackOffset, err)
 	return err
 }
 
@@ -253,37 +251,37 @@ func (l *Logger) Panic(v ...interface{}) {
 func (l *Logger) Enable(enable bool) { l.isDisabled = !enable }
 
 func _info(name string, v ...interface{}) {
-	mes, timeStr, _, _ := getLogPrefixes(fmt.Sprint(v...))
+	mes, timeStr, _, _ := getLogPrefixes(fmt.Sprint(v...), 0)
 	write(timeStr, name, mes)
 }
 
 func _debug(name string, v ...interface{}) {
-	mes, timeStr, runtimeInfo, _ := getLogPrefixes(fmt.Sprint(v...))
+	mes, timeStr, runtimeInfo, _ := getLogPrefixes(fmt.Sprint(v...), 0)
 	write(timeStr, name, "DEBUG", runtimeInfo, mes)
 }
 
 func _warning(name string, v ...interface{}) {
-	mes, timeStr, runtimeInfo, _ := getLogPrefixes(fmt.Sprint(v...))
+	mes, timeStr, runtimeInfo, _ := getLogPrefixes(fmt.Sprint(v...), 0)
 	write(timeStr, name, "WARNING", runtimeInfo, mes)
 }
 
 func _trace(name string, v ...interface{}) {
-	mes, timeStr, runtimeInfo, methodInfo := getLogPrefixes(fmt.Sprint(v...))
+	mes, timeStr, runtimeInfo, methodInfo := getLogPrefixes(fmt.Sprint(v...), 0)
 	write(timeStr, name, "TRACE", runtimeInfo+methodInfo, mes)
 }
 
-func _error(name string, v ...interface{}) {
-	mes, timeStr, runtimeInfo, methodInfo := getLogPrefixes(fmt.Sprint(v...))
+func _error(name string, callerStackOffset int, v ...interface{}) {
+	mes, timeStr, runtimeInfo, methodInfo := getLogPrefixes(fmt.Sprint(v...), callerStackOffset)
 	write(timeStr, name, "ERROR", runtimeInfo+methodInfo, mes)
 }
 
 func _errorTrace(name string, err error) {
-	mes, timeStr, runtimeInfo, methodInfo := getLogPrefixes(getErrorDetails(err))
+	mes, timeStr, runtimeInfo, methodInfo := getLogPrefixes(getErrorDetails(err), 0)
 	write(timeStr, name, "ERROR", runtimeInfo+methodInfo, mes)
 }
 
 func _panic(name string, v ...interface{}) {
-	mes, timeStr, runtimeInfo, methodInfo := getLogPrefixes(fmt.Sprint(v...))
+	mes, timeStr, runtimeInfo, methodInfo := getLogPrefixes(fmt.Sprint(v...), 0)
 
 	//fmt.Println(timeStr, "PANIC", runtimeInfo+methodInfo, mes)
 	write(timeStr, name, "PANIC", runtimeInfo+methodInfo, mes)
@@ -295,10 +293,10 @@ func getErrorDetails(err error) string {
 	return fmt.Sprintf("%v", err)
 }
 
-func getCallerMethodName() (string, error) {
+func getCallerMethodName(callerStackOffset int) (string, error) {
 	fpcs := make([]uintptr, 1)
 	// Skip 5 levels to get the caller
-	n := runtime.Callers(5, fpcs)
+	n := runtime.Callers(5+callerStackOffset, fpcs)
 	if n == 0 {
 		return "", fmt.Errorf("no caller")
 	}
@@ -311,13 +309,13 @@ func getCallerMethodName() (string, error) {
 	return caller.Name(), nil
 }
 
-func getLogPrefixes(message string) (retMes string, timeStr string, runtimeInfo string, methodInfo string) {
+func getLogPrefixes(message string, callerStackOffset int) (retMes string, timeStr string, runtimeInfo string, methodInfo string) {
 	t := time.Now()
 
-	if _, filename, line, isRuntimeInfoOk := runtime.Caller(3); isRuntimeInfoOk {
+	if _, filename, line, isRuntimeInfoOk := runtime.Caller(3 + callerStackOffset); isRuntimeInfoOk {
 		runtimeInfo = filepath.Base(filename) + ":" + strconv.Itoa(line) + ":"
 
-		if methodName, err := getCallerMethodName(); err == nil {
+		if methodName, err := getCallerMethodName(callerStackOffset); err == nil {
 			methodInfo = "(in " + methodName + "):"
 		}
 	}

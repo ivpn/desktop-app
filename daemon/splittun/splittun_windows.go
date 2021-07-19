@@ -91,10 +91,10 @@ func catchPanic(err *error) {
 
 func checkCallErrResp(retval uintptr, err error, mName string) error {
 	if err != syscall.Errno(0) {
-		return log.ErrorE(fmt.Errorf("%s:  %w", mName, err))
+		return log.ErrorE(fmt.Errorf("%s:  %w", mName, err), 1)
 	}
 	if retval != 1 {
-		return log.ErrorE(fmt.Errorf("Split-Tunnelling operation failed (%s)", mName))
+		return log.ErrorE(fmt.Errorf("Split-Tunnelling operation failed (%s)", mName), 1)
 	}
 	return nil
 }
@@ -159,6 +159,11 @@ func implStart() (err error) {
 	/// It adds new info to internal process tree but not erasing current known PID\PPIDs.
 	/// Operaion fails when 'process monitor' not running
 	retval, _, err = fSplitTun_ProcMonInitRunningApps.Call()
+
+	if err == syscall.ERROR_NO_MORE_FILES {
+		// ignore ERROR_NO_MORE_FILES error. It is Ok after calling of 'SplitTun_ProcMonInitRunningApps'
+		err = syscall.Errno(0)
+	}
 	if err := checkCallErrResp(retval, err, "SplitTun_ProcMonInitRunningApps"); err != nil {
 		return err
 	}
@@ -235,7 +240,7 @@ func implSetConfig(config Config) (err error) {
 	// SET APPS TO SPLIT
 	buff, err := makeRawBuffAppsConfig(config.Apps)
 	if err != nil {
-		return log.ErrorE(fmt.Errorf("failed to set split-tinnelling configuration (apps): %w", err))
+		return log.ErrorE(fmt.Errorf("failed to set split-tinnelling configuration (apps): %w", err), 0)
 	}
 
 	var bufSize uint32 = uint32(len(buff))
@@ -291,7 +296,7 @@ func implGetConfig() (cfg Config, err error) {
 
 	apps, err := parseRawBuffAppsConfig(buff)
 	if err != nil {
-		return Config{}, log.ErrorE(fmt.Errorf("failed to obtain split-tinnelling configuration (apps): %w", err))
+		return Config{}, log.ErrorE(fmt.Errorf("failed to obtain split-tinnelling configuration (apps): %w", err), 0)
 	}
 
 	return Config{Addr: addr, Apps: apps}, nil

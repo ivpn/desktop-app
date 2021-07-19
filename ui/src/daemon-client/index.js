@@ -103,7 +103,7 @@ const daemonResponses = Object.freeze({
   KillSwitchStatusResp: "KillSwitchStatusResp",
   AccountStatusResp: "AccountStatusResp",
 
-  SplitTunnelStatus: "SplitTunnelStatus",
+  SplitTunnelConfig: "SplitTunnelConfig",
 
   WiFiAvailableNetworksResp: "WiFiAvailableNetworksResp",
   WiFiCurrentNetworkResp: "WiFiCurrentNetworkResp",
@@ -377,7 +377,7 @@ async function processResponse(response) {
       store.commit(`vpnState/availableWiFiNetworks`, obj.Networks);
       break;
 
-    case daemonResponses.SplitTunnelStatus:
+    case daemonResponses.SplitTunnelConfig:
       store.commit(`settings/splitTunnelling`, {
         enabled: obj.IsEnabled,
         apps: obj.SplitTunnelApps
@@ -1212,7 +1212,7 @@ async function SplitTunnelSetConfig(IsEnabled, SplitTunnelApps) {
       IsEnabled,
       SplitTunnelApps
     },
-    [daemonResponses.SplitTunnelStatus]
+    [daemonResponses.SplitTunnelConfig]
   );
 }
 

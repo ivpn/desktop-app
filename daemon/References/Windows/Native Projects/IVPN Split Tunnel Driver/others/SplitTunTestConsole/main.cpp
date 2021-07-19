@@ -123,9 +123,6 @@ void doConfigSetSplitApp()
 		if (appPath.length() <= 0)
 			break;
 
-		if (appPath.find(L"\\??\\") != 0)
-			appPath = L"\\??\\" + appPath;
-
 		paths.push_back(appPath);
 	}
 	// C:\Program Files\Mozilla Firefox\firefox.exe

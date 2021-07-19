@@ -102,5 +102,5 @@ func (p *Protocol) OnServersUpdated(serv *apitypes.ServersInfoResponse) {
 
 func (p *Protocol) OnSplitTunnelConfigChanged() {
 	var prefs = p._service.Preferences()
-	p.notifyClients(&types.SplitTunnelStatus{IsEnabled: prefs.IsSplitTunnel, SplitTunnelApps: prefs.SplitTunnelApps})
+	p.notifyClients(&types.SplitTunnelConfig{IsEnabled: prefs.IsSplitTunnel, SplitTunnelApps: prefs.SplitTunnelApps})
 }
