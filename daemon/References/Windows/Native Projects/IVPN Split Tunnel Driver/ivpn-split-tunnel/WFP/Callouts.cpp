@@ -152,20 +152,18 @@ namespace wfp
 
 				auto srcAddr = reinterpret_cast<const IN_ADDR*>(&rawLocalAddr);
 				auto dstAddr = reinterpret_cast<const IN_ADDR*>(&rawRemoteAddr);
-
-				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (on-%s) src:%d.%d.%d.%d dst:%d.%d.%d.%d",
-					inMetaValues->processId,
-					isConnect ? "CONNECT" : "BIND",
-					srcAddr->S_un.S_un_b.s_b1, srcAddr->S_un.S_un_b.s_b2, srcAddr->S_un.S_un_b.s_b3, srcAddr->S_un.S_un_b.s_b4,
-					dstAddr->S_un.S_un_b.s_b1, dstAddr->S_un.S_un_b.s_b2, dstAddr->S_un.S_un_b.s_b3, dstAddr->S_un.S_un_b.s_b4
-					);
-
+				
 				bool isSrcTun = srcAddr->S_un.S_addr == config.IPv4Tunnel.S_un.S_addr;
-
+				
 				if (isConnect)
 				{	// CONNECT
-					bool isDestLocal = LocalAddress(dstAddr);
+					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (IPv4-CONNECT) src:%d.%d.%d.%d dst:%d.%d.%d.%d",
+						inMetaValues->processId,
+						srcAddr->S_un.S_un_b.s_b1, srcAddr->S_un.S_un_b.s_b2, srcAddr->S_un.S_un_b.s_b3, srcAddr->S_un.S_un_b.s_b4,
+						dstAddr->S_un.S_un_b.s_b1, dstAddr->S_un.S_un_b.s_b2, dstAddr->S_un.S_un_b.s_b3, dstAddr->S_un.S_un_b.s_b4
+					);
 
+					bool isDestLocal = LocalAddress(dstAddr);
 					if (!(isSrcTun || !isDestLocal)) {
 						TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Connect SKIPPING: isSrcTun=%d isDestLocal=%d", isSrcTun, isDestLocal);
 						break;
@@ -173,8 +171,12 @@ namespace wfp
 				}
 				else 
 				{	// BIND
-					bool isSrcNull = IN4_IS_ADDR_UNSPECIFIED(srcAddr);
-					
+					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (IPv4-BIND) src:%d.%d.%d.%d",
+						inMetaValues->processId, 
+						srcAddr->S_un.S_un_b.s_b1, srcAddr->S_un.S_un_b.s_b2, srcAddr->S_un.S_un_b.s_b3, srcAddr->S_un.S_un_b.s_b4
+					);
+
+					bool isSrcNull = IN4_IS_ADDR_UNSPECIFIED(srcAddr);					
 					if (!(isSrcNull || isSrcTun))
 					{
 						TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Bind SKIPPING: isSrcTun=%d isSrcNull=%d", isSrcTun, isSrcNull);
@@ -247,19 +249,16 @@ namespace wfp
 
 				bool isSrcTun = IN6_ADDR_EQUAL(srcAddr, &config.IPv6Tunnel);
 							
-				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (on-%s) src:%x:%x:%x:%x:%x:%x:%x:%x dst:%x:%x:%x:%x:%x:%x:%x:%x",
-					inMetaValues->processId,
-					isConnect ? "CONNECT" : "BIND",
-					(srcAddr) ? srcAddr->u.Word[0] : 0, (srcAddr) ? srcAddr->u.Word[1] : 0, (srcAddr) ? srcAddr->u.Word[2] : 0, (srcAddr) ? srcAddr->u.Word[3] : 0,
-					(srcAddr) ? srcAddr->u.Word[4] : 0, (srcAddr) ? srcAddr->u.Word[5] : 0, (srcAddr) ? srcAddr->u.Word[6] : 0, (srcAddr) ? srcAddr->u.Word[7] : 0,
-					(dstAddr) ? dstAddr->u.Word[0] : 0, (dstAddr) ? dstAddr->u.Word[1] : 0, (dstAddr) ? dstAddr->u.Word[2] : 0, (dstAddr) ? dstAddr->u.Word[3] : 0,
-					(dstAddr) ? dstAddr->u.Word[4] : 0, (dstAddr) ? dstAddr->u.Word[5] : 0, (dstAddr) ? dstAddr->u.Word[6] : 0, (dstAddr) ? dstAddr->u.Word[7] : 0
-				);
-
 				if (isConnect)
 				{ // CONNECT
-					bool isDestLocal = LocalAddress(dstAddr);
+					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (IPv6-CONNECT) src:%x:%x:%x:%x:%x:%x:%x:%x dst:%x:%x:%x:%x:%x:%x:%x:%x",
+						inMetaValues->processId,
+						srcAddr->u.Word[0], srcAddr->u.Word[1], srcAddr->u.Word[2], srcAddr->u.Word[3],
+						srcAddr->u.Word[4], srcAddr->u.Word[5], srcAddr->u.Word[6], srcAddr->u.Word[7],
+						dstAddr->u.Word[0], dstAddr->u.Word[1], dstAddr->u.Word[2], dstAddr->u.Word[3],
+						dstAddr->u.Word[4], dstAddr->u.Word[5], dstAddr->u.Word[6], dstAddr->u.Word[7]);
 
+					bool isDestLocal = LocalAddress(dstAddr);
 					if (!(isSrcTun || !isDestLocal)) 
 					{
 						TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Connect (IPv6) SKIPPING: isSrcTun=%d isDestLocal=%d", isSrcTun, isDestLocal);
@@ -268,6 +267,11 @@ namespace wfp
 				}
 				else
 				{ // BIND
+					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (IPv6-BIND) src:%x:%x:%x:%x:%x:%x:%x:%x",
+						inMetaValues->processId,
+						srcAddr->u.Word[0], srcAddr->u.Word[1], srcAddr->u.Word[2], srcAddr->u.Word[3],
+						srcAddr->u.Word[4], srcAddr->u.Word[5], srcAddr->u.Word[6], srcAddr->u.Word[7]);
+
 					bool isSrcNull = IN6_ADDR_EQUAL(srcAddr, &IN6_ADDR_ZERO);
 					if (!(isSrcNull || isSrcTun))
 					{
