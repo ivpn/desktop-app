@@ -75,6 +75,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
+    <TargetName>$(ProjectName) x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -187,6 +188,7 @@
     <ClCompile Include="Firewall.cpp" />
     <ClCompile Include="SplitTunnelling.cpp" />
     <ClCompile Include="WfpFilter.cpp" />
+    <ClCompile Include="WfpFilterSplitTunnelling.cpp"/>
     <ClCompile Include="WfpSubLayer.cpp" />
     <ClCompile Include="WfpProvider.cpp" />
     <ClCompile Include="stdafx.cpp">

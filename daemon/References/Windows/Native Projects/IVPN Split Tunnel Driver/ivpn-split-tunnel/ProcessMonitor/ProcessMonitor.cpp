@@ -19,7 +19,7 @@ void OnCreateProcessNotify(
 		const UNICODE_STRING testPathToSplit2	= RTL_CONSTANT_STRING(L"\\??\\C:\\Windows\\system32\\cmd.exe");
 		const UNICODE_STRING testFNNotAvail		= RTL_CONSTANT_STRING(L"(fileName not available)");
 		
-		DEBUG_PrintElapsedTimeEx(5);
+		DEBUG_PrintElapsedTimeEx(20);
 				
 		// We are keeping in the process tree only the information about processes:
 		// 1. If process path equals to configuration 

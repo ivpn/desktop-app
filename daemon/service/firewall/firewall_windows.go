@@ -391,6 +391,15 @@ func doEnable() (retErr error) {
 				}
 			}*/
 	}
+
+	// register split-tunnelling filters
+
+	// TODO: fix CRASHING WHEN REQUIRED CALLOUTS ARE NOT REGISTERED AT THE CURRENT MOMENT (crash because of blocking ALL communication)
+	// By default filters that reference callouts that have been added but have not yet registered with the filter engine are treated as Block filters.
+	if err := manager.WfpRegisterSplitTunFilters(providerKey, sublayerKey); err != nil {
+		log.Warning(fmt.Errorf("failed to register Split-Tunnelling filters: %w", err))
+	}
+
 	return nil
 }
 
@@ -399,7 +408,7 @@ func doDisable() error {
 	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
 	}
-	if enabled == false {
+	if !enabled {
 		return nil
 	}
 

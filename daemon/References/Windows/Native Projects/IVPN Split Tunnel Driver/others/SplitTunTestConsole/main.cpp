@@ -243,7 +243,7 @@ int main()
 			{
 				doConfigGetSplitApp();
 				continue;
-			}			
+			}
 		}
 		catch (const std::exception& ex)
 		{
@@ -252,7 +252,10 @@ int main()
 		}
 
 		std::wcout << L"Invalid command!" << std::endl;
-		std::wcout << L"Allowed commands:\n connect\n disconnect\n get-state\n clean\n split-start\n split-stop\n pm-start\n pm-stop\n pm-init\n get-config\n set-addr\n get-addr\n set-app\n get-app" << std::endl;
+		std::wcout << L"Allowed commands:\n\
+ connect\n disconnect\n get-state\n clean\n split-start\n split-stop\n\
+ pm-start\n pm-stop\n pm-init\n get-config\n set-addr\n get-addr\n\
+ set-app\n get-app\n" << std::endl;
 
 	}
 

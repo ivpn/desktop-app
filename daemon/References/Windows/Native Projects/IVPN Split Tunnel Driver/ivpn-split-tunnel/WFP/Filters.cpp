@@ -17,9 +17,9 @@ namespace wfp
 		filter.displayData.name = const_cast<wchar_t*>(filterName);
 		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
 		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT;
-		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_FW_PROVIDER);
+		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
 		filter.layerKey = FWPM_LAYER_ALE_BIND_REDIRECT_V4;
-		filter.subLayerKey = KEY_IVPN_FW_SUBLAYER;
+		filter.subLayerKey = KEY_IVPN_ST_SUBLAYER;
 		filter.weight.type = FWP_UINT64;
 		filter.weight.uint64 = const_cast<UINT64*>(&weight);
 		filter.action.type = FWP_ACTION_CALLOUT_UNKNOWN;
@@ -66,9 +66,9 @@ namespace wfp
 		filter.displayData.name = const_cast<wchar_t*>(filterName);
 		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
 		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT;
-		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_FW_PROVIDER);
+		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
 		filter.layerKey = FWPM_LAYER_ALE_CONNECT_REDIRECT_V4;
-		filter.subLayerKey = KEY_IVPN_FW_SUBLAYER;
+		filter.subLayerKey = KEY_IVPN_ST_SUBLAYER;
 		filter.weight.type = FWP_UINT64;
 		filter.weight.uint64 = const_cast<UINT64*>(&weight);
 
@@ -118,9 +118,9 @@ namespace wfp
 		filter.displayData.name = const_cast<wchar_t*>(filterName);
 		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
 		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT;
-		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_FW_PROVIDER);
+		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
 		filter.layerKey = FWPM_LAYER_ALE_BIND_REDIRECT_V6;
-		filter.subLayerKey = KEY_IVPN_FW_SUBLAYER;
+		filter.subLayerKey = KEY_IVPN_ST_SUBLAYER;
 		filter.weight.type = FWP_UINT64;
 		filter.weight.uint64 = const_cast<UINT64*>(&weight);
 		filter.action.type = FWP_ACTION_CALLOUT_UNKNOWN;
@@ -166,9 +166,9 @@ namespace wfp
 		filter.displayData.name = const_cast<wchar_t*>(filterName);
 		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
 		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT;
-		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_FW_PROVIDER);
+		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
 		filter.layerKey = FWPM_LAYER_ALE_CONNECT_REDIRECT_V6;
-		filter.subLayerKey = KEY_IVPN_FW_SUBLAYER;
+		filter.subLayerKey = KEY_IVPN_ST_SUBLAYER;
 		filter.weight.type = FWP_UINT64;
 		filter.weight.uint64 = const_cast<UINT64*>(&weight);
 
@@ -202,5 +202,51 @@ namespace wfp
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) failed':  %!STATUS!", status);
 
 		return status;
+	}
+
+	NTSTATUS RegisterFilters(HANDLE wfpEngineHandle)
+	{
+		NTSTATUS status;
+
+		status = RegisterFilterBindRedirectIpv4(wfpEngineHandle);
+		if (!NT_SUCCESS(status))
+			return status;
+
+		status = RegisterFilterConnectRedirectIpv4(wfpEngineHandle);
+		if (!NT_SUCCESS(status))
+			return status;
+
+		status = RegisterFilterBindRedirectIpv6(wfpEngineHandle);
+		if (!NT_SUCCESS(status))
+			return status;
+
+		status = RegisterFilterConnectRedirectIpv6(wfpEngineHandle);
+		if (!NT_SUCCESS(status))
+			return status;
+
+		return status;
+	}
+
+	NTSTATUS UnRegisterFilters(HANDLE wfpEngineHandle)
+	{
+		NTSTATUS ret = STATUS_SUCCESS, status;
+
+		status = UnRegisterFilterBindRedirectIpv4(wfpEngineHandle);
+		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
+			ret = status;
+
+		status = UnRegisterFilterConnectRedirectIpv4(wfpEngineHandle);
+		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
+			ret = status;
+
+		status = UnRegisterFilterBindRedirectIpv6(wfpEngineHandle);
+		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
+			ret = status;
+
+		status = UnRegisterFilterConnectRedirectIpv6(wfpEngineHandle);
+		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
+			ret = status;
+				
+		return ret;
 	}
 }

@@ -232,6 +232,48 @@ extern "C" {
 		return FwpmFilterDeleteById0(engineHandle, id);
 	}
 
+	DWORD FindMatchingCallouts(
+		HANDLE engine,
+		GUID providerKey,
+		GUID layerKey,
+		FWPM_CALLOUT0*** callouts,
+		UINT32* numCallouts
+	)
+	{
+		DWORD result = ERROR_SUCCESS;
+		HANDLE enumHandle = NULL;
+		FWPM_CALLOUT_ENUM_TEMPLATE0 enumTempl;
+
+		memset(&enumTempl, 0, sizeof(enumTempl));
+		enumTempl.layerKey = layerKey;
+		enumTempl.providerKey = new GUID();
+		*(enumTempl.providerKey) = providerKey;
+
+		result = FwpmCalloutCreateEnumHandle0(
+			engine,
+			&enumTempl,
+			&enumHandle
+		);
+
+		if (result != ERROR_SUCCESS)
+		{
+			delete enumTempl.providerKey;
+			return result;
+		}
+
+		result = FwpmCalloutEnum0(engine,
+			enumHandle,
+			INFINITE,			
+			callouts,
+			numCallouts
+		);
+
+		delete enumTempl.providerKey;
+		FwpmCalloutDestroyEnumHandle0(engine, enumHandle);
+
+		return result;
+	}
+
 	DWORD FindMatchingFilters(
 		HANDLE engine,
 		GUID providerKey,
@@ -279,6 +321,7 @@ extern "C" {
 
 	EXPORT DWORD _cdecl WfpFiltersDeleteByProviderKey(HANDLE engineHandle, GUID providerKey, GUID layerKey)
 	{
+		// Delete all filters by providerKey+layerKey
 		UINT32 numFilters = 0;
 		FWPM_FILTER0** filters = 0;
 		DWORD result;
@@ -303,6 +346,32 @@ extern "C" {
 		}
 
 		FwpmFreeMemory0((void**)&filters);
+
+		// Delete all callouts by providerKey+layerKey
+		UINT32 numCallouts = 0;
+		FWPM_CALLOUT0** callouts = 0;
+		
+		result = FindMatchingCallouts(engineHandle, providerKey, layerKey, &callouts, &numCallouts);
+		if (result != ERROR_SUCCESS)
+			return result;
+
+		for (UINT32 i = 0; i < numCallouts; i++)
+		{
+			FWPM_CALLOUT0* callout = callouts[i];
+			if (callout->providerKey != NULL &&
+				*(callout->providerKey) == providerKey)
+			{
+				result = FwpmCalloutDeleteById0(engineHandle, callout->calloutId);
+				if (result != ERROR_SUCCESS)
+				{
+					FwpmFreeMemory0((void**)&callouts);
+					return result;
+				}
+			}
+		}
+
+		FwpmFreeMemory0((void**)&callouts);
+
 		return ERROR_SUCCESS;
 
 	}

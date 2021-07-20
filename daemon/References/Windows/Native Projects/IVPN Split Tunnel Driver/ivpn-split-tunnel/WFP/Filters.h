@@ -10,9 +10,13 @@
 
 namespace wfp
 {
+	//
+	// 'Callout' filters for splitting
+	//
+	/*
 	NTSTATUS RegisterFilterBindRedirectIpv4(HANDLE wfpEngineHandle);
 	NTSTATUS UnRegisterFilterBindRedirectIpv4(HANDLE wfpEngineHandle);
-
+	
 	NTSTATUS RegisterFilterConnectRedirectIpv4(HANDLE wfpEngineHandle);
 	NTSTATUS UnRegisterFilterConnectRedirectIpv4(HANDLE wfpEngineHandle);
 
@@ -21,5 +25,9 @@ namespace wfp
 
 	NTSTATUS RegisterFilterConnectRedirectIpv6(HANDLE wfpEngineHandle);
 	NTSTATUS UnRegisterFilterConnectRedirectIpv6(HANDLE wfpEngineHandle);
+	*/
+
+	NTSTATUS RegisterFilters(HANDLE wfpEngineHandle);
+	NTSTATUS UnRegisterFilters(HANDLE wfpEngineHandle);
 }
 

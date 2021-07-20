@@ -24,14 +24,13 @@ namespace wfp
 		}
 
 		// TODO: do we need transaction start here? ( status = FwpmTransactionBegin0(gEngineHandle, 0); ...)
-		//auto f = []() { gEngineHandle = 0; };
 
 		// --------------------------------------------
 		// Provider + layoults
 		// --------------------------------------------
-		
+
 		FWPM_PROVIDER0 provider = { 0 };
-		provider.providerKey = KEY_IVPN_FW_PROVIDER;
+		provider.providerKey = KEY_IVPN_ST_PROVIDER;
 		provider.displayData.name = const_cast<wchar_t*>(L"IVPN Split Tunnel");
 		provider.displayData.description = const_cast<wchar_t*>(L"IVPN Split Tunnel filters + callouts");
 
@@ -44,7 +43,7 @@ namespace wfp
 		FWPM_SUBLAYER subLayer;
 		RtlZeroMemory(&subLayer, sizeof(FWPM_SUBLAYER));
 
-		subLayer.subLayerKey = KEY_IVPN_FW_SUBLAYER;
+		subLayer.subLayerKey = KEY_IVPN_ST_SUBLAYER;
 		subLayer.displayData.name = L"IVPN Split Tunnel sub-Layer";
 		subLayer.displayData.description = L"IVPN Split Tunnel sub-Layer for use callouts";
 		subLayer.flags = 0;
@@ -55,7 +54,7 @@ namespace wfp
 		{
 			return status;
 		}
-		
+
 		// --------------------------------------------
 		// callouts
 		// --------------------------------------------
@@ -74,35 +73,13 @@ namespace wfp
 		// --------------------------------------------
 		// filters
 		// --------------------------------------------
-
-		status = RegisterFilterBindRedirectIpv4(gWfpEngineHandle);
+		status = RegisterFilters(gWfpEngineHandle);
 		if (!NT_SUCCESS(status))
 		{
 			Stop();
 			return status;
 		}
-
-		status = RegisterFilterConnectRedirectIpv4(gWfpEngineHandle);
-		if (!NT_SUCCESS(status))
-		{
-			Stop();
-			return status;
-		}
-
-		status = RegisterFilterBindRedirectIpv6(gWfpEngineHandle);
-		if (!NT_SUCCESS(status))
-		{
-			Stop();
-			return status;
-		}
-
-		status = RegisterFilterConnectRedirectIpv6(gWfpEngineHandle);
-		if (!NT_SUCCESS(status))
-		{
-			Stop();
-			return status;
-		}
-
+				
 		TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Splitting started");
 		return status;
 	}
@@ -114,19 +91,7 @@ namespace wfp
 
 		NTSTATUS ret = STATUS_SUCCESS, status;
 		
-		status = UnRegisterFilterBindRedirectIpv4(gWfpEngineHandle);
-		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))			
-			ret = status;
-
-		status = UnRegisterFilterConnectRedirectIpv4(gWfpEngineHandle);
-		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))			
-			ret = status;
-
-		status = UnRegisterFilterBindRedirectIpv6(gWfpEngineHandle);
-		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
-			ret = status;
-
-		status = UnRegisterFilterConnectRedirectIpv6(gWfpEngineHandle);
+		status = UnRegisterFilters(gWfpEngineHandle);
 		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
 			ret = status;
 
@@ -137,6 +102,7 @@ namespace wfp
 		status = FwpmEngineClose0(gWfpEngineHandle);
 		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))			
 			ret = status;
+				
 		gWfpEngineHandle = NULL;
 
 		TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Splitting stopped (%!STATUS!)", ret);

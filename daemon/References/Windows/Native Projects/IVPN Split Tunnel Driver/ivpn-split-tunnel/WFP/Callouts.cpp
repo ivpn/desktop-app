@@ -53,7 +53,7 @@ namespace wfp
 			_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 		)
 	{
-		DEBUG_PrintElapsedTimeEx(5);
+		DEBUG_PrintElapsedTimeEx(20);
 
 		UNREFERENCED_PARAMETER(layerData);
 		UNREFERENCED_PARAMETER(flowContext);
@@ -330,6 +330,74 @@ namespace wfp
 		}
 	}
 
+	void CalloutClassifyAuthConnectOrRecv
+	(
+		_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
+		_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
+		_Inout_opt_ void* layerData,
+		_In_opt_ const void* classifyContext,
+		_In_ const FWPS_FILTER1* filter,
+		_In_ UINT64 flowContext,
+		_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
+	)
+	{
+		DEBUG_PrintElapsedTimeEx(20);
+
+		UNREFERENCED_PARAMETER(classifyContext);
+		UNREFERENCED_PARAMETER(filter);
+		UNREFERENCED_PARAMETER(layerData);
+		UNREFERENCED_PARAMETER(flowContext);
+
+		NT_ASSERT(inFixedValues);
+		NT_ASSERT(inMetaValues);
+		NT_ASSERT(classifyOut);
+		NT_ASSERT(
+			inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V4 ||
+			inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 ||
+			inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4 ||
+			inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6);
+
+		if (!(classifyOut->rights & FWPS_RIGHT_ACTION_WRITE))
+		{
+			//	classifyOut->actionType: specifies the suggested action to be taken as determined by the callout.
+			//	If the FWPS_RIGHT_ACTION_WRITE flag is not set, a callout driver should not write to this member 
+			//	unless it is vetoing an FWP_ACTION_PERMIT action that was previously returned by a higher weight filter in the filter engine.
+			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) SKIPPING: FWPS_RIGHT_ACTION_WRITE not set.");
+			return;
+		}
+
+		if (classifyOut->actionType == FWP_ACTION_NONE)
+			classifyOut->actionType = FWP_ACTION_CONTINUE;
+
+		if (!FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_PROCESS_ID))
+		{
+			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) SKIPPING: Failed to classify connection because PID was not provided");
+			// TODO: what we should do for the connections when we can not determine PID?
+			return;
+		}
+
+		// Checking: is it 'known' process
+		// ProcessMonitor keep information only about processes that have to be applied to split-tunnel
+		prc::ProcessInfo* pi = prc::FindProcessInfoForPid((HANDLE)inMetaValues->processId);
+
+		if (pi == NULL)
+		{
+			//TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) UNKNOWN PID: 0x%llX (on-%s [%s])", inMetaValues->processId,
+			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6) ? "CONNECT" : "BIND",
+			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6)? "IPv6" : "IPv4");
+			return;
+		}
+		else
+		{
+			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX (%s [%s])", inMetaValues->processId,
+				(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6) ? "AUTH_CONNECT" : "AUTH_RECV_ACCEPT",
+				(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6) ? "IPv6" : "IPv4");
+		}
+		
+		classifyOut->actionType = FWP_ACTION_PERMIT;
+		classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;		
+	}
+
 	/// <summary>
 	/// The filter engine calls this function to notify the callout driver about events 
 	/// that are associated with the callout.
@@ -356,6 +424,26 @@ namespace wfp
 	NTSTATUS RegisterCallout
 	(
 		PDEVICE_OBJECT wdfDevObject,
+		FWPS_CALLOUT_CLASSIFY_FN1 calloutClassifyFunc,
+		const GUID* calloutKey
+	)
+	{
+		FWPS_CALLOUT1 sCallout = { 0 };
+
+		sCallout.calloutKey = *calloutKey;
+		sCallout.classifyFn = calloutClassifyFunc;
+		sCallout.notifyFn = OnCalloutNotify;
+		sCallout.flowDeleteFn = NULL;
+
+		return FwpsCalloutRegister1(wdfDevObject, &sCallout, NULL);
+	}
+
+	/// <summary>
+	/// AddAndRegisterCallout
+	/// </summary>
+	NTSTATUS AddAndRegisterCallout
+	(
+		PDEVICE_OBJECT wdfDevObject,
 		HANDLE wfpEngineHandle,
 		FWPS_CALLOUT_CLASSIFY_FN1 calloutClassifyFunc,
 		const GUID* calloutKey,
@@ -369,8 +457,7 @@ namespace wfp
 		mCallout.calloutKey = *calloutKey;
 		mCallout.displayData.name = const_cast<wchar_t*>(calloutName);
 		mCallout.displayData.description = const_cast<wchar_t*>(calloutDescription);
-		mCallout.flags = FWPM_CALLOUT_FLAG_USES_PROVIDER_CONTEXT;
-		mCallout.providerKey = const_cast<GUID*>(&KEY_IVPN_FW_PROVIDER);
+		mCallout.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
 		mCallout.applicableLayer = *applicableLayerKey;
 
 		auto status = FwpmCalloutAdd0(wfpEngineHandle, &mCallout, NULL, NULL);
@@ -378,14 +465,7 @@ namespace wfp
 		if (!NT_SUCCESS(status))
 			return status;
 
-		FWPS_CALLOUT1 sCallout = { 0 };
-
-		sCallout.calloutKey = *calloutKey;
-		sCallout.classifyFn = calloutClassifyFunc;
-		sCallout.notifyFn = OnCalloutNotify;
-		sCallout.flowDeleteFn = NULL;
-
-		return FwpsCalloutRegister1(wdfDevObject, &sCallout, NULL);
+		return RegisterCallout(wdfDevObject, calloutClassifyFunc, calloutKey);
 	}
 
 	/// <summary>
@@ -402,8 +482,16 @@ namespace wfp
 		HANDLE wfpEngineHandle
 	)
 	{
+		//
+		// REDIRECTING LAYERS
+		// 
+		// FWPM_LAYER_ALE_BIND_REDIRECT_V4
+		// FWPM_LAYER_ALE_BIND_REDIRECT_V6
+		// FWPM_LAYER_ALE_CONNECT_REDIRECT_V4,
+		// FWPM_LAYER_ALE_CONNECT_REDIRECT_V6
+		
 		// IPv4
-		auto status = RegisterCallout(
+		auto status = AddAndRegisterCallout(
 			wdfDevObject,
 			wfpEngineHandle,
 			CalloutClassifyConnectOrBind,
@@ -415,11 +503,11 @@ namespace wfp
 
 		if (!NT_SUCCESS(status))
 		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V4':  %!STATUS!", status);
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) AddAndRegisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V4':  %!STATUS!", status);
 			return status;
 		}
 
-		status = RegisterCallout(
+		status = AddAndRegisterCallout(
 			wdfDevObject,
 			wfpEngineHandle,
 			CalloutClassifyConnectOrBind,
@@ -431,12 +519,12 @@ namespace wfp
 		 
 		if (!NT_SUCCESS(status))
 		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4':  %!STATUS!", status);
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) AddAndRegisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4':  %!STATUS!", status);
 			return status;
 		}
 
 		// IPv6
-		status = RegisterCallout(
+		status = AddAndRegisterCallout(
 			wdfDevObject,
 			wfpEngineHandle,
 			CalloutClassifyConnectOrBind,
@@ -448,11 +536,11 @@ namespace wfp
 
 		if (!NT_SUCCESS(status))
 		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V6':  %!STATUS!", status);
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) AddAndRegisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V6':  %!STATUS!", status);
 			return status;
 		}
 
-		status = RegisterCallout(
+		status = AddAndRegisterCallout(
 			wdfDevObject,
 			wfpEngineHandle,
 			CalloutClassifyConnectOrBind,
@@ -464,10 +552,61 @@ namespace wfp
 
 		if (!NT_SUCCESS(status))
 		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6':  %!STATUS!", status);
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) AddAndRegisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6':  %!STATUS!", status);
 			return status;
 		}
 		 
+		//
+		// ALE AUTH LAYERS
+		// 
+		// FWPM_LAYER_ALE_AUTH_CONNECT_V4
+		// FWPM_LAYER_ALE_AUTH_CONNECT_V6
+		// FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4
+		// FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6
+
+		status = RegisterCallout(
+			wdfDevObject,			
+			CalloutClassifyAuthConnectOrRecv,
+			&KEY_CALLOUT_ALE_AUTH_CONNECT_V4
+		);
+		if (!NT_SUCCESS(status))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_AUTH_CONNECT_V4':  %!STATUS!", status);
+			return status;
+		}
+
+		status = RegisterCallout(
+			wdfDevObject,
+			CalloutClassifyAuthConnectOrRecv,
+			&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4			
+		);
+		if (!NT_SUCCESS(status))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4':  %!STATUS!", status);
+			return status;
+		}
+
+		status = RegisterCallout(
+			wdfDevObject,
+			CalloutClassifyAuthConnectOrRecv,
+			&KEY_CALLOUT_ALE_AUTH_CONNECT_V6
+		);
+		if (!NT_SUCCESS(status))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_AUTH_CONNECT_V6':  %!STATUS!", status);
+			return status;
+		}
+
+		status = RegisterCallout(
+			wdfDevObject,
+			CalloutClassifyAuthConnectOrRecv,
+			&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6
+		);
+		if (!NT_SUCCESS(status))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6':  %!STATUS!", status);
+			return status;
+		}
 		return status;
 	}
 
@@ -476,10 +615,14 @@ namespace wfp
 		NTSTATUS ret = STATUS_SUCCESS;
 		NTSTATUS s = STATUS_SUCCESS;
 
+		//
+		// REDIRECTING LAYERS
+		// 
+
 		s = UnregisterCallout(&KEY_CALLOUT_ALE_BIND_REDIRECT_V4);
 		if (!NT_SUCCESS(s))
 		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V4':  %!STATUS!", s);
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_BIND_REDIRECT_V4':  %!STATUS!", s);
 			ret = s;
 		}
 
@@ -503,7 +646,38 @@ namespace wfp
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6':  %!STATUS!", s);
 			ret = s;
 		}
-						
+			
+		//
+		// ALE AUTH LAYERS
+		// 
+
+		s = UnregisterCallout(&KEY_CALLOUT_ALE_AUTH_CONNECT_V4);
+		if (!NT_SUCCESS(s))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_AUTH_CONNECT_V4':  %!STATUS!", s);
+			ret = s;
+		}
+
+		s = UnregisterCallout(&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4);
+		if (!NT_SUCCESS(s))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4':  %!STATUS!", s);
+			ret = s;
+		}
+
+		s = UnregisterCallout(&KEY_CALLOUT_ALE_AUTH_CONNECT_V6);
+		if (!NT_SUCCESS(s))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_AUTH_CONNECT_V6':  %!STATUS!", s);
+			ret = s;
+		}
+
+		s = UnregisterCallout(&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6);
+		if (!NT_SUCCESS(s))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6':  %!STATUS!", s);
+			ret = s;
+		}
 		return ret;
 	}
 }

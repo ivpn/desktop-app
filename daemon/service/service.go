@@ -284,7 +284,7 @@ func (s *Service) OnControlConnectionClosed() (isServiceMustBeClosed bool, err e
 	// disable firewall if it not persistant
 	if !s._preferences.IsFwPersistant {
 		log.Info("Control connection was closed. Disabling firewall.")
-		err = firewall.SetEnabled(false)
+		err = s.SetKillSwitchState(false)
 	}
 	return isServiceMustBeClosed, err
 }
@@ -631,17 +631,18 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 		// Ensure that routing-change detector is stopped (we do not need it when VPN disconnected)
 		s._netChangeDetector.Stop()
 
-		// notify firewall that client is disconnected
-		err := firewall.ClientDisconnected()
-		if err != nil {
-			log.Error("(stopping) error on notifying FW about disconnected client:", err)
-		}
-
+		// disabling Split-Tunnelling
 		if splittun.IsConnectted() {
 			err := splittun.StopAndClean()
 			if err != nil {
 				log.Error("(stopping) error on stopping Split-Tunnelling:", err)
 			}
+		}
+
+		// notify firewall that client is disconnected
+		err := firewall.ClientDisconnected()
+		if err != nil {
+			log.Error("(stopping) error on notifying FW about disconnected client:", err)
 		}
 
 		// when we were requested to enable firewall for this connection
