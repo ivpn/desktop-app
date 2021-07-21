@@ -36,18 +36,18 @@ import (
 
 var (
 	fSplitTun_Connect                *syscall.LazyProc
-	fSplitTun_Disconnect             *syscall.LazyProc
 	fSplitTun_StopAndClean           *syscall.LazyProc
 	fSplitTun_SplitStart             *syscall.LazyProc
-	fSplitTun_SplitStop              *syscall.LazyProc
 	fSplitTun_GetState               *syscall.LazyProc
 	fSplitTun_ConfigSetAddresses     *syscall.LazyProc
 	fSplitTun_ConfigGetAddresses     *syscall.LazyProc
 	fSplitTun_ConfigSetSplitAppRaw   *syscall.LazyProc
 	fSplitTun_ConfigGetSplitAppRaw   *syscall.LazyProc
 	fSplitTun_ProcMonInitRunningApps *syscall.LazyProc
-	fSplitTun_ProcMonStop            *syscall.LazyProc
 	//fSplitTun_ProcMonStart           *syscall.LazyProc
+	//fSplitTun_ProcMonStop            *syscall.LazyProc
+	//fSplitTun_Disconnect             *syscall.LazyProc
+	//fSplitTun_SplitStop              *syscall.LazyProc
 )
 
 // Initialize doing initialization stuff (called on application start)
@@ -63,18 +63,18 @@ func implInitialize() error {
 	dll := syscall.NewLazyDLL(wfpDllPath)
 
 	fSplitTun_Connect = dll.NewProc("SplitTun_Connect")
-	fSplitTun_Disconnect = dll.NewProc("SplitTun_Disconnect")
 	fSplitTun_StopAndClean = dll.NewProc("SplitTun_StopAndClean")
-	//fSplitTun_ProcMonStart = dll.NewProc("SplitTun_ProcMonStart")
-	fSplitTun_ProcMonStop = dll.NewProc("SplitTun_ProcMonStop")
 	fSplitTun_ProcMonInitRunningApps = dll.NewProc("SplitTun_ProcMonInitRunningApps")
 	fSplitTun_SplitStart = dll.NewProc("SplitTun_SplitStart")
-	fSplitTun_SplitStop = dll.NewProc("SplitTun_SplitStop")
 	fSplitTun_GetState = dll.NewProc("SplitTun_GetState")
 	fSplitTun_ConfigSetAddresses = dll.NewProc("SplitTun_ConfigSetAddresses")
 	fSplitTun_ConfigGetAddresses = dll.NewProc("SplitTun_ConfigGetAddresses")
 	fSplitTun_ConfigSetSplitAppRaw = dll.NewProc("fSplitTun_ConfigSetSplitAppRaw")
 	fSplitTun_ConfigGetSplitAppRaw = dll.NewProc("fSplitTun_ConfigGetSplitAppRaw")
+	//fSplitTun_ProcMonStart = dll.NewProc("SplitTun_ProcMonStart")
+	//fSplitTun_ProcMonStop = dll.NewProc("SplitTun_ProcMonStop")
+	//fSplitTun_Disconnect = dll.NewProc("SplitTun_Disconnect")
+	//fSplitTun_SplitStop = dll.NewProc("SplitTun_SplitStop")
 	return nil
 }
 
@@ -111,15 +111,6 @@ func implConnect() (err error) {
 	if retval != 1 {
 		return fmt.Errorf("Split-Tunnelling operation failed (SplitTun_Connect)")
 	}
-	return nil
-}
-func implDisconnect() (err error) {
-	defer catchPanic(&err)
-	retval, _, err := fSplitTun_Disconnect.Call()
-	if err := checkCallErrResp(retval, err, "SplitTun_Disconnect"); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -165,23 +156,6 @@ func implStart() (err error) {
 		err = syscall.Errno(0)
 	}
 	if err := checkCallErrResp(retval, err, "SplitTun_ProcMonInitRunningApps"); err != nil {
-		return err
-	}
-
-	return nil
-}
-func implStop() (err error) {
-	defer catchPanic(&err)
-
-	// stop splitting
-	retval, _, err := fSplitTun_SplitStop.Call()
-	if err := checkCallErrResp(retval, err, "SplitTun_SplitStop"); err != nil {
-		return err
-	}
-
-	// stop process monitor
-	retval, _, err = fSplitTun_ProcMonStop.Call()
-	if err := checkCallErrResp(retval, err, "SplitTun_ProcMonStop"); err != nil {
 		return err
 	}
 
@@ -396,3 +370,33 @@ func parseRawBuffAppsConfig(bytesArr []byte) (apps ConfigApps, err error) {
 
 	return ConfigApps{ImagesPathToSplit: files}, nil
 }
+
+/*
+func implDisconnect() (err error) {
+	defer catchPanic(&err)
+	retval, _, err := fSplitTun_Disconnect.Call()
+	if err := checkCallErrResp(retval, err, "SplitTun_Disconnect"); err != nil {
+		return err
+	}
+
+	return nil
+}*/
+
+/*
+func implStop() (err error) {
+	defer catchPanic(&err)
+
+	// stop splitting
+	retval, _, err := fSplitTun_SplitStop.Call()
+	if err := checkCallErrResp(retval, err, "SplitTun_SplitStop"); err != nil {
+		return err
+	}
+
+	// stop process monitor
+	retval, _, err = fSplitTun_ProcMonStop.Call()
+	if err := checkCallErrResp(retval, err, "SplitTun_ProcMonStop"); err != nil {
+		return err
+	}
+
+	return nil
+}*/

@@ -33,14 +33,21 @@ import (
 func WfpRegisterSplitTunFilters(
 	engine syscall.Handle,
 	providerGUID syscall.GUID,
-	subLayerGUID syscall.GUID) (err error) {
+	subLayerGUID syscall.GUID,
+	isPersistant bool) (err error) {
+
+	var isPersistantDW uint32
+	if isPersistant {
+		isPersistantDW = 1
+	}
 
 	defer catchPanic(&err)
 
 	retval, _, err := fWfpRegisterSplitTunFilters.Call(
 		uintptr(engine),
 		uintptr(unsafe.Pointer(&providerGUID)),
-		uintptr(unsafe.Pointer(&subLayerGUID)))
+		uintptr(unsafe.Pointer(&subLayerGUID)),
+		uintptr(isPersistantDW))
 
 	if err != syscall.Errno(0) {
 		return err

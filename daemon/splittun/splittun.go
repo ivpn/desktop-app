@@ -108,20 +108,13 @@ func Connect() error {
 
 	return doConnect()
 }
-func Disconnect() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: disconnecting")
-	isConnected = false
-	return implDisconnect()
-}
 
 func StopAndClean() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	log.Info("Split-Tunnelling: disabling")
+
 	return implStopAndClean()
 }
 
@@ -153,10 +146,22 @@ func Start() error {
 	log.Info("Split-Tunnelling: starting")
 	return implStart()
 }
+
+/*
+func Disconnect() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	log.Info("Split-Tunnelling: disconnecting")
+	isConnected = false
+	return implDisconnect()
+}*/
+
+/*
 func Stop() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	log.Info("Split-Tunnelling: stopping")
 	return implStop()
-}
+}*/

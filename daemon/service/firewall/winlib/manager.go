@@ -55,7 +55,6 @@ type SubLayer struct {
 	providerKey   syscall.GUID
 	ddName        string // DisplayData Name
 	ddDescription string // DisplayData Description
-	//weight        uint32
 	isPersistence bool
 }
 
@@ -64,13 +63,12 @@ func CreateSubLayer(
 	_key syscall.GUID,
 	_providerKey syscall.GUID,
 	_ddName string, _ddDescription string,
-	_weight uint32, _isPersistence bool) SubLayer {
+	_isPersistence bool) SubLayer {
 	return SubLayer{
 		key:           _key,
 		providerKey:   _providerKey,
 		ddName:        _ddName,
 		ddDescription: _ddDescription,
-		//weight:        _weight,
 		isPersistence: _isPersistence}
 }
 
@@ -358,11 +356,12 @@ func (m *Manager) DeleteFilterByProviderKey(providerKey syscall.GUID, layerKey s
 
 func (m *Manager) WfpRegisterSplitTunFilters(
 	providerGUID syscall.GUID,
-	subLayerGUID syscall.GUID) (err error) {
+	subLayerGUID syscall.GUID,
+	isPersistant bool) (err error) {
 
 	if !m.isInitialized() {
 		return errors.New("FW engine not initialized")
 	}
 
-	return WfpRegisterSplitTunFilters(m.engine, providerGUID, subLayerGUID)
+	return WfpRegisterSplitTunFilters(m.engine, providerGUID, subLayerGUID, isPersistant)
 }

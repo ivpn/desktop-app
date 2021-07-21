@@ -34,10 +34,6 @@ func implConnect() error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for Linux")
 }
 
-func implDisconnect() error {
-	return nil
-}
-
 func implStopAndClean() error {
 	return nil
 }
@@ -54,8 +50,5 @@ func implGetConfig() (Config, error) {
 }
 
 func implStart() error {
-	return nil
-}
-func implStop() error {
 	return nil
 }

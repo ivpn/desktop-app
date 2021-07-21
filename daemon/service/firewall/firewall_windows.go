@@ -37,6 +37,14 @@ import (
 var (
 	providerKey = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x01}}
 	sublayerKey = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x02}}
+	//  Using separate subLayer for Split-Tunnelling filters (which allow all communications for splitted applications)
+	//
+	// 	We need it to be able to use filter flag FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED - the filter  will permit everything until driver will not register a callout
+	// 	But since we using separate subLayer for this filters (independent from default IVPN Firewall subLayer) - connection can be blocked by IVPN firewall
+	//
+	// 	Note: We do not use FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT for split-tunnelling filters (in sublayerSplitTunKey), because
+	//		FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED + FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT will permit all connections (will ignore IVPN firewall blocking rules)
+	sublayerSplitTunKey = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x03}}
 
 	v4Layers = []syscall.GUID{winlib.FwpmLayerAleAuthConnectV4, winlib.FwpmLayerAleAuthRecvAcceptV4}
 	v6Layers = []syscall.GUID{winlib.FwpmLayerAleAuthConnectV6, winlib.FwpmLayerAleAuthRecvAcceptV6}
@@ -267,7 +275,8 @@ func doEnable() (retErr error) {
 	}
 
 	provider := winlib.CreateProvider(providerKey, providerDName, "", isPersistant)
-	sublayer := winlib.CreateSubLayer(sublayerKey, providerKey, sublayerDName, "", 2300, isPersistant)
+	sublayer := winlib.CreateSubLayer(sublayerKey, providerKey, sublayerDName, "", isPersistant)
+	sublayerSplitTun := winlib.CreateSubLayer(sublayerSplitTunKey, providerKey, sublayerDName, "", isPersistant)
 
 	// add provider
 	pinfo, err := manager.GetProviderInfo(providerKey)
@@ -287,6 +296,9 @@ func doEnable() (retErr error) {
 	}
 	if !installed {
 		if err = manager.AddSubLayer(sublayer); err != nil {
+			return fmt.Errorf("failed to add sublayer: %w", err)
+		}
+		if err = manager.AddSubLayer(sublayerSplitTun); err != nil {
 			return fmt.Errorf("failed to add sublayer: %w", err)
 		}
 	}
@@ -392,11 +404,13 @@ func doEnable() (retErr error) {
 			}*/
 	}
 
-	// register split-tunnelling filters
-
-	// TODO: fix CRASHING WHEN REQUIRED CALLOUTS ARE NOT REGISTERED AT THE CURRENT MOMENT (crash because of blocking ALL communication)
-	// By default filters that reference callouts that have been added but have not yet registered with the filter engine are treated as Block filters.
-	if err := manager.WfpRegisterSplitTunFilters(providerKey, sublayerKey); err != nil {
+	// Register split-tunnelling filters
+	//
+	// Split-Tunnelling filters using separate sub-layer (sublayerSplitTunKey) and using flag FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED (the filter will permit everything until driver will not register a callout)
+	// But since we using separate subLayer for this filters (independent from default IVPN Firewall subLayer) - connection can be blocked by IVPN firewall
+	//
+	// All filters will be erased on FW off (by a call 'manager.DeleteFilterByProviderKey(providerKey, l)')
+	if err := manager.WfpRegisterSplitTunFilters(providerKey, sublayerSplitTunKey, isPersistant); err != nil {
 		log.Warning(fmt.Errorf("failed to register Split-Tunnelling filters: %w", err))
 	}
 
@@ -433,6 +447,9 @@ func doDisable() error {
 	if installed {
 		if err := manager.DeleteSubLayer(sublayerKey); err != nil {
 			return fmt.Errorf("failed to delete sublayer : %w", err)
+		}
+		if err := manager.DeleteSubLayer(sublayerSplitTunKey); err != nil {
+			return fmt.Errorf("failed to delete sublayerST : %w", err)
 		}
 	}
 

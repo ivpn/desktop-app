@@ -34,7 +34,7 @@ DEFINE_GUID(KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6,
 
 extern "C" {
 
-	DWORD registerSTFilter(HANDLE wfpEngineHandle, GUID providerKey, GUID subLayerKey, GUID filterKey, GUID calloutKey)
+	DWORD registerSTFilter(HANDLE wfpEngineHandle, GUID providerKey, GUID subLayerKey, GUID filterKey, GUID calloutKey, DWORD isPersistant)
 	{
 		// add callout
 
@@ -65,7 +65,13 @@ extern "C" {
 		filter.filterKey = filterKey;
 		filter.displayData.name = const_cast<wchar_t*>(filterName);
 		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
-		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT;
+		// We need it to be able to use filter flag FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED - the filter  will permit everything until driver will not register a callout
+		// But since we using separate subLayer for this filters (independent from default IVPN Firewall subLayer) - connection can be blocked by IVPN firewall
+		// Note: We do not use here FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT, because 
+		//		FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED + FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT will permit all connections (will ignore IVPN firewall blocking rules)
+		filter.flags = FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED; 
+		if (isPersistant)
+			filter.flags |= FWPM_FILTER_FLAG_PERSISTENT;
 		filter.providerKey = const_cast<GUID*>(&providerKey);
 		filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
 		filter.subLayerKey = subLayerKey;
@@ -79,16 +85,16 @@ extern "C" {
 		return FwpmFilterAdd0(wfpEngineHandle, &filter, NULL, NULL);		
 	}
 
-	EXPORT DWORD _cdecl WfpRegisterSplitTunFilters(HANDLE wfpEngineHandle, GUID* providerKey, GUID* subLayerKey)
+	EXPORT DWORD _cdecl WfpRegisterSplitTunFilters(HANDLE wfpEngineHandle, GUID* providerKey, GUID* subLayerKey, DWORD isPersistant)
 	{
 		DWORD ret = 0, r;
-		r = registerSTFilter(wfpEngineHandle, *providerKey, *subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V4, KEY_CALLOUT_ALE_AUTH_CONNECT_V4	);
+		r = registerSTFilter(wfpEngineHandle, *providerKey, *subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V4, KEY_CALLOUT_ALE_AUTH_CONNECT_V4, isPersistant);
 		if (ret == 0 && r != 0) ret = r;
-		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V6,	KEY_CALLOUT_ALE_AUTH_CONNECT_V6);
+		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V6,	KEY_CALLOUT_ALE_AUTH_CONNECT_V6, isPersistant);
 		if (ret == 0 && r != 0) ret = r;
-		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4);
+		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4, isPersistant);
 		if (ret == 0 && r != 0) ret = r;
-		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6);
+		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6, isPersistant);
 		if (ret == 0 && r != 0) ret = r;
 
 		return ret;
