@@ -39,11 +39,14 @@ var (
 	sublayerKey = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x02}}
 	//  Using separate subLayer for Split-Tunnelling filters (which allow all communications for splitted applications)
 	//
-	// 	We need it to be able to use filter flag FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED - the filter  will permit everything until driver will not register a callout
-	// 	But since we using separate subLayer for this filters (independent from default IVPN Firewall subLayer) - connection can be blocked by IVPN firewall
+	// 	We need it to be able to use filter flag FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED
+	//	- the filter  will permit everything until driver will not register a callout
+	// 	But since we using separate subLayer for this filters (independent from default IVPN Firewall subLayer)
+	//	- connection can be blocked by IVPN firewall
 	//
 	// 	Note: We do not use FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT for split-tunnelling filters (in sublayerSplitTunKey), because
-	//		FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED + FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT will permit all connections (will ignore IVPN firewall blocking rules)
+	//		FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED + FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT will permit all connections
+	//		(will ignore IVPN firewall blocking rules)
 	sublayerSplitTunKey = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x03}}
 
 	v4Layers = []syscall.GUID{winlib.FwpmLayerAleAuthConnectV4, winlib.FwpmLayerAleAuthRecvAcceptV4}

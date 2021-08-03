@@ -117,17 +117,17 @@ namespace wfp
 
 		if (pi == NULL)
 		{
+			// PID unknown. Do nothing. Just go to the next filter.
+
 			//TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) UNKNOWN PID: 0x%llX (on-%s [%s])", inMetaValues->processId,
 			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6) ? "CONNECT" : "BIND",
 			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6)? "IPv6" : "IPv4");
 			return;
 		}
-		else
-		{
-			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX (on-%s [%s])", inMetaValues->processId,
-				(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6) ? "CONNECT" : "BIND",
-				(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6) ? "IPv6" : "IPv4");
-		}
+
+		TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX (on-%s [%s])", inMetaValues->processId,
+			(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6) ? "CONNECT" : "BIND",
+			(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6) ? "IPv6" : "IPv4");
 
 		const IPAddrConfig config = cfg::GetIPs();
 		
@@ -396,12 +396,10 @@ namespace wfp
 			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6)? "IPv6" : "IPv4");
 			return;
 		}
-		else
-		{
-			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX (on-%s [%s]) PERMIT", inMetaValues->processId,
-				(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6) ? "AUTH_CONNECT" : "AUTH_RECV_ACCEPT",
-				(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6) ? "IPv6" : "IPv4");
-		}
+
+		TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX (on-%s [%s]) PERMIT", inMetaValues->processId,
+			(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6) ? "AUTH_CONNECT" : "AUTH_RECV_ACCEPT",
+			(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6) ? "IPv6" : "IPv4");
 		
 		// permit operation (PID is known)
 		classifyOut->actionType = FWP_ACTION_PERMIT;

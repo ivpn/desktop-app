@@ -15,16 +15,14 @@ void OnCreateProcessNotify(
 	{
 		UNREFERENCED_PARAMETER(Process);
 
-		const UNICODE_STRING testPathToSplit1	= RTL_CONSTANT_STRING(L"\\??\\C:\\Program Files\\Mozilla Firefox\\firefox.exe");
-		const UNICODE_STRING testPathToSplit2	= RTL_CONSTANT_STRING(L"\\??\\C:\\Windows\\system32\\cmd.exe");
-		const UNICODE_STRING testFNNotAvail		= RTL_CONSTANT_STRING(L"(fileName not available)");
+		const UNICODE_STRING FNNotAvailStr		= RTL_CONSTANT_STRING(L"(fileName not available)");
 		
 		DEBUG_PrintElapsedTimeEx(20);
 				
 		// We are keeping in the process tree only the information about processes:
 		// 1. If process path equals to configuration 
 		//		(available in the list of applications which has to be splitted)
-		// 2. If process is an owner of configured application 
+		// 2. If process is a child of configured application 
 		//		We can simple check if the PPID is already available in a process tree
 				
 		if (CreateInfo != NULL)
@@ -40,14 +38,29 @@ void OnCreateProcessNotify(
 				auto status = AddNewProcessInfo(ProcessId, CreateInfo->ParentProcessId); // , CreateInfo->FileOpenNameAvailable ? CreateInfo->ImageFileName : NULL);
 				if (status == STATUS_DUPLICATE_OBJECTID)
 				{
-					DeleteProcessInfoForPid(ProcessId);
-					AddNewProcessInfo(ProcessId, CreateInfo->ParentProcessId);
-				}
+					TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) WARNING duplicate PID=0x%llX PROC='%wZ'\n", (INT_PTR)ProcessId, (CreateInfo->FileOpenNameAvailable ? CreateInfo->ImageFileName : &FNNotAvailStr));
 
-				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) STARTED process: PID=0x%llX PPID=0x%llX PROC='%wZ' (Processes TOTAL: %lu)\n", 
-					(INT_PTR)ProcessId, (INT_PTR)CreateInfo->ParentProcessId,
-					(CreateInfo->FileOpenNameAvailable ? CreateInfo->ImageFileName : &testFNNotAvail),
-					GetProcessCount());
+					status = DeleteProcessInfoForPid(ProcessId);
+					if (status != STATUS_SUCCESS)
+						TraceEvents(TRACE_LEVEL_CRITICAL, TRACE_DRIVER, "(%!FUNC!) FAILED to remove duplicate PID=0x%llX. Error: %!STATUS!\n", (INT_PTR)ProcessId, status);
+
+					status = AddNewProcessInfo(ProcessId, CreateInfo->ParentProcessId);
+				} 
+				
+				if (status != STATUS_SUCCESS)
+					TraceEvents(TRACE_LEVEL_CRITICAL, TRACE_DRIVER, "(%!FUNC!) FAILED to register new process PID=0x%llX. Error: %!STATUS!\n", (INT_PTR)ProcessId, status);
+				else 
+				{
+					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) STARTED process: PID=0x%llX PPID=0x%llX PROC='%wZ' (Processes TOTAL: %lu)\n",
+						(INT_PTR)ProcessId, (INT_PTR)CreateInfo->ParentProcessId,
+						(CreateInfo->FileOpenNameAvailable ? CreateInfo->ImageFileName : &FNNotAvailStr),
+						GetProcessCount());
+				}
+			}
+			else 
+			{
+				// just do logging in debug mode
+				//TraceEvents(TRACE_LEVEL_CRITICAL, TRACE_DRIVER, "(%!FUNC!) Ignored new process PID=0x%llX '%wZ'\n", (INT_PTR)ProcessId, (CreateInfo->FileOpenNameAvailable ? CreateInfo->ImageFileName : &FNNotAvailStr));
 			}
 		}
 		else
