@@ -64,10 +64,10 @@ func WfpSubLayerAdd(engine syscall.Handle, sublayer syscall.Handle) (err error) 
 }
 
 // FWPMSUBLAYER0Create creates syblayer
-func FWPMSUBLAYER0Create(sublayerGUID syscall.GUID) (sublayer syscall.Handle, err error) {
+func FWPMSUBLAYER0Create(sublayerGUID syscall.GUID, weight uint16) (sublayer syscall.Handle, err error) {
 	defer catchPanic(&err)
 
-	sublayerPtr, _, err := fFWPMSUBLAYER0Create.Call(uintptr(unsafe.Pointer(&sublayerGUID)))
+	sublayerPtr, _, err := fFWPMSUBLAYER0Create.Call(uintptr(unsafe.Pointer(&sublayerGUID)), uintptr(weight))
 	if sublayerPtr == 0 {
 		if err != syscall.Errno(0) {
 			return 0, err

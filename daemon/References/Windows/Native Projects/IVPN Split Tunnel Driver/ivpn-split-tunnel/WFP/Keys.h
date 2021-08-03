@@ -34,8 +34,18 @@ DEFINE_GUID(KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6,
 	0x4612064f, 0xf055, 0x44f2, 0xaa, 0x59, 0x6a, 0xa1, 0x8e, 0x2, 0xa8, 0x4a);
 
 //
-// NOTE: The callout GUIDs (bellow) can be used by external applications in order to allow all communications for applications which have to be splitted
+// NOTE: The callout GUIDs (bellow) can be used by external applications 
+// in order to allow all communications for applications which have to be splitted
 // (e.g. it is in use by IVPN firewall to bypass its default blocking rule)
+// 
+// The callouts have to be added by external applications (FwpmCalloutAdd0(...))
+// and should be referenced in an appropriate filter (with type FWP_ACTION_CALLOUT_UNKNOWN)
+//
+// Callouts applicable for ALE AUTH LAYERS:
+// FWPM_LAYER_ALE_AUTH_CONNECT_V4
+// FWPM_LAYER_ALE_AUTH_CONNECT_V6
+// FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4
+// FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6
 // 
 
 // {100DD8BC-5C6C-4989-99CF-EB93B14AFA69}

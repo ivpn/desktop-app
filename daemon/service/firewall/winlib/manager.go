@@ -56,6 +56,7 @@ type SubLayer struct {
 	ddName        string // DisplayData Name
 	ddDescription string // DisplayData Description
 	isPersistence bool
+	weight        uint16
 }
 
 // CreateSubLayer - create WFP SubLayer
@@ -63,13 +64,15 @@ func CreateSubLayer(
 	_key syscall.GUID,
 	_providerKey syscall.GUID,
 	_ddName string, _ddDescription string,
+	_weight uint16,
 	_isPersistence bool) SubLayer {
 	return SubLayer{
 		key:           _key,
 		providerKey:   _providerKey,
 		ddName:        _ddName,
 		ddDescription: _ddDescription,
-		isPersistence: _isPersistence}
+		isPersistence: _isPersistence,
+		weight:        _weight}
 }
 
 // Manager - helper to communicate WFP methods
@@ -244,7 +247,7 @@ func (m *Manager) AddSubLayer(sbl SubLayer) (retErr error) {
 		return fmt.Errorf("failed to initialize manager: %w", err)
 	}
 
-	handler, err := FWPMSUBLAYER0Create(sbl.key)
+	handler, err := FWPMSUBLAYER0Create(sbl.key, sbl.weight)
 	if err != nil {
 		return fmt.Errorf("failed to create sublayer: %w", err)
 	}

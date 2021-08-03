@@ -341,6 +341,13 @@ namespace wfp
 		_Inout_ FWPS_CLASSIFY_OUT0* classifyOut
 	)
 	{
+		// NOTE: The callout can be used by external applications 
+		// in order to allow all communications for applications which have to be splitted
+		// (e.g. it is in use by IVPN firewall to bypass its default blocking rule)
+		// 
+		// The callout have to be added by external applications (FwpmCalloutAdd0(...))
+		// and should be referenced in an appropriate filter (with type FWP_ACTION_CALLOUT_UNKNOWN)
+
 		DEBUG_PrintElapsedTimeEx(20);
 
 		UNREFERENCED_PARAMETER(classifyContext);
@@ -382,6 +389,8 @@ namespace wfp
 
 		if (pi == NULL)
 		{
+			// PID unknown. Do nothing. Just go to the next filter.
+
 			//TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) UNKNOWN PID: 0x%llX (on-%s [%s])", inMetaValues->processId,
 			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6) ? "CONNECT" : "BIND",
 			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6)? "IPv6" : "IPv4");
@@ -389,11 +398,12 @@ namespace wfp
 		}
 		else
 		{
-			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX (%s [%s])", inMetaValues->processId,
+			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX (on-%s [%s]) PERMIT", inMetaValues->processId,
 				(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6) ? "AUTH_CONNECT" : "AUTH_RECV_ACCEPT",
 				(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6) ? "IPv6" : "IPv4");
 		}
 		
+		// permit operation (PID is known)
 		classifyOut->actionType = FWP_ACTION_PERMIT;
 		classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;		
 	}
@@ -556,9 +566,14 @@ namespace wfp
 			return status;
 		}
 		 
-		//
-		// ALE AUTH LAYERS
+		// Registering callouts which can be used by external applications 
+		// in order to allow all communications for applications which have to be splitted
+		// (e.g. it is in use by IVPN firewall to bypass its default blocking rule)
 		// 
+		// The callouts have to be added by external applications (FwpmCalloutAdd0(...))
+		// and should be referenced in an appropriate filter (with type FWP_ACTION_CALLOUT_UNKNOWN)
+		//
+		// Callouts applicable for ALE AUTH LAYERS:
 		// FWPM_LAYER_ALE_AUTH_CONNECT_V4
 		// FWPM_LAYER_ALE_AUTH_CONNECT_V6
 		// FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4

@@ -275,8 +275,8 @@ func doEnable() (retErr error) {
 	}
 
 	provider := winlib.CreateProvider(providerKey, providerDName, "", isPersistant)
-	sublayer := winlib.CreateSubLayer(sublayerKey, providerKey, sublayerDName, "", isPersistant)
-	sublayerSplitTun := winlib.CreateSubLayer(sublayerSplitTunKey, providerKey, sublayerDName, "", isPersistant)
+	sublayer := winlib.CreateSubLayer(sublayerKey, providerKey, sublayerDName, "", 0x0001, isPersistant)
+	sublayerSplitTun := winlib.CreateSubLayer(sublayerSplitTunKey, providerKey, sublayerDName, "", 0xFFFF, isPersistant)
 
 	// add provider
 	pinfo, err := manager.GetProviderInfo(providerKey)
@@ -406,8 +406,11 @@ func doEnable() (retErr error) {
 
 	// Register split-tunnelling filters
 	//
-	// Split-Tunnelling filters using separate sub-layer (sublayerSplitTunKey) and using flag FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED (the filter will permit everything until driver will not register a callout)
-	// But since we using separate subLayer for this filters (independent from default IVPN Firewall subLayer) - connection can be blocked by IVPN firewall
+	// Split-Tunnelling filters using separate sub-layer (sublayerSplitTunKey)
+	// and using flag FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED
+	// (the filter will permit everything until driver will not register a callout)
+	// But since we using separate subLayer for this filters (independent from default IVPN Firewall subLayer)
+	// - connection can be blocked by IVPN firewall
 	//
 	// All filters will be erased on FW off (by a call 'manager.DeleteFilterByProviderKey(providerKey, l)')
 	if err := manager.WfpRegisterSplitTunFilters(providerKey, sublayerSplitTunKey, isPersistant); err != nil {
@@ -428,12 +431,14 @@ func doDisable() error {
 
 	// delete filters
 	for _, l := range v6Layers {
+		// delete filters and callouts registered for the provider+layer
 		if err := manager.DeleteFilterByProviderKey(providerKey, l); err != nil {
 			return fmt.Errorf("failed to delete filter : %w", err)
 		}
 	}
 
 	for _, l := range v4Layers {
+		// delete filters and callouts registered for the provider+layer
 		if err := manager.DeleteFilterByProviderKey(providerKey, l); err != nil {
 			return fmt.Errorf("failed to delete filter : %w", err)
 		}

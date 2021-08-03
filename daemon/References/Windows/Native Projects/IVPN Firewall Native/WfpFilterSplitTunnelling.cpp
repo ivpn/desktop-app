@@ -17,6 +17,19 @@ DEFINE_GUID(KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6,
 
 //
 // NOTE!: The callouts with the GUIDs (bellow) are registered by split-tunnelling driver
+// 
+// NOTE: The callout GUIDs (bellow) can be used by external applications 
+// in order to allow all communications for applications which have to be splitted
+// (e.g. it is in use by IVPN firewall to bypass its default blocking rule)
+// 
+// The callouts have to be added by external applications (FwpmCalloutAdd0(...))
+// and should be referenced in an appropriate filter (with type FWP_ACTION_CALLOUT_UNKNOWN)
+//
+// Callouts applicable for ALE AUTH LAYERS:
+// FWPM_LAYER_ALE_AUTH_CONNECT_V4
+// FWPM_LAYER_ALE_AUTH_CONNECT_V6
+// FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4
+// FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6
 //
 
 // {100DD8BC-5C6C-4989-99CF-EB93B14AFA69}
@@ -34,7 +47,7 @@ DEFINE_GUID(KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6,
 
 extern "C" {
 
-	DWORD registerSTFilter(HANDLE wfpEngineHandle, GUID providerKey, GUID subLayerKey, GUID filterKey, GUID calloutKey, DWORD isPersistant)
+	DWORD registerSTFilter(HANDLE wfpEngineHandle, GUID providerKey, GUID subLayerKey, GUID layerKey, GUID filterKey, GUID calloutKey, DWORD isPersistant)
 	{
 		// add callout
 
@@ -47,7 +60,7 @@ extern "C" {
 		mCallout.displayData.name = const_cast<wchar_t*>(calloutName);
 		mCallout.displayData.description = const_cast<wchar_t*>(calloutDescription);
 		mCallout.providerKey = const_cast<GUID*>(&providerKey);
-		mCallout.applicableLayer = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
+		mCallout.applicableLayer = layerKey;
 
 		auto status = FwpmCalloutAdd0(wfpEngineHandle, &mCallout, NULL, NULL);
 
@@ -73,7 +86,7 @@ extern "C" {
 		if (isPersistant)
 			filter.flags |= FWPM_FILTER_FLAG_PERSISTENT;
 		filter.providerKey = const_cast<GUID*>(&providerKey);
-		filter.layerKey = FWPM_LAYER_ALE_AUTH_CONNECT_V4;
+		filter.layerKey = layerKey;
 		filter.subLayerKey = subLayerKey;
 		filter.weight.type = FWP_UINT64;
 		filter.weight.uint64 = const_cast<UINT64*>(&weight);
@@ -88,13 +101,28 @@ extern "C" {
 	EXPORT DWORD _cdecl WfpRegisterSplitTunFilters(HANDLE wfpEngineHandle, GUID* providerKey, GUID* subLayerKey, DWORD isPersistant)
 	{
 		DWORD ret = 0, r;
-		r = registerSTFilter(wfpEngineHandle, *providerKey, *subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V4, KEY_CALLOUT_ALE_AUTH_CONNECT_V4, isPersistant);
+		r = registerSTFilter(wfpEngineHandle, *providerKey, *subLayerKey, 
+			FWPM_LAYER_ALE_AUTH_CONNECT_V4, 
+			KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V4, KEY_CALLOUT_ALE_AUTH_CONNECT_V4, 
+			isPersistant);
 		if (ret == 0 && r != 0) ret = r;
-		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V6,	KEY_CALLOUT_ALE_AUTH_CONNECT_V6, isPersistant);
+
+		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey, 
+			FWPM_LAYER_ALE_AUTH_CONNECT_V6, 
+			KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V6,	KEY_CALLOUT_ALE_AUTH_CONNECT_V6, 
+			isPersistant);
 		if (ret == 0 && r != 0) ret = r;
-		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4, isPersistant);
+
+		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey, 
+			FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
+			KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4, 
+			isPersistant);
 		if (ret == 0 && r != 0) ret = r;
-		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey,	KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6, isPersistant);
+
+		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey, 
+			FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
+			KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6, 
+			isPersistant);
 		if (ret == 0 && r != 0) ret = r;
 
 		return ret;

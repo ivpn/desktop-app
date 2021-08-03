@@ -26,14 +26,16 @@ extern "C" {
 		return FwpmSubLayerAdd0(engineHandle, subLayerStruct, NULL);
 	}
 
-	EXPORT FWPM_SUBLAYER0 * _cdecl FWPM_SUBLAYER0_Create(GUID subLayerKey)
+	EXPORT FWPM_SUBLAYER0 * _cdecl FWPM_SUBLAYER0_Create(GUID subLayerKey, UINT32 weight)
 	{
 		FWPM_SUBLAYER0 *subLayer = new FWPM_SUBLAYER0();
 		subLayer->subLayerKey = subLayerKey;
+		if (weight > 0 && weight<=0xFFFF)
+			subLayer->weight = (UINT16) weight;
 
 		return subLayer;
 	}
-	EXPORT FWPM_SUBLAYER0* _cdecl FWPM_SUBLAYER0_CreatePtr(GUID *subLayerKey) { return FWPM_SUBLAYER0_Create(*subLayerKey); }
+	EXPORT FWPM_SUBLAYER0* _cdecl FWPM_SUBLAYER0_CreatePtr(GUID *subLayerKey, UINT32 weight) { return FWPM_SUBLAYER0_Create(*subLayerKey, weight); }
 
 	EXPORT DWORD _cdecl FWPM_SUBLAYER0_SetProviderKey(FWPM_SUBLAYER0 *subLayer, GUID providerKey)
 	{
