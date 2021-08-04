@@ -47,7 +47,7 @@ DEFINE_GUID(KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6,
 
 extern "C" {
 
-	DWORD registerSTFilter(HANDLE wfpEngineHandle, GUID providerKey, GUID subLayerKey, GUID layerKey, GUID filterKey, GUID calloutKey, DWORD isPersistant)
+	DWORD registerSTFilter(HANDLE wfpEngineHandle, GUID providerKey, GUID subLayerKey, GUID layerKey, GUID filterKey, GUID calloutKey, UINT8 weight, DWORD isPersistant)
 	{
 		// add callout
 
@@ -70,7 +70,6 @@ extern "C" {
 		// add filter
 
 		FWPM_FILTER0 filter = { 0 };
-		UINT64 weight = MAXUINT64;
 
 		const auto filterName = L"IVPN Firewall filter for Split-Tunnel callout";
 		const auto filterDescription = L"Allow communications for splitted appls";
@@ -78,18 +77,23 @@ extern "C" {
 		filter.filterKey = filterKey;
 		filter.displayData.name = const_cast<wchar_t*>(filterName);
 		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
-		// We need it to be able to use filter flag FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED - the filter  will permit everything until driver will not register a callout
-		// But since we using separate subLayer for this filters (independent from default IVPN Firewall subLayer) - connection can be blocked by IVPN firewall
-		// Note: We do not use here FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT, because 
-		//		FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED + FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT will permit all connections (will ignore IVPN firewall blocking rules)
-		filter.flags = FWPM_FILTER_FLAG_PERMIT_IF_CALLOUT_UNREGISTERED; 
+				
+		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT; 
 		if (isPersistant)
 			filter.flags |= FWPM_FILTER_FLAG_PERSISTENT;
 		filter.providerKey = const_cast<GUID*>(&providerKey);
 		filter.layerKey = layerKey;
 		filter.subLayerKey = subLayerKey;
-		filter.weight.type = FWP_UINT64;
-		filter.weight.uint64 = const_cast<UINT64*>(&weight);
+
+		filter.weight.type = FWP_UINT8;
+		filter.weight.uint8 = 3;
+
+		// NOTE: A callout and filters that specify the callout for the filter's action can be added 
+		// to the filter engine before a callout driver registers the callout with the filter engine.
+		// In this situation, filters with an action type of FWP_ACTION_CALLOUT_UNKNOWN are treated as FWP_ACTION_BLOCK.
+		// 
+		// In other words:
+		// If split-tunnelling not enabled (driver not registered callouts) - this filter will BLOCK everything
 		filter.action.type = FWP_ACTION_CALLOUT_UNKNOWN; 
 		filter.action.calloutKey = calloutKey;
 
@@ -98,31 +102,31 @@ extern "C" {
 		return FwpmFilterAdd0(wfpEngineHandle, &filter, NULL, NULL);		
 	}
 
-	EXPORT DWORD _cdecl WfpRegisterSplitTunFilters(HANDLE wfpEngineHandle, GUID* providerKey, GUID* subLayerKey, DWORD isPersistant)
+	EXPORT DWORD _cdecl WfpRegisterSplitTunFilters(HANDLE wfpEngineHandle, GUID* providerKey, GUID* subLayerKey, UINT8 weight, DWORD isPersistant)
 	{
 		DWORD ret = 0, r;
 		r = registerSTFilter(wfpEngineHandle, *providerKey, *subLayerKey, 
 			FWPM_LAYER_ALE_AUTH_CONNECT_V4, 
 			KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V4, KEY_CALLOUT_ALE_AUTH_CONNECT_V4, 
-			isPersistant);
+			weight, isPersistant);
 		if (ret == 0 && r != 0) ret = r;
 
 		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey, 
 			FWPM_LAYER_ALE_AUTH_CONNECT_V6, 
 			KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V6,	KEY_CALLOUT_ALE_AUTH_CONNECT_V6, 
-			isPersistant);
+			weight, isPersistant);
 		if (ret == 0 && r != 0) ret = r;
 
 		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey, 
 			FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
 			KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4, 
-			isPersistant);
+			weight, isPersistant);
 		if (ret == 0 && r != 0) ret = r;
 
 		r = registerSTFilter(wfpEngineHandle, *providerKey,	*subLayerKey, 
 			FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
 			KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6,	KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6, 
-			isPersistant);
+			weight, isPersistant);
 		if (ret == 0 && r != 0) ret = r;
 
 		return ret;

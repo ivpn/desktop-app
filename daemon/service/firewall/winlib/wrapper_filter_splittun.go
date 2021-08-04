@@ -47,6 +47,7 @@ func WfpRegisterSplitTunFilters(
 		uintptr(engine),
 		uintptr(unsafe.Pointer(&providerGUID)),
 		uintptr(unsafe.Pointer(&subLayerGUID)),
+		uintptr(weightAllowSplittedApps),
 		uintptr(isPersistantDW))
 
 	if err != syscall.Errno(0) {

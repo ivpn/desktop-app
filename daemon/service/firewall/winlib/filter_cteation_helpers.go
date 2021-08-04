@@ -32,13 +32,16 @@ import (
 // filter Weights
 const (
 	weightAllowLocalPort   = 10
-	weightAllowApplication = 5
-	weightAllowRemoteIP    = 3
-	weightAllowRemoteIPV6  = 5
+	weightAllowApplication = 6
+	weightAllowRemoteIP    = 4
+	weightAllowRemoteIPV6  = 6
 	weightAllowLocalIP     = 10
 	weightAllowLocalIPV6   = 10
 	weightBlockAll         = 2
-	weightBlockDNS         = 4
+	// NOTE: If split-tunnelling not enabled (driver not registered callouts) - this filter will BLOCK everything
+	// But it is ok since ST-filters weight = weightBlockAll + 1
+	weightAllowSplittedApps = 3
+	weightBlockDNS          = 5
 )
 
 // NewFilterAllowLocalPort creates a filter to allow local port
