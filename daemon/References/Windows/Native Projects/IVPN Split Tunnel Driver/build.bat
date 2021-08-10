@@ -85,8 +85,12 @@ signtool sign /fd sha256 /sha1 %CERT_SHA1% /v "%DIST_PATH_OUT%\ivpn-split-tunnel
 echo.
 echo [ ] IVPN Split-Tunnelling Driver: Build SUCCESS
 echo [ ] CAB file: %DIST_PATH_OUT%\ivpn-split-tunnel.cab
-echo [ ]      Now you can send the CAB file to Microsoft Partner portal for Attestation signing
+echo.
+echo [ ] Now you can send the CAB file to Microsoft Partner portal for Attestation signing
 echo [ ]      https://partner.microsoft.com/en-US/dashboard/home
+echo.
+echo [ ] The signed driver files should be placed at:
+echo [ ]      daemon\References\Windows\SplitTunnelDriver\x86_64
 echo.
 
 exit /b 0

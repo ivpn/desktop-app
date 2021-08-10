@@ -1,0 +1,87 @@
+;
+; ivpn-split-tunnel.inf
+;
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=WFPCALLOUTS
+ClassGuid={DD5F555B-D00E-413D-B10E-7A5DE3470540} 
+Provider=%ManufacturerName%
+CatalogFile=ivpn-split-tunnel.cat
+PnpLockdown=1
+DriverVer = 08/10/2021,0.0.0.1
+
+[DestinationDirs]
+DefaultDestDir = 12
+ivpn-split-tunnel_Device_CoInstaller_CopyFiles = 11
+
+; ================= Class section =====================
+
+[ClassInstall32]
+Addreg=SampleClassReg
+
+[SampleClassReg]
+HKR,,,0,%ClassName%
+HKR,,Icon,,-5
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+ivpn-split-tunnel.sys  = 1,,
+WdfCoInstaller01009.dll=1
+
+;*****************************************
+; Install Section
+;*****************************************
+
+[Manufacturer]
+%ManufacturerName%=Standard,NTamd64
+
+[Standard.NTamd64]
+%ivpn-split-tunnel.DeviceDesc%=ivpn-split-tunnel_Device, Root\ivpn-split-tunnel 
+
+[ivpn-split-tunnel_Device.NT]
+CopyFiles=Drivers_Dir
+
+[Drivers_Dir]
+ivpn-split-tunnel.sys
+
+;-------------- Service installation
+[ivpn-split-tunnel_Device.NT.Services]
+AddService = ivpn-split-tunnel,%SPSVCINST_ASSOCSERVICE%, ivpn-split-tunnel_Service_Inst
+
+; -------------- ivpn-split-tunnel driver install sections
+[ivpn-split-tunnel_Service_Inst]
+DisplayName    = %ivpn-split-tunnel.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\ivpn-split-tunnel.sys
+
+;
+;--- ivpn-split-tunnel_Device Coinstaller installation ------
+;
+
+[ivpn-split-tunnel_Device.NT.CoInstallers]
+AddReg=ivpn-split-tunnel_Device_CoInstaller_AddReg
+CopyFiles=ivpn-split-tunnel_Device_CoInstaller_CopyFiles
+
+[ivpn-split-tunnel_Device_CoInstaller_AddReg]
+HKR,,CoInstallers32,0x00010000, "WdfCoInstaller01009.dll,WdfCoInstaller"
+
+[ivpn-split-tunnel_Device_CoInstaller_CopyFiles]
+WdfCoInstaller01009.dll
+
+[ivpn-split-tunnel_Device.NT.Wdf]
+KmdfService =  ivpn-split-tunnel, ivpn-split-tunnel_wdfsect
+[ivpn-split-tunnel_wdfsect]
+KmdfLibraryVersion = 1.9
+
+[Strings]
+SPSVCINST_ASSOCSERVICE= 0x00000002
+ManufacturerName="Privatus Limited" 
+ClassName="IVPN Split Tunnel" 
+DiskName = "IVPN Split Tunnel Installation Disk"
+ivpn-split-tunnel.DeviceDesc = "IVPN Split Tunnel Device"
+ivpn-split-tunnel.SVCDESC = "IVPN Split Tunnel Service"

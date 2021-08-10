@@ -32,6 +32,11 @@ ${StrLoc}
 !define IVPN_SERVICE_NAME "IVPN Client"
 !define PATHDIR "$INSTDIR\cli"
 
+!define DEVCON_BASENAME "devcon.exe"
+!define PRODUCT_TAP_WIN_COMPONENT_ID "tapivpn"
+
+!define DRIVER_SPLIT_TUNNEL_ID "root\ivpn-split-tunnel"
+
 ; The following variables will be set from the build.bat script
 ; !define PRODUCT_VERSION "2.0-b4"
 ; !define OUT_FILE "bin\${PRODUCT_NAME} ${PRODUCT_VERSION}.exe"
@@ -310,9 +315,6 @@ FunctionEnd
 ; installer sections
 ; ------------------
 
-!define DEVCON_BASENAME "devcon.exe"
-!define PRODUCT_TAP_WIN_COMPONENT_ID "tapivpn"
-
 Section "${PRODUCT_NAME}" SecIVPN
   SetRegView 64
   SetOutPath "$INSTDIR"
@@ -428,7 +430,7 @@ Section "${PRODUCT_NAME}" SecIVPN
   Call CheckIsWin7DriverInstalled
 
   ; ============ TAP driver ======================================================================
-  DetailPrint "Installing TAP driver..."
+  DetailPrint "Installing TAP Driver..."
 
   ; check if TUN/TAP driver is installed
   IntOp $R5 0 & 0
@@ -472,6 +474,52 @@ Section "${PRODUCT_NAME}" SecIVPN
     Abort
   ${EndIf}
 
+  ; ============ Split-Tunnel driver ==========================================================
+  ${If} ${AtLeastWin10}
+    DetailPrint "Installing IVPN Split-Tunnel Driver..."
+
+    ; check if TUN/TAP driver is installed
+    IntOp $R5 0 & 0
+    nsExec::ExecToStack '"$INSTDIR\devcon\$BitDir\${DEVCON_BASENAME}" hwids ${DRIVER_SPLIT_TUNNEL_ID}'
+    Pop $R0 # return value/error/timeout
+    IntOp $R5 $R5 | $R0
+    DetailPrint "${DEVCON_BASENAME} hwids returned: $R0"
+
+    ; if output contains the component id, then it's installed already
+    Push "${DRIVER_SPLIT_TUNNEL_ID}"
+    Push ">"
+    Call StrLoc
+    Pop $R0
+
+    ; if it's installed, do an update
+    ${If} $R5 == 0
+      ${If} $R0 == ""
+        StrCpy $R1 "install"
+      ${Else}
+        StrCpy $R1 "update"
+      ${EndIf}
+
+      DetailPrint "Split-Tunnel Driver $R1 (${DRIVER_SPLIT_TUNNEL_ID}) (May require confirmation)"
+      nsExec::ExecToLog '"$INSTDIR\devcon\$BitDir\${DEVCON_BASENAME}" $R1 "$INSTDIR\SplitTunnelDriver\$BitDir\ivpn-split-tunnel.inf" ${DRIVER_SPLIT_TUNNEL_ID}'
+      Pop $R0 # return value/error/timeout
+
+      IntOp $R5 $R5 | $R0
+      DetailPrint "${DEVCON_BASENAME} returned: $R0"
+    ${EndIf}
+
+    DetailPrint "${DEVCON_BASENAME} cumulative status: $R5"
+
+    ${If} $R5 == 0
+      DetailPrint "Split-Tunnel Driver installed successfully"
+    ${Else}
+      ${If} $R5 == 1
+        SetRebootFlag true
+        DetailPrint "Split-Tunnel Driver install: Requires reboot"
+      ${Else}
+        DetailPrint "An error occurred installing the Split-Tunnel Driver. Split-Tunnel functionality will not be available"
+      ${EndIf}
+    ${EndIf}
+  ${EndIf} ; AtLeastWin10
   ; ============ Service ======================================================================
   ; install service
   DetailPrint "Installing IVPN Client service..."
@@ -542,13 +590,17 @@ Section "Uninstall"
 
   ; uninstall TUN/TAP driver
   DetailPrint "Removing TUN/TAP device..."
-
   nsExec::ExecToLog '"$INSTDIR\devcon\$BitDir\${DEVCON_BASENAME}" remove ${PRODUCT_TAP_WIN_COMPONENT_ID}'
   Pop $R0 # return value/error/timeout
   DetailPrint "${DEVCON_BASENAME} remove returned: $R0"
 
-  DetailPrint "Removing files..."
+  ; uninstall Split-Tunnell driver
+  DetailPrint "Removing Split-Tunnell driver..."
+  nsExec::ExecToLog '"$INSTDIR\devcon\$BitDir\${DEVCON_BASENAME}" remove ${DRIVER_SPLIT_TUNNEL_ID}'
+  Pop $R0 # return value/error/timeout
+  DetailPrint "${DEVCON_BASENAME} remove returned: $R0"
 
+  DetailPrint "Removing files..."
   ; remove all
   Delete "$DESKTOP\IVPN Client.lnk"
   RMDir /r "$INSTDIR\mutable"

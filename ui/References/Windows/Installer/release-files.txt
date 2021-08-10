@@ -37,3 +37,7 @@ OpenVPN\x86_64\tap\tapivpn.cat
 OpenVPN\x86_64\tap\tapivpn.sys
 WireGuard\x86_64\wg.exe
 WireGuard\x86_64\wireguard.exe
+SplitTunnelDriver\x86_64\ivpn-split-tunnel.cat
+SplitTunnelDriver\x86_64\ivpn-split-tunnel.inf
+SplitTunnelDriver\x86_64\ivpn-split-tunnel.sys
+SplitTunnelDriver\x86_64\WdfCoinstaller01009.dll
