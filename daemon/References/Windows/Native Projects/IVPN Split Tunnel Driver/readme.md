@@ -31,15 +31,15 @@ It can control all aspects of driver functionality.
 
 <a name="useful_links"></a>
 ## Useful links
-https://docs.microsoft.com/en-us/windows-hardware/drivers/wdf/
-https://docs.microsoft.com/en-us/windows-hardware/drivers/wdf/using-kernel-mode-driver-framework-with-non-pnp-drivers
-https://docs.microsoft.com/en-us/windows-hardware/drivers/network/inf-files-for-callout-drivers
-https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/debug-universal-drivers---step-by-step-lab--echo-kernel-mode-
-https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/writing-a-very-small-kmdf--driver
-https://docs.microsoft.com/en-us/windows-hardware/drivers/devtest/adding-wpp-software-tracing-to-a-windows-driver
-https://docs.microsoft.com/en-us/windows-hardware/drivers/network/using-bind-or-connect-redirection
-https://docs.microsoft.com/en-us/windows-hardware/drivers/network/data-field-identifiers
-https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/fwpsk/ne-fwpsk-fwps_fields_ale_connect_redirect_v4_
-https://docs.microsoft.com/en-us/windows-hardware/drivers/network/processing-classify-callouts
-https://docs.microsoft.com/en-us/windows-hardware/drivers/network/filtering-layer
-https://docs.microsoft.com/en-us/windows-hardware/drivers/network/filtering-condition-flags
+https://docs.microsoft.com/en-us/windows-hardware/drivers/wdf/  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/wdf/using-kernel-mode-driver-framework-with-non-pnp-drivers  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/network/inf-files-for-callout-drivers  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/debug-universal-drivers---step-by-step-lab--echo-kernel-mode-  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/gettingstarted/writing-a-very-small-kmdf--driver  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/devtest/adding-wpp-software-tracing-to-a-windows-driver  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/network/using-bind-or-connect-redirection  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/network/data-field-identifiers  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/fwpsk/ne-fwpsk-fwps_fields_ale_connect_redirect_v4_  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/network/processing-classify-callouts  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/network/filtering-layer  
+https://docs.microsoft.com/en-us/windows-hardware/drivers/network/filtering-condition-flags  
