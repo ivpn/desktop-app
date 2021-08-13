@@ -34,8 +34,7 @@ ${StrLoc}
 
 !define DEVCON_BASENAME "devcon.exe"
 !define PRODUCT_TAP_WIN_COMPONENT_ID "tapivpn"
-
-!define DRIVER_SPLIT_TUNNEL_ID "root\ivpn-split-tunnel"
+;!define DRIVER_SPLIT_TUNNEL_ID "root\ivpn-split-tunnel"
 
 ; The following variables will be set from the build.bat script
 ; !define PRODUCT_VERSION "2.0-b4"
@@ -475,6 +474,7 @@ Section "${PRODUCT_NAME}" SecIVPN
   ${EndIf}
 
   ; ============ Split-Tunnel driver ==========================================================
+  /*
   ${If} ${AtLeastWin10}
     DetailPrint "Installing IVPN Split-Tunnel Driver..."
 
@@ -520,6 +520,7 @@ Section "${PRODUCT_NAME}" SecIVPN
       ${EndIf}
     ${EndIf}
   ${EndIf} ; AtLeastWin10
+  */
   ; ============ Service ======================================================================
   ; install service
   DetailPrint "Installing IVPN Client service..."
@@ -594,11 +595,11 @@ Section "Uninstall"
   Pop $R0 # return value/error/timeout
   DetailPrint "${DEVCON_BASENAME} remove returned: $R0"
 
-  ; uninstall Split-Tunnell driver
-  DetailPrint "Removing Split-Tunnell driver..."
-  nsExec::ExecToLog '"$INSTDIR\devcon\$BitDir\${DEVCON_BASENAME}" remove ${DRIVER_SPLIT_TUNNEL_ID}'
-  Pop $R0 # return value/error/timeout
-  DetailPrint "${DEVCON_BASENAME} remove returned: $R0"
+  ;; uninstall Split-Tunnell driver
+  ;DetailPrint "Removing Split-Tunnell driver..."
+  ;nsExec::ExecToLog '"$INSTDIR\devcon\$BitDir\${DEVCON_BASENAME}" remove ${DRIVER_SPLIT_TUNNEL_ID}'
+  ;Pop $R0 # return value/error/timeout
+  ;DetailPrint "${DEVCON_BASENAME} remove returned: $R0"
 
   DetailPrint "Removing files..."
   ; remove all
@@ -610,6 +611,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\WireGuard"
   RMDir /r "$INSTDIR\cli"
   RMDir /r "$INSTDIR\ui"
+  RMDir /r "$INSTDIR\SplitTunnelDriver"
 
   Delete "$INSTDIR\*.*"
 

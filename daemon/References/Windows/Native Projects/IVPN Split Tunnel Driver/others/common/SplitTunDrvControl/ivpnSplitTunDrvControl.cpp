@@ -1,5 +1,8 @@
 #include "ivpnSplitTunDrvControl.h"
 
+#define IVPN_ST_SERVICE_NAME L"ivpn-split-tunnel"
+#define IVPN_ST_SERVICE_DISPLAY_NAME L"IVPN Split-Tunnel Service"
+
 namespace splittun
 {
 	////////////////////////////////////////////////////////////////
@@ -25,25 +28,26 @@ namespace splittun
 
 	std::wstring _getLastErrorStr()
 	{
+		const int BUFSIZE = 256;
 		DWORD eNum;
-		WCHAR sysMsg[256];
+		WCHAR sysMsg[BUFSIZE];
 		WCHAR* p;
 
 		eNum = GetLastError();
 		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, eNum,
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-			sysMsg, 256, NULL);
+			sysMsg, BUFSIZE, NULL);
 
 		// Trim the end of the line and terminate it with a null
 		p = sysMsg;
-		while ((*p > 31) || (*p == 9))
+		while (p < &sysMsg[BUFSIZE] && ((*p > 31) || (*p == 9)))	
 			++p;
-		do { *p-- = 0; } while ((p >= sysMsg) &&
-			((*p == '.') || (*p < 33)));
-
+		do { *p-- = 0; } while ((p >= sysMsg) && ((*p == '.') || (*p < 33)));
+		
 		std::wostringstream stringStream;
-		stringStream << eNum << " (" << sysMsg << ")";
+
+		stringStream << eNum << " ("<< sysMsg << ")";
 		return stringStream.str();
 	}
 
@@ -310,7 +314,114 @@ namespace splittun
 	////////////////////////////////////////////////////////////////
 	// 	   Public functionality
 	////////////////////////////////////////////////////////////////
-	
+	bool StartDriverAsService(LPCTSTR serviceExe)
+	{
+		// Connect to the Service Control Manager and open the Services database.
+		SC_HANDLE schSCManager = OpenSCManager(
+			NULL,                   // local machine
+			NULL,                   // local database
+			SC_MANAGER_ALL_ACCESS   // access required
+		);
+		
+		if (!schSCManager)
+		{
+			_sendToLog(L"Error opening Service Control Manager: " + _getLastErrorStr() + L"\n");
+			return false;
+		}
+
+		// Create a new a service object
+		SC_HANDLE schService = CreateService(
+			schSCManager,           // handle of service control manager database
+			IVPN_ST_SERVICE_NAME,    // address of name of service to start
+			IVPN_ST_SERVICE_DISPLAY_NAME,    // address of display name
+			SERVICE_ALL_ACCESS,     // type of access to service
+			SERVICE_KERNEL_DRIVER,  // type of service
+			SERVICE_DEMAND_START,   // when to start service
+			SERVICE_ERROR_NORMAL,   // severity if service fails to start
+			serviceExe,             // address of name of binary file
+			NULL,                   // service does not belong to a group
+			NULL,                   // no tag requested
+			NULL,                   // no dependency names
+			NULL,                   // use LocalSystem account
+			NULL                    // no password for service account
+		);
+
+		if (schService == NULL)
+		{
+			_sendToLog(L"CreateService failed: " + _getLastErrorStr() + L"\n");
+			CloseServiceHandle(schSCManager);
+			return false;
+		}
+
+		bool retVal = true; 
+		// Start the execution of the service (i.e. start the driver)
+		if (!StartService(schService, 0, NULL))
+		{
+			_sendToLog(L"StartService failed: " + _getLastErrorStr() + L"\n");
+			retVal = false;
+		}
+
+		// Close the service object
+		CloseServiceHandle(schService);
+		// Close handle to service control manager
+		CloseServiceHandle(schSCManager);
+
+		return retVal;
+	}
+
+	bool StopDriverAsService()
+	{
+		// Connect to the Service Control Manager and open the Services database.
+		SC_HANDLE schSCManager = OpenSCManager(
+			NULL,                   // local machine
+			NULL,                   // local database
+			SC_MANAGER_ALL_ACCESS   // access required
+		);
+
+		if (!schSCManager) 
+		{
+			_sendToLog(L"Error opening Service Control Manager: " + _getLastErrorStr() + L"\n");
+			return false;
+		}
+				
+		// Open the handle to the existing service.
+		SC_HANDLE schService = OpenService(
+			schSCManager,
+			IVPN_ST_SERVICE_NAME,	// Service name
+			SERVICE_ALL_ACCESS
+		);
+
+		if (schService == NULL) 
+		{
+			_sendToLog(L"OpenService failed: " + _getLastErrorStr() + L"\n");
+			CloseServiceHandle(schSCManager);
+			return false;
+		}
+
+		SERVICE_STATUS  serviceStatus;
+		bool retVal = true;
+
+		// Request that the service stop
+		if (!ControlService(schService, SERVICE_CONTROL_STOP, &serviceStatus))
+		{
+			_sendToLog(L"ControlService(SERVICE_CONTROL_STOP) failed: " + _getLastErrorStr() + L"\n");
+			retVal = false;
+		}	
+
+		if (!DeleteService(schService))
+		{
+			_sendToLog(L"DeleteService failed: " + _getLastErrorStr() + L"\n");
+			retVal = false;
+		}
+
+		// Close the service object
+		CloseServiceHandle(schService);
+		// Close handle to service control manager
+		CloseServiceHandle(schSCManager);
+
+		return retVal;
+	}
+
 	void RegisterLoggingCallback(LoggingCallback cb)
 	{
 		cbLog = cb;

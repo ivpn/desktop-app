@@ -30,8 +30,16 @@ func implInitialize() error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for Linux")
 }
 
+func implFuncNotAvailableError() error {
+	return fmt.Errorf("Split-Tunnelling is not implemented for Linux")
+}
+
 func implConnect() error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for Linux")
+}
+
+func implDisconnect() (err error) {
+	return nil
 }
 
 func implStopAndClean() error {

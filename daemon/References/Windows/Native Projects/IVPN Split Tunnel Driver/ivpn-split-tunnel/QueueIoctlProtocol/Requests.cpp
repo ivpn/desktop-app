@@ -10,14 +10,8 @@ typedef NTSTATUS(*ProcessIoctlFunc)(
     _In_ WDFQUEUE Queue,
     _In_ WDFREQUEST Request);
 
-
-NTSTATUS Process_IOCTL_STOP_ALL_AND_CFG_CLEAN(
-    _In_ WDFQUEUE Queue,
-    _In_ WDFREQUEST Request)
+NTSTATUS StopAndClean()
 {
-    UNREFERENCED_PARAMETER(Queue);
-    UNREFERENCED_PARAMETER(Request);
-
     NTSTATUS retState = STATUS_SUCCESS;
     NTSTATUS status;
 
@@ -28,12 +22,22 @@ NTSTATUS Process_IOCTL_STOP_ALL_AND_CFG_CLEAN(
     status = wfp::Stop();
     if (!NT_SUCCESS(status))
         retState = status;
-    
+
     status = cfg::Clean();
     if (!NT_SUCCESS(status))
         retState = status;
 
-    return STATUS_SUCCESS;
+    return retState;
+}
+
+NTSTATUS Process_IOCTL_STOP_ALL_AND_CFG_CLEAN(
+    _In_ WDFQUEUE Queue,
+    _In_ WDFREQUEST Request)
+{
+    UNREFERENCED_PARAMETER(Queue);
+    UNREFERENCED_PARAMETER(Request);
+
+    return StopAndClean();
 }
 
 NTSTATUS Process_IOCTL_GET_STATE(

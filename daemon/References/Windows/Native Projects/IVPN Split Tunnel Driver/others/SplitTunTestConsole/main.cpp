@@ -1,4 +1,12 @@
-// test-splittun-drv.cpp : This file contains the 'main' function. Program execution begins and ends there.
+//
+//  The test console for Split-Tunnel Driver (Windows)
+//  https://github.com/ivpn/desktop-app/daemon/References/Windows/Native%20Projects/IVPN%20Split%20Tunnel%20Driver
+//
+//  Created by Stelnykovych Alexandr.
+//  Copyright (c) 2021 Privatus Limited.
+// 
+//  This file is part of the IVPN Client Desktop project.
+//  https://github.com/ivpn/desktop-app
 //
 
 #include <iostream>
@@ -7,7 +15,30 @@
 
 void Log(std::wstring logMes)
 {
-	std::wcout << "    [log]: " << logMes;
+	// ensure the string ends with a new line
+	if (!logMes.empty() && logMes[logMes.length() - 1] != '\n') {
+		logMes += L"\n";
+	}
+
+	wprintf(L"    [log]: %s", logMes.c_str());
+}
+
+void doStartDriverAsService()
+{
+	std::wstring sysFilePath;
+
+	std::wcout << L" Full path to driver *.sys file: ";
+	std::getline(std::wcin, sysFilePath);
+	if (sysFilePath.length() <= 0)
+	{
+		std::wcout << L"Error: Not defined path to driver binary" << std::endl;
+		return;
+	}
+
+	if (!splittun::StartDriverAsService(sysFilePath.c_str()))
+	{
+		std::wcout << L"Failed" << std::endl;
+	}
 }
 
 void doGetState()
@@ -162,6 +193,17 @@ int main()
 				
 		try
 		{
+			if (0 == _wcsicmp(command.c_str(), L"start-driver"))
+			{
+				doStartDriverAsService();
+				continue;
+			}
+			if (0 == _wcsicmp(command.c_str(), L"stop-driver"))
+			{
+				splittun::StopDriverAsService();
+				continue;
+			}
+
 			if (0 == _wcsicmp(command.c_str(), L"connect"))
 			{
 				splittun::Connect();
@@ -253,6 +295,7 @@ int main()
 
 		std::wcout << L"Invalid command!" << std::endl;
 		std::wcout << L"Allowed commands:\n\
+ start-driver\n stop-driver\n\
  connect\n disconnect\n get-state\n clean\n split-start\n split-stop\n\
  pm-start\n pm-stop\n pm-init\n get-config\n set-addr\n get-addr\n\
  set-app\n get-app\n" << std::endl;

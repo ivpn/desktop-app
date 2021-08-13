@@ -147,7 +147,7 @@ func Init() (warnings []string, errors []error) {
 		routeBinary := strings.Split(routeCommand, " ")[0]
 		if err := checkFileAccessRightsExecutable("routeCommand", routeBinary); err != nil {
 			routeCommand = ""
-			warnings = append(warnings, fmt.Errorf("Route binary error: %w", err).Error())
+			warnings = append(warnings, fmt.Errorf("route binary error: %w", err).Error())
 		}
 	}
 

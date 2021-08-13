@@ -5,6 +5,8 @@
 
 EXTERN_C_START
 
+NTSTATUS StopAndClean();
+
 NTSTATUS ProcessEvtIoDeviceControl(
     _In_ WDFQUEUE Queue,
     _In_ WDFREQUEST Request,

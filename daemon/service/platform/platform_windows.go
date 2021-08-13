@@ -32,6 +32,7 @@ import (
 var (
 	wfpDllPath           string
 	nativeHelpersDllPath string
+	splitTunDriverPath   string
 )
 
 func doInitConstants() {
@@ -62,10 +63,13 @@ func doOsInit() (warnings []string, errors []error) {
 	_installDir := getInstallDir()
 
 	_archDir := "x86_64"
-	if Is64Bit() == false {
+	if !Is64Bit() {
 		_archDir = "x86"
 	}
 
+	if warnings == nil {
+		warnings = make([]string, 0)
+	}
 	if errors == nil {
 		errors = make([]error, 0)
 	}
@@ -91,7 +95,7 @@ func doOsInit() (warnings []string, errors []error) {
 	if _, err := os.Stat(path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")); err != nil {
 		_wgArchDir = "x86"
 		if _, err := os.Stat(path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")); err != nil {
-			errors = append(errors, fmt.Errorf("Unabale to find WireGuard binary: %s ..<x86_64\\x86>", path.Join(_installDir, "WireGuard")))
+			errors = append(errors, fmt.Errorf("unabale to find WireGuard binary: %s ..<x86_64\\x86>", path.Join(_installDir, "WireGuard")))
 		}
 	}
 	wgBinaryPath = path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")
@@ -102,6 +106,9 @@ func doOsInit() (warnings []string, errors []error) {
 	}
 	if _, err := os.Stat(nativeHelpersDllPath); err != nil {
 		errors = append(errors, fmt.Errorf("file not exists: '%s'", nativeHelpersDllPath))
+	}
+	if _, err := os.Stat(splitTunDriverPath); err != nil {
+		warnings = append(warnings, fmt.Errorf("file not exists: '%s'", splitTunDriverPath).Error())
 	}
 
 	return warnings, errors
@@ -117,4 +124,9 @@ func WindowsWFPDllPath() string {
 // WindowsNativeHelpersDllPath - Path to Windows DLL with helper methods (native DNS implementation... etc.)
 func WindowsNativeHelpersDllPath() string {
 	return nativeHelpersDllPath
+}
+
+// WindowsSplitTunnelDriverPath - path to *.sys binary of Split-Tunnel driver
+func WindowsSplitTunnelDriverPath() string {
+	return splitTunDriverPath
 }

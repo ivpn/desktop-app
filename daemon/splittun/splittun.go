@@ -77,43 +77,45 @@ func Initialize() error {
 		return err
 	}
 
-	err = doConnect()
-	if err != nil {
-		return err
-	}
-
-	err = implStopAndClean()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func doConnect() error {
-	if isConnected {
-		return nil
-	}
-	ret := implConnect()
-	if ret == nil {
-		isConnected = true
-		log.Info("Split-Tunnelling ready")
-	}
-	return ret
+// IsFuncNotAvailableError - returns non-nil error object if Split-Tunneling functionality not available
+func GetFuncNotAvailableError() error {
+	return implFuncNotAvailableError()
 }
 
 func Connect() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	return doConnect()
+	if isConnected {
+		return nil
+	}
+
+	log.Info("Split-Tunnelling: Connect...")
+	ret := implConnect()
+	if ret == nil {
+		isConnected = true
+		log.Info("Split-Tunnelling: ready")
+	}
+	return ret
+}
+
+func Disconnect() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	log.Info("Split-Tunnelling: Disconnect...")
+	isConnected = false
+	return implDisconnect()
 }
 
 func StopAndClean() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	log.Info("Split-Tunnelling: disabling")
+	log.Info("Split-Tunnelling: StopAndClean...")
 
 	return implStopAndClean()
 }
@@ -129,7 +131,7 @@ func SetConfig(config Config) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	log.Info("Split-Tunnelling: setting configuration")
+	log.Info("Split-Tunnelling: SetConfig...")
 	return implSetConfig(config)
 }
 func GetConfig() (Config, error) {
@@ -143,19 +145,9 @@ func Start() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	log.Info("Split-Tunnelling: starting")
+	log.Info("Split-Tunnelling: Start...")
 	return implStart()
 }
-
-/*
-func Disconnect() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: disconnecting")
-	isConnected = false
-	return implDisconnect()
-}*/
 
 /*
 func Stop() error {

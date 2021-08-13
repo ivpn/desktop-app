@@ -2,14 +2,26 @@
 #include "../IVPN Split Tunnel Driver/others/common/SplitTunDrvControl/ivpnSplitTunDrvControl.h"
 
 extern "C" {
-
-	EXPORT DWORD _cdecl  SplitTun_Connect()
+	EXPORT DWORD _cdecl  SplitTun_Connect(wchar_t* driverPath)
 	{
-		return splittun::Connect();
+		if (driverPath == NULL || wcslen(driverPath) <= 0)
+			return false;
+
+		if (!splittun::StartDriverAsService(driverPath))
+			return false;
+
+		if (!splittun::Connect())
+		{
+			splittun::StopDriverAsService();
+			return false;
+		}
+		return true;
 	}
 	EXPORT DWORD _cdecl  SplitTun_Disconnect()
 	{
-		return splittun::Disconnect();
+		bool isDisconnected = splittun::Disconnect();
+		bool isStopped = splittun::StopDriverAsService();
+		return isDisconnected | isStopped;
 	}
 
 	EXPORT DWORD _cdecl  SplitTun_StopAndClean()

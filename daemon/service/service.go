@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -329,8 +330,8 @@ func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr 
 		}
 	}
 
-	// returns nil if already connected or connected successfully
-	splitTunErr = splittun.Connect()
+	// returns non-nil error object if Split-Tunneling functionality not available
+	splitTunErr = splittun.GetFuncNotAvailableError()
 
 	if errors.Is(ovpnErr, os.ErrNotExist) {
 		ovpnErr = fmt.Errorf("%w. Please install OpenVPN", ovpnErr)
@@ -636,6 +637,10 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 			err := splittun.StopAndClean()
 			if err != nil {
 				log.Error("(stopping) error on stopping Split-Tunnelling:", err)
+			}
+			err = splittun.Disconnect()
+			if err != nil {
+				log.Error("(stopping) error on disconnecting Split-Tunnelling:", err)
 			}
 		}
 
@@ -1124,6 +1129,24 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 
 func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string) error {
 	prefs := s._preferences
+
+	// Ensure no binaries from IVPN package is included into apps list to Split-Tunnel
+	if ex, err := os.Executable(); err == nil && len(ex) > 0 {
+		exDir := filepath.Dir(ex)
+
+		parsedApps := make([]string, 0, len(appsToSplit))
+		for _, app := range appsToSplit {
+			if len(app) > 0 {
+				if strings.HasPrefix(app, exDir) {
+					log.Warning(fmt.Sprintf("Split-Tunnelling for IVPN binaries is forbidden (%s)", app))
+				} else {
+					parsedApps = append(parsedApps, app)
+				}
+			}
+		}
+		appsToSplit = parsedApps
+	}
+
 	prefs.IsSplitTunnel = isEnabled
 	prefs.SplitTunnelApps = appsToSplit
 	s.setPreferences(prefs)
@@ -1132,23 +1155,51 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string
 	return s.SplitTunnelling_ApplyConfig()
 }
 func (s *Service) SplitTunnelling_ApplyConfig() error {
-	if !splittun.IsConnectted() {
-		// Split-Tunneling not accessable (not connected to a driver or not implemented for current platform)
+	if splittun.GetFuncNotAvailableError() != nil {
+		// Split-Tunneling not accessable (not able to connect to a driver or not implemented for current platform)
+		return nil
+	}
+
+	if !s.Connected() {
+		// VPM not connected. No sense to enable split-tunnelling
 		return nil
 	}
 
 	prefs := s.Preferences()
 	sInf := s.GetVpnSessionInfo()
 
-	stopErr := splittun.StopAndClean()
-	if stopErr != nil {
-		stopErr = log.ErrorE(fmt.Errorf("failed to stop split-tunnelling: %w", stopErr), 0)
+	// If ST connected:
+	//	- stop and erase old configuration
+	//  - if ST have to be disabled - disconnect ST driver
+	if splittun.IsConnectted() {
+		if err := splittun.StopAndClean(); err != nil {
+			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
+		}
+		if !prefs.IsSplitTunnel {
+			if err := splittun.Disconnect(); err != nil {
+				return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
+			}
+		}
 	}
 
 	if !prefs.IsSplitTunnel || len(prefs.SplitTunnelApps) == 0 || ((sInf.OutboundIPv4 == nil || sInf.VpnLocalIPv4 == nil) && (sInf.OutboundIPv6 == nil || sInf.VpnLocalIPv6 == nil)) {
-		return stopErr
+		// no configuration
+		return nil
 	}
 
+	// If ST not connected:
+	//	- connect driver
+	//  - stop and erase old configuration
+	if !splittun.IsConnectted() {
+		if err := splittun.Connect(); err != nil {
+			return log.ErrorE(fmt.Errorf("failed to start split-tunnelling: %w", err), 0)
+		}
+		if err := splittun.StopAndClean(); err != nil {
+			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
+		}
+	}
+
+	// Set new configuration
 	cfg := splittun.Config{}
 	cfg.Apps = splittun.ConfigApps{ImagesPathToSplit: prefs.SplitTunnelApps}
 	cfg.Addr = splittun.ConfigAddresses{

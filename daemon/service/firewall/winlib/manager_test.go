@@ -72,7 +72,7 @@ func TestBlockAll(t *testing.T) {
 		defer mgr.TransactionCommit()
 
 		provider := winlib.CreateProvider(providerKey, "IVPN Test", "IVPN Test WFP Provider", false)
-		sublayer := winlib.CreateSubLayer(sublayerKey, providerKey, "IVPN Test", "IVPN Test WFP Sublayer", false)
+		sublayer := winlib.CreateSubLayer(sublayerKey, providerKey, "IVPN Test", "IVPN Test WFP Sublayer", 0, false)
 
 		pinfo, err := mgr.GetProviderInfo(providerKey)
 		if err != nil {

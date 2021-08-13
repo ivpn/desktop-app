@@ -30,8 +30,16 @@ func implInitialize() error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }
 
+func implFuncNotAvailableError() error {
+	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+}
+
 func implConnect() error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+}
+
+func implDisconnect() (err error) {
+	return nil
 }
 
 func implStopAndClean() error {

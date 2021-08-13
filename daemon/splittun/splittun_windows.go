@@ -35,7 +35,10 @@ import (
 )
 
 var (
+	// error describing details if functionality not available
+	funcNotAvailableError            error
 	fSplitTun_Connect                *syscall.LazyProc
+	fSplitTun_Disconnect             *syscall.LazyProc
 	fSplitTun_StopAndClean           *syscall.LazyProc
 	fSplitTun_SplitStart             *syscall.LazyProc
 	fSplitTun_GetState               *syscall.LazyProc
@@ -46,7 +49,6 @@ var (
 	fSplitTun_ProcMonInitRunningApps *syscall.LazyProc
 	//fSplitTun_ProcMonStart           *syscall.LazyProc
 	//fSplitTun_ProcMonStop            *syscall.LazyProc
-	//fSplitTun_Disconnect             *syscall.LazyProc
 	//fSplitTun_SplitStop              *syscall.LazyProc
 )
 
@@ -63,6 +65,7 @@ func implInitialize() error {
 	dll := syscall.NewLazyDLL(wfpDllPath)
 
 	fSplitTun_Connect = dll.NewProc("SplitTun_Connect")
+	fSplitTun_Disconnect = dll.NewProc("SplitTun_Disconnect")
 	fSplitTun_StopAndClean = dll.NewProc("SplitTun_StopAndClean")
 	fSplitTun_ProcMonInitRunningApps = dll.NewProc("SplitTun_ProcMonInitRunningApps")
 	fSplitTun_SplitStart = dll.NewProc("SplitTun_SplitStart")
@@ -73,9 +76,15 @@ func implInitialize() error {
 	fSplitTun_ConfigGetSplitAppRaw = dll.NewProc("fSplitTun_ConfigGetSplitAppRaw")
 	//fSplitTun_ProcMonStart = dll.NewProc("SplitTun_ProcMonStart")
 	//fSplitTun_ProcMonStop = dll.NewProc("SplitTun_ProcMonStop")
-	//fSplitTun_Disconnect = dll.NewProc("SplitTun_Disconnect")
 	//fSplitTun_SplitStop = dll.NewProc("SplitTun_SplitStop")
-	return nil
+
+	// to ensure that functionality works - just try to start/stop driver
+	defer implDisconnect()
+	if connectErr := implConnect(); connectErr != nil {
+		funcNotAvailableError = fmt.Errorf("Split-Tunnel functionality test failed: %w", connectErr)
+	}
+
+	return funcNotAvailableError
 }
 
 func catchPanic(err *error) {
@@ -99,9 +108,20 @@ func checkCallErrResp(retval uintptr, err error, mName string) error {
 	return nil
 }
 
+func implFuncNotAvailableError() error {
+	return funcNotAvailableError
+}
+
 func implConnect() (err error) {
 	defer catchPanic(&err)
-	retval, _, err := fSplitTun_Connect.Call()
+
+	drvPath := platform.WindowsSplitTunnelDriverPath()
+	utfDrvPath, err := syscall.UTF16PtrFromString(drvPath)
+	if err != nil {
+		return fmt.Errorf("(SplitTun_Connect) Failed to convert driver file path: %w", err)
+	}
+
+	retval, _, err := fSplitTun_Connect.Call(uintptr(unsafe.Pointer(utfDrvPath)))
 	if err != syscall.Errno(0) {
 		if err == syscall.ERROR_FILE_NOT_FOUND {
 			err = fmt.Errorf("%w (check if IVPN Split-Tunnelling driver installed)", err)
@@ -111,6 +131,16 @@ func implConnect() (err error) {
 	if retval != 1 {
 		return fmt.Errorf("Split-Tunnelling operation failed (SplitTun_Connect)")
 	}
+	return nil
+}
+
+func implDisconnect() (err error) {
+	defer catchPanic(&err)
+	retval, _, err := fSplitTun_Disconnect.Call()
+	if err := checkCallErrResp(retval, err, "SplitTun_Disconnect"); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -370,17 +400,6 @@ func parseRawBuffAppsConfig(bytesArr []byte) (apps ConfigApps, err error) {
 
 	return ConfigApps{ImagesPathToSplit: files}, nil
 }
-
-/*
-func implDisconnect() (err error) {
-	defer catchPanic(&err)
-	retval, _, err := fSplitTun_Disconnect.Call()
-	if err := checkCallErrResp(retval, err, "SplitTun_Disconnect"); err != nil {
-		return err
-	}
-
-	return nil
-}*/
 
 /*
 func implStop() (err error) {

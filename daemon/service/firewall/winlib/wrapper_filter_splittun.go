@@ -36,10 +36,13 @@ func WfpRegisterSplitTunFilters(
 	subLayerGUID syscall.GUID,
 	isPersistant bool) (err error) {
 
-	var isPersistantDW uint32
-	if isPersistant {
-		isPersistantDW = 1
-	}
+	var isPersistantDW uint32 = 0
+	// Do not apply 'Persistant' flag to ST firewall rules in order to avoid error (0x80320016: FWP_E_LIFETIME_MISMATCH)
+	// The driver is not using 'Persistant' when creating  callouts or filters
+	//
+	//if isPersistant {
+	//	isPersistantDW = 1
+	//}
 
 	defer catchPanic(&err)
 

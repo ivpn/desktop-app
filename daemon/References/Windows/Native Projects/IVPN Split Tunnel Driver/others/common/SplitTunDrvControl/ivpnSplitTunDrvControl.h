@@ -23,6 +23,9 @@ namespace splittun
 	void RegisterLoggingCallback(LoggingCallback cb);
 	void UnRegisterLoggingCallback();
 
+	bool StartDriverAsService(LPCTSTR serviceExe);
+	bool StopDriverAsService();
+
 	/// <summary>
 	/// Connects to driver
 	/// </summary>

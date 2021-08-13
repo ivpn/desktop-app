@@ -104,3 +104,8 @@ EvtIoDeviceControl(
 
     return;
 }
+
+NTSTATUS StopAndCleanDriver()
+{
+    return StopAndClean();
+}

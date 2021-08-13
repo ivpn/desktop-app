@@ -59,7 +59,7 @@ func DoTest() {
 	isInstalled, flags, err := winlib.WfpGetProviderFlags(engine, guid)
 	fmt.Println(isInstalled, flags, err)
 
-	sublayer, serr := winlib.FWPMSUBLAYER0Create(guid)
+	sublayer, serr := winlib.FWPMSUBLAYER0Create(guid, 0)
 	fmt.Println(sublayer, serr)
 
 	isInstalled, err = winlib.WfpSubLayerIsInstalled(engine, guid)
