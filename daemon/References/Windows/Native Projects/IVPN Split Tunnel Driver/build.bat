@@ -53,6 +53,7 @@ rem       We can ignore this warning
 copy "%RELEASE_PATH%\ivpn-split-tunnel.inf" "%DIST_PATH_DRV%\ivpn-split-tunnel.inf" || goto :error
 copy "%RELEASE_PATH%\ivpn-split-tunnel.sys" "%DIST_PATH_DRV%\ivpn-split-tunnel.sys" || goto :error
 copy "%RELEASE_PATH%\WdfCoinstaller01009.dll" "%DIST_PATH_DRV%\WdfCoinstaller01009.dll" || goto :error
+copy "%RELEASE_PATH%\..\ivpn-split-tunnel.pdb" "%DIST_PATH_DRV%\ivpn-split-tunnel.pdb" || goto :error
 
 rem echo [+] Signing SYS file by EV Certificate ...
 rem set TIMESTAMP_SERVER=http://timestamp.digicert.com
@@ -75,6 +76,7 @@ echo [+] Preparing CAB file configuration...
   echo "%DIST_PATH_DRV%\ivpn-split-tunnel.inf"
   echo "%DIST_PATH_DRV%\ivpn-split-tunnel.sys"
   echo "%DIST_PATH_DRV%\WdfCoinstaller01009.dll"
+	echo "%DIST_PATH_DRV%\ivpn-split-tunnel.pdb"
 )
 IF %ERRORLEVEL% NEQ 0 goto error
 
