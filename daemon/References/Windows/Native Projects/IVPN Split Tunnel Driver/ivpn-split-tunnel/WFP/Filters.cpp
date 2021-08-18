@@ -3,37 +3,30 @@
 
 namespace wfp
 {
-	NTSTATUS RegisterFilterBindRedirectIpv4 ( HANDLE wfpEngineHandle)
+	NTSTATUS AddCalloutFilter(HANDLE wfpEngineHandle, const wchar_t* filterName, const wchar_t* filterDescription, 
+		const GUID filterKey, const GUID layerKey, const GUID calloutKey)
 	{
-		// In use for non-TCP protocols
-
 		FWPM_FILTER0 filter = { 0 };
 		UINT64 weight = MAXUINT64;
 
-		const auto filterName = L"IVPN Split Tunnel filter (BIND_REDIRECT_V4)";
-		const auto filterDescription = L"Fits only for non-TCP connections";
-
-		filter.filterKey = KEY_FILTER_CALLOUT_ALE_BIND_REDIRECT_V4;
+		filter.filterKey = filterKey;
 		filter.displayData.name = const_cast<wchar_t*>(filterName);
-		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
+		filter.displayData.description = const_cast<wchar_t*>((filterDescription!=NULL)? filterDescription : filterName);
 		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT;
 		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
-		filter.layerKey = FWPM_LAYER_ALE_BIND_REDIRECT_V4;
+		filter.layerKey = layerKey;
 		filter.subLayerKey = KEY_IVPN_ST_SUBLAYER;
+		
 		filter.weight.type = FWP_UINT64;
 		filter.weight.uint64 = const_cast<UINT64*>(&weight);
+		//filter.weight.type = FWP_UINT8;
+		//filter.weight.uint8 = 0xF;
+
 		filter.action.type = FWP_ACTION_CALLOUT_UNKNOWN;
-		filter.action.calloutKey = KEY_CALLOUT_ALE_BIND_REDIRECT_V4;
+		filter.action.calloutKey = calloutKey;
 
-		FWPM_FILTER_CONDITION0 cond;
-
-		cond.fieldKey = FWPM_CONDITION_IP_PROTOCOL;
-		cond.matchType = FWP_MATCH_NOT_EQUAL;
-		cond.conditionValue.type = FWP_UINT8;
-		cond.conditionValue.uint8 = IPPROTO_TCP;
-
-		filter.filterCondition = &cond;
-		filter.numFilterConditions = 1;
+		// catch all connections
+		filter.numFilterConditions = 0;
 
 		NTSTATUS status = FwpmFilterAdd0(wfpEngineHandle, &filter, NULL, NULL);
 		if (!NT_SUCCESS(status))
@@ -42,162 +35,9 @@ namespace wfp
 		return status;
 	}
 
-	NTSTATUS UnRegisterFilterBindRedirectIpv4 ( HANDLE wfpEngineHandle)
+	NTSTATUS DeleteFilter(HANDLE wfpEngineHandle, const GUID filterKey)
 	{
-		NTSTATUS status = FwpmFilterDeleteByKey0(wfpEngineHandle, &KEY_FILTER_CALLOUT_ALE_BIND_REDIRECT_V4);
-		if (!NT_SUCCESS(status))
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) failed':  %!STATUS!", status);
-
-		return status;
-	}
-
-	
-	NTSTATUS RegisterFilterConnectRedirectIpv4 ( HANDLE wfpEngineHandle)
-	{
-		// In use for TCP protocols
-
-		FWPM_FILTER0 filter = { 0 };
-		UINT64 weight = MAXUINT64;
-
-		const auto filterName = L"IVPN Split Tunnel filter (CONNECT_REDIRECT_V4)";
-		const auto filterDescription = L"Fits only for TCP connections";
-
-		filter.filterKey = KEY_FILTER_CALLOUT_ALE_CONNECT_REDIRECT_V4;
-		filter.displayData.name = const_cast<wchar_t*>(filterName);
-		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
-		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT;
-		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
-		filter.layerKey = FWPM_LAYER_ALE_CONNECT_REDIRECT_V4;
-		filter.subLayerKey = KEY_IVPN_ST_SUBLAYER;
-		filter.weight.type = FWP_UINT64;
-		filter.weight.uint64 = const_cast<UINT64*>(&weight);
-
-		// TODO: https://docs.microsoft.com/en-us/windows-hardware/drivers/network/types-of-callouts
-		//The filter action type for this type of callout should be set to FWP_ACTION_PERMIT.
-		filter.action.type = FWP_ACTION_CALLOUT_UNKNOWN;
-
-		filter.action.calloutKey = KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4;
-
-		FWPM_FILTER_CONDITION0 cond;
-
-		cond.fieldKey = FWPM_CONDITION_IP_PROTOCOL;
-		cond.matchType = FWP_MATCH_EQUAL;
-		cond.conditionValue.type = FWP_UINT8;
-		cond.conditionValue.uint8 = IPPROTO_TCP;
-
-		filter.filterCondition = &cond;
-		filter.numFilterConditions = 1;
-
-		NTSTATUS status = FwpmFilterAdd0(wfpEngineHandle, &filter, NULL, NULL);
-		if (!NT_SUCCESS(status))
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) failed':  %!STATUS!", status);
-
-		return status;
-	}
-
-	NTSTATUS UnRegisterFilterConnectRedirectIpv4 ( HANDLE wfpEngineHandle)
-	{
-		NTSTATUS status = FwpmFilterDeleteByKey0(wfpEngineHandle, &KEY_FILTER_CALLOUT_ALE_CONNECT_REDIRECT_V4);
-		if (!NT_SUCCESS(status))
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) failed':  %!STATUS!", status);
-
-		return status;
-	}
-
-	NTSTATUS RegisterFilterBindRedirectIpv6 ( HANDLE wfpEngineHandle)
-	{
-		// In use for non-TCP protocols
-
-		FWPM_FILTER0 filter = { 0 };
-		UINT64 weight = MAXUINT64;
-
-		const auto filterName = L"IVPN Split Tunnel filter (BIND_REDIRECT_V6)";
-		const auto filterDescription = L"Fits only for non-TCP connections";
-
-		filter.filterKey = KEY_FILTER_CALLOUT_ALE_BIND_REDIRECT_V6;
-		filter.displayData.name = const_cast<wchar_t*>(filterName);
-		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
-		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT;
-		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
-		filter.layerKey = FWPM_LAYER_ALE_BIND_REDIRECT_V6;
-		filter.subLayerKey = KEY_IVPN_ST_SUBLAYER;
-		filter.weight.type = FWP_UINT64;
-		filter.weight.uint64 = const_cast<UINT64*>(&weight);
-		filter.action.type = FWP_ACTION_CALLOUT_UNKNOWN;
-		filter.action.calloutKey = KEY_CALLOUT_ALE_BIND_REDIRECT_V6;
-
-		FWPM_FILTER_CONDITION0 cond;
-
-		cond.fieldKey = FWPM_CONDITION_IP_PROTOCOL;
-		cond.matchType = FWP_MATCH_NOT_EQUAL;
-		cond.conditionValue.type = FWP_UINT8;
-		cond.conditionValue.uint8 = IPPROTO_TCP;
-
-		filter.filterCondition = &cond;
-		filter.numFilterConditions = 1;
-
-		NTSTATUS status = FwpmFilterAdd0(wfpEngineHandle, &filter, NULL, NULL);
-		if (!NT_SUCCESS(status))
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) failed':  %!STATUS!", status);
-
-		return status;
-	}
-
-	NTSTATUS UnRegisterFilterBindRedirectIpv6 ( HANDLE wfpEngineHandle)
-	{
-		NTSTATUS status = FwpmFilterDeleteByKey0(wfpEngineHandle, &KEY_FILTER_CALLOUT_ALE_BIND_REDIRECT_V6);
-		if (!NT_SUCCESS(status))
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) failed':  %!STATUS!", status);
-
-		return status;
-	}
-
-	NTSTATUS RegisterFilterConnectRedirectIpv6 ( HANDLE wfpEngineHandle)
-	{
-		// In use for TCP protocols
-
-		FWPM_FILTER0 filter = { 0 };
-		UINT64 weight = MAXUINT64;
-
-		const auto filterName = L"IVPN Split Tunnel filter (CONNECT_REDIRECT_V6)";
-		const auto filterDescription = L"Fits only for TCP connections";
-
-		filter.filterKey = KEY_FILTER_CALLOUT_ALE_CONNECT_REDIRECT_V6;
-		filter.displayData.name = const_cast<wchar_t*>(filterName);
-		filter.displayData.description = const_cast<wchar_t*>(filterDescription);
-		filter.flags = FWPM_FILTER_FLAG_CLEAR_ACTION_RIGHT;
-		filter.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
-		filter.layerKey = FWPM_LAYER_ALE_CONNECT_REDIRECT_V6;
-		filter.subLayerKey = KEY_IVPN_ST_SUBLAYER;
-		filter.weight.type = FWP_UINT64;
-		filter.weight.uint64 = const_cast<UINT64*>(&weight);
-
-		// TODO: https://docs.microsoft.com/en-us/windows-hardware/drivers/network/types-of-callouts
-		//The filter action type for this type of callout should be set to FWP_ACTION_PERMIT.
-		filter.action.type = FWP_ACTION_CALLOUT_UNKNOWN;
-
-		filter.action.calloutKey = KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6;
-
-		FWPM_FILTER_CONDITION0 cond;
-
-		cond.fieldKey = FWPM_CONDITION_IP_PROTOCOL;
-		cond.matchType = FWP_MATCH_EQUAL;
-		cond.conditionValue.type = FWP_UINT8;
-		cond.conditionValue.uint8 = IPPROTO_TCP;
-
-		filter.filterCondition = &cond;
-		filter.numFilterConditions = 1;
-
-		NTSTATUS status = FwpmFilterAdd0(wfpEngineHandle, &filter, NULL, NULL);
-		if (!NT_SUCCESS(status))
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) failed':  %!STATUS!", status);
-
-		return status;
-	}
-
-	NTSTATUS UnRegisterFilterConnectRedirectIpv6 ( HANDLE wfpEngineHandle)
-	{
-		NTSTATUS status = FwpmFilterDeleteByKey0(wfpEngineHandle, &KEY_FILTER_CALLOUT_ALE_CONNECT_REDIRECT_V6);
+		NTSTATUS status = FwpmFilterDeleteByKey0(wfpEngineHandle, &filterKey);
 		if (!NT_SUCCESS(status))
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) failed':  %!STATUS!", status);
 
@@ -208,19 +48,83 @@ namespace wfp
 	{
 		NTSTATUS status;
 
-		status = RegisterFilterBindRedirectIpv4(wfpEngineHandle);
+		//
+		// REDIRECTION CALLOUTS
+		// 
+		
+		// BIND_REDIRECT_V4
+		status = AddCalloutFilter(wfpEngineHandle, 
+			L"IVPN Split Tunnel filter (BIND_REDIRECT_V4)", NULL,
+			KEY_FILTER_CALLOUT_ALE_BIND_REDIRECT_V4, 
+			FWPM_LAYER_ALE_BIND_REDIRECT_V4, 
+			KEY_CALLOUT_ALE_BIND_REDIRECT_V4);
 		if (!NT_SUCCESS(status))
 			return status;
 
-		status = RegisterFilterConnectRedirectIpv4(wfpEngineHandle);
+		// CONNECT_REDIRECT_V4
+		status = AddCalloutFilter(wfpEngineHandle,
+			L"IVPN Split Tunnel filter (CONNECT_REDIRECT_V4)", NULL,
+			KEY_FILTER_CALLOUT_ALE_CONNECT_REDIRECT_V4, 
+			FWPM_LAYER_ALE_CONNECT_REDIRECT_V4, 
+			KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4);
+		if (!NT_SUCCESS(status))
+			return status;
+				
+		// BIND_REDIRECT_V6
+		status = AddCalloutFilter(wfpEngineHandle,
+			L"IVPN Split Tunnel filter (BIND_REDIRECT_V6)", NULL,
+			KEY_FILTER_CALLOUT_ALE_BIND_REDIRECT_V6, 
+			FWPM_LAYER_ALE_BIND_REDIRECT_V6, 
+			KEY_CALLOUT_ALE_BIND_REDIRECT_V6);
 		if (!NT_SUCCESS(status))
 			return status;
 
-		status = RegisterFilterBindRedirectIpv6(wfpEngineHandle);
+		// CONNECT_REDIRECT_V6
+		status = AddCalloutFilter(wfpEngineHandle,
+			L"IVPN Split Tunnel filter (CONNECT_REDIRECT_V6)", NULL,
+			KEY_FILTER_CALLOUT_ALE_CONNECT_REDIRECT_V6, 
+			FWPM_LAYER_ALE_CONNECT_REDIRECT_V6, 
+			KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6);
 		if (!NT_SUCCESS(status))
 			return status;
 
-		status = RegisterFilterConnectRedirectIpv6(wfpEngineHandle);
+		//
+		// PERMIT/BLOCK CALLOUTS
+		// 
+
+		// ALE_AUTH_CONNECT_V4
+		status = AddCalloutFilter(wfpEngineHandle,
+			L"IVPN Split Tunnel filter (ALE_AUTH_CONNECT_V4)", NULL,
+			KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V4_ST_INTERNAL,
+			FWPM_LAYER_ALE_AUTH_CONNECT_V4,
+			KEY_CALLOUT_ALE_AUTH_CONNECT_V4);
+		if (!NT_SUCCESS(status))
+			return status;
+
+		// ALE_AUTH_CONNECT_V6
+		status = AddCalloutFilter(wfpEngineHandle,
+			L"IVPN Split Tunnel filter (ALE_AUTH_CONNECT_V6)", NULL,
+			KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V6_ST_INTERNAL,
+			FWPM_LAYER_ALE_AUTH_CONNECT_V6,
+			KEY_CALLOUT_ALE_AUTH_CONNECT_V6);
+		if (!NT_SUCCESS(status))
+			return status;
+
+		// ALE_AUTH_RECV_ACCEPT_V4
+		status = AddCalloutFilter(wfpEngineHandle,
+			L"IVPN Split Tunnel filter (ALE_AUTH_RECV_ACCEPT_V4)", NULL,
+			KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4_ST_INTERNAL,
+			FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
+			KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT);
+		if (!NT_SUCCESS(status))
+			return status;
+
+		// ALE_AUTH_RECV_ACCEPT_V6
+		status = AddCalloutFilter(wfpEngineHandle,
+			L"IVPN Split Tunnel filter (ALE_AUTH_RECV_ACCEPT_V6)", NULL,
+			KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6_ST_INTERNAL,
+			FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
+			KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6);
 		if (!NT_SUCCESS(status))
 			return status;
 
@@ -231,22 +135,42 @@ namespace wfp
 	{
 		NTSTATUS ret = STATUS_SUCCESS, status;
 
-		status = UnRegisterFilterBindRedirectIpv4(wfpEngineHandle);
+		// REDIRECTION CALLOUTS
+
+		status = DeleteFilter(wfpEngineHandle, KEY_FILTER_CALLOUT_ALE_BIND_REDIRECT_V4);
 		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
 			ret = status;
 
-		status = UnRegisterFilterConnectRedirectIpv4(wfpEngineHandle);
+		status = DeleteFilter(wfpEngineHandle, KEY_FILTER_CALLOUT_ALE_CONNECT_REDIRECT_V4);
 		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
 			ret = status;
 
-		status = UnRegisterFilterBindRedirectIpv6(wfpEngineHandle);
+		status = DeleteFilter(wfpEngineHandle, KEY_FILTER_CALLOUT_ALE_BIND_REDIRECT_V6);
 		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
 			ret = status;
 
-		status = UnRegisterFilterConnectRedirectIpv6(wfpEngineHandle);
+		status = DeleteFilter(wfpEngineHandle, KEY_FILTER_CALLOUT_ALE_CONNECT_REDIRECT_V6);
 		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
 			ret = status;
 				
+		// PERMIT/BLOCK CALLOUTS
+
+		status = DeleteFilter(wfpEngineHandle, KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V4_ST_INTERNAL);
+		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
+			ret = status;
+
+		status = DeleteFilter(wfpEngineHandle, KEY_FILTER_CALLOUT_ALE_AUTH_CONNECT_V6_ST_INTERNAL);
+		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
+			ret = status;
+
+		status = DeleteFilter(wfpEngineHandle, KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4_ST_INTERNAL);
+		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
+			ret = status;
+
+		status = DeleteFilter(wfpEngineHandle, KEY_FILTER_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6_ST_INTERNAL);
+		if (!NT_SUCCESS(status) && (NT_SUCCESS(ret)))
+			ret = status;
+
 		return ret;
 	}
 }

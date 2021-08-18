@@ -356,15 +356,3 @@ func (m *Manager) DeleteFilterByProviderKey(providerKey syscall.GUID, layerKey s
 
 	return WfpFiltersDeleteByProviderKey(m.engine, providerKey, layerKey)
 }
-
-func (m *Manager) WfpRegisterSplitTunFilters(
-	providerGUID syscall.GUID,
-	subLayerGUID syscall.GUID,
-	isPersistant bool) (err error) {
-
-	if !m.isInitialized() {
-		return errors.New("FW engine not initialized")
-	}
-
-	return WfpRegisterSplitTunFilters(m.engine, providerGUID, subLayerGUID, isPersistant)
-}

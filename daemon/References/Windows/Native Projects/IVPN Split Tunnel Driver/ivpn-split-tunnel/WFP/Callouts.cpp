@@ -31,18 +31,18 @@ namespace wfp
 
 	bool LocalAddress(const IN6_ADDR* addr)
 	{
-		return IN6_IS_ADDR_LOOPBACK(addr) // ::1/128
-			|| IN6_IS_ADDR_LINKLOCAL(addr) // fe80::/10
-			|| IN6_IS_ADDR_SITELOCAL(addr) // fec0::/10
-			|| IN6_IS_ADDR_ULA(addr) // fd00::/8
-			|| IN6_IS_ADDR_MC_NON_GLOBAL(addr) // ff00::/8 && !(ffxe::/16)
+		return IN6_IS_ADDR_LOOPBACK(addr)		// ::1/128
+			|| IN6_IS_ADDR_LINKLOCAL(addr)		// fe80::/10
+			|| IN6_IS_ADDR_SITELOCAL(addr)		// fec0::/10
+			|| IN6_IS_ADDR_ULA(addr)			// fd00::/8
+			|| IN6_IS_ADDR_MC_NON_GLOBAL(addr)	// ff00::/8 && !(ffxe::/16)
 			;
 	}
 
 	/// <summary>
 	/// // https://docs.microsoft.com/en-us/windows-hardware/drivers/network/using-bind-or-connect-redirection
 	/// </summary>
-	void CalloutClassifyConnectOrBind
+	void CalloutClassifyConnectOrBindRedirect
 		(
 			_In_ const FWPS_INCOMING_VALUES0* inFixedValues,
 			_In_ const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
@@ -69,7 +69,7 @@ namespace wfp
 			inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 ||
 			inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V4 ||
 			inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6);
-						
+		
 		// https://docs.microsoft.com/en-us/windows-hardware/drivers/network/using-bind-or-connect-redirection
 		// 
 		// INFO:
@@ -103,13 +103,48 @@ namespace wfp
 
 		if (classifyOut->actionType == FWP_ACTION_NONE)
 			classifyOut->actionType = FWP_ACTION_CONTINUE;
-
+		
 		if (!FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_PROCESS_ID))
 		{
 			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) SKIPPING: Failed to classify connection because PID was not provided");
-			// TODO: what we should do for the connections when we can not determine PID?
 			return;
 		}
+		
+		// ================= DEBUG: TEST START ===================
+		/*const bool isIPv6 = inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6;
+		if (isIPv6)
+		{
+			auto srcAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_LOCAL_ADDRESS].value.byteArray16);
+			if (inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6)
+			{
+				auto dstAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_REMOTE_ADDRESS].value.byteArray16);
+				bool isSrcLocal = LocalAddress(srcAddr);
+				bool isDstLocal = LocalAddress(dstAddr);
+
+				if (isSrcLocal || isDstLocal)
+				{
+					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Split skipped LOCAL (src:%d dst:%d pid:0x%llX) IPv6 CONNECT src:%x:%x:%x:%x:%x:%x:%x:%x dst:%x:%x:%x:%x:%x:%x:%x:%x", 
+						isSrcLocal, isDstLocal, inMetaValues->processId,
+						srcAddr->u.Word[0], srcAddr->u.Word[1], srcAddr->u.Word[2], srcAddr->u.Word[3],
+						srcAddr->u.Word[4], srcAddr->u.Word[5], srcAddr->u.Word[6], srcAddr->u.Word[7],
+						dstAddr->u.Word[0], dstAddr->u.Word[1], dstAddr->u.Word[2], dstAddr->u.Word[3],
+						dstAddr->u.Word[4], dstAddr->u.Word[5], dstAddr->u.Word[6], dstAddr->u.Word[7]);
+					return;
+				}
+			}
+			else
+			{
+				if (LocalAddress(srcAddr))
+				{
+					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Split skipped LOCAL (pid:0x%llX) BIND src:%x:%x:%x:%x:%x:%x:%x:%x",
+						inMetaValues->processId,
+						srcAddr->u.Word[0], srcAddr->u.Word[1], srcAddr->u.Word[2], srcAddr->u.Word[3],
+						srcAddr->u.Word[4], srcAddr->u.Word[5], srcAddr->u.Word[6], srcAddr->u.Word[7]);
+					return;
+				}
+			}
+		}*/
+		// ================= DEBUG: TEST STOP ===================
 		
 		// Checking: is it 'known' process
 		// ProcessMonitor keep information only about processes that have to be applied to split-tunnel
@@ -128,7 +163,7 @@ namespace wfp
 		TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX (on-%s [%s])", inMetaValues->processId,
 			(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6) ? "CONNECT" : "BIND",
 			(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6) ? "IPv6" : "IPv4");
-
+				
 		const IPAddrConfig config = cfg::GetIPs();
 		
 		switch (inFixedValues->layerId)
@@ -136,9 +171,7 @@ namespace wfp
 			case FWPS_LAYER_ALE_BIND_REDIRECT_V4:
 			case FWPS_LAYER_ALE_CONNECT_REDIRECT_V4:
 			{
-				bool isConnect = inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4;
-
-				if (IN4_IS_ADDR_UNSPECIFIED(&config.IPv4Public) || IN4_IS_ADDR_UNSPECIFIED(&config.IPv4Tunnel))
+				if (!cfg::IsConfigIPv4AddrOk(config))
 				{
 					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) IPv4 configuration unspecified. SKIPPING.");
 					break;
@@ -146,7 +179,6 @@ namespace wfp
 
 				const auto rawLocalAddr = RtlUlongByteSwap(inFixedValues->incomingValue[
 					FWPS_FIELD_ALE_CONNECT_REDIRECT_V4_IP_LOCAL_ADDRESS].value.uint32);
-
 				const auto rawRemoteAddr = RtlUlongByteSwap(inFixedValues->incomingValue[
 					FWPS_FIELD_ALE_CONNECT_REDIRECT_V4_IP_REMOTE_ADDRESS].value.uint32);
 
@@ -154,7 +186,8 @@ namespace wfp
 				auto dstAddr = reinterpret_cast<const IN_ADDR*>(&rawRemoteAddr);
 				
 				bool isSrcTun = srcAddr->S_un.S_addr == config.IPv4Tunnel.S_un.S_addr;
-				
+				bool isConnect = inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4;
+
 				if (isConnect)
 				{	// CONNECT
 					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (IPv4-CONNECT) src:%d.%d.%d.%d dst:%d.%d.%d.%d",
@@ -163,17 +196,16 @@ namespace wfp
 						dstAddr->S_un.S_un_b.s_b1, dstAddr->S_un.S_un_b.s_b2, dstAddr->S_un.S_un_b.s_b3, dstAddr->S_un.S_un_b.s_b4
 					);
 
-					bool isDestLocal = LocalAddress(dstAddr);
-					if (!(isSrcTun || !isDestLocal)) {
-						TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Connect SKIPPING: isSrcTun=%d isDestLocal=%d", isSrcTun, isDestLocal);
+					if (!isSrcTun) 
+					{
+						TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Connect SKIPPING (source interface is not tunnel)");
 						break;
 					}
 				}
 				else 
 				{	// BIND
 					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (IPv4-BIND) src:%d.%d.%d.%d",
-						inMetaValues->processId, 
-						srcAddr->S_un.S_un_b.s_b1, srcAddr->S_un.S_un_b.s_b2, srcAddr->S_un.S_un_b.s_b3, srcAddr->S_un.S_un_b.s_b4
+						inMetaValues->processId, srcAddr->S_un.S_un_b.s_b1, srcAddr->S_un.S_un_b.s_b2, srcAddr->S_un.S_un_b.s_b3, srcAddr->S_un.S_un_b.s_b4
 					);
 
 					bool isSrcNull = IN4_IS_ADDR_UNSPECIFIED(srcAddr);					
@@ -223,8 +255,7 @@ namespace wfp
 				FwpsApplyModifiedLayerData0(classifyHandle, request, 0);
 				FwpsReleaseClassifyHandle0(classifyHandle);
 
-				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) REDIRECTED PID: 0x%llX (%s [IPv4])", inMetaValues->processId,
-					isConnect ? "CONNECT" : "BIND");
+				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) REDIRECTED PID: 0x%llX (%s [IPv4])", inMetaValues->processId,	isConnect ? "CONNECT" : "BIND");
 
 				break;
 			}
@@ -232,10 +263,8 @@ namespace wfp
 			case FWPS_LAYER_ALE_BIND_REDIRECT_V6:
 			case FWPS_LAYER_ALE_CONNECT_REDIRECT_V6:
 			{
-				bool isConnect = inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6;
-
 				static const IN6_ADDR IN6_ADDR_ZERO = { 0 };
-				if (IN6_ADDR_EQUAL(&config.IPv6Public, &IN6_ADDR_ZERO) || IN6_ADDR_EQUAL(&config.IPv6Tunnel, &IN6_ADDR_ZERO))
+				if (!cfg::IsConfigIPv6AddrOk(config))
 				{
 					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) IPv6 configuration unspecified. SKIPPING.");
 					break;
@@ -243,12 +272,12 @@ namespace wfp
 
 				auto srcAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[
 					FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_LOCAL_ADDRESS].value.byteArray16);
-
 				auto dstAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[
 					FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_REMOTE_ADDRESS].value.byteArray16);
 
 				bool isSrcTun = IN6_ADDR_EQUAL(srcAddr, &config.IPv6Tunnel);
-							
+				bool isConnect = inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6;
+
 				if (isConnect)
 				{ // CONNECT
 					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) KNOWN PID: 0x%llX (IPv6-CONNECT) src:%x:%x:%x:%x:%x:%x:%x:%x dst:%x:%x:%x:%x:%x:%x:%x:%x",
@@ -258,10 +287,9 @@ namespace wfp
 						dstAddr->u.Word[0], dstAddr->u.Word[1], dstAddr->u.Word[2], dstAddr->u.Word[3],
 						dstAddr->u.Word[4], dstAddr->u.Word[5], dstAddr->u.Word[6], dstAddr->u.Word[7]);
 
-					bool isDestLocal = LocalAddress(dstAddr);
-					if (!(isSrcTun || !isDestLocal)) 
+					if (!isSrcTun)
 					{
-						TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Connect (IPv6) SKIPPING: isSrcTun=%d isDestLocal=%d", isSrcTun, isDestLocal);
+						TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Connect SKIPPING (source interface is not tunnel)");
 						break;
 					}
 				}
@@ -317,8 +345,7 @@ namespace wfp
 				FwpsApplyModifiedLayerData0(classifyHandle, request, 0);
 				FwpsReleaseClassifyHandle0(classifyHandle);
 
-				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) REDIRECTED PID: 0x%llX (%s [IPv6])", inMetaValues->processId,
-					isConnect ? "CONNECT" : "BIND");
+				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) REDIRECTED PID: 0x%llX (%s [IPv6])", inMetaValues->processId,	isConnect ? "CONNECT" : "BIND");
 				
 				break;
 			}
@@ -364,6 +391,7 @@ namespace wfp
 			inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4 ||
 			inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6);
 
+
 		if (!(classifyOut->rights & FWPS_RIGHT_ACTION_WRITE))
 		{
 			//	classifyOut->actionType: specifies the suggested action to be taken as determined by the callout.
@@ -375,7 +403,7 @@ namespace wfp
 
 		if (classifyOut->actionType == FWP_ACTION_NONE)
 			classifyOut->actionType = FWP_ACTION_CONTINUE;
-
+		
 		if (!FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_PROCESS_ID))
 		{
 			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) SKIPPING: Failed to classify connection because PID was not provided");
@@ -383,27 +411,75 @@ namespace wfp
 			return;
 		}
 
+		const bool isIPv6 = inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6;
+
+		// ================= DEBUG: TEST START ===================
+		/*
+		bool isPermitted = false;
+		if (isIPv6)
+		{
+			auto srcAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_LOCAL_ADDRESS].value.byteArray16);
+			auto dstAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_REMOTE_ADDRESS].value.byteArray16);
+			bool isSrcLocal = LocalAddress(srcAddr);
+			bool isDstLocal = LocalAddress(dstAddr);
+
+			if (isSrcLocal || isDstLocal)
+			{
+				isPermitted = true;
+				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) PERMITTED LOCAL-DST IPv6 (src:%d dst:%d pid:0x%llX) src:%x:%x:%x:%x:%x:%x:%x:%x dst:%x:%x:%x:%x:%x:%x:%x:%x",
+					isSrcLocal, isDstLocal, inMetaValues->processId,
+					srcAddr->u.Word[0], srcAddr->u.Word[1], srcAddr->u.Word[2], srcAddr->u.Word[3],
+					srcAddr->u.Word[4], srcAddr->u.Word[5], srcAddr->u.Word[6], srcAddr->u.Word[7],
+					dstAddr->u.Word[0], dstAddr->u.Word[1], dstAddr->u.Word[2], dstAddr->u.Word[3],
+					dstAddr->u.Word[4], dstAddr->u.Word[5], dstAddr->u.Word[6], dstAddr->u.Word[7]);
+			}
+		}
+
+		if (isPermitted)
+		{
+			classifyOut->actionType = FWP_ACTION_PERMIT;
+			classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
+			return;
+		}*/
+		// ================= DEBUG: TEST STOP ===================
+		
 		// Checking: is it 'known' process
 		// ProcessMonitor keep information only about processes that have to be applied to split-tunnel
 		prc::ProcessInfo* pi = prc::FindProcessInfoForPid((HANDLE)inMetaValues->processId);
-
+		
 		if (pi == NULL)
 		{
 			// PID unknown. Do nothing. Just go to the next filter.
-
+						
 			//TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) UNKNOWN PID: 0x%llX (on-%s [%s])", inMetaValues->processId,
 			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6) ? "CONNECT" : "BIND",
 			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6)? "IPv6" : "IPv4");
 			return;
 		}
-
-		TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX (on-%s [%s]) PERMIT", inMetaValues->processId,
-			(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6) ? "AUTH_CONNECT" : "AUTH_RECV_ACCEPT",
-			(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6) ? "IPv6" : "IPv4");
 		
 		// permit operation (PID is known)
 		classifyOut->actionType = FWP_ACTION_PERMIT;
-		classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;		
+		if (isIPv6)
+		{
+			// Block if IPv6 not configured
+			if (!cfg::IsConfigIPv6AddrOk())
+				classifyOut->actionType = FWP_ACTION_BLOCK;
+		}
+		else
+		{
+			// Block if IPv4 not configured
+			if (!cfg::IsConfigIPv4AddrOk())
+				classifyOut->actionType = FWP_ACTION_BLOCK;
+		}
+
+		// apply changes		
+		classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
+		TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX %s (on-%s [%s])", inMetaValues->processId, 
+			(classifyOut->actionType == FWP_ACTION_PERMIT)? "PERMIT" : "BLOCK",
+			(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6) ? "AUTH_CONNECT" : "AUTH_RECV_ACCEPT",
+			(isIPv6) ? "IPv6" : "IPv4");
 	}
 
 	/// <summary>
@@ -417,8 +493,16 @@ namespace wfp
 			FWPS_FILTER1* filter
 		)
 	{
-		// TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!)");
-
+		
+		//if (filterKey != NULL)
+		//{
+		//	GUID guid = *filterKey;
+		//	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Guid = {%08lX-%04hX-%04hX-%02hX%02hX-%02hX%02hX%02hX%02hX%02hX%02hX}",
+		//		guid.Data1, guid.Data2, guid.Data3,	guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],	guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+		//}
+		//else
+		//	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!)");
+		
 		UNREFERENCED_PARAMETER(notifyType);
 		UNREFERENCED_PARAMETER(filterKey);
 		UNREFERENCED_PARAMETER(filter);
@@ -464,22 +548,28 @@ namespace wfp
 
 		mCallout.calloutKey = *calloutKey;
 		mCallout.displayData.name = const_cast<wchar_t*>(calloutName);
-		mCallout.displayData.description = const_cast<wchar_t*>(calloutDescription);
+		mCallout.displayData.description = const_cast<wchar_t*>((calloutDescription!=NULL)? calloutDescription : calloutName);
 		mCallout.providerKey = const_cast<GUID*>(&KEY_IVPN_ST_PROVIDER);
 		mCallout.applicableLayer = *applicableLayerKey;
 
 		auto status = FwpmCalloutAdd0(wfpEngineHandle, &mCallout, NULL, NULL);
-
 		if (!NT_SUCCESS(status))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) FwpmCalloutAdd0() failed for '%ls':  %!STATUS!", calloutName, status);
 			return status;
+		}
 
-		return RegisterCallout(wdfDevObject, calloutClassifyFunc, calloutKey);
+		status = RegisterCallout(wdfDevObject, calloutClassifyFunc, calloutKey);
+		if (!NT_SUCCESS(status))
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout() failed for '%ls':  %!STATUS!", calloutName, status);
+
+		return status;
 	}
 
 	/// <summary>
 	/// UnregisterCallout
 	/// </summary>
-	NTSTATUS UnregisterCallout( const GUID* calloutKey)
+	NTSTATUS UnregisterCallout(const GUID* calloutKey)
 	{
 		return FwpsCalloutUnregisterByKey0(calloutKey);
 	}
@@ -499,127 +589,73 @@ namespace wfp
 		// FWPM_LAYER_ALE_CONNECT_REDIRECT_V6
 		
 		// IPv4
-		auto status = AddAndRegisterCallout(
-			wdfDevObject,
-			wfpEngineHandle,
-			CalloutClassifyConnectOrBind,
-			&KEY_CALLOUT_ALE_BIND_REDIRECT_V4,
-			&FWPM_LAYER_ALE_BIND_REDIRECT_V4,
-			L"IVPN Callout for split tunnelling (BIND_REDIRECT_V4)",
-			L"Redirects connections from tunnel interface"
-		);
-
+		auto status = AddAndRegisterCallout(wdfDevObject, wfpEngineHandle,
+			CalloutClassifyConnectOrBindRedirect,
+			&KEY_CALLOUT_ALE_BIND_REDIRECT_V4,	&FWPM_LAYER_ALE_BIND_REDIRECT_V4,
+			L"IVPN Callout for split tunnelling (BIND_REDIRECT_V4)", NULL);
 		if (!NT_SUCCESS(status))
-		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) AddAndRegisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V4':  %!STATUS!", status);
 			return status;
-		}
 
-		status = AddAndRegisterCallout(
-			wdfDevObject,
-			wfpEngineHandle,
-			CalloutClassifyConnectOrBind,
+		status = AddAndRegisterCallout(wdfDevObject,	wfpEngineHandle,
+			CalloutClassifyConnectOrBindRedirect,
 			&KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4,
 			&FWPM_LAYER_ALE_CONNECT_REDIRECT_V4,
-			L"IVPN Callout for split tunnelling (CONNECT_REDIRECT_V4)",
-			L"Redirects bindings from tunnel interface"
-		);
-		 
+			L"IVPN Callout for split tunnelling (CONNECT_REDIRECT_V4)", NULL);
 		if (!NT_SUCCESS(status))
-		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) AddAndRegisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4':  %!STATUS!", status);
 			return status;
-		}
 
 		// IPv6
-		status = AddAndRegisterCallout(
-			wdfDevObject,
-			wfpEngineHandle,
-			CalloutClassifyConnectOrBind,
+		status = AddAndRegisterCallout(wdfDevObject, wfpEngineHandle,
+			CalloutClassifyConnectOrBindRedirect,
 			&KEY_CALLOUT_ALE_BIND_REDIRECT_V6,
 			&FWPM_LAYER_ALE_BIND_REDIRECT_V6,
-			L"IVPN Callout for split tunnelling (BIND_REDIRECT_V6)",
-			L"Redirects connections from tunnel interface"
-		);
-
+			L"IVPN Callout for split tunnelling (BIND_REDIRECT_V6)", NULL);
 		if (!NT_SUCCESS(status))
-		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) AddAndRegisterCallout failed 'CALLOUT_ALE_BIND_REDIRECT_V6':  %!STATUS!", status);
 			return status;
-		}
 
-		status = AddAndRegisterCallout(
-			wdfDevObject,
-			wfpEngineHandle,
-			CalloutClassifyConnectOrBind,
+		status = AddAndRegisterCallout(wdfDevObject, wfpEngineHandle,
+			CalloutClassifyConnectOrBindRedirect,
 			&KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6,
 			&FWPM_LAYER_ALE_CONNECT_REDIRECT_V6,
-			L"IVPN Callout for split tunnelling (CONNECT_REDIRECT_V6)",
-			L"Redirects bindings from tunnel interface"
-		);
-
+			L"IVPN Callout for split tunnelling (CONNECT_REDIRECT_V6)", NULL);
 		if (!NT_SUCCESS(status))
-		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) AddAndRegisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6':  %!STATUS!", status);
 			return status;
-		}
-		 
-		// Registering callouts which can be used by external applications 
-		// in order to allow all communications for applications which have to be splitted
-		// (e.g. it is in use by IVPN firewall to bypass its default blocking rule)
+
+		// permit\block callouts:
 		// 
-		// The callouts have to be added by external applications (FwpmCalloutAdd0(...))
-		// and should be referenced in an appropriate filter (with type FWP_ACTION_CALLOUT_UNKNOWN)
-		//
-		// Callouts applicable for ALE AUTH LAYERS:
 		// FWPM_LAYER_ALE_AUTH_CONNECT_V4
 		// FWPM_LAYER_ALE_AUTH_CONNECT_V6
 		// FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4
 		// FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6
 
-		status = RegisterCallout(
-			wdfDevObject,			
+		status = AddAndRegisterCallout(wdfDevObject, wfpEngineHandle,
 			CalloutClassifyAuthConnectOrRecv,
-			&KEY_CALLOUT_ALE_AUTH_CONNECT_V4
-		);
+			&KEY_CALLOUT_ALE_AUTH_CONNECT_V4, &FWPM_LAYER_ALE_AUTH_CONNECT_V4,
+			L"IVPN Callout for split tunnelling (ALE_AUTH_CONNECT_V4)", NULL);
 		if (!NT_SUCCESS(status))
-		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_AUTH_CONNECT_V4':  %!STATUS!", status);
 			return status;
-		}
 
-		status = RegisterCallout(
-			wdfDevObject,
+		status = AddAndRegisterCallout(wdfDevObject, wfpEngineHandle,
 			CalloutClassifyAuthConnectOrRecv,
-			&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4			
-		);
+			&KEY_CALLOUT_ALE_AUTH_CONNECT_V6, &FWPM_LAYER_ALE_AUTH_CONNECT_V6,
+			L"IVPN Callout for split tunnelling (ALE_AUTH_CONNECT_V6)", NULL);
 		if (!NT_SUCCESS(status))
-		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4':  %!STATUS!", status);
 			return status;
-		}
 
-		status = RegisterCallout(
-			wdfDevObject,
+		status = AddAndRegisterCallout(wdfDevObject, wfpEngineHandle,
 			CalloutClassifyAuthConnectOrRecv,
-			&KEY_CALLOUT_ALE_AUTH_CONNECT_V6
-		);
+			&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT, &FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4,
+			L"IVPN Callout for split tunnelling (ALE_AUTH_RECV_ACCEPT_V4)", NULL);
 		if (!NT_SUCCESS(status))
-		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_AUTH_CONNECT_V6':  %!STATUS!", status);
 			return status;
-		}
 
-		status = RegisterCallout(
-			wdfDevObject,
+		status = AddAndRegisterCallout(wdfDevObject, wfpEngineHandle,
 			CalloutClassifyAuthConnectOrRecv,
-			&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6
-		);
+			&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6, &FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6,
+			L"IVPN Callout for split tunnelling (ALE_AUTH_RECV_ACCEPT_V6)", NULL);
 		if (!NT_SUCCESS(status))
-		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) RegisterCallout failed 'KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6':  %!STATUS!", status);
 			return status;
-		}
+				
 		return status;
 	}
 
@@ -631,66 +667,58 @@ namespace wfp
 		//
 		// REDIRECTING LAYERS
 		// 
-
 		s = UnregisterCallout(&KEY_CALLOUT_ALE_BIND_REDIRECT_V4);
 		if (!NT_SUCCESS(s))
 		{
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_BIND_REDIRECT_V4':  %!STATUS!", s);
 			ret = s;
 		}
-
 		s = UnregisterCallout(&KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4);
 		if (!NT_SUCCESS(s))
 		{
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V4':  %!STATUS!", s);
 			ret = s;
 		}
-
 		s = UnregisterCallout(&KEY_CALLOUT_ALE_BIND_REDIRECT_V6);
 		if (!NT_SUCCESS(s))
 		{
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_BIND_REDIRECT_V6':  %!STATUS!", s);
 			ret = s;
 		}
-
 		s = UnregisterCallout(&KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6);
 		if (!NT_SUCCESS(s))
 		{
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_CONNECT_REDIRECT_V6':  %!STATUS!", s);
 			ret = s;
 		}
-			
-		//
-		// ALE AUTH LAYERS
-		// 
 
+		//
+		// permit\block callouts: ALE AUTH LAYERS	// 
 		s = UnregisterCallout(&KEY_CALLOUT_ALE_AUTH_CONNECT_V4);
 		if (!NT_SUCCESS(s))
 		{
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_AUTH_CONNECT_V4':  %!STATUS!", s);
 			ret = s;
 		}
-
-		s = UnregisterCallout(&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4);
-		if (!NT_SUCCESS(s))
-		{
-			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V4':  %!STATUS!", s);
-			ret = s;
-		}
-
 		s = UnregisterCallout(&KEY_CALLOUT_ALE_AUTH_CONNECT_V6);
 		if (!NT_SUCCESS(s))
 		{
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_AUTH_CONNECT_V6':  %!STATUS!", s);
 			ret = s;
 		}
-
+		s = UnregisterCallout(&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT);
+		if (!NT_SUCCESS(s))
+		{
+			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT':  %!STATUS!", s);
+			ret = s;
+		}
 		s = UnregisterCallout(&KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6);
 		if (!NT_SUCCESS(s))
 		{
 			TraceEvents(TRACE_LEVEL_WARNING, TRACE_DRIVER, "(%!FUNC!) UnregisterCallout failed 'KEY_CALLOUT_ALE_AUTH_RECV_ACCEPT_V6':  %!STATUS!", s);
 			ret = s;
 		}
+				
 		return ret;
 	}
 }

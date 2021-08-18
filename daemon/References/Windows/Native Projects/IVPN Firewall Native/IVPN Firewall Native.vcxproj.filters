@@ -10,7 +10,6 @@
     <ClCompile Include="..\IVPN Split Tunnel Driver\others\common\SplitTunDrvControl\ivpnSplitTunDrvControl.cpp">
       <Filter>SplitTunCommon</Filter>
     </ClCompile>
-    <ClCompile Include="WfpFilterSplitTunnelling.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Firewall.h" />

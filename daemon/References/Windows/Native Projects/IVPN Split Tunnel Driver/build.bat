@@ -54,6 +54,10 @@ copy "%RELEASE_PATH%\ivpn-split-tunnel.inf" "%DIST_PATH_DRV%\ivpn-split-tunnel.i
 copy "%RELEASE_PATH%\ivpn-split-tunnel.sys" "%DIST_PATH_DRV%\ivpn-split-tunnel.sys" || goto :error
 copy "%RELEASE_PATH%\WdfCoinstaller01009.dll" "%DIST_PATH_DRV%\WdfCoinstaller01009.dll" || goto :error
 
+rem echo [+] Signing SYS file by EV Certificate ...
+rem set TIMESTAMP_SERVER=http://timestamp.digicert.com
+rem signtool sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%DIST_PATH_DRV%\ivpn-split-tunnel.sys" || goto :error
+
 echo [+] Preparing CAB file configuration...
 >"%DIST_PATH_OUT%\ivpn-split-tunnel.ddf" (
   echo .Set CabinetFileCountThreshold=0

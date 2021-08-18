@@ -188,7 +188,6 @@
     <ClCompile Include="Firewall.cpp" />
     <ClCompile Include="SplitTunnelling.cpp" />
     <ClCompile Include="WfpFilter.cpp" />
-    <ClCompile Include="WfpFilterSplitTunnelling.cpp"/>
     <ClCompile Include="WfpSubLayer.cpp" />
     <ClCompile Include="WfpProvider.cpp" />
     <ClCompile Include="stdafx.cpp">

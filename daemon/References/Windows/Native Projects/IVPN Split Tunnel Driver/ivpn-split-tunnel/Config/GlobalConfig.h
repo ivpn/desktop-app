@@ -10,7 +10,13 @@ namespace cfg
 
     NTSTATUS Clean();
     bool IsConfigOk();
-    
+
+    bool IsConfigIPv4AddrOk();
+    bool IsConfigIPv6AddrOk();
+
+    bool IsConfigIPv4AddrOk(const IPAddrConfig& cfgIPs);
+    bool IsConfigIPv6AddrOk(const IPAddrConfig& cfgIPs);
+        
     void SetIPs(const IPAddrConfig&);
     const IPAddrConfig GetIPs();
 

@@ -1204,8 +1204,8 @@ func (s *Service) SplitTunnelling_ApplyConfig() error {
 	cfg.Apps = splittun.ConfigApps{ImagesPathToSplit: prefs.SplitTunnelApps}
 	cfg.Addr = splittun.ConfigAddresses{
 		IPv4Tunnel: sInf.VpnLocalIPv4,
-		IPv6Tunnel: sInf.VpnLocalIPv6,
 		IPv4Public: sInf.OutboundIPv4,
+		IPv6Tunnel: sInf.VpnLocalIPv6,
 		IPv6Public: sInf.OutboundIPv6}
 
 	if err := splittun.SetConfig(cfg); err != nil {

@@ -89,6 +89,22 @@ func (c *ConditionIPLocalPort) Apply(filter syscall.Handle, conditionIndex uint3
 
 // ------------------------------------------------------------------------------------------------------
 
+// ConditionIPRemotePort - new condition type implementation
+type ConditionIPRemotePort struct {
+	Match FwpMatchType
+	Port  uint16
+}
+
+// Apply applies the filter
+func (c *ConditionIPRemotePort) Apply(filter syscall.Handle, conditionIndex uint32) error {
+	if err := preApply(c.Match, filter, conditionIndex, FwpmConditionIPRemotePort); err != nil {
+		return fmt.Errorf("condition pre-apply error: %w", err)
+	}
+	return FWPMFILTERSetConditionUINT16(filter, conditionIndex, c.Port)
+}
+
+// ------------------------------------------------------------------------------------------------------
+
 // ConditionIPRemoteAddressV4 - new condition type implementation
 type ConditionIPRemoteAddressV4 struct {
 	Match FwpMatchType
@@ -139,17 +155,3 @@ func (c *ConditionIPLocalAddressV6) Apply(filter syscall.Handle, conditionIndex 
 }
 
 // ------------------------------------------------------------------------------------------------------
-
-// ConditionIPRemotePort - new condition type implementation
-type ConditionIPRemotePort struct {
-	Match FwpMatchType
-	Port  uint16
-}
-
-// Apply applies the filter
-func (c *ConditionIPRemotePort) Apply(filter syscall.Handle, conditionIndex uint32) error {
-	if err := preApply(c.Match, filter, conditionIndex, FwpmConditionIPRemotePort); err != nil {
-		return fmt.Errorf("condition pre-apply error: %w", err)
-	}
-	return FWPMFILTERSetConditionUINT16(filter, conditionIndex, c.Port)
-}

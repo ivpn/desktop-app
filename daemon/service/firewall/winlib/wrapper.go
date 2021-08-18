@@ -90,8 +90,6 @@ var (
 	fWfpFilterAdd                     *syscall.LazyProc
 	fWfpFilterDeleteByID              *syscall.LazyProc
 	fWfpFiltersDeleteByProviderKey    *syscall.LazyProc
-
-	fWfpRegisterSplitTunFilters *syscall.LazyProc
 )
 
 // Initialize doing initialization stuff (called on application start)
@@ -149,8 +147,6 @@ func Initialize(wfpDllPath string) error {
 	fWfpFilterAdd = dll.NewProc("WfpFilterAdd")
 	fWfpFilterDeleteByID = dll.NewProc("WfpFilterDeleteById")
 	fWfpFiltersDeleteByProviderKey = dll.NewProc("WfpFiltersDeleteByProviderKeyPtr")
-
-	fWfpRegisterSplitTunFilters = dll.NewProc("WfpRegisterSplitTunFilters")
 
 	return nil
 }

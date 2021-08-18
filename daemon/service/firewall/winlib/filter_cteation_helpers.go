@@ -32,6 +32,7 @@ import (
 // filter Weights
 const (
 	weightAllowLocalPort   = 10
+	weightAllowRemotePort  = 10
 	weightAllowApplication = 6
 	weightAllowRemoteIP    = 4
 	weightAllowRemoteIPV6  = 6
@@ -64,6 +65,29 @@ func NewFilterAllowLocalPort(
 	}
 
 	f.AddCondition(&ConditionIPLocalPort{Match: FwpMatchEqual, Port: port})
+	return f
+}
+
+// NewFilterAllowRemotePort creates a filter to allow remote port
+func NewFilterAllowRemotePort(
+	keyProvider syscall.GUID,
+	keyLayer syscall.GUID,
+	keySublayer syscall.GUID,
+	dispName string,
+	dispDescription string,
+	port uint16,
+	isPersistent bool) Filter {
+
+	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
+	f.Weight = weightAllowRemotePort
+	f.Action = FwpActionPermit
+
+	f.Flags = FwpmFilterFlagClearActionRight
+	if isPersistent {
+		f.Flags = f.Flags | FwpmFilterFlagPersistent
+	}
+
+	f.AddCondition(&ConditionIPRemotePort{Match: FwpMatchEqual, Port: port})
 	return f
 }
 

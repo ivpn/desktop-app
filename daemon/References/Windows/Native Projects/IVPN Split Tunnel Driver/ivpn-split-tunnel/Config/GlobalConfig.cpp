@@ -136,6 +136,33 @@ namespace cfg
 		return _deleteAllImageInfo();
 	}
 
+	bool IsConfigIPv4AddrOk(const IPAddrConfig& cfgIPs)
+	{
+		if (IN4_IS_ADDR_UNSPECIFIED(&cfgIPs.IPv4Public) || IN4_IS_ADDR_UNSPECIFIED(&cfgIPs.IPv4Tunnel))
+			return false;
+		return true;
+	}
+
+	bool IsConfigIPv6AddrOk(const IPAddrConfig& cfgIPs)
+	{
+		static const IN6_ADDR IN6_ADDR_ZERO = { 0 };
+		if (IN6_ADDR_EQUAL(&cfgIPs.IPv6Public, &IN6_ADDR_ZERO) || IN6_ADDR_EQUAL(&cfgIPs.IPv6Tunnel, &IN6_ADDR_ZERO))
+			return false;
+		return true;
+	}
+	
+	bool IsConfigIPv4AddrOk()
+	{
+		utils::Locker la(_cfg_IPsLock);
+		return IsConfigIPv4AddrOk(_cfg_IPs);
+	}
+
+	bool IsConfigIPv6AddrOk()
+	{
+		utils::Locker la(_cfg_IPsLock);
+		return IsConfigIPv6AddrOk(_cfg_IPs);
+	}
+
 	bool IsConfigOk()
 	{
 		utils::Locker la(_cfg_IPsLock);

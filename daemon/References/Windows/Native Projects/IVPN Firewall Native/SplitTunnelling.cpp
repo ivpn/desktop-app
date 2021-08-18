@@ -4,15 +4,20 @@
 extern "C" {
 	EXPORT DWORD _cdecl  SplitTun_Connect(wchar_t* driverPath)
 	{
-		if (driverPath == NULL || wcslen(driverPath) <= 0)
-			return false;
-
-		if (!splittun::StartDriverAsService(driverPath))
-			return false;
+		// If driver file is defined - start driver as a service
+		// If driver file is not defined - just try to connect driver object (it could be that driver already registered in a system)
+		bool isStartedAsService = false;
+		if (driverPath != NULL && wcslen(driverPath) > 0)
+		{
+			isStartedAsService = true;
+			if (!splittun::StartDriverAsService(driverPath))
+				return false;
+		}
 
 		if (!splittun::Connect())
 		{
-			splittun::StopDriverAsService();
+			if (isStartedAsService)
+				splittun::StopDriverAsService();
 			return false;
 		}
 		return true;
@@ -20,8 +25,8 @@ extern "C" {
 	EXPORT DWORD _cdecl  SplitTun_Disconnect()
 	{
 		bool isDisconnected = splittun::Disconnect();
-		bool isStopped = splittun::StopDriverAsService();
-		return isDisconnected | isStopped;
+		splittun::StopDriverAsService();
+		return isDisconnected;
 	}
 
 	EXPORT DWORD _cdecl  SplitTun_StopAndClean()

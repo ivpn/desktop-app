@@ -298,8 +298,13 @@ func doEnable() (retErr error) {
 			return fmt.Errorf("failed to add filter 'block all IPv6': %w", err)
 		}
 
-		if isAllowLAN {
-			for _, ip := range addressesV6 {
+		for _, ip := range addressesV6 {
+			_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ip.IP, 128, isPersistant))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow remote IP': %w", err)
+			}
+
+			if isAllowLAN {
 				prefixLen, _ := ip.Mask.Size()
 				_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ip.IP, byte(prefixLen), isPersistant))
 				if err != nil {
@@ -307,6 +312,19 @@ func doEnable() (retErr error) {
 				}
 			}
 		}
+
+		/*
+			// DHCPv6 uses UDP port number 546 for clients and port number 547 for servers.
+			// allow DHCP port
+			_, err = manager.AddFilter(winlib.NewFilterAllowLocalPort(providerKey, layer, sublayerKey, sublayerDName, "", 547, isPersistant))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow dhcp IPv6 local port': %w", err)
+			}
+			_, err = manager.AddFilter(winlib.NewFilterAllowRemotePort(providerKey, layer, sublayerKey, sublayerDName, "", 546, isPersistant))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow dhcp IPv6 remote port': %w", err)
+			}
+		*/
 	}
 
 	// IPv4 filters
@@ -329,7 +347,7 @@ func doEnable() (retErr error) {
 			return fmt.Errorf("failed to add filter 'allow dhcp': %w", err)
 		}
 
-		// allow current executabe
+		// allow current executable
 		binaryPath, err := os.Executable()
 		if err != nil {
 			return fmt.Errorf("failed to obtain executable info: %w", err)
@@ -339,12 +357,12 @@ func doEnable() (retErr error) {
 			return fmt.Errorf("failed to add filter 'allow application': %w", err)
 		}
 
-		// allow OpenVPN executabe
+		// allow OpenVPN executable
 		_, err = manager.AddFilter(winlib.NewFilterAllowApplication(providerKey, layer, sublayerKey, sublayerDName, "", platform.OpenVpnBinaryPath(), isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow application - openvpn': %w", err)
 		}
-		// allow WireGuard executabe
+		// allow WireGuard executable
 		_, err = manager.AddFilter(winlib.NewFilterAllowApplication(providerKey, layer, sublayerKey, sublayerDName, "", platform.WgBinaryPath(), isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow application - wireguard': %w", err)
@@ -376,16 +394,6 @@ func doEnable() (retErr error) {
 				return fmt.Errorf("failed to add filter 'allow lan-multicast': %w", err)
 			}
 		}
-	}
-
-	// Register split-tunnelling filters
-	//
-	// If split-tunnelling not enabled (driver not registered callouts) - this filter will BLOCK everything
-	// But it is ok since ST-filters weight = weightBlockAll + 1
-	//
-	// All filters will be erased on FW off (by a call 'manager.DeleteFilterByProviderKey(providerKey, l)')
-	if err := manager.WfpRegisterSplitTunFilters(providerKey, sublayerKey, isPersistant); err != nil {
-		log.Warning(fmt.Errorf("failed to register Split-Tunnelling filters: %w", err))
 	}
 
 	return nil
