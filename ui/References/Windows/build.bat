@@ -3,6 +3,8 @@
 setlocal
 set SCRIPTDIR=%~dp0
 
+set CERT_SHA1=%1
+
 rem ==================================================
 rem DEFINE path to NSIS binary here
 SET MAKENSIS="C:\Program Files (x86)\NSIS\makensis.exe"
@@ -68,13 +70,13 @@ goto :success
 
 :build_service
 	echo [*] Building IVPN service and dependencies...
-	call %SERVICE_REPO%\References\Windows\scripts\build-all.bat %APPVER% exclude32bit || exit /b 1
+	call %SERVICE_REPO%\References\Windows\scripts\build-all.bat %APPVER% exclude32bit %CERT_SHA1% || exit /b 1
 	goto :eof
 
 :build_cli
 	echo [*] Building IVPN CLI...
 	echo %CLI_REPO%\References\Windows\build.bat
-	call %CLI_REPO%\References\Windows\build.bat %APPVER% || exit /b 1
+	call %CLI_REPO%\References\Windows\build.bat %APPVER% %CERT_SHA1% || exit /b 1
 	goto :eof
 
 :build_ui
@@ -89,17 +91,29 @@ goto :success
 	echo [*] Building UI...
 	cd %SCRIPTDIR%  || exit /b 1
 	call npm run electron:build || exit /b 1
+
 	goto :eof
 
 :copy_files
-	echo [*] Copying files...
+	set UI_BINARIES_FOLDER=%SCRIPTDIR%..\..\dist_electron\win-unpacked
 
+	set TIMESTAMP_SERVER=http://timestamp.digicert.com
+	if NOT "%CERT_SHA1%" == "" (
+		echo.
+		echo Signing binary by certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%
+		echo.
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%UI_BINARIES_FOLDER%\IVPN.exe" || exit /b 1
+		echo.
+		echo Signing SUCCES
+		echo.
+	)
+
+	echo [*] Copying files...
 	IF exist "%INSTALLER_TMP_DIR%" (
 		rmdir /s /q "%INSTALLER_TMP_DIR%"
 	)
 	mkdir "%INSTALLER_TMP_DIR%"
 
-	set UI_BINARIES_FOLDER=%SCRIPTDIR%..\..\dist_electron\win-unpacked
 	echo     Copying UI '%UI_BINARIES_FOLDER%' ...
 	xcopy /E /I  "%UI_BINARIES_FOLDER%" "%INSTALLER_TMP_DIR%\ui" || goto :error
 	echo     Renaming UI binary to 'IVPN Client.exe' ...

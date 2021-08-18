@@ -4,6 +4,7 @@ set SCRIPTDIR=%~dp0
 set APPVER=%1
 set COMMIT=""
 set DATE=""
+set CERT_SHA1=%2
 
 echo ==================================================
 echo ============ BUILDING IVPN CLI ===================
@@ -46,6 +47,17 @@ goto :success
 	echo [ ] x86_64 ...
 	set GOARCH=amd64
 	go build -tags release -o "bin\x86_64\cli\ivpn.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
+
+	set TIMESTAMP_SERVER=http://timestamp.digicert.com
+	if NOT "%CERT_SHA1%" == "" (
+		echo.
+		echo Signing binary by certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%
+		echo.
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "bin\x86_64\cli\ivpn.exe" || exit /b 1
+		echo.
+		echo Signing SUCCES
+		echo.
+	)
 
 	goto :eof
 

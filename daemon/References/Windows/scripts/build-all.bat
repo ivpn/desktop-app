@@ -6,6 +6,9 @@ set APPVER=%1
 
 rem E.g. 'exclude32bit'
 set EXTRA_ARG=%2
+
+set CERT_SHA1=%3
+
 set COMMIT=""
 set DATE=""
 
@@ -87,6 +90,18 @@ goto :success
 	if exist "bin\%~1\IVPN Service.exe" del "bin\%~1\IVPN Service.exe" || exit /b 1
 
 	go build -tags release -o "bin\%~1\IVPN Service.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
+
+	set TIMESTAMP_SERVER=http://timestamp.digicert.com
+	if NOT "%CERT_SHA1%" == "" (
+		echo.
+		echo Signing binary by certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%
+		echo.
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "bin\%~1\IVPN Service.exe" || exit /b 1
+		echo.
+		echo Signing SUCCES
+		echo.
+	)
+
 	goto :eof
 
 :build_native_libs
