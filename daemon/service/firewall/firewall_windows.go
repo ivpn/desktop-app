@@ -313,18 +313,18 @@ func doEnable() (retErr error) {
 			}
 		}
 
-		/*
-			// DHCPv6 uses UDP port number 546 for clients and port number 547 for servers.
-			// allow DHCP port
-			_, err = manager.AddFilter(winlib.NewFilterAllowLocalPort(providerKey, layer, sublayerKey, sublayerDName, "", 547, isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow dhcp IPv6 local port': %w", err)
-			}
-			_, err = manager.AddFilter(winlib.NewFilterAllowRemotePort(providerKey, layer, sublayerKey, sublayerDName, "", 546, isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow dhcp IPv6 remote port': %w", err)
-			}
-		*/
+		ipv6loopback := net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}     // LOOPBACK 		::1/128
+		ipv6llocal := net.IP{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // LINKLOCAL		fe80::/10
+		//ipv6slocal := net.IP{0xfe, 0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // SITELOCAL	fec0::/10
+		//ipv6ulocal := net.IP{0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}    // UNIQUELOCAL	fd00::/8
+		_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6loopback, 128, isPersistant))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'allow remote IP' for ipv6loopback: %w", err)
+		}
+		_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6llocal, 10, isPersistant))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'allow remote IP' for ipv6llocal: %w", err)
+		}
 	}
 
 	// IPv4 filters
