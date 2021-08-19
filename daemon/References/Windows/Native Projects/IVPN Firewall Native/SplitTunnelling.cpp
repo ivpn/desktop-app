@@ -10,8 +10,20 @@ extern "C" {
 		if (driverPath != NULL && wcslen(driverPath) > 0)
 		{
 			isStartedAsService = true;
+						
 			if (!splittun::StartDriverAsService(driverPath))
-				return false;
+			{
+				// It could be that service already started (which is not expected for us)
+				// Therefore, we stopping it. And do a clean start then.
+				if (GetLastError() == ERROR_SERVICE_EXISTS)
+				{
+					splittun::StopDriverAsService();
+					if (!splittun::StartDriverAsService(driverPath))
+						return false;
+				}
+				else 
+					return false;
+			}
 		}
 
 		if (!splittun::Connect())
