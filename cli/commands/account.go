@@ -23,8 +23,10 @@
 package commands
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -84,12 +86,27 @@ func doLogin(accountID string, force bool) error {
 		accountID = string(data)
 	}
 
-	apiStatus, err := _proto.SessionNew(accountID, force)
+	apiStatus, err := _proto.SessionNew(accountID, force, "")
 	if err != nil {
+		if apiStatus == types.The2FARequired {
+			fmt.Println("Account has two-factor authentication enabled.")
+			fmt.Print("Please enter TOTP token to login: ")
+			reader := bufio.NewReader(os.Stdin)
+			topt, _ := reader.ReadString('\n')
+
+			topt = strings.TrimSuffix(topt, "\n")
+			topt = strings.TrimSuffix(topt, "\r")
+
+			apiStatus, err = _proto.SessionNew(accountID, force, topt)
+		}
+
 		if apiStatus == types.CodeSessionsLimitReached {
 			PrintTips([]TipType{TipForceLogin})
 		}
-		return err
+
+		if err != nil {
+			return err
+		}
 	}
 
 	fmt.Println("Logged in")

@@ -115,12 +115,12 @@ func (c *Client) GetHelloResponse() types.HelloResp {
 }
 
 // SessionNew creates new session
-func (c *Client) SessionNew(accountID string, forceLogin bool) (apiStatus int, err error) {
+func (c *Client) SessionNew(accountID string, forceLogin bool, the2FA string) (apiStatus int, err error) {
 	if err := c.ensureConnected(); err != nil {
 		return 0, err
 	}
 
-	req := types.SessionNew{AccountID: accountID, ForceLogin: forceLogin}
+	req := types.SessionNew{AccountID: accountID, ForceLogin: forceLogin, Confirmation2FA: the2FA}
 	var resp types.SessionNewResp
 
 	if err := c.sendRecv(&req, &resp); err != nil {

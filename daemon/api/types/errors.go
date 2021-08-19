@@ -42,6 +42,14 @@ const (
 
 	// AccountNotActive - account should be purchased
 	AccountNotActive int = 702
+
+	CaptchaRequired int = 70001
+	CaptchaInvalid  int = 70002
+
+	// Account has two-factor authentication enabled. Please enter TOTP token to login
+	The2FARequired int = 70011
+	// Specified two-factor authentication token is not valid
+	The2FAInvalidToken int = 70012
 )
 
 // APIError - error, user not logged in into account
