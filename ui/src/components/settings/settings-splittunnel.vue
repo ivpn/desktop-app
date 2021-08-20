@@ -44,21 +44,18 @@
 
       <div
         class="scrollableColumnContainer"
-        style="padding:1px; margin-top: 8px; margin-bottom:8px; max-height: 280px;  height: 320px;"
+        style="padding:1px;margin-top: 1px; margin-bottom:1px; max-height: 295px;  height: 320px;"
       >
         <div v-for="app of filteredApps" v-bind:key="app.AppBinaryPath">
           <div
             class="flexRow grayedOnHover"
-            style="padding: 5px; height: 32px; min-height: 32px;"
+            style="padding: 4px; padding-bottom: 8px; height: 32px; min-height: 32px;"
           >
             <div class="flexRowRestSpace" style="height: 100%">
-              <!--{{ app }}-->
-
               <div v-if="!app.AppName">
                 <div>
                   {{ app.AppBinaryPath }}
                 </div>
-                <div></div>
               </div>
               <div v-else>
                 <div>
@@ -73,22 +70,23 @@
               </div>
             </div>
 
-            <div style="height: 100%">
+            <div>
               <button
-                class="settingsButton"
-                style="min-width: 60px"
+                class="noBordersBtn"
                 v-if="app.isSplitted"
                 v-on:click="removeApp(app.AppBinaryPath)"
+                style="pointer-events: auto;"
               >
-                remove
+                <img width="24" height="24" src="@/assets/minus.svg" />
               </button>
+
               <button
-                class="settingsButton"
-                style="min-width: 60px"
+                class="noBordersBtn"
                 v-else
                 v-on:click="addApp(app.AppBinaryPath)"
+                style="pointer-events: auto;"
               >
-                add
+                <img width="24" height="24" src="@/assets/plus.svg" />
               </button>
             </div>
           </div>
@@ -182,16 +180,19 @@ export default {
     updateAppsToShow() {
       // 'splitted' applications
       let configApps = this.$store.state.settings.splitTunnelling.apps;
+
       // hashed list of splitted apps (needed to avoid duplicates in final list)
       let configAppsHashed = {};
 
       // prepare information for selected apps: update app info (if exists)
       configApps.forEach(appPath => {
         // use 'Object.assign' to not update data in 'this.allAppsHashed'
-        let appInfo = Object.assign({}, this.allAppsHashed[appPath]);
+        let appInfoConst = this.allAppsHashed[appPath];
+        let appInfo = {};
 
-        if (!appInfo)
+        if (!appInfoConst)
           appInfo = { AppBinaryPath: appPath, AppName: null, AppGroup: null };
+        else appInfo = Object.assign({}, appInfoConst);
 
         appInfo.isSplitted = true;
         configAppsHashed[appPath] = appInfo;

@@ -789,6 +789,18 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		p.sendResponse(conn, &types.InstalledAppsResp{Apps: apps}, reqCmd.Idx)
 
+	case "Disconnect":
+		p._disconnectRequested = true
+
+		if !p._service.Connected() {
+			p.sendResponse(conn, &types.DisconnectedResp{Reason: types.DisconnectRequested}, reqCmd.Idx)
+			break
+		}
+
+		if err := p._service.Disconnect(); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+		}
+
 	case "Connect":
 		p._disconnectRequested = false
 		requestTime := p.vpnConnectReqCounterIncrease()
