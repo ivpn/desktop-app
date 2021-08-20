@@ -31,6 +31,7 @@ import (
 	"math/rand"
 	"net"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,6 +39,7 @@ import (
 
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/oshelpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -736,17 +738,56 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p._service.WireGuardSetKeysRotationInterval(req.Interval)
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
-	case "Disconnect":
-		p._disconnectRequested = true
-
-		if !p._service.Connected() {
-			p.sendResponse(conn, &types.DisconnectedResp{Reason: types.DisconnectRequested}, reqCmd.Idx)
+	case "GetInstalledApps":
+		// Get a list of installed applications on the system
+		// returns: map[binaryPath]description
+		retMap, err := oshelpers.GetInstalledApps()
+		if err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		if err := p._service.Disconnect(); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
+		if retMap == nil {
+			p.sendErrorResponse(conn, reqCmd, fmt.Errorf("failed to get installed applications info"))
+			break
 		}
+
+		// do sorting by app description
+		binPaths := make([]string, 0, len(retMap))
+		for binPath := range retMap {
+			binPaths = append(binPaths, binPath)
+		}
+		sort.Strings(binPaths)
+
+		// prepare response
+		apps := make([]types.AppInfo, len(binPaths))
+		for idx, binPath := range binPaths {
+			var appName string
+			var appGroup string
+
+			// Application description: [<AppGroup>/]<AppName>.
+			// Example 1: "Git/Git GUI"
+			// 		AppName  = "Git GUI"
+			// 		AppGroup = "Git"
+			// Example 2: "Firefox"
+			// 		AppName  = "Firefox"
+			// 		AppGroup = null
+			descr := retMap[binPath]
+			descrSplitted := strings.Split(descr, "/")
+
+			if len(descrSplitted) == 1 {
+				appName = descrSplitted[0]
+			} else if len(descrSplitted) == 2 {
+				appGroup = descrSplitted[0]
+				appName = descrSplitted[1]
+			} else {
+				continue
+			}
+
+			apps[idx] = types.AppInfo{AppBinaryPath: binPath, AppName: appName, AppGroup: appGroup}
+		}
+
+		p.sendResponse(conn, &types.InstalledAppsResp{Apps: apps}, reqCmd.Idx)
 
 	case "Connect":
 		p._disconnectRequested = false

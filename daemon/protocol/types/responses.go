@@ -240,3 +240,24 @@ type APIResponse struct {
 	ResponseData string
 	Error        string
 }
+
+// Information about application
+type AppInfo struct {
+	// Full path to application binary
+	AppBinaryPath string
+	// Application description: [<AppGroup>/]<AppName>.
+	// Example 1: "Git/Git GUI"
+	// 		AppName  = "Git GUI"
+	// 		AppGroup = "Git"
+	// Example 2: "Firefox"
+	// 		AppName  = "Firefox"
+	// 		AppGroup = null
+	AppName  string
+	AppGroup string // optional
+}
+
+// InstalledAppsResp contains information about installed applications on the system
+type InstalledAppsResp struct {
+	CommandBase
+	Apps []AppInfo
+}

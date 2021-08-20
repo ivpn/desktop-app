@@ -241,3 +241,8 @@ type APIRequest struct {
 	APIPath            string
 	IPProtocolRequired RequiredIPProtocol
 }
+
+// GetInstalledApps requests information about installed applications on the system
+type GetInstalledApps struct {
+	CommandBase
+}
