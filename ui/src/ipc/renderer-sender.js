@@ -160,6 +160,10 @@ export default {
     return await invoke("renderer-request-SplitTunnelSetConfig", enabled, apps);
   },
 
+  GetInstalledApps: async () => {
+    return await invoke("renderer-request-GetInstalledApps");
+  },
+
   SetLogging: async () => {
     return await invoke("renderer-request-set-logging");
   },

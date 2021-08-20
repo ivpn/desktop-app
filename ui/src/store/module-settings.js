@@ -341,6 +341,11 @@ export default {
     },
     getPort: state => {
       return state.port[enumValueName(VpnTypeEnum, state.vpnType)];
+    },
+
+    // Split-Tunnelling
+    splitTunnelling: state => {
+      return state.splitTunnelling;
     }
   },
 
@@ -454,11 +459,6 @@ export default {
     // WIFI
     wifi(context, val) {
       context.commit("wifi", val);
-    },
-
-    // Split-Tunnelling
-    splitTunnelling(context, val) {
-      context.commit("splitTunnelling", val);
     },
 
     // UI

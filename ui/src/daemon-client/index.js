@@ -77,6 +77,7 @@ const daemonRequests = Object.freeze({
   KillSwitchSetIsPersistent: "KillSwitchSetIsPersistent",
 
   SplitTunnelSetConfig: "SplitTunnelSetConfig",
+  GetInstalledApps: "GetInstalledApps",
 
   SetAlternateDns: "SetAlternateDns",
   WireGuardGenerateNewKeys: "WireGuardGenerateNewKeys",
@@ -104,6 +105,7 @@ const daemonResponses = Object.freeze({
   AccountStatusResp: "AccountStatusResp",
 
   SplitTunnelConfig: "SplitTunnelConfig",
+  InstalledAppsResp: "InstalledAppsResp",
 
   WiFiAvailableNetworksResp: "WiFiAvailableNetworksResp",
   WiFiCurrentNetworkResp: "WiFiCurrentNetworkResp",
@@ -1216,6 +1218,25 @@ async function SplitTunnelSetConfig(IsEnabled, SplitTunnelApps) {
   );
 }
 
+async function GetInstalledApps() {
+  try {
+    let appsResp = await sendRecv(
+      {
+        Command: daemonRequests.GetInstalledApps
+      },
+      [daemonResponses.InstalledAppsResp]
+    );
+
+    if (appsResp == null) {
+      return null;
+    }
+    return appsResp.Apps;
+  } catch (e) {
+    console.error("GetInstalledApps failed: ", e);
+    return null;
+  }
+}
+
 async function SetDNS(antitrackerIsEnabled) {
   let DNS = "";
   if (store.state.settings.dnsIsCustom) DNS = store.state.settings.dnsCustom;
@@ -1309,6 +1330,7 @@ export default {
   KillSwitchSetIsPersistent,
 
   SplitTunnelSetConfig,
+  GetInstalledApps,
 
   SetDNS,
   SetLogging,

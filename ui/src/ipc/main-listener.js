@@ -128,6 +128,9 @@ ipcMain.handle(
     return await client.SplitTunnelSetConfig(enabled, apps);
   }
 );
+ipcMain.handle("renderer-request-GetInstalledApps", async () => {
+  return await client.GetInstalledApps();
+});
 
 ipcMain.handle("renderer-request-set-logging", async () => {
   return await client.SetLogging();

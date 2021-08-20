@@ -279,6 +279,14 @@ if (gotTheLock) {
     } else {
       createWindow();
     }
+
+    if (isDevelopment) {
+      try {
+        win.webContents.openDevTools();
+      } catch (e) {
+        console.error("Failed to open dev tools:", e.toString());
+      }
+    }
   });
 
   app.on("activate", () => {
