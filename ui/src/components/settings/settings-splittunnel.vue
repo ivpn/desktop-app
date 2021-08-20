@@ -160,7 +160,6 @@ export default {
     });
     // now we are able to update information about splitted apps
     this.updateAppsToShow();
-
     // If no applications selected: show all applications for selection
     if (this.showAllApps == false) {
       var st = this.$store.state.settings.splitTunnelling;
@@ -185,18 +184,20 @@ export default {
       let configAppsHashed = {};
 
       // prepare information for selected apps: update app info (if exists)
-      configApps.forEach(appPath => {
-        // use 'Object.assign' to not update data in 'this.allAppsHashed'
-        let appInfoConst = this.allAppsHashed[appPath];
-        let appInfo = {};
+      if (configApps) {
+        configApps.forEach(appPath => {
+          // use 'Object.assign' to not update data in 'this.allAppsHashed'
+          let appInfoConst = this.allAppsHashed[appPath];
+          let appInfo = {};
 
-        if (!appInfoConst)
-          appInfo = { AppBinaryPath: appPath, AppName: null, AppGroup: null };
-        else appInfo = Object.assign({}, appInfoConst);
+          if (!appInfoConst)
+            appInfo = { AppBinaryPath: appPath, AppName: null, AppGroup: null };
+          else appInfo = Object.assign({}, appInfoConst);
 
-        appInfo.isSplitted = true;
-        configAppsHashed[appPath] = appInfo;
-      });
+          appInfo.isSplitted = true;
+          configAppsHashed[appPath] = appInfo;
+        });
+      }
 
       // apps to show
       let appsInfo = [];
@@ -275,19 +276,7 @@ export default {
       });
       if (actionNo == 1) return;
 
-      //this.appsToShow = null;
       this.filter = "";
-
-      //showAllApps: false,
-
-      // Heshed info about all available applications.
-      //  allAppsHashed[binaryPath] = AppInfo
-      // Where the AppInfo object:
-      //	  AppBinaryPath string
-      //    AppName  string
-      //    AppGroup string
-      //    isSplitted (true or (false/null))
-
       await sender.SplitTunnelSetConfig(false, null);
     },
 
