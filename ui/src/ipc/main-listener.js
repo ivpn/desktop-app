@@ -35,6 +35,7 @@ import { AutoLaunchIsEnabled, AutoLaunchSet } from "@/auto-launch";
 import store from "@/store";
 import config from "@/config";
 import { Upgrade, CancelDownload, Install } from "@/app-updater";
+import { extractBinaryIcon } from "@/helpers/main_appIcon.js";
 
 import os from "os";
 
@@ -330,4 +331,9 @@ ipcMain.on("renderer-request-platform", event => {
 // APP
 ipcMain.on("renderer-request-app-getversion", event => {
   event.returnValue = app.getVersion();
+});
+
+// HELPERS
+ipcMain.handle("renderer-request-getAppIcon", (event, binaryPath) => {
+  return extractBinaryIcon(binaryPath);
 });

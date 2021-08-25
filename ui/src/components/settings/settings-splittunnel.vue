@@ -49,20 +49,26 @@
         <div v-for="app of filteredApps" v-bind:key="app.AppBinaryPath">
           <div
             class="flexRow grayedOnHover"
-            style="padding: 4px; padding-bottom: 8px; height: 32px; min-height: 32px;"
+            style="padding: 4px; padding-top: 7px; padding-bottom: 7px; height: 32px; min-height: 32px;"
           >
-            <div class="flexRowRestSpace" style="height: 100%">
+            <binaryIconControl
+              :binaryPath="app.AppBinaryPath"
+              style="min-width:32px; min-height:32px; padding: 4px"
+            />
+
+            <div class="flexRowRestSpace">
               <div v-if="!app.AppName">
-                <div>
+                <div class="text" style="max-width: 395px;">
                   {{ app.AppBinaryPath }}
                 </div>
               </div>
               <div v-else>
-                <div>
+                <div class="text" style="max-width: 395px;">
                   {{ app.AppName }}
                 </div>
                 <div
-                  class="settingsGrayLongDescriptionFont"
+                  style="max-width: 395px;"
+                  class="settingsGrayLongDescriptionFont text"
                   v-if="app.AppName != app.AppGroup"
                 >
                   {{ app.AppGroup }}
@@ -72,7 +78,7 @@
 
             <div>
               <button
-                class="noBordersBtn"
+                class="noBordersBtn opacityOnHover"
                 v-if="app.isSplitted"
                 v-on:click="removeApp(app.AppBinaryPath)"
                 style="pointer-events: auto;"
@@ -81,7 +87,7 @@
               </button>
 
               <button
-                class="noBordersBtn"
+                class="noBordersBtn opacityOnHover"
                 v-else
                 v-on:click="addApp(app.AppBinaryPath)"
                 style="pointer-events: auto;"
@@ -132,7 +138,13 @@ import Image_search_windows from "@/assets/search-windows.svg";
 import Image_search_macos from "@/assets/search-macos.svg";
 import Image_search_linux from "@/assets/search-linux.svg";
 
+import binaryIconControl from "@/components/controls/control-app-binary-icon.vue";
+
 export default {
+  components: {
+    binaryIconControl
+  },
+
   data: function() {
     return {
       filter: "",
@@ -154,6 +166,7 @@ export default {
     //this.updateAppsToShow();
 
     let allApps = await sender.GetInstalledApps();
+
     // create a list of hashed appinfo (by app path)
     allApps.forEach(appInfo => {
       this.allAppsHashed[appInfo.AppBinaryPath] = appInfo;
@@ -209,15 +222,29 @@ export default {
         }
       } else {
         // show all appInfo (avoid duplicates)
-        for (const [appPath, appInfo] of Object.entries(this.allAppsHashed)) {
-          let splittedApp = configAppsHashed[appPath];
-          if (splittedApp) {
-            appsInfo.push(splittedApp); // splitted app
-          } else {
-            appsInfo.push(appInfo); // not-splitted app
-          }
+        let allApps = Object.assign(this.allAppsHashed, configAppsHashed);
+
+        for (const [binPath, appInfo] of Object.entries(allApps)) {
+          // ensure the apps not from config are 'unchecked'
+          if (!configAppsHashed[binPath] && this.allAppsHashed[binPath])
+            appInfo.isSplitted = false;
+
+          appsInfo.push(appInfo);
         }
       }
+
+      appsInfo.sort(function(a, b) {
+        if (a.AppName && b.AppName) {
+          let app1 = a.AppName.toUpperCase();
+          let app2 = b.AppName.toUpperCase();
+          if (app1 > app2) return 1;
+          if (app1 < app2) return -1;
+        } else {
+          if (a.AppName > b.AppName) return 1;
+          if (a.AppName < b.AppName) return -1;
+        }
+        return 0;
+      });
 
       this.appsToShow = appsInfo;
     },
@@ -345,6 +372,10 @@ export default {
   border-radius: 2px;
 }
 
+.opacityOnHover:hover {
+  opacity: 0.6;
+}
+
 .defColor {
   @extend .settingsDefaultTextColor;
 }
@@ -381,5 +412,11 @@ input#filter {
 
   background-position: 97% 50%; //right
   background-repeat: no-repeat;
+}
+
+.text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

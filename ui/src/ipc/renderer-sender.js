@@ -318,5 +318,10 @@ export default {
   // APP
   appGetVersion: () => {
     return ipcRenderer.sendSync("renderer-request-app-getversion");
+  },
+
+  // HELPERS
+  getAppIcon: binaryPath => {
+    return invoke("renderer-request-getAppIcon", binaryPath);
   }
 };
