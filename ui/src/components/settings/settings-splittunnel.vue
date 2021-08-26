@@ -35,7 +35,7 @@
             style="min-width: 156px"
             v-on:click="addNewApplication"
           >
-            Another application ...
+            Add application ...
           </button>
         </div>
       </div>
@@ -43,8 +43,7 @@
       <div class="horizontalLine" />
 
       <div
-        class="scrollableColumnContainer"
-        style="padding:1px;margin-top: 1px; margin-bottom:1px; max-height: 295px;  height: 320px;"
+        style="overflow: auto; padding:1px;margin-top: 1px; margin-bottom:1px; max-height: 295px;  height: 320px;"
       >
         <div v-for="app of filteredApps" v-bind:key="app.AppBinaryPath">
           <div
@@ -53,21 +52,21 @@
           >
             <binaryIconControl
               :binaryPath="app.AppBinaryPath"
-              style="min-width:32px; min-height:32px; padding: 4px"
+              style="min-width:32px; min-height:32px; max-width:32px; max-height:32px; padding: 4px"
             />
-
+            <!-- {{ app.AppBinaryPath }} -->
             <div class="flexRowRestSpace">
               <div v-if="!app.AppName">
-                <div class="text" style="max-width: 395px;">
+                <div class="text" style="max-width: 380px;">
                   {{ app.AppBinaryPath }}
                 </div>
               </div>
               <div v-else>
-                <div class="text" style="max-width: 395px;">
+                <div class="text" style="max-width: 380px;">
                   {{ app.AppName }}
                 </div>
                 <div
-                  style="max-width: 395px;"
+                  style="max-width: 380px;"
                   class="settingsGrayLongDescriptionFont text"
                   v-if="app.AppName != app.AppGroup"
                 >
@@ -105,7 +104,7 @@
       <div class="horizontalLine" />
 
       <div class="flexRow" style="margin-top: 15px;">
-        <div class="param">
+        <div class="param" v-if="allInstalledApps">
           <input
             type="checkbox"
             id="showAllApplications"
@@ -149,7 +148,7 @@ export default {
     return {
       filter: "",
       showAllApps: false,
-
+      allInstalledApps: null,
       // Heshed info about all available applications.
       //  allAppsHashed[binaryPath] = AppInfo
       // Where the AppInfo object:
@@ -167,16 +166,22 @@ export default {
 
     let allApps = await sender.GetInstalledApps();
 
-    // create a list of hashed appinfo (by app path)
-    allApps.forEach(appInfo => {
-      this.allAppsHashed[appInfo.AppBinaryPath] = appInfo;
-    });
+    if (allApps) {
+      // create a list of hashed appinfo (by app path)
+      allApps.forEach(appInfo => {
+        this.allAppsHashed[appInfo.AppBinaryPath] = appInfo;
+      });
+
+      this.allInstalledApps = allApps;
+    }
+
     // now we are able to update information about splitted apps
     this.updateAppsToShow();
+
     // If no applications selected: show all applications for selection
     if (this.showAllApps == false) {
       var st = this.$store.state.settings.splitTunnelling;
-      if (!st.apps || st.apps.length == 0) {
+      if (allApps && (!st.apps || st.apps.length == 0)) {
         this.onShowAllApps();
       }
     }
@@ -309,6 +314,7 @@ export default {
 
     async onShowAllApps() {
       this.showAllApps = !this.showAllApps;
+      this.filter = "";
       this.updateAppsToShow();
     }
   },

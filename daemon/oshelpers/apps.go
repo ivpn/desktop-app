@@ -1,6 +1,16 @@
 package oshelpers
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/ivpn/desktop-app/daemon/logger"
+)
+
+var log *logger.Logger
+
+func init() {
+	log = logger.NewLogger("oshlpr")
+}
 
 // GetInstalledApps returns a list of installed applications on the system
 // Return format:
@@ -16,6 +26,7 @@ func GetInstalledApps() (apps map[string]string, err error) {
 			} else {
 				err = fmt.Errorf("PANIC on GetInstalledApps() [recovered] ")
 			}
+			log.Error(err)
 		}
 	}()
 
