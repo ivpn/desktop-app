@@ -56,12 +56,20 @@
             />
             <!-- {{ app.AppBinaryPath }} -->
             <div class="flexRowRestSpace">
+              <!-- Manually added application -->
               <div v-if="!app.AppName">
                 <div class="text" style="max-width: 380px;">
-                  {{ app.AppBinaryPath }}
+                  {{ getFileName(app.AppBinaryPath) }}
+                </div>
+                <div
+                  style="max-width: 380px;"
+                  class="settingsGrayLongDescriptionFont text"
+                >
+                  {{ getFileFolder(app.AppBinaryPath) }}
                 </div>
               </div>
               <div v-else>
+                <!-- Application from the installed apps list (AppName and AppGroup is known)-->
                 <div class="text" style="max-width: 380px;">
                   {{ app.AppName }}
                 </div>
@@ -148,7 +156,7 @@ export default {
     return {
       filter: "",
       showAllApps: false,
-      allInstalledApps: null,
+      allInstalledApps: null, // []; array of configured application path's (only absolute file path)
       // Heshed info about all available applications.
       //  allAppsHashed[binaryPath] = AppInfo
       // Where the AppInfo object:
@@ -157,7 +165,7 @@ export default {
       //    AppGroup string
       //    isSplitted (true or (false/null))
       allAppsHashed: {},
-      appsToShow: null
+      appsToShow: null // []; array of appInfo
     };
   },
   async mounted() {
@@ -283,8 +291,14 @@ export default {
 
       var index = stApps.indexOf(appPath);
       if (index === -1) return;
-
       stApps.splice(index, 1);
+
+      // If the application has no AppName info - it means it was added manually
+      // In this case, we can remove it from the 'allApps' list
+      let appInfo = this.allAppsHashed[appPath];
+      if (appInfo && !appInfo.AppName) {
+        delete this.allAppsHashed[appPath];
+      }
 
       await sender.SplitTunnelSetConfig(st.enabled, stApps);
     },
@@ -316,6 +330,21 @@ export default {
       this.showAllApps = !this.showAllApps;
       this.filter = "";
       this.updateAppsToShow();
+    },
+
+    getFileFolder(filePath) {
+      let fname = this.getFileName(filePath);
+      if (!fname) return filePath;
+      return filePath.substring(0, filePath.length - fname.length);
+    },
+
+    getFileName(filePath) {
+      if (!filePath) return null;
+      return filePath
+        .split("\\")
+        .pop()
+        .split("/")
+        .pop();
     }
   },
 

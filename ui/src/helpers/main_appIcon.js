@@ -1,8 +1,6 @@
 import { extractIcon } from "@bitdisaster/exe-icon-extractor";
 import { Platform, PlatformEnum } from "@/platform/platform";
 
-//import fs from "fs";
-
 export function extractBinaryIcon(binaryPath) {
   try {
     if (Platform() != PlatformEnum.Windows) return null;
@@ -18,5 +16,6 @@ export function extractBinaryIcon(binaryPath) {
     return imageEncoded;
   } catch (e) {
     console.warn(`Failed to obtain app icon for '${binaryPath}:' ` + e);
+    return null;
   }
 }
