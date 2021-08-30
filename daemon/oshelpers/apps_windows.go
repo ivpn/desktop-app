@@ -7,8 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
+	"sync"
+	"syscall"
+	"unsafe"
 
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 	lnk "github.com/parsiya/golnk"
 )
 
@@ -21,7 +26,7 @@ func WinExpandEnvPath(path string) string {
 	return os.ExpandEnv(path)
 }
 
-func implGetInstalledApps() (map[string]string, error) {
+func implGetInstalledApps() ([]AppInfo, error) {
 
 	programData := os.Getenv("PROGRAMDATA")
 	appData := os.Getenv("APPDATA")
@@ -46,7 +51,8 @@ func implGetInstalledApps() (map[string]string, error) {
 		excludeBinPath = strings.ToLower(filepath.Dir(ex))
 	}
 
-	retMap := make(map[string]string) // [path]description
+	retMap := make(map[string]AppInfo) // [path]description
+
 	walkFunc := func(path string, info os.FileInfo, walkErr error) (err error) {
 
 		defer func() {
@@ -89,6 +95,17 @@ func implGetInstalledApps() (map[string]string, error) {
 				targetPath = f.StringData.IconLocation
 			}
 
+			if targetPath == "" {
+				return
+			}
+
+			// expand all environment variables in file path
+			targetPath = WinExpandEnvPath(targetPath)
+
+			if _, isAlreadyExists := retMap[targetPath]; isAlreadyExists {
+				return
+			}
+
 			// Only look for exe files.
 			if targetPath != "" && filepath.Ext(targetPath) == ".exe" {
 				baseDir := filepath.Dir(path)
@@ -96,11 +113,8 @@ func implGetInstalledApps() (map[string]string, error) {
 				if strings.EqualFold(baseDir, programDataSMDir) || strings.EqualFold(baseDir, appDataSMDir) {
 					baseDir = ""
 				} else {
-					baseDir = filepath.Base(baseDir) + "/"
+					baseDir = filepath.Base(baseDir)
 				}
-
-				// expand all environment variables in file path
-				targetPath = WinExpandEnvPath(targetPath)
 
 				if _, err := os.Stat(targetPath); os.IsNotExist(err) {
 					// file not exists
@@ -112,7 +126,11 @@ func implGetInstalledApps() (map[string]string, error) {
 					return nil
 				}
 
-				retMap[targetPath] = baseDir + strings.TrimSuffix(info.Name(), ".lnk")
+				retMap[targetPath] = AppInfo{
+					AppBinaryPath: targetPath,
+					AppName:       strings.TrimSuffix(info.Name(), ".lnk"),
+					AppGroup:      baseDir}
+
 			}
 		}
 
@@ -127,5 +145,158 @@ func implGetInstalledApps() (map[string]string, error) {
 		filepath.Walk(appDataSMDir, walkFunc)
 	}
 
-	return retMap, nil
+	retValues := make([]AppInfo, 0, len(retMap))
+	for _, value := range retMap {
+		retValues = append(retValues, value)
+	}
+
+	// extract icons from binaries
+
+	binaryIconReaderInit()
+	defer binaryIconReaderUnInit()
+	for i, app := range retValues {
+		ico, err := binaryIconReaderGetBase64PngIcon(app.AppBinaryPath)
+		if err != nil {
+			log.Warning(err)
+		} else {
+			retValues[i].AppIcon = ico
+		}
+	}
+
+	// sort by app name
+	sort.Slice(retValues[:], func(i, j int) bool {
+		return strings.Compare(retValues[i].AppName, retValues[j].AppName) == -1
+	})
+
+	return retValues, nil
+}
+
+func implGetBinaryIconBase64Png(binaryPath string) (icon string, err error) {
+	binaryIconReaderInit()
+	defer binaryIconReaderUnInit()
+	return binaryIconReaderGetBase64PngIcon(binaryPath)
+}
+
+// =============================================================================
+// ============= Internal implementation =======================================
+// =============================================================================
+var (
+	_fBinaryIconReaderInit          *syscall.LazyProc // DWORD _cdecl BinaryIconReaderInit()
+	_fBinaryIconReaderUnInit        *syscall.LazyProc // DWORD _cdecl BinaryIconReaderUnInit()
+	_fBinaryIconReaderReadBase64Png *syscall.LazyProc // DWORD _cdecl BinaryIconReaderReadBase64Png(const wchar_t* binaryPath, unsigned char* buff, DWORD* _in_out_buffSize)
+)
+
+var (
+	_iconReaderInitCounter      int
+	_iconReaderInitCounterMutex sync.Mutex
+)
+
+func initBinaryIconReaderDll() error {
+	if _fBinaryIconReaderInit != nil {
+		return nil
+	}
+	helpersDllPath := platform.WindowsNativeHelpersDllPath()
+	if len(helpersDllPath) == 0 {
+		return fmt.Errorf("unable to BinaryIconReader: helpers dll path not initialized")
+	}
+	if _, err := os.Stat(helpersDllPath); err != nil {
+		return fmt.Errorf("unable to BinaryIconReader (helpers dll not found) : '%s'", helpersDllPath)
+	}
+
+	dll := syscall.NewLazyDLL(helpersDllPath)
+	_fBinaryIconReaderInit = dll.NewProc("BinaryIconReaderInit")
+	_fBinaryIconReaderUnInit = dll.NewProc("BinaryIconReaderUnInit")
+	_fBinaryIconReaderReadBase64Png = dll.NewProc("BinaryIconReaderReadBase64Png")
+	return nil
+}
+
+func checkCallErrResp(retval uintptr, err error, mName string) error {
+	if err != syscall.Errno(0) {
+		return log.ErrorE(fmt.Errorf("%s:  %w", mName, err), 1)
+	}
+	if retval != 1 {
+		return log.ErrorE(fmt.Errorf("BinaryIconReader operation failed (%s)", mName), 1)
+	}
+	return nil
+}
+
+func binaryIconReaderInit() error {
+
+	// Calculate how many process using this functionality
+	// Call '_fBinaryIconReaderInit' only once and '_fBinaryIconReaderUnInit' only when nobody using this functionality
+	// NOTE! every call 'binaryIconReaderInit()' should be finished by 'binaryIconReaderUnInit()'
+	_iconReaderInitCounterMutex.Lock()
+	defer _iconReaderInitCounterMutex.Unlock()
+	_iconReaderInitCounter += 1
+	if _iconReaderInitCounter > 1 {
+		return nil
+	}
+
+	if err := initBinaryIconReaderDll(); err != nil {
+		return err
+	}
+
+	retval, _, err := _fBinaryIconReaderInit.Call()
+	if err := checkCallErrResp(retval, err, "BinaryIconReaderInit"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func binaryIconReaderUnInit() error {
+	// Calculate how many process using this functionality
+	// Call '_fBinaryIconReaderInit' only once and '_fBinaryIconReaderUnInit' only when nobody using this functionality
+	_iconReaderInitCounterMutex.Lock()
+	defer _iconReaderInitCounterMutex.Unlock()
+	_iconReaderInitCounter -= 1
+	if _iconReaderInitCounter > 0 {
+		return nil
+	}
+	_iconReaderInitCounter = 0
+
+	if err := initBinaryIconReaderDll(); err != nil {
+		return err
+	}
+
+	retval, _, err := _fBinaryIconReaderUnInit.Call()
+	if err := checkCallErrResp(retval, err, "BinaryIconReaderUnInit"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func binaryIconReaderGetBase64PngIcon(binaryPath string) (icon string, err error) {
+	if err := initBinaryIconReaderDll(); err != nil {
+		return "", err
+	}
+
+	utfBinaryPath, err := syscall.UTF16PtrFromString(binaryPath)
+	if err != nil {
+		return "", fmt.Errorf("(implBinaryIconReaderGetBase64PngIcon) Failed to convert binaryPath: %w", err)
+	}
+	var (
+		iconReaderBuffSize uint32 = 1024 * 5
+		iconReaderBuff     []byte = make([]byte, iconReaderBuffSize)
+	)
+
+	buffSize := iconReaderBuffSize
+
+	retval, _, err := _fBinaryIconReaderReadBase64Png.Call(uintptr(unsafe.Pointer(utfBinaryPath)),
+		uintptr(unsafe.Pointer(&iconReaderBuff[0])),
+		uintptr(unsafe.Pointer(&buffSize)))
+
+	if retval != 1 && buffSize > iconReaderBuffSize && buffSize < 1024*15 {
+		iconReaderBuffSize = buffSize
+		iconReaderBuff = make([]byte, iconReaderBuffSize)
+
+		retval, _, err = _fBinaryIconReaderReadBase64Png.Call(uintptr(unsafe.Pointer(utfBinaryPath)),
+			uintptr(unsafe.Pointer(&iconReaderBuff[0])),
+			uintptr(unsafe.Pointer(&buffSize)))
+	}
+
+	if err := checkCallErrResp(retval, err, "BinaryIconReaderReadBase64Png"); err != nil {
+		return "", err
+	}
+
+	return string(iconReaderBuff[:buffSize]), nil
 }

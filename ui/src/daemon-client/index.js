@@ -78,6 +78,7 @@ const daemonRequests = Object.freeze({
 
   SplitTunnelSetConfig: "SplitTunnelSetConfig",
   GetInstalledApps: "GetInstalledApps",
+  GetAppIcon: "GetAppIcon",
 
   SetAlternateDns: "SetAlternateDns",
   WireGuardGenerateNewKeys: "WireGuardGenerateNewKeys",
@@ -106,6 +107,7 @@ const daemonResponses = Object.freeze({
 
   SplitTunnelConfig: "SplitTunnelConfig",
   InstalledAppsResp: "InstalledAppsResp",
+  AppIconResp: "AppIconResp",
 
   WiFiAvailableNetworksResp: "WiFiAvailableNetworksResp",
   WiFiCurrentNetworkResp: "WiFiCurrentNetworkResp",
@@ -1237,6 +1239,24 @@ async function GetInstalledApps() {
   }
 }
 
+async function GetAppIcon(binaryPath) {
+  try {
+    let resp = await sendRecv({
+      Command: daemonRequests.GetAppIcon,
+      AppBinaryPath: binaryPath
+    });
+
+    if (resp == null) {
+      return null;
+    }
+
+    return resp.AppIcon;
+  } catch (e) {
+    console.error("GetInstalledApps failed: ", e);
+    return null;
+  }
+}
+
 async function SetDNS(antitrackerIsEnabled) {
   let DNS = "";
   if (store.state.settings.dnsIsCustom) DNS = store.state.settings.dnsCustom;
@@ -1331,6 +1351,7 @@ export default {
 
   SplitTunnelSetConfig,
   GetInstalledApps,
+  GetAppIcon,
 
   SetDNS,
   SetLogging,

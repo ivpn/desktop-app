@@ -1,7 +1,7 @@
 #include "dns.h"
 
 #define EXPORT __declspec(dllexport)
-#define _CRT_SECURE_NO_WARNINGS
+//#define _CRT_SECURE_NO_WARNINGS
 
 extern "C" 
 {

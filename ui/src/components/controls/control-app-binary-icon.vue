@@ -7,21 +7,26 @@ const sender = window.ipcSender;
 
 export default {
   props: {
-    binaryPath: String
+    binaryPath: String,
+    preloadedBase64Icon: String
   },
   data: () => ({
     base64Icon: "",
     defaultIcon:
-      "data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAQXSURBVFhH7VfLbiNFFL3ddjKeeCIWEYNAvKQZwQoQs0RssmPDL7DgT9jxC0gs+AE+AUWseKwQMCQIhWRC4tiQZJzY3e52P4pz7q1qmyQ2sJjMAu7odD26+t5zT90qZ+Q/b9HW1tarvv80rB9tb2+7TqfjxzdnRVHIYDDYjH7d23Nra2t+GpL49kmY8y0tyzI57vU2o739fbd+Z/3JRr7GkiSR3tHRZuxAS5nxcdOARfuPDly325VPviuks4J5fWlv/ZqZOFGk/SiKrY/2wV0nrz9T4ZOw+qodZ6vyzQnqDEvWVyp576WppFSgBwXokZ+uxrXcbjmglk7bARyjD5RVIReTXE7HmfwxzuUsySXNC4lcqWT5/TLUrpao5vpCXF028zTdAlpVlX9BUZbSG6by/eFQfu6P5LezRAbnqZxcpDIADjDeGYwlLytzsMTqupYfexfyw9G59OFj3qAl2ICEBa4UCbJ9eDSUg9ORTPIcZKZSehRlgRaAKiVI0nkUtyReAq7JskQxnWYar1GADw4qOCSJi0kmP/UeyxhtCFoWbH1gncNaAt9QXu5/vQRVXclkMlbk+aQJTourCg7QKRE8RbY7x48lm+YIiswRmChLU8GUmJEg6hpBkOEyMLFJCjUnIxBINV6jgA7w4KLd388lAwmTmkEMSgKETIl5sKiogPlYBG5riuxTkKACjM55JcAH+2ejFEgsoA/aKBDaucBBCd0C72MRat0CKjBGgqZAMCiAf5g5Ho7MuQ8Y+krCBzYyBcaeAFQjAS221mJUUIkFSAJahAgcSDTH0KSncx+cAbH3oT+bm6IA2bdC1H2GE4daWASuofTc/wL1xZgNAT44oDMLYhma5DbX9HlSdM739RRYAGa5CHxfoIaYPRMIwWnRzi5+Dbvr8sGnX0gNSfmBc5V+RKZ6DePajWMCkira0oK07daKfPjua/LOvWfV2SIb51PZ7Z/Cn5M7t2/J/ec2JEsTOenzKvZy8BRwT5mVZW4Z2oUT1JjN68WFa1Xlp48l6K6uypsvPy9vvfKC3Lu7YfP+F8YIAOqQJDRI6Pu91r7NBbCyiXAJXZZ9HnB/BcH0HqDVyGYWIGSK/nzGJOEDK3C+AwG2CwH/14FmFxGg1ewd229CCAiwzxbvHN7ZOlY/6wQEcJsug54GBLkMGk6Bf6kEAjyRRhUEDvMIqvBrLT96WY5FBgIoBv2bAMvAxGlWIYhlGuZ0lbLlp+bann9vYV2z3mpQooe/7LkOjuFHn3+p2WpQbgGOIrPWRXGsx6+F48ebjW2rBbTb8v7b9+WNFzd03b+xPEtl2D/cbAg0lG7IpiQwOOQfpTgqesRC8V0FFQl1cS3+yZpL0K2ERV99/e1nK7f8f0xuUASejiJLPvbD/+1pmcifg3tWxjSNYQAAAAAASUVORK5CYII="
+      "data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEaSURBVFhH7ZTbCoJAEIaFCCKCCKJnLTpQVBdB14HQ00T0CqUP4AN41puJAVe92F3HRZegHfgQFvH7/1nQMmPmZ+Z8uYJOCm01vJe64PF8cZ+Ftho89DxPC8IAeZ73QpZlJWmattsAfsBavsk0yRsD3Ox7ST3A4uTC/OjC7ODCdO/AZOfAeOvAaPOB4foDg1UVwLZtIUmSqG2AIq9vgNcc5coBKHIWgNec0RhAdAUUOSJrjsRxrLYBihxBMa85QzkARY7ImjOkAURXQJEjKOY1Z0RRpLYBihyRNUe5cgCKHEEprzmjMYDoCqjImiNhGKptgApvA3V57wFkzbUGEMmDIGgfAKH84ShypQBdyn3fFwfQSaE1Y+bvx7K+efsbU5+Ow3MAAAAASUVORK5CYII="
   }),
   mounted() {
-    this.loadIcon();
+    if (this.preloadedBase64Icon)
+      this.base64Icon = "data:image/x-icon;base64," + this.preloadedBase64Icon;
+    else this.loadIcon();
   },
   methods: {
     async loadIcon() {
       if (this.binaryPath == null) return null;
       try {
-        this.base64Icon = await sender.getAppIcon(this.binaryPath);
+        let ico = await sender.getAppIcon(this.binaryPath);
+        if (ico) ico = "data:image/x-icon;base64," + ico;
+        this.base64Icon = ico;
       } catch (e) {
         console.error(`Error receiving appicon '${this.binaryPath}': `, e);
       }

@@ -41,6 +41,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/oshelpers"
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/firewall"
@@ -1218,6 +1219,22 @@ func (s *Service) SplitTunnelling_ApplyConfig() error {
 		}
 	}
 	return nil
+}
+
+func (s *Service) GetInstalledApps() ([]oshelpers.AppInfo, error) {
+	start := time.Now() // TODO: just for test
+	defer func() {
+		elapsed := time.Since(start)
+		if elapsed > time.Second*4 {
+			log.Debug(fmt.Sprintf("GetInstalledApps: elapsed %v", elapsed))
+		}
+	}()
+
+	return oshelpers.GetInstalledApps()
+}
+
+func (s *Service) GetBinaryIcon(binaryPath string) (string, error) {
+	return oshelpers.GetBinaryIconBase64Png(binaryPath)
 }
 
 // SetPreference set preference value

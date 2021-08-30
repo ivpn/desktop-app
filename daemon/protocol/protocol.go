@@ -31,7 +31,6 @@ import (
 	"math/rand"
 	"net"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -84,6 +83,8 @@ type Service interface {
 	SetKillSwitchAllowLAN(isAllowLan bool) error
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
 	SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string) error
+	GetInstalledApps() ([]oshelpers.AppInfo, error)
+	GetBinaryIcon(binaryPath string) (string, error)
 
 	Preferences() preferences.Preferences
 	SetPreference(key string, val string) error
@@ -738,55 +739,26 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p._service.WireGuardSetKeysRotationInterval(req.Interval)
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
-	case "GetInstalledApps":
-		// Get a list of installed applications on the system
-		// returns: map[binaryPath]description
-		retMap, err := oshelpers.GetInstalledApps()
-		if err != nil {
+	case "GetAppIcon":
+		var req types.GetAppIcon
+		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		if retMap == nil {
-			p.sendErrorResponse(conn, reqCmd, fmt.Errorf("failed to get installed applications info"))
+		base64Png, err := p._service.GetBinaryIcon(req.AppBinaryPath)
+		if err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+		p.sendResponse(conn, &types.AppIconResp{AppBinaryPath: req.AppBinaryPath, AppIcon: base64Png}, reqCmd.Idx)
 
-		// do sorting by app description
-		binPaths := make([]string, 0, len(retMap))
-		for binPath := range retMap {
-			binPaths = append(binPaths, binPath)
+	case "GetInstalledApps":
+		apps, err := p._service.GetInstalledApps()
+		if err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
 		}
-		sort.Strings(binPaths)
-
-		// prepare response
-		apps := make([]types.AppInfo, len(binPaths))
-		for idx, binPath := range binPaths {
-			var appName string
-			var appGroup string
-
-			// Application description: [<AppGroup>/]<AppName>.
-			// Example 1: "Git/Git GUI"
-			// 		AppName  = "Git GUI"
-			// 		AppGroup = "Git"
-			// Example 2: "Firefox"
-			// 		AppName  = "Firefox"
-			// 		AppGroup = null
-			descr := retMap[binPath]
-			descrSplitted := strings.Split(descr, "/")
-
-			if len(descrSplitted) == 1 {
-				appName = descrSplitted[0]
-			} else if len(descrSplitted) == 2 {
-				appGroup = descrSplitted[0]
-				appName = descrSplitted[1]
-			} else {
-				continue
-			}
-
-			apps[idx] = types.AppInfo{AppBinaryPath: binPath, AppName: appName, AppGroup: appGroup}
-		}
-
 		p.sendResponse(conn, &types.InstalledAppsResp{Apps: apps}, reqCmd.Idx)
 
 	case "Disconnect":

@@ -246,3 +246,9 @@ type APIRequest struct {
 type GetInstalledApps struct {
 	CommandBase
 }
+
+// GetAppIcon requests shell icon for binary file (application)
+type GetAppIcon struct {
+	CommandBase
+	AppBinaryPath string
+}

@@ -43,8 +43,13 @@
       <div class="horizontalLine" />
 
       <div
-        style="overflow: auto; padding:1px;margin-top: 1px; margin-bottom:1px; max-height: 295px;  height: 320px;"
+        style="overflow: auto; padding:1px;margin-top: 1px; margin-bottom:1px; max-height: 295px;  height: 320px; position: relative; "
       >
+        <spinner
+          :loading="isLoadingAllApps"
+          style="position: absolute; background: transparent; width: 480px;"
+        />
+
         <div v-for="app of filteredApps" v-bind:key="app.AppBinaryPath">
           <div
             class="flexRow grayedOnHover"
@@ -52,29 +57,29 @@
           >
             <binaryIconControl
               :binaryPath="app.AppBinaryPath"
-              style="min-width:32px; min-height:32px; max-width:32px; max-height:32px; padding: 4px"
+              :preloadedBase64Icon="app.AppIcon"
+              style="min-width:32px; min-height:32px; max-width:32px; max-height:32px; padding: 4px;"
             />
             <!-- {{ app.AppBinaryPath }} -->
-            <div class="flexRowRestSpace">
+            <div
+              class="flexRowRestSpace"
+              style="max-width: 375px; padding-left: 5px"
+            >
               <!-- Manually added application -->
               <div v-if="!app.AppName">
-                <div class="text" style="max-width: 380px;">
+                <div class="text">
                   {{ getFileName(app.AppBinaryPath) }}
                 </div>
-                <div
-                  style="max-width: 380px;"
-                  class="settingsGrayLongDescriptionFont text"
-                >
+                <div class="settingsGrayLongDescriptionFont text">
                   {{ getFileFolder(app.AppBinaryPath) }}
                 </div>
               </div>
               <div v-else>
                 <!-- Application from the installed apps list (AppName and AppGroup is known)-->
-                <div class="text" style="max-width: 380px;">
+                <div class="text">
                   {{ app.AppName }}
                 </div>
                 <div
-                  style="max-width: 380px;"
                   class="settingsGrayLongDescriptionFont text"
                   v-if="app.AppName != app.AppGroup"
                 >
@@ -112,7 +117,7 @@
       <div class="horizontalLine" />
 
       <div class="flexRow" style="margin-top: 15px;">
-        <div class="param" v-if="allInstalledApps">
+        <div class="param">
           <input
             type="checkbox"
             id="showAllApplications"
@@ -146,14 +151,17 @@ import Image_search_macos from "@/assets/search-macos.svg";
 import Image_search_linux from "@/assets/search-linux.svg";
 
 import binaryIconControl from "@/components/controls/control-app-binary-icon.vue";
+import spinner from "@/components/controls/control-spinner.vue";
 
 export default {
   components: {
+    spinner,
     binaryIconControl
   },
 
   data: function() {
     return {
+      isLoadingAllApps: false,
       filter: "",
       showAllApps: false,
       allInstalledApps: null, // []; array of configured application path's (only absolute file path)
@@ -163,6 +171,7 @@ export default {
       //	  AppBinaryPath string
       //    AppName  string
       //    AppGroup string
+      //    AppIcon string
       //    isSplitted (true or (false/null))
       allAppsHashed: {},
       appsToShow: null // []; array of appInfo
@@ -172,7 +181,13 @@ export default {
     // show base information about splitted apps immediately
     //this.updateAppsToShow();
 
-    let allApps = await sender.GetInstalledApps();
+    let allApps = null;
+    try {
+      this.isLoadingAllApps = true;
+      allApps = await sender.GetInstalledApps();
+    } finally {
+      this.isLoadingAllApps = false;
+    }
 
     if (allApps) {
       // create a list of hashed appinfo (by app path)
@@ -329,7 +344,9 @@ export default {
     async onShowAllApps() {
       this.showAllApps = !this.showAllApps;
       this.filter = "";
-      this.updateAppsToShow();
+      setTimeout(() => {
+        this.updateAppsToShow();
+      }, 0);
     },
 
     getFileFolder(filePath) {

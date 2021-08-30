@@ -12,12 +12,22 @@ func init() {
 	log = logger.NewLogger("oshlpr")
 }
 
+type AppInfo struct {
+	// Application description: [<AppGroup>/]<AppName>.
+	// Example 1: "Git/Git GUI"
+	// 		AppName  = "Git GUI"
+	// 		AppGroup = "Git"
+	// Example 2: "Firefox"
+	// 		AppName  = "Firefox"
+	// 		AppGroup = null
+	AppName       string
+	AppGroup      string // optional
+	AppBinaryPath string // absolute path to application binary
+	AppIcon       string // base64 png icon of the executable binary
+}
+
 // GetInstalledApps returns a list of installed applications on the system
-// Return format:
-//	map[binaryPath]description
-// 	Where 'description' has format: [<app group>/]<AppName>.
-// 		Description example: "Git/Git GUI" or "Firefox"
-func GetInstalledApps() (apps map[string]string, err error) {
+func GetInstalledApps() (apps []AppInfo, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			apps = nil
@@ -31,4 +41,20 @@ func GetInstalledApps() (apps map[string]string, err error) {
 	}()
 
 	return implGetInstalledApps()
+}
+
+func GetBinaryIconBase64Png(binaryPath string) (icon string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			icon = ""
+			if theErr, ok := r.(error); ok {
+				err = fmt.Errorf("PANIC on GetBinaryBase64PngIcon() [recovered] : %w", theErr)
+			} else {
+				err = fmt.Errorf("PANIC on GetBinaryIconBase64Png() [recovered] ")
+			}
+			log.Error(err)
+		}
+	}()
+
+	return implGetBinaryIconBase64Png(binaryPath)
 }
