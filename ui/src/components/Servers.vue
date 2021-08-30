@@ -347,18 +347,21 @@ export default {
       let store = this.$store;
       let sType = store.state.settings.serversSortType;
       function compare(a, b) {
-        let ret = 0;
         switch (sType) {
           case ServersSortTypeEnum.City:
             return a.city.localeCompare(b.city);
 
-          case ServersSortTypeEnum.Country:
-            if (!a.country_code && b.country_code) return 0;
-            if (!a.country_code) return 1;
+          case ServersSortTypeEnum.Country: {
+            if (!a.country && !b.country) return 0;
+            if (!a.country) return 1;
 
-            ret = a.country_code.localeCompare(b.country_code);
+            let ret = 0;
+            ret = a.country.localeCompare(b.country);
             if (ret != 0) return ret;
-            return a.city.localeCompare(b.city);
+            // If countries are the same - compare cities
+            if (a.city && b.city) return a.city.localeCompare(b.city);
+            return ret;
+          }
 
           case ServersSortTypeEnum.Latency:
             if (a.ping && b.ping) return a.ping - b.ping;
