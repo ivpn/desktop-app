@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.3.30 - 2021-08-31
+
+[NEW] Preparation for 2FA in CLI  
+[IMPROVED] (Linux) The installation path changed from '/usr/local/bin' to '/usr/bin'  
+[FIXED] Server selection order incorrect when sorted by country  
+[FIXED] (Linux) Removed unnecessary paths from package which may lead to conflict with other software  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.30.exe)  
+SHA256: 981bce29c543df2485687edcc9383e1fe5acc343cba0d8b8ea8beada8c57a3e6   
+
+[Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.30.dmg)  
+SHA256: 7155967dda8f53580ab2d158fa57b447efe0c40a29f28b884bf33fc0f8fcb12d  
 
 ## Version 3.3.20 - 2021-06-29
 
@@ -16,7 +28,6 @@ All notable changes to this project will be documented in this file.
 
 [Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.20.exe)  
 SHA256: 02b312a0edf21765229c1e8f12e48bec2539b241e05afcda65b90c4f9730d950   
-
 
 [Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.20.dmg)  
 SHA256: 14d4f51e2167a9c07e56d35de7632570168c69ed93beb4711128e5ddd04ca67f  
