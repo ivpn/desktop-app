@@ -15,6 +15,16 @@ SHA256: 981bce29c543df2485687edcc9383e1fe5acc343cba0d8b8ea8beada8c57a3e6
 [Download IVPN Client for macOS](https://repo.ivpn.net/macos/bin/IVPN-3.3.30.dmg)  
 SHA256: 7155967dda8f53580ab2d158fa57b447efe0c40a29f28b884bf33fc0f8fcb12d  
 
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.3.30_amd64.deb)  
+SHA256: 89d20099b8e36b704106074c60a89ff189ff6e99e999a3ae748801b3ba76bd07   
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.3.30-1.x86_64.rpm)  
+SHA256: 7b432c77c85bee2267bbbb218ee761b8c036208b14350476afa7179b133ad0a3 
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.3.30_amd64.deb)  
+SHA256: 229d70cfcb7bee5a7a888b5864797a5fec09cbd320f4d1a0c374cd30b17b2452  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.3.30-1.x86_64.rpm)  
+SHA256: f7a77300bcc261af44e0d146970a89a4598d54be3161b2913516051d57f13a52  
+
 ## Version 3.3.20 - 2021-06-29
 
 [NEW] IPv6 inside WireGuard tunnel  
