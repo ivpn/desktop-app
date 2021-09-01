@@ -382,10 +382,11 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.SplitTunnelConfig:
-      store.commit(`settings/splitTunnelling`, {
+      store.commit(`vpnState/splitTunnelling`, {
         enabled: obj.IsEnabled,
         apps: obj.SplitTunnelApps
       });
+
       break;
 
     case daemonResponses.ServiceExitingResp:
@@ -533,7 +534,9 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
           GetServersList: true,
           GetStatus: true,
           GetConfigParams: true,
-          KeepDaemonAlone: true
+          KeepDaemonAlone: true,
+          GetSplitTunnelConfig: true,
+          GetWiFiCurrentState: true
         };
 
         try {

@@ -272,6 +272,36 @@ func (c *Client) FirewallStatus() (state types.KillSwitchStatusResp, err error) 
 	return state, nil
 }
 
+// GetSplitTunnelConfig requests the Split-Tunnelling configuration
+func (c *Client) GetSplitTunnelConfig() (cfg types.SplitTunnelConfig, err error) {
+	if err := c.ensureConnected(); err != nil {
+		return cfg, err
+	}
+
+	// requesting status
+	req := types.SplitTunnelGetConfig{}
+	if err := c.sendRecv(&req, &cfg); err != nil {
+		return cfg, err
+	}
+
+	return cfg, nil
+}
+
+// SetSplitTunnelConfig sets the split-tunnelling configuration
+func (c *Client) SetSplitTunnelConfig(cfg types.SplitTunnelConfig) (err error) {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.SplitTunnelSetConfig{IsEnabled: cfg.IsEnabled, SplitTunnelApps: cfg.SplitTunnelApps}
+	resp := types.SplitTunnelConfig{}
+	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetServers gets servers list
 func (c *Client) GetServers() (apitypes.ServersInfoResponse, error) {
 	if err := c.ensureConnected(); err != nil {

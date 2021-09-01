@@ -125,11 +125,39 @@ func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN
 		fwState = "Enabled"
 	}
 
-	fmt.Fprintln(w, fmt.Sprintf("Allow IVPN access\t:\t%v", isAllowApiServers))
 	fmt.Fprintln(w, fmt.Sprintf("Firewall\t:\t%v", fwState))
 	fmt.Fprintln(w, fmt.Sprintf("    Allow LAN\t:\t%v", isAllowLAN))
 	if isPersistent {
 		fmt.Fprintln(w, fmt.Sprintf("    Persistent\t:\t%v", isPersistent))
+	}
+	fmt.Fprintln(w, fmt.Sprintf("    Allow IVPN servers\t:\t%v", isAllowApiServers))
+
+	return w
+}
+
+func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, apps []string) *tabwriter.Writer {
+	if w == nil {
+		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+	}
+
+	state := "Disabled"
+	if isEnabled {
+		state = "Enabled"
+		if len(apps) == 0 {
+			state += " (not configured)"
+		}
+	}
+
+	fmt.Fprintln(w, fmt.Sprintf("Split Tunnel\t:\t%v", state))
+
+	if !isShortPrint {
+		for i, path := range apps {
+			if i == 0 {
+				fmt.Fprintln(w, fmt.Sprintf("Split Tunnel apps\t:\t%v", path))
+			} else {
+				fmt.Fprintln(w, fmt.Sprintf("\t\t%v", path))
+			}
+		}
 	}
 
 	return w

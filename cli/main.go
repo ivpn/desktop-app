@@ -92,6 +92,7 @@ func main() {
 	addCommand(&commands.CmdDisconnect{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
+	addCommand(&commands.SplitTun{})
 	addCommand(&commands.CmdWireGuard{})
 	addCommand(&commands.CmdDns{})
 	addCommand(&commands.CmdAntitracker{})

@@ -1131,21 +1131,39 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string) error {
 	prefs := s._preferences
 
-	// Ensure no binaries from IVPN package is included into apps list to Split-Tunnel
-	if ex, err := os.Executable(); err == nil && len(ex) > 0 {
-		exDir := filepath.Dir(ex)
+	parsedApps := make(map[string]string, len(appsToSplit))
 
-		parsedApps := make([]string, 0, len(appsToSplit))
-		for _, app := range appsToSplit {
-			if len(app) > 0 {
-				if strings.HasPrefix(app, exDir) {
-					log.Warning(fmt.Sprintf("Split-Tunnelling for IVPN binaries is forbidden (%s)", app))
-				} else {
-					parsedApps = append(parsedApps, app)
-				}
+	// current binary folder path
+	var exeDir string
+
+	if ex, err := os.Executable(); err == nil && len(ex) > 0 {
+		exeDir = filepath.Dir(ex)
+	}
+
+	for _, app := range appsToSplit {
+		if len(app) > 0 {
+
+			// Ensure no binaries from IVPN package is included into apps list to Split-Tunnel
+			if strings.HasPrefix(app, exeDir) {
+				log.Warning(fmt.Sprintf("Split-Tunnelling for IVPN binaries is forbidden (%s)", app))
+				continue
 			}
+
+			// Ensure file is exists
+			if _, err := os.Stat(app); os.IsNotExist(err) {
+				log.Warning(fmt.Sprintf("File not exists: %s", app))
+				continue
+			}
+
+			// Using map to avoid duplicates
+			// Ignore case: not possible to add files with same name but different case
+			parsedApps[strings.ToLower(app)] = app
 		}
-		appsToSplit = parsedApps
+	}
+
+	appsToSplit = make([]string, 0, len(parsedApps))
+	for _, v := range parsedApps {
+		appsToSplit = append(appsToSplit, v)
 	}
 
 	prefs.IsSplitTunnel = isEnabled

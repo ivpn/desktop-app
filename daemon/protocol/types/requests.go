@@ -43,6 +43,12 @@ type Hello struct {
 	// GetConfigParams == true - client requests config parameters (user-defined OpevVPN file location ... etc.)
 	GetConfigParams bool
 
+	// GetSplitTunnelConfig == true - client requests configuration of SplitTunnelling
+	GetSplitTunnelConfig bool
+
+	// GetWiFiCurrentState == true - client requests info about current WiFi
+	GetWiFiCurrentState bool
+
 	//	KeepDaemonAlone == false (default) - VPN disconnects when client disconnects from a daemon
 	//	KeepDaemonAlone == true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
 	KeepDaemonAlone bool
@@ -100,13 +106,6 @@ type KillSwitchGetStatus struct {
 type KillSwitchSetIsPersistent struct {
 	CommandBase
 	IsPersistent bool
-}
-
-// SplitTunnelSet sets the split-tunnelling configuration
-type SplitTunnelSetConfig struct {
-	CommandBase
-	IsEnabled       bool // is ST enabled (will be automatically activated on VPN connect)
-	SplitTunnelApps []string
 }
 
 // SetPreference sets daemon configuration parameter
@@ -251,4 +250,16 @@ type GetInstalledApps struct {
 type GetAppIcon struct {
 	CommandBase
 	AppBinaryPath string
+}
+
+// SplitTunnelSet sets the split-tunnelling configuration
+type SplitTunnelSetConfig struct {
+	CommandBase
+	IsEnabled       bool // is ST enabled (will be automatically activated on VPN connect)
+	SplitTunnelApps []string
+}
+
+// GetSplitTunnelConfig requests the Split-Tunnelling configuration
+type SplitTunnelGetConfig struct {
+	CommandBase
 }

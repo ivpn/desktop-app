@@ -203,7 +203,7 @@ export default {
 
     // If no applications selected: show all applications for selection
     if (this.showAllApps == false) {
-      var st = this.$store.state.settings.splitTunnelling;
+      var st = this.$store.state.vpnState.splitTunnelling;
       if (allApps && (!st.apps || st.apps.length == 0)) {
         this.onShowAllApps();
       }
@@ -219,7 +219,7 @@ export default {
   methods: {
     updateAppsToShow() {
       // 'splitted' applications
-      let configApps = this.$store.state.settings.splitTunnelling.apps;
+      let configApps = this.$store.state.vpnState.splitTunnelling.apps;
 
       // hashed list of splitted apps (needed to avoid duplicates in final list)
       let configAppsHashed = {};
@@ -288,7 +288,7 @@ export default {
       var ret = await sender.showOpenDialog(diagConfig);
       if (!ret || ret.canceled || ret.filePaths.length == 0) return;
 
-      var st = this.$store.state.settings.splitTunnelling;
+      var st = this.$store.state.vpnState.splitTunnelling;
       var stApps = [];
       if (st.apps) stApps = Object.assign(stApps, st.apps);
 
@@ -300,7 +300,7 @@ export default {
     },
 
     async removeApp(appPath) {
-      var st = this.$store.state.settings.splitTunnelling;
+      var st = this.$store.state.vpnState.splitTunnelling;
       var stApps = [];
       if (st.apps) stApps = Object.assign(stApps, st.apps);
 
@@ -319,7 +319,7 @@ export default {
     },
 
     async addApp(appPath) {
-      var st = this.$store.state.settings.splitTunnelling;
+      var st = this.$store.state.vpnState.splitTunnelling;
       var stApps = [];
       if (st.apps) stApps = Object.assign(stApps, st.apps);
 
@@ -368,17 +368,17 @@ export default {
   computed: {
     isSTEnabled: {
       get() {
-        return this.$store.state.settings.splitTunnelling.enabled;
+        return this.$store.state.vpnState.splitTunnelling.enabled;
       },
       async set(value) {
-        var st = this.$store.state.settings.splitTunnelling;
+        var st = this.$store.state.vpnState.splitTunnelling;
         await sender.SplitTunnelSetConfig(value, st.apps);
       }
     },
 
     // needed for 'watch'
     STConfig: function() {
-      return this.$store.state.settings.splitTunnelling;
+      return this.$store.state.vpnState.splitTunnelling;
     },
 
     filteredApps: function() {

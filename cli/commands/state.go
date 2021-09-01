@@ -53,6 +53,11 @@ func showState() error {
 		return err
 	}
 
+	stConfig, err := _proto.GetSplitTunnelConfig()
+	if err != nil {
+		return err
+	}
+
 	serverInfo := ""
 	exitServerInfo := ""
 
@@ -72,6 +77,7 @@ func showState() error {
 	if state == vpn.CONNECTED {
 		printDNSState(w, connected.ManualDNS, &servers)
 	}
+	printSplitTunState(w, true, stConfig.IsEnabled, stConfig.SplitTunnelApps)
 	printFirewallState(w, fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast, fwstate.IsAllowApiServers)
 	w.Flush()
 

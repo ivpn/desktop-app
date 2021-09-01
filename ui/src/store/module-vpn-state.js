@@ -58,6 +58,12 @@ export default {
       IsAllowApiServers: null
     },
 
+    // Split-Tunnelling
+    splitTunnelling: {
+      enabled: false,
+      apps: null // []string
+    },
+
     dns: "",
 
     currentWiFiInfo: null, //{ SSID: "", IsInsecureNetwork: false },
@@ -158,6 +164,10 @@ export default {
     },
     firewallState(state, obj) {
       state.firewallState = obj;
+    },
+    // Split-Tunnelling
+    splitTunnelling(state, val) {
+      state.splitTunnelling = val;
     },
     dns(state, dns) {
       state.dns = dns;
@@ -274,6 +284,10 @@ export default {
       // notify 'settings' module about updated servers list
       // (it is required to update selected servers, if necessary)
       context.dispatch("settings/updateSelectedServers", null, { root: true });
+    },
+    // Split-Tunnelling
+    splitTunnelling(state, val) {
+      state.splitTunnelling = val;
     },
     dns(context, dns) {
       context.commit("dns", dns);

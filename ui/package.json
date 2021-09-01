@@ -1,6 +1,6 @@
 {
   "name": "ivpn-ui",
-  "version": "3.3.32",
+  "version": "3.3.33",
   "productName": "IVPN",
   "description": "IVPN Client",
   "author": "IVPN Limited",
@@ -17,7 +17,7 @@
     "postuninstall": "electron-builder install-app-deps"
   },
   "main": "background.js",
-  "dependencies": {    
+  "dependencies": {
     "@sentry/electron": "1.5.2",
     "auto-launch": "5.0.5",
     "core-js": "3.6.5",

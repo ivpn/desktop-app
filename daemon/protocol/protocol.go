@@ -408,11 +408,15 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				reqCmd.Idx)
 		}
 
-		// sending WIFI info
-		p.OnWiFiChanged(p._service.GetWiFiCurrentState())
+		if req.GetSplitTunnelConfig {
+			// sending split-tunnelling configuration
+			p.OnSplitTunnelConfigChanged()
+		}
 
-		// sending split-tunnelling configuration
-		p.OnSplitTunnelConfigChanged()
+		if req.GetWiFiCurrentState {
+			// sending WIFI info
+			p.OnWiFiChanged(p._service.GetWiFiCurrentState())
+		}
 
 	case "GetVPNState":
 		// send VPN connection  state
@@ -571,6 +575,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err := p._service.SetPreference(req.Key, req.Value); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
+
+	case "SplitTunnelGetConfig":
+		var prefs = p._service.Preferences()
+		p.sendResponse(conn, &types.SplitTunnelConfig{IsEnabled: prefs.IsSplitTunnel, SplitTunnelApps: prefs.SplitTunnelApps}, reqCmd.Idx)
 
 	case "SplitTunnelSetConfig":
 		var req types.SplitTunnelSetConfig
