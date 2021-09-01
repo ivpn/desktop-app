@@ -104,7 +104,7 @@ mkdir -p $TMPDIRSRVC
 cd $TMPDIRSRVC
 
 echo "Preparing service..."
-fpm -v $VERSION -n ivpn-service -s pleaserun -t dir --deb-no-default-config-files /usr/local/bin/ivpn-service
+fpm -v $VERSION -n ivpn-service -s pleaserun -t dir --deb-no-default-config-files /usr/bin/ivpn-service
 
 
 CreatePackage()
@@ -140,6 +140,7 @@ CreatePackage()
   # NOTE! 'remove' scripts is using from old version!
 
   fpm -d openvpn $EXTRA_ARGS \
+    --rpm-rpmbuild-define "_build_id_links none" \
     --deb-no-default-config-files -s dir -t $PKG_TYPE -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
     --template-scripts --template-value pkg=$PKG_TYPE \
     --vendor "Privatus Limited" --maintainer "Privatus Limited" \
@@ -149,8 +150,8 @@ CreatePackage()
     --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
     --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
     $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
-    $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/local/bin/ \
-    $OUT_DIR/ivpn=/usr/local/bin/ \
+    $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/bin/ \
+    $OUT_DIR/ivpn=/usr/bin/ \
     $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
 }
 
@@ -164,7 +165,7 @@ echo "RPM package..."
 CreatePackage "rpm"
 
 echo '---------------------------'
-echo "Copying compiled pachages to '$OUT_DIR'..."
+echo "Copying compiled packages to '$OUT_DIR'..."
 mkdir -p $OUT_DIR
 yes | cp -f $TMPDIR/*.* $OUT_DIR
 

@@ -9,7 +9,6 @@ INSTRUCTIONS_FILE="$IVPN_TMP/service_install.txt"
 mkdir -p $IVPN_TMP
 [ -e $INSTRUCTIONS_FILE ] && rm $INSTRUCTIONS_FILE
 
-
 silent() {
   "$@" > /dev/null 2>&1
 }
@@ -42,8 +41,8 @@ silent chmod 0600 $IVPN_ETC/servers.json  # can read/wrire only owner (root)
 silent chmod 0700 $IVPN_ETC/*.sh          # can execute only owner (root)
 silent chmod 0700 $IVPN_ETC/*.up          # can execute only owner (root)
 silent chmod 0700 $IVPN_ETC/*.down        # can execute only owner (root)
-silent chmod 0755 /usr/local/bin/ivpn         # can change only owner (root)
-silent chmod 0755 /usr/local/bin/ivpn-service # can change only owner (root)
+silent chmod 0755 /usr/bin/ivpn           # can change only owner (root)
+silent chmod 0755 /usr/bin/ivpn-service   # can change only owner (root)
 
 
 IVPN_SAVED_DNS_FILE="/etc/resolv.conf.ivpnsave"
@@ -95,12 +94,12 @@ if [ -f $FILE_ACCID_TO_UPGRADE ]; then
     # giving a chance for a daemon to fully start
     sleep 1
     echo "[+] Logging in ..."
-    /usr/local/bin/ivpn login $ACCID #||  echo "[-] Finishing installation: Failed to to re-login (try#1)"
+    /usr/bin/ivpn login $ACCID #||  echo "[-] Finishing installation: Failed to to re-login (try#1)"
     if [ ! $? -eq 0 ]; then
       echo "[-] Finishing installation: Failed to to re-login (try#1)"
       echo "[ ] Retry ..."
       sleep 3
-      /usr/local/bin/ivpn login $ACCID ||  echo "[-] Finishing installation: Failed to to re-login (try#2)"
+      /usr/bin/ivpn login $ACCID ||  echo "[-] Finishing installation: Failed to to re-login (try#2)"
     fi
   fi
 fi
