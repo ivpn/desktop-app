@@ -1225,11 +1225,13 @@ async function SplitTunnelSetConfig(IsEnabled, SplitTunnelApps) {
 
 async function GetInstalledApps() {
   try {
+    const responseTimeoutMs = 25 * 1000;
     let appsResp = await sendRecv(
       {
         Command: daemonRequests.GetInstalledApps
       },
-      [daemonResponses.InstalledAppsResp]
+      [daemonResponses.InstalledAppsResp],
+      responseTimeoutMs
     );
 
     if (appsResp == null) {
