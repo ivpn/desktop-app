@@ -46,6 +46,9 @@ namespace wfp
 
 	NTSTATUS RegisterFilters(HANDLE wfpEngineHandle)
 	{
+		// Useful link:
+		// https://docs.microsoft.com/en-us/windows/win32/fwp/filter-arbitration
+
 		NTSTATUS status;
 
 		//

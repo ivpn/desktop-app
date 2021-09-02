@@ -47,7 +47,10 @@ namespace wfp
 		subLayer.displayData.name = L"IVPN Split Tunnel sub-Layer";
 		subLayer.displayData.description = L"IVPN Split Tunnel sub-Layer for use callouts";
 		subLayer.flags = 0;
-		subLayer.weight = FWP_EMPTY; // auto-weight;
+
+		// Useful link:
+		// https://docs.microsoft.com/en-us/windows/win32/fwp/filter-arbitration
+		subLayer.weight = 0xFFFF; // highest weight 
 
 		status = FwpmSubLayerAdd(gWfpEngineHandle, &subLayer, NULL);
 		if (!NT_SUCCESS(status))

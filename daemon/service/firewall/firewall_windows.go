@@ -267,7 +267,10 @@ func doEnable() (retErr error) {
 	}
 
 	provider := winlib.CreateProvider(providerKey, providerDName, "", isPersistant)
-	sublayer := winlib.CreateSubLayer(sublayerKey, providerKey, sublayerDName, "", 0, isPersistant)
+	sublayer := winlib.CreateSubLayer(sublayerKey, providerKey,
+		sublayerDName, "",
+		0xFFF0, // The weight of current layer should be smaller than 0xFFFF (The layer of split-tunneling driver using weight 0xFFFF)
+		isPersistant)
 
 	// add provider
 	pinfo, err := manager.GetProviderInfo(providerKey)
@@ -315,7 +318,8 @@ func doEnable() (retErr error) {
 
 		ipv6loopback := net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}     // LOOPBACK 		::1/128
 		ipv6llocal := net.IP{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // LINKLOCAL		fe80::/10
-
+		// ipv6slocal := net.IP{0xfe, 0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // SITELOCAL	fec0::/10
+		// ipv6ulocal := net.IP{0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}    // UNIQUELOCAL	fd00::/8
 		_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6loopback, 128, isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow remote IP' for ipv6loopback: %w", err)
@@ -324,38 +328,6 @@ func doEnable() (retErr error) {
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow remote IP' for ipv6llocal: %w", err)
 		}
-
-		////////////////////////////////////////////////////////////////////////
-		/*
-			// TEST
-			ipv6slocal := net.IP{0xfe, 0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // SITELOCAL	fec0::/10
-			ipv6ulocal := net.IP{0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}    // UNIQUELOCAL	fd00::/8
-			_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6slocal, 10, isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow remote IP' for ipv6slocal: %w", err)
-			}
-			_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6ulocal, 8, isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow remote IP' for ipv6ulocal: %w", err)
-			}
-
-			_, err = manager.AddFilter(winlib.NewFilterAllowLocalIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6loopback, 128, isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow local IP' for ipv6loopback: %w", err)
-			}
-			_, err = manager.AddFilter(winlib.NewFilterAllowLocalIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6llocal, 10, isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow local IP' for ipv6llocal: %w", err)
-			}
-			_, err = manager.AddFilter(winlib.NewFilterAllowLocalIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6slocal, 10, isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow local IP' for ipv6slocal: %w", err)
-			}
-			_, err = manager.AddFilter(winlib.NewFilterAllowLocalIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6ulocal, 8, isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow local IP' for ipv6ulocal: %w", err)
-			}*/
-		// /////////////////////////////////////////////////////////////////////
 	}
 
 	// IPv4 filters

@@ -110,47 +110,9 @@ namespace wfp
 			return;
 		}
 		
-		// ================= DEBUG: TEST START ===================
-		/*const bool isIPv6 = inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6;
-		if (isIPv6)
-		{
-			auto srcAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_LOCAL_ADDRESS].value.byteArray16);
-			if (inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6)
-			{
-				auto dstAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_REMOTE_ADDRESS].value.byteArray16);
-				bool isSrcLocal = LocalAddress(srcAddr);
-				bool isDstLocal = LocalAddress(dstAddr);
-
-				if (isSrcLocal || isDstLocal)
-				{
-					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Split skipped LOCAL (src:%d dst:%d pid:0x%llX) IPv6 CONNECT src:%x:%x:%x:%x:%x:%x:%x:%x dst:%x:%x:%x:%x:%x:%x:%x:%x", 
-						isSrcLocal, isDstLocal, inMetaValues->processId,
-						srcAddr->u.Word[0], srcAddr->u.Word[1], srcAddr->u.Word[2], srcAddr->u.Word[3],
-						srcAddr->u.Word[4], srcAddr->u.Word[5], srcAddr->u.Word[6], srcAddr->u.Word[7],
-						dstAddr->u.Word[0], dstAddr->u.Word[1], dstAddr->u.Word[2], dstAddr->u.Word[3],
-						dstAddr->u.Word[4], dstAddr->u.Word[5], dstAddr->u.Word[6], dstAddr->u.Word[7]);
-					return;
-				}
-			}
-			else
-			{
-				if (LocalAddress(srcAddr))
-				{
-					TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Split skipped LOCAL (pid:0x%llX) BIND src:%x:%x:%x:%x:%x:%x:%x:%x",
-						inMetaValues->processId,
-						srcAddr->u.Word[0], srcAddr->u.Word[1], srcAddr->u.Word[2], srcAddr->u.Word[3],
-						srcAddr->u.Word[4], srcAddr->u.Word[5], srcAddr->u.Word[6], srcAddr->u.Word[7]);
-					return;
-				}
-			}
-		}*/
-		// ================= DEBUG: TEST STOP ===================
-		
 		// Checking: is it 'known' process
 		// ProcessMonitor keep information only about processes that have to be applied to split-tunnel
-		prc::ProcessInfo* pi = prc::FindProcessInfoForPid((HANDLE)inMetaValues->processId);
-
-		if (pi == NULL)
+		if (NULL == prc::FindProcessInfoForPid((HANDLE)inMetaValues->processId))
 		{
 			// PID unknown. Do nothing. Just go to the next filter.
 
@@ -390,18 +352,8 @@ namespace wfp
 			inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 ||
 			inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4 ||
 			inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6);
-
-
-		if (!(classifyOut->rights & FWPS_RIGHT_ACTION_WRITE))
-		{
-			//	classifyOut->actionType: specifies the suggested action to be taken as determined by the callout.
-			//	If the FWPS_RIGHT_ACTION_WRITE flag is not set, a callout driver should not write to this member 
-			//	unless it is vetoing an FWP_ACTION_PERMIT action that was previously returned by a higher weight filter in the filter engine.
-			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) SKIPPING: FWPS_RIGHT_ACTION_WRITE not set.");
-			return;
-		}
-
-		if (classifyOut->actionType == FWP_ACTION_NONE)
+				
+		if (classifyOut->actionType == FWP_ACTION_NONE && classifyOut->rights & FWPS_RIGHT_ACTION_WRITE)
 			classifyOut->actionType = FWP_ACTION_CONTINUE;
 		
 		if (!FWPS_IS_METADATA_FIELD_PRESENT(inMetaValues, FWPS_METADATA_FIELD_PROCESS_ID))
@@ -409,77 +361,54 @@ namespace wfp
 			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) SKIPPING: Failed to classify connection because PID was not provided");
 			// TODO: what we should do for the connections when we can not determine PID?
 			return;
-		}
+		}		
 
-		const bool isIPv6 = inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6;
-
-		// ================= DEBUG: TEST START ===================
-		/*
-		bool isPermitted = false;
-		if (isIPv6)
-		{
-			auto srcAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_LOCAL_ADDRESS].value.byteArray16);
-			auto dstAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[FWPS_FIELD_ALE_CONNECT_REDIRECT_V6_IP_REMOTE_ADDRESS].value.byteArray16);
-			bool isSrcLocal = LocalAddress(srcAddr);
-			bool isDstLocal = LocalAddress(dstAddr);
-
-			if (isSrcLocal || isDstLocal)
-			{
-				isPermitted = true;
-				TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) PERMITTED LOCAL-DST IPv6 (src:%d dst:%d pid:0x%llX) src:%x:%x:%x:%x:%x:%x:%x:%x dst:%x:%x:%x:%x:%x:%x:%x:%x",
-					isSrcLocal, isDstLocal, inMetaValues->processId,
-					srcAddr->u.Word[0], srcAddr->u.Word[1], srcAddr->u.Word[2], srcAddr->u.Word[3],
-					srcAddr->u.Word[4], srcAddr->u.Word[5], srcAddr->u.Word[6], srcAddr->u.Word[7],
-					dstAddr->u.Word[0], dstAddr->u.Word[1], dstAddr->u.Word[2], dstAddr->u.Word[3],
-					dstAddr->u.Word[4], dstAddr->u.Word[5], dstAddr->u.Word[6], dstAddr->u.Word[7]);
-			}
-		}
-
-		if (isPermitted)
-		{
-			classifyOut->actionType = FWP_ACTION_PERMIT;
-			classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-
-			return;
-		}*/
-		// ================= DEBUG: TEST STOP ===================
-		
 		// Checking: is it 'known' process
 		// ProcessMonitor keep information only about processes that have to be applied to split-tunnel
-		prc::ProcessInfo* pi = prc::FindProcessInfoForPid((HANDLE)inMetaValues->processId);
-		
-		if (pi == NULL)
+		if (NULL == prc::FindProcessInfoForPid((HANDLE)inMetaValues->processId))
 		{
 			// PID unknown. Do nothing. Just go to the next filter.
-						
-			//TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) UNKNOWN PID: 0x%llX (on-%s [%s])", inMetaValues->processId,
-			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6) ? "CONNECT" : "BIND",
-			//	(inFixedValues->layerId == FWPS_LAYER_ALE_CONNECT_REDIRECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_BIND_REDIRECT_V6)? "IPv6" : "IPv4");
 			return;
 		}
 		
+		const bool isIPv6 = inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6;
+
 		// permit operation (PID is known)
-		classifyOut->actionType = FWP_ACTION_PERMIT;
-		if (isIPv6)
-		{
-			// Block if IPv6 not configured
-			if (!cfg::IsConfigIPv6AddrOk())
-				classifyOut->actionType = FWP_ACTION_BLOCK;
-		}
+		classifyOut->actionType = FWP_ACTION_BLOCK;
+		if (!(classifyOut->rights & FWPS_RIGHT_ACTION_WRITE))
+			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) SKIPPING: FWPS_RIGHT_ACTION_WRITE not set (pid=0x%llX %s)", inMetaValues->processId, (isIPv6) ? "IPv6" : "IPv4");
 		else
 		{
-			// Block if IPv4 not configured
-			if (!cfg::IsConfigIPv4AddrOk())
-				classifyOut->actionType = FWP_ACTION_BLOCK;
+			//	classifyOut->actionType: specifies the suggested action to be taken as determined by the callout.
+			//	If the FWPS_RIGHT_ACTION_WRITE flag is not set, a callout driver should not write to this member 
+			//	unless it is vetoing an FWP_ACTION_PERMIT action that was previously returned by a higher weight filter in the filter engine.
+			// 
+			// Traffic can be blocked by a callout filter via a Veto even if a higher priority filter has permitted it.
+			// (https://docs.microsoft.com/en-us/windows/win32/fwp/filter-arbitration)
+			// 
+			// A Veto is a "Block" action returned by the filter when the FWPS_RIGHT_ACTION_WRITE flag was reset prior to calling the filter.
+			// A Veto will block traffic that was permitted with a hard permit.
+
+			if (isIPv6)
+			{
+				// Block if IPv6 not configured
+				if (cfg::IsConfigIPv6AddrOk())
+					classifyOut->actionType = FWP_ACTION_PERMIT;
+			}
+			else
+			{
+				// Block if IPv4 not configured
+				if (cfg::IsConfigIPv4AddrOk())
+					classifyOut->actionType = FWP_ACTION_PERMIT;
+			}
+			// apply changes		
+			classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
+
+			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX %s (on-%s [%s])", inMetaValues->processId,
+				(classifyOut->actionType == FWP_ACTION_PERMIT) ? "PERMIT" : "BLOCK",
+				(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6) ? "AUTH_CONNECT" : "AUTH_RECV_ACCEPT",
+				(isIPv6) ? "IPv6" : "IPv4");
 		}
-
-		// apply changes		
-		classifyOut->rights &= ~FWPS_RIGHT_ACTION_WRITE;
-
-		TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) 0x%llX %s (on-%s [%s])", inMetaValues->processId, 
-			(classifyOut->actionType == FWP_ACTION_PERMIT)? "PERMIT" : "BLOCK",
-			(inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V4 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6) ? "AUTH_CONNECT" : "AUTH_RECV_ACCEPT",
-			(isIPv6) ? "IPv6" : "IPv4");
 	}
 
 	/// <summary>
@@ -492,17 +421,7 @@ namespace wfp
 			const GUID* filterKey,
 			FWPS_FILTER1* filter
 		)
-	{
-		
-		//if (filterKey != NULL)
-		//{
-		//	GUID guid = *filterKey;
-		//	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) Guid = {%08lX-%04hX-%04hX-%02hX%02hX-%02hX%02hX%02hX%02hX%02hX%02hX}",
-		//		guid.Data1, guid.Data2, guid.Data3,	guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],	guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
-		//}
-		//else
-		//	TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!)");
-		
+	{	
 		UNREFERENCED_PARAMETER(notifyType);
 		UNREFERENCED_PARAMETER(filterKey);
 		UNREFERENCED_PARAMETER(filter);
