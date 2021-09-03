@@ -7,8 +7,8 @@
       <label class="defColor" for="isSTEnabled">Split Tunnel</label>
     </div>
     <div class="fwDescription">
-      By enabling this feature you can exclude traffic of specific applications
-      from the VPN tunnel
+      By enabling this feature you can exclude traffic for a specific
+      applications from the VPN tunnel
     </div>
 
     <!-- APPS -->
@@ -192,7 +192,7 @@ export default {
     if (allApps) {
       // create a list of hashed appinfo (by app path)
       allApps.forEach(appInfo => {
-        this.allAppsHashed[appInfo.AppBinaryPath] = appInfo;
+        this.allAppsHashed[appInfo.AppBinaryPath.toLowerCase()] = appInfo;
       });
 
       this.allInstalledApps = allApps;
@@ -228,7 +228,7 @@ export default {
       if (configApps) {
         configApps.forEach(appPath => {
           // use 'Object.assign' to not update data in 'this.allAppsHashed'
-          let appInfoConst = this.allAppsHashed[appPath];
+          let appInfoConst = this.allAppsHashed[appPath.toLowerCase()];
           let appInfo = {};
 
           if (!appInfoConst)
@@ -236,7 +236,7 @@ export default {
           else appInfo = Object.assign({}, appInfoConst);
 
           appInfo.isSplitted = true;
-          configAppsHashed[appPath] = appInfo;
+          configAppsHashed[appPath.toLowerCase()] = appInfo;
         });
       }
 
@@ -304,15 +304,18 @@ export default {
       var stApps = [];
       if (st.apps) stApps = Object.assign(stApps, st.apps);
 
-      var index = stApps.indexOf(appPath);
+      var indexOfIgnoreCaseFunc = (arr, q) =>
+        arr.findIndex(item => q.toLowerCase() === item.toLowerCase());
+
+      var index = indexOfIgnoreCaseFunc(stApps, appPath);
       if (index === -1) return;
       stApps.splice(index, 1);
 
       // If the application has no AppName info - it means it was added manually
       // In this case, we can remove it from the 'allApps' list
-      let appInfo = this.allAppsHashed[appPath];
+      let appInfo = this.allAppsHashed[appPath.toLowerCase()];
       if (appInfo && !appInfo.AppName) {
-        delete this.allAppsHashed[appPath];
+        delete this.allAppsHashed[appPath.toLowerCase()];
       }
 
       await sender.SplitTunnelSetConfig(st.enabled, stApps);

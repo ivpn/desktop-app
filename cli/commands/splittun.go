@@ -41,7 +41,7 @@ type SplitTun struct {
 }
 
 func (c *SplitTun) Init() {
-	c.Initialize("splittun", "Split Tunnel management\nBy enabling this feature you can exclude traffic of specific applications from the VPN tunnel")
+	c.Initialize("splittun", "Split Tunnel management\nBy enabling this feature you can exclude traffic for a specific applications from the VPN tunnel")
 	c.BoolVar(&c.status, "status", false, "(default) Show Split Tunnel status and configuration")
 	c.BoolVar(&c.on, "on", false, "Enable")
 	c.BoolVar(&c.off, "off", false, "Disable")

@@ -5,6 +5,7 @@ package oshelpers
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -27,22 +28,56 @@ func WinExpandEnvPath(path string) string {
 }
 
 func implGetInstalledApps() ([]AppInfo, error) {
+	//startTime := time.Now()
+	//defer func() {
+	//	log.Debug("implGetInstalledApps: ", time.Since(startTime))
+	//}()
 
 	programData := os.Getenv("PROGRAMDATA")
 	appData := os.Getenv("APPDATA")
 	programDataSMDir := ""
 	appDataSMDir := ""
 
-	excludeStartMenuPaths := make([]string, 0, 2)
+	// process only binaries from the programFilesDirs:
+	programFilesDirs := make(map[string]struct{})
+	programFilesDirAddFunc := func(dirpath string) {
+		if len(dirpath) == 0 {
+			return
+		}
+		abspath, err := filepath.Abs(dirpath)
+		if err != nil {
+			return
+		}
+		programFilesDirs[strings.ToLower(abspath)] = struct{}{}
+	}
+	programFilesDirAddFunc(os.ExpandEnv("${ProgramFiles}"))
+	programFilesDirAddFunc(os.ExpandEnv("${ProgramFiles(x86)}"))
+	programFilesDirAddFunc(os.ExpandEnv("${ProgramW6432}"))
+	programFilesDirAddFunc(os.ExpandEnv("${APPDATA}"))
+	programFilesDirAddFunc(os.ExpandEnv("${LOCALAPPDATA}"))
+	programFilesDirAddFunc(path.Join(os.ExpandEnv("${SystemRoot}"), "System32"))
+	programFilesDirAddFunc(path.Join(os.ExpandEnv("${SystemRoot}"), "SysWOW64"))
+	for _, dir := range strings.Split(os.ExpandEnv("${Path}"), ";") {
+		programFilesDirAddFunc(dir)
+	}
+
+	// StartMenu paths which has priority
+	systemPaths := make([]string, 0, 2)
+
+	excludeStartMenuPaths := make([]string, 0, 5)
 	if len(programData) > 0 {
 		programDataSMDir = programData + `\Microsoft\Windows\Start Menu\Programs`
 		excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(programDataSMDir+`\startup`))
 		excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(programDataSMDir+`\Administrative Tools`))
+
+		systemPaths = append(systemPaths, strings.ToLower(programDataSMDir+`\System Tools`))
 	}
 	if len(appData) > 0 {
 		appDataSMDir = appData + `\Microsoft\Windows\Start Menu\Programs`
 		excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataSMDir+`\startup`))
 		excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataSMDir+`\Administrative Tools`))
+
+		systemPaths = append(systemPaths, strings.ToLower(appDataSMDir+`\System Tools`))
 	}
 
 	// ignore all binaries from IVPN installation
@@ -53,15 +88,14 @@ func implGetInstalledApps() ([]AppInfo, error) {
 
 	retMap := make(map[string]AppInfo) // [path]description
 
-	walkFunc := func(path string, info os.FileInfo, walkErr error) (err error) {
-
+	walkFunc := func(lnkPath string, info os.FileInfo, walkErr error) (err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				errText := ""
 				if theErr, ok := r.(error); ok {
-					errText = fmt.Sprintf("PANIC [recovered] on implGetInstalledApps() for '%s' : %v", path, theErr)
+					errText = fmt.Sprintf("PANIC [recovered] on implGetInstalledApps() for '%s' : %v", lnkPath, theErr)
 				} else {
-					errText = fmt.Sprintf("PANIC [recovered] on implGetInstalledApps() for '%s'", path)
+					errText = fmt.Sprintf("PANIC [recovered] on implGetInstalledApps() for '%s'", lnkPath)
 				}
 				log.Error(errText)
 			}
@@ -70,29 +104,40 @@ func implGetInstalledApps() ([]AppInfo, error) {
 		// Only look for lnk files.
 		if filepath.Ext(info.Name()) == ".lnk" {
 
+			lnkPathLowCase := strings.ToLower(lnkPath)
+
 			// ignore files from 'excludePaths'
 			for _, excludePath := range excludeStartMenuPaths {
-				curLnkPath := strings.ToLower(path)
-				if strings.HasPrefix(curLnkPath, excludePath) {
+				if strings.HasPrefix(lnkPathLowCase, excludePath) {
 					return nil
 				}
 			}
 
-			f, lnkErr := lnk.File(path)
+			lnkInfo, lnkErr := lnk.File(lnkPath)
 
 			if lnkErr != nil {
 				return nil
 			}
 
+			// - if the target binary from the link has command line arguments - skip processing this link
+			if len(lnkInfo.StringData.CommandLineArguments) != 0 {
+				return
+			}
+
 			var targetPath = ""
-			if f.LinkInfo.LocalBasePath != "" {
-				targetPath = f.LinkInfo.LocalBasePath
+			if lnkInfo.LinkInfo.LocalBasePath != "" {
+				targetPath = lnkInfo.LinkInfo.LocalBasePath
 			}
-			if f.LinkInfo.LocalBasePathUnicode != "" {
-				targetPath = f.LinkInfo.LocalBasePathUnicode
+			if lnkInfo.LinkInfo.LocalBasePathUnicode != "" {
+				targetPath = lnkInfo.LinkInfo.LocalBasePathUnicode
 			}
-			if f.StringData.IconLocation != "" {
-				targetPath = f.StringData.IconLocation
+			if len(targetPath) == 0 && len(lnkInfo.StringData.RelativePath) > 0 {
+				relativePath := filepath.Join(filepath.Dir(lnkPath), lnkInfo.StringData.RelativePath)
+				absPath, e := filepath.Abs(relativePath)
+				if e != nil {
+					return
+				}
+				targetPath = absPath
 			}
 
 			if targetPath == "" {
@@ -101,14 +146,23 @@ func implGetInstalledApps() ([]AppInfo, error) {
 
 			// expand all environment variables in file path
 			targetPath = WinExpandEnvPath(targetPath)
+			targetPathKey := strings.ToLower(targetPath)
 
-			if _, isAlreadyExists := retMap[targetPath]; isAlreadyExists {
+			// process only binaries from the programFilesDirs
+			isAcceptedBinLocation := false
+			for k := range programFilesDirs {
+				if strings.HasPrefix(targetPathKey, k) {
+					isAcceptedBinLocation = true
+					break
+				}
+			}
+			if !isAcceptedBinLocation {
 				return
 			}
 
 			// Only look for exe files.
 			if targetPath != "" && filepath.Ext(targetPath) == ".exe" {
-				baseDir := filepath.Dir(path)
+				baseDir := filepath.Dir(lnkPath)
 
 				if strings.EqualFold(baseDir, programDataSMDir) || strings.EqualFold(baseDir, appDataSMDir) {
 					baseDir = ""
@@ -126,10 +180,44 @@ func implGetInstalledApps() ([]AppInfo, error) {
 					return nil
 				}
 
-				retMap[targetPath] = AppInfo{
-					AppBinaryPath: targetPath,
-					AppName:       strings.TrimSuffix(info.Name(), ".lnk"),
-					AppGroup:      baseDir}
+				isBinaryExists := false
+				existsAppInf, isBinaryExists := retMap[targetPathKey]
+				if isBinaryExists {
+					// If binary already exists (two different links to the same binary)
+					// keep only one link:
+					// - if there is a link from root from StartMenu (baseDir is empty) - use it (overwrite data which already exists)
+					// - if there is a link from 'prioritized' folders of StartMenu (systemPaths) - use it (overwrite data which already exists)
+					// - otherwise use only AppBinaryPath (ignore AppName and AppGroup)
+					if len(baseDir) == 0 {
+						isBinaryExists = false
+					} else {
+						for _, priorityPath := range systemPaths {
+							if strings.HasPrefix(lnkPathLowCase, priorityPath) {
+								// save info about current link (overwrite info which is already exists)
+								isBinaryExists = false
+								break
+							}
+						}
+					}
+				}
+
+				appGroup := baseDir
+				appName := strings.TrimSuffix(info.Name(), ".lnk")
+				if !isBinaryExists {
+					retMap[targetPathKey] = AppInfo{
+						AppBinaryPath: targetPath,
+						AppName:       appName,
+						AppGroup:      appGroup}
+				} else {
+					if !strings.EqualFold(existsAppInf.AppGroup, appGroup) {
+						existsAppInf.AppGroup = ""
+					}
+					if !strings.EqualFold(existsAppInf.AppName, appName) {
+						existsAppInf.AppName = ""
+						existsAppInf.AppGroup = ""
+					}
+					retMap[targetPathKey] = existsAppInf
+				}
 
 			}
 		}
@@ -137,21 +225,27 @@ func implGetInstalledApps() ([]AppInfo, error) {
 		return nil
 	}
 
+	retMapCombined := make(map[string]AppInfo)
+
 	if len(programDataSMDir) > 0 {
 		filepath.Walk(programDataSMDir, walkFunc)
+		retMapCombined = retMap
 	}
 
 	if len(appDataSMDir) > 0 {
+		retMap = make(map[string]AppInfo)
 		filepath.Walk(appDataSMDir, walkFunc)
+		for k, v := range retMap {
+			retMapCombined[k] = v
+		}
 	}
 
-	retValues := make([]AppInfo, 0, len(retMap))
-	for _, value := range retMap {
+	retValues := make([]AppInfo, 0, len(retMapCombined))
+	for _, value := range retMapCombined {
 		retValues = append(retValues, value)
 	}
 
 	// extract icons from binaries
-
 	binaryIconReaderInit()
 	defer binaryIconReaderUnInit()
 	for i, app := range retValues {
@@ -274,6 +368,7 @@ func binaryIconReaderGetBase64PngIcon(binaryPath string) (icon string, err error
 	if err != nil {
 		return "", fmt.Errorf("(implBinaryIconReaderGetBase64PngIcon) Failed to convert binaryPath: %w", err)
 	}
+
 	var (
 		iconReaderBuffSize uint32 = 1024 * 5
 		iconReaderBuff     []byte = make([]byte, iconReaderBuffSize)

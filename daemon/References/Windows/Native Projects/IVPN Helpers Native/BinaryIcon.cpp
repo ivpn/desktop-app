@@ -197,8 +197,7 @@ static BITMAP_AND_BYTES createAlphaChannelBitmapFromIcon(HICON hIcon)
             break;
         }
 
-        // Check whether the color bitmap has an alpha channel.
-        // (On my Windows 7, all file icons I tried have an alpha channel.)
+        // Check whether the color bitmap has an alpha channel
         BOOL hasAlpha = FALSE;
         for (int i = 0; i < nBits; i++)
         {
