@@ -1,3 +1,7 @@
+.settingsGrayTextColor {
+  color: rgba(132, 148, 165, 0.85);
+}
+
 .settingsTitle {
     margin-bottom: 46px;
     font-weight: 500;
@@ -25,10 +29,10 @@
   }
 
   .settingsGrayLongDescriptionFont {
+    @extend .settingsGrayTextColor;
     font-size: 12px;
     line-height: 17px;
     letter-spacing: -0.0850909px;
-    color: rgba(132, 148, 165, 0.85);
   }
 
   .settingsBoldFont {
