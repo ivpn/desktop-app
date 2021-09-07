@@ -3,6 +3,7 @@
 package oshelpers
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -27,16 +28,38 @@ func WinExpandEnvPath(path string) string {
 	return os.ExpandEnv(path)
 }
 
-func implGetInstalledApps() ([]AppInfo, error) {
+type extraArgsGetInstalledApps struct {
+	WindowsEnvAppdata string
+}
+
+// implGetInstalledApps - the Windows implementation of GetInstalledApps(). Returns a list of installed applications on the system
+// Parameters:
+// 	extraArgsJSON - (optional) Platform-depended: extra parameters (in JSON)
+// 	For Windows:
+//		{ "WindowsEnvAppdata": "..." }
+// 		Applicable only for Windows: APPDATA environment variable
+// 		Needed to know path of current user's (not root) StartMenu folder location
+func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 	//startTime := time.Now()
 	//defer func() {
 	//	log.Debug("implGetInstalledApps: ", time.Since(startTime))
 	//}()
 
-	programData := os.Getenv("PROGRAMDATA")
-	appData := os.Getenv("APPDATA")
 	programDataSMDir := ""
 	appDataSMDir := ""
+	appDataUserSMDir := ""
+
+	programData := os.Getenv("PROGRAMDATA")
+	appData := os.Getenv("APPDATA")
+	userAppData := ""
+	var extraArgs extraArgsGetInstalledApps
+	if len(extraArgsJSON) > 0 {
+		if err := json.Unmarshal([]byte(extraArgsJSON), &extraArgs); err == nil {
+			if _, err := os.Stat(extraArgs.WindowsEnvAppdata); !os.IsNotExist(err) {
+				userAppData = extraArgs.WindowsEnvAppdata
+			}
+		}
+	}
 
 	// process only binaries from the programFilesDirs:
 	programFilesDirs := make(map[string]struct{})
@@ -67,17 +90,39 @@ func implGetInstalledApps() ([]AppInfo, error) {
 	excludeStartMenuPaths := make([]string, 0, 5)
 	if len(programData) > 0 {
 		programDataSMDir = programData + `\Microsoft\Windows\Start Menu\Programs`
-		excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(programDataSMDir+`\startup`))
-		excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(programDataSMDir+`\Administrative Tools`))
-
-		systemPaths = append(systemPaths, strings.ToLower(programDataSMDir+`\System Tools`))
+		absPath, err := filepath.Abs(programDataSMDir)
+		if err == nil {
+			programDataSMDir = absPath
+			excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(programDataSMDir+`\startup`))
+			excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(programDataSMDir+`\Administrative Tools`))
+			systemPaths = append(systemPaths, strings.ToLower(programDataSMDir+`\System Tools`))
+		} else {
+			programDataSMDir = ""
+		}
 	}
 	if len(appData) > 0 {
 		appDataSMDir = appData + `\Microsoft\Windows\Start Menu\Programs`
-		excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataSMDir+`\startup`))
-		excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataSMDir+`\Administrative Tools`))
-
-		systemPaths = append(systemPaths, strings.ToLower(appDataSMDir+`\System Tools`))
+		absPath, err := filepath.Abs(appDataSMDir)
+		if err == nil {
+			appDataSMDir = absPath
+			excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataSMDir+`\startup`))
+			excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataSMDir+`\Administrative Tools`))
+			systemPaths = append(systemPaths, strings.ToLower(appDataSMDir+`\System Tools`))
+		} else {
+			appDataSMDir = ""
+		}
+	}
+	if len(userAppData) > 0 {
+		appDataUserSMDir = userAppData + `\Microsoft\Windows\Start Menu\Programs`
+		absPath, err := filepath.Abs(appDataSMDir)
+		if err == nil {
+			appDataUserSMDir = absPath
+			excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataUserSMDir+`\startup`))
+			excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataUserSMDir+`\Administrative Tools`))
+			systemPaths = append(systemPaths, strings.ToLower(appDataUserSMDir+`\System Tools`))
+		} else {
+			appDataUserSMDir = ""
+		}
 	}
 
 	// ignore all binaries from IVPN installation
@@ -164,7 +209,7 @@ func implGetInstalledApps() ([]AppInfo, error) {
 			if targetPath != "" && filepath.Ext(targetPath) == ".exe" {
 				baseDir := filepath.Dir(lnkPath)
 
-				if strings.EqualFold(baseDir, programDataSMDir) || strings.EqualFold(baseDir, appDataSMDir) {
+				if strings.EqualFold(baseDir, programDataSMDir) || strings.EqualFold(baseDir, appDataSMDir) || strings.EqualFold(baseDir, appDataUserSMDir) {
 					baseDir = ""
 				} else {
 					baseDir = filepath.Base(baseDir)
@@ -230,6 +275,14 @@ func implGetInstalledApps() ([]AppInfo, error) {
 	if len(programDataSMDir) > 0 {
 		filepath.Walk(programDataSMDir, walkFunc)
 		retMapCombined = retMap
+	}
+
+	if len(appDataUserSMDir) > 0 {
+		retMap = make(map[string]AppInfo)
+		filepath.Walk(appDataUserSMDir, walkFunc)
+		for k, v := range retMap {
+			retMapCombined[k] = v
+		}
 	}
 
 	if len(appDataSMDir) > 0 {

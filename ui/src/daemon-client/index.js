@@ -1225,10 +1225,18 @@ async function SplitTunnelSetConfig(IsEnabled, SplitTunnelApps) {
 
 async function GetInstalledApps() {
   try {
+    let extraArgsJson = "";
+    if (Platform() == PlatformEnum.Windows) {
+      let appData = process.env["APPDATA"];
+      if (appData)
+        extraArgsJson = JSON.stringify({ WindowsEnvAppdata: appData });
+    }
+
     const responseTimeoutMs = 25 * 1000;
     let appsResp = await sendRecv(
       {
-        Command: daemonRequests.GetInstalledApps
+        Command: daemonRequests.GetInstalledApps,
+        ExtraArgsJSON: extraArgsJson
       },
       [daemonResponses.InstalledAppsResp],
       responseTimeoutMs

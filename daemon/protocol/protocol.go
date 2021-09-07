@@ -83,7 +83,7 @@ type Service interface {
 	SetKillSwitchAllowLAN(isAllowLan bool) error
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
 	SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string) error
-	GetInstalledApps() ([]oshelpers.AppInfo, error)
+	GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error)
 	GetBinaryIcon(binaryPath string) (string, error)
 
 	Preferences() preferences.Preferences
@@ -762,7 +762,13 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.sendResponse(conn, &types.AppIconResp{AppBinaryPath: req.AppBinaryPath, AppIcon: base64Png}, reqCmd.Idx)
 
 	case "GetInstalledApps":
-		apps, err := p._service.GetInstalledApps()
+		var req types.GetInstalledApps
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+
+		apps, err := p._service.GetInstalledApps(req.ExtraArgsJSON)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break

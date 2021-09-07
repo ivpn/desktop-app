@@ -1239,7 +1239,7 @@ func (s *Service) SplitTunnelling_ApplyConfig() error {
 	return nil
 }
 
-func (s *Service) GetInstalledApps() ([]oshelpers.AppInfo, error) {
+func (s *Service) GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error) {
 	start := time.Now() // TODO: just for test
 	defer func() {
 		elapsed := time.Since(start)
@@ -1248,7 +1248,7 @@ func (s *Service) GetInstalledApps() ([]oshelpers.AppInfo, error) {
 		}
 	}()
 
-	return oshelpers.GetInstalledApps()
+	return oshelpers.GetInstalledApps(extraArgsJSON)
 }
 
 func (s *Service) GetBinaryIcon(binaryPath string) (string, error) {

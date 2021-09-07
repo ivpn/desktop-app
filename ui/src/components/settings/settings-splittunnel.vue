@@ -462,9 +462,22 @@ export default {
     },
 
     appsFiletrFunc(filter, appInfo) {
-      if (appInfo.AppName == null || appInfo.AppName == "") {
-        return appInfo.AppBinaryPath.toLowerCase().includes(filter);
+      // file name of binary (without extension)
+      let binaryFname = "";
+      try {
+        binaryFname = appInfo.AppBinaryPath.split("\\")
+          .pop()
+          .split("/")
+          .pop();
+        binaryFname = binaryFname.substring(0, binaryFname.lastIndexOf("."));
+      } catch (e) {
+        console.error(e);
       }
+
+      if (binaryFname && binaryFname.toLowerCase().includes(filter)) {
+        return true;
+      }
+
       return (
         appInfo.AppName.toLowerCase().includes(filter) ||
         appInfo.AppGroup.toLowerCase().includes(filter)

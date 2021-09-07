@@ -27,7 +27,13 @@ type AppInfo struct {
 }
 
 // GetInstalledApps returns a list of installed applications on the system
-func GetInstalledApps() (apps []AppInfo, err error) {
+// Parameters:
+// 	extraArgsJSON - (optional) Platform-depended: extra parameters (in JSON)
+// 	For Windows:
+//		{ "WindowsEnvAppdata": "..." }
+// 		Applicable only for Windows: APPDATA environment variable
+// 		Needed to know path of current user's (not root) StartMenu folder location
+func GetInstalledApps(extraArgsJSON string) (apps []AppInfo, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			apps = nil
@@ -40,7 +46,7 @@ func GetInstalledApps() (apps []AppInfo, err error) {
 		}
 	}()
 
-	return implGetInstalledApps()
+	return implGetInstalledApps(extraArgsJSON)
 }
 
 func GetBinaryIconBase64Png(binaryPath string) (icon string, err error) {

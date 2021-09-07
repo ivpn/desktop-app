@@ -244,6 +244,12 @@ type APIRequest struct {
 // GetInstalledApps requests information about installed applications on the system
 type GetInstalledApps struct {
 	CommandBase
+	// (optional) Platform-depended: extra parameters (in JSON)
+	// For Windows:
+	//		{ "WindowsEnvAppdata": "..." }
+	// 		Applicable only for Windows: APPDATA environment variable
+	// 		Needed to know path of current user's (not root) StartMenu folder location
+	ExtraArgsJSON string
 }
 
 // GetAppIcon requests shell icon for binary file (application)
