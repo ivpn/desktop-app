@@ -72,14 +72,12 @@
             IP Address
           </div>
 
-          <div class="value">
-            <div style="display: inline-block">
-              <div>
+          <div class="flexRow" style="overflow: hidden;" >
+            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 {{ ip }}
-              </div>
             </div>
 
-            <div style="display: inline-block; vertical-align:top">
+            <div style="vertical-align:top">
               <button
                 class="noBordersBtn"
                 v-on:click="onRefreshCurrLocation"
