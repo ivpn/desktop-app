@@ -234,7 +234,7 @@
 
         <spinner :loading="isProcessing" />
         <div class="flexRow paramBlock">
-          <div class="defColor paramName">Local IP:</div>
+          <div class="defColor paramName">Local IP Address:</div>
           <div class="detailedParamValue">
             {{ this.$store.state.account.session.WgLocalIP }}
           </div>
