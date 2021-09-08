@@ -69,7 +69,7 @@
 
         <div class="flexRow row">
           <div class="descriptipn">
-            Your IP
+            IP Address
           </div>
 
           <div class="value">
