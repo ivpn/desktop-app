@@ -4,11 +4,19 @@
 
     <div class="param">
       <input type="checkbox" id="isSTEnabled" v-model="isSTEnabled" />
-      <label class="defColor" for="isSTEnabled">Split Tunnel</label>
+      <label class="defColor" for="isSTEnabled">Split Tunnel (Beta) </label>
     </div>
-    <div class="fwDescription">
-      By enabling this feature you can exclude traffic for a specific
-      applications from the VPN tunnel
+    <div class="fwDescription" style="margin-bottom: 0px">
+      Exclude traffic from specific applications from being routed through the
+      VPN tunnel
+    </div>
+    <div class="fwDescription" style="margin-top: 0px">
+      <span class="settingsGrayLongDescriptionFont" style="font-weight: bold;"
+        >Warning:</span
+      >
+      When adding a running application, any connections already established by
+      the application will continue to be routed through the VPN tunnel until
+      the TCP connection/s are reset or the application is restarted
     </div>
 
     <!-- APPS -->
@@ -18,7 +26,7 @@
           class="flexRowRestSpace settingsBoldFont settingsDefaultTextColor"
           style="margin-top: 0px; margin-bottom:0px; white-space: nowrap;"
         >
-          Applications to split
+          Applications
         </div>
 
         <!-- CONFIGURED APPS FILETR -->
@@ -51,17 +59,10 @@
         <!-- No applications in Split Tunnel configuration -->
         <div
           v-if="isNoConfiguredApps"
-          style="text-align: center; width:100%; padding: 50px;"
+          style="text-align: center; width:100%; margin-top: 50px; padding: 50px;"
         >
           <div class="settingsGrayTextColor">
             No applications in Split Tunnel configuration
-          </div>
-          <div class="settingsGrayTextColor" style="margin-top: 10px">
-            Use '<span
-              class="settingsGrayTextColor"
-              style="font-weight: bold;"
-              >{{ addAppButtonText }}</span
-            >' button to exclude applications from the VPN tunnel
           </div>
         </div>
 
@@ -93,7 +94,7 @@
           style="overflow: auto;
           width: 100%;
           position: relative;
-          height:296px; min-height:296px; max-height:296px;"
+          height:247px; min-height:247px; max-height:247px;"
         >
           <spinner
             :loading="isLoadingAllApps"
@@ -112,6 +113,7 @@
                   v-if="app.isSplitted"
                   v-on:click="removeApp(app.AppBinaryPath)"
                   style="pointer-events: auto;"
+                  title="Remove"
                 >
                   <img width="24" height="24" src="@/assets/minus.svg" />
                 </button>
@@ -649,7 +651,7 @@ $shadow: 0px 3px 12px rgba(var(--shadow-color-rgb), var(--shadow-opacity));
   height: 435px; //calc(100% + 140px);
   width: calc(100% + 10px);
   left: -20px;
-  top: -130px;
+  top: -180px;
 
   border-width: 1px;
   border-style: solid;
