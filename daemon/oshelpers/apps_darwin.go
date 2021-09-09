@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func implGetInstalledApps(extraArgsJSON string) (apps []AppInfo, error) {
+func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 	return nil, fmt.Errorf("not implemented for macOS")
 }
 
