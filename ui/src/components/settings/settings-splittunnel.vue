@@ -8,7 +8,7 @@
     </div>
     <div class="fwDescription" style="margin-bottom: 0px">
       Exclude traffic from specific applications from being routed through the
-      VPN tunnel
+      VPN
     </div>
     <div class="fwDescription" style="margin-top: 0px">
       <span class="settingsGrayLongDescriptionFont" style="font-weight: bold;"
@@ -94,7 +94,7 @@
           style="overflow: auto;
           width: 100%;
           position: relative;
-          height:247px; min-height:247px; max-height:247px;"
+          height:264px; min-height:264px; max-height:264px;"
         >
           <spinner
             :loading="isLoadingAllApps"
@@ -651,7 +651,7 @@ $shadow: 0px 3px 12px rgba(var(--shadow-color-rgb), var(--shadow-opacity));
   height: 435px; //calc(100% + 140px);
   width: calc(100% + 10px);
   left: -20px;
-  top: -180px;
+  top: -160px;
 
   border-width: 1px;
   border-style: solid;
