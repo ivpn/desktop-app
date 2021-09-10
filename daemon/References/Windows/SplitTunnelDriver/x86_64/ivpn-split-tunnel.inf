@@ -9,7 +9,7 @@ ClassGuid={DD5F555B-D00E-413D-B10E-7A5DE3470540}
 Provider=%ManufacturerName%
 CatalogFile=ivpn-split-tunnel.cat
 PnpLockdown=1
-DriverVer = 09/02/2021,1.0.0.0
+DriverVer = 09/10/2021,1.0.1.0
 
 [DestinationDirs]
 DefaultDestDir = 12
