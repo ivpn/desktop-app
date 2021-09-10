@@ -13,6 +13,8 @@ namespace cfg
 
     bool IsConfigIPv4AddrOk();
     bool IsConfigIPv6AddrOk();
+    bool IsConfigIPv4PublicAddrOk();
+    bool IsConfigIPv6PublicAddrOk();
 
     bool IsConfigIPv4AddrOk(const IPAddrConfig& cfgIPs);
     bool IsConfigIPv6AddrOk(const IPAddrConfig& cfgIPs);

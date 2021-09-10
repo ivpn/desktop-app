@@ -209,7 +209,7 @@
       <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;THE_DRIVER_PROJECT;DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Inf>
-      <TimeStamp>1.0.0.0</TimeStamp>
+      <TimeStamp>1.0.1.0</TimeStamp>
     </Inf>
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\wdmsec.lib;Fwpkclnt.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -225,7 +225,7 @@
       <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;THE_DRIVER_PROJECT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Inf>
-      <TimeStamp>1.0.0.0</TimeStamp>
+      <TimeStamp>1.0.1.0</TimeStamp>
     </Inf>
     <Link>
       <AdditionalDependencies>$(DDK_LIB_PATH)\wdmsec.lib;Fwpkclnt.lib;%(AdditionalDependencies)</AdditionalDependencies>

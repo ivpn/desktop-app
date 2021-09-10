@@ -373,7 +373,7 @@ namespace wfp
 		
 		const bool isIPv6 = inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_CONNECT_V6 || inFixedValues->layerId == FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6;
 
-		// permit operation (PID is known)
+		// by default - block connection
 		classifyOut->actionType = FWP_ACTION_BLOCK;
 		if (!(classifyOut->rights & FWPS_RIGHT_ACTION_WRITE))
 			TraceEvents(TRACE_LEVEL_INFORMATION, TRACE_DRIVER, "(%!FUNC!) SKIPPING: FWPS_RIGHT_ACTION_WRITE not set (pid=0x%llX %s)", inMetaValues->processId, (isIPv6) ? "IPv6" : "IPv4");
@@ -391,14 +391,14 @@ namespace wfp
 
 			if (isIPv6)
 			{
-				// Block if IPv6 not configured
-				if (cfg::IsConfigIPv6AddrOk())
+				// Permit if IPv6 is configured
+				if (cfg::IsConfigIPv6PublicAddrOk())
 					classifyOut->actionType = FWP_ACTION_PERMIT;
 			}
 			else
 			{
-				// Block if IPv4 not configured
-				if (cfg::IsConfigIPv4AddrOk())
+				// Permit if IPv4 is configured
+				if (cfg::IsConfigIPv4PublicAddrOk())
 					classifyOut->actionType = FWP_ACTION_PERMIT;
 			}
 			// apply changes		

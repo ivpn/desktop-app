@@ -17,6 +17,7 @@ namespace cfg
 	RTL_AVL_TABLE	_cfg_Images		= {};
 	LOCKER_TYPE		_cfg_ImagesLock = NULL;
 
+	static const IN6_ADDR IN6_ADDR_ZERO = { 0 };
 	// =====================================
 	// Internal functions block
 	// =====================================
@@ -145,12 +146,27 @@ namespace cfg
 
 	bool IsConfigIPv6AddrOk(const IPAddrConfig& cfgIPs)
 	{
-		static const IN6_ADDR IN6_ADDR_ZERO = { 0 };
 		if (IN6_ADDR_EQUAL(&cfgIPs.IPv6Public, &IN6_ADDR_ZERO) || IN6_ADDR_EQUAL(&cfgIPs.IPv6Tunnel, &IN6_ADDR_ZERO))
 			return false;
 		return true;
 	}
 	
+	bool IsConfigIPv4PublicAddrOk()
+	{
+		utils::Locker la(_cfg_IPsLock);
+		if (IN4_IS_ADDR_UNSPECIFIED(&_cfg_IPs.IPv4Public))
+			return false;
+		return true;
+	}
+
+	bool IsConfigIPv6PublicAddrOk()
+	{
+		utils::Locker la(_cfg_IPsLock);
+		if (IN6_ADDR_EQUAL(&_cfg_IPs.IPv6Public, &IN6_ADDR_ZERO))
+			return false;
+		return true;
+	}
+
 	bool IsConfigIPv4AddrOk()
 	{
 		utils::Locker la(_cfg_IPsLock);
@@ -167,8 +183,6 @@ namespace cfg
 	{
 		utils::Locker la(_cfg_IPsLock);
 		utils::Locker li(_cfg_ImagesLock);
-
-		static const IN6_ADDR IN6_ADDR_ZERO = { 0 };
 		
 		if ((IN4_IS_ADDR_UNSPECIFIED(&_cfg_IPs.IPv4Public) || IN4_IS_ADDR_UNSPECIFIED(&_cfg_IPs.IPv4Tunnel))
 			&& (IN6_ADDR_EQUAL(&_cfg_IPs.IPv6Public, &IN6_ADDR_ZERO) || IN6_ADDR_EQUAL(&_cfg_IPs.IPv6Tunnel, &IN6_ADDR_ZERO)))
