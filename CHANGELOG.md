@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.3.40 - 2021-09-14
+
+[NEW] (Windows) Split Tunneling  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.3.40.exe)  
+SHA256: 9875bc8ee2124464b66fa70555270865caf03c827e4323fdf6fb2a7a83589606  
+
 ## Version 3.3.30 - 2021-08-31
 
 [NEW] Preparation for 2FA in CLI  
