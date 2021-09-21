@@ -32,8 +32,15 @@ echo "############################################"
 if [[ ! -f "../_deps/openvpn_inst/bin/openvpn" ]] || [[ ! -f "../_deps/wg_inst/wg" ]] || [[ ! -f "../_deps/wg_inst/wireguard-go" ]]
 then
   echo "Please, check/modify required versions at the begining of scripts:"
-  echo "    build-openvpn.sh"
-  echo "    build-wireguard.sh"
+  if [[ ! -f "../_deps/openvpn_inst/bin/openvpn" ]]
+  then
+    echo "    build-openvpn.sh"
+  fi
+
+  if [[ ! -f "../_deps/wg_inst/wg" ]] || [[ ! -f "../_deps/wg_inst/wireguard-go" ]]
+  then
+    echo "    build-wireguard.sh"
+  fi
 
   read -p "Press enter to start ..."
 fi
