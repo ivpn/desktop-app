@@ -77,10 +77,12 @@ fi
 if [ ${_ARCH} = "arm64" ]; then
   export GOOS=darwin
   export GOARCH=arm64
+  export CGO_ENABLED=1
   echo "    Version:                 '${_VERSION}'"
   echo "    Defining Golang variables:"
   echo "      GOOS:                  '${GOOS}'"
   echo "      GOARCH:                '${GOARCH}'"
+  echo "      CGO_ENABLED:           '${CGO_ENABLED}'"
 fi
 
 # ============================== PROJECTS PATH =============================
