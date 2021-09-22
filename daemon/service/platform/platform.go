@@ -250,6 +250,10 @@ func LogFile() string {
 	return logFile
 }
 
+func LogDir() string {
+	return filepath.Dir(logFile)
+}
+
 // OpenvpnLogFile path to log-file for openvpn
 func OpenvpnLogFile() string {
 	return "" // OpenVPN logging disabled (it is not required due to all openvpn log data present in global daemon log)

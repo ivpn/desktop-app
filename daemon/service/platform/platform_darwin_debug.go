@@ -64,7 +64,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnUpScript = path.Join(installDir, "References/macOS/etc/dns.sh -up")
 	openvpnDownScript = path.Join(installDir, "References/macOS/etc/dns.sh -down")
 
-	obfsproxyStartScript = path.Join(installDir, "References/macOS/obfsproxy/obfsproxy.sh")
+	obfsproxyStartScript = path.Join(installDir, "References/macOS/_deps/obfs4proxy_inst/obfs4proxy")
 
 	wgBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wireguard-go")
 	wgToolBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wg")
