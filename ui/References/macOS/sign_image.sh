@@ -82,6 +82,7 @@ ListThirdPartyBinaries=(
 "_image/IVPN.app/Contents/MacOS/openvpn"
 "_image/IVPN.app/Contents/MacOS/WireGuard/wg"
 "_image/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"
+"_image/IVPN.app/Contents/Resources/obfsproxy/obfs4proxy"
 )
 
 echo "[+] Signing compiled libs..."

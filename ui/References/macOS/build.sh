@@ -214,7 +214,8 @@ echo "[+] Preparing DMG image: Copying 'openvpn'..."
 cp "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/openvpn_inst/bin/openvpn" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/openvpn" || CheckLastResult
 
 echo "[+] Preparing DMG image: Copying 'obfsproxy' binaries..."
-cp -R "${_PATH_ABS_REPO_DAEMON}/References/macOS/obfsproxy" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources" || CheckLastResult
+mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources/obfsproxy"
+cp -R "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/obfs4proxy_inst/obfs4proxy" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources/obfsproxy/obfs4proxy" || CheckLastResult
 
 echo "[+] Preparing DMG image: Copying 'WireGuard' binaries..."
 mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/WireGuard"
