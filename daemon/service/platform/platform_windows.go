@@ -89,7 +89,7 @@ func doOsInit() (warnings []string, errors []error) {
 	openvpnUpScript = ""
 	openvpnDownScript = ""
 
-	obfsproxyStartScript = path.Join(_installDir, "OpenVPN", "obfsproxy", "obfsproxy.exe")
+	obfsproxyStartScript = path.Join(_installDir, "OpenVPN", "obfsproxy", "obfs4proxy.exe")
 
 	_wgArchDir := "x86_64"
 	if _, err := os.Stat(path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")); err != nil {
