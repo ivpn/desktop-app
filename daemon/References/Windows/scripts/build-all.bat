@@ -4,10 +4,7 @@ setlocal
 set SCRIPTDIR=%~dp0
 set APPVER=%1
 
-rem E.g. 'exclude32bit'
-set EXTRA_ARG=%2
-
-set CERT_SHA1=%3
+set CERT_SHA1=%2
 
 set COMMIT=""
 set DATE=""
@@ -54,8 +51,6 @@ IF %ERRORLEVEL% NEQ 0 (
 call :build_native_libs || goto :error
 
 set needRebuildWireGuard=0
-if not exist "%SCRIPTDIR%..\WireGuard\x86\wg.exe" 					set needRebuildWireGuard=1
-if not exist "%SCRIPTDIR%..\WireGuard\x86\wireguard.exe" 			set needRebuildWireGuard=1
 if not exist "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe" 				set needRebuildWireGuard=1
 if not exist "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe" 		set needRebuildWireGuard=1
 rem if not exist "%SCRIPTDIR%..\.deps\wireguard-windows\.deps\prepared" set needRebuildWireGuard=1
@@ -76,14 +71,7 @@ goto :success
 
 :build_agent
 	cd "%SCRIPTDIR%..\..\.."
-
-	IF not "%EXTRA_ARG%" == "exclude32bit" (
-		call :build_agent_plat x86 386 		|| exit /b 1
-	)
-	IF not "%EXTRA_ARG%" == "exclude64bit" (
-		call :build_agent_plat x86_64 amd64 	|| exit /b 1
-	)
-
+	call :build_agent_plat x86_64 amd64 	|| exit /b 1
 	goto :eof
 
 :build_agent_plat
@@ -109,14 +97,8 @@ goto :success
 	goto :eof
 
 :build_native_libs
-	IF not "%EXTRA_ARG%" == "exclude32bit" (
-		echo [*] Building Native projects x86
-		msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x86 || exit /b 1
-	)
-	IF not "%EXTRA_ARG%" == "exclude64bit" (
-		echo [*] Building Native projects x64
-		msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x64 || exit /b 1
-	)
+	echo [*] Building Native projects x64
+	msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x64 || exit /b 1
 	goto :eof
 
 :build_obfs4proxy
