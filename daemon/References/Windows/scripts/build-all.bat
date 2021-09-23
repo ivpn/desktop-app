@@ -12,6 +12,8 @@ set CERT_SHA1=%3
 set COMMIT=""
 set DATE=""
 
+set TIMESTAMP_SERVER=http://timestamp.digicert.com
+
 rem ==================================================
 rem DEFINE required WireGuard version here
 rem This parameter take place only for clean build
@@ -59,6 +61,8 @@ if not exist "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe" 		set needRebuildWir
 rem if not exist "%SCRIPTDIR%..\.deps\wireguard-windows\.deps\prepared" set needRebuildWireGuard=1
 if %needRebuildWireGuard% == 1 call :build_wireguard || goto :error
 
+if not exist "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe" call :build_obfs4proxy || goto :error
+
 call :update_servers_info || goto :error
 call :build_agent || goto :error
 
@@ -91,7 +95,6 @@ goto :success
 
 	go build -tags release -o "bin\%~1\IVPN Service.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
 
-	set TIMESTAMP_SERVER=http://timestamp.digicert.com
 	if NOT "%CERT_SHA1%" == "" (
 		echo.
 		echo Signing binary by certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%
@@ -102,6 +105,7 @@ goto :success
 		echo.
 	)
 
+	echo Compiled binary: "bin\%~1\IVPN Service.exe"
 	goto :eof
 
 :build_native_libs
@@ -113,6 +117,23 @@ goto :success
 		echo [*] Building Native projects x64
 		msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x64 || exit /b 1
 	)
+	goto :eof
+
+:build_obfs4proxy
+echo ### obfs4proxy binary not found ###
+echo ### Buildind obfs4proxy         ###
+	call "%SCRIPTDIR%\build-obfs4proxy.bat" || goto error
+
+	if NOT "%CERT_SHA1%" == "" (
+		echo.
+		echo Signing binary by certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%
+		echo.
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe" || exit /b 1
+		echo.
+		echo Signing SUCCES
+		echo.
+	)
+
 	goto :eof
 
 :build_wireguard
