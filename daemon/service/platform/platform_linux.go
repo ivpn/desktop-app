@@ -44,8 +44,7 @@ func doInitConstants() {
 }
 
 func doOsInit() (warnings []string, errors []error) {
-	openVpnBinaryPath = path.Join("/usr/sbin", "openvpn")
-	obfsproxyStartScript = "/usr/bin/obfsproxy"
+	openVpnBinaryPath = path.Join("/usr/sbin", "openvpn")	
 	wgBinaryPath = path.Join("/usr/bin", "wg-quick")
 	wgToolBinaryPath = path.Join("/usr/bin", "wg")
 	routeCommand = "/sbin/ip route"
