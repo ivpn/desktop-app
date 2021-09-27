@@ -28,6 +28,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -92,7 +93,10 @@ func main() {
 	addCommand(&commands.CmdDisconnect{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
-	addCommand(&commands.SplitTun{})
+	if runtime.GOOS == "windows" {
+		// Split tunnel functionality is currently only available on Windows
+		addCommand(&commands.SplitTun{})
+	}
 	addCommand(&commands.CmdWireGuard{})
 	addCommand(&commands.CmdDns{})
 	addCommand(&commands.CmdAntitracker{})
