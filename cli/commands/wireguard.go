@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app/cli/flags"
-	"github.com/ivpn/desktop-app/daemon/service"
+	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 )
 
 type CmdWireGuard struct {
@@ -54,7 +54,7 @@ func (c *CmdWireGuard) Run() error {
 	defer func() {
 		helloResp := _proto.GetHelloResponse()
 		if len(helloResp.Session.Session) == 0 {
-			fmt.Println(service.ErrorNotLoggedIn{})
+			fmt.Println(srverrors.ErrorNotLoggedIn{})
 
 			PrintTips([]TipType{TipLogin})
 		}

@@ -32,7 +32,7 @@ import (
 
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/daemon/api/types"
-	"github.com/ivpn/desktop-app/daemon/service"
+	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -172,7 +172,7 @@ func checkStatus() error {
 		fmt.Println()
 		PrintTips([]TipType{TipLogin})
 
-		return service.ErrorNotLoggedIn{}
+		return srverrors.ErrorNotLoggedIn{}
 	}
 
 	if err != nil {

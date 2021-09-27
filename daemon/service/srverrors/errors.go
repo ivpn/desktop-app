@@ -20,7 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-package service
+package srverrors
 
 // ErrorNotLoggedIn - error, user not logged in into account
 type ErrorNotLoggedIn struct {
