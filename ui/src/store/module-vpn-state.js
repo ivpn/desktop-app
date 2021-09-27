@@ -20,7 +20,11 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import { enumValueName, isStrNullOrEmpty } from "../helpers/helpers";
+import {
+  enumValueName,
+  isStrNullOrEmpty,
+  getDistanceFromLatLonInKm
+} from "../helpers/helpers";
 import {
   VpnTypeEnum,
   VpnStateEnum,
@@ -235,10 +239,16 @@ export default {
 
       let skipSvrs = rootState.settings.serversFastestExcludeList;
       let retSvr = null;
+
+      // If there will not be any server with ping-info -
+      // save the info about the first applicable server (which is not in skipSvrs)
+      let fallbackSvr = null;
+
       for (let i = 0; i < servers.length; i++) {
         let curSvr = servers[i];
         if (!curSvr) continue;
         if (skipSvrs != null && skipSvrs.includes(curSvr.gateway)) continue;
+        if (!fallbackSvr) fallbackSvr = curSvr;
         if (
           curSvr != null &&
           curSvr.ping &&
@@ -247,6 +257,53 @@ export default {
         )
           retSvr = curSvr;
       }
+
+      if (!retSvr) {
+        // No fastest server detected (due to no ping info available)
+        // Get nearest or first applicable server
+
+        // get last known location
+        const l = rootState.lastRealLocation;
+        if (l) {
+          try {
+            // distance compare
+            let compare = function(a, b) {
+              var distA = getDistanceFromLatLonInKm(
+                l.latitude,
+                l.longitude,
+                a.latitude,
+                a.longitude
+              );
+              var distB = getDistanceFromLatLonInKm(
+                l.latitude,
+                l.longitude,
+                b.latitude,
+                b.longitude
+              );
+              if (distA === distB) return 0;
+              if (distA < distB) return -1;
+              return 1;
+            };
+
+            // sort servers by distance from last known real location
+            let sortedSvrs = servers.slice().sort(compare);
+            // get nearest server
+            for (let i = 0; i < sortedSvrs.length; i++) {
+              let curSvr = servers[i];
+              if (skipSvrs != null && skipSvrs.includes(curSvr.gateway))
+                continue;
+              retSvr = curSvr;
+              break;
+            }
+          } catch (e) {
+            console.log(e);
+          }
+        }
+
+        // If still not found: choose the first applicable server
+        if (!retSvr) retSvr = fallbackSvr;
+      }
+
       return retSvr;
     }
   },
