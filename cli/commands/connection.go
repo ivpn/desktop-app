@@ -32,7 +32,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/flags"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
-	"github.com/ivpn/desktop-app/daemon/service"
+	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -199,7 +199,7 @@ func (c *CmdConnect) Run() (retError error) {
 		PrintTips([]TipType{TipLogin})
 		fmt.Println()
 
-		return service.ErrorNotLoggedIn{}
+		return srverrors.ErrorNotLoggedIn{}
 	}
 
 	// requesting servers list

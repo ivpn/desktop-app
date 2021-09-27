@@ -48,6 +48,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/splittun"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
@@ -491,7 +492,7 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
-		return ErrorNotLoggedIn{}
+		return srverrors.ErrorNotLoggedIn{}
 	}
 
 	s._manualDNS = manualDNS
@@ -1435,7 +1436,7 @@ func (s *Service) RequestSessionStatus() (
 
 	session := s.Preferences().Session
 	if !session.IsLoggedIn() {
-		return apiCode, "", "", accountInfo, ErrorNotLoggedIn{}
+		return apiCode, "", "", accountInfo, srverrors.ErrorNotLoggedIn{}
 	}
 
 	log.Info("Requesting session status...")
@@ -1447,7 +1448,7 @@ func (s *Service) RequestSessionStatus() (
 		// It could happen that logout\login was performed during the session check
 		// Ignoring result if there is already a new session
 		log.Info("Ignoring requested session status result. Local session already changed.")
-		return apiCode, "", "", accountInfo, ErrorNotLoggedIn{}
+		return apiCode, "", "", accountInfo, srverrors.ErrorNotLoggedIn{}
 	}
 
 	apiCode = 0
@@ -1617,7 +1618,7 @@ func (s *Service) WireGuardGetKeys() (session, wgPublicKey, wgPrivateKey, wgLoca
 // WireGuardGenerateKeys - generate new wireguard keys
 func (s *Service) WireGuardGenerateKeys(updateIfNecessary bool) error {
 	if !s._preferences.Session.IsLoggedIn() {
-		return ErrorNotLoggedIn{}
+		return srverrors.ErrorNotLoggedIn{}
 	}
 
 	// Update WG keys, if necessary

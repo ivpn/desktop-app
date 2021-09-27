@@ -27,7 +27,7 @@ import (
 
 	"github.com/ivpn/desktop-app/cli/flags"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
-	"github.com/ivpn/desktop-app/daemon/service"
+	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -99,7 +99,7 @@ func showState() error {
 	}
 
 	if len(_proto.GetHelloResponse().Session.Session) == 0 {
-		return service.ErrorNotLoggedIn{}
+		return srverrors.ErrorNotLoggedIn{}
 	}
 	return nil
 }
