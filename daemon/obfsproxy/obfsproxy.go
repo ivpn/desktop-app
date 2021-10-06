@@ -116,8 +116,9 @@ func (p *Obfsproxy) start() (port int, command *startedCmd, err error) {
 	// obfs4 configuration parameters
 	// https://github.com/Pluggable-Transports/Pluggable-Transports-spec/tree/main/releases
 	// https://gitweb.torproject.org/torspec.git/tree/pt-spec.txt
+	const obfsProxyVer = "obfs3"
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "TOR_PT_CLIENT_TRANSPORTS=obfs3")
+	cmd.Env = append(cmd.Env, "TOR_PT_CLIENT_TRANSPORTS="+obfsProxyVer)
 	cmd.Env = append(cmd.Env, "TOR_PT_MANAGED_TRANSPORT_VER=1")
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TOR_PT_STATE_LOCATION=%s", ptStateDir))
 
@@ -135,7 +136,7 @@ func (p *Obfsproxy) start() (port int, command *startedCmd, err error) {
 	// 	VERSION 1
 	// 	CMETHOD obfs3 socks5 127.0.0.1:53914
 	//	CMETHODS DONE
-	portRegExp := regexp.MustCompile("CMETHOD.+obfs3.+[0-9.]+:([0-9]+)")
+	portRegExp := regexp.MustCompile("CMETHOD.+" + obfsProxyVer + ".+[0-9.]+:([0-9]+)")
 	outputParseFunc := func(text string, isError bool) {
 		if isError {
 			log.Info("[ERR] ", text)
