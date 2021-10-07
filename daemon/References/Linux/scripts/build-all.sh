@@ -42,15 +42,31 @@ if [ -z "$COMMIT" ]; then
   COMMIT="$(git rev-list -1 HEAD)"
 fi
 
+echo "!!!!!!!!!!!!!!!!!!!! INFO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo "Version: $VERSION"
+echo "Date   : $DATE"
+echo "Commit : $COMMIT"
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+
+# check if we need to compile obfs4proxy
+if [[ ! -f "../_deps/obfs4proxy_inst/obfs4proxy" ]]
+then
+  echo "======================================================"
+  echo "========== Compiling obfs4proxy ======================"
+  echo "======================================================"
+  cd $SCRIPT_DIR
+  ./build-obfs4proxy.sh
+else
+  echo "obfs4proxy already compiled. Skipping build."
+fi
+
 # updating servers.json
+cd $SCRIPT_DIR
 ./update-servers.sh
 
 echo "======================================================"
 echo "============ Compiling IVPN service =================="
 echo "======================================================"
-echo "Version: $VERSION"
-echo "Date   : $DATE"
-echo "Commit : $COMMIT"
 
 cd $SCRIPT_DIR/../../../
 

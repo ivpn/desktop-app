@@ -4,25 +4,12 @@ setlocal
 set SCRIPTDIR=%~dp0
 set APPVER=%1
 
-rem E.g. 'exclude32bit'
-set EXTRA_ARG=%2
-
-set CERT_SHA1=%3
+set CERT_SHA1=%2
 
 set COMMIT=""
 set DATE=""
 
-rem ==================================================
-rem DEFINE required WireGuard version here
-rem This parameter take place only for clean build
-rem It uses to download correspond version of WireGuard sources for building
-rem If the files (bellow) already exists - building WireGuard binaries will be skipped
-rem        	%SCRIPTDIR%..\WireGuard\x86\wg.exe
-rem        	%SCRIPTDIR%..\WireGuard\x86\wireguard.exe
-rem        	%SCRIPTDIR%..\WireGuard\x86_64\wg.exe
-rem        	%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe
-set WGVER=v0.3.4
-rem ==================================================
+set TIMESTAMP_SERVER=http://timestamp.digicert.com
 
 echo ==================================================
 echo ============ BUILDING IVPN Service ===============
@@ -50,15 +37,8 @@ IF %ERRORLEVEL% NEQ 0 (
 )
 
 call :build_native_libs || goto :error
-
-set needRebuildWireGuard=0
-if not exist "%SCRIPTDIR%..\WireGuard\x86\wg.exe" 					set needRebuildWireGuard=1
-if not exist "%SCRIPTDIR%..\WireGuard\x86\wireguard.exe" 			set needRebuildWireGuard=1
-if not exist "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe" 				set needRebuildWireGuard=1
-if not exist "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe" 		set needRebuildWireGuard=1
-rem if not exist "%SCRIPTDIR%..\.deps\wireguard-windows\.deps\prepared" set needRebuildWireGuard=1
-if %needRebuildWireGuard% == 1 call :build_wireguard || goto :error
-
+call :build_obfs4proxy || goto :error
+call :build_wireguard || goto :error
 call :update_servers_info || goto :error
 call :build_agent || goto :error
 
@@ -72,14 +52,7 @@ goto :success
 
 :build_agent
 	cd "%SCRIPTDIR%..\..\.."
-
-	IF not "%EXTRA_ARG%" == "exclude32bit" (
-		call :build_agent_plat x86 386 		|| exit /b 1
-	)
-	IF not "%EXTRA_ARG%" == "exclude64bit" (
-		call :build_agent_plat x86_64 amd64 	|| exit /b 1
-	)
-
+	call :build_agent_plat x86_64 amd64 	|| exit /b 1
 	goto :eof
 
 :build_agent_plat
@@ -91,7 +64,6 @@ goto :success
 
 	go build -tags release -o "bin\%~1\IVPN Service.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
 
-	set TIMESTAMP_SERVER=http://timestamp.digicert.com
 	if NOT "%CERT_SHA1%" == "" (
 		echo.
 		echo Signing binary by certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%
@@ -102,78 +74,58 @@ goto :success
 		echo.
 	)
 
+	echo Compiled binary: "bin\%~1\IVPN Service.exe"
 	goto :eof
 
 :build_native_libs
-	IF not "%EXTRA_ARG%" == "exclude32bit" (
-		echo [*] Building Native projects x86
-		msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x86 || exit /b 1
+	echo [*] Building Native projects x64
+	msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x64 || exit /b 1
+	goto :eof
+
+:build_obfs4proxy
+	if exist "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe" (
+		echo [ ] obfs4proxy binaries already available. Compilation skipped.
+		goto :eof
 	)
-	IF not "%EXTRA_ARG%" == "exclude64bit" (
-		echo [*] Building Native projects x64
-		msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x64 || exit /b 1
+
+	echo ### obfs4proxy binary not found ###
+	echo ### Buildind obfs4proxy         ###
+	call "%SCRIPTDIR%\build-obfs4proxy.bat" || goto error
+
+	if NOT "%CERT_SHA1%" == "" (
+		echo.
+		echo Signing 'obfs4proxy.exe' binary [certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%]
+		echo.
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe" || goto :eof
+		echo.
+		echo Signing SUCCES
+		echo.
 	)
+
 	goto :eof
 
 :build_wireguard
-	echo ### WireGuard binaries not found ###
-	echo ### Buildind WireGuard binaries  ###
-
-	if exist "%SCRIPTDIR%..\WireGuard\x86" (
-		echo [*] Erasing WireGuard\x86\*.exe ...
-		del /f /q /s "%SCRIPTDIR%..\WireGuard\x86\*.exe"  	>nul 2>&1 || exit /b 1
-	)
-
-	if exist "%SCRIPTDIR%..\WireGuard\x86_64" (
-		echo [*] Erasing WireGuard\x86_64\*.exe ...
-		del /f /q /s "%SCRIPTDIR%..\WireGuard\x86_64\*.exe" >nul 2>&1 || exit /b 1
-	)
-
-	if not exist "%SCRIPTDIR%..\.deps\wireguard-windows\.deps\prepared" (
-		if exist "%SCRIPTDIR%..\.deps" (
-			echo [*] Erasing .deps ...
-			rd /s /q "%SCRIPTDIR%..\.deps" || exit /b 1
-			sleep 2
+	if exist "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe" (
+ 		if exist "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe" (
+			echo [ ] Wireguard binaries already available. Compilation skipped.
+			goto :eof
 		)
-
-		echo [*] Creating .deps ...
-		mkdir "%SCRIPTDIR%..\.deps" || exit /b 1
-		cd "%SCRIPTDIR%..\.deps" 	|| exit /b 1
-
-		echo [*] Cloning wireguard-windows...
-		git clone https://git.zx2c4.com/wireguard-windows || exit /b 1
-		cd wireguard-windows || exit /b 1
-
-		echo [*] Checking out wireguard-windows version [%WGVER%]...
-		git checkout %WGVER% >nul 2>&1 || exit /b 1
-			echo [*] Building wireguard-windows from NEW sources...
-	) else (
-		echo [*] Building wireguard-windows from ALREADY DOWNLOADED sources...
-		cd "%SCRIPTDIR%..\.deps\wireguard-windows" 	|| exit /b 1
 	)
 
-	call build.bat
-	if not %errorlevel%==0 (
-			echo [!] ERROR: Building WireGuard from official sources
-			echo [ ]        You can skip building WireGuard binaries.
-			echo [ ]        To skip build, copy correspond precompiled official WireGuard binaries to locations:
-			echo [ ]        	%SCRIPTDIR%..\WireGuard\x86\wg.exe
-			echo [ ]        	%SCRIPTDIR%..\WireGuard\x86\wireguard.exe
-			echo [ ]        	%SCRIPTDIR%..\WireGuard\x86_64\wg.exe
-			echo [ ]        	%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe
-			exit /b 1
+	echo ### WireGuard binaries not found ###
+	call "%SCRIPTDIR%\build-wireguard.bat" || goto error
+
+	if NOT "%CERT_SHA1%" == "" (
+		echo.
+		echo Signing binaries ['wg.exe', 'wireguard.exe'] [certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%]
+		echo.
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe" || goto :eof
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe" || goto :eof
+		echo.
+		echo Signing SUCCES
+		echo.
 	)
 
-	echo [*] WireGuard build DONE. Copying compiled binaries ...
-
-	if not exist "%SCRIPTDIR%..\WireGuard" 			mkdir "%SCRIPTDIR%..\WireGuard" 		|| exit /b 1
-	if not exist "%SCRIPTDIR%..\WireGuard\x86" 		mkdir "%SCRIPTDIR%..\WireGuard\x86"		|| exit /b 1
-	if not exist "%SCRIPTDIR%..\WireGuard\x86_64" 	mkdir "%SCRIPTDIR%..\WireGuard\x86_64"	|| exit /b 1
-
-	copy /y "%SCRIPTDIR%..\.deps\wireguard-windows\x86\wg.exe" 			"%SCRIPTDIR%..\WireGuard\x86\wg.exe" 			>nul 2>&1 || exit /b 1
-	copy /y "%SCRIPTDIR%..\.deps\wireguard-windows\x86\wireguard.exe" 	"%SCRIPTDIR%..\WireGuard\x86\wireguard.exe" 	>nul 2>&1 || exit /b 1
-	copy /y "%SCRIPTDIR%..\.deps/wireguard-windows\amd64\wg.exe" 		"%SCRIPTDIR%..\WireGuard\x86_64\wg.exe" 		>nul 2>&1 || exit /b 1
-	copy /y "%SCRIPTDIR%..\.deps\wireguard-windows\amd64\wireguard.exe" "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe" 	>nul 2>&1 || exit /b 1
 	goto :eof
 
 :success
@@ -182,5 +134,14 @@ goto :success
 	exit /b 0
 
 :error
+	set ERR=%errorlevel%
 	echo [!] IVPN Service build script FAILED with error #%errorlevel%.
-	exit /b %errorlevel%
+	echo [!] Removing files:
+	echo [ ] "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe"
+	echo [ ] "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe"
+	echo [ ] "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe"
+	del "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe"
+	del "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe"
+	del "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe"
+
+	exit /b %ERR%

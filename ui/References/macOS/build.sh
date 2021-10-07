@@ -67,6 +67,24 @@ _PATH_ABS_REPO_DAEMON=""
 _PATH_ABS_REPO_CLI=""
 _PATH_ABS_REPO_UI=""
 
+# ============================== ARCHITECTURE =============================
+_ARCH="$( uname -m )"
+echo "    ARCHITECTURE:            '${_ARCH}'"
+if [ ${_ARCH} != "x86_64" ] && [ ${_ARCH} != "arm64" ]; then
+  echo "ERROR: Unsupported architecture"
+  exit 1
+fi
+if [ ${_ARCH} = "arm64" ]; then
+  export GOOS=darwin
+  export GOARCH=arm64
+  export CGO_ENABLED=1
+  echo "    Version:                 '${_VERSION}'"
+  echo "    Defining Golang variables:"
+  echo "      GOOS:                  '${GOOS}'"
+  echo "      GOARCH:                '${GOARCH}'"
+  echo "      CGO_ENABLED:           '${CGO_ENABLED}'"
+fi
+
 # ============================== PROJECTS PATH =============================
 # obtaining absolute paths to sources of daemon and CLI
 if [ ! -d ${_PATH_REL_REPO_DAEMON} ]; then
@@ -138,6 +156,10 @@ echo "[+] Building IVPN CLI (${_PATH_ABS_REPO_CLI})...";
 ${_PATH_ABS_REPO_CLI}/References/macOS/build.sh -v ${_VERSION}
 CheckLastResult "[!] ERROR building IVPN CLI"
 
+echo ======================================================
+echo ================= Compiling UI =======================
+echo ======================================================
+
 echo "[+] Building UI (${_PATH_ABS_REPO_UI})...";
 cd ${_PATH_ABS_REPO_UI}
 echo "[+] Building UI: Installing NPM molules ..."
@@ -148,13 +170,25 @@ npm run electron:build
 CheckLastResult
 
 # ============================== PREPARING DMG ==============================
+echo ======================================================
+echo ================= Preparing DMG ======================
+echo ======================================================
+_COMPILEDFOLDER="mac"
+_ARCH="$( uname -m )"
+if [ ${_ARCH} = "arm64" ]; then
+  _COMPILEDFOLDER="mac-arm64"
+  echo "[ ] Using folder with compiled files ${_COMPILEDFOLDER}. Atchitecture: ${_ARCH}"
+else
+  echo "[ ] Using folder with compiled files ${_COMPILEDFOLDER}. Default atchitecture (${_ARCH})"
+fi
+
 echo "[+] Preparing DMG ..."
 _FNAME_UI_COMPILED="IVPN.app"
 _PATH_IMAGE_FOLDER="${_SCRIPT_DIR}/_image"
 _PATH_UI_COMPILED_IMAGE=${_PATH_IMAGE_FOLDER}/${_FNAME_UI_COMPILED}
 
 _FNAME_UI_ORIG="IVPN.app"
-_PATH_COMPILED_UI_ORIG="${_PATH_ABS_REPO_UI}/dist_electron/mac/${_FNAME_UI_ORIG}"
+_PATH_COMPILED_UI_ORIG="${_PATH_ABS_REPO_UI}/dist_electron/${_COMPILEDFOLDER}/${_FNAME_UI_ORIG}"
 
 # Erasing old files
 rm -fr ${_PATH_IMAGE_FOLDER}
@@ -180,7 +214,8 @@ echo "[+] Preparing DMG image: Copying 'openvpn'..."
 cp "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/openvpn_inst/bin/openvpn" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/openvpn" || CheckLastResult
 
 echo "[+] Preparing DMG image: Copying 'obfsproxy' binaries..."
-cp -R "${_PATH_ABS_REPO_DAEMON}/References/macOS/obfsproxy" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources" || CheckLastResult
+mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources/obfsproxy"
+cp -R "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/obfs4proxy_inst/obfs4proxy" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources/obfsproxy/obfs4proxy" || CheckLastResult
 
 echo "[+] Preparing DMG image: Copying 'WireGuard' binaries..."
 mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/WireGuard"

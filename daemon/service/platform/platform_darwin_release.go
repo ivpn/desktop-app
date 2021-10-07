@@ -53,7 +53,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnUpScript = "/Applications/IVPN.app/Contents/Resources/etc/dns.sh -up"
 	openvpnDownScript = "/Applications/IVPN.app/Contents/Resources/etc/dns.sh -down"
 
-	obfsproxyStartScript = "/Applications/IVPN.app/Contents/Resources/obfsproxy/obfsproxy.sh"
+	obfsproxyStartScript = "/Applications/IVPN.app/Contents/Resources/obfsproxy/obfs4proxy"
 
 	wgBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"
 	wgToolBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wg"

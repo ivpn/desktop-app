@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2021 Privatus Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -26,12 +26,15 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"net"
+	"os"
 	"os/exec"
-	"strings"
+	"path"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
@@ -42,10 +45,11 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-const (
-	constDefLocalPort         = 1050
-	constMaxConnectionRetries = 7
-)
+type startedCmd struct {
+	command   *exec.Cmd
+	stopped   <-chan struct{}
+	exitError error
+}
 
 // Obfsproxy structure. Contains info about obfsproxy binary
 type Obfsproxy struct {
@@ -60,49 +64,27 @@ func CreateObfsproxy(theBinaryPath string) (obj *Obfsproxy) {
 
 // Start - asynchronously start obfsproxy
 func (p *Obfsproxy) Start() (port int, err error) {
-
-	localPort := constDefLocalPort
-	log.Info(fmt.Sprintf("Starting obfsproxy on local port %d", localPort))
+	log.Info("Starting obfsproxy")
 	defer func() {
 		if err != nil || port <= 0 {
-			log.Error("Error starting obfsproxy")
+			if err == nil {
+				err = fmt.Errorf("error starting obfsproxy")
+			}
+			log.Error(err)
 			p.Stop()
 		}
 	}()
 
-	// retry-connection loop (required local port may be already in use)
-	for doNextTry, tryNo := true, 0; doNextTry == true && tryNo < constMaxConnectionRetries; tryNo++ {
-		doNextTry = false
-
-		prepareFoNextTry := func() {
-			doNextTry = true
-			newPort := getRandPort()
-			log.Info(fmt.Sprintf("Local port %d already in use. Trying another port %d.", localPort, newPort))
-			localPort = newPort
-		}
-
-		if checkIsPortInUse(localPort) {
-			prepareFoNextTry()
-			continue
-		}
-
-		command, err := p.start(localPort)
-		if err != nil {
-			if _, ok := err.(*obfsStartErrorPortInUse); ok {
-				prepareFoNextTry()
-				continue
-			}
-			return 0, fmt.Errorf("failed to start obfsproxy: %w", err)
-		}
-
-		p.proc = command
-		return localPort, nil
+	localPort, command, err := p.start()
+	if err != nil {
+		return 0, fmt.Errorf("failed to start obfsproxy: %w", err)
 	}
 
-	return 0, errors.New("obfsproxy not started")
+	p.proc = command
+
+	return localPort, nil
 }
 
-// Wait - wait for obfsproxy process stop
 func (p *Obfsproxy) Wait() error {
 	prc := p.proc
 	if prc == nil {
@@ -126,22 +108,18 @@ func (p *Obfsproxy) Stop() {
 	}
 }
 
-type obfsStartErrorPortInUse struct {
-}
+func (p *Obfsproxy) start() (port int, command *startedCmd, err error) {
+	// obfsproxy command
+	cmd := exec.Command(p.binaryPath)
 
-func (e *obfsStartErrorPortInUse) Error() string {
-	return "Port already in use"
-}
-
-type startedCmd struct {
-	command   *exec.Cmd
-	stopped   <-chan struct{}
-	exitError error
-}
-
-func (p *Obfsproxy) start(localPort int) (command *startedCmd, err error) {
-	// obfsproxy command with arguments
-	cmd := exec.Command(p.binaryPath, "obfs3", "socks", fmt.Sprintf("127.0.0.1:%d", localPort))
+	ptStateDir := path.Join(platform.LogDir(), "ivpn-obfsproxy-state")
+	// obfs4 configuration parameters
+	// https://github.com/Pluggable-Transports/Pluggable-Transports-spec/tree/main/releases
+	// https://gitweb.torproject.org/torspec.git/tree/pt-spec.txt
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "TOR_PT_CLIENT_TRANSPORTS=obfs3")
+	cmd.Env = append(cmd.Env, "TOR_PT_MANAGED_TRANSPORT_VER=1")
+	cmd.Env = append(cmd.Env, fmt.Sprintf("TOR_PT_STATE_LOCATION=%s", ptStateDir))
 
 	defer func() {
 		if err != nil {
@@ -151,41 +129,43 @@ func (p *Obfsproxy) start(localPort int) (command *startedCmd, err error) {
 		}
 	}()
 
-	// process console output
-	isPortInUse := false
-	isFirstOutput := false
-
+	localPort := 0
+	isInitialized := false
+	// output example:
+	// 	VERSION 1
+	// 	CMETHOD obfs3 socks5 127.0.0.1:53914
+	//	CMETHODS DONE
+	portRegExp := regexp.MustCompile("CMETHOD.+obfs3.+[0-9.]+:([0-9]+)")
 	outputParseFunc := func(text string, isError bool) {
-		// notify first console output received
-		isFirstOutput = true
-
-		if isPortInUse { // Do not log other obfsproxy output. We already logged the problem "address already in use"
-			return
-		}
-
-		if isError { // logging error output
-			log.Error("[ERR] ", text)
+		if isError {
+			log.Info("[ERR] ", text)
 		} else {
-			log.Debug("[OUT] ", text)
-		}
+			log.Info("[OUT] ", text)
 
-		// TODO: NOTE! hardcoded string!
-		// Output example: [ERROR] Couldn't listen on 127.0.0.1:1050: [Errno 48] Address already in use.
-		if strings.Contains(strings.ToLower(text), "errno 48") || strings.Contains(strings.ToLower(text), "address already in use") {
-			isPortInUse = true
+			// check if obfsproxy ready to use
+			if text == "CMETHODS DONE" {
+				isInitialized = true
+				return
+			}
+
+			// check for port number
+			columns := portRegExp.FindStringSubmatch(text)
+			if len(columns) > 1 {
+				localPort, _ = strconv.Atoi(columns[1])
+			}
 		}
 	}
 
 	// register colsole output reader for a process
 	if err := shell.StartConsoleReaders(cmd, outputParseFunc); err != nil {
 		log.Error("Failed to init obfsproxy command: ", err.Error())
-		return nil, err
+		return 0, nil, err
 	}
 
 	// Start obfsproxy process
 	if err := cmd.Start(); err != nil {
 		log.Error("Failed to start obfsproxy: ", err.Error())
-		return nil, err
+		return 0, nil, err
 	}
 
 	stoppedChan := make(chan struct{}, 1)
@@ -195,43 +175,24 @@ func (p *Obfsproxy) start(localPort int) (command *startedCmd, err error) {
 		log.Info("Obfsproxy stopped")
 		stoppedChan <- struct{}{}
 		close(stoppedChan)
+
+		// remove PT state directory
+		os.RemoveAll(ptStateDir)
 	}()
 
 	started := time.Now()
 	// waiting for first channel output (ensure process is started)
-	for isFirstOutput == false && shell.IsRunning(cmd) {
+	for !isInitialized && shell.IsRunning(cmd) {
 		time.Sleep(time.Millisecond * 10)
 
-		if time.Since(started) > time.Second*10 { // timeout limit to start obfsproxy process = 10 seconds
-			return nil, errors.New("obfsproxy start timeout")
-		}
-		if isPortInUse {
-			return nil, &obfsStartErrorPortInUse{}
+		// timeout limit to start obfsproxy process = 10 seconds
+		if time.Since(started) > time.Second*10 {
+			return 0, nil, errors.New("obfsproxy start timeout")
 		}
 	}
 
-	// wait some to ensure process successfully started
-	// TODO: necessary to think how to avoid using hardcoded 'Sleep()'
-	time.Sleep(time.Millisecond * 10)
-
-	if isPortInUse {
-		return nil, &obfsStartErrorPortInUse{}
+	if localPort > 0 {
+		log.Info(fmt.Sprintf("Started on port %d", localPort))
 	}
-
-	log.Info(fmt.Sprintf("Started on port %d", localPort))
-	return &startedCmd{command: cmd, stopped: stoppedChan, exitError: procStoppedError}, nil
-}
-
-func getRandPort() int {
-	return constDefLocalPort + rand.Intn(3000)
-}
-
-func checkIsPortInUse(localPort int) bool {
-	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", localPort))
-	if err != nil {
-		return false
-	}
-
-	defer conn.Close()
-	return true
+	return localPort, &startedCmd{command: cmd, stopped: stoppedChan, exitError: procStoppedError}, nil
 }
