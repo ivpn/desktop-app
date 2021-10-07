@@ -83,7 +83,10 @@ if (!gotTheLock) {
 } else {
   app.on("second-instance", () => {
     // Someone tried to run a second instance, we should focus our window.
-    menuOnShow();
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
   });
 }
 
