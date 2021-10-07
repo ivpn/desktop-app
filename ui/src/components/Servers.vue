@@ -518,9 +518,21 @@ export default {
     isInaccessibleServer: function(server) {
       if (this.$store.state.settings.isMultiHop === false) return false;
       let ccSkip = "";
-      if (!this.isExitServer && this.$store.state.settings.serverExit)
+
+      let connected = !this.$store.getters["vpnState/isDisconnected"];
+      if (
+        // ENTRY SERVER
+        !this.isExitServer &&
+        this.$store.state.settings.serverExit &&
+        (connected || !this.$store.state.settings.isRandomExitServer)
+      )
         ccSkip = this.$store.state.settings.serverExit.country_code;
-      else if (this.$store.state.settings.serverEntry)
+      else if (
+        // EXIT SERVER
+        this.isExitServer &&
+        this.$store.state.settings.serverEntry &&
+        (connected || !this.$store.state.settings.isRandomServer)
+      )
         ccSkip = this.$store.state.settings.serverEntry.country_code;
       if (server.country_code === ccSkip) return true;
       return false;
