@@ -1070,6 +1070,11 @@ func (s *Service) getHostsToPing(currentLocation *types.GeoLookupResponse) ([]ne
 
 // SetKillSwitchState enable\disable killswitch
 func (s *Service) SetKillSwitchState(isEnabled bool) error {
+
+	if !isEnabled && s._preferences.IsFwPersistant {
+		return fmt.Errorf("unable to disable Firewall in 'Persistent' state. Please, disable 'Always-on firewall' first")
+	}
+
 	err := firewall.SetEnabled(isEnabled)
 	if err == nil {
 		s._evtReceiver.OnKillSwitchStateChanged()
@@ -1416,6 +1421,7 @@ func (s *Service) logOut(needToDeleteOnBackend bool) error {
 	s._preferences.SetSession("", "", "", "", "", "", "")
 
 	// Disable firewall
+	s.SetKillSwitchIsPersistent(false)
 	s.SetKillSwitchState(false)
 	// Disconnect (if connected)
 	s.Disconnect()
