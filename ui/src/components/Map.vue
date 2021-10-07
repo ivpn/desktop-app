@@ -547,14 +547,13 @@ export default {
             // Entry and exit servers cannot be in the same country
             return;
           }
-        }
-
-        this.$store.dispatch("settings/isFastestServer", false);
-        this.$store.dispatch("settings/isRandomServer", false);
-
-        if (this.$store.state.settings.isMultiHop)
+          this.$store.dispatch("settings/isRandomExitServer", false);
           await sender.Connect(null, location);
-        else await sender.Connect(location, null);
+        } else {
+          this.$store.dispatch("settings/isFastestServer", false);
+          this.$store.dispatch("settings/isRandomServer", false);
+          await sender.Connect(location, null);
+        }
       } catch (e) {
         console.error(e);
         sender.showMessageBoxSync({
