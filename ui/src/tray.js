@@ -28,6 +28,8 @@ import { PauseStateEnum } from "@/store/types";
 import { VpnStateEnum } from "@/store/types";
 import daemonClient from "@/daemon-client";
 import { Platform, PlatformEnum } from "@/platform/platform";
+import path from "path";
+
 const { nativeTheme } = require("electron");
 
 let tray = null;
@@ -87,7 +89,8 @@ export function InitTray(
           }
         });
 
-        const f = __static + "/tray/windows/";
+        const f = path.join(path.dirname(__dirname), "tray", "windows") + "\\";
+
         iconConnected = nativeImage.createFromPath(f + "connected.ico");
         iconDisconnected = nativeImage.createFromPath(f + "disconnected.ico");
         iconPaused = nativeImage.createFromPath(f + "paused.ico");

@@ -19,6 +19,16 @@ module.exports = {
           }
         },
 
+        win: {
+          extraResources: [
+            {
+              from: "public/tray/windows",
+              to: "tray/windows",
+              filter: ["**/*"]
+            }
+          ]
+        },
+
         extraResources: [
           {
             from: "extraResources",
