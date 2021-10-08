@@ -39,14 +39,18 @@ import (
 
 type CmdLogout struct {
 	flags.CmdInfo
+	disableFirewall            bool
+	resetAppSettingsToDefaults bool
 }
 
 func (c *CmdLogout) Init() {
 	c.Initialize("logout", "Logout from this device (if logged-in)")
+	c.BoolVar(&c.disableFirewall, "firewall_off", false, "Turn Firewall off (do not prompt about enabled Firewall)")
+	c.BoolVar(&c.resetAppSettingsToDefaults, "reset_settings", false, "Reset application settings to defaults")
 }
 
 func (c *CmdLogout) Run() error {
-	return doLogout()
+	return doLogout(c.disableFirewall, c.resetAppSettingsToDefaults)
 }
 
 //----------------------------------------------------------------------------------------
@@ -131,7 +135,7 @@ func (c *CmdAccount) Run() error {
 
 //----------------------------------------------------------------------------------------
 
-func doLogout() error {
+func doLogout(disableFirewall bool, resetAppSettingsToDefaults bool) error {
 	// checking if we are logged-in
 	_proto.SessionStatus() // do not check error response (could be received 'not logged in' errors)
 	helloResp := _proto.GetHelloResponse()
@@ -149,8 +153,33 @@ func doLogout() error {
 		return fmt.Errorf("unable to log out (please, disconnect VPN first)")
 	}
 
+	if disableFirewall == false {
+		fwstate, fwerr := _proto.FirewallStatus()
+		if fwerr != nil {
+			return err
+		}
+		if fwstate.IsEnabled {
+			fmt.Println("The Firewall is enabled.  All network access will be blocked.")
+			fmt.Print("Do you want to turn Firewall off? [Yes/no]: ")
+			reader := bufio.NewReader(os.Stdin)
+			yn, _ := reader.ReadString('\n')
+			yn = strings.TrimSuffix(yn, "\n")
+			yn = strings.TrimSuffix(yn, "\r")
+
+			if yn == "" {
+				yn = "yes"
+				fmt.Println(yn)
+			}
+			yn = strings.ToUpper(yn)
+
+			if yn == "Y" || yn == "YES" {
+				disableFirewall = true
+			}
+		}
+	}
+
 	// delete session
-	err = _proto.SessionDelete()
+	err = _proto.SessionDelete(disableFirewall, resetAppSettingsToDefaults)
 	if err != nil {
 		return err
 	}

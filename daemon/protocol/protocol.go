@@ -88,6 +88,7 @@ type Service interface {
 
 	Preferences() preferences.Preferences
 	SetPreference(key string, val string) error
+	ResetPreferences() error
 
 	SetManualDNS(dns net.IP) error
 	ResetManualDNS() error
@@ -697,11 +698,26 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.notifyClients(p.createHelloResponse())
 
 	case "SessionDelete":
+		var req types.SessionDelete
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+
+		if req.NeedToDisableFirewall {
+			p._service.SetKillSwitchIsPersistent(false)
+			p._service.SetKillSwitchState(false)
+		}
+		if req.NeedToResetSettings {
+			p._service.ResetPreferences()
+		}
+
 		err := p._service.SessionDelete()
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 		// notify all clients about changed session status

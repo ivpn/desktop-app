@@ -1126,6 +1126,15 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 }
 
 func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
+	if !isAllowAPIServers {
+		// Do not allow to disable access to IVPN API server if user logged-out
+		// Otherwise, we will not have possibility to login
+		session := s.Preferences().Session
+		if !session.IsLoggedIn() {
+			return srverrors.ErrorNotLoggedIn{}
+		}
+	}
+
 	prefs := s._preferences
 	prefs.IsFwAllowApiServers = isAllowAPIServers
 	s.setPreferences(prefs)
@@ -1296,6 +1305,11 @@ func (s *Service) Preferences() preferences.Preferences {
 	return s._preferences
 }
 
+func (s *Service) ResetPreferences() error {
+	s._preferences = *preferences.Create()
+	return nil
+}
+
 //////////////////////////////////////////////////////////
 // SESSIONS
 //////////////////////////////////////////////////////////
@@ -1400,6 +1414,17 @@ func (s *Service) SessionDelete() error {
 }
 
 func (s *Service) logOut(needToDeleteOnBackend bool) error {
+	var retErr error = nil
+
+	// If Firewall is enabled - enable ability to connect to IVPN API serves
+	// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
+	isEnabled, _, _, _, isAllowApiServers, _ := s.KillSwitchState()
+	if isEnabled && !isAllowApiServers {
+		s.SetKillSwitchAllowAPIServers(true)
+	}
+
+	// Disconnect (if connected)
+	s.Disconnect()
 
 	// stop session checker (use goroutine to avoid deadlocks)
 	go s.stopSessionChecker()
@@ -1413,23 +1438,19 @@ func (s *Service) logOut(needToDeleteOnBackend bool) error {
 			log.Info("Logging out")
 			err := s._api.SessionDelete(session.Session)
 			if err != nil {
-				return err
+				log.Info("Logging out error:", err)
+				retErr = err
 			}
+			log.Info("Logging out: done")
 		}
 	}
 
 	s._preferences.SetSession("", "", "", "", "", "", "")
 
-	// Disable firewall
-	s.SetKillSwitchIsPersistent(false)
-	s.SetKillSwitchState(false)
-	// Disconnect (if connected)
-	s.Disconnect()
-
 	// notify clients about session update
 	s._evtReceiver.OnServiceSessionChanged()
 
-	return nil
+	return retErr
 }
 
 // RequestSessionStatus receives session status

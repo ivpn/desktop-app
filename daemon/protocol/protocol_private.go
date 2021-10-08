@@ -187,8 +187,9 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 
 	// send back Hello message with account session info
 	helloResp := types.HelloResp{
-		Version: version.Version(),
-		Session: types.CreateSessionResp(prefs.Session),
+		Version:             version.Version(),
+		Session:             types.CreateSessionResp(prefs.Session),
+		SettingsSessionUUID: prefs.SettingsSessionUUID,
 		DisabledFunctions: types.DisabledFunctionality{
 			WireGuardError:   wgErr,
 			OpenVPNError:     ovpnErr,

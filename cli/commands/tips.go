@@ -32,18 +32,19 @@ import (
 type TipType uint
 
 const (
-	TipHelp            TipType = iota
-	TipHelpFull        TipType = iota
-	TipHelpCommand     TipType = iota
-	TipLogout          TipType = iota
-	TipLogin           TipType = iota
-	TipForceLogin      TipType = iota
-	TipServers         TipType = iota
-	TipConnectHelp     TipType = iota
-	TipDisconnect      TipType = iota
-	TipFirewallDisable TipType = iota
-	TipFirewallEnable  TipType = iota
-	TipLastConnection  TipType = iota
+	TipHelp                      TipType = iota
+	TipHelpFull                  TipType = iota
+	TipHelpCommand               TipType = iota
+	TipLogout                    TipType = iota
+	TipLogin                     TipType = iota
+	TipForceLogin                TipType = iota
+	TipServers                   TipType = iota
+	TipConnectHelp               TipType = iota
+	TipDisconnect                TipType = iota
+	TipFirewallDisable           TipType = iota
+	TipFirewallEnable            TipType = iota
+	TipFirewallDisablePersistent TipType = iota
+	TipLastConnection            TipType = iota
 )
 
 func PrintTips(tips []TipType) {
@@ -99,6 +100,9 @@ func PrintTip(w *tabwriter.Writer, tip TipType) {
 		break
 	case TipFirewallEnable:
 		str = newTip("firewall -on", "Enable firewall (to block all connectivity outside VPN)")
+		break
+	case TipFirewallDisablePersistent:
+		str = newTip("firewall -persistent_off", "Disable firewall persistency (Always-on firewall)")
 		break
 	case TipLastConnection:
 		str = newTip("connect -last", "Connect with last successful connection parameters")

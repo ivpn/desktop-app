@@ -62,9 +62,12 @@ ipcMain.handle(
   }
 );
 
-ipcMain.handle("renderer-request-logout", async () => {
-  return await client.Logout();
-});
+ipcMain.handle(
+  "renderer-request-logout",
+  async (event, needToResetSettings, needToDisableFirewall) => {
+    return await client.Logout(needToResetSettings, needToDisableFirewall);
+  }
+);
 
 ipcMain.handle("renderer-request-account-status", async () => {
   return await client.AccountStatus();
@@ -243,12 +246,18 @@ ipcMain.on("renderer-request-showmsgboxsync", (event, diagConfig) => {
     diagConfig
   );
 });
-ipcMain.handle("renderer-request-showmsgbox", async (event, diagConfig) => {
-  return await dialog.showMessageBox(
-    event.sender.getOwnerBrowserWindow(),
-    diagConfig
-  );
-});
+ipcMain.handle(
+  "renderer-request-showmsgbox",
+  async (event, diagConfig, doNotAttachToWindow) => {
+    if (doNotAttachToWindow === true)
+      return await dialog.showMessageBox(diagConfig);
+
+    return await dialog.showMessageBox(
+      event.sender.getOwnerBrowserWindow(),
+      diagConfig
+    );
+  }
+);
 
 ipcMain.on("renderer-request-showOpenDialogSync", (event, options) => {
   event.returnValue = dialog.showOpenDialogSync(

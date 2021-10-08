@@ -135,12 +135,12 @@ func (c *Client) SessionNew(accountID string, forceLogin bool, the2FA string) (a
 }
 
 // SessionDelete remove session
-func (c *Client) SessionDelete() error {
+func (c *Client) SessionDelete(needToDisableFirewall, resetAppSettingsToDefaults bool) error {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
 
-	req := types.SessionDelete{}
+	req := types.SessionDelete{NeedToDisableFirewall: needToDisableFirewall, NeedToResetSettings: resetAppSettingsToDefaults}
 	var resp types.EmptyResp
 
 	if err := c.sendRecv(&req, &resp); err != nil {
@@ -204,6 +204,32 @@ func (c *Client) FirewallSet(isOn bool) error {
 
 	if state.IsEnabled != isOn {
 		return fmt.Errorf("firewall state did not change [isEnabled=%v]", state.IsEnabled)
+	}
+
+	return nil
+}
+
+// FirewallSet change firewall Persistent state
+func (c *Client) FirewallPersistentSet(isOn bool) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	// changing killswitch Persistent state
+	req := types.KillSwitchSetIsPersistent{IsPersistent: isOn}
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
+
+	// requesting status
+	state, err := c.FirewallStatus()
+	if err != nil {
+		return err
+	}
+
+	if state.IsPersistent != isOn || (isOn == true && state.IsEnabled != true) {
+		return fmt.Errorf("firewall 'persistent' state did not change [isEnabled=%v; IsPersistent=%v]", state.IsEnabled, state.IsPersistent)
 	}
 
 	return nil

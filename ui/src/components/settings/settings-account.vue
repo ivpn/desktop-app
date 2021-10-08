@@ -159,18 +159,57 @@ export default {
   },
   methods: {
     async logOut() {
-      if (
-        sender.showMessageBoxSync({
-          type: "question",
-          message: "Do you really want to log out?",
-          buttons: ["Log out", "Cancel"]
-        }) != 0
-      )
-        return;
+      // check: is it is necessary to warn user about enabled firewall?
+      let isNeedPromptFirewallStatus = false;
+      if (this.$store.state.vpnState.firewallState.IsEnabled == true) {
+        isNeedPromptFirewallStatus = true;
+        if (
+          this.$store.state.vpnState.firewallState.IsPersistent === false &&
+          this.$store.state.settings.firewallDeactivateOnDisconnect === true &&
+          this.$store.getters["vpnState/isDisconnected"] === false
+        ) {
+          isNeedPromptFirewallStatus = false;
+        }
+      }
+
+      // show dialog ("confirm to logout")
+      let needToDisableFirewall = true;
+      let needToResetSettings = false;
+      const mes = "Do you really want to log out IVPN account?";
+      const mesResetSettings = "Reset application settings to defaults";
+
+      if (isNeedPromptFirewallStatus == true) {
+        let ret = await sender.showMessageBox(
+          {
+            type: "question",
+            message: mes,
+            detail:
+              "The Firewall is enabled. All network access will be blocked.",
+            checkboxLabel: mesResetSettings,
+            buttons: ["Turn Firewall off and log out", "Log out", "Cancel"]
+          },
+          true
+        );
+        if (ret.response == 2) return; // cancel
+        if (ret.response != 0) needToDisableFirewall = false;
+        needToResetSettings = ret.checkboxChecked;
+      } else {
+        let ret = await sender.showMessageBox(
+          {
+            type: "question",
+            message: mes,
+            checkboxLabel: mesResetSettings,
+            buttons: ["Log out", "Cancel"]
+          },
+          true
+        );
+        if (ret.response == 1) return; // cancel
+        needToResetSettings = ret.checkboxChecked;
+      }
 
       try {
         this.isProcessing = true;
-        await sender.Logout();
+        await sender.Logout(needToResetSettings, needToDisableFirewall);
       } catch (e) {
         this.isProcessing = false;
         console.error(e);

@@ -68,7 +68,10 @@ type HelloResp struct {
 	Version           string
 	Session           SessionResp
 	DisabledFunctions DisabledFunctionality
-	//Account preferences.AccountStatus
+
+	// SettingsSessionUUID is unique for Preferences object
+	// It allow to detect situations when settings was erased (created new Preferences object)
+	SettingsSessionUUID string
 }
 
 // ConfigParamsResp return s configuration parameters

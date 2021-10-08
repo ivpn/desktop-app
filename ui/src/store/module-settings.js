@@ -30,6 +30,10 @@ import { Platform, PlatformEnum } from "@/platform/platform";
 
 const getDefaultState = () => {
   let defState = {
+    // SettingsSessionUUID allows to detect situations when settings was erased
+    // This value should be the same as on daemon side. If it differs - current settings should be erased to default state
+    SettingsSessionUUID: "",
+
     // session
     isExpectedAccountToBeLoggedIn: false,
 
@@ -125,7 +129,7 @@ const getDefaultState = () => {
 };
 
 // initial state
-const initialState = getDefaultState();
+let initialState = getDefaultState();
 
 export default {
   namespaced: true,
@@ -139,17 +143,12 @@ export default {
 
     resetToDefaults(state) {
       var defaultState = getDefaultState();
-
-      // some parameters have to stay without changes
-      defaultState.vpnType = state.vpnType;
-      defaultState.colorTheme = state.colorTheme;
-      defaultState.isExpectedAccountToBeLoggedIn =
-        state.isExpectedAccountToBeLoggedIn;
-      defaultState.skipAppUpdate = state.skipAppUpdate;
-      defaultState.logging = state.logging;
       defaultState.showAppInSystemDock = state.showAppInSystemDock;
-
       Object.assign(state, defaultState);
+    },
+
+    settingsSessionUUID(state, val) {
+      state.SettingsSessionUUID = val;
     },
 
     isExpectedAccountToBeLoggedIn(state, val) {
@@ -335,6 +334,12 @@ export default {
 
   // can be called from renderer
   actions: {
+    resetToDefaults(context) {
+      context.commit("resetToDefaults");
+      // Necessary to initialize selected VPN servers
+      updateSelectedServers(context);
+    },
+
     isExpectedAccountToBeLoggedIn(context, val) {
       context.commit("isExpectedAccountToBeLoggedIn", val);
     },

@@ -261,6 +261,11 @@ function requestGeoLookupAsync() {
   }, 0);
 }
 
+function doResetSettings() {
+  // Necessary to initialize selected VPN servers
+  store.dispatch("settings/resetToDefaults");
+}
+
 async function processResponse(response) {
   const obj = JSON.parse(response);
 
@@ -276,6 +281,18 @@ async function processResponse(response) {
   switch (obj.Command) {
     case daemonResponses.HelloResp:
       store.commit("daemonVersion", obj.Version);
+
+      if (obj.SettingsSessionUUID) {
+        const ssID = obj.SettingsSessionUUID;
+        // SettingsSessionUUID allows to detect situations when settings was erased
+        // This value should be the same as on daemon side. If it differs - current settings should be erased to default state
+        if (ssID != store.state.settings.SettingsSessionUUID) {
+          // UUID not equal to the UUID received from daemon: reset settings
+          if (store.state.settings.SettingsSessionUUID) doResetSettings();
+          // save new UUID received from daemon
+          store.commit("settings/settingsSessionUUID", ssID);
+        }
+      }
 
       // Check minimal required daemon version
       if (IsNewVersion(obj.Version, config.MinRequiredDaemonVer)) {
@@ -656,14 +673,18 @@ async function Login(accountID, force, captchaID, captcha, confirmation2FA) {
   return resp;
 }
 
-async function Logout() {
+async function Logout(needToResetSettings, needToDisableFirewall) {
   store.commit("settings/isExpectedAccountToBeLoggedIn", false);
-  await KillSwitchSetIsPersistent(false);
-  await EnableFirewall(false);
-  await Disconnect();
+
+  if (needToResetSettings === true) {
+    doResetSettings();
+  }
+
   try {
     await sendRecv({
-      Command: daemonRequests.SessionDelete
+      Command: daemonRequests.SessionDelete,
+      NeedToResetSettings: needToResetSettings,
+      NeedToDisableFirewall: needToDisableFirewall
     });
   } catch (e) {
     console.error(e);

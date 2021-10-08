@@ -196,6 +196,8 @@ type SessionNew struct {
 // SessionDelete logout from current device
 type SessionDelete struct {
 	CommandBase
+	NeedToResetSettings   bool
+	NeedToDisableFirewall bool
 }
 
 // AccountStatus get account status

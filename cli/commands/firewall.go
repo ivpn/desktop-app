@@ -22,7 +22,11 @@
 
 package commands
 
-import "github.com/ivpn/desktop-app/cli/flags"
+import (
+	"fmt"
+
+	"github.com/ivpn/desktop-app/cli/flags"
+)
 
 type CmdFirewall struct {
 	flags.CmdInfo
@@ -33,6 +37,8 @@ type CmdFirewall struct {
 	blockLan           bool
 	ivpnSvrAccessAllow bool
 	ivpnSvrAccessBlock bool
+	persistentOn       bool
+	persistentOff      bool
 	//allowLanMulticast bool
 	//blockLanMulticast bool
 }
@@ -46,6 +52,8 @@ func (c *CmdFirewall) Init() {
 	c.BoolVar(&c.blockLan, "lan_block", false, "Set configuration: block LAN communication (take effect when firewall enabled)")
 	c.BoolVar(&c.ivpnSvrAccessAllow, "ivpn_access_allow", false, "Allow access to IVPN servers when Firewall is enabled")
 	c.BoolVar(&c.ivpnSvrAccessBlock, "ivpn_access_block", false, "Block access to IVPN servers when Firewall is enabled")
+	c.BoolVar(&c.persistentOff, "persistent_off", false, "Persistent firewall (Always-on firewall): disable")
+	c.BoolVar(&c.persistentOn, "persistent_on", false, "Persistent firewall (Always-on firewall): enable. When the option is enabled the IVPN Firewall is started during system boot")
 
 	//c.BoolVar(&c.allowLanMulticast, "lan_multicast_allow", false, "Same as 'lan_allow' + allow multicast communication ")
 	//c.BoolVar(&c.blockLanMulticast, "lan_multicast_block", false, "Same as 'lan_block' + block multicast communication")
@@ -56,6 +64,14 @@ func (c *CmdFirewall) Run() error {
 	}
 
 	if c.allowLan && c.blockLan {
+		return flags.BadParameter{}
+	}
+
+	if c.persistentOn && c.persistentOff {
+		return flags.BadParameter{}
+	}
+
+	if c.persistentOn && c.off {
 		return flags.BadParameter{}
 	}
 
@@ -93,11 +109,28 @@ func (c *CmdFirewall) Run() error {
 	//	}
 	//}
 
+	if c.persistentOn {
+		if err := _proto.FirewallPersistentSet(true); err != nil {
+			return err
+		}
+	} else if c.persistentOff {
+		if err := _proto.FirewallPersistentSet(false); err != nil {
+			return err
+		}
+	}
+
 	if c.on {
 		if err := _proto.FirewallSet(true); err != nil {
 			return err
 		}
 	} else if c.off {
+
+		state, err := _proto.FirewallStatus()
+		if err == nil && state.IsPersistent {
+			PrintTips([]TipType{TipFirewallDisablePersistent})
+			return fmt.Errorf("Not possible to disable Firewall in 'Always-on' state")
+		}
+
 		if err := _proto.FirewallSet(false); err != nil {
 			return err
 		}
