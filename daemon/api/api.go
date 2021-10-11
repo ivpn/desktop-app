@@ -36,7 +36,7 @@ import (
 
 // API URLs
 const (
-	_defaultRequestTimeout = time.Second * 15
+	_defaultRequestTimeout = time.Second * 10
 	_apiHost               = "api.ivpn.net"
 	_updateHost            = "repo.ivpn.net"
 	_apiPathPrefix         = "v4"

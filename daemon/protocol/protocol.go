@@ -109,7 +109,7 @@ type Service interface {
 		rawResponse string,
 		err error)
 
-	SessionDelete() error
+	SessionDelete(isCanDeleteSessionLocally bool) error
 	RequestSessionStatus() (
 		apiCode int,
 		apiErrorMsg string,
@@ -712,7 +712,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p._service.ResetPreferences()
 		}
 
-		err := p._service.SessionDelete()
+		err := p._service.SessionDelete(req.IsCanDeleteSessionLocally)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break

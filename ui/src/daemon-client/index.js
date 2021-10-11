@@ -45,7 +45,7 @@ import store from "@/store";
 const PingServersTimeoutMs = 4000;
 const PingServersRetriesCnt = 4;
 
-const DefaultResponseTimeoutMs = 15 * 1000;
+const DefaultResponseTimeoutMs = 3 * 60 * 1000;
 
 // Socket to connect to a daemon
 let socket = new net.Socket();
@@ -217,6 +217,12 @@ function sendRecv(request, waitRespCommandsList, timeoutMs) {
     waitForCommandsList: waitRespCommandsList
   };
 
+  if (socket == null) {
+    return new Promise((resolve, reject) => {
+      reject(new Error("Error: Daemon is not connected"));
+    });
+  }
+
   let promise = addWaiter(waiter, timeoutMs);
 
   // send data
@@ -224,17 +230,7 @@ function sendRecv(request, waitRespCommandsList, timeoutMs) {
 
   return promise;
 }
-function commitNoSession() {
-  const session = {
-    AccountID: "",
-    Session: "",
-    WgPublicKey: "",
-    WgLocalIP: "",
-    WgKeyGenerated: new Date(),
-    WgKeysRegenIntervalSec: 0
-  };
-  commitSession(session);
-}
+
 function commitSession(sessionRespObj) {
   if (sessionRespObj == null) return;
   const session = {
@@ -636,11 +632,15 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
       // Save 'disconnected' state
       setConnState(DaemonConnectionType.NotConnected);
       log.debug("Connection closed");
+
+      socket = null;
     });
 
     socket.on("error", e => {
       log.error(`Connection error: ${e}`);
       reject(e);
+
+      socket = null;
     });
 
     log.debug("Connecting to daemon...");
@@ -653,18 +653,14 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
 }
 
 async function Login(accountID, force, captchaID, captcha, confirmation2FA) {
-  let resp = await sendRecv(
-    {
-      Command: daemonRequests.SessionNew,
-      AccountID: accountID,
-      ForceLogin: force,
-      CaptchaID: captchaID,
-      Captcha: captcha,
-      Confirmation2FA: confirmation2FA
-    },
-    null,
-    30000
-  );
+  let resp = await sendRecv({
+    Command: daemonRequests.SessionNew,
+    AccountID: accountID,
+    ForceLogin: force,
+    CaptchaID: captchaID,
+    Captcha: captcha,
+    Confirmation2FA: confirmation2FA
+  });
 
   if (resp.APIStatus === API_SUCCESS) commitSession(resp.Session);
 
@@ -673,27 +669,23 @@ async function Login(accountID, force, captchaID, captcha, confirmation2FA) {
   return resp;
 }
 
-async function Logout(needToResetSettings, needToDisableFirewall) {
+async function Logout(
+  needToResetSettings,
+  needToDisableFirewall,
+  isCanDeleteSessionLocally
+) {
+  await sendRecv({
+    Command: daemonRequests.SessionDelete,
+    NeedToResetSettings: needToResetSettings,
+    NeedToDisableFirewall: needToDisableFirewall,
+    IsCanDeleteSessionLocally: isCanDeleteSessionLocally
+  });
+
   store.commit("settings/isExpectedAccountToBeLoggedIn", false);
 
   if (needToResetSettings === true) {
     doResetSettings();
   }
-
-  try {
-    await sendRecv({
-      Command: daemonRequests.SessionDelete,
-      NeedToResetSettings: needToResetSettings,
-      NeedToDisableFirewall: needToDisableFirewall
-    });
-  } catch (e) {
-    console.error(e);
-  }
-
-  // It can happen that there will be no CONNECTION TO API or error on backend side
-  // In this case the daemon will not logout.
-  // Here we manually removing local session info
-  commitNoSession();
 }
 
 async function AccountStatus() {

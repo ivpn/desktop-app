@@ -105,11 +105,16 @@ export default {
       confirmation2FA
     );
   },
-  Logout: async (needToResetSettings, needToDisableFirewall) => {
+  Logout: async (
+    needToResetSettings,
+    needToDisableFirewall,
+    isCanDeleteSessionLocally
+  ) => {
     return await invoke(
       "renderer-request-logout",
       needToResetSettings,
-      needToDisableFirewall
+      needToDisableFirewall,
+      isCanDeleteSessionLocally
     );
   },
   AccountStatus: async () => {

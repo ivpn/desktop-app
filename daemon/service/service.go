@@ -1360,7 +1360,8 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	}()
 
 	// delete current session (if exists)
-	if err := s.SessionDelete(); err != nil {
+	isCanDeleteSessionLocally := true
+	if err := s.SessionDelete(isCanDeleteSessionLocally); err != nil {
 		log.Error("Creating new session -> Failed to delete active session: ", err)
 	}
 
@@ -1422,26 +1423,21 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 }
 
 // SessionDelete removes session info
-func (s *Service) SessionDelete() error {
-	return s.logOut(true)
+func (s *Service) SessionDelete(isCanDeleteSessionLocally bool) error {
+	sessionNeedToDeleteOnBackend := true
+	return s.logOut(sessionNeedToDeleteOnBackend, isCanDeleteSessionLocally)
 }
 
-func (s *Service) logOut(needToDeleteOnBackend bool) error {
-	var retErr error = nil
+// logOut performs log out from current session
+// 1) if 'sessionNeedToDeleteOnBackend' == false: the app not trying to make API request
+//	  the session info just erasing locally
+//    (this is useful for the situations when we already know that session is not available on backend anymore)
+// 2) if 'sessionNeedToDeleteOnBackend' == true (and 'isCanDeleteSessionLocally' == false): app is trying to make API request to logout correctly
+//	  in case if API request failed the function returns error (session keeps not logged out)
+// 3) if 'isCanDeleteSessionLocally' == true (and 'sessionNeedToDeleteOnBackend' == true): app is trying to make API request to logout correctly
+//	  in case if API request failed we just erasing session info locally (no errors returned)
 
-	// Temporary allow API server access (If Firewall is enabled)
-	// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
-	fwIsEnabled, _, _, _, fwIsAllowApiServers, _ := s.KillSwitchState()
-	if fwIsEnabled && !fwIsAllowApiServers {
-		s.SetKillSwitchAllowAPIServers(true)
-	}
-	defer func() {
-		if fwIsEnabled && !fwIsAllowApiServers {
-			// restore state for 'AllowAPIServers' configuration (previously, was enabled)
-			s.SetKillSwitchAllowAPIServers(false)
-		}
-	}()
-
+func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLocally bool) error {
 	// Disconnect (if connected)
 	s.Disconnect()
 
@@ -1451,26 +1447,42 @@ func (s *Service) logOut(needToDeleteOnBackend bool) error {
 	// stop WG keys rotation
 	s._wgKeysMgr.StopKeysRotation()
 
-	if needToDeleteOnBackend {
+	if sessionNeedToDeleteOnBackend {
+
+		// Temporary allow API server access (If Firewall is enabled)
+		// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
+		fwIsEnabled, _, _, _, fwIsAllowApiServers, _ := s.KillSwitchState()
+		if fwIsEnabled && !fwIsAllowApiServers {
+			s.SetKillSwitchAllowAPIServers(true)
+		}
+		defer func() {
+			if fwIsEnabled && !fwIsAllowApiServers {
+				// restore state for 'AllowAPIServers' configuration (previously, was enabled)
+				s.SetKillSwitchAllowAPIServers(false)
+			}
+		}()
+
 		session := s.Preferences().Session
 		if session.IsLoggedIn() {
 			log.Info("Logging out")
 			err := s._api.SessionDelete(session.Session)
 			if err != nil {
 				log.Info("Logging out error:", err)
-				retErr = err
-				return err // do not allow to logout if failed to delete session on backend
+				if !isCanDeleteSessionLocally {
+					return err // do not allow to logout if failed to delete session on backend
+				}
+			} else {
+				log.Info("Logging out: done")
 			}
-			log.Info("Logging out: done")
 		}
 	}
 
 	s._preferences.SetSession("", "", "", "", "", "", "")
+	log.Info("Logged out locally")
 
 	// notify clients about session update
 	s._evtReceiver.OnServiceSessionChanged()
-
-	return retErr
+	return nil
 }
 
 // RequestSessionStatus receives session status
@@ -1506,7 +1518,9 @@ func (s *Service) RequestSessionStatus() (
 		if apiCode == types.SessionNotFound {
 			// Logging out now
 			log.Info("Session not found. Logging out.")
-			s.logOut(false)
+			needToDeleteOnBackend := false
+			canLogoutOnlyLocally := true
+			s.logOut(needToDeleteOnBackend, canLogoutOnlyLocally)
 		}
 
 		// notify clients that account not active

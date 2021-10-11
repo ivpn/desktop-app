@@ -198,6 +198,9 @@ type SessionDelete struct {
 	CommandBase
 	NeedToResetSettings   bool
 	NeedToDisableFirewall bool
+	// If IsCanDeleteSessionLocally==true: the account will be logged out
+	// even if there is no connectivity to API server
+	IsCanDeleteSessionLocally bool
 }
 
 // AccountStatus get account status

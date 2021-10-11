@@ -64,8 +64,17 @@ ipcMain.handle(
 
 ipcMain.handle(
   "renderer-request-logout",
-  async (event, needToResetSettings, needToDisableFirewall) => {
-    return await client.Logout(needToResetSettings, needToDisableFirewall);
+  async (
+    event,
+    needToResetSettings,
+    needToDisableFirewall,
+    isCanDeleteSessionLocally
+  ) => {
+    return await client.Logout(
+      needToResetSettings,
+      needToDisableFirewall,
+      isCanDeleteSessionLocally
+    );
   }
 );
 

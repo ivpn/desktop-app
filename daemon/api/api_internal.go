@@ -121,9 +121,9 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string)
 
 		}
 		if lastErr != nil {
-			return nil, fmt.Errorf("Certificate check error: pinned certificate key not found: %w", lastErr)
+			return nil, fmt.Errorf("certificate check error: pinned certificate key not found: %w", lastErr)
 		}
-		return nil, fmt.Errorf("Certificate check error: pinned certificate key not found")
+		return nil, fmt.Errorf("certificate check error: pinned certificate key not found")
 	}
 }
 
@@ -191,7 +191,7 @@ func (a *API) doRequestUpdateHost(urlPath string, method string, contentType str
 	resp, e := client.Do(req)
 	if e != nil {
 		log.Warning("Failed to access " + _updateHost)
-		return resp, fmt.Errorf("Unable to access IVPN repo server: %w", e)
+		return resp, fmt.Errorf("unable to access IVPN repo server: %w", e)
 	}
 
 	return resp, nil
@@ -295,11 +295,11 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 		// save last good IP
 		a.SetLastGoodAlternateIP(isIPv6, ip)
 
-		log.Info(fmt.Sprintf("Success!"))
+		log.Info("Success!")
 		return resp, err
 	}
 
-	return nil, fmt.Errorf("Unable to access IVPN API server: %w", firstErr)
+	return nil, fmt.Errorf("unable to access IVPN API server: %w", firstErr)
 }
 
 func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int) (responseData []byte, err error) {
