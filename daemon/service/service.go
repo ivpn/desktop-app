@@ -1346,6 +1346,19 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	rawResponse string,
 	err error) {
 
+	// Temporary allow API server access (If Firewall is enabled)
+	// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
+	fwIsEnabled, _, _, _, fwIsAllowApiServers, _ := s.KillSwitchState()
+	if fwIsEnabled && !fwIsAllowApiServers {
+		s.SetKillSwitchAllowAPIServers(true)
+	}
+	defer func() {
+		if fwIsEnabled && !fwIsAllowApiServers {
+			// restore state for 'AllowAPIServers' configuration (previously, was enabled)
+			s.SetKillSwitchAllowAPIServers(false)
+		}
+	}()
+
 	// delete current session (if exists)
 	if err := s.SessionDelete(); err != nil {
 		log.Error("Creating new session -> Failed to delete active session: ", err)
@@ -1416,12 +1429,18 @@ func (s *Service) SessionDelete() error {
 func (s *Service) logOut(needToDeleteOnBackend bool) error {
 	var retErr error = nil
 
-	// If Firewall is enabled - enable ability to connect to IVPN API serves
+	// Temporary allow API server access (If Firewall is enabled)
 	// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
-	isEnabled, _, _, _, isAllowApiServers, _ := s.KillSwitchState()
-	if isEnabled && !isAllowApiServers {
+	fwIsEnabled, _, _, _, fwIsAllowApiServers, _ := s.KillSwitchState()
+	if fwIsEnabled && !fwIsAllowApiServers {
 		s.SetKillSwitchAllowAPIServers(true)
 	}
+	defer func() {
+		if fwIsEnabled && !fwIsAllowApiServers {
+			// restore state for 'AllowAPIServers' configuration (previously, was enabled)
+			s.SetKillSwitchAllowAPIServers(false)
+		}
+	}()
 
 	// Disconnect (if connected)
 	s.Disconnect()
@@ -1440,6 +1459,7 @@ func (s *Service) logOut(needToDeleteOnBackend bool) error {
 			if err != nil {
 				log.Info("Logging out error:", err)
 				retErr = err
+				return err // do not allow to logout if failed to delete session on backend
 			}
 			log.Info("Logging out: done")
 		}
