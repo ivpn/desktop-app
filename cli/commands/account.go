@@ -161,11 +161,11 @@ func doLogout(disableFirewall bool, resetAppSettingsToDefaults bool) error {
 		if fwstate.IsEnabled {
 			fmt.Println("The Firewall is enabled.  All network access will be blocked.")
 			fmt.Print("Do you want to turn Firewall off? [Yes/no]: ")
+
 			reader := bufio.NewReader(os.Stdin)
 			yn, _ := reader.ReadString('\n')
 			yn = strings.TrimSuffix(yn, "\n")
 			yn = strings.TrimSuffix(yn, "\r")
-
 			if yn == "" {
 				yn = "yes"
 				fmt.Println(yn)
@@ -179,9 +179,34 @@ func doLogout(disableFirewall bool, resetAppSettingsToDefaults bool) error {
 	}
 
 	// delete session
-	err = _proto.SessionDelete(disableFirewall, resetAppSettingsToDefaults)
+	isCanDeleteSessionLocally := false
+	err = _proto.SessionDelete(disableFirewall, resetAppSettingsToDefaults, isCanDeleteSessionLocally)
 	if err != nil {
-		return err
+		fmt.Println("Unable to contact server to log out. Please check Internet connectivity.")
+		fmt.Println("Doing force logout this device will continue to count towards your device limit.")
+		fmt.Print("Do you want to force log out? [yes/No]: ")
+
+		reader := bufio.NewReader(os.Stdin)
+		yn, _ := reader.ReadString('\n')
+		yn = strings.TrimSuffix(yn, "\n")
+		yn = strings.TrimSuffix(yn, "\r")
+		if yn == "" {
+			yn = "no"
+			fmt.Println(yn)
+		}
+		yn = strings.ToUpper(yn)
+
+		if yn != "Y" && yn != "YES" {
+			fmt.Println("Cancelled")
+			return nil
+		}
+
+		fmt.Println("Force logout...")
+		isCanDeleteSessionLocally := true
+		err = _proto.SessionDelete(disableFirewall, resetAppSettingsToDefaults, isCanDeleteSessionLocally)
+		if err != nil {
+			return err
+		}
 	}
 
 	fmt.Println("Logged out")

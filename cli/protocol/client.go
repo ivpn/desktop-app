@@ -63,7 +63,7 @@ func CreateClient(port int, secret uint64) *Client {
 	return &Client{
 		_port:           port,
 		_secret:         secret,
-		_defaultTimeout: time.Second * 30,
+		_defaultTimeout: time.Second * 60 * 3,
 		_receivers:      make(map[*receiverChannel]struct{})}
 }
 
@@ -135,12 +135,16 @@ func (c *Client) SessionNew(accountID string, forceLogin bool, the2FA string) (a
 }
 
 // SessionDelete remove session
-func (c *Client) SessionDelete(needToDisableFirewall, resetAppSettingsToDefaults bool) error {
+func (c *Client) SessionDelete(needToDisableFirewall, resetAppSettingsToDefaults, isCanDeleteSessionLocally bool) error {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
 
-	req := types.SessionDelete{NeedToDisableFirewall: needToDisableFirewall, NeedToResetSettings: resetAppSettingsToDefaults}
+	req := types.SessionDelete{
+		NeedToDisableFirewall:     needToDisableFirewall,
+		NeedToResetSettings:       resetAppSettingsToDefaults,
+		IsCanDeleteSessionLocally: isCanDeleteSessionLocally}
+
 	var resp types.EmptyResp
 
 	if err := c.sendRecv(&req, &resp); err != nil {
