@@ -26,6 +26,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -52,25 +54,36 @@ const (
 type Alias struct {
 	host string
 	path string
+	// If isArchDependent==true, the path will be updated: the "_<architecture>" will be added to filename
+	// (see 'DoRequestByAlias()' for details)
+	// Example:
+	//		The "updateInfo_macOS" on arm64 platform will use file "/macos/update_arm64.json" (NOT A "/macos/update.json")
+	isArchDependent bool
 }
 
 // APIAliases - aliases of API requests (can be requested by UI client)
+// NOTE: the aliases bellow are only for amd64 architecture!!!
+// If isArchDependent==true: Filename construction for non-amd64 architectures: filename_<architecture>.<extensions>
+// (see 'DoRequestByAlias()' for details)
+// Example:
+//		The "updateInfo_macOS" on arm64 platform will use file "/macos/update_arm64.json" (NOT A "/macos/update.json")
+
 var APIAliases = map[string]Alias{
 	"geo-lookup": {host: _apiHost, path: _geoLookupPath},
 
-	"updateInfo_Linux":   {host: _updateHost, path: "/stable/_update_info/update.json"},
-	"updateSign_Linux":   {host: _updateHost, path: "/stable/_update_info/update.json.sign.sha256.base64"},
-	"updateInfo_macOS":   {host: _updateHost, path: "/macos/update.json"},
-	"updateSign_macOS":   {host: _updateHost, path: "/macos/update.json.sign.sha256.base64"},
-	"updateInfo_Windows": {host: _updateHost, path: "/windows/update.json"},
-	"updateSign_Windows": {host: _updateHost, path: "/windows/update.json.sign.sha256.base64"},
+	"updateInfo_Linux":   {host: _updateHost, isArchDependent: true, path: "/stable/_update_info/update.json"},
+	"updateSign_Linux":   {host: _updateHost, isArchDependent: true, path: "/stable/_update_info/update.json.sign.sha256.base64"},
+	"updateInfo_macOS":   {host: _updateHost, isArchDependent: true, path: "/macos/update.json"},
+	"updateSign_macOS":   {host: _updateHost, isArchDependent: true, path: "/macos/update.json.sign.sha256.base64"},
+	"updateInfo_Windows": {host: _updateHost, isArchDependent: true, path: "/windows/update.json"},
+	"updateSign_Windows": {host: _updateHost, isArchDependent: true, path: "/windows/update.json.sign.sha256.base64"},
 
-	"updateInfo_manual_Linux":   {host: _updateHost, path: "/stable/_update_info/update_manual.json"},
-	"updateSign_manual_Linux":   {host: _updateHost, path: "/stable/_update_info/update_manual.json.sign.sha256.base64"},
-	"updateInfo_manual_macOS":   {host: _updateHost, path: "/macos/update_manual.json"},
-	"updateSign_manual_macOS":   {host: _updateHost, path: "/macos/update_manual.json.sign.sha256.base64"},
-	"updateInfo_manual_Windows": {host: _updateHost, path: "/windows/update_manual.json"},
-	"updateSign_manual_Windows": {host: _updateHost, path: "/windows/update_manual.json.sign.sha256.base64"},
+	"updateInfo_manual_Linux":   {host: _updateHost, isArchDependent: true, path: "/stable/_update_info/update_manual.json"},
+	"updateSign_manual_Linux":   {host: _updateHost, isArchDependent: true, path: "/stable/_update_info/update_manual.json.sign.sha256.base64"},
+	"updateInfo_manual_macOS":   {host: _updateHost, isArchDependent: true, path: "/macos/update_manual.json"},
+	"updateSign_manual_macOS":   {host: _updateHost, isArchDependent: true, path: "/macos/update_manual.json.sign.sha256.base64"},
+	"updateInfo_manual_Windows": {host: _updateHost, isArchDependent: true, path: "/windows/update_manual.json"},
+	"updateSign_manual_Windows": {host: _updateHost, isArchDependent: true, path: "/windows/update_manual.json.sign.sha256.base64"},
 }
 
 var log *logger.Logger
@@ -177,7 +190,7 @@ func (a *API) doSetAlternateIPs(IPv6 bool, IPs []string) error {
 		}
 	}
 
-	if isLastIPExists == false {
+	if !isLastIPExists {
 		if IPv6 {
 			a.lastGoodAlternateIPv6 = nil
 		} else {
@@ -210,9 +223,23 @@ func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 // DoRequestByAlias do API request (by API endpoint alias). Returns raw data of response
 func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.RequiredIPProtocol) (responseData []byte, err error) {
 	alias, ok := APIAliases[apiAlias]
-	if ok != true {
-		return nil, fmt.Errorf("Unexpected request alias")
+	if !ok {
+		return nil, fmt.Errorf("unexpected request alias")
 	}
+
+	if alias.isArchDependent {
+		// If isArchDependent==true, the path will be updated: the "_<architecture>" will be added to filename
+		// Example:
+		//		The "updateInfo_macOS" on arm64 platform will use file "/macos/update_arm64.json" (NOT A "/macos/update.json"!)
+		if runtime.GOARCH != "amd64" {
+			extIdx := strings.Index(alias.path, ".")
+			if extIdx > 0 {
+				newPath := alias.path[:extIdx] + "_" + runtime.GOARCH + alias.path[extIdx:]
+				alias.path = newPath
+			}
+		}
+	}
+
 	retData, retErr := a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0)
 	return retData, retErr
 }
