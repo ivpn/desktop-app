@@ -26,11 +26,13 @@ _SIGN_CERT=""
 _VERSION=""
 
 # reading version info from arguments
-while getopts ":v:c:" opt; do
+while getopts ":v:c:f:" opt; do
   case $opt in
     v) _VERSION="$OPTARG"
     ;;
     c) _SIGN_CERT="$OPTARG"
+    ;;
+    f) _PATH_DMG_FILE="$OPTARG"
     ;;
   esac
 done
@@ -42,7 +44,6 @@ if [ -z "${_VERSION}" ] || [ -z "${_SIGN_CERT}" ]; then
 fi
 
 _PATH_COMPILED_FOLDER=${_SCRIPT_DIR}/_compiled
-_PATH_DMG_FILE="${_PATH_COMPILED_FOLDER}/IVPN-"${_VERSION}".dmg"
 
 if [ ! -f ${_PATH_DMG_FILE} ]; then
   echo "ERROR: Unable to notarize. File not exists '${_PATH_DMG_FILE}'"

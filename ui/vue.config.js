@@ -12,6 +12,9 @@ module.exports = {
         // options placed here will be merged with default configuration and passed to electron-builder
 
         mac: {
+          // do not build DMG. We do not need it
+          "target": "dir",
+
           extendInfo: {
             // this section contains extendend elements to be added to Info.plist
             LSUIElement: 1, // ability to hide app icon from macOS dock
