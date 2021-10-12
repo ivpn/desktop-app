@@ -271,8 +271,14 @@ else
 fi
 # ============================== GENERATING DMG ==============================
 echo "[+] GENERATING DMG ..."
+
 _PATH_COMPILED_FOLDER=${_SCRIPT_DIR}/_compiled
+
 _PATH_DMG_FILE="${_PATH_COMPILED_FOLDER}/IVPN-"${_VERSION}".dmg"
+if [ ${_ARCH} != "x86_64" ]; then
+  _PATH_DMG_FILE="${_PATH_COMPILED_FOLDER}/IVPN-"${_VERSION}-${_ARCH}".dmg"
+fi
+
 _PATH_TMP_DMG_FILE="${_PATH_COMPILED_FOLDER}/ivpn.temp.dmg"
 
 _BACKGROUND_FILE="back.png"
@@ -350,7 +356,7 @@ if [ -z "${_SIGN_CERT}" ]; then
   echo "[!] WARNING! SIGNING CERTIFICATE NOT DEFINED"
   echo "             Notarization skipped!"
 else
-  ${_SCRIPT_DIR}/notarize_dmg.sh -c ${_SIGN_CERT} -v ${_VERSION}
+  ${_SCRIPT_DIR}/notarize_dmg.sh -c ${_SIGN_CERT} -v ${_VERSION} -f "${_PATH_DMG_FILE}"
   CheckLastResult "ERROR: NOTARIZATION FAILED!"
 fi
 
