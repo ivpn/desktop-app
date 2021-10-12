@@ -674,14 +674,22 @@ async function Logout(
   needToDisableFirewall,
   isCanDeleteSessionLocally
 ) {
-  await sendRecv({
-    Command: daemonRequests.SessionDelete,
-    NeedToResetSettings: needToResetSettings,
-    NeedToDisableFirewall: needToDisableFirewall,
-    IsCanDeleteSessionLocally: isCanDeleteSessionLocally
-  });
+  const isExpectedAccountToBeLoggedIn =
+    store.state.settings.isExpectedAccountToBeLoggedIn;
 
-  store.commit("settings/isExpectedAccountToBeLoggedIn", false);
+  try {
+    store.commit("settings/isExpectedAccountToBeLoggedIn", false);
+    await sendRecv({
+      Command: daemonRequests.SessionDelete,
+      NeedToResetSettings: needToResetSettings,
+      NeedToDisableFirewall: needToDisableFirewall,
+      IsCanDeleteSessionLocally: isCanDeleteSessionLocally
+    });
+  } catch (e) {
+    if (isExpectedAccountToBeLoggedIn)
+      store.commit("settings/isExpectedAccountToBeLoggedIn", true);
+    throw e;
+  }
 
   if (needToResetSettings === true) {
     doResetSettings();
