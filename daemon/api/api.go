@@ -38,7 +38,8 @@ import (
 
 // API URLs
 const (
-	_defaultRequestTimeout = time.Second * 10
+	_defaultRequestTimeout = time.Second * 10 // full request time (for each request)
+	_defaultDialTimeout    = time.Second * 5  // time for the dial to the API server (for each request)
 	_apiHost               = "api.ivpn.net"
 	_updateHost            = "repo.ivpn.net"
 	_apiPathPrefix         = "v4"
@@ -240,7 +241,8 @@ func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.Req
 		}
 	}
 
-	retData, retErr := a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0)
+	retData, retErr := a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0, 0)
+
 	return retData, retErr
 }
 
@@ -266,7 +268,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool, 
 		Captcha:         captcha,
 		Confirmation2FA: confirmation2FA}
 
-	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, 0)
+	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, 0, 0)
 	if err != nil {
 		return nil, nil, nil, rawResponse, err
 	}
@@ -308,7 +310,7 @@ func (a *API) SessionStatus(session string) (
 
 	request := &types.SessionStatusRequest{Session: session}
 
-	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionStatusPath, "POST", "application/json", request, 0)
+	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionStatusPath, "POST", "application/json", request, 0, 0)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -371,7 +373,7 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 func (a *API) GeoLookup(timeoutMs int) (location *types.GeoLookupResponse, err error) {
 	resp := &types.GeoLookupResponse{}
 
-	if err := a.requestEx("", _geoLookupPath, "GET", "", nil, resp, timeoutMs); err != nil {
+	if err := a.requestEx("", _geoLookupPath, "GET", "", nil, resp, timeoutMs, 0); err != nil {
 		return nil, err
 	}
 
