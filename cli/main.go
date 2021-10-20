@@ -28,11 +28,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"text/tabwriter"
 
+	"github.com/ivpn/desktop-app/cli/cliplatform"
 	"github.com/ivpn/desktop-app/cli/commands"
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/cli/protocol"
@@ -93,7 +93,7 @@ func main() {
 	addCommand(&commands.CmdDisconnect{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
-	if runtime.GOOS == "windows" {
+	if cliplatform.IsMultiHopSupported() {
 		// Split tunnel functionality is currently only available on Windows
 		addCommand(&commands.SplitTun{})
 	}
