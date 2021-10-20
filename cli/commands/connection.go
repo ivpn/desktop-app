@@ -134,7 +134,7 @@ func (c *CmdConnect) Init() {
 	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy")
 	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy")
 
-	c.StringVar(&c.multihopExitSvr, "exit_svr", "", "LOCATION", "OpenVPN only: Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
+	c.StringVar(&c.multihopExitSvr, "exit_svr", "", "LOCATION", "Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
 
 	c.BoolVar(&c.firewallOff, "fw_off", false, "Do not enable firewall for this connection\n(has effect only if Firewall not enabled before)")
 
