@@ -156,7 +156,7 @@ export default {
       return this.$store.state.settings.vpnType === VpnTypeEnum.OpenVPN;
     },
     isMultihopAllowed: function() {
-      return this.isOpenVPN && this.$store.getters["account/isMultihopAllowed"];
+      return this.$store.getters["account/isMultihopAllowed"];
     },
     port: function() {
       // needed for watcher

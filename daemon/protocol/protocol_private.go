@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/version"
@@ -261,10 +262,11 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 
 	} else if vpn.Type(r.VpnType) == vpn.WireGuard {
 		hosts := r.WireGuardParameters.EntryVpnServer.Hosts
+		multihopExitHosts := r.WireGuardParameters.MultihopExitServer.Hosts
 
 		// filter hosts: use IPv6 hosts
 		if r.IPv6 {
-			ipv6Hosts := append(hosts[:0:0], hosts...)
+			ipv6Hosts := append(hosts[0:0], hosts...)
 			n := 0
 			for _, h := range ipv6Hosts {
 				if h.IPv6.LocalIP != "" {
@@ -280,7 +282,46 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 				hosts = ipv6Hosts[:n]
 			}
 		}
+
+		// filter exit servers (Multi-Hop connection):
+		// 1) each exit server must have initialized 'multihop_port' field
+		// 2) (in case of IPv6Only) IPv6 local address should be defined
+		if len(multihopExitHosts) > 0 {
+			isHasMHPort := false
+			ipv6ExitHosts := append(multihopExitHosts[0:0], multihopExitHosts...)
+			n := 0
+			for _, h := range ipv6ExitHosts {
+				if h.MultihopPort == 0 {
+					continue
+				}
+				isHasMHPort = true
+				if r.IPv6 && h.IPv6.LocalIP == "" {
+					continue
+				}
+
+				ipv6ExitHosts[n] = h
+				n++
+			}
+			if n == 0 {
+				if !isHasMHPort {
+					return fmt.Errorf("unable to make Multi-Hop connection inside tunnel. Exit server does not support Multi-Hop")
+				}
+				if r.IPv6Only {
+					return fmt.Errorf("unable to make IPv6 Multi-Hop connection inside tunnel. Exit server does not support IPv6")
+				}
+			} else {
+				multihopExitHosts = ipv6ExitHosts[:n]
+			}
+		}
+
 		hostValue := hosts[rand.Intn(len(hosts))]
+
+		var exitHostValue *apitypes.WireGuardServerHostInfo
+		if len(multihopExitHosts) > 0 {
+			exitHostValue = &multihopExitHosts[rand.Intn(len(multihopExitHosts))]
+		}
+		// only one-line parameter is allowed
+		multihopExitSrvID := strings.Split(r.WireGuardParameters.MultihopExitServer.ExitSrvID, "\n")[0]
 
 		// prevent user-defined data injection: ensure that nothing except the base64 public key will be stored in the configuration
 		if !helpers.ValidateBase64(hostValue.PublicKey) {
@@ -293,12 +334,26 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 			ipv6Prefix = strings.Split(hostValue.IPv6.LocalIP, "/")[0]
 		}
 
-		connectionParams := wireguard.CreateConnectionParams(
-			r.WireGuardParameters.Port.Port,
-			net.ParseIP(hostValue.Host),
-			hostValue.PublicKey,
-			hostLocalIP,
-			ipv6Prefix)
+		var connectionParams wireguard.ConnectionParams
+		if exitHostValue != nil && len(multihopExitSrvID) > 0 {
+			// Multi-Hop
+			connectionParams = wireguard.CreateConnectionParams(
+				multihopExitSrvID,
+				exitHostValue.MultihopPort,
+				net.ParseIP(hostValue.Host),
+				exitHostValue.PublicKey,
+				hostLocalIP,
+				ipv6Prefix)
+		} else {
+			// Single-Hop
+			connectionParams = wireguard.CreateConnectionParams(
+				"",
+				r.WireGuardParameters.Port.Port,
+				net.ParseIP(hostValue.Host),
+				hostValue.PublicKey,
+				hostLocalIP,
+				ipv6Prefix)
+		}
 
 		return p._service.ConnectWireGuard(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
 

@@ -1026,6 +1026,10 @@ async function Connect(entryServer, exitServer) {
 
     let port = store.getters["settings/getPort"];
 
+    let multihopExitSrvID = settings.isMultiHop
+      ? settings.serverExit.gateway.split(".")[0]
+      : "";
+
     if (settings.vpnType === VpnTypeEnum.OpenVPN) {
       vpnParamsPropName = "OpenVpnParameters";
 
@@ -1033,9 +1037,7 @@ async function Connect(entryServer, exitServer) {
         EntryVpnServer: {
           ip_addresses: settings.serverEntry.ip_addresses
         },
-        MultihopExitSrvID: settings.isMultiHop
-          ? settings.serverExit.gateway.split(".")[0]
-          : "",
+        MultihopExitSrvID: multihopExitSrvID,
 
         Port: {
           Port: port.port,
@@ -1064,6 +1066,13 @@ async function Connect(entryServer, exitServer) {
         EntryVpnServer: {
           Hosts: settings.serverEntry.hosts
         },
+
+        MultihopExitServer: settings.isMultiHop
+          ? {
+              ExitSrvID: multihopExitSrvID,
+              Hosts: settings.serverExit.hosts
+            }
+          : null,
 
         Port: {
           Port: port.port

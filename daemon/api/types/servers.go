@@ -29,11 +29,12 @@ type WireGuardServerHostInfoIPv6 struct {
 
 // WireGuardServerHostInfo contains info about WG server host
 type WireGuardServerHostInfo struct {
-	Hostname  string                      `json:"hostname"`
-	Host      string                      `json:"host"`
-	PublicKey string                      `json:"public_key"`
-	LocalIP   string                      `json:"local_ip"`
-	IPv6      WireGuardServerHostInfoIPv6 `json:"ipv6"`
+	Hostname     string                      `json:"hostname"`
+	Host         string                      `json:"host"`
+	PublicKey    string                      `json:"public_key"`
+	LocalIP      string                      `json:"local_ip"`
+	IPv6         WireGuardServerHostInfoIPv6 `json:"ipv6"`
+	MultihopPort int                         `json:"multihop_port"`
 }
 
 // WireGuardServerInfo contains all info about WG server
