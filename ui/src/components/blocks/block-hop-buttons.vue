@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="isOpenVPN" class="hopButtons">
+    <div class="hopButtons">
       <div />
       <button
         class="hopButton"
@@ -32,14 +32,10 @@
 <script>
 const sender = window.ipcSender;
 
-import { VpnStateEnum, VpnTypeEnum } from "@/store/types";
+import { VpnStateEnum } from "@/store/types";
 
 export default {
-  computed: {
-    isOpenVPN: function() {
-      return this.$store.state.settings.vpnType === VpnTypeEnum.OpenVPN;
-    }
-  },
+  computed: {},
 
   methods: {
     ChangeHop(isMultihop) {

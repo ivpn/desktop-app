@@ -50,6 +50,11 @@ type ConnectionParams struct {
 	hostPublicKey    string
 	hostLocalIP      net.IP
 	ipv6Prefix       string
+
+	// multihopExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
+	// in same manner as for OpenVPN connection.
+	// Example: "gateway":"zz.wg.ivpn.net" => "zz"
+	multihopExitSrvID string
 }
 
 func (cp *ConnectionParams) GetIPv6ClientLocalIP() net.IP {
@@ -73,6 +78,7 @@ func (cp *ConnectionParams) SetCredentials(privateKey string, localIP net.IP) {
 
 // CreateConnectionParams initializing connection parameters object
 func CreateConnectionParams(
+	multihopExitSrvID string,
 	hostPort int,
 	hostIP net.IP,
 	hostPublicKey string,
@@ -80,11 +86,12 @@ func CreateConnectionParams(
 	ipv6Prefix string) ConnectionParams {
 
 	return ConnectionParams{
-		hostPort:      hostPort,
-		hostIP:        hostIP,
-		hostPublicKey: hostPublicKey,
-		hostLocalIP:   hostLocalIP,
-		ipv6Prefix:    ipv6Prefix}
+		multihopExitSrvID: multihopExitSrvID,
+		hostPort:          hostPort,
+		hostIP:            hostIP,
+		hostPublicKey:     hostPublicKey,
+		hostLocalIP:       hostLocalIP,
+		ipv6Prefix:        ipv6Prefix}
 }
 
 // WireGuard structure represents all data of wireguard connection
@@ -238,7 +245,8 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
 	const isTCP = false
 	const isCanPause = true
-	stateChan <- vpn.NewStateInfoConnected(
+
+	si := vpn.NewStateInfoConnected(
 		isTCP,
 		wg.connectParams.clientLocalIP,
 		wg.connectParams.GetIPv6ClientLocalIP(),
@@ -246,6 +254,10 @@ func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
 		wg.connectParams.hostIP,
 		wg.connectParams.hostPort,
 		isCanPause)
+
+	si.ExitServerID = wg.connectParams.multihopExitSrvID
+
+	stateChan <- si
 }
 
 func (wg *WireGuard) OnRoutingChanged() error {

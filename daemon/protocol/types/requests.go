@@ -147,6 +147,14 @@ type Connect struct {
 		EntryVpnServer struct {
 			Hosts []types.WireGuardServerHostInfo
 		}
+
+		MultihopExitServer struct {
+			// ExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
+			// in same manner as for OpenVPN connection.
+			// Example: "gateway":"zz.wg.ivpn.net" => "zz"
+			ExitSrvID string
+			Hosts     []types.WireGuardServerHostInfo
+		}
 	}
 
 	OpenVpnParameters struct {
@@ -154,6 +162,7 @@ type Connect struct {
 			IPAddresses []string `json:"ip_addresses"`
 		}
 
+		// MultihopExitSrvID example: "gateway":"zz.wg.ivpn.net" => "zz"
 		MultihopExitSrvID string
 		ProxyType         string
 		ProxyAddress      string

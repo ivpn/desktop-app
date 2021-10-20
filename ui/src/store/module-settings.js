@@ -161,12 +161,9 @@ export default {
     },
     vpnType(state, val) {
       state.vpnType = val;
-      if (state.vpnType !== VpnTypeEnum.OpenVPN) state.isMultiHop = false;
     },
     isMultiHop(state, isMH) {
-      if (state.vpnType === VpnTypeEnum.OpenVPN) {
-        state.isMultiHop = isMH;
-      } else state.isMultiHop = false;
+      state.isMultiHop = isMH;
     },
     serverEntry(state, srv) {
       if (srv == null || srv.gateway == null)
