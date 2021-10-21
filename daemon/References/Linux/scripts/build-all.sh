@@ -60,6 +60,18 @@ else
   echo "obfs4proxy already compiled. Skipping build."
 fi
 
+# check if we need to compile wireguard-tools
+if [[ ! -f "../_deps/wireguard-tools_inst/wg-quick" ]] || [[ ! -f "../_deps/wireguard-tools_inst/wg" ]]
+then
+  echo "======================================================"
+  echo "========== Compiling wireguard-tools ================="
+  echo "======================================================"
+  cd $SCRIPT_DIR
+  ./build-wireguard-tools.sh
+else
+  echo "wireguard-tools already compiled. Skipping build."
+fi
+
 # updating servers.json
 cd $SCRIPT_DIR
 ./update-servers.sh

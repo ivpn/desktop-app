@@ -40,6 +40,9 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	
 	obfsproxyStartScript = path.Join(installDir, "obfsproxy/obfs4proxy")
 
+	wgBinaryPath = path.Join(installDir, "wireguard-tools/wg-quick")
+	wgToolBinaryPath = path.Join(installDir, "wireguard-tools/wg")
+
 	settingsFile = path.Join(tmpDir, "settings.json")
 	openvpnConfigFile = path.Join(tmpDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(tmpDir, "proxyauth.txt")

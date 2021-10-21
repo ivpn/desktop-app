@@ -107,12 +107,20 @@ echo "Preparing service..."
 fpm -v $VERSION -n ivpn-service -s pleaserun -t dir --deb-no-default-config-files /usr/bin/ivpn-service
 
 OBFSPXY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/obfs4proxy_inst/obfs4proxy
-if [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ]
+WG_QUICK_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg-quick
+WG_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg
+
+if [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ] || [ "$(find ${WG_QUICK_BIN} -perm 755)" != "${WG_QUICK_BIN}" ] || [ "$(find ${WG_BIN} -perm 755)" != "${WG_BIN}" ]
 then
   echo ----------------------------------------------------------
-  echo "Going to change access mode for '${OBFSPXY_BIN}' binary to 755"
+  echo "Going to change access mode to 755 for binaries:"
+  echo "  - ${OBFSPXY_BIN}"
+  echo "  - ${WG_QUICK_BIN}"
+  echo "  - ${WG_BIN}"
   echo "(you may be asked for credentials for 'sudo')"
   sudo chmod 755 ${OBFSPXY_BIN}
+  sudo chmod 755 ${WG_QUICK_BIN}
+  sudo chmod 755 ${WG_BIN}
   echo ----------------------------------------------------------
 fi
 
@@ -159,9 +167,11 @@ CreatePackage()
     --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
     --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
     $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
-    $DAEMON_REPO_ABS_PATH/References/Linux/_deps/obfs4proxy_inst/obfs4proxy=/opt/ivpn/obfsproxy/obfs4proxy \
     $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/bin/ \
     $OUT_DIR/ivpn=/usr/bin/ \
+    $OBFSPXY_BIN=/opt/ivpn/obfsproxy/obfs4proxy \
+    $WG_QUICK_BIN=/opt/ivpn/wireguard-tools/wg-quick \
+    $WG_BIN=/opt/ivpn/wireguard-tools/wg \
     $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
 }
 
