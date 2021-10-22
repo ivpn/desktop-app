@@ -708,14 +708,16 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p._service.SetKillSwitchIsPersistent(false)
 			p._service.SetKillSwitchState(false)
 		}
-		if req.NeedToResetSettings {
-			p._service.ResetPreferences()
-		}
 
 		err := p._service.SessionDelete(req.IsCanDeleteSessionLocally)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
+		}
+
+		if req.NeedToResetSettings {
+			// Reset settings only after SessionDelete() to correctly logout on the backed
+			p._service.ResetPreferences()
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
