@@ -1485,6 +1485,14 @@ func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLo
 	return nil
 }
 
+func (s *Service) OnSessionNotFound() {
+	// Logging out now
+	log.Info("Session not found. Logging out.")
+	needToDeleteOnBackend := false
+	canLogoutOnlyLocally := true
+	s.logOut(needToDeleteOnBackend, canLogoutOnlyLocally)
+}
+
 // RequestSessionStatus receives session status
 func (s *Service) RequestSessionStatus() (
 	apiCode int,
@@ -1516,11 +1524,7 @@ func (s *Service) RequestSessionStatus() (
 
 		// Session not found - can happens when user forced to logout from another device
 		if apiCode == types.SessionNotFound {
-			// Logging out now
-			log.Info("Session not found. Logging out.")
-			needToDeleteOnBackend := false
-			canLogoutOnlyLocally := true
-			s.logOut(needToDeleteOnBackend, canLogoutOnlyLocally)
+			s.OnSessionNotFound()
 		}
 
 		// notify clients that account not active

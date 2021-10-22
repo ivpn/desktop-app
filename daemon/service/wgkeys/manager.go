@@ -23,11 +23,13 @@
 package wgkeys
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/api"
+	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
@@ -49,6 +51,7 @@ type IWgKeysChangeReceiver interface {
 	Connected() bool
 	ConnectedType() (isConnected bool, connectedVpnType vpn.Type)
 	IsConnectivityBlocked() (isBlocked bool, reasonDescription string, err error)
+	OnSessionNotFound()
 }
 
 // CreateKeysManager create WireGuard keys manager
@@ -238,6 +241,14 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 			m.service.WireGuardSaveNewKeys("", "", "")
 		}
 		log.Info("WG keys not updated: ", err)
+
+		var e types.APIError
+		if errors.As(err, &e) {
+			if e.ErrorCode == types.SessionNotFound {
+				m.service.OnSessionNotFound()
+				return fmt.Errorf("WG keys not updated (session not found)")
+			}
+		}
 		return fmt.Errorf("WG keys not updated. Please check your internet connection")
 	}
 
