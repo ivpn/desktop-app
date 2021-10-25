@@ -89,7 +89,16 @@ export function InitTray(
           }
         });
 
-        const f = path.join(path.dirname(__dirname), "tray", "windows") + "\\";
+        let f = path.join(path.dirname(__dirname), "tray", "windows", "/");
+        if (process.env.IS_DEBUG) {
+          f = path.join(
+            path.dirname(__dirname),
+            "public",
+            "tray",
+            "windows",
+            "/"
+          );
+        }
 
         iconConnected = nativeImage.createFromPath(f + "connected.ico");
         iconDisconnected = nativeImage.createFromPath(f + "disconnected.ico");

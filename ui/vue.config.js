@@ -13,7 +13,7 @@ module.exports = {
 
         mac: {
           // do not build DMG. We do not need it
-          "target": "dir",
+          target: "dir",
 
           extendInfo: {
             // this section contains extendend elements to be added to Info.plist
@@ -23,6 +23,9 @@ module.exports = {
         },
 
         win: {
+          // do not build exe installer. We do not need it
+          target: "dir",
+
           extraResources: [
             {
               from: "public/tray/windows",
