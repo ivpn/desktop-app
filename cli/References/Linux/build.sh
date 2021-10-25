@@ -155,6 +155,20 @@ CreatePackage()
   #   after_remove
   #
   # NOTE! 'remove' scripts is using from old version!
+  #
+  # EXAMPLES:
+  #
+  # DEB (apt) Install/Upgrade 3.3.20->3.3.30:
+  #   [*] Before remove (3.3.20 : deb : upgrade)
+  #   [*] Before install (3.3.30 : deb : upgrade)
+  #   [*] After remove (3.3.20 : deb : upgrade)
+  #   [*] After install (3.3.30 : deb : configure)
+  #
+  # RPM (dnf) upgrade:
+  #   NEW: before install (2)
+  #   NEW: after install (2)
+  #   OLD: before remove (1)
+  #   OLD: after remove (1)
 
   fpm -d openvpn $EXTRA_ARGS \
     --rpm-rpmbuild-define "_build_id_links none" \
