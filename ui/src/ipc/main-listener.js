@@ -245,7 +245,6 @@ ipcMain.on("renderer-request-ui-color-scheme-get", event => {
 });
 ipcMain.handle("renderer-request-ui-color-scheme-set", (event, theme) => {
   store.dispatch("settings/colorTheme", theme);
-  nativeTheme.themeSource = theme;
 });
 
 // DIALOG

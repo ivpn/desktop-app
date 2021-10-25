@@ -45,6 +45,7 @@ SentryInit();
 import "./ipc/main-listener";
 
 import store from "@/store";
+import { AutoLaunchSet } from "@/auto-launch";
 import { DaemonConnectionType, ColorTheme } from "@/store/types";
 import daemonClient from "./daemon-client";
 import darwinDaemonInstaller from "./daemon-client/darwin-installer";
@@ -345,6 +346,20 @@ if (gotTheLock) {
   store.subscribe(mutation => {
     try {
       switch (mutation.type) {
+        case "settings/resetToDefaults":
+          try {
+            updateAppDockVisibility();
+            nativeTheme.themeSource = store.state.settings.colorTheme;
+            AutoLaunchSet(false);
+          } catch (e) {
+            console.debug("Failed to reset settings to defaults: " + e);
+          }
+          break;
+
+        case "settings/colorTheme":
+          nativeTheme.themeSource = store.state.settings.colorTheme;
+          break;
+
         case "vpnState/currentWiFiInfo":
           // if wifi
           if (

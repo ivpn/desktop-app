@@ -1307,6 +1307,7 @@ func (s *Service) Preferences() preferences.Preferences {
 
 func (s *Service) ResetPreferences() error {
 	s._preferences = *preferences.Create()
+	s.SplitTunnelling_SetConfig(false, []string{})
 	return nil
 }
 

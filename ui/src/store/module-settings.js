@@ -106,7 +106,7 @@ const getDefaultState = () => {
     minimizeToTray: true,
     showAppInSystemDock: false,
     serversSortType: ServersSortTypeEnum.City,
-    colorTheme: ColorTheme.default,
+    colorTheme: ColorTheme.system,
     connectSelectedMapLocation: false,
     windowRestorePosition: null, // {x=xxx, y=xxx}
 
@@ -142,9 +142,7 @@ export default {
     },
 
     resetToDefaults(state) {
-      var defaultState = getDefaultState();
-      defaultState.showAppInSystemDock = state.showAppInSystemDock;
-      Object.assign(state, defaultState);
+      Object.assign(state, getDefaultState());
     },
 
     settingsSessionUUID(state, val) {
