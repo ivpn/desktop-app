@@ -72,9 +72,11 @@
             IP Address
           </div>
 
-          <div class="flexRow" style="overflow: hidden;" >
-            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                {{ ip }}
+          <div class="flexRow" style="overflow: hidden;">
+            <div
+              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+            >
+              {{ ip }}
             </div>
 
             <div style="vertical-align:top">

@@ -31,13 +31,13 @@ export default {
     currentSettingsViewName: null, // 'account', 'general', 'version' ...
 
     isIPv6View: false,
-    
+
     //{
     //  state: AppUpdaterStageEnum.Downloading,
     //  error: null,
     //  readyToInstallBinary: "",
     //  readyToInstallSignatureFile: "",
-    //  downloadStatus: { 
+    //  downloadStatus: {
     //    contentLength: 0,
     //    downloaded:    0
     //  }

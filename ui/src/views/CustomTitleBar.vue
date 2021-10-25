@@ -1,6 +1,7 @@
 <template>
   <div class="titleBar" v-show="!isWindowHasFrame">
-    <button style="margin-top: 1px"
+    <button
+      style="margin-top: 1px"
       v-if="minimizable"
       class="noBordersBtn winBtns winBtnMinimize"
       v-on:click="onMinimize()"
@@ -10,7 +11,8 @@
       </svg>
     </button>
 
-    <button style="margin-top: 1px; margin-right: 1px"
+    <button
+      style="margin-top: 1px; margin-right: 1px"
       v-if="closable"
       class="noBordersBtn winBtns winBtnClose"
       v-on:click="onClose()"
