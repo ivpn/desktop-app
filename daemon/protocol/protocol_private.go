@@ -225,8 +225,8 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		// PARAMETERS VALIDATION
 		// parsing hosts
 		var hosts []net.IP
-		for _, v := range r.OpenVpnParameters.EntryVpnServer.IPAddresses {
-			hosts = append(hosts, net.ParseIP(v))
+		for _, v := range r.OpenVpnParameters.EntryVpnServer.Hosts {
+			hosts = append(hosts, net.ParseIP(v.Host))
 		}
 		if len(hosts) < 1 {
 			return fmt.Errorf("VPN host not defined")

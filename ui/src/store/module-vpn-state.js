@@ -104,8 +104,9 @@ export default {
               local_ip: "",
               ipv6: 
               {                        
-                "local_ip": "",
-                "host": ""
+                local_ip: "",
+                host: "",
+                multihop_port: 0
               }
             }
           ]
@@ -122,7 +123,13 @@ export default {
           ping: ??? // property added after receiving ping info from daemon
           pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon
           
-          ip_addresses: [""]
+          hosts: [
+            {
+              hostname: "",
+              host: "",
+              multihop_port: 0
+            }
+          ]
         }
       ],
       config: {
@@ -381,13 +388,10 @@ function findServerByIp(servers, ip) {
     const srv = servers[i];
 
     if (srv.hosts != null) {
-      // wireguard server
+      // wireguard/openvpn server
       for (let j = 0; j < srv.hosts.length; j++) {
         if (srv.hosts[j].host === ip) return srv;
       }
-    } else if (srv.ip_addresses !== null) {
-      // openvpn server
-      if (srv.ip_addresses.includes(ip)) return srv;
     }
   }
   return null;
@@ -423,7 +427,7 @@ function updateServersPings(state, pings) {
     return PingQuality.Bad;
   }
 
-  state.servers.wireguard.forEach(s => {
+  let funcGetPing = function(s) {
     for (let i = 0; i < s.hosts.length; i++) {
       let pingValFoHost = hashedPings[s.hosts[i].host];
       if (pingValFoHost != null) {
@@ -432,17 +436,14 @@ function updateServersPings(state, pings) {
         break;
       }
     }
+  };
+
+  state.servers.wireguard.forEach(s => {
+    funcGetPing(s);
   });
 
   state.servers.openvpn.forEach(s => {
-    for (let i = 0; i < s.ip_addresses.length; i++) {
-      let pingValFoHost = hashedPings[s.ip_addresses[i]];
-      if (pingValFoHost != null) {
-        s.ping = pingValFoHost;
-        s.pingQuality = getPingQuality(s.ping);
-        break;
-      }
-    }
+    funcGetPing(s);
   });
 }
 

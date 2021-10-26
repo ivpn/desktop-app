@@ -1031,10 +1031,11 @@ func (s *Service) getHostsToPing(currentLocation *types.GeoLookupResponse) ([]ne
 
 	// OpenVPN servers
 	for _, s := range servers.OpenvpnServers {
-		if len(s.IPAddresses) <= 0 {
+		if len(s.Hosts) <= 0 {
 			continue
 		}
-		ip := net.ParseIP(s.IPAddresses[0])
+
+		ip := net.ParseIP(s.Hosts[0].Host)
 		if ip != nil {
 			hosts = append(hosts, hostInfo{Latitude: s.Latitude, Longitude: s.Longitude, host: ip})
 		}

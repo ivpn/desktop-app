@@ -159,7 +159,7 @@ type Connect struct {
 
 	OpenVpnParameters struct {
 		EntryVpnServer struct {
-			IPAddresses []string `json:"ip_addresses"`
+			Hosts []types.OpenVPNServerHostInfo
 		}
 
 		// MultihopExitSrvID example: "gateway":"zz.wg.ivpn.net" => "zz"

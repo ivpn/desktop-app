@@ -1035,7 +1035,7 @@ async function Connect(entryServer, exitServer) {
 
       vpnParamsObj = {
         EntryVpnServer: {
-          ip_addresses: settings.serverEntry.ip_addresses
+          Hosts: settings.serverEntry.hosts
         },
         MultihopExitSrvID: multihopExitSrvID,
 

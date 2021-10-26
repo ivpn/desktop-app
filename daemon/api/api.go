@@ -42,8 +42,8 @@ const (
 	_defaultDialTimeout    = time.Second * 5  // time for the dial to the API server (for each request)
 	_apiHost               = "api.ivpn.net"
 	_updateHost            = "repo.ivpn.net"
+	_serversPath           = "v5/servers.json"
 	_apiPathPrefix         = "v4"
-	_serversPath           = _apiPathPrefix + "/servers.json"
 	_sessionNewPath        = _apiPathPrefix + "/session/new"
 	_sessionStatusPath     = _apiPathPrefix + "/session/status"
 	_sessionDeletePath     = _apiPathPrefix + "/session/delete"

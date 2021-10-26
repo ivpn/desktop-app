@@ -473,7 +473,7 @@ func (c *CmdConnect) Run() (retError error) {
 
 				serverFound = true
 				req.VpnType = vpn.OpenVPN
-				req.OpenVpnParameters.EntryVpnServer.IPAddresses = s.IPAddresses
+				req.OpenVpnParameters.EntryVpnServer.Hosts = s.Hosts
 
 				// port
 				destPort, err = getPort(vpn.OpenVPN, c.port)

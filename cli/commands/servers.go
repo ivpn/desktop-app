@@ -180,9 +180,10 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 		ret = make([]serverDesc, 0, len(servers.OpenvpnServers))
 
 		for _, s := range servers.OpenvpnServers {
-			hosts := make(map[string]struct{}, len(s.IPAddresses))
-			for _, h := range s.IPAddresses {
-				hosts[strings.ToLower(strings.TrimSpace(h))] = struct{}{}
+			hosts := make(map[string]struct{}, len(s.Hosts))
+
+			for _, h := range s.Hosts {
+				hosts[strings.ToLower(strings.TrimSpace(h.Host))] = struct{}{}
 			}
 			ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 		}

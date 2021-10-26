@@ -510,10 +510,10 @@ function updateSelectedServers(context) {
 
   // HELPER FUNCTIONS
   function getVpnServerType(server) {
-    if (server == null) return null;
-    if (server.hosts != null) return VpnTypeEnum.WireGuard;
-    if (server.ip_addresses != null) return VpnTypeEnum.OpenVPN;
-    return null;
+    if (!server) return null;
+    if (!server.hosts) return null;
+    if (server.hosts.public_key != null) return VpnTypeEnum.WireGuard;
+    return VpnTypeEnum.OpenVPN;
   }
   function findServerFromLocation(servers, countryCode, city) {
     let retServerByCountry = null;
