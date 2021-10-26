@@ -122,7 +122,7 @@ type CmdConnect struct {
 }
 
 func (c *CmdConnect) Init() {
-	c.Initialize("connect", "Establish new VPN connection\nLOCATION can be a mask for filtering servers (see 'servers' command)")
+	c.Initialize("connect", "Establish new VPN connection\nLOCATION can be a mask for filtering servers or full hostname (see 'servers' command)")
 	c.DefaultStringVar(&c.gateway, "LOCATION")
 
 	c.StringVar(&c.port, "port", "", "PROTOCOL:PORT", fmt.Sprintf("Port to connect to (default: %s - OpenVPN, %s - WireGuard)\nOpenVPN: %s\nWireGuard: %s",
@@ -262,12 +262,12 @@ func (c *CmdConnect) Run() (retError error) {
 			fmt.Println("WARNING: filtering flags are ignored for Multi-Hop connection [exit_svr]")
 		}
 
-		entrySvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, false, false, false, false, false)
+		entrySvrs, _ := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, false, false, false, false, false)
 		if len(entrySvrs) == 0 || len(entrySvrs) > 1 {
 			return flags.BadParameter{Message: "specify correct entry server ID for multi-hop connection"}
 		}
 
-		exitSvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multihopExitSvr, c.filter_proto, false, false, false, false, false)
+		exitSvrs, _ := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multihopExitSvr, c.filter_proto, false, false, false, false, false)
 		if len(exitSvrs) == 0 || len(exitSvrs) > 1 {
 			return flags.BadParameter{Message: "specify correct exit server ID for multi-hop connection"}
 		}
@@ -282,7 +282,7 @@ func (c *CmdConnect) Run() (retError error) {
 		c.multihopExitSvr = exitSvr.gateway
 	} else {
 		//SINGLE-HOP
-		svrs = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
+		svrs, _ = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
 
 		srvID := ""
 
