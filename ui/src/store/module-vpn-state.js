@@ -232,6 +232,12 @@ export default {
         ? atConfig.hardcore
         : atConfig.default;
       if (atIPs == null) return null;
+
+      if (rootState.settings.vpnType === VpnTypeEnum.WireGuard) {        
+        // WireGuard (port-based MultiHop using the same DNS IP as SingleHop)
+        return atIPs.ip;
+      }
+      // OpenVPN
       return rootState.settings.isMultiHop ? atIPs["multihop-ip"] : atIPs.ip;
     },
     isAntitrackerEnabled: state => {
