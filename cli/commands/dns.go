@@ -166,13 +166,14 @@ func (c *CmdAntitracker) Run() error {
 		if err != nil {
 			return err
 		}
+
 		if state == vpn.CONNECTED {
 			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectInfo.ManualDNS, &servers)
 			if c.off && !(isAntitracker || isAtHardcore) {
 				fmt.Println("AntiTracker already disabled")
 			} else {
 				if cfg.Antitracker || cfg.AntitrackerHardcore {
-					dns, err = GetAntitrackerIP(cfg.AntitrackerHardcore, len(connectInfo.ExitServerID) > 0, &servers)
+					dns, err = GetAntitrackerIP(connectInfo.VpnType, cfg.AntitrackerHardcore, len(connectInfo.ExitServerID) > 0, &servers)
 				}
 				if err := _proto.SetManualDNS(dns); err != nil {
 					return err
@@ -236,16 +237,16 @@ func printAntitrackerConfigInfo(w *tabwriter.Writer, antitracker, antitrackerHar
 //----------------------------------------------------------------------------------------
 
 // GetAntitrackerIP - returns IP of antitracker DNS
-func GetAntitrackerIP(isHardcore, isMultihop bool, servers *apitypes.ServersInfoResponse) (string, error) {
+func GetAntitrackerIP(vpntype vpn.Type, isHardcore, isMultihop bool, servers *apitypes.ServersInfoResponse) (string, error) {
 
 	if isHardcore {
-		if isMultihop {
+		if vpntype == vpn.OpenVPN && isMultihop {
 			return servers.Config.Antitracker.Hardcore.MultihopIP, nil
 		}
 		return servers.Config.Antitracker.Hardcore.IP, nil
 	}
 
-	if isMultihop {
+	if vpntype == vpn.OpenVPN && isMultihop {
 		return servers.Config.Antitracker.Default.MultihopIP, nil
 	}
 	return servers.Config.Antitracker.Default.IP, nil

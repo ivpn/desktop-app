@@ -354,50 +354,10 @@ func (c *CmdConnect) Run() (retError error) {
 			fmt.Println("WARNING! Firewall option ignored (Firewall already enabled manually)")
 		}
 	}
-	// get configuration
-	cfg, _ := config.GetConfig()
-
-	// set antitracker DNS (if defined). It will overwrite 'custom DNS' parameter
-	if c.antitracker == false && c.antitrackerHard == false {
-		// AntiTracker parameters not defined for current connection
-		// Taking default configuration parameters (if defined)
-		if cfg.Antitracker || cfg.AntitrackerHardcore {
-			// print info
-			printAntitrackerConfigInfo(nil, cfg.Antitracker, cfg.AntitrackerHardcore).Flush()
-			// set values
-			c.antitracker = cfg.Antitracker
-			c.antitrackerHard = cfg.AntitrackerHardcore
-		}
-	}
-	if c.antitracker || c.antitrackerHard {
-		atDNS, err := GetAntitrackerIP(c.antitrackerHard, len(c.multihopExitSvr) > 0, &servers)
-		if err != nil {
-			return err
-		}
-		req.CurrentDNS = atDNS
-
-		if len(c.dns) > 0 {
-			fmt.Println("WARNING! Manual DNS configuration ignored due to AntiTracker")
-		}
-	}
-
-	// set Manual DNS if defined (only in case if AntiTracker not defined)
-	if len(req.CurrentDNS) == 0 {
-		if len(c.dns) > 0 {
-			dns := net.ParseIP(c.dns)
-			if dns == nil {
-				return flags.BadParameter{}
-			}
-			req.CurrentDNS = dns.String()
-		} else if len(cfg.CustomDNS) > 0 {
-			// using default DNS configuration
-			printDNSConfigInfo(nil, cfg.CustomDNS).Flush()
-			req.CurrentDNS = cfg.CustomDNS
-		}
-	}
 
 	// Looking for connection server
 
+	vpntype := vpn.WireGuard
 	// WireGuard
 	{
 		var entrySvrWg *apitypes.WireGuardServerInfo = nil
@@ -448,6 +408,8 @@ func (c *CmdConnect) Run() (retError error) {
 
 	// OpenVPN
 	if serverFound == false {
+		vpntype = vpn.OpenVPN
+
 		var entrySvrOvpn *apitypes.OpenvpnServerInfo = nil
 		var exitSvrOvpn *apitypes.OpenvpnServerInfo = nil
 
@@ -509,6 +471,46 @@ func (c *CmdConnect) Run() (retError error) {
 
 	if serverFound == false {
 		return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
+	}
+
+	// Get configuration
+	cfg, _ := config.GetConfig()
+	// SET ANTITRACKER DNS (if defined). It will overwrite 'custom DNS' parameter
+	if c.antitracker == false && c.antitrackerHard == false {
+		// AntiTracker parameters not defined for current connection
+		// Taking default configuration parameters (if defined)
+		if cfg.Antitracker || cfg.AntitrackerHardcore {
+			// print info
+			printAntitrackerConfigInfo(nil, cfg.Antitracker, cfg.AntitrackerHardcore).Flush()
+			// set values
+			c.antitracker = cfg.Antitracker
+			c.antitrackerHard = cfg.AntitrackerHardcore
+		}
+	}
+	if c.antitracker || c.antitrackerHard {
+		atDNS, err := GetAntitrackerIP(vpntype, c.antitrackerHard, len(c.multihopExitSvr) > 0, &servers)
+		if err != nil {
+			return err
+		}
+		req.CurrentDNS = atDNS
+
+		if len(c.dns) > 0 {
+			fmt.Println("WARNING! Manual DNS configuration ignored due to AntiTracker")
+		}
+	}
+	// Set MANUAL DNS if defined (only in case if AntiTracker not defined)
+	if len(req.CurrentDNS) == 0 {
+		if len(c.dns) > 0 {
+			dns := net.ParseIP(c.dns)
+			if dns == nil {
+				return flags.BadParameter{}
+			}
+			req.CurrentDNS = dns.String()
+		} else if len(cfg.CustomDNS) > 0 {
+			// using default DNS configuration
+			printDNSConfigInfo(nil, cfg.CustomDNS).Flush()
+			req.CurrentDNS = cfg.CustomDNS
+		}
 	}
 
 	fmt.Println("Connecting...")
