@@ -716,10 +716,18 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		if req.NeedToResetSettings {
+			oldPrefs := p._service.Preferences()
+
 			// Reset settings only after SessionDelete() to correctly logout on the backed
 			p._service.ResetPreferences()
-
 			prefs := p._service.Preferences()
+
+			// restore active persistant Firewall state
+			if oldPrefs.IsFwPersistant != prefs.IsFwPersistant {
+				p._service.SetKillSwitchIsPersistent(oldPrefs.IsFwPersistant)
+			}
+
+			// set AllowLan according to default values
 			p._service.SetKillSwitchAllowLAN(prefs.IsFwAllowLAN)
 			p._service.SetKillSwitchAllowLANMulticast(prefs.IsFwAllowLANMulticast)
 		}
