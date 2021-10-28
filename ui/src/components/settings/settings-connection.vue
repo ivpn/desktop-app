@@ -474,10 +474,20 @@ export default {
     wgKeysWillBeRegeneratedStr: function() {
       let t = this.getWgKeysGenerated();
       if (t == null) return null;
+
       t.setSeconds(
         t.getSeconds() +
           this.$store.state.account.session.WgKeysRegenIntervalSec
       );
+
+      let now = new Date();
+      if (t < now) {
+        // Do not show planned regeneration date in the past (it can happen after the computer wake up from a long sleep)
+        // Show 'today' as planned date to regenerate keys in this case.
+        // (the max interval to check if regeneration required is defined on daemon side, it is less than 24 hours)
+        t = now;
+      }
+
       return this.formatDate(t);
     },
     wgKeysExpirationDateStr: function() {

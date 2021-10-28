@@ -1665,21 +1665,12 @@ func (s *Service) WireGuardSetKeysRotationInterval(interval int64) {
 func (s *Service) WireGuardGetKeys() (session, wgPublicKey, wgPrivateKey, wgLocalIP string, generatedTime time.Time, updateInterval time.Duration) {
 	p := s._preferences
 
-	interval := p.Session.WGKeysRegenInerval
-
-	//----------------------------------------------------------------
-	// ONLY FOR TESTS!
-	// Interval change 1 day => 1 minute
-	// interval = time.Minute * (interval / (time.Hour * 24))
-	// log.Debug(fmt.Sprintf("(TESTING) Changed WG keys rotation interval %v => %v", p.Session.WGKeysRegenInerval, interval))
-	//----------------------------------------------------------------
-
 	return p.Session.Session,
 		p.Session.WGPublicKey,
 		p.Session.WGPrivateKey,
 		p.Session.WGLocalIP,
 		p.Session.WGKeyGenerated,
-		interval //p.Session.WGKeysRegenInerval
+		p.Session.WGKeysRegenInerval
 }
 
 // WireGuardGenerateKeys - generate new wireguard keys
@@ -1691,7 +1682,7 @@ func (s *Service) WireGuardGenerateKeys(updateIfNecessary bool) error {
 	// Update WG keys, if necessary
 	var err error
 	if updateIfNecessary {
-		err = s._wgKeysMgr.UpdateKeysIfNecessary()
+		_, err = s._wgKeysMgr.UpdateKeysIfNecessary()
 	} else {
 		err = s._wgKeysMgr.GenerateKeys()
 	}

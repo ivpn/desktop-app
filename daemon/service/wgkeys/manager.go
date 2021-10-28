@@ -103,15 +103,27 @@ func (m *KeysManager) StartKeysRotation() error {
 		log.Info(fmt.Sprintf("Keys rotation started (interval:%v)", interval))
 		defer log.Info("Keys rotation stopped")
 
-		needStop := false
-		isLastUpdateFailed := false
+		const maxCheckInterval = time.Minute * 5
 
-		for needStop == false {
-			_, _, _, _, lastUpdate, interval = m.service.WireGuardGetKeys()
-			waitInterval := time.Until(lastUpdate.Add(interval))
+		needStop := false
+
+		isLastUpdateFailed := false
+		isLastUpdateFailedCnt := 0
+
+		for !needStop {
+			waitInterval := maxCheckInterval
+
 			if isLastUpdateFailed {
-				waitInterval = time.Hour
+				// If the last update failed - do next try after some delay
+				// (delay is incrteasing every retry: 5, 10, 15 ... 60 min)
+				waitInterval = maxCheckInterval * time.Duration(isLastUpdateFailedCnt)
+				if waitInterval > time.Hour {
+					waitInterval = time.Hour
+				}
 				lastUpdate = time.Now()
+			} else {
+				_, _, _, _, lastUpdate, interval = m.service.WireGuardGetKeys()
+				waitInterval = time.Until(lastUpdate.Add(interval))
 			}
 
 			// update immediately, if it is a time
@@ -119,21 +131,27 @@ func (m *KeysManager) StartKeysRotation() error {
 				waitInterval = time.Second
 			}
 
+			if waitInterval > maxCheckInterval && !isLastUpdateFailed {
+				// We can not trust "time.After()" that it will be triggered in exact time.
+				// If the computer fall to sleep on a long time, after wake up the "time.After()"
+				// will trigger after [sleep time]+[time].
+				// Therefore we defining maximum allowed interval to check necessity on keys generation
+				waitInterval = maxCheckInterval
+			}
+
 			select {
 			case <-time.After(waitInterval):
-				err := m.UpdateKeysIfNecessary()
+				_, err := m.UpdateKeysIfNecessary()
 				if err != nil {
 					isLastUpdateFailed = true
+					isLastUpdateFailedCnt += 1
 				} else {
 					isLastUpdateFailed = false
-					lastUpdate = time.Now()
+					isLastUpdateFailedCnt = 0
 				}
-
-				break
 
 			case <-m.stopKeysRotation:
 				needStop = true
-				break
 			}
 		}
 	}()
@@ -151,17 +169,21 @@ func (m *KeysManager) StopKeysRotation() {
 
 // GenerateKeys generate keys
 func (m *KeysManager) GenerateKeys() error {
-	return m.generateKeys(false)
+	isUpdated, err := m.generateKeys(false)
+	if err == nil && !isUpdated {
+		err = fmt.Errorf("WG keys were not updated")
+	}
+	return err
 }
 
 // UpdateKeysIfNecessary generate or update keys
 // 1) If no active WG keys defined - new keys will be generated + key rotation will be started
 // 2) If active WG key defined - key will be updated only if it is a time to do it
-func (m *KeysManager) UpdateKeysIfNecessary() error {
+func (m *KeysManager) UpdateKeysIfNecessary() (isUpdated bool, retErr error) {
 	return m.generateKeys(true)
 }
 
-func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
+func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, retErr error) {
 	defer func() {
 		if retErr != nil {
 			log.Error("Failed to update WG keys: ", retErr)
@@ -169,7 +191,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	}()
 
 	if m.service == nil {
-		return fmt.Errorf("WG KeysManager not initialized")
+		return false, fmt.Errorf("WG KeysManager not initialized")
 	}
 
 	// Check update configuration
@@ -196,7 +218,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	}
 
 	if haveToUpdate, err := isNecessaryUpdate(); !haveToUpdate || err != nil {
-		return err
+		return false, err
 	}
 
 	m.mutex.Lock()
@@ -205,7 +227,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	// Check update configuration second time (locked by mutex)
 	session, activePublicKey, _, _, lastUpdate, interval := m.service.WireGuardGetKeys()
 	if haveToUpdate, err := isNecessaryUpdate(); !haveToUpdate || err != nil {
-		return err
+		return false, err
 	}
 
 	isRotationStopped := false
@@ -217,12 +239,12 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 
 	if isBlocked, reasonDescription, err := m.service.IsConnectivityBlocked(); err == nil && isBlocked {
 		// Connectivity with API servers is blocked. No sense to make API requests
-		return fmt.Errorf(`%s`, reasonDescription)
+		return false, fmt.Errorf(`%s`, reasonDescription)
 	}
 
 	pub, priv, err := wireguard.GenerateKeys(m.wgToolBinPath)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	isVPNConnected, connectedVpnType := m.service.ConnectedType()
@@ -246,10 +268,10 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		if errors.As(err, &e) {
 			if e.ErrorCode == types.SessionNotFound {
 				m.service.OnSessionNotFound()
-				return fmt.Errorf("WG keys not updated (session not found)")
+				return false, fmt.Errorf("WG keys not updated (session not found)")
 			}
 		}
-		return fmt.Errorf("WG keys not updated. Please check your internet connection")
+		return false, fmt.Errorf("WG keys not updated. Please check your internet connection")
 	}
 
 	log.Info(fmt.Sprintf("WG keys updated (%s:%s) ", localIP.String(), pub))
@@ -262,5 +284,5 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		m.StartKeysRotation()
 	}
 
-	return nil
+	return true, nil
 }
