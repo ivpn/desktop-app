@@ -21,7 +21,7 @@
     </div>
     <div class="fwDescription">
       Hardcode mode blocks the leading companies with business models relying on
-      user surveilance (currently: Google and Facebook)
+      user surveillance (currently: Google and Facebook)
     </div>
     <div class="fwDescription">
       To better understand how this may impact your experience please refer to
