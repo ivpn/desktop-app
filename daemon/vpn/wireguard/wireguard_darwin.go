@@ -494,7 +494,7 @@ func (wg *WireGuard) removeDNS() error {
 }
 
 func getFreeTunInterfaceName() (string, error) {
-	utunNameRegExp := regexp.MustCompile("^utun([0-9])+")
+	utunNameRegExp := regexp.MustCompile("^utun([0-9]+)")
 
 	ifaces, err := net.Interfaces()
 	if err != nil {
