@@ -233,7 +233,7 @@ export default {
         : atConfig.default;
       if (atIPs == null) return null;
 
-      if (rootState.settings.vpnType === VpnTypeEnum.WireGuard) {        
+      if (rootState.settings.vpnType === VpnTypeEnum.WireGuard) {
         // WireGuard (port-based MultiHop using the same DNS IP as SingleHop)
         return atIPs.ip;
       }
@@ -455,12 +455,8 @@ function updateServersPings(state, pings) {
 
 function isServerSupportIPv6(server) {
   if (!server) return null;
+  if (!server.hosts) return null;
 
-  if (!server.hosts) return null; // non-WireGuard server
-  // TODO: implement same (IPv6) for OpenVPN
-  // IPv6 for OpenVPN if not implemented yet
-
-  // WireGuard
   for (let h of server.hosts) {
     if (h && h.ipv6 && h.ipv6.local_ip) return true;
   }

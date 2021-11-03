@@ -512,8 +512,12 @@ function updateSelectedServers(context) {
   function getVpnServerType(server) {
     if (!server) return null;
     if (!server.hosts) return null;
-    if (server.hosts.public_key != null) return VpnTypeEnum.WireGuard;
-    return VpnTypeEnum.OpenVPN;
+
+    for (let h of server.hosts) {
+      if (h && h.public_key) return VpnTypeEnum.WireGuard;
+      else return VpnTypeEnum.OpenVPN;
+    }
+    return null;
   }
   function findServerFromLocation(servers, countryCode, city) {
     let retServerByCountry = null;
