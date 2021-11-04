@@ -1031,10 +1031,11 @@ func (s *Service) getHostsToPing(currentLocation *types.GeoLookupResponse) ([]ne
 
 	// OpenVPN servers
 	for _, s := range servers.OpenvpnServers {
-		if len(s.IPAddresses) <= 0 {
+		if len(s.Hosts) <= 0 {
 			continue
 		}
-		ip := net.ParseIP(s.IPAddresses[0])
+
+		ip := net.ParseIP(s.Hosts[0].Host)
 		if ip != nil {
 			hosts = append(hosts, hostInfo{Latitude: s.Latitude, Longitude: s.Longitude, host: ip})
 		}
@@ -1070,6 +1071,11 @@ func (s *Service) getHostsToPing(currentLocation *types.GeoLookupResponse) ([]ne
 
 // SetKillSwitchState enable\disable killswitch
 func (s *Service) SetKillSwitchState(isEnabled bool) error {
+
+	if !isEnabled && s._preferences.IsFwPersistant {
+		return fmt.Errorf("unable to disable Firewall in 'Persistent' state. Please, disable 'Always-on firewall' first")
+	}
+
 	err := firewall.SetEnabled(isEnabled)
 	if err == nil {
 		s._evtReceiver.OnKillSwitchStateChanged()
@@ -1121,6 +1127,15 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 }
 
 func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
+	if !isAllowAPIServers {
+		// Do not allow to disable access to IVPN API server if user logged-out
+		// Otherwise, we will not have possibility to login
+		session := s.Preferences().Session
+		if !session.IsLoggedIn() {
+			return srverrors.ErrorNotLoggedIn{}
+		}
+	}
+
 	prefs := s._preferences
 	prefs.IsFwAllowApiServers = isAllowAPIServers
 	s.setPreferences(prefs)
@@ -1291,6 +1306,12 @@ func (s *Service) Preferences() preferences.Preferences {
 	return s._preferences
 }
 
+func (s *Service) ResetPreferences() error {
+	s._preferences = *preferences.Create()
+	s.SplitTunnelling_SetConfig(false, []string{})
+	return nil
+}
+
 //////////////////////////////////////////////////////////
 // SESSIONS
 //////////////////////////////////////////////////////////
@@ -1327,8 +1348,22 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	rawResponse string,
 	err error) {
 
+	// Temporary allow API server access (If Firewall is enabled)
+	// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
+	fwIsEnabled, _, _, _, fwIsAllowApiServers, _ := s.KillSwitchState()
+	if fwIsEnabled && !fwIsAllowApiServers {
+		s.SetKillSwitchAllowAPIServers(true)
+	}
+	defer func() {
+		if fwIsEnabled && !fwIsAllowApiServers {
+			// restore state for 'AllowAPIServers' configuration (previously, was enabled)
+			s.SetKillSwitchAllowAPIServers(false)
+		}
+	}()
+
 	// delete current session (if exists)
-	if err := s.SessionDelete(); err != nil {
+	isCanDeleteSessionLocally := true
+	if err := s.SessionDelete(isCanDeleteSessionLocally); err != nil {
 		log.Error("Creating new session -> Failed to delete active session: ", err)
 	}
 
@@ -1390,11 +1425,23 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 }
 
 // SessionDelete removes session info
-func (s *Service) SessionDelete() error {
-	return s.logOut(true)
+func (s *Service) SessionDelete(isCanDeleteSessionLocally bool) error {
+	sessionNeedToDeleteOnBackend := true
+	return s.logOut(sessionNeedToDeleteOnBackend, isCanDeleteSessionLocally)
 }
 
-func (s *Service) logOut(needToDeleteOnBackend bool) error {
+// logOut performs log out from current session
+// 1) if 'sessionNeedToDeleteOnBackend' == false: the app not trying to make API request
+//	  the session info just erasing locally
+//    (this is useful for the situations when we already know that session is not available on backend anymore)
+// 2) if 'sessionNeedToDeleteOnBackend' == true (and 'isCanDeleteSessionLocally' == false): app is trying to make API request to logout correctly
+//	  in case if API request failed the function returns error (session keeps not logged out)
+// 3) if 'isCanDeleteSessionLocally' == true (and 'sessionNeedToDeleteOnBackend' == true): app is trying to make API request to logout correctly
+//	  in case if API request failed we just erasing session info locally (no errors returned)
+
+func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLocally bool) error {
+	// Disconnect (if connected)
+	s.Disconnect()
 
 	// stop session checker (use goroutine to avoid deadlocks)
 	go s.stopSessionChecker()
@@ -1402,28 +1449,50 @@ func (s *Service) logOut(needToDeleteOnBackend bool) error {
 	// stop WG keys rotation
 	s._wgKeysMgr.StopKeysRotation()
 
-	if needToDeleteOnBackend {
+	if sessionNeedToDeleteOnBackend {
+
+		// Temporary allow API server access (If Firewall is enabled)
+		// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
+		fwIsEnabled, _, _, _, fwIsAllowApiServers, _ := s.KillSwitchState()
+		if fwIsEnabled && !fwIsAllowApiServers {
+			s.SetKillSwitchAllowAPIServers(true)
+		}
+		defer func() {
+			if fwIsEnabled && !fwIsAllowApiServers {
+				// restore state for 'AllowAPIServers' configuration (previously, was enabled)
+				s.SetKillSwitchAllowAPIServers(false)
+			}
+		}()
+
 		session := s.Preferences().Session
 		if session.IsLoggedIn() {
 			log.Info("Logging out")
 			err := s._api.SessionDelete(session.Session)
 			if err != nil {
-				return err
+				log.Info("Logging out error:", err)
+				if !isCanDeleteSessionLocally {
+					return err // do not allow to logout if failed to delete session on backend
+				}
+			} else {
+				log.Info("Logging out: done")
 			}
 		}
 	}
 
 	s._preferences.SetSession("", "", "", "", "", "", "")
-
-	// Disable firewall
-	s.SetKillSwitchState(false)
-	// Disconnect (if connected)
-	s.Disconnect()
+	log.Info("Logged out locally")
 
 	// notify clients about session update
 	s._evtReceiver.OnServiceSessionChanged()
-
 	return nil
+}
+
+func (s *Service) OnSessionNotFound() {
+	// Logging out now
+	log.Info("Session not found. Logging out.")
+	needToDeleteOnBackend := false
+	canLogoutOnlyLocally := true
+	s.logOut(needToDeleteOnBackend, canLogoutOnlyLocally)
 }
 
 // RequestSessionStatus receives session status
@@ -1457,9 +1526,7 @@ func (s *Service) RequestSessionStatus() (
 
 		// Session not found - can happens when user forced to logout from another device
 		if apiCode == types.SessionNotFound {
-			// Logging out now
-			log.Info("Session not found. Logging out.")
-			s.logOut(false)
+			s.OnSessionNotFound()
 		}
 
 		// notify clients that account not active
@@ -1598,21 +1665,12 @@ func (s *Service) WireGuardSetKeysRotationInterval(interval int64) {
 func (s *Service) WireGuardGetKeys() (session, wgPublicKey, wgPrivateKey, wgLocalIP string, generatedTime time.Time, updateInterval time.Duration) {
 	p := s._preferences
 
-	interval := p.Session.WGKeysRegenInerval
-
-	//----------------------------------------------------------------
-	// ONLY FOR TESTS!
-	// Interval change 1 day => 1 minute
-	// interval = time.Minute * (interval / (time.Hour * 24))
-	// log.Debug(fmt.Sprintf("(TESTING) Changed WG keys rotation interval %v => %v", p.Session.WGKeysRegenInerval, interval))
-	//----------------------------------------------------------------
-
 	return p.Session.Session,
 		p.Session.WGPublicKey,
 		p.Session.WGPrivateKey,
 		p.Session.WGLocalIP,
 		p.Session.WGKeyGenerated,
-		interval //p.Session.WGKeysRegenInerval
+		p.Session.WGKeysRegenInerval
 }
 
 // WireGuardGenerateKeys - generate new wireguard keys
@@ -1624,7 +1682,7 @@ func (s *Service) WireGuardGenerateKeys(updateIfNecessary bool) error {
 	// Update WG keys, if necessary
 	var err error
 	if updateIfNecessary {
-		err = s._wgKeysMgr.UpdateKeysIfNecessary()
+		_, err = s._wgKeysMgr.UpdateKeysIfNecessary()
 	} else {
 		err = s._wgKeysMgr.GenerateKeys()
 	}

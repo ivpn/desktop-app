@@ -32,11 +32,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
 	"path"
 	"time"
 
+	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
@@ -79,11 +81,11 @@ func findPinnedKey(certHashes []string, certBase64hash256 string) bool {
 
 type dialer func(network, addr string) (net.Conn, error)
 
-func makeDialer(certHashes []string, skipCAVerification bool, serverName string) dialer {
+func makeDialer(certHashes []string, skipCAVerification bool, serverName string, dialTimeout time.Duration) dialer {
 	return func(network, addr string) (net.Conn, error) {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Error(fmt.Sprintf("PANIC (API request): "), r)
+				log.Error("PANIC (API request): ", r)
 				if err, ok := r.(error); ok {
 					log.ErrorTrace(err)
 				}
@@ -95,7 +97,8 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string)
 			ServerName:         serverName, // only have sense when skipCAVerification == false
 		}
 
-		c, err := tls.Dial(network, addr, tlsConfig)
+		c, err := tls.DialWithDialer(&net.Dialer{Timeout: dialTimeout}, network, addr, tlsConfig)
+
 		if err != nil {
 			return c, err
 		}
@@ -121,13 +124,13 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string)
 
 		}
 		if lastErr != nil {
-			return nil, fmt.Errorf("Certificate check error: pinned certificate key not found: %w", lastErr)
+			return nil, fmt.Errorf("certificate check error: pinned certificate key not found: %w", lastErr)
 		}
-		return nil, fmt.Errorf("Certificate check error: pinned certificate key not found")
+		return nil, fmt.Errorf("certificate check error: pinned certificate key not found")
 	}
 }
 
-func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, request interface{}, timeoutMs int, timeoutDialMs int) (resp *http.Response, err error) {
 	connectivityChecker := a.connectivityChecker
 	if connectivityChecker != nil {
 		if isBlocked, reasonDescription, err := connectivityChecker.IsConnectivityBlocked(); err == nil && isBlocked {
@@ -138,16 +141,30 @@ func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, ur
 	if len(host) == 0 || host == _apiHost {
 		if ipTypeRequired != types.IPvAny {
 			// The specific IP version required to use
-			return a.doRequestAPIHost(ipTypeRequired, false, urlPath, method, contentType, request, timeoutMs)
+			return a.doRequestAPIHost(ipTypeRequired, false, urlPath, method, contentType, request, timeoutMs, timeoutDialMs)
 		} else {
 			// No specific IP version required to use
 			// Trying first to use IPv4, as fallback - try to use IPv6
-			resp4, err4 := a.doRequestAPIHost(types.IPv4, true, urlPath, method, contentType, request, timeoutMs)
+			canUseDNS := true
+			resp4, err4 := a.doRequestAPIHost(types.IPv4, canUseDNS, urlPath, method, contentType, request, timeoutMs, timeoutDialMs)
 			if err4 != nil {
-				log.Info("Failed to access API server using IPv4. Trying IPv6 ...")
-				resp6, err6 := a.doRequestAPIHost(types.IPv6, true, urlPath, method, contentType, request, timeoutMs)
-				if err6 == nil {
-					return resp6, err6
+				// checking if IPv6 connectivity exists
+				_, errIPv6 := netinfo.GetOutboundIP(true)
+				if errIPv6 != nil {
+					alIPs := a.getAlternateIPs(true)
+					if len(alIPs) > 0 {
+						_, errIPv6 = netinfo.GetOutboundIPEx(alIPs[rand.Intn(len(alIPs))])
+					}
+				}
+
+				if errIPv6 == nil {
+					log.Info("Failed to access API server using IPv4. Trying IPv6 ...")
+					// we already tried to access using DNS. No sense to try it again
+					canUseDNS = false
+					resp6, err6 := a.doRequestAPIHost(types.IPv6, canUseDNS, urlPath, method, contentType, request, timeoutMs, timeoutDialMs)
+					if err6 == nil {
+						return resp6, err6
+					}
 				}
 			}
 			return resp4, err4
@@ -162,7 +179,7 @@ func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, ur
 func (a *API) doRequestUpdateHost(urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
 	transCfg := &http.Transport{
 		// using certificate key pinning
-		DialTLS: makeDialer(UpdateIvpnHashes, false, _updateHost),
+		DialTLS: makeDialer(UpdateIvpnHashes, false, _updateHost, 0),
 	}
 
 	// configure http-client with preconfigured TLS transport
@@ -191,14 +208,28 @@ func (a *API) doRequestUpdateHost(urlPath string, method string, contentType str
 	resp, e := client.Do(req)
 	if e != nil {
 		log.Warning("Failed to access " + _updateHost)
-		return resp, fmt.Errorf("Unable to access IVPN repo server: %w", e)
+		return resp, fmt.Errorf("unable to access IVPN repo server: %w", e)
 	}
 
 	return resp, nil
 }
 
-func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUseDNS bool, urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUseDNS bool, urlPath string, method string, contentType string, request interface{}, timeoutMs int, timeoutDialMs int) (resp *http.Response, err error) {
 	isIPv6 := ipTypeRequired == types.IPv6
+
+	// timeout time for full request
+	timeout := _defaultRequestTimeout
+	if timeoutMs > 0 {
+		timeout = time.Millisecond * time.Duration(timeoutMs)
+	}
+	// timeout for the dial
+	timeoutDial := _defaultDialTimeout
+	if timeoutDialMs > 0 {
+		timeoutDial = time.Millisecond * time.Duration(timeoutDialMs)
+	}
+	if timeoutDial > timeout {
+		timeoutDial = 0
+	}
 
 	// When trying to access API server by alternate IPs (not by DNS name)
 	// we need to configure TLS to use api.ivpn.net hostname
@@ -210,7 +241,7 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 		//},
 
 		// using certificate key pinning
-		DialTLS: makeDialer(APIIvpnHashes, false, _apiHost),
+		DialTLS: makeDialer(APIIvpnHashes, false, _apiHost, timeoutDial),
 	}
 	if len(APIIvpnHashes) == 0 {
 		log.Warning("No pinned certificates for ", _apiHost)
@@ -223,10 +254,6 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 	}
 
 	// configure http-client with preconfigured TLS transport
-	timeout := _defaultRequestTimeout
-	if timeoutMs > 0 {
-		timeout = time.Millisecond * time.Duration(timeoutMs)
-	}
 	client := &http.Client{Transport: transCfg, Timeout: timeout}
 
 	data := []byte{}
@@ -240,9 +267,9 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 	bodyBuffer := bytes.NewBuffer(data)
 
 	// access API by last good IP (if defined)
-	lastIP := a.GetLastGoodAlternateIP(isIPv6)
-	if lastIP != nil {
-		req, err := newRequest(getURL_IPHost(lastIP, isIPv6, urlPath), method, contentType, bodyBuffer)
+	lastGoodIP := a.GetLastGoodAlternateIP(isIPv6)
+	if lastGoodIP != nil {
+		req, err := newRequest(getURL_IPHost(lastGoodIP, isIPv6, urlPath), method, contentType, bodyBuffer)
 		if err != nil {
 			return nil, err
 		}
@@ -263,21 +290,28 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 		}
 		firstResp, firstErr = client.Do(req)
 		if firstErr == nil {
-			// save last good IP
-			a.SetLastGoodAlternateIP(isIPv6, nil)
 			return firstResp, firstErr
 		}
 		log.Warning("Failed to access " + _apiHost)
 	}
 
+	isLogNotificationPrinted := false
+
 	// try to access API server by alternate IP
 	ips := a.getAlternateIPs(isIPv6)
-	for i, ip := range ips {
-		ipVerStr := ""
-		if ipTypeRequired == types.IPv6 {
-			ipVerStr = "(IPv6)"
+	for _, ip := range ips {
+		if ip.Equal(lastGoodIP) {
+			continue
 		}
-		log.Info(fmt.Sprintf("Trying to use alternate API IP #%d %s...", i, ipVerStr))
+		if firstErr != nil && !isLogNotificationPrinted {
+			isLogNotificationPrinted = true
+
+			ipVerStr := ""
+			if ipTypeRequired == types.IPv6 {
+				ipVerStr = "(IPv6)"
+			}
+			log.Info(fmt.Sprintf("Trying to use alternate API IPs %s...", ipVerStr))
+		}
 
 		req, err := newRequest(getURL_IPHost(ip, isIPv6, urlPath), method, contentType, bodyBuffer)
 		if err != nil {
@@ -295,15 +329,15 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 		// save last good IP
 		a.SetLastGoodAlternateIP(isIPv6, ip)
 
-		log.Info(fmt.Sprintf("Success!"))
+		log.Info("Success!")
 		return resp, err
 	}
 
-	return nil, fmt.Errorf("Unable to access IVPN API server: %w", firstErr)
+	return nil, fmt.Errorf("unable to access IVPN API server: %w", firstErr)
 }
 
-func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int) (responseData []byte, err error) {
-	resp, err := a.doRequest(ipTypeRequired, host, urlPath, method, contentType, requestObject, timeoutMs)
+func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int, timeoutDialMs int) (responseData []byte, err error) {
+	resp, err := a.doRequest(ipTypeRequired, host, urlPath, method, contentType, requestObject, timeoutMs, timeoutDialMs)
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}
@@ -317,11 +351,11 @@ func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, u
 }
 
 func (a *API) request(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}) error {
-	return a.requestEx(host, urlPath, method, contentType, requestObject, responseObject, 0)
+	return a.requestEx(host, urlPath, method, contentType, requestObject, responseObject, 0, 0)
 }
 
-func (a *API) requestEx(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}, timeoutMs int) error {
-	body, err := a.requestRaw(types.IPvAny, host, urlPath, method, contentType, requestObject, timeoutMs)
+func (a *API) requestEx(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}, timeoutMs int, timeoutDialMs int) error {
+	body, err := a.requestRaw(types.IPvAny, host, urlPath, method, contentType, requestObject, timeoutMs, timeoutDialMs)
 	if err != nil {
 		return err
 	}

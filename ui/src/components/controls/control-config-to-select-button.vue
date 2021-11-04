@@ -25,18 +25,18 @@ export default {
     "description",
     "markerText",
     "markerColor",
-    "markerTextColor"
+    "markerTextColor",
   ],
   computed: {
-    isShowMarker: function() {
+    isShowMarker: function () {
       return this.markerText != null && this.markerColor != null;
     },
-    markerStyle: function() {
+    markerStyle: function () {
       let ret = `background: ${this.markerColor};  border-radius: 4px; padding: 4px; font-size: 10px; line-height: 10px; letter-spacing: 1px; `;
       if (this.markerTextColor) ret += `color: ${this.markerTextColor}`;
       return ret;
-    }
-  }
+    },
+  },
 };
 </script>
 

@@ -1,9 +1,7 @@
 <template>
   <div>
     <div class="settingsTitle">CONNECTION SETTINGS</div>
-    <div class="settingsBoldFont">
-      VPN protocol:
-    </div>
+    <div class="settingsBoldFont">VPN protocol:</div>
 
     <div>
       <div class="settingsRadioBtn">
@@ -64,21 +62,20 @@
 
       <div class="flexRow paramBlock">
         <div class="defColor paramName">Preferred port:</div>
-        <select v-model="port" style="background: var(--background-color);">
+        <select v-model="port" style="background: var(--background-color)">
           <option
             v-for="item in prefferedPorts"
             :value="item.port"
             :key="item.text"
-            >{{ item.text }}</option
           >
+            {{ item.text }}
+          </option>
         </select>
       </div>
 
       <div v-bind:class="{ disabled: connectionUseObfsproxy }">
         <div class="flexRow paramBlock">
-          <div class="defColor paramName">
-            Network proxy:
-          </div>
+          <div class="defColor paramName">Network proxy:</div>
           <div class="settingsRadioBtnProxy">
             <input
               type="radio"
@@ -158,9 +155,7 @@
           >Use obfsproxy</label
         >
       </div>
-      <div class="description">
-        Only enable if you have trouble connecting
-      </div>
+      <div class="description">Only enable if you have trouble connecting</div>
 
       <div class="param" v-if="userDefinedOvpnFile">
         <input
@@ -186,10 +181,16 @@
           >
             Open configuration file location ...
           </button>
-          <div style="max-width: 500px; margin: 0px; padding: 0px;">
+          <div style="max-width: 500px; margin: 0px; padding: 0px">
             <div
               class="settingsGrayLongDescriptionFont selectable"
-              style=" margin-top:5px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+              style="
+                margin-top: 5px;
+                font-size: 10px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              "
             >
               {{ userDefinedOvpnFile }}
             </div>
@@ -204,13 +205,14 @@
 
       <div class="flexRow paramBlock">
         <div class="defColor paramName">Preferred port:</div>
-        <select v-model="port" style="background: var(--background-color);">
+        <select v-model="port" style="background: var(--background-color)">
           <option
             v-for="item in prefferedPorts"
             :value="item.port"
             :key="item.text"
-            >{{ item.text }}</option
           >
+            {{ item.text }}
+          </option>
         </select>
       </div>
 
@@ -218,14 +220,15 @@
         <div class="defColor paramName">Rotate key every:</div>
         <select
           v-model="wgKeyRegenerationInterval"
-          style="background: var(--background-color);"
+          style="background: var(--background-color)"
         >
           <option
             v-for="item in wgRegenerationIntervals"
             :value="item.seconds"
             :key="item.seconds"
-            >{{ item.text }}</option
           >
+            {{ item.text }}
+          </option>
         </select>
       </div>
 
@@ -252,17 +255,13 @@
           </div>
         </div>
         <div class="flexRow paramBlockDetailedConfig">
-          <div class="defColor paramName">
-            Expiration date:
-          </div>
+          <div class="defColor paramName">Expiration date:</div>
           <div class="detailedParamValue">
             {{ wgKeysExpirationDateStr }}
           </div>
         </div>
         <div class="flexRow paramBlockDetailedConfig">
-          <div class="defColor paramName">
-            Will be automatically rotated:
-          </div>
+          <div class="defColor paramName">Will be automatically rotated:</div>
           <div class="detailedParamValue">
             {{ wgKeysWillBeRegeneratedStr }}
           </div>
@@ -270,7 +269,7 @@
 
         <button
           class="settingsButton paramBlock"
-          style="margin-top: 10px; height: 24px;"
+          style="margin-top: 10px; height: 24px"
           v-on:click="onWgKeyRegenerate"
         >
           Regenerate
@@ -289,16 +288,16 @@ import { dateDefaultFormat } from "@/helpers/helpers";
 
 export default {
   components: {
-    spinner
+    spinner,
   },
-  data: function() {
+  data: function () {
     return {
       isProcessing: false,
-      openvpnManualConfig: false
+      openvpnManualConfig: false,
     };
   },
   methods: {
-    isAbleToChangeVpnSettings: function() {
+    isAbleToChangeVpnSettings: function () {
       if (
         this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
       )
@@ -309,12 +308,12 @@ export default {
         buttons: ["OK"],
         message: "You are now connected to IVPN",
         detail:
-          "You can change VPN protocol settings only when IVPN is disconnected."
+          "You can change VPN protocol settings only when IVPN is disconnected.",
       });
 
       return false;
     },
-    onVpnChange: function(e) {
+    onVpnChange: function (e) {
       if (this.isAbleToChangeVpnSettings() != true) {
         e.preventDefault();
         return;
@@ -325,11 +324,11 @@ export default {
       else type = VpnTypeEnum.OpenVPN;
       this.$store.dispatch("settings/vpnType", type);
     },
-    onVPNConfigFileLocation: function() {
+    onVPNConfigFileLocation: function () {
       const file = this.userDefinedOvpnFile;
       if (file) sender.shellShowItemInFolder(file);
     },
-    onWgKeyRegenerate: async function() {
+    onWgKeyRegenerate: async function () {
       try {
         this.isProcessing = true;
         await sender.WgRegenerateKeys();
@@ -339,13 +338,13 @@ export default {
           type: "error",
           buttons: ["OK"],
           message: "Error generating WireGuard keys",
-          detail: e
+          detail: e,
         });
       } finally {
         this.isProcessing = false;
       }
     },
-    getWgKeysGenerated: function() {
+    getWgKeysGenerated: function () {
       if (
         this.$store.state.account == null ||
         this.$store.state.account.session == null ||
@@ -354,13 +353,13 @@ export default {
         return null;
       return new Date(this.$store.state.account.session.WgKeyGenerated);
     },
-    formatDate: function(d) {
+    formatDate: function (d) {
       if (d == null) return null;
       return dateDefaultFormat(d);
-    }
+    },
   },
   computed: {
-    isCanUseIPv6InTunnel: function() {
+    isCanUseIPv6InTunnel: function () {
       return this.$store.getters["isCanUseIPv6InTunnel"];
     },
     enableIPv6InTunnel: {
@@ -374,7 +373,7 @@ export default {
         if (isCanChange != true) {
           this.$store.dispatch("settings/enableIPv6InTunnel", !value);
         }
-      }
+      },
     },
     showGatewaysWithoutIPv6: {
       get() {
@@ -382,9 +381,9 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/showGatewaysWithoutIPv6", value);
-      }
+      },
     },
-    IsAccountActive: function() {
+    IsAccountActive: function () {
       // if no info about account status - let's believe that account is active
       if (
         !this.$store.state.account ||
@@ -399,9 +398,9 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/setPort", value);
-      }
+      },
     },
-    userDefinedOvpnFile: function() {
+    userDefinedOvpnFile: function () {
       if (!this.$store.state.configParams) return null;
       return this.$store.state.configParams.UserDefinedOvpnFile;
     },
@@ -412,7 +411,7 @@ export default {
       set(value) {
         // daemon will send back a Hello response with updated 'session.WgKeysRegenIntervalSec'
         sender.WgSetKeysRotationInterval(value);
-      }
+      },
     },
     connectionUseObfsproxy: {
       get() {
@@ -421,7 +420,7 @@ export default {
       set(value) {
         this.$store.dispatch("settings/connectionUseObfsproxy", value);
         sender.SetObfsproxy();
-      }
+      },
     },
 
     ovpnProxyType: {
@@ -430,7 +429,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/ovpnProxyType", value);
-      }
+      },
     },
     ovpnProxyServer: {
       get() {
@@ -438,7 +437,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/ovpnProxyServer", value);
-      }
+      },
     },
     ovpnProxyPort: {
       get() {
@@ -446,7 +445,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/ovpnProxyPort", value);
-      }
+      },
     },
     ovpnProxyUser: {
       get() {
@@ -454,7 +453,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/ovpnProxyUser", value);
-      }
+      },
     },
     ovpnProxyPass: {
       get() {
@@ -462,50 +461,60 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/ovpnProxyPass", value);
-      }
+      },
     },
 
-    isOpenVPN: function() {
+    isOpenVPN: function () {
       return this.$store.state.settings.vpnType === VpnTypeEnum.OpenVPN;
     },
-    wgKeysGeneratedDateStr: function() {
+    wgKeysGeneratedDateStr: function () {
       return this.formatDate(this.getWgKeysGenerated());
     },
-    wgKeysWillBeRegeneratedStr: function() {
+    wgKeysWillBeRegeneratedStr: function () {
       let t = this.getWgKeysGenerated();
       if (t == null) return null;
+
       t.setSeconds(
         t.getSeconds() +
           this.$store.state.account.session.WgKeysRegenIntervalSec
       );
+
+      let now = new Date();
+      if (t < now) {
+        // Do not show planned regeneration date in the past (it can happen after the computer wake up from a long sleep)
+        // Show 'today' as planned date to regenerate keys in this case.
+        // (the max interval to check if regeneration required is defined on daemon side, it is less than 24 hours)
+        t = now;
+      }
+
       return this.formatDate(t);
     },
-    wgKeysExpirationDateStr: function() {
+    wgKeysExpirationDateStr: function () {
       let t = this.getWgKeysGenerated();
       if (t == null) return null;
       t.setSeconds(t.getSeconds() + 40 * 24 * 60 * 60); // 40 days
       return this.formatDate(t);
     },
-    wgRegenerationIntervals: function() {
+    wgRegenerationIntervals: function () {
       let ret = [{ text: "1 day", seconds: 24 * 60 * 60 }];
       for (let i = 2; i <= 30; i++) {
         ret.push({ text: `${i} days`, seconds: i * 24 * 60 * 60 });
       }
       return ret;
     },
-    prefferedPorts: function() {
+    prefferedPorts: function () {
       let data = this.isOpenVPN ? Ports.OpenVPN : Ports.WireGuard;
       let ret = [];
-      data.forEach(p =>
+      data.forEach((p) =>
         ret.push({
           text: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
-          port: p
+          port: p,
         })
       );
 
       return ret;
-    }
-  }
+    },
+  },
 };
 </script>
 

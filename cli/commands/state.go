@@ -107,8 +107,8 @@ func showState() error {
 func getServerInfoByIP(servers []serverDesc, ip string) string {
 	ip = strings.TrimSpace(ip)
 	for _, s := range servers {
-		for h := range s.hosts {
-			if ip == strings.TrimSpace(h) {
+		for _, h := range s.hosts {
+			if ip == strings.TrimSpace(h.host) {
 				return s.String()
 			}
 		}

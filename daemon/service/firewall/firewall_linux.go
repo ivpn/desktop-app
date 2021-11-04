@@ -239,7 +239,7 @@ func delayedAllowLAN(allowLanMulticast bool) {
 			log.Warning(fmt.Errorf("Delayed 'Allow LAN': failed to get local IPs: %w", err))
 			return
 		}
-		if len(ipList) >= 0 {
+		if len(ipList) > 0 {
 			time.Sleep(time.Second) // just to ensure that everything initialized
 			if delayedAllowLanAllowed {
 				log.Info("Delayed 'Allow LAN': apply ...")

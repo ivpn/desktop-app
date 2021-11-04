@@ -84,7 +84,7 @@ export function StartUpdateChecker(onHasUpdateCallback) {
       return false;
     }
 
-    const doCheck = async function() {
+    const doCheck = async function () {
       const isAutomaticCheck = true;
       const updatesInfo = await CheckUpdates(isAutomaticCheck);
       if (!updatesInfo) return;
@@ -125,14 +125,14 @@ export async function CheckUpdates(isAutomaticCheck) {
   console.log("Checking for app updates...");
   try {
     setState({
-      state: AppUpdateStage.CheckingForUpdates
+      state: AppUpdateStage.CheckingForUpdates,
     });
 
     let updatesInfo = await updater.CheckUpdates(isAutomaticCheck);
     store.commit("latestVersionInfo", updatesInfo);
 
     setState({
-      state: AppUpdateStage.CheckingFinished
+      state: AppUpdateStage.CheckingFinished,
     });
 
     return updatesInfo;
@@ -140,7 +140,7 @@ export async function CheckUpdates(isAutomaticCheck) {
     console.error(e);
     setState({
       state: AppUpdateStage.Error,
-      error: e
+      error: e,
     });
   }
 

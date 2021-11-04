@@ -9,10 +9,10 @@
 
     <select
       class="trustedConfigBase"
-      style="background: var(--background-color);"
+      style="background: var(--background-color)"
       v-bind:class="{
         trustedConfigUntrusted: isTrusted == false,
-        trustedConfigTrusted: isTrusted == true
+        trustedConfigTrusted: isTrusted == true,
       }"
       v-model="isTrusted"
     >
@@ -33,10 +33,10 @@ export default {
       },
       set(value) {
         if (this.onChange != null) this.onChange(this.wifiInfo.ssid, value);
-      }
-    }
+      },
+    },
   },
-  methods: {}
+  methods: {},
 };
 </script>
 

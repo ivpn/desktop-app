@@ -109,7 +109,7 @@ func Launch() {
 	}
 
 	tzName, tzOffsetSec := time.Now().Zone()
-	log.Info("Starting IVPN daemon", fmt.Sprintf(" [%s]", runtime.GOOS), fmt.Sprintf(" [timezone: %s %d (%dh)]", tzName, tzOffsetSec, tzOffsetSec/(60*60)), " ...")
+	log.Info("Starting IVPN daemon", fmt.Sprintf(" [%s,%s]", runtime.GOOS, runtime.GOARCH), fmt.Sprintf(" [timezone: %s %d (%dh)]", tzName, tzOffsetSec, tzOffsetSec/(60*60)), " ...")
 	log.Info(fmt.Sprintf("args: %s", os.Args))
 	log.Info(fmt.Sprintf("pid : %d ppid: %d", os.Getpid(), os.Getppid()))
 	log.Info(fmt.Sprintf("arch: %d bit", strconv.IntSize))

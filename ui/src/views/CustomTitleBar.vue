@@ -1,6 +1,7 @@
 <template>
   <div class="titleBar" v-show="!isWindowHasFrame">
-    <button style="margin-top: 1px"
+    <button
+      style="margin-top: 1px"
       v-if="minimizable"
       class="noBordersBtn winBtns winBtnMinimize"
       v-on:click="onMinimize()"
@@ -10,7 +11,8 @@
       </svg>
     </button>
 
-    <button style="margin-top: 1px; margin-right: 1px"
+    <button
+      style="margin-top: 1px; margin-right: 1px"
       v-if="closable"
       class="noBordersBtn winBtns winBtnClose"
       v-on:click="onClose()"
@@ -31,11 +33,11 @@ import { IsWindowHasFrame } from "@/platform/platform";
 const sender = window.ipcSender;
 
 export default {
-  data: function() {
+  data: function () {
     return {
       closable: true,
       maximizable: true,
-      minimizable: true
+      minimizable: true,
     };
   },
   mounted() {
@@ -49,19 +51,19 @@ export default {
     }, 0);
   },
   computed: {
-    isWindowHasFrame: function() {
+    isWindowHasFrame: function () {
       return IsWindowHasFrame();
-    }
+    },
   },
   watch: {},
   methods: {
-    onMinimize: function() {
+    onMinimize: function () {
       sender.minimizeCurrentWindow();
     },
-    onClose: function() {
+    onClose: function () {
       sender.closeCurrentWindow();
-    }
-  }
+    },
+  },
 };
 </script>
 

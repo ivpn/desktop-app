@@ -34,43 +34,43 @@ ipcMain.on("renderer-request-show-context-menu-edit", () => {
 const InputMenuInput = Menu.buildFromTemplate([
   {
     label: "Undo",
-    role: "undo"
+    role: "undo",
   },
   {
     label: "Redo",
-    role: "redo"
+    role: "redo",
   },
   {
-    type: "separator"
+    type: "separator",
   },
   {
     label: "Cut",
-    role: "cut"
+    role: "cut",
   },
   {
     label: "Copy",
-    role: "copy"
+    role: "copy",
   },
   {
     label: "Paste",
-    role: "paste"
+    role: "paste",
   },
   {
-    type: "separator"
+    type: "separator",
   },
   {
     label: "Select all",
-    role: "selectall"
-  }
+    role: "selectall",
+  },
 ]);
 // Default COPY context menu for all label elements
 const InputMenuLabel = Menu.buildFromTemplate([
   {
     label: "Copy",
-    role: "copy"
+    role: "copy",
   },
   {
     label: "Select all",
-    role: "selectall"
-  }
+    role: "selectall",
+  },
 ]);

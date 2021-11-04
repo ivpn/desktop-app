@@ -35,7 +35,7 @@ export function SentryInit() {
 
       enableJavaScript: false, // Enables crash reporting for JavaScript errors in this process.
       enableUnresponsive: false, // Enables event reporting for BrowserWindow 'unresponsive' events
-      useSentryMinidumpUploader: false // Enables the Sentry internal uploader for minidumps.
+      useSentryMinidumpUploader: false, // Enables the Sentry internal uploader for minidumps.
     });
   } catch (e) {
     console.error(e);
@@ -91,12 +91,12 @@ export function SentrySendDiagnosticReport(
       message: `Diagnostic report`,
       extra: objectToSend,
       contexts: {
-        ["comment"]: { "User comment": comment }
+        ["comment"]: { "User comment": comment },
       },
       tags: {
         AccountID: AccountID,
-        DaemonVersion: daemonVer
-      }
+        DaemonVersion: daemonVer,
+      },
     });
   } catch (e) {
     console.error(e);

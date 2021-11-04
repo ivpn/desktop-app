@@ -18,10 +18,10 @@ import Image_iconStatusBad from "@/assets/iconStatusBad.svg";
 export default {
   props: {
     server: Object,
-    isShowPingTime: Boolean
+    isShowPingTime: Boolean,
   },
   computed: {
-    pingStatusImg: function() {
+    pingStatusImg: function () {
       if (this.server == null) return null;
       switch (this.server.pingQuality) {
         case PingQuality.Good:
@@ -32,10 +32,10 @@ export default {
           return Image_iconStatusBad;
       }
       return null;
-    }
+    },
   },
 
-  methods: {}
+  methods: {},
 };
 </script>
 

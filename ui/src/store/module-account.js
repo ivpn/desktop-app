@@ -36,7 +36,7 @@ export default {
       WgPublicKey: "",
       WgLocalIP: "",
       WgKeyGenerated: new Date(),
-      WgKeysRegenIntervalSec: 0
+      WgKeysRegenIntervalSec: 0,
     },
     accountStatus: {
       Active: false,
@@ -50,8 +50,8 @@ export default {
       Upgradable: false,
       UpgradeToPlan: "",
       UpgradeToURL: "",
-      Limit: 0 // applicable for 'session limit' error
-    }
+      Limit: 0, // applicable for 'session limit' error
+    },
   },
 
   mutations: {
@@ -98,27 +98,27 @@ export default {
 
       // convert capabilities to lower case
       if (state.accountStatus.Capabilities != null)
-        state.accountStatus.Capabilities.map(a => {
+        state.accountStatus.Capabilities.map((a) => {
           return a.toLowerCase();
         });
-    }
+    },
   },
 
   getters: {
-    isLoggedIn: state => !isStrNullOrEmpty(state.session.Session),
+    isLoggedIn: (state) => !isStrNullOrEmpty(state.session.Session),
 
-    isAccountStateExists: state => {
+    isAccountStateExists: (state) => {
       return state.accountStatus != null;
     },
 
-    isMultihopAllowed: state => {
+    isMultihopAllowed: (state) => {
       // if no info about account status - let's believe that multihop is allowed
       if (!state.accountStatus || !state.accountStatus.Capabilities)
         return true;
       return state.accountStatus.Capabilities.includes("multihop");
     },
 
-    messageFreeTrial: state => {
+    messageFreeTrial: (state) => {
       if (!state.accountStatus) return null;
       if (!state.accountStatus.IsFreeTrial) return null;
 
@@ -134,7 +134,7 @@ export default {
       if (diffDays == 1) return "Your free trial expires in 1 day";
       return `Your free trial expires in ${diffDays} days`;
     },
-    messageAccountExpiration: state => {
+    messageAccountExpiration: (state) => {
       if (!state.accountStatus) return null;
       if (state.accountStatus.IsFreeTrial) return null;
 
@@ -150,7 +150,7 @@ export default {
       if (diffDays == 0) return "Your account expires today";
       if (diffDays == 1) return "Your account expires in 1 day";
       return `Your account expires in ${diffDays} days`;
-    }
+    },
   },
 
   actions: {
@@ -160,10 +160,10 @@ export default {
       if (context.getters.isMultihopAllowed === false)
         // TODO: have to be removed from here (potential problem example: VPN is connected multihop but multihop not allowed)
         context.dispatch("settings/isMultiHop", false, { root: true });
-    }
+    },
   },
 
-  modules: {}
+  modules: {},
 };
 
 function getLastPartOfSessionToken(sessionToken) {

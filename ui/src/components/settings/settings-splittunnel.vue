@@ -11,7 +11,7 @@
       VPN
     </div>
     <div class="fwDescription" style="margin-top: 0px; margin-bottom: 0px">
-      <span class="settingsGrayLongDescriptionFont" style="font-weight: bold;"
+      <span class="settingsGrayLongDescriptionFont" style="font-weight: bold"
         >Warning:</span
       >
       When adding a running application, any connections already established by
@@ -28,11 +28,11 @@
     </div>
 
     <!-- APPS -->
-    <div style="height:100%;">
-      <div class="flexRow" style="margin-top: 12px; margin-bottom:12px">
+    <div style="height: 100%">
+      <div class="flexRow" style="margin-top: 12px; margin-bottom: 12px">
         <div
           class="flexRowRestSpace settingsBoldFont settingsDefaultTextColor"
-          style="margin-top: 0px; margin-bottom:0px; white-space: nowrap;"
+          style="margin-top: 0px; margin-bottom: 0px; white-space: nowrap"
         >
           Applications
         </div>
@@ -61,13 +61,18 @@
       </div>
 
       <div class="horizontalLine" />
-      <div class="flexRow" style="position: relative;">
+      <div class="flexRow" style="position: relative">
         <!-- Configured apps view -->
 
         <!-- No applications in Split Tunnel configuration -->
         <div
           v-if="isNoConfiguredApps"
-          style="text-align: center; width:100%; margin-top: 50px; padding: 50px;"
+          style="
+            text-align: center;
+            width: 100%;
+            margin-top: 50px;
+            padding: 50px;
+          "
         >
           <div class="settingsGrayTextColor">
             No applications in Split Tunnel configuration
@@ -77,7 +82,7 @@
         <!-- No applications that are fit the filter -->
         <div
           v-if="!isNoConfiguredApps && isNoConfiguredAppsMatchFilter"
-          style="text-align: center; width:100%; padding: 50px;"
+          style="text-align: center; width: 100%; padding: 50px"
         >
           <div class="settingsGrayTextColor">
             No applications in Split Tunnel configuration that are fit the
@@ -86,7 +91,14 @@
           <div>
             '<span
               class="settingsGrayTextColor"
-              style="display: inline-block; font-weight: bold; overflow: hidden; white-space: nowrap;  text-overflow: ellipsis; max-width: 300px"
+              style="
+                display: inline-block;
+                font-weight: bold;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+                max-width: 300px;
+              "
               >{{ filter }}</span
             >'
           </div>
@@ -96,21 +108,30 @@
         <div
           v-if="
             !isShowAppAddPopup &&
-              !isNoConfiguredApps &&
-              !isNoConfiguredAppsMatchFilter
+            !isNoConfiguredApps &&
+            !isNoConfiguredAppsMatchFilter
           "
-          style="overflow: auto;
-          width: 100%;
-          position: relative;
-          height:244px; min-height:244px; max-height:244px;"
+          style="
+            overflow: auto;
+            width: 100%;
+            position: relative;
+            height: 244px;
+            min-height: 244px;
+            max-height: 244px;
+          "
         >
           <spinner
             :loading="isLoadingAllApps"
-            style="position: absolute; background: transparent; width: 100%; height: 100%;"
+            style="
+              position: absolute;
+              background: transparent;
+              width: 100%;
+              height: 100%;
+            "
           />
 
           <div v-for="app of filteredApps" v-bind:key="app.AppBinaryPath">
-            <div class="flexRow grayedOnHover" style="padding-top: 4px;">
+            <div class="flexRow grayedOnHover" style="padding-top: 4px">
               <!-- APP INFO  -->
               <binaryInfoControl :app="app" style="width: 100%" />
 
@@ -120,7 +141,7 @@
                   class="noBordersBtn opacityOnHover"
                   v-if="app.isSplitted"
                   v-on:click="removeApp(app.AppBinaryPath)"
-                  style="pointer-events: auto;"
+                  style="pointer-events: auto"
                   title="Remove"
                 >
                   <img width="24" height="24" src="@/assets/minus.svg" />
@@ -130,7 +151,7 @@
                   class="noBordersBtn opacityOnHover"
                   v-else
                   v-on:click="addApp(app.AppBinaryPath)"
-                  style="pointer-events: auto;"
+                  style="pointer-events: auto"
                 >
                   <img width="24" height="24" src="@/assets/plus.svg" />
                 </button>
@@ -150,7 +171,7 @@
 
                 <button
                   class="noBordersBtn opacityOnHoverLight settingsGrayTextColor"
-                  style="pointer-events: auto;"
+                  style="pointer-events: auto"
                   v-on:click="showAddApplicationPopup(false)"
                 >
                   CANCEL
@@ -164,18 +185,23 @@
                 placeholder="Search for app"
                 v-model="filterAppsToAdd"
                 v-bind:style="{ backgroundImage: 'url(' + searchImage + ')' }"
-                style="margin: 0px;  margin-bottom: 10px"
+                style="margin: 0px; margin-bottom: 10px"
               />
               <div class="horizontalLine" />
 
               <!--all apps-->
               <div
-                style="overflow: auto; position: relative; height: 320px; max-height: 320px"
+                style="
+                  overflow: auto;
+                  position: relative;
+                  height: 320px;
+                  max-height: 320px;
+                "
               >
                 <!-- No applications that are fit the filter -->
                 <div
                   v-if="!filteredAppsToAdd || filteredAppsToAdd.length == 0"
-                  style="text-align: center; width:100%; margin-top: 100px;"
+                  style="text-align: center; width: 100%; margin-top: 100px"
                 >
                   <div class="settingsGrayTextColor">
                     No applications that are fit the filter:
@@ -183,7 +209,14 @@
                   <div>
                     '<span
                       class="settingsGrayTextColor"
-                      style="display: inline-block; font-weight: bold; overflow: hidden; white-space: nowrap;  text-overflow: ellipsis; max-width: 300px"
+                      style="
+                        display: inline-block;
+                        font-weight: bold;
+                        overflow: hidden;
+                        white-space: nowrap;
+                        text-overflow: ellipsis;
+                        max-width: 300px;
+                      "
                       >{{ filterAppsToAdd }}</span
                     >'
                   </div>
@@ -197,7 +230,7 @@
                   <div
                     v-on:click="addApp(app.AppBinaryPath)"
                     class="flexRow grayedOnHover"
-                    style="padding-top: 4px;"
+                    style="padding-top: 4px"
                   >
                     <binaryInfoControl :app="app" style="width: 100%" />
                   </div>
@@ -209,7 +242,12 @@
               <div>
                 <button
                   class="settingsButton flexRow grayedOnHover"
-                  style="margin-top:10px; margin-bottom:10px; height: 40px; width: 100%"
+                  style="
+                    margin-top: 10px;
+                    margin-bottom: 10px;
+                    height: 40px;
+                    width: 100%;
+                  "
                   v-on:click="onManuaAddNewApplication"
                 >
                   <div class="flexRowRestSpace"></div>
@@ -235,10 +273,10 @@
 
     <!-- FOOTER -->
 
-    <div style="position: sticky; bottom: 20px;">
+    <div style="position: sticky; bottom: 20px">
       <div class="horizontalLine" />
 
-      <div class="flexRow" style="margin-top: 15px;">
+      <div class="flexRow" style="margin-top: 15px">
         <!-- CONFIGURED APPS FILETR -->
         <!--
         <input
@@ -254,7 +292,7 @@
         <button
           class="settingsButton opacityOnHoverLight"
           v-on:click="onResetToDefaultSettings"
-          style="white-space: nowrap;"
+          style="white-space: nowrap"
         >
           Reset to default settings
         </button>
@@ -280,10 +318,10 @@ import spinner from "@/components/controls/control-spinner.vue";
 export default {
   components: {
     spinner,
-    binaryInfoControl
+    binaryInfoControl,
   },
 
-  data: function() {
+  data: function () {
     return {
       isLoadingAllApps: false,
       isShowAppAddPopup: false,
@@ -300,7 +338,7 @@ export default {
       //    isSplitted (true or (false/null))
       allAppsHashed: {},
       appsToShow: null, // []; array of appInfo
-      configAppsHashed: {} // hashed list of splitted apps (needed to avoid duplicates in final list)
+      configAppsHashed: {}, // hashed list of splitted apps (needed to avoid duplicates in final list)
     };
   },
   async mounted() {
@@ -317,7 +355,7 @@ export default {
 
     if (allApps) {
       // create a list of hashed appinfo (by app path)
-      allApps.forEach(appInfo => {
+      allApps.forEach((appInfo) => {
         this.allAppsHashed[appInfo.AppBinaryPath.toLowerCase()] = appInfo;
       });
 
@@ -331,7 +369,7 @@ export default {
   watch: {
     STConfig() {
       this.updateAppsToShow();
-    }
+    },
   },
 
   methods: {
@@ -350,7 +388,7 @@ export default {
 
       // prepare information for selected apps: update app info (if exists)
       if (configApps) {
-        configApps.forEach(appPath => {
+        configApps.forEach((appPath) => {
           // use 'Object.assign' to not update data in 'this.allAppsHashed'
           let appInfoConst = this.allAppsHashed[appPath.toLowerCase()];
           let appInfo = {};
@@ -372,7 +410,7 @@ export default {
         appsInfo.push(appInfo);
       }
 
-      appsInfo.sort(function(a, b) {
+      appsInfo.sort(function (a, b) {
         if (a.AppName && b.AppName) {
           let app1 = a.AppName.toUpperCase();
           let app2 = b.AppName.toUpperCase();
@@ -408,8 +446,8 @@ export default {
           properties: ["openFile"],
           filters: [
             { name: "Executables", extensions: ["exe"] },
-            { name: "All files", extensions: ["*"] }
-          ]
+            { name: "All files", extensions: ["*"] },
+          ],
         };
         var ret = await sender.showOpenDialog(diagConfig);
         if (!ret || ret.canceled || ret.filePaths.length == 0) return;
@@ -418,7 +456,7 @@ export default {
         var stApps = [];
         if (st.apps) stApps = Object.assign(stApps, st.apps);
 
-        ret.filePaths.forEach(appPath => {
+        ret.filePaths.forEach((appPath) => {
           if (stApps.includes(appPath) == false) stApps.push(appPath);
         });
 
@@ -434,7 +472,7 @@ export default {
       if (st.apps) stApps = Object.assign(stApps, st.apps);
 
       var indexOfIgnoreCaseFunc = (arr, q) =>
-        arr.findIndex(item => q.toLowerCase() === item.toLowerCase());
+        arr.findIndex((item) => q.toLowerCase() === item.toLowerCase());
 
       var index = indexOfIgnoreCaseFunc(stApps, appPath);
       if (index === -1) return;
@@ -469,7 +507,7 @@ export default {
         type: "question",
         buttons: ["Yes", "Cancel"],
         message: "Reset all settings to default values",
-        detail: `Are you sure you want to reset the Split Tunnel configuration for all applications?`
+        detail: `Are you sure you want to reset the Split Tunnel configuration for all applications?`,
       });
       if (actionNo == 1) return;
 
@@ -481,10 +519,7 @@ export default {
       // file name of binary (without extension)
       let binaryFname = "";
       try {
-        binaryFname = appInfo.AppBinaryPath.split("\\")
-          .pop()
-          .split("/")
-          .pop();
+        binaryFname = appInfo.AppBinaryPath.split("\\").pop().split("/").pop();
         binaryFname = binaryFname.substring(0, binaryFname.lastIndexOf("."));
       } catch (e) {
         console.error(e);
@@ -500,14 +535,14 @@ export default {
       );
     },
 
-    resetFilters: function() {
+    resetFilters: function () {
       this.filter = "";
       this.filterAppsToAdd = "";
-    }
+    },
   },
 
   computed: {
-    addAppButtonText: function() {
+    addAppButtonText: function () {
       return "Add application...";
     },
 
@@ -518,15 +553,15 @@ export default {
       async set(value) {
         var st = this.$store.state.vpnState.splitTunnelling;
         await sender.SplitTunnelSetConfig(value, st.apps);
-      }
+      },
     },
 
     // needed for 'watch'
-    STConfig: function() {
+    STConfig: function () {
       return this.$store.state.vpnState.splitTunnelling;
     },
 
-    isNoConfiguredApps: function() {
+    isNoConfiguredApps: function () {
       if (
         this.isLoadingAllApps == false &&
         (!this.appsToShow || this.appsToShow.length == 0)
@@ -535,7 +570,7 @@ export default {
       return false;
     },
 
-    isNoConfiguredAppsMatchFilter: function() {
+    isNoConfiguredAppsMatchFilter: function () {
       if (!this.filter || this.filter == "") return false;
 
       if (
@@ -546,17 +581,17 @@ export default {
       return false;
     },
 
-    filteredApps: function() {
+    filteredApps: function () {
       if (this.filter == null || this.filter.length == 0)
         return this.appsToShow;
 
       let filter = this.filter.toLowerCase();
-      return this.appsToShow.filter(appInfo =>
+      return this.appsToShow.filter((appInfo) =>
         this.appsFiletrFunc(filter, appInfo)
       );
     },
 
-    filteredAppsToAdd: function() {
+    filteredAppsToAdd: function () {
       let retApps = [];
       if (this.allInstalledApps)
         retApps = Object.assign(retApps, this.allInstalledApps);
@@ -565,23 +600,23 @@ export default {
 
       // filter: exclude apps which are already in configuration
       let confAppsHashed = this.configAppsHashed;
-      let filterFunc = function(appInfo) {
+      let filterFunc = function (appInfo) {
         if (confAppsHashed[appInfo.AppBinaryPath.toLowerCase()]) return false;
         return true;
       };
-      retApps = retApps.filter(appInfo => filterFunc(appInfo));
+      retApps = retApps.filter((appInfo) => filterFunc(appInfo));
 
       // filter: default
       let filter = this.filterAppsToAdd.toLowerCase();
       if (filter && filter.length > 0)
-        retApps = retApps.filter(appInfo =>
+        retApps = retApps.filter((appInfo) =>
           this.appsFiletrFunc(filter, appInfo)
         );
 
       return retApps;
     },
 
-    searchImage: function() {
+    searchImage: function () {
       if (!isStrNullOrEmpty(this.filter)) return null;
 
       switch (Platform()) {
@@ -592,8 +627,8 @@ export default {
         default:
           return Image_search_linux;
       }
-    }
-  }
+    },
+  },
 };
 </script>
 

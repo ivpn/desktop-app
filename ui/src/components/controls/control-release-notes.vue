@@ -11,7 +11,7 @@
               'badge-green':
                 note.type && note.type.toLowerCase().startsWith('new'),
               'badge-blue':
-                note.type && note.type.toLowerCase().startsWith('improve')
+                note.type && note.type.toLowerCase().startsWith('improve'),
             }"
           >
             {{ note.type }}
@@ -28,12 +28,12 @@
 <script>
 export default {
   props: ["releaseNotes"],
-  data: function() {
+  data: function () {
     return {};
   },
   mounted() {},
   methods: {},
-  computed: {}
+  computed: {},
 };
 </script>
 

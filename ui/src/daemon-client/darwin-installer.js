@@ -35,19 +35,19 @@ function InstallDaemon(onInstallationStarted, done) {
 
     if (onInstallationStarted != null) onInstallationStarted();
 
-    cmd.stdout.on("data", data => {
+    cmd.stdout.on("data", (data) => {
       console.log(`${logStringPrefix}: ${data}`);
     });
-    cmd.stderr.on("data", err => {
+    cmd.stderr.on("data", (err) => {
       console.log(`[ERROR] ${logStringPrefix}: ${err}`);
     });
 
-    cmd.on("error", err => {
+    cmd.on("error", (err) => {
       console.error(err);
       if (done) done(-1);
     });
 
-    cmd.on("exit", code => {
+    cmd.on("exit", (code) => {
       if (done) done(code);
     });
   } catch (e) {
@@ -66,16 +66,16 @@ function TryStartDaemon(done) {
       ["--start_helper"]
     );
 
-    cmd.stderr.on("data", err => {
+    cmd.stderr.on("data", (err) => {
       console.log(`[ERROR] ${logStringPrefix}: ${err}`);
     });
 
-    cmd.on("error", err => {
+    cmd.on("error", (err) => {
       console.error(err);
       if (done) done(-1);
     });
 
-    cmd.on("exit", code => {
+    cmd.on("exit", (code) => {
       if (done) done(code);
     });
   } catch (e) {
@@ -99,12 +99,12 @@ function IsDaemonInstallationRequired(onResultFunc) {
       ["--is_helper_installation_required"]
     );
 
-    cmd.on("error", err => {
+    cmd.on("error", (err) => {
       console.error(err);
       if (onResultFunc) onResultFunc(-1);
     });
 
-    cmd.on("exit", code => {
+    cmd.on("exit", (code) => {
       // if exitCode == 0 - the daemon must be installed
       if (onResultFunc) onResultFunc(code);
     });
@@ -118,7 +118,7 @@ function InstallDaemonIfRequired(onInstallationStarted, done) {
   if (Platform() !== PlatformEnum.macOS) return;
 
   try {
-    IsDaemonInstallationRequired(code => {
+    IsDaemonInstallationRequired((code) => {
       // if exitCode == 0 - the daemon must be installed
       if (code == 0) InstallDaemon(onInstallationStarted, done);
       else if (done) done(code);
@@ -134,5 +134,5 @@ function InstallDaemonIfRequired(onInstallationStarted, done) {
 export default {
   InstallDaemonIfRequired,
   IsDaemonInstallationRequired,
-  TryStartDaemon
+  TryStartDaemon,
 };

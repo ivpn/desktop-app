@@ -62,7 +62,7 @@ class SharedMutations {
   }
 
   notifyRenderers(connections, payload) {
-    Object.keys(connections).forEach(processId => {
+    Object.keys(connections).forEach((processId) => {
       connections[processId].send(IPC_EVENT_NOTIFY_RENDERERS, payload);
     });
   }
@@ -101,7 +101,7 @@ class SharedMutations {
     const connections = {};
 
     // Save new connection
-    this.onConnect(event => {
+    this.onConnect((event) => {
       const win = event.sender;
       const winId = win.id;
 
@@ -119,7 +119,7 @@ class SharedMutations {
     });
 
     // Subscribe on changes from Vuex store
-    this.store.subscribe(mutation => {
+    this.store.subscribe((mutation) => {
       const { type, payload } = mutation;
 
       // Forward changes to renderer processes
@@ -141,9 +141,10 @@ class SharedMutations {
   }
 }
 
-export default (options = {}) => store => {
-  const sharedMutations = new SharedMutations(options, store);
+export default (options = {}) =>
+  (store) => {
+    const sharedMutations = new SharedMutations(options, store);
 
-  sharedMutations.loadOptions();
-  sharedMutations.activatePlugin();
-};
+    sharedMutations.loadOptions();
+    sharedMutations.activatePlugin();
+  };

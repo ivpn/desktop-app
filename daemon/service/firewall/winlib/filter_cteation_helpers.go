@@ -180,7 +180,11 @@ func NewFilterAllowLocalIP(
 	f.Weight = weightAllowLocalIP
 	f.Action = FwpActionPermit
 
-	f.Flags = FwpmFilterFlagClearActionRight
+	// Do not set FwpmFilterFlagClearActionRight (f.Flags = FwpmFilterFlagClearActionRight)
+	// Otherwise, we will overlap blocking rules from Windows Firewall (if they are)
+	// For example: if the Windows firewall have rule to block a specific application
+	//		-> using FwpmFilterFlagClearActionRight will allow to communicate from 'ip' for this application
+
 	if isPersistent {
 		f.Flags = f.Flags | FwpmFilterFlagPersistent
 	}
@@ -204,7 +208,11 @@ func NewFilterAllowLocalIPV6(
 	f.Weight = weightAllowLocalIPV6
 	f.Action = FwpActionPermit
 
-	f.Flags = FwpmFilterFlagClearActionRight
+	// Do not set FwpmFilterFlagClearActionRight (f.Flags = FwpmFilterFlagClearActionRight)
+	// Otherwise, we will overlap blocking rules from Windows Firewall (if they are)
+	// For example: if the Windows firewall have rule to block a specific application
+	//		-> using FwpmFilterFlagClearActionRight will allow to communicate from 'ip' for this application
+
 	if isPersistent {
 		f.Flags = f.Flags | FwpmFilterFlagPersistent
 	}

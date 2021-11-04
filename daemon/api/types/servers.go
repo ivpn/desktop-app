@@ -29,11 +29,12 @@ type WireGuardServerHostInfoIPv6 struct {
 
 // WireGuardServerHostInfo contains info about WG server host
 type WireGuardServerHostInfo struct {
-	Hostname  string                      `json:"hostname"`
-	Host      string                      `json:"host"`
-	PublicKey string                      `json:"public_key"`
-	LocalIP   string                      `json:"local_ip"`
-	IPv6      WireGuardServerHostInfoIPv6 `json:"ipv6"`
+	Hostname     string                      `json:"hostname"`
+	Host         string                      `json:"host"`
+	PublicKey    string                      `json:"public_key"`
+	LocalIP      string                      `json:"local_ip"`
+	IPv6         WireGuardServerHostInfoIPv6 `json:"ipv6"`
+	MultihopPort int                         `json:"multihop_port"`
 }
 
 // WireGuardServerInfo contains all info about WG server
@@ -49,6 +50,13 @@ type WireGuardServerInfo struct {
 	Hosts []WireGuardServerHostInfo `json:"hosts"`
 }
 
+// OpenVPNServerHostInfo contains info about OpenVPN server host
+type OpenVPNServerHostInfo struct {
+	Hostname     string `json:"hostname"`
+	Host         string `json:"host"`
+	MultihopPort int    `json:"multihop_port"`
+}
+
 // OpenvpnServerInfo contains all info about OpenVPN server
 type OpenvpnServerInfo struct {
 	Gateway     string `json:"gateway"`
@@ -59,7 +67,7 @@ type OpenvpnServerInfo struct {
 	Latitude  float32 `json:"latitude"`
 	Longitude float32 `json:"longitude"`
 
-	IPAddresses []string `json:"ip_addresses"`
+	Hosts []OpenVPNServerHostInfo `json:"hosts"`
 }
 
 // DNSInfo contains info about DNS server

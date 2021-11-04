@@ -49,6 +49,7 @@ type CmdServers struct {
 	countryCode  bool
 	filter       string
 	ping         bool
+	hosts        bool
 	filterInvert bool
 }
 
@@ -71,6 +72,9 @@ func (c *CmdServers) Init() {
 	c.BoolVar(&c.city, "city", false, "Apply FILTER to city name")
 
 	c.BoolVar(&c.ping, "ping", false, "Ping servers and view ping result")
+
+	c.BoolVar(&c.hosts, "hosts", false, "Show location hosts")
+
 	c.BoolVar(&c.filterInvert, "filter_invert", false, "Invert filtering result")
 }
 func (c *CmdServers) Run() error {
@@ -89,35 +93,58 @@ func (c *CmdServers) Run() error {
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.AlignRight|tabwriter.Debug)
 
+	pingHeader := ""
+	hostsHeader := ""
+	pingEmptyVal := ""
 	if c.ping {
-		fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\tPING\t")
-	} else {
-		fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\t")
+		pingHeader = "PING\t"
+		pingEmptyVal = "\t"
 	}
+	if c.hosts {
+		hostsHeader = "HOSTS\t"
+	}
+
+	fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\t"+pingHeader+hostsHeader)
 
 	helloResp := _proto.GetHelloResponse()
 	isWgDisabled := len(helloResp.DisabledFunctions.WireGuardError) > 0
 	isOpenVPNDisabled := len(helloResp.DisabledFunctions.OpenVPNError) > 0
 
-	svrs := serversFilter(isWgDisabled, isOpenVPNDisabled,
+	svrs, _ := serversFilter(isWgDisabled, isOpenVPNDisabled,
 		slist, c.filter, c.proto, c.location, c.city, c.countryCode, c.country, c.filterInvert)
 	for _, s := range svrs {
 		str := ""
 		IPvInfo := "IPv4"
-		if s.isIPv6Tunnel == true {
+		if s.isIPv6Tunnel {
 			IPvInfo = "IPv4/IPv6"
 		}
-		if c.ping {
-			pingStr := " ?  "
-			if s.pingMs > 0 {
-				pingStr = fmt.Sprintf("%dms", s.pingMs)
-			}
 
-			str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s\t", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo, pingStr)
-		} else {
-			str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo)
+		pingStr := ""
+		if c.ping {
+			pingStr = " ?  \t"
+			if s.pingMs > 0 {
+				pingStr = fmt.Sprintf("%dms\t", s.pingMs)
+			}
 		}
+
+		firstHostStr := ""
+		if c.hosts {
+			firstHostStr = "\t"
+			if len(s.hosts) > 0 {
+				firstHostStr = s.hosts[0].hostname + "\t"
+			}
+		}
+
+		str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s%s", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo, pingStr, firstHostStr)
 		fmt.Fprintln(w, str)
+
+		if c.hosts && len(s.hosts) > 1 {
+			for _, h := range s.hosts[1:] {
+				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s%s", "", "", "", "", "", "", pingEmptyVal, h.hostname+"\t")
+				fmt.Fprintln(w, str)
+			}
+		}
+
 	}
 
 	w.Flush()
@@ -165,14 +192,14 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 		ret = make([]serverDesc, 0, len(servers.WireguardServers))
 
 		for _, s := range servers.WireguardServers {
+			hosts := make([]hostDesc, 0, len(s.Hosts))
 
-			hosts := make(map[string]struct{}, len(s.Hosts))
 			isIPv6Tunnel := false
 			for _, h := range s.Hosts {
 				if len(h.IPv6.LocalIP) > 0 {
 					isIPv6Tunnel = true
 				}
-				hosts[strings.ToLower(strings.TrimSpace(h.Host))] = struct{}{}
+				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname)})
 			}
 			ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts, isIPv6Tunnel: isIPv6Tunnel})
 		}
@@ -180,9 +207,10 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 		ret = make([]serverDesc, 0, len(servers.OpenvpnServers))
 
 		for _, s := range servers.OpenvpnServers {
-			hosts := make(map[string]struct{}, len(s.IPAddresses))
-			for _, h := range s.IPAddresses {
-				hosts[strings.ToLower(strings.TrimSpace(h))] = struct{}{}
+			hosts := make([]hostDesc, 0, len(s.Hosts))
+
+			for _, h := range s.Hosts {
+				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname)})
 			}
 			ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 		}
@@ -190,7 +218,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 	return ret
 }
 
-func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc, mask string, proto string, useGw, useCity, useCCode, useCountry, invertFilter bool) []serverDesc {
+func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc, mask string, proto string, useGw, useCity, useCCode, useCountry, invertFilter bool) (svrs []serverDesc, isStrictHost bool) {
 	if isWgDisabled || isOvpnDisabled {
 		oldSvrs := servers
 		servers = make([]serverDesc, 0, len(oldSvrs))
@@ -206,7 +234,7 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 	}
 
 	if len(mask) == 0 && len(proto) == 0 {
-		return servers
+		return servers, false
 	}
 	mask = strings.ToLower(mask)
 	checkAll := !(useGw || useCity || useCCode || useCountry)
@@ -240,6 +268,15 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 			isOK = true
 		}
 
+		for _, h := range s.hosts {
+			if h.hostname == mask {
+				isOK = true
+				isStrictHost = true
+				s.hosts = []hostDesc{h}
+				break
+			}
+		}
+
 		if invertFilter {
 			isOK = !isOK
 		}
@@ -247,7 +284,7 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 			ret = append(ret, s)
 		}
 	}
-	return ret
+	return ret, isStrictHost
 }
 
 func serversPing(servers []serverDesc, needSort bool) error {
@@ -262,9 +299,12 @@ func serversPing(servers []serverDesc, needSort bool) error {
 
 	for _, pr := range pingRes {
 		for i, s := range servers {
-			if _, ok := s.hosts[pr.Host]; ok {
-				s.pingMs = pr.Ping
-				servers[i] = s
+			for _, h := range s.hosts {
+				if h.host == pr.Host {
+					s.pingMs = pr.Ping
+					servers[i] = s
+					break
+				}
 			}
 		}
 	}
@@ -286,13 +326,18 @@ func serversPing(servers []serverDesc, needSort bool) error {
 	return nil
 }
 
+type hostDesc struct {
+	hostname string
+	host     string // ip
+}
+
 type serverDesc struct {
 	protocol     string
 	gateway      string
 	city         string
 	countryCode  string
 	country      string
-	hosts        map[string]struct{}
+	hosts        []hostDesc
 	pingMs       int
 	isIPv6Tunnel bool
 }

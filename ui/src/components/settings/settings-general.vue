@@ -47,24 +47,22 @@
       >
     </div>
 
-    <div class="settingsBoldFont">
-      View:
-    </div>
+    <div class="settingsBoldFont">View:</div>
     <div class="flexRow paramBlock">
       <div class="defColor paramName">Color theme:</div>
       <select
         v-model="colorTheme"
-        style="margin-left:30px; background: var(--background-color);"
+        style="margin-left: 30px; background: var(--background-color)"
       >
-        <option :value="colorThemeEnum.system" :key="colorThemeEnum.system"
-          >System default</option
-        >
-        <option :value="colorThemeEnum.light" :key="colorThemeEnum.light"
-          >Light</option
-        >
-        <option :value="colorThemeEnum.dark" :key="colorThemeEnum.dark"
-          >Dark</option
-        >
+        <option :value="colorThemeEnum.system" :key="colorThemeEnum.system">
+          System default
+        </option>
+        <option :value="colorThemeEnum.light" :key="colorThemeEnum.light">
+          Light
+        </option>
+        <option :value="colorThemeEnum.dark" :key="colorThemeEnum.dark">
+          Dark
+        </option>
       </select>
     </div>
 
@@ -76,9 +74,7 @@
       </div>
     </div> -->
 
-    <div class="settingsBoldFont">
-      Autoconnect:
-    </div>
+    <div class="settingsBoldFont">Autoconnect:</div>
     <div class="param">
       <input
         type="checkbox"
@@ -98,9 +94,7 @@
       >
     </div>
 
-    <div class="settingsBoldFont">
-      On exit:
-    </div>
+    <div class="settingsBoldFont">On exit:</div>
     <div class="param">
       <input
         type="checkbox"
@@ -124,9 +118,7 @@
     </div>
 
     <!-- DIAGNOSTIC LOGS-->
-    <div class="settingsBoldFont">
-      Diagnostics:
-    </div>
+    <div class="settingsBoldFont">Diagnostics:</div>
     <div class="flexRow">
       <div class="param">
         <input type="checkbox" id="logging" v-model="logging" />
@@ -145,7 +137,7 @@
     <div id="diagnosticLogs" v-if="diagnosticLogsShown">
       <ComponentDiagnosticLogs
         :onClose="
-          evtId => {
+          (evtId) => {
             diagnosticLogsShown = false;
           }
         "
@@ -163,13 +155,13 @@ const sender = window.ipcSender;
 // VUE component
 export default {
   components: {
-    ComponentDiagnosticLogs
+    ComponentDiagnosticLogs,
   },
-  data: function() {
+  data: function () {
     return {
       diagnosticLogsShown: false,
       isLaunchAtLoginValue: null,
-      colorScheme: null
+      colorScheme: null,
     };
   },
   mounted() {
@@ -187,7 +179,7 @@ export default {
         console.error("Error obtaining 'LaunchAtLogin' value: ", err);
         this.isLaunchAtLoginValue = null;
       }
-    }
+    },
   },
   computed: {
     isLinux() {
@@ -200,7 +192,7 @@ export default {
       set(value) {
         this.isLaunchAtLoginValue = value;
         let theThis = this;
-        (async function() {
+        (async function () {
           try {
             await sender.AutoLaunchSet(theThis.isLaunchAtLoginValue);
           } catch (err) {
@@ -208,7 +200,7 @@ export default {
             theThis.isLaunchAtLoginValue = null;
           }
         })();
-      }
+      },
     },
     autoConnectOnLaunch: {
       get() {
@@ -216,7 +208,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/autoConnectOnLaunch", value);
-      }
+      },
     },
     connectVPNOnInsecureNetwork: {
       get() {
@@ -226,7 +218,7 @@ export default {
         let wifi = Object.assign({}, this.$store.state.settings.wifi);
         wifi.connectVPNOnInsecureNetwork = value;
         this.$store.dispatch("settings/wifi", wifi);
-      }
+      },
     },
 
     minimizeToTray: {
@@ -237,7 +229,7 @@ export default {
         this.$store.dispatch("settings/minimizeToTray", value);
         if (value !== true)
           this.$store.dispatch("settings/showAppInSystemDock", true);
-      }
+      },
     },
     connectSelectedMapLocation: {
       get() {
@@ -245,7 +237,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/connectSelectedMapLocation", value);
-      }
+      },
     },
     showAppInSystemDock: {
       get() {
@@ -253,7 +245,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/showAppInSystemDock", value);
-      }
+      },
     },
     disconnectOnQuit: {
       get() {
@@ -261,7 +253,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/disconnectOnQuit", value);
-      }
+      },
     },
     quitWithoutConfirmation: {
       get() {
@@ -269,7 +261,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/quitWithoutConfirmation", value);
-      }
+      },
     },
     logging: {
       get() {
@@ -278,7 +270,7 @@ export default {
       set(value) {
         this.$store.dispatch("settings/logging", value);
         sender.SetLogging();
-      }
+      },
     },
 
     isCanSendDiagLogs() {
@@ -295,9 +287,9 @@ export default {
       set(value) {
         sender.ColorSchemeSet(value);
         this.colorScheme = value;
-      }
-    }
-  }
+      },
+    },
+  },
 };
 </script>
 

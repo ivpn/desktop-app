@@ -24,7 +24,7 @@ import CustomTitleBar from "@/views/CustomTitleBar.vue";
 
 export default {
   components: {
-    CustomTitleBar
+    CustomTitleBar,
   },
   beforeCreate() {
     // function using to re-apply all mutations
@@ -32,18 +32,18 @@ export default {
     sender.RefreshStorage();
   },
   computed: {
-    isWindowHasFrame: function() {
+    isWindowHasFrame: function () {
       return IsWindowHasFrame();
     },
-    isLoggedIn: function() {
+    isLoggedIn: function () {
       return this.$store.getters["account/isLoggedIn"];
-    }
+    },
   },
   watch: {
     isLoggedIn() {
       if (this.isLoggedIn === false) this.$router.push("/");
-    }
-  }
+    },
+  },
 };
 
 InitDefaultCopyMenus();

@@ -33,7 +33,7 @@ function GetResourcesPath() {
 }
 
 export default {
-  MinRequiredDaemonVer: "3.3.31",
+  MinRequiredDaemonVer: "3.3.61",
 
   MinimizedUIWidth: 320,
   MaximizedUIWidth: 800,
@@ -44,5 +44,5 @@ export default {
   URLApps: "https://www.ivpn.net/apps/",
 
   IsDebug,
-  GetResourcesPath
+  GetResourcesPath,
 };

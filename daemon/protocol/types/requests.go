@@ -147,13 +147,22 @@ type Connect struct {
 		EntryVpnServer struct {
 			Hosts []types.WireGuardServerHostInfo
 		}
+
+		MultihopExitServer struct {
+			// ExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
+			// in same manner as for OpenVPN connection.
+			// Example: "gateway":"zz.wg.ivpn.net" => "zz"
+			ExitSrvID string
+			Hosts     []types.WireGuardServerHostInfo
+		}
 	}
 
 	OpenVpnParameters struct {
 		EntryVpnServer struct {
-			IPAddresses []string `json:"ip_addresses"`
+			Hosts []types.OpenVPNServerHostInfo
 		}
 
+		// MultihopExitSrvID example: "gateway":"zz.wg.ivpn.net" => "zz"
 		MultihopExitSrvID string
 		ProxyType         string
 		ProxyAddress      string
@@ -196,6 +205,11 @@ type SessionNew struct {
 // SessionDelete logout from current device
 type SessionDelete struct {
 	CommandBase
+	NeedToResetSettings   bool
+	NeedToDisableFirewall bool
+	// If IsCanDeleteSessionLocally==true: the account will be logged out
+	// even if there is no connectivity to API server
+	IsCanDeleteSessionLocally bool
 }
 
 // AccountStatus get account status

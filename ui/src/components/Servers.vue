@@ -83,7 +83,7 @@
         <div
           class="popup popupMinShifted"
           v-bind:class="{
-            popupMinShifted: isMinimizedUI
+            popupMinShifted: isMinimizedUI,
           }"
         >
           <div
@@ -91,7 +91,7 @@
             class="popuptext"
             v-bind:class="{
               show: isSortMenu,
-              popuptextMinShifted: isMinimizedUI
+              popuptextMinShifted: isMinimizedUI,
             }"
           >
             <div class="popup_menu_block">
@@ -149,7 +149,7 @@
     <div
       v-if="isFastestServerConfig"
       class="small_text"
-      style="margin-bottom: 5px;"
+      style="margin-bottom: 5px"
     >
       Disable servers you do not want to be choosen as the fastest server
     </div>
@@ -275,32 +275,32 @@ import ClickOutside from "vue-click-outside";
 
 export default {
   directives: {
-    ClickOutside
+    ClickOutside,
   },
   props: [
     "onBack",
     "onServerChanged",
     "isExitServer",
     "onFastestServer",
-    "onRandomServer"
+    "onRandomServer",
   ],
   components: {
     serverNameControl,
     serverPingInfoControl,
     SwitchProgress,
-    imgArrowLeft
+    imgArrowLeft,
   },
-  data: function() {
+  data: function () {
     return {
       filter: "",
       isFastestServerConfig: false,
       isSortMenu: false,
-      isShowScrollButton: false
+      isShowScrollButton: false,
     };
   },
-  created: function() {
+  created: function () {
     let self = this;
-    window.addEventListener("click", function(e) {
+    window.addEventListener("click", function (e) {
       // close dropdown when clicked outside
       if (!self.$el.contains(e.target)) {
         self.isSortMenu = false;
@@ -313,37 +313,37 @@ export default {
     resizeObserver.observe(this.$refs.scrollArea);
   },
   computed: {
-    isMinimizedUI: function() {
+    isMinimizedUI: function () {
       return this.$store.state.settings.minimizedUI;
     },
-    isFavoritesView: function() {
+    isFavoritesView: function () {
       return this.$store.state.uiState.serversFavoriteView;
     },
-    isMultihop: function() {
+    isMultihop: function () {
       return this.$store.state.settings.isMultiHop;
     },
-    isShowFavoriteDescriptionBlock: function() {
+    isShowFavoriteDescriptionBlock: function () {
       if (!this.isFavoritesView) return false;
       let favSvrs = this.favoriteServers;
       return favSvrs == null || favSvrs.length == 0;
     },
-    servers: function() {
+    servers: function () {
       return this.$store.getters["vpnState/activeServers"];
     },
 
-    sortTypeStr: function() {
+    sortTypeStr: function () {
       return enumValueName(
         ServersSortTypeEnum,
         this.$store.state.settings.serversSortType
       );
     },
 
-    favoriteServers: function() {
+    favoriteServers: function () {
       let favorites = this.$store.state.settings.serversFavoriteList;
-      return this.servers.filter(s => favorites.includes(s.gateway));
+      return this.servers.filter((s) => favorites.includes(s.gateway));
     },
 
-    filteredServers: function() {
+    filteredServers: function () {
       let store = this.$store;
       let sType = store.state.settings.serversSortType;
       function compare(a, b) {
@@ -402,7 +402,7 @@ export default {
 
       let filter = this.filter.toLowerCase();
       let filtered = servers.filter(
-        s =>
+        (s) =>
           (s.city && s.city.toLowerCase().includes(filter)) ||
           (s.country && s.country.toLowerCase().includes(filter)) ||
           (s.country_code && s.country_code.toLowerCase().includes(filter))
@@ -411,7 +411,7 @@ export default {
       return filtered.slice().sort(compare);
     },
 
-    arrowLeftImagePath: function() {
+    arrowLeftImagePath: function () {
       switch (Platform()) {
         case PlatformEnum.Windows:
           return Image_arrow_left_windows;
@@ -421,7 +421,7 @@ export default {
           return Image_arrow_left_linux;
       }
     },
-    searchImage: function() {
+    searchImage: function () {
       if (!isStrNullOrEmpty(this.filter)) return null;
 
       switch (Platform()) {
@@ -433,7 +433,7 @@ export default {
           return Image_search_linux;
       }
     },
-    settingsImage: function() {
+    settingsImage: function () {
       switch (Platform()) {
         case PlatformEnum.Windows:
           return Image_settings_windows;
@@ -443,16 +443,16 @@ export default {
           return Image_settings_linux;
       }
     },
-    sortImage: function() {
+    sortImage: function () {
       return Image_sort;
     },
-    selectedImage: function() {
+    selectedImage: function () {
       return Image_check_thin;
-    }
+    },
   },
 
   methods: {
-    goBack: function() {
+    goBack: function () {
       if (this.isFastestServerConfig) {
         this.filter = "";
         this.isFastestServerConfig = false;
@@ -460,14 +460,14 @@ export default {
       }
       if (this.onBack != null) this.onBack();
     },
-    onServerSelected: function(server) {
+    onServerSelected: function (server) {
       if (this.isInaccessibleServer(server)) {
         sender.showMessageBoxSync({
           type: "info",
           buttons: ["OK"],
           message: "Entry and exit servers cannot be in the same country",
           detail:
-            "When using multihop you must select entry and exit servers in different countries. Please select a different entry or exit server."
+            "When using multihop you must select entry and exit servers in different countries. Please select a different entry or exit server.",
         });
         return;
       }
@@ -475,13 +475,13 @@ export default {
       this.onServerChanged(server, this.isExitServer != null);
       this.onBack();
     },
-    onSortMenuClickedOutside: function() {
+    onSortMenuClickedOutside: function () {
       this.isSortMenu = false;
     },
-    onSortMenuClicked: function() {
+    onSortMenuClicked: function () {
       this.isSortMenu = !this.isSortMenu;
     },
-    onSortType: function(sortTypeStr) {
+    onSortType: function (sortTypeStr) {
       this.$store.dispatch(
         "settings/serversSortType",
         ServersSortTypeEnum[sortTypeStr]
@@ -496,36 +496,48 @@ export default {
       if (this.onRandomServer != null) this.onRandomServer();
       this.onBack();
     },
-    isSvrExcludedFomFastest: function(server) {
+    isSvrExcludedFomFastest: function (server) {
       return this.$store.state.settings.serversFastestExcludeList.includes(
         server.gateway
       );
     },
-    favoriteImage: function(server) {
+    favoriteImage: function (server) {
       if (
         this.$store.state.settings.serversFavoriteList.includes(server.gateway)
       )
         return Image_star_active;
       return Image_star_inactive;
     },
-    favoriteImageActive: function() {
+    favoriteImageActive: function () {
       return Image_star_active;
     },
     onFastestServerConfig() {
       this.isFastestServerConfig = true;
       this.filter = "";
     },
-    isInaccessibleServer: function(server) {
+    isInaccessibleServer: function (server) {
       if (this.$store.state.settings.isMultiHop === false) return false;
       let ccSkip = "";
-      if (!this.isExitServer && this.$store.state.settings.serverExit)
+
+      let connected = !this.$store.getters["vpnState/isDisconnected"];
+      if (
+        // ENTRY SERVER
+        !this.isExitServer &&
+        this.$store.state.settings.serverExit &&
+        (connected || !this.$store.state.settings.isRandomExitServer)
+      )
         ccSkip = this.$store.state.settings.serverExit.country_code;
-      else if (this.$store.state.settings.serverEntry)
+      else if (
+        // EXIT SERVER
+        this.isExitServer &&
+        this.$store.state.settings.serverEntry &&
+        (connected || !this.$store.state.settings.isRandomServer)
+      )
         ccSkip = this.$store.state.settings.serverEntry.country_code;
       if (server.country_code === ccSkip) return true;
       return false;
     },
-    favoriteClicked: function(evt, server) {
+    favoriteClicked: function (evt, server) {
       evt.stopPropagation();
 
       let favorites = this.$store.state.settings.serversFavoriteList.slice();
@@ -535,7 +547,7 @@ export default {
       if (favorites.includes(gateway)) {
         // remove
         console.log(`Removing favorite ${gateway}`);
-        favorites = favorites.filter(gw => gw != gateway);
+        favorites = favorites.filter((gw) => gw != gateway);
       } else {
         // add
         console.log(`Adding favorite ${gateway}`);
@@ -547,15 +559,16 @@ export default {
     },
     configFastestSvrClicked(server, event) {
       if (server == null || server.gateway == null) return;
-      let excludeSvrs = this.$store.state.settings.serversFastestExcludeList.slice();
+      let excludeSvrs =
+        this.$store.state.settings.serversFastestExcludeList.slice();
 
       if (excludeSvrs.includes(server.gateway))
-        excludeSvrs = excludeSvrs.filter(gw => gw != server.gateway);
+        excludeSvrs = excludeSvrs.filter((gw) => gw != server.gateway);
       else excludeSvrs.push(server.gateway);
 
       const activeServers = this.servers.slice();
       const notExcludedActiveServers = activeServers.filter(
-        s => !excludeSvrs.includes(s.gateway)
+        (s) => !excludeSvrs.includes(s.gateway)
       );
 
       if (notExcludedActiveServers.length < 1) {
@@ -563,7 +576,7 @@ export default {
           type: "info",
           buttons: ["OK"],
           message: "Please, keep at least one server",
-          detail: "Not allowed to exclude all servers."
+          detail: "Not allowed to exclude all servers.",
         });
         event.preventDefault();
         return;
@@ -571,11 +584,11 @@ export default {
         this.$store.dispatch("settings/serversFastestExcludeList", excludeSvrs);
     },
 
-    showFavorites: function() {
+    showFavorites: function () {
       this.$store.dispatch("uiState/serversFavoriteView", true);
       this.filter = "";
     },
-    showAll: function() {
+    showAll: function () {
       this.$store.dispatch("uiState/serversFavoriteView", false);
       this.filter = "";
     },
@@ -602,10 +615,10 @@ export default {
       if (sa == null) return;
       sa.scrollTo({
         top: sa.clientHeight * 0.9 + sa.scrollTop, //sa.scrollHeight,
-        behavior: "smooth"
+        behavior: "smooth",
       });
-    }
-  }
+    },
+  },
 };
 </script>
 

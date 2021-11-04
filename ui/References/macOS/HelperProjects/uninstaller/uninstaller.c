@@ -397,7 +397,7 @@ int uninstall() {
         }
       }
 
-      char relDir1[128], relDir2[128];
+      char relDir1[128];
       snprintf(relDir1, 128, "%s/Library/Application Support/IVPN", homeDir);
 
       char *foldersToRemove[] = {
@@ -406,11 +406,10 @@ int uninstall() {
         "/Library/Application Support/IVPN",
         "/Library/Application Support/net.ivpn.client.Agent/LocalMachine", // seems, the folder created by OS
         "/Library/Application Support/net.ivpn.client.Agent", // seems, the folder created by OS
-        relDir1,
-        relDir2
+        relDir1
       };
 
-     for (int i=0;i<7;i++)
+     for (int i=0;i<6;i++)
      {
         char* fname = foldersToRemove[i];
         printf("[] Removing folder: %s ...\n", fname);

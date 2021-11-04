@@ -1,6 +1,6 @@
 <template>
   <div class="main flexColumn" style="margin: 0px">
-    <div class="flexColumn" style="flex-grow: 1;" />
+    <div class="flexColumn" style="flex-grow: 1" />
 
     <div ref="contentdiv" class="flexColumn">
       <div class="main flexColumn">
@@ -8,17 +8,13 @@
           <!-- CHECKING FOR UPDATE-->
           <transition name="fade" mode="out-in">
             <div v-if="isCheckingUpdate">
-              <div class="big_text">
-                Checking for updates ...
-              </div>
+              <div class="big_text">Checking for updates ...</div>
               <spinner :loading="isCheckingUpdate" />
             </div>
             <div v-else>
               <!-- UPDATE CHECK FAILED-->
               <div v-if="!latestVersionInfo">
-                <div class="big_text">
-                  Check update failed
-                </div>
+                <div class="big_text">Check update failed</div>
                 <div class="small_text">
                   Check new version failed, please try again.
                 </div>
@@ -54,9 +50,7 @@
                 </div>
                 <!-- NEW UPDATE -->
                 <div v-else>
-                  <div class="big_text">
-                    New IVPN version available
-                  </div>
+                  <div class="big_text">New IVPN version available</div>
 
                   <!-- info: new version -->
                   <div class="small_text">
@@ -96,9 +90,7 @@
                   >
                     <!--release notes GENERIC-->
                     <div v-if="versionLatestGeneric">
-                      <div class="relNotesPreText">
-                        Release notes:
-                      </div>
+                      <div class="relNotesPreText">Release notes:</div>
                       <releaseNotes
                         :releaseNotes="latestVersionInfo.generic.releaseNotes"
                       >
@@ -107,9 +99,7 @@
                     <div v-else>
                       <!--release notes DAEMON-->
                       <div v-if="latestVersionInfo.daemon.releaseNotes">
-                        <div class="relNotesPreText">
-                          Daemon release notes:
-                        </div>
+                        <div class="relNotesPreText">Daemon release notes:</div>
                         <releaseNotes
                           :releaseNotes="latestVersionInfo.daemon.releaseNotes"
                         >
@@ -117,9 +107,7 @@
                       </div>
                       <!--release notes UI-->
                       <div v-if="latestVersionInfo.uiClient.releaseNotes">
-                        <div class="relNotesPreText">
-                          UI app release notes:
-                        </div>
+                        <div class="relNotesPreText">UI app release notes:</div>
                         <releaseNotes
                           :releaseNotes="
                             latestVersionInfo.uiClient.releaseNotes
@@ -158,7 +146,7 @@
                     <div
                       v-else-if="isInstalling"
                       class="small_text flexRow flexRowRestSpace"
-                      style="text-align: center;"
+                      style="text-align: center"
                     >
                       Installing ...
                     </div>
@@ -174,7 +162,7 @@
                       <div v-else class="flexRow flexRowRestSpace">
                         <button
                           class="slave btn"
-                          style="margin:0px"
+                          style="margin: 0px"
                           v-on:click="onCancel"
                         >
                           Remind Me Later
@@ -191,9 +179,7 @@
                         <span v-if="!isUpdateError" style="color: inherit">
                           Update
                         </span>
-                        <span v-else style="color: inherit">
-                          Retry
-                        </span>
+                        <span v-else style="color: inherit"> Retry </span>
                       </button>
                       <button
                         v-if="isUpdateError"
@@ -212,7 +198,7 @@
       </div>
     </div>
 
-    <div class="flexColumn" style="flex-grow: 1;" />
+    <div class="flexColumn" style="flex-grow: 1" />
   </div>
 </template>
 
@@ -229,32 +215,32 @@ import { IsNewVersion } from "@/app-updater/helper";
 export default {
   components: { spinner, releaseNotes, UpdateProgress },
 
-  data: function() {
+  data: function () {
     return {
-      lastWindowHeight: 0
+      lastWindowHeight: 0,
     };
   },
 
   mounted() {},
-  updated: function() {
-    this.$nextTick(function() {
+  updated: function () {
+    this.$nextTick(function () {
       // All DOM elements updated (https://ru.vuejs.org/v2/api/#updated)
       this.updateWindowSize();
     });
   },
 
   computed: {
-    latestVersionInfo: function() {
+    latestVersionInfo: function () {
       //return null;
       return this.$store.state.latestVersionInfo;
     },
-    updateState: function() {
+    updateState: function () {
       return this.$store.state.uiState?.appUpdateProgress?.state;
     },
-    isCheckingUpdate: function() {
+    isCheckingUpdate: function () {
       return this.updateState == AppUpdateStage.CheckingForUpdates;
     },
-    isHasUpgrade: function() {
+    isHasUpgrade: function () {
       //if (this != "TEST") return false;
       if (this.versionLatestGeneric) {
         return (
@@ -270,25 +256,25 @@ export default {
       }
       return false;
     },
-    isShowProgressBar: function() {
+    isShowProgressBar: function () {
       let s = this.updateState;
       return (
         s == AppUpdateStage.Downloading || s == AppUpdateStage.CheckingSignature
       );
     },
-    isDownloading: function() {
+    isDownloading: function () {
       return this.updateState == AppUpdateStage.Downloading;
     },
-    isReadyToInstall: function() {
+    isReadyToInstall: function () {
       return this.updateState == AppUpdateStage.ReadyToInstall;
     },
-    isInstalling: function() {
+    isInstalling: function () {
       return this.updateState == AppUpdateStage.Installing;
     },
-    isUpdateError: function() {
+    isUpdateError: function () {
       return this.updateState == AppUpdateStage.Error;
     },
-    updateErrorText: function() {
+    updateErrorText: function () {
       if (!this.isUpdateError) return "";
       let err = this.$store.state.uiState?.appUpdateProgress?.error;
       if (!err) return null;
@@ -296,26 +282,26 @@ export default {
     },
 
     // ACTUAL VERSIONS
-    versionSingle: function() {
+    versionSingle: function () {
       if (this.versionDaemon === this.versionUI) return this.versionDaemon;
       return null;
     },
-    versionDaemon: function() {
+    versionDaemon: function () {
       return this.$store.state.daemonVersion;
     },
-    versionUI: function() {
+    versionUI: function () {
       return sender.appGetVersion();
     },
     // LATEST VERSIONS
-    versionLatestGeneric: function() {
+    versionLatestGeneric: function () {
       return this.$store.state.latestVersionInfo?.generic?.version;
     },
-    versionLatestUI: function() {
+    versionLatestUI: function () {
       return this.$store.state.latestVersionInfo?.uiClient?.version;
     },
-    versionLatestDaemon: function() {
+    versionLatestDaemon: function () {
       return this.$store.state.latestVersionInfo?.daemon?.version;
-    }
+    },
   },
 
   methods: {
@@ -331,36 +317,36 @@ export default {
       this.lastWindowHeight = h;
       sender.UpdateWindowResizeContent(0, h);
     },
-    onCheckUpdates: async function() {
+    onCheckUpdates: async function () {
       await sender.AppUpdatesCheck();
     },
-    onSkipThisVersion: function() {
+    onSkipThisVersion: function () {
       this.$store.dispatch("settings/skipAppUpdate", {
         genericVersion: this.versionLatestGeneric,
         daemonVersion: this.versionLatestDaemon,
-        uiVersion: this.versionLatestUI
+        uiVersion: this.versionLatestUI,
       });
 
       this.onCancel();
     },
-    onCancel: async function() {
+    onCancel: async function () {
       await sender.AppUpdatesCancelDownload();
       await sender.UpdateWindowClose();
     },
-    onUpgrade: async function() {
+    onUpgrade: async function () {
       let isCanCloseWindow = await sender.AppUpdatesUpgrade();
       if (isCanCloseWindow === true) {
         await sender.UpdateWindowClose();
       }
     },
-    onCancelDownload: async function() {
+    onCancelDownload: async function () {
       await sender.AppUpdatesCancelDownload();
     },
-    onInstall: async function() {
+    onInstall: async function () {
       await sender.AppUpdatesInstall();
-    }
+    },
   },
-  watch: {}
+  watch: {},
 };
 </script>
 

@@ -1,10 +1,10 @@
 <template>
-  <div class="login">
-    <spinner :loading="isProcessing" />
+  <div class="flexColumn">
+    <div class="flexRow flexRowRestSpace">
+      <spinner :loading="isProcessing" />
 
-    <div class="column">
-      <div>
-        <div class="centered" style="margin-top: -50px; margin-bottom:50px">
+      <div class="column">
+        <div class="centered" style="margin-top: -50px; margin-bottom: 50px">
           <img src="@/assets/logo.svg" />
         </div>
 
@@ -13,9 +13,7 @@
           <div class="centered">
             <div class="large_text">Captcha Required</div>
             <div style="height: 12px" />
-            <div class="small_text">
-              Please enter number you see below
-            </div>
+            <div class="small_text">Please enter number you see below</div>
           </div>
 
           <div style="height: 21px" />
@@ -82,16 +80,31 @@
         >
           Create an account
         </button>
-        <button v-else class="slave" v-on:click="Cancel">
-          Cancel
-        </button>
+        <button v-else class="slave" v-on:click="Cancel">Cancel</button>
       </div>
+    </div>
+
+    <div class="flexRow leftright_margins" style="margin-bottom: 20px">
+      <div
+        class="flexRow flexRowRestSpace switcher_small_text"
+        style="margin-right: 10px"
+      >
+        {{ firewallStatusText }}
+      </div>
+
+      <SwitchProgress
+        :onChecked="firewallOnChecked"
+        :isChecked="this.$store.state.vpnState.firewallState.IsEnabled"
+        :isProgress="firewallIsProgress"
+      />
     </div>
   </div>
 </template>
 
 <script>
 import spinner from "@/components/controls/control-spinner.vue";
+import SwitchProgress from "@/components/controls/control-switch-small2.vue";
+
 import { IsOsDarkColorScheme } from "@/helpers/renderer";
 import { ColorTheme } from "@/store/types";
 
@@ -102,21 +115,33 @@ import {
   API_CAPTCHA_REQUIRED,
   API_CAPTCHA_INVALID,
   API_2FA_REQUIRED,
-  API_2FA_TOKEN_NOT_VALID
+  API_2FA_TOKEN_NOT_VALID,
 } from "@/api/statuscode";
+
+function processError(e) {
+  console.error(e);
+  sender.showMessageBox({
+    type: "error",
+    buttons: ["OK"],
+    message: e.toString(),
+  });
+}
 
 export default {
   props: {
     forceLoginAccount: {
       type: String,
-      default: null
-    }
+      default: null,
+    },
   },
   components: {
-    spinner
+    spinner,
+    SwitchProgress,
   },
-  data: function() {
+  data: function () {
     return {
+      firewallIsProgress: false,
+
       accountID: "",
       isProcessing: false,
 
@@ -127,7 +152,7 @@ export default {
 
       isForceLogoutRequested: false,
       captcha: "",
-      confirmation2FA: ""
+      confirmation2FA: "",
     };
   },
   mounted() {
@@ -156,7 +181,7 @@ export default {
           sender.showMessageBox({
             type: "info",
             buttons: ["OK"],
-            message: `You are logged out.\n\nYou have been redirected to the login page to re-enter your credentials.`
+            message: `You are logged out.\n\nYou have been redirected to the login page to re-enter your credentials.`,
           });
         }, 0);
       }
@@ -179,7 +204,7 @@ export default {
             type: "warning",
             buttons: ["OK"],
             message: "Failed to login",
-            detail: `Please enter 6-digit verification code`
+            detail: `Please enter 6-digit verification code`,
           });
           return;
         }
@@ -201,8 +226,6 @@ export default {
         this.confirmation2FA = "";
         this.apiResponseStatus = resp.APIStatus;
         this.rawResponse = JSON.parse(resp.RawResponse);
-
-        console.log("apiResponseStatus:", this.apiResponseStatus);
 
         if (resp.APIStatus !== API_SUCCESS) {
           if (resp.APIStatus === API_CAPTCHA_INVALID) {
@@ -231,9 +254,9 @@ export default {
                 UpgradeToPlan: resp.Account.UpgradeToPlan,
                 UpgradeToURL: resp.Account.UpgradeToURL,
                 extraArgs: {
-                  confirmation2FA: oldConfirmation2FA
-                }
-              }
+                  confirmation2FA: oldConfirmation2FA,
+                },
+              },
             });
           } else throw new Error(`[${resp.APIStatus}] ${resp.APIErrorMessage}`);
         } else {
@@ -249,7 +272,7 @@ export default {
           type: "error",
           buttons: ["OK"],
           message: "Failed to login",
-          detail: `${e}`
+          detail: `${e}`,
         });
       } finally {
         this.isProcessing = false;
@@ -285,10 +308,39 @@ export default {
       else
         this.capchaImageStyle =
           "filter: grayscale(100%) brightness(0%); display: block; margin-left: auto; margin-right: auto; max-width:240px; max-height:80px";
-    }
+    },
+    async firewallOnChecked(isEnabled) {
+      this.firewallIsProgress = true;
+      try {
+        if (
+          isEnabled === false &&
+          this.$store.state.vpnState.firewallState.IsPersistent
+        ) {
+          let ret = await sender.showMessageBoxSync(
+            {
+              type: "question",
+              message:
+                "The always-on firewall is enabled. If you disable the firewall the 'always-on' feature will be disabled.",
+              buttons: ["Disable Always-on firewall", "Cancel"],
+            },
+            true
+          );
+
+          if (ret == 1) return; // cancel
+          await sender.KillSwitchSetIsPersistent(false);
+        }
+
+        this.firewallIsProgress = true;
+        await sender.EnableFirewall(isEnabled);
+      } catch (e) {
+        processError(e);
+      } finally {
+        this.firewallIsProgress = false;
+      }
+    },
   },
   computed: {
-    isCaptchaRequired: function() {
+    isCaptchaRequired: function () {
       return (
         (this.apiResponseStatus === API_CAPTCHA_REQUIRED ||
           this.apiResponseStatus === API_CAPTCHA_INVALID) &&
@@ -297,48 +349,48 @@ export default {
         this.accountID
       );
     },
-    isCaptchaInvalid: function() {
+    isCaptchaInvalid: function () {
       return this.apiResponseStatus === API_CAPTCHA_INVALID;
     },
-    is2FATokenRequired: function() {
+    is2FATokenRequired: function () {
       return (
         (this.apiResponseStatus === API_2FA_REQUIRED ||
           this.apiResponseStatus === API_2FA_TOKEN_NOT_VALID) &&
         this.accountID
       );
     },
-    captchaImage: function() {
+    captchaImage: function () {
       return this.rawResponse?.captcha_image;
-      //return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAABQCAMAAAAQlwhOAAAAP1BMVEUAAAA7dEUsZTZlnm97tIU1bj+Fvo8MRRYcVSZ0rX43cEESSxxlnm9ZkmNDfE0nYDEiWyxlnm8rZDUQSRomXzDFtqbCAAAAAXRSTlMAQObYZgAABMBJREFUeJzsWm1v4yAMxlPUat0qVfv/P/Z0aTB+B5q3acV3H1YSjB8e2xhIGjJkyJAhQ1rlcbYBB8vj8XaIzzZgyHqBc4b9OWfYBAlOQfzzcwpiABcu7Ey9i3fPRAkOwbBMxRncPx47Igab4QUsnAJ6T8DgMAyLLKB3Gt2R/QAvFCo8DO02BHdB2I1gQCJ5c4nsrQjeNSw9yb57uVyWBgfvswlKP6bkpXX7HMCId0Fc/Fa96K5UGNV9oM8ADBLw02qfYktH8QroW6bPw0sAz9Q6MexomIGCEwu/Sah5SPAzLVkE2yowl3nZfdva7HNFX9O+pUXFsAuY5DI7e8esd3r152eIGPBfYKxsNB9hA1emVWiFIcPdeSvAW4mrHHq6G62p0Fbi6zQbVzdVlbjeMFEDEzXJAGny/FT0LUjlIt2Qo7YG/PX15YzDGTaCdZomm/pZKVCSy4rDtDUsvNXU3Y/XRYw2moH8n2FrGhLArFRyTFwFXYYEtoc3TCIviAuYF0tqludnFt7/wgGr4ODpIUVM+/61OWARXnKWkTTe5fl/AUw6GNGb54ysv0Fm3K4aCWNYjcyeKjPQc2el+nFS+YpXWALUxFPdWqQ1UfTppYQvKYIkZSSJZvI+z2X0/WmacNgDzkcChkvkQVRDmIjJ3h+ou1rnPhPWZ6czfBX1snk2p4KS5TB2AoIjOGXMIQdCAcPX6zXR6hipExqMGM9JuegUmaGjiN1a3CwNcBUEOyuUDDx8yctT0RHBMYBB/82TDiubq0aCJFdGvVtYH0AxBlheMUszWlca3CVUtnD1Oq156bg1T6+YF2uJpBSU9OqPbazESrvsYaprZVitk50iSlnp5YGFyWaF7QxtwB6SFutBOVG9DzVX+Z02N9BoPtZuLcfsUBYpb9hoWb19ihu0sSxAMEmTaI944xQbrEqh2maaG4tHxdgJDI/0jQMhRi/NQezTseVWMZDnvI6XvFpStTTNtQHA3UwzHhYV5HfAcIiY66HtCRous7K9rE6wItjD6zIsKpbytFpD1gHXwitCLHwBKc6/DByqt39eAvK8BzWFTESgXuOfvsEzJiECNC9G/9CDMGAQKuqL7I7Ga2OwsqbMf5AbFOWkrxc1/DwP/PLaNqoNzMV4K7Qo8UsyBXdFcavcxa6u2yx22vECl71Xu1Uo16CJ2bZ2/5JzgsIcxwIrghgMQy5Wf6faRiXi3rcoXwk4OWFSi0T5CUGfr+W3nb3O/Idzs9+P98NBoPJ1xeDiG6mctXSIM4i9fScO0TvOx4eNOGtvCxT0/pSZfcXTzF2PbCmRhj/7RgnxJnaTbvkcvbKgae6Vb0PMEaybB+CHPmtj2DYmW6RsZGCr62plFDDCmZZKdDafZ/d7fktnVr8Mrb1V6Buk5D7NK+U3387sBjeZW5Pi6+raZv0whW8g4bJA9K+jNhWVwdQB/kbD5Jmz6T0OsEgcgJD94sGUytfTnFVzZ+jev20vetKLYY0qGr4XB5zIrSKlWb61LdSBlwzTZ0/79/GQWGa63+9dA70g398KcUqS3KOm/34/ArH7BE8e9jYB5RDAv0neDvARMfxX5Xa7nW3CoXK7vRniAfjPy7vhHTJkyJAhQ95Q/gUAAP//0o0UuFkwDccAAAAASUVORK5CYII=";
     },
-    captchaID: function() {
+    captchaID: function () {
       return this.rawResponse?.captcha_id;
-    }
+    },
+    firewallStatusText: function () {
+      if (this.$store.state.vpnState.firewallState.IsEnabled)
+        return "Firewall enabled and blocking all traffic";
+      return "Firewall disabled";
+    },
   },
   watch: {
     isCaptchaRequired() {
       if (!this.$refs.captcha || !this.$refs.accountid) return;
       if (this.isCaptchaRequired) this.$refs.captcha.focus();
       else this.$refs.accountid.focus();
-    }
-  }
+    },
+  },
 };
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
-.login {
-  height: 100%;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.leftright_margins {
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 .column {
+  @extend .leftright_margins;
   width: 100%;
-  margin-left: 20px;
-  margin-right: 20px;
 }
 
 .centered {
@@ -358,5 +410,11 @@ export default {
   line-height: 17px;
   letter-spacing: -0.208px;
   color: #98a5b3;
+}
+
+.switcher_small_text {
+  font-size: 11px;
+  line-height: 13px;
+  color: var(--text-color-details);
 }
 </style>

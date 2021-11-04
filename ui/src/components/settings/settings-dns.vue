@@ -35,9 +35,9 @@ export default {
     this.isDnsValueChanged = false;
   },
 
-  data: function() {
+  data: function () {
     return {
-      isDnsValueChanged: false
+      isDnsValueChanged: false,
     };
   },
   methods: {},
@@ -49,7 +49,7 @@ export default {
       async set(value) {
         this.$store.dispatch("settings/dnsIsCustom", value);
         await sender.SetDNS();
-      }
+      },
     },
     dnsCustom: {
       get() {
@@ -58,9 +58,9 @@ export default {
       set(value) {
         this.isDnsValueChanged = true;
         this.$store.dispatch("settings/dnsCustom", value);
-      }
-    }
-  }
+      },
+    },
+  },
 };
 </script>
 

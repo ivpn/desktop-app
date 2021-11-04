@@ -27,11 +27,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 func TestStart(t *testing.T) {
+	platform.Init()
+	logger.Enable(true)
 	obfsp := obfsproxy.CreateObfsproxy(platform.ObfsproxyStartScript())
 
 	port, err := obfsp.Start()

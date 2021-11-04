@@ -9,7 +9,7 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
   echo "============== UPDATING servers.json ================="
   echo "======================================================"
 
-  curl -sf "https://api.ivpn.net/v4/servers.json" > ../etc/tmp_servers.json
+  curl -sf "https://api.ivpn.net/v5/servers.json" > ../etc/tmp_servers.json
   if ! [ $? -eq 0 ]
   then #check result of last command
     rm ../etc/tmp_servers.json

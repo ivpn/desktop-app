@@ -15,14 +15,14 @@
 export default {
   props: ["onChecked", "isChecked", "isProgress", "checkedColor"],
   computed: {
-    isConnected: function() {
+    isConnected: function () {
       if (this.isProgress) return false;
       return this.isChecked === true;
     },
-    style: function() {
+    style: function () {
       if (this.checkedColor == null || this.isConnected === false) return "";
       return `background: ${this.checkedColor}`;
-    }
+    },
   },
 
   methods: {
@@ -32,13 +32,15 @@ export default {
         if (this.isProgress) this.onChecked(false, e);
         else this.onChecked(!this.isConnected, e);
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
+@use "sass:math";
+
 $switchSize: 31px;
 $wToHproportion: 2;
 $switchBorder: transparent; //#d1d7e3;
@@ -66,7 +68,7 @@ $switchActive: #449cf8;
       height: $switchSize;
       border: 1px solid $switchBorder;
       background: $switchBackground;
-      border-radius: $switchSize / 2;
+      border-radius: math.div($switchSize, 2);
       vertical-align: top;
       position: relative;
       display: inline-block;
@@ -101,7 +103,7 @@ $switchActive: #449cf8;
       background: $switchActive;
       border: 1px solid $switchBorderActive;
       &:before {
-        transform: translate($switchSize/1.6, 0); // !!!
+        transform: translate(math.div($switchSize, 1.6), 0); // !!!
       }
     }
   }
@@ -109,7 +111,7 @@ $switchActive: #449cf8;
     input {
       & + div {
         width: $switchSize;
-        margin: 0 $switchSize / 4; // !!!
+        margin: 0 math.div($switchSize, 4); // !!!
         &:after {
           opacity: 1;
           animation: rotate 0.9s infinite linear;

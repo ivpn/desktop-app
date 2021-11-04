@@ -1,10 +1,10 @@
 <template>
   <div class="main">
-    <div class="flexColumn" style="min-width: 22px;">
+    <div class="flexColumn" style="min-width: 22px">
       <img
         class="pic"
         v-bind:class="{
-          flag: isCountryFlagInUse
+          flag: isCountryFlagInUse,
         }"
         :src="serverImage"
         v-show="isImgLoadError !== true"
@@ -52,13 +52,13 @@ export default {
     isFullName: String,
 
     isFastestServer: Boolean,
-    isRandomServer: Boolean
+    isRandomServer: Boolean,
   },
   data: () => ({
-    isImgLoadError: false
+    isImgLoadError: false,
   }),
   computed: {
-    isShowSingleLine: function() {
+    isShowSingleLine: function () {
       return (
         this.isSingleLine ||
         this.isFullName ||
@@ -67,7 +67,7 @@ export default {
       );
     },
 
-    singleLine: function() {
+    singleLine: function () {
       if (this.isFastestServer === true) return "Fastest server";
       if (this.isRandomServer === true) return "Random server";
       if (!this.server) return "";
@@ -84,20 +84,20 @@ export default {
         return `${this.server.city}, ${this.server.country_code}`;
       }
     },
-    multilineFirstLine: function() {
+    multilineFirstLine: function () {
       if (!this.server) return "";
       if (this.isCountryFirst) return this.server.country;
       return this.server.city;
     },
-    multilineSecondLine: function() {
+    multilineSecondLine: function () {
       if (!this.server) return "";
       if (this.isCountryFirst) return this.server.city;
       return this.server.country;
     },
-    isCountryFlagInUse: function() {
+    isCountryFlagInUse: function () {
       return this.isFastestServer !== true && this.isRandomServer !== true;
     },
-    isShowIPVersionBage: function() {
+    isShowIPVersionBage: function () {
       return (
         this.$store.state.settings.enableIPv6InTunnel && // IPv6 enabled
         this.$store.state.settings.showGatewaysWithoutIPv6 && // and we show both types of servers (IPv4 and IPv6)
@@ -105,10 +105,10 @@ export default {
         this.server.isIPv6 != undefined
       );
     },
-    isIPv6: function() {
+    isIPv6: function () {
       return this.server.isIPv6 == true;
     },
-    serverImage: function() {
+    serverImage: function () {
       if (this.isFastestServer === true) return Image_speedometer;
       if (this.isRandomServer === true) return Image_shuffle;
       if (!this.server) return `/flags/unk.svg`;
@@ -120,7 +120,7 @@ export default {
         return null;
       }
     },
-    pingStatusImg: function() {
+    pingStatusImg: function () {
       if (!this.server) return null;
       switch (this.server.pingQuality) {
         case PingQuality.Good:
@@ -131,14 +131,14 @@ export default {
           return Image_iconStatusBad;
       }
       return null;
-    }
+    },
   },
 
   methods: {
     onImgLoadError() {
       this.isImgLoadError = true;
-    }
-  }
+    },
+  },
 };
 </script>
 

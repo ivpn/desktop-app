@@ -27,7 +27,7 @@ import SwitchProgress from "@/components/controls/control-switch-small.vue";
 
 export default {
   components: {
-    SwitchProgress
+    SwitchProgress,
   },
   props: [
     "onChecked",
@@ -36,14 +36,14 @@ export default {
     "text",
     "description",
     "checkedColor",
-    "switcherOpacity"
+    "switcherOpacity",
   ],
   computed: {
-    switcherStyle: function() {
+    switcherStyle: function () {
       if (!this.switcherOpacity) return "";
       return `opacity: ${this.switcherOpacity}`;
-    }
-  }
+    },
+  },
 };
 </script>
 

@@ -6,10 +6,10 @@ async function winInstallFolder() {
     let Registry = require("winreg");
     let regKey = new Registry({
       hive: Registry.HKLM,
-      key: "\\Software\\IVPN Client"
+      key: "\\Software\\IVPN Client",
     });
 
-    regKey.get(Registry.DEFAULT_VALUE, function(err, item) {
+    regKey.get(Registry.DEFAULT_VALUE, function (err, item) {
       if (err) reject(`Error reading installation path (registry):${err}`);
       else resolve(item.value);
     });

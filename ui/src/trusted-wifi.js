@@ -26,7 +26,7 @@ import daemonClient from "./daemon-client";
 let lastProcessedRule = null; //{ SSID: null, isTrusted: null}
 
 export function InitTrustedNetworks() {
-  store.subscribe(mutation => {
+  store.subscribe((mutation) => {
     try {
       if (
         mutation.type === "vpnState/currentWiFiInfo" ||
@@ -41,22 +41,29 @@ export function InitTrustedNetworks() {
 }
 
 // returns 'false' when not allowed to perform automatic VPN connection (e.g. on application startup):
-//    - 'trustedNetworksControl' is enabled 
-//       AND the current WIFI is 'trusted' 
+//    - 'trustedNetworksControl' is enabled
+//       AND the current WIFI is 'trusted'
 //       AND 'disconnect VPN for trusted networks' action is enabled
 export function IsCanAutoConnectForCurrentSSID() {
+  const isLoggedIn = store.getters["account/isLoggedIn"];
+  if (!isLoggedIn) {
+    return false;
+  }
+
   let wifi = store.state.settings.wifi;
-  if (!wifi || !wifi.actions || wifi.trustedNetworksControl != true) return true;
+  if (!wifi || !wifi.actions || wifi.trustedNetworksControl != true)
+    return true;
 
   let currentWiFiInfo = store.state.vpnState.currentWiFiInfo;
-  if (!currentWiFiInfo || !currentWiFiInfo.SSID ) return true;
+  if (!currentWiFiInfo || !currentWiFiInfo.SSID) return true;
 
   const isTrusted = getTrustRuleForConfiguredNetwork(
     currentWiFiInfo.SSID,
     wifi.networks
   );
 
-  if (isTrusted == true && wifi.actions.trustedDisconnectVpn == true) return false;
+  if (isTrusted == true && wifi.actions.trustedDisconnectVpn == true)
+    return false;
   return true;
 }
 
@@ -64,7 +71,12 @@ async function processWifiChange() {
   // 1. trying to apply rules (if network is configured)
   // 2. if network not configured -> apply rules for default trust status
   // 3. if default trust status not defined -> for insecure network: connect VPN
-  // Returns 'true' if a rule was applied for current WIFI network (including rule for 'connectVPNOnInsecureNetwork') 
+  // Returns 'true' if a rule was applied for current WIFI network (including rule for 'connectVPNOnInsecureNetwork')
+
+  const isLoggedIn = store.getters["account/isLoggedIn"];
+  if (!isLoggedIn) {
+    return false;
+  }
 
   // trusted networks config
   let wifi = store.state.settings.wifi;
@@ -87,10 +99,7 @@ async function processWifiChange() {
   // if trusted network control is enabled
   if (wifi.trustedNetworksControl == true && wifi.actions) {
     // get configuration for current network
-    let trustRule = getTrustRuleForConfiguredNetwork(
-      currSSID,
-      wifi.networks
-    );
+    let trustRule = getTrustRuleForConfiguredNetwork(currSSID, wifi.networks);
 
     // if network not configured - get default trust operation for not configured networks
     if (trustRule == null) trustRule = wifi.defaultTrustStatusTrusted;
@@ -109,7 +118,7 @@ async function processWifiChange() {
       await applyTrustRule(trustRule, wifi.actions);
       lastProcessedRule = {
         SSID: currSSID,
-        isTrusted: trustRule
+        isTrusted: trustRule,
       };
       return true;
     }
@@ -138,7 +147,7 @@ async function processWifiChange() {
     await daemonClient.Connect();
     lastProcessedRule = {
       SSID: currSSID,
-      isTrusted: null
+      isTrusted: null,
     };
     return true;
   }
@@ -151,7 +160,7 @@ function getTrustRuleForConfiguredNetwork(currSSID, networks) {
   if (!currSSID || networks == null) return null;
 
   // check configuration for current network
-  let networkConfigArr = networks.filter(wifi => wifi.ssid == currSSID);
+  let networkConfigArr = networks.filter((wifi) => wifi.ssid == currSSID);
   if (networkConfigArr == null || networkConfigArr.length == 0) return null;
   let networkConfig = networkConfigArr[0];
 

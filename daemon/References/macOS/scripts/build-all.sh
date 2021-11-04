@@ -32,8 +32,15 @@ echo "############################################"
 if [[ ! -f "../_deps/openvpn_inst/bin/openvpn" ]] || [[ ! -f "../_deps/wg_inst/wg" ]] || [[ ! -f "../_deps/wg_inst/wireguard-go" ]]
 then
   echo "Please, check/modify required versions at the begining of scripts:"
-  echo "    build-openvpn.sh"
-  echo "    build-wireguard.sh"
+  if [[ ! -f "../_deps/openvpn_inst/bin/openvpn" ]]
+  then
+    echo "    build-openvpn.sh"
+  fi
+
+  if [[ ! -f "../_deps/wg_inst/wg" ]] || [[ ! -f "../_deps/wg_inst/wireguard-go" ]]
+  then
+    echo "    build-wireguard.sh"
+  fi
 
   read -p "Press enter to start ..."
 fi
@@ -57,6 +64,14 @@ function BuildWireGuard
   ./build-wireguard.sh
 }
 
+function BuildObfs4proxy
+{
+  echo "############################################"
+  echo "### obfs4proxy"
+  echo "############################################"
+  ./build-obfs4proxy.sh
+}
+
 if [[ "$@" == *"-norebuild"* ]]
 then
     # check if we need to compile openvpn
@@ -77,10 +92,20 @@ then
       echo "WireGuard already compiled. Skipping build."
     fi
 
+    # check if we need to compile obfs4proxy
+    if [[ ! -f "../_deps/obfs4proxy_inst/obfs4proxy" ]]
+    then
+      echo "obfs4proxy not compiled"
+      BuildObfs4proxy
+    else
+      echo "obfs4proxy already compiled. Skipping build."
+    fi
+
 else
-  # recompile openvpn and WireGuard
+  # recompile openvpn, WireGuard, obfs4proxy
   BuildOpenVPN
   BuildWireGuard
+  BuildObfs4proxy
 fi
 
 # updating servers.json

@@ -95,15 +95,15 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 	// if we are trying to connect when no connectivity (WiFi off?) -
 	// waiting until network appears
 	// Retry to check each 5 seconds (sending RECONNECTING event)
-	for wg.internals.isGoingToStop == false {
-		if dns.IsPrimaryInterfaceFound() == true {
+	for !wg.internals.isGoingToStop {
+		if dns.IsPrimaryInterfaceFound() {
 			break
 		}
-		log.Info(fmt.Sprintf("No connectivity. Waiting 5 sec to retry..."))
+		log.Info("No connectivity. Waiting 5 sec to retry...")
 
 		stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "No connectivity")
 		pauseEnd := time.Now().Add(time.Second * 5)
-		for time.Now().Before(pauseEnd) && wg.internals.isGoingToStop == false {
+		for time.Now().Before(pauseEnd) && !wg.internals.isGoingToStop {
 			time.Sleep(time.Millisecond * 50)
 		}
 	}
@@ -147,7 +147,7 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 	// output reader
 	outPipe, err := wg.internals.command.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("Failed to start WireGuard: %w", err)
+		return fmt.Errorf("failed to start WireGuard: %w", err)
 	}
 	outPipeScanner := bufio.NewScanner(outPipe)
 	routineStopWaiter.Add(1)
@@ -220,15 +220,15 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		}
 	}()
 
-	if wg.internals.isGoingToStop == true {
+	if wg.internals.isGoingToStop {
 		wg.disconnect()
 	}
 
 	if err := wg.internals.command.Wait(); err != nil {
 		// error will be received anyway. We are logging it only if process was stopped unexpectable
-		if wg.internals.isGoingToStop == false {
+		if !wg.internals.isGoingToStop {
 			log.Error(err.Error())
-			return fmt.Errorf("WireGuard prosess error: %w", err)
+			return fmt.Errorf("WireGuard process error: %w", err)
 		}
 	}
 	return nil
@@ -377,7 +377,7 @@ func (wg *WireGuard) setWgConfiguration(utunName string) error {
 		err = shell.ExecAndProcessOutput(log, errParse, "", wg.toolBinaryPath,
 			"setconf", utunName, wg.configFilePath)
 
-		if isPortInUse == false {
+		if !isPortInUse {
 			return err
 		}
 	}
@@ -494,7 +494,7 @@ func (wg *WireGuard) removeDNS() error {
 }
 
 func getFreeTunInterfaceName() (string, error) {
-	utunNameRegExp := regexp.MustCompile("^utun([0-9])+")
+	utunNameRegExp := regexp.MustCompile("^utun([0-9]+)")
 
 	ifaces, err := net.Interfaces()
 	if err != nil {

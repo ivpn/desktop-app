@@ -20,12 +20,16 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import { enumValueName, isStrNullOrEmpty } from "../helpers/helpers";
+import {
+  enumValueName,
+  isStrNullOrEmpty,
+  getDistanceFromLatLonInKm,
+} from "../helpers/helpers";
 import {
   VpnTypeEnum,
   VpnStateEnum,
   PingQuality,
-  PauseStateEnum
+  PauseStateEnum,
 } from "./types";
 
 export default {
@@ -45,7 +49,7 @@ export default {
     }*/,
 
     disconnectedInfo: {
-      ReasonDescription: ""
+      ReasonDescription: "",
     },
 
     pauseState: PauseStateEnum.Resumed,
@@ -55,13 +59,13 @@ export default {
       IsPersistent: null,
       IsAllowLAN: null,
       IsAllowMulticast: null,
-      IsAllowApiServers: null
+      IsAllowApiServers: null,
     },
 
     // Split-Tunnelling
     splitTunnelling: {
       enabled: false,
-      apps: null // []string
+      apps: null, // []string
     },
 
     dns: "",
@@ -74,7 +78,7 @@ export default {
     servers: { wireguard: [], openvpn: [], config: {} },
 
     // true when servers pinging in progress
-    isPingingServers: false
+    isPingingServers: false,
 
     /*
     // SERVERS
@@ -100,8 +104,9 @@ export default {
               local_ip: "",
               ipv6: 
               {                        
-                "local_ip": "",
-                "host": ""
+                local_ip: "",
+                host: "",
+                multihop_port: 0
               }
             }
           ]
@@ -118,7 +123,13 @@ export default {
           ping: ??? // property added after receiving ping info from daemon
           pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon
           
-          ip_addresses: [""]
+          hosts: [
+            {
+              hostname: "",
+              host: "",
+              multihop_port: 0
+            }
+          ]
         }
       ],
       config: {
@@ -180,17 +191,17 @@ export default {
     },
     availableWiFiNetworks(state, availableWiFiNetworks) {
       state.availableWiFiNetworks = availableWiFiNetworks;
-    }
+    },
   },
 
   getters: {
-    isDisconnecting: state => {
+    isDisconnecting: (state) => {
       return state.connectionState === VpnStateEnum.DISCONNECTING;
     },
-    isDisconnected: state => {
+    isDisconnected: (state) => {
       return state.connectionState === VpnStateEnum.DISCONNECTED;
     },
-    isConnecting: state => {
+    isConnecting: (state) => {
       switch (state.connectionState) {
         case VpnStateEnum.CONNECTING:
         case VpnStateEnum.WAIT:
@@ -205,10 +216,10 @@ export default {
           return false;
       }
     },
-    isConnected: state => {
+    isConnected: (state) => {
       return state.connectionState === VpnStateEnum.CONNECTED;
     },
-    vpnStateText: state => {
+    vpnStateText: (state) => {
       return enumValueName(VpnStateEnum, state.connectionState);
     },
     activeServers(state, getters, rootState) {
@@ -221,12 +232,18 @@ export default {
         ? atConfig.hardcore
         : atConfig.default;
       if (atIPs == null) return null;
+
+      if (rootState.settings.vpnType === VpnTypeEnum.WireGuard) {
+        // WireGuard (port-based MultiHop using the same DNS IP as SingleHop)
+        return atIPs.ip;
+      }
+      // OpenVPN
       return rootState.settings.isMultiHop ? atIPs["multihop-ip"] : atIPs.ip;
     },
-    isAntitrackerEnabled: state => {
+    isAntitrackerEnabled: (state) => {
       return isAntitrackerActive(state);
     },
-    isAntitrackerHardcoreEnabled: state => {
+    isAntitrackerHardcoreEnabled: (state) => {
       return isAntitrackerHardcoreActive(state);
     },
     fastestServer(state, getters, rootState) {
@@ -235,10 +252,16 @@ export default {
 
       let skipSvrs = rootState.settings.serversFastestExcludeList;
       let retSvr = null;
+
+      // If there will not be any server with ping-info -
+      // save the info about the first applicable server (which is not in skipSvrs)
+      let fallbackSvr = null;
+
       for (let i = 0; i < servers.length; i++) {
         let curSvr = servers[i];
         if (!curSvr) continue;
         if (skipSvrs != null && skipSvrs.includes(curSvr.gateway)) continue;
+        if (!fallbackSvr) fallbackSvr = curSvr;
         if (
           curSvr != null &&
           curSvr.ping &&
@@ -247,8 +270,55 @@ export default {
         )
           retSvr = curSvr;
       }
+
+      if (!retSvr) {
+        // No fastest server detected (due to no ping info available)
+        // Get nearest or first applicable server
+
+        // get last known location
+        const l = rootState.lastRealLocation;
+        if (l) {
+          try {
+            // distance compare
+            let compare = function (a, b) {
+              var distA = getDistanceFromLatLonInKm(
+                l.latitude,
+                l.longitude,
+                a.latitude,
+                a.longitude
+              );
+              var distB = getDistanceFromLatLonInKm(
+                l.latitude,
+                l.longitude,
+                b.latitude,
+                b.longitude
+              );
+              if (distA === distB) return 0;
+              if (distA < distB) return -1;
+              return 1;
+            };
+
+            // sort servers by distance from last known real location
+            let sortedSvrs = servers.slice().sort(compare);
+            // get nearest server
+            for (let i = 0; i < sortedSvrs.length; i++) {
+              let curSvr = servers[i];
+              if (skipSvrs != null && skipSvrs.includes(curSvr.gateway))
+                continue;
+              retSvr = curSvr;
+              break;
+            }
+          } catch (e) {
+            console.log(e);
+          }
+        }
+
+        // If still not found: choose the first applicable server
+        if (!retSvr) retSvr = fallbackSvr;
+      }
+
       return retSvr;
-    }
+    },
   },
 
   // can be called from renderer
@@ -294,8 +364,8 @@ export default {
       // save current state to settings
       const isAntitracker = isAntitrackerActive(context.state);
       context.dispatch("settings/isAntitracker", isAntitracker, { root: true });
-    }
-  }
+    },
+  },
 };
 
 function getActiveServers(state, rootState) {
@@ -311,7 +381,7 @@ function getActiveServers(state, rootState) {
   let wgServers = state.servers.wireguard;
   if (enableIPv6InTunnel == true && showGatewaysWithoutIPv6 != true) {
     // show only servers which support IPv6
-    return wgServers.filter(s => {
+    return wgServers.filter((s) => {
       return s.isIPv6;
     });
   }
@@ -324,13 +394,10 @@ function findServerByIp(servers, ip) {
     const srv = servers[i];
 
     if (srv.hosts != null) {
-      // wireguard server
+      // wireguard/openvpn server
       for (let j = 0; j < srv.hosts.length; j++) {
         if (srv.hosts[j].host === ip) return srv;
       }
-    } else if (srv.ip_addresses !== null) {
-      // openvpn server
-      if (srv.ip_addresses.includes(ip)) return srv;
     }
   }
   return null;
@@ -366,7 +433,7 @@ function updateServersPings(state, pings) {
     return PingQuality.Bad;
   }
 
-  state.servers.wireguard.forEach(s => {
+  let funcGetPing = function (s) {
     for (let i = 0; i < s.hosts.length; i++) {
       let pingValFoHost = hashedPings[s.hosts[i].host];
       if (pingValFoHost != null) {
@@ -375,28 +442,21 @@ function updateServersPings(state, pings) {
         break;
       }
     }
+  };
+
+  state.servers.wireguard.forEach((s) => {
+    funcGetPing(s);
   });
 
-  state.servers.openvpn.forEach(s => {
-    for (let i = 0; i < s.ip_addresses.length; i++) {
-      let pingValFoHost = hashedPings[s.ip_addresses[i]];
-      if (pingValFoHost != null) {
-        s.ping = pingValFoHost;
-        s.pingQuality = getPingQuality(s.ping);
-        break;
-      }
-    }
+  state.servers.openvpn.forEach((s) => {
+    funcGetPing(s);
   });
 }
 
 function isServerSupportIPv6(server) {
   if (!server) return null;
+  if (!server.hosts) return null;
 
-  if (!server.hosts) return null; // non-WireGuard server
-  // TODO: implement same (IPv6) for OpenVPN
-  // IPv6 for OpenVPN if not implemented yet
-
-  // WireGuard
   for (let h of server.hosts) {
     if (h && h.ipv6 && h.ipv6.local_ip) return true;
   }
@@ -413,10 +473,10 @@ function updateServers(state, newServers) {
     config: {
       antitracker: {
         default: {},
-        hardcore: {}
+        hardcore: {},
       },
-      api: { ips: [], ipv6s: [] }
-    }
+      api: { ips: [], ipv6s: [] },
+    },
   };
   newServers = Object.assign(serversEmpty, newServers);
 

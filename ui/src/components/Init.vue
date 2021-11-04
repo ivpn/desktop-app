@@ -9,9 +9,7 @@
         Please follow the instructions in the dialog
       </div>
     </div>
-    <div v-else-if="isConnecting" class="main small_text">
-      Connecting ...
-    </div>
+    <div v-else-if="isConnecting" class="main small_text">Connecting ...</div>
     <div v-else class="flexColumn">
       <div class="main">
         <div class="large_text">Error connecting to IVPN daemon</div>
@@ -65,12 +63,12 @@ import config from "@/config";
 
 export default {
   components: {
-    spinner
+    spinner,
   },
-  data: function() {
+  data: function () {
     return {
       isProcessing: false,
-      isDelayElapsedAfterMount: false
+      isDelayElapsedAfterMount: false,
     };
   },
   mounted() {
@@ -91,13 +89,13 @@ export default {
     },
     visitWebsite() {
       sender.shellOpenExternal(`https://www.ivpn.net`);
-    }
+    },
   },
   computed: {
-    isDaemonInstalling: function() {
+    isDaemonInstalling: function () {
       return this.$store.state.daemonIsInstalling;
     },
-    isInitialization: function() {
+    isInitialization: function () {
       return (
         (this.$store.state.daemonConnectionState == null &&
           !this.isDaemonInstalling &&
@@ -105,27 +103,27 @@ export default {
         (this.isConnecting && this.isDelayElapsedAfterMount == false)
       );
     },
-    isConnecting: function() {
+    isConnecting: function () {
       return (
         this.$store.state.daemonConnectionState ===
         DaemonConnectionType.Connecting
       );
     },
-    minRequiredVer: function() {
+    minRequiredVer: function () {
       return config.MinRequiredDaemonVer;
     },
-    currDaemonVer: function() {
+    currDaemonVer: function () {
       return this.$store.state.daemonVersion;
     },
-    daemonIsOldVersionError: function() {
+    daemonIsOldVersionError: function () {
       return this.$store.state.daemonIsOldVersionError;
-    }
+    },
   },
   watch: {
     isConnecting() {
       this.isProcessing = this.isConnecting;
-    }
-  }
+    },
+  },
 };
 </script>
 

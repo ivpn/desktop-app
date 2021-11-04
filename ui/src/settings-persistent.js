@@ -44,7 +44,7 @@ export function InitPersistentSettings() {
       const settings = JSON.parse(data);
 
       const mergedState = merge(store.state.settings, settings, {
-        arrayMerge: combineMerge
+        arrayMerge: combineMerge,
       });
       store.commit("settings/replaceState", mergedState);
     } catch (e) {
@@ -57,9 +57,9 @@ export function InitPersistentSettings() {
 
     // importing persistent settings from an old app version (upgrade)
     console.log("Checking old configuration to import ...");
-    ImportAndDeleteOldSettingsIfExists(importedSettings => {
+    ImportAndDeleteOldSettingsIfExists((importedSettings) => {
       const mergedState = merge(store.state.settings, importedSettings, {
-        arrayMerge: combineMerge
+        arrayMerge: combineMerge,
       });
       store.commit("settings/replaceState", mergedState);
     });
@@ -82,7 +82,7 @@ export function InitPersistentSettings() {
   }
 
   // STORE EVENT SUBSCRIPTION
-  store.subscribe(mutation => {
+  store.subscribe((mutation) => {
     try {
       // SETTINGS
       // saves settings object each 2 seconds
@@ -146,11 +146,11 @@ export function SaveAccountState() {
 }
 
 function combineMerge(target, source, options) {
-  const emptyTarget = value => (Array.isArray(value) ? [] : {});
+  const emptyTarget = (value) => (Array.isArray(value) ? [] : {});
   const clone = (value, options) => merge(emptyTarget(value), value, options);
   const destination = target.slice();
 
-  source.forEach(function(e, i) {
+  source.forEach(function (e, i) {
     if (typeof destination[i] === "undefined") {
       const cloneRequested = options.clone !== false;
       const shouldClone = cloneRequested && options.isMergeableObject(e);

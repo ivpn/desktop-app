@@ -25,7 +25,7 @@ export const PlatformEnum = Object.freeze({
   unknown: 0,
   macOS: 1,
   Linux: 2,
-  Windows: 3
+  Windows: 3,
 });
 
 import os from "os";

@@ -54,7 +54,7 @@ type IWgKeysManager interface {
 	StartKeysRotation() error
 	StopKeysRotation()
 	GenerateKeys() error
-	UpdateKeysIfNecessary() error
+	UpdateKeysIfNecessary() (isUpdated bool, retErr error)
 }
 
 // IServiceEventsReceiver is the receiver for service events (normally, it is protocol object)

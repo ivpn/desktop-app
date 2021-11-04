@@ -1,11 +1,11 @@
 <template>
   <div>
-    <div v-if="isOpenVPN" class="hopButtons">
+    <div class="hopButtons">
       <div />
       <button
         class="hopButton"
         v-bind:class="{
-          hopButtonActive: !this.$store.state.settings.isMultiHop
+          hopButtonActive: !this.$store.state.settings.isMultiHop,
         }"
         v-on:click="ChangeHop(false)"
       >
@@ -17,7 +17,7 @@
       <button
         class="hopButton"
         v-bind:class="{
-          hopButtonActive: this.$store.state.settings.isMultiHop
+          hopButtonActive: this.$store.state.settings.isMultiHop,
         }"
         v-on:click="ChangeHop(true)"
       >
@@ -32,14 +32,10 @@
 <script>
 const sender = window.ipcSender;
 
-import { VpnStateEnum, VpnTypeEnum } from "@/store/types";
+import { VpnStateEnum } from "@/store/types";
 
 export default {
-  computed: {
-    isOpenVPN: function() {
-      return this.$store.state.settings.vpnType === VpnTypeEnum.OpenVPN;
-    }
-  },
+  computed: {},
 
   methods: {
     ChangeHop(isMultihop) {
@@ -52,7 +48,7 @@ export default {
           buttons: ["OK"],
           message: "You are now connected to IVPN",
           detail:
-            "You can change Multi-Hop settings only when IVPN is disconnected."
+            "You can change Multi-Hop settings only when IVPN is disconnected.",
         });
         return;
       }
@@ -64,8 +60,8 @@ export default {
     },
     showServersList(isExitServer) {
       this.onShowServersPressed(isExitServer);
-    }
-  }
+    },
+  },
 };
 </script>
 

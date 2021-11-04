@@ -26,11 +26,11 @@ const keyCodes = {
   V: 86,
   C: 67,
   X: 88,
-  A: 65
+  A: 65,
 };
 
 export function InitDefaultCopyMenus() {
-  document.body.addEventListener("contextmenu", e => {
+  document.body.addEventListener("contextmenu", (e) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -55,7 +55,7 @@ export function InitDefaultCopyMenus() {
 
   // Ability to get working Copy\Paste to 'input' elements
   // without modification application menu (which is required for macOS)
-  document.onkeydown = function(event) {
+  document.onkeydown = function (event) {
     if (event.ctrlKey || event.metaKey) {
       // detect ctrl or cmd
       const field = document.activeElement;

@@ -43,9 +43,20 @@ func DefaultGatewayIP() (defGatewayIP net.IP, err error) {
 }
 
 func GetOutboundIP(isIPv6 bool) (net.IP, error) {
-	addrStr := "8.8.8.8:80"
 	if isIPv6 {
-		addrStr = "[2a00:1450:400d:80a::200e]:80"
+		return GetOutboundIPEx(net.ParseIP("2a00:1450:400d:80a::200e"))
+	}
+	return GetOutboundIPEx(net.ParseIP("8.8.8.8"))
+}
+
+func GetOutboundIPEx(addr net.IP) (net.IP, error) {
+	addrStr := ""
+	if addr.To4() != nil {
+		// IPv4
+		addrStr = addr.String() + ":80"
+	} else {
+		// IPv6
+		addrStr = "[" + addr.String() + "]:80"
 	}
 
 	conn, err := net.Dial("udp", addrStr)

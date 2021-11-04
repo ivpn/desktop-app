@@ -7,9 +7,7 @@
 
       <div class="flexRowSpace">
         <div class="flexColumn">
-          <div class="settingsGrayDescriptionFont">
-            Account ID
-          </div>
+          <div class="settingsGrayDescriptionFont">Account ID</div>
 
           <div class="settingsBigBoldFont" id="accountID">
             <label class="settingsBigBoldFont selectable">
@@ -56,9 +54,9 @@
         </div>
 
         <div class="flexRowAlignTop">
-          <div style="min-width: 170px; margin-right:17px">
+          <div style="min-width: 170px; margin-right: 17px">
             <div class="settingsGrayDescriptionFont">Subscription</div>
-            <div class="defColor" style="margin-top: 5px; margin-bottom:4px;">
+            <div class="defColor" style="margin-top: 5px; margin-bottom: 4px">
               {{ CurrentPlan }}
             </div>
 
@@ -73,7 +71,7 @@
 
           <div v-if="IsActive">
             <div class="settingsGrayDescriptionFont">Active until</div>
-            <div class="defColor" style="margin-top: 5px; margin-bottom:4px;">
+            <div class="defColor" style="margin-top: 5px; margin-bottom: 4px">
               {{ ActiveUntil }}
             </div>
 
@@ -105,9 +103,7 @@
           <div class="i">*</div>
           Turn on <strong>Port forwarding</strong>
         </div>
-        <p>
-          Login to the website to change subscription plan
-        </p>
+        <p>Login to the website to change subscription plan</p>
       </div>
     </div>
 
@@ -127,11 +123,11 @@ const sender = window.ipcSender;
 
 export default {
   components: {
-    spinner
+    spinner,
   },
-  data: function() {
+  data: function () {
     return {
-      isProcessing: false
+      isProcessing: false,
     };
   },
   mounted() {
@@ -159,27 +155,97 @@ export default {
   },
   methods: {
     async logOut() {
-      if (
-        sender.showMessageBoxSync({
-          type: "question",
-          message: "Do you really want to log out?",
-          buttons: ["Log out", "Cancel"]
-        }) != 0
-      )
-        return;
+      // check: is it is necessary to warn user about enabled firewall?
+      let isNeedPromptFirewallStatus = false;
+      if (this.$store.state.vpnState.firewallState.IsEnabled == true) {
+        isNeedPromptFirewallStatus = true;
+        if (
+          this.$store.state.vpnState.firewallState.IsPersistent === false &&
+          this.$store.state.settings.firewallDeactivateOnDisconnect === true &&
+          this.$store.getters["vpnState/isDisconnected"] === false
+        ) {
+          isNeedPromptFirewallStatus = false;
+        }
+      }
 
+      // show dialog ("confirm to logout")
+      let needToDisableFirewall = true;
+      let needToResetSettings = false;
+      const mes = "Do you really want to log out IVPN account?";
+      const mesResetSettings = "Reset application settings to defaults";
+
+      if (isNeedPromptFirewallStatus == true) {
+        // LOGOUT message: Firewall is enabled
+        let ret = await sender.showMessageBox(
+          {
+            type: "question",
+            message: mes,
+            detail:
+              "The Firewall is enabled. All network access will be blocked.",
+            checkboxLabel: mesResetSettings,
+            buttons: ["Turn Firewall off and log out", "Log out", "Cancel"],
+          },
+          true
+        );
+        if (ret.response == 2) return; // cancel
+        if (ret.response != 0) needToDisableFirewall = false;
+        needToResetSettings = ret.checkboxChecked;
+      } else {
+        // LOGOUT message: Firewall is disabled
+        let ret = await sender.showMessageBox(
+          {
+            type: "question",
+            message: mes,
+            checkboxLabel: mesResetSettings,
+            buttons: ["Log out", "Cancel"],
+          },
+          true
+        );
+        if (ret.response == 1) return; // cancel
+        needToResetSettings = ret.checkboxChecked;
+      }
+
+      // LOGOUT
       try {
         this.isProcessing = true;
-        await sender.Logout();
+
+        const isCanDeleteSessionLocally = false;
+        await sender.Logout(
+          needToResetSettings,
+          needToDisableFirewall,
+          isCanDeleteSessionLocally
+        );
       } catch (e) {
         this.isProcessing = false;
         console.error(e);
-        sender.showMessageBoxSync({
-          type: "error",
-          message: "Failed to log out.",
-          detail: e,
-          buttons: ["OK"]
-        });
+
+        try {
+          let ret = sender.showMessageBoxSync({
+            type: "error",
+            message:
+              "Unable to contact server to log out. Please check Internet connectivity.\nDo you want to force log out?",
+            detail:
+              "This device will continue to count towards your device limit.",
+            buttons: ["Force log out", "Cancel"],
+          });
+          if (ret == 1) return; // Cancel
+
+          this.isProcessing = true;
+          // FORCE LOGOUT
+          const isCanDeleteSessionLocally = true;
+          await sender.Logout(
+            needToResetSettings,
+            needToDisableFirewall,
+            isCanDeleteSessionLocally
+          );
+        } catch (e) {
+          sender.showMessageBoxSync({
+            type: "error",
+            message: "Failed to log out.",
+            detail: e,
+            buttons: ["OK"],
+          });
+        }
       } finally {
         this.isProcessing = false;
       }
@@ -192,32 +258,32 @@ export default {
     },
     addMoreTime() {
       sender.shellOpenExternal(`https://www.ivpn.net/account`);
-    }
+    },
   },
   computed: {
-    IsAccountStateExists: function() {
+    IsAccountStateExists: function () {
       return this.$store.getters["account/isAccountStateExists"];
     },
-    CurrentPlan: function() {
+    CurrentPlan: function () {
       return this.$store.state.account.accountStatus.CurrentPlan;
     },
-    ActiveUntil: function() {
+    ActiveUntil: function () {
       return dateDefaultFormat(
         new Date(this.$store.state.account.accountStatus.ActiveUntil * 1000)
       );
     },
-    IsActive: function() {
+    IsActive: function () {
       return this.$store.state.account.accountStatus.Active;
     },
-    IsCanUpgradeToPro: function() {
+    IsCanUpgradeToPro: function () {
       return (
         this.IsAccountStateExists &&
         this.$store.state.account.accountStatus.Upgradable &&
         this.$store.state.account.accountStatus.CurrentPlan.toLowerCase() !=
           "ivpn pro"
       );
-    }
-  }
+    },
+  },
 };
 </script>
 

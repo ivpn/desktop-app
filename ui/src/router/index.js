@@ -33,17 +33,17 @@ const mainRoutes = [
   {
     path: "/",
     name: "Main",
-    component: Main
+    component: Main,
   },
   {
     path: "/account_limit",
     name: "AccountLimit",
-    component: AccountLimit
+    component: AccountLimit,
   },
   {
     path: "/settings/:view",
     name: "settings",
-    component: Settings
+    component: Settings,
   },
   {
     path: "/test",
@@ -51,22 +51,23 @@ const mainRoutes = [
     // route level code-splitting
     // this generates a separate chunk (about.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ "../views/Test.vue")
-  }
+    component: () =>
+      import(/* webpackChunkName: "about" */ "../views/Test.vue"),
+  },
 ];
 const forbiddenToChangeRouteFrom = [
   {
     path: "/update",
     name: "Update",
-    component: Update
-  }
+    component: Update,
+  },
 ];
 const routes = mainRoutes.concat(forbiddenToChangeRouteFrom);
 
 const router = new VueRouter({
   mode: "hash",
   base: process.env.BASE_URL,
-  routes
+  routes,
 });
 
 router.beforeEach((to, from, next) => {

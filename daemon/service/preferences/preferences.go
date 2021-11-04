@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
@@ -47,6 +49,9 @@ const (
 
 // Preferences - IVPN service preferences
 type Preferences struct {
+	// SettingsSessionUUID is unique for Preferences object
+	// It allow to detect situations when settings was erased (created new Preferences object)
+	SettingsSessionUUID      string
 	IsLogging                bool
 	IsFwPersistant           bool
 	IsFwAllowLAN             bool
@@ -66,6 +71,9 @@ type Preferences struct {
 func Create() *Preferences {
 	// init default values
 	return &Preferences{
+		// SettingsSessionUUID is unique for Preferences object
+		// It allow to detect situations when settings was erased (created new Preferences object)
+		SettingsSessionUUID: uuid.New().String(),
 		IsFwAllowApiServers: true,
 	}
 }

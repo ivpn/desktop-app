@@ -23,7 +23,7 @@
 export const DaemonConnectionType = Object.freeze({
   NotConnected: 0,
   Connecting: 1,
-  Connected: 2
+  Connected: 2,
 });
 
 export const VpnTypeEnum = Object.freeze({ OpenVPN: 0, WireGuard: 1 });
@@ -31,7 +31,7 @@ export const PauseStateEnum = Object.freeze({
   Resumed: 0,
   Pausing: 1,
   Paused: 2,
-  Resuming: 3
+  Resuming: 3,
 });
 
 export const VpnStateEnum = Object.freeze({
@@ -46,7 +46,7 @@ export const VpnStateEnum = Object.freeze({
   RECONNECTING: 8, // A restart has occurred.
   TCP_CONNECT: 9, // TCP_CONNECT
   EXITING: 10, // A graceful exit is in progress.
-  DISCONNECTING: 11
+  DISCONNECTING: 11,
 });
 
 export const PingQuality = Object.freeze({ Good: 0, Moderate: 1, Bad: 2 });
@@ -60,7 +60,7 @@ export const Ports = Object.freeze({
     { port: 1194, type: PortTypeEnum.UDP },
     { port: 443, type: PortTypeEnum.TCP },
     { port: 1443, type: PortTypeEnum.TCP },
-    { port: 80, type: PortTypeEnum.TCP }
+    { port: 80, type: PortTypeEnum.TCP },
   ],
   WireGuard: [
     { port: 2049, type: PortTypeEnum.UDP },
@@ -70,21 +70,21 @@ export const Ports = Object.freeze({
     { port: 30587, type: PortTypeEnum.UDP },
     { port: 41893, type: PortTypeEnum.UDP },
     { port: 48574, type: PortTypeEnum.UDP },
-    { port: 58237, type: PortTypeEnum.UDP }
-  ]
+    { port: 58237, type: PortTypeEnum.UDP },
+  ],
 });
 
 export const ServersSortTypeEnum = Object.freeze({
   City: 0,
   Country: 1,
   Latency: 2,
-  Proximity: 3
+  Proximity: 3,
 });
 
 export const ColorTheme = Object.freeze({
   system: "system",
   light: "light",
-  dark: "dark"
+  dark: "dark",
 });
 
 export const AppUpdateStage = Object.freeze({
@@ -96,5 +96,5 @@ export const AppUpdateStage = Object.freeze({
   CheckingSignature: "Checking signature ...",
   ReadyToInstall: "Ready to install",
   Installing: "Installing...",
-  Error: "Error"
+  Error: "Error",
 });

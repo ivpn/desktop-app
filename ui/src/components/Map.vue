@@ -10,7 +10,7 @@
             isPopupVisible &&
             isMapLoaded &&
             isInProgress == false &&
-            isBlured !== 'true'
+            isBlured !== 'true',
         }"
       >
         <popupControl
@@ -34,7 +34,7 @@
     <div
       class="buttonsPanelTopRight"
       v-bind:class="{
-        buttonsPanelTopRightNoFrameWindow: !isWindowHasFrame
+        buttonsPanelTopRightNoFrameWindow: !isWindowHasFrame,
       }"
       v-if="isBlured !== 'true'"
     >
@@ -66,7 +66,7 @@
     <div class="bottomPanel">
       <div class="flexRow">
         <div class="geolocationInfoPanel">
-          <GeolocationInfoControl style="display: flex; align-items: center;" />
+          <GeolocationInfoControl style="display: flex; align-items: center" />
         </div>
         <div calsss="flexRowRestSpace"></div>
       </div>
@@ -89,9 +89,7 @@
         <img src="@/assets/alert-circle.svg" style="margin-right: 12px" />
         {{ $store.getters["account/messageFreeTrial"] }}
         <div class="flexRowRestSpace" />
-        <button class="noBordersBtn">
-          UPGRADE
-        </button>
+        <button class="noBordersBtn">UPGRADE</button>
       </div>
     </div>
     <!-- Map -->
@@ -120,7 +118,7 @@
         <div
           ref="hiddenTestTextMeter"
           class="mapLocationName"
-          style="opacity: 0; pointer-events: none; z-index: -1;"
+          style="opacity: 0; pointer-events: none; z-index: -1"
         ></div>
 
         <div class="mapLocationsContainer" ref="mapLocationsContainer">
@@ -135,13 +133,13 @@
             v-bind:class="{
               mapLocationPointCurrent: l.location === location,
               mapLocationPointConnected:
-                l.location === connectedLocation && isConnected
+                l.location === connectedLocation && isConnected,
             }"
             :style="{
               left: l.x - l.pointRadius + 'px',
               top: l.y - l.pointRadius + 'px',
               height: l.pointRadius * 2 + 'px',
-              width: l.pointRadius * 2 + 'px'
+              width: l.pointRadius * 2 + 'px',
             }"
           ></div>
           <!-- Location name -->
@@ -155,7 +153,7 @@
             v-bind:class="{
               mapLocationNameCurrent: l.location === location,
               mapLocationNameConnected:
-                l.location === connectedLocation && isConnected
+                l.location === connectedLocation && isConnected,
             }"
             :style="{ left: l.left + 'px', top: l.top + 'px' }"
           >
@@ -185,7 +183,7 @@
             ref="animationConnectedWaves"
             class="mapLocationCircleConnectedWaves"
             v-bind:class="{
-              mapLocationCircleConnectedWavesRunning: isConnected
+              mapLocationCircleConnectedWavesRunning: isConnected,
             }"
           ></div>
         </div>
@@ -211,20 +209,20 @@ import config from "@/config";
 import {
   notLinear,
   getPosFromCoordinates,
-  getCoordinatesBy
+  getCoordinatesBy,
 } from "@/helpers/helpers";
 
 const defaultZoomScale = 0.41;
 export default {
   components: {
     popupControl,
-    GeolocationInfoControl
+    GeolocationInfoControl,
   },
   props: {
     isBlured: String,
     onAccountSettings: Function,
     onSettings: Function,
-    onMinimize: Function
+    onMinimize: Function,
   },
 
   data: () => ({
@@ -258,7 +256,7 @@ export default {
       startTimeMs: null,
       startLeft: -1,
       startTop: -1,
-      maxDurationMs: 0
+      maxDurationMs: 0,
     },
 
     moving: false,
@@ -269,7 +267,7 @@ export default {
 
     mapPos: {
       mapLeftOffset: 0.0,
-      mapTopOffset: 0.0
+      mapTopOffset: 0.0,
     },
 
     locationsToDisplay: [
@@ -284,30 +282,30 @@ export default {
         width: textWidth,
         height: textHeight
       } */
-    ]
+    ],
   }),
 
   computed: {
-    isWindowHasFrame: function() {
+    isWindowHasFrame: function () {
       return IsWindowHasFrame();
     },
-    mapImage: function() {
+    mapImage: function () {
       if (this.isDarkTheme) return Image_world_map_dark;
       return Image_world_map_light;
     },
-    servers: function() {
+    servers: function () {
       return this.$store.getters["vpnState/activeServers"];
     },
-    entryServer: function() {
+    entryServer: function () {
       return this.$store.state.settings.serverEntry;
     },
-    selectedServer: function() {
+    selectedServer: function () {
       if (this.$store.state.settings.isMultiHop)
         return this.$store.state.settings.serverExit;
       return this.$store.state.settings.serverEntry;
     },
 
-    location: function() {
+    location: function () {
       let l = this.$store.state.location;
 
       // IPv6
@@ -321,7 +319,7 @@ export default {
       return l;
     },
 
-    isRequestingLocation: function() {
+    isRequestingLocation: function () {
       let isInProcess = this.$store.state.isRequestingLocation;
       // IPv6
       if (this.$store.getters["getIsIPv6View"]) {
@@ -330,51 +328,51 @@ export default {
       return isInProcess;
     },
 
-    isFastestServer: function() {
+    isFastestServer: function () {
       return this.$store.state.settings.isFastestServer;
     },
-    isRandomExitServer: function() {
+    isRandomExitServer: function () {
       return this.$store.state.settings.isRandomExitServer;
     },
 
-    isPaused: function() {
+    isPaused: function () {
       return this.$store.state.vpnState.pauseState === PauseStateEnum.Paused;
     },
 
-    connectedLocation: function() {
+    connectedLocation: function () {
       if (!this.isConnected) return null;
       return this.selectedServer;
     },
 
     // needed for watcher
-    isLoggedIn: function() {
+    isLoggedIn: function () {
       return this.$store.getters["account/isLoggedIn"];
     },
     // needed for watcher
-    connectionState: function() {
+    connectionState: function () {
       return this.$store.state.vpnState.connectionState;
     },
-    isConnecting: function() {
+    isConnecting: function () {
       return this.$store.getters["vpnState/isConnecting"];
     },
-    isConnected: function() {
+    isConnected: function () {
       if (this.isPaused) return false;
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.CONNECTED
       );
     },
-    isDisconnected: function() {
+    isDisconnected: function () {
       if (this.isPaused) return true;
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
       );
     },
-    isInProgress: function() {
+    isInProgress: function () {
       return !this.isConnected && !this.isDisconnected;
     },
-    isMinimizedUI: function() {
+    isMinimizedUI: function () {
       return this.$store.state.settings.minimizedUI;
-    }
+    },
   },
 
   mounted() {
@@ -405,10 +403,10 @@ export default {
     this.updateAnimations();
   },
 
-  created: function() {
+  created: function () {
     window.addEventListener("mousemove", this.windowsmousemove);
   },
-  destroyed: function() {
+  destroyed: function () {
     window.removeEventListener("mousemove", this.windowsmousemove);
   },
 
@@ -470,7 +468,7 @@ export default {
           this.centerCurrentLocation();
         }, 300);
       }
-    }
+    },
   },
 
   methods: {
@@ -532,7 +530,7 @@ export default {
         sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
-          message: `Failed to disconnect: ` + e
+          message: `Failed to disconnect: ` + e,
         });
       }
     },
@@ -547,20 +545,19 @@ export default {
             // Entry and exit servers cannot be in the same country
             return;
           }
-        }
-
-        this.$store.dispatch("settings/isFastestServer", false);
-        this.$store.dispatch("settings/isRandomServer", false);
-
-        if (this.$store.state.settings.isMultiHop)
+          this.$store.dispatch("settings/isRandomExitServer", false);
           await sender.Connect(null, location);
-        else await sender.Connect(location, null);
+        } else {
+          this.$store.dispatch("settings/isFastestServer", false);
+          this.$store.dispatch("settings/isRandomServer", false);
+          await sender.Connect(location, null);
+        }
       } catch (e) {
         console.error(e);
         sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
-          message: `Failed to connect: ` + e
+          message: `Failed to connect: ` + e,
         });
       }
     },
@@ -573,7 +570,7 @@ export default {
         sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
-          message: `Failed to resume: ` + e
+          message: `Failed to resume: ` + e,
         });
       }
     },
@@ -697,7 +694,7 @@ export default {
                 buttons: ["OK"],
                 message: "Entry and exit servers cannot be in the same country",
                 detail:
-                  "When using multihop you must select entry and exit servers in different countries. Please select a different entry or exit server."
+                  "When using multihop you must select entry and exit servers in different countries. Please select a different entry or exit server.",
               });
               return;
             }
@@ -787,7 +784,7 @@ export default {
         startTimeMs: performance.now(),
         startLeft: this.combinedDiv.scrollLeft,
         startTop: this.combinedDiv.scrollTop,
-        maxDurationMs: 600
+        maxDurationMs: 600,
       };
 
       this.scrollingTick();
@@ -947,14 +944,14 @@ export default {
         // - necessary to recalculate mouse position accourding canvas area
         zoomPoint = {
           offsetX: zoomPoint.clientX - config.MinimizedUIWidth,
-          offsetY: zoomPoint.clientY
+          offsetY: zoomPoint.clientY,
         };
       }
       // save geo coordinates of center point (to be able to center same point after scalling)
       else if (zoomPoint == null) {
         zoomPoint = {
           offsetX: this.canvas.width / 2,
-          offsetY: this.canvas.height / 2
+          offsetY: this.canvas.height / 2,
         };
       }
 
@@ -1051,7 +1048,7 @@ export default {
 
       let skippedCities = [];
       // all the rest locations
-      this.servers.forEach(s => {
+      this.servers.forEach((s) => {
         city = this.createCity(s, cities, PointRadius);
         if (city == null) {
           skippedCities.push(s);
@@ -1062,7 +1059,7 @@ export default {
 
       // if there is no space to show location -> trying to show at least points (without name)
       const doNotShowName = true;
-      skippedCities.forEach(s => {
+      skippedCities.forEach((s) => {
         city = this.createCity(s, cities, PointRadius, doNotShowName);
         if (city == null) return;
         cities.push(city);
@@ -1104,7 +1101,7 @@ export default {
         top: textPos.textY,
         pointRadius,
         width: textWidth,
-        height: textHeight
+        height: textHeight,
       };
     },
 
@@ -1213,8 +1210,8 @@ export default {
           }
         }
       } else setDisconnectedObj(this);
-    }
-  }
+    },
+  },
 };
 
 function calcTextLocation(
@@ -1281,7 +1278,7 @@ function calcTextLocation(
 }
 
 function isUse(drawedCities, x, y, pointRadius, left, top, width, height) {
-  let isRectInside = function(r1, r2) {
+  let isRectInside = function (r1, r2) {
     return (
       r1.left + r1.width >= r2.left &&
       r1.left <= r2.left + r2.width &&
@@ -1297,13 +1294,13 @@ function isUse(drawedCities, x, y, pointRadius, left, top, width, height) {
       left: x - pointRadius,
       top: y - pointRadius,
       width: pointRadius * 2,
-      height: pointRadius * 2
+      height: pointRadius * 2,
     };
     let p2 = {
       left: r2.x - pointRadius,
       top: r2.y - pointRadius,
       width: r2.pointRadius * 2,
-      height: r2.pointRadius * 2
+      height: r2.pointRadius * 2,
     };
 
     if (isRectInside(r1, r2)) return drawedCities[i];

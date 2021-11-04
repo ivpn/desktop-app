@@ -28,6 +28,8 @@ import { PauseStateEnum } from "@/store/types";
 import { VpnStateEnum } from "@/store/types";
 import daemonClient from "@/daemon-client";
 import { Platform, PlatformEnum } from "@/platform/platform";
+import path from "path";
+
 const { nativeTheme } = require("electron");
 
 let tray = null;
@@ -87,7 +89,17 @@ export function InitTray(
           }
         });
 
-        const f = __static + "/tray/windows/";
+        let f = path.join(path.dirname(__dirname), "tray", "windows", "/");
+        if (process.env.IS_DEBUG) {
+          f = path.join(
+            path.dirname(__dirname),
+            "public",
+            "tray",
+            "windows",
+            "/"
+          );
+        }
+
         iconConnected = nativeImage.createFromPath(f + "connected.ico");
         iconDisconnected = nativeImage.createFromPath(f + "disconnected.ico");
         iconPaused = nativeImage.createFromPath(f + "paused.ico");
@@ -134,7 +146,7 @@ export function InitTray(
   }
 
   // subscribe to any changes in a tore
-  store.subscribe(mutation => {
+  store.subscribe((mutation) => {
     try {
       switch (mutation.type) {
         case "vpnState/connectionState":
@@ -231,13 +243,13 @@ function updateTrayMenu() {
   const favSvrs = store.state.settings.serversFavoriteList;
   if (favSvrs == null || favSvrs.length == 0) {
     favoriteSvrsTemplate = [
-      { label: "No servers in favorite list", enabled: false }
+      { label: "No servers in favorite list", enabled: false },
     ];
   } else {
     favoriteSvrsTemplate = [{ label: "Connect to ...", enabled: false }];
 
     const serversHashed = store.state.vpnState.serversHashed;
-    favSvrs.forEach(gw => {
+    favSvrs.forEach((gw) => {
       const s = serversHashed[gw];
       if (s == null) return;
 
@@ -248,14 +260,14 @@ function updateTrayMenu() {
           label: serverName(null, s),
           click: () => {
             menuItemConnect(null, s);
-          }
+          },
         };
       } else {
         options = {
           label: serverName(s),
           click: () => {
             menuItemConnect(s);
-          }
+          },
         };
       }
 
@@ -282,7 +294,7 @@ function updateTrayMenu() {
   const statusText = GetStatusText();
   if (statusText) {
     const lines = statusText.split("\n");
-    lines.forEach(l => {
+    lines.forEach((l) => {
       if (l == "separator") mainMenu.push({ type: "separator" });
       else if (l) mainMenu.push({ label: l, enabled: false });
     });
@@ -296,7 +308,7 @@ function updateTrayMenu() {
     if (store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED) {
       mainMenu.push({
         label: `Connect to ${connectToName}`,
-        click: () => menuItemConnect()
+        click: () => menuItemConnect(),
       });
     } else {
       // PAUSE\RESUME
@@ -308,31 +320,31 @@ function updateTrayMenu() {
               label: "Resume in 5 min",
               click: () => {
                 menuItemPause(5 * 60);
-              }
+              },
             },
             {
               label: "Resume in 30 min",
               click: () => {
                 menuItemPause(30 * 60);
-              }
+              },
             },
             {
               label: "Resume in 1 hour",
               click: () => {
                 menuItemPause(1 * 60 * 60);
-              }
+              },
             },
             {
               label: "Resume in 3 hours",
               click: () => {
                 menuItemPause(3 * 60 * 60);
-              }
-            }
+              },
+            },
           ];
           mainMenu.push({
             label: "Resume in",
             type: "submenu",
-            submenu: Menu.buildFromTemplate(pauseSubMenuTemplate)
+            submenu: Menu.buildFromTemplate(pauseSubMenuTemplate),
           });
           mainMenu.push({ type: "separator" });
         } else if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) {
@@ -341,31 +353,31 @@ function updateTrayMenu() {
               label: "Pause for 5 min",
               click: () => {
                 menuItemPause(5 * 60);
-              }
+              },
             },
             {
               label: "Pause for 30 min",
               click: () => {
                 menuItemPause(30 * 60);
-              }
+              },
             },
             {
               label: "Pause for 1 hour",
               click: () => {
                 menuItemPause(1 * 60 * 60);
-              }
+              },
             },
             {
               label: "Pause for 3 hours",
               click: () => {
                 menuItemPause(3 * 60 * 60);
-              }
-            }
+              },
+            },
           ];
           mainMenu.push({
             label: "Pause",
             type: "submenu",
-            submenu: Menu.buildFromTemplate(pauseSubMenuTemplate)
+            submenu: Menu.buildFromTemplate(pauseSubMenuTemplate),
           });
         }
       }
@@ -375,7 +387,7 @@ function updateTrayMenu() {
     mainMenu.push({
       label: "Favorite servers",
       type: "submenu",
-      submenu: favorites
+      submenu: favorites,
     });
     mainMenu.push({ type: "separator" });
     mainMenu.push({ label: "Account", click: menuHandlerAccount });
@@ -383,7 +395,7 @@ function updateTrayMenu() {
     if (menuHandlerCheckUpdates != null) {
       mainMenu.push({
         label: `Check for Updates`,
-        click: menuHandlerCheckUpdates
+        click: menuHandlerCheckUpdates,
       });
     }
     mainMenu.push({ type: "separator" });

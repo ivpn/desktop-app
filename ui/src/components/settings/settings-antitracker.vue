@@ -2,12 +2,10 @@
   <div>
     <div class="settingsTitle">ANTITRACKER SETTINGS</div>
 
-    <div class="defColor" style="margin-bottom: 24px;">
+    <div class="defColor" style="margin-bottom: 24px">
       When AntiTracker is enabled, IVPN blocks ads, malicious websites, and
       third-party trackers using our private DNS servers.
-      <button class="link" v-on:click="onLearnMoreLink">
-        Learn more
-      </button>
+      <button class="link" v-on:click="onLearnMoreLink">Learn more</button>
       about how IVPN AntiTracker is implemented.
     </div>
 
@@ -21,13 +19,12 @@
     </div>
     <div class="fwDescription">
       Hardcode mode blocks the leading companies with business models relying on
-      user surveilance (currently: Google and Facebook)
+      user surveillance (currently: Google and Facebook)
     </div>
     <div class="fwDescription">
       To better understand how this may impact your experience please refer to
       our
-      <button class="link" v-on:click="onHardcodeLink">
-        hardcore mode FAQ</button
+      <button class="link" v-on:click="onHardcodeLink">hardcore mode FAQ</button
       >.
     </div>
   </div>
@@ -37,7 +34,7 @@
 const sender = window.ipcSender;
 
 export default {
-  data: function() {
+  data: function () {
     return {};
   },
   methods: {
@@ -46,7 +43,7 @@ export default {
     },
     onHardcodeLink: () => {
       sender.shellOpenExternal(`https://www.ivpn.net/antitracker/hardcore`);
-    }
+    },
   },
   computed: {
     isAntitrackerHardcore: {
@@ -56,9 +53,9 @@ export default {
       async set(value) {
         this.$store.dispatch("settings/isAntitrackerHardcore", value);
         await sender.SetDNS();
-      }
-    }
-  }
+      },
+    },
+  },
 };
 </script>
 

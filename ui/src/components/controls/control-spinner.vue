@@ -11,16 +11,16 @@ export default {
   props: {
     loading: {
       type: Boolean,
-      default: false
+      default: false,
     },
     color: {
       type: String,
-      default: "#3385ff"
+      default: "#3385ff",
     },
     radius: {
       type: Number,
-      default: 50
-    }
+      default: 50,
+    },
   },
   data() {
     return {
@@ -28,13 +28,13 @@ export default {
         "border-top-color": this.color,
         width: `${this.radius * 2}px`,
         height: `${this.radius * 2}px`,
-        margin: `-${this.radius}px 0 0 -${this.radius}px`
-      }
+        margin: `-${this.radius}px 0 0 -${this.radius}px`,
+      },
     };
   },
   computed: {},
 
-  methods: {}
+  methods: {},
 };
 </script>
 

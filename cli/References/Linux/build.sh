@@ -106,6 +106,23 @@ cd $TMPDIRSRVC
 echo "Preparing service..."
 fpm -v $VERSION -n ivpn-service -s pleaserun -t dir --deb-no-default-config-files /usr/bin/ivpn-service
 
+OBFSPXY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/obfs4proxy_inst/obfs4proxy
+WG_QUICK_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg-quick
+WG_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg
+
+if [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ] || [ "$(find ${WG_QUICK_BIN} -perm 755)" != "${WG_QUICK_BIN}" ] || [ "$(find ${WG_BIN} -perm 755)" != "${WG_BIN}" ]
+then
+  echo ----------------------------------------------------------
+  echo "Going to change access mode to 755 for binaries:"
+  echo "  - ${OBFSPXY_BIN}"
+  echo "  - ${WG_QUICK_BIN}"
+  echo "  - ${WG_BIN}"
+  echo "(you may be asked for credentials for 'sudo')"
+  sudo chmod 755 ${OBFSPXY_BIN}
+  sudo chmod 755 ${WG_QUICK_BIN}
+  sudo chmod 755 ${WG_BIN}
+  echo ----------------------------------------------------------
+fi
 
 CreatePackage()
 {
@@ -138,6 +155,20 @@ CreatePackage()
   #   after_remove
   #
   # NOTE! 'remove' scripts is using from old version!
+  #
+  # EXAMPLES:
+  #
+  # DEB (apt) Install/Upgrade 3.3.20->3.3.30:
+  #   [*] Before remove (3.3.20 : deb : upgrade)
+  #   [*] Before install (3.3.30 : deb : upgrade)
+  #   [*] After remove (3.3.20 : deb : upgrade)
+  #   [*] After install (3.3.30 : deb : configure)
+  #
+  # RPM (dnf) upgrade:
+  #   NEW: before install (2)
+  #   NEW: after install (2)
+  #   OLD: before remove (1)
+  #   OLD: after remove (1)
 
   fpm -d openvpn $EXTRA_ARGS \
     --rpm-rpmbuild-define "_build_id_links none" \
@@ -152,6 +183,9 @@ CreatePackage()
     $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
     $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/bin/ \
     $OUT_DIR/ivpn=/usr/bin/ \
+    $OBFSPXY_BIN=/opt/ivpn/obfsproxy/obfs4proxy \
+    $WG_QUICK_BIN=/opt/ivpn/wireguard-tools/wg-quick \
+    $WG_BIN=/opt/ivpn/wireguard-tools/wg \
     $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
 }
 

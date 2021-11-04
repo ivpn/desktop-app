@@ -29,6 +29,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/ivpn/desktop-app/cli/cliplatform"
 	"github.com/ivpn/desktop-app/cli/protocol"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -138,6 +139,10 @@ func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN
 func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, apps []string) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+	}
+
+	if !cliplatform.IsMultiHopSupported() {
+		return w
 	}
 
 	state := "Disabled"

@@ -1,9 +1,7 @@
 <template>
   <div calss="main" v-on:click="onMouseClick">
     <div class="popup_description_text">
-      <div v-if="isTheCurrentLocation">
-        Your current location
-      </div>
+      <div v-if="isTheCurrentLocation">Your current location</div>
     </div>
     <div class="popup_description_text">
       <div v-if="isExitServerCountrySameAsEntry">
@@ -59,33 +57,33 @@ export default {
   props: ["location", "onConnect", "onDisconnect", "onMouseClick", "onResume"],
   components: {
     serverNameControl,
-    serverPingInfoControl
+    serverPingInfoControl,
   },
   data: () => ({
     pauseTimeUpdateTimer: null,
-    pauseTimeLeftText: ""
+    pauseTimeLeftText: "",
   }),
   mounted() {
     this.startPauseTimer();
   },
   computed: {
     // needed for watcher
-    pauseConnectionTill: function() {
+    pauseConnectionTill: function () {
       return this.$store.state.uiState.pauseConnectionTill;
     },
-    isPaused: function() {
+    isPaused: function () {
       if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Paused)
         return false;
       return this.pauseConnectionTill != null;
     },
-    isTheCurrentLocation: function() {
+    isTheCurrentLocation: function () {
       return (
         this.location === this.$store.state.location ||
         this.location === this.$store.state.locationIPv6
       );
     },
 
-    isExitServerCountrySameAsEntry: function() {
+    isExitServerCountrySameAsEntry: function () {
       if (this.location == null || this.location.gateway == null) return false;
       return (
         this.$store.state.settings.isMultiHop &&
@@ -112,7 +110,7 @@ export default {
       return false;
     },
 
-    isCanConnect: function() {
+    isCanConnect: function () {
       // selected curent users location (not a server)
       if (this.isTheCurrentLocation) return false;
       // not allowed multi-hop connect for servers in same country
@@ -122,7 +120,7 @@ export default {
       return true;
     },
 
-    isAllowedExitServer: function() {
+    isAllowedExitServer: function () {
       if (this.$store.state.settings.isMultiHop === false) return true;
       if (this.location == null) return true;
 
@@ -132,12 +130,12 @@ export default {
       )
         return false;
       return true;
-    }
+    },
   },
   watch: {
     isPaused() {
       this.startPauseTimer();
-    }
+    },
   },
   methods: {
     startPauseTimer() {
@@ -158,8 +156,8 @@ export default {
       this.pauseTimeLeftText = GetTimeLeftText(
         this.$store.state.uiState.pauseConnectionTill
       );
-    }
-  }
+    },
+  },
 };
 </script>
 
