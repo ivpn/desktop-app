@@ -431,6 +431,22 @@ Section "${PRODUCT_NAME}" SecIVPN
   ; ============ TAP driver ======================================================================
   DetailPrint "Installing TAP Driver..."
 
+  ; Remove unnecessary driver version
+  ; We are using two versions of the tap driver. It is the same driver but signed by different certificates:
+  ; - OpenVPN\x86_64\tap: Signed by Microsoft (using IVPN EV certificate). It works only since Windows 10.
+  ;   (additionally, it allows to install of the driver in silent mode (required for Winget package manager))
+  ; - OpenVPN\x86_64\tap_oldsign: The driver signed by an old certificate. Works for old Windows versions.
+  ${If} ${AtLeastWin10}
+    ; keep using "$INSTDIR\OpenVPN\x86_64\tap"    
+  ${Else}
+    ; use driver from "$INSTDIR\OpenVPN\x86_64\tap_oldsign"
+     DetailPrint "info: The Windows version older than Windows 10"
+     Delete "$INSTDIR\OpenVPN\x86_64\tap\*.*"
+     CopyFiles "$INSTDIR\OpenVPN\x86_64\tap_oldsign\*.*" "$INSTDIR\OpenVPN\x86_64\tap"
+  ${EndIf}
+  ; we do not need 'tap_oldsign' anymore
+  RMDir /r "$INSTDIR\OpenVPN\x86_64\tap_oldsign"
+
   ; check if TUN/TAP driver is installed
   IntOp $R5 0 & 0
   nsExec::ExecToStack '"$INSTDIR\devcon\$BitDir\${DEVCON_BASENAME}" hwids ${PRODUCT_TAP_WIN_COMPONENT_ID}'
