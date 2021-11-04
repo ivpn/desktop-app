@@ -57,13 +57,13 @@ import { Platform, PlatformEnum } from "@/platform/platform";
 
 export default {
   computed: {
-    PlatformEnum: function() {
+    PlatformEnum: function () {
       return PlatformEnum;
     },
-    platform: function() {
+    platform: function () {
       return Platform();
-    }
-  }
+    },
+  },
 };
 </script>
 

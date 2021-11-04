@@ -23,7 +23,7 @@ import {
   VpnTypeEnum,
   Ports,
   ServersSortTypeEnum,
-  ColorTheme
+  ColorTheme,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -63,7 +63,7 @@ const getDefaultState = () => {
 
     port: {
       OpenVPN: Ports.OpenVPN[0],
-      WireGuard: Ports.WireGuard[0]
+      WireGuard: Ports.WireGuard[0],
     },
 
     ovpnProxyType: "",
@@ -96,8 +96,8 @@ const getDefaultState = () => {
         unTrustedEnableFirewall: true,
 
         trustedDisconnectVpn: true,
-        trustedDisableFirewall: true
-      }
+        trustedDisableFirewall: true,
+      },
     },
 
     // UI
@@ -114,8 +114,8 @@ const getDefaultState = () => {
     skipAppUpdate: {
       genericVersion: null,
       daemonVersion: null,
-      uiVersion: null
-    }
+      uiVersion: null,
+    },
   };
 
   if (Platform() === PlatformEnum.Linux) {
@@ -260,12 +260,12 @@ export default {
         // remove trusted wifi config duplicates (only one record for SSID)
         val.networks = val.networks.filter(
           (wifi, index, self) =>
-            index === self.findIndex(t => t.ssid === wifi.ssid)
+            index === self.findIndex((t) => t.ssid === wifi.ssid)
         );
 
         // remove networks with not defined trust level or empty ssid
         val.networks = val.networks.filter(
-          n =>
+          (n) =>
             n.ssid != "" &&
             n.ssid != null &&
             (n.isTrusted == true || n.isTrusted == false)
@@ -304,27 +304,27 @@ export default {
     // updates
     skipAppUpdate(state, val) {
       state.skipAppUpdate = val;
-    }
+    },
   },
 
   getters: {
-    vpnType: state => {
+    vpnType: (state) => {
       return state.vpnType;
     },
-    isFastestServer: state => {
+    isFastestServer: (state) => {
       if (state.isMultiHop) return false;
       return state.isFastestServer;
     },
-    isRandomServer: state => {
+    isRandomServer: (state) => {
       return state.isRandomServer;
     },
-    isRandomExitServer: state => {
+    isRandomExitServer: (state) => {
       if (!state.isMultiHop) return false;
       return state.isRandomExitServer;
     },
-    getPort: state => {
+    getPort: (state) => {
       return state.port[enumValueName(VpnTypeEnum, state.vpnType)];
-    }
+    },
   },
 
   // can be called from renderer
@@ -481,8 +481,8 @@ export default {
       // Do nothing. Just trigger mechanism to update properties for 'selected servers' objects
       context.commit("serverEntry", context.state.serverEntry);
       context.commit("serverExit", context.state.serverExit);
-    }
-  }
+    },
+  },
 };
 
 function updateSelectedServers(context) {

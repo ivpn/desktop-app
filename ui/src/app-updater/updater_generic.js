@@ -28,7 +28,7 @@ import { IsNewVersion } from "./helper";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import {
   ValidateDataOpenSSLCertificate,
-  ValidateFileOpenSSLCertificate
+  ValidateFileOpenSSLCertificate,
 } from "@/helpers/main_signature";
 
 const os = require("os");
@@ -126,14 +126,14 @@ async function installWindows(updateProgress) {
   let cmd = spawn(updateProgress.readyToInstallBinary, null, {
     shell: true,
     stdio: "ignore",
-    detached: true
+    detached: true,
   });
 
-  cmd.on("exit", code => {
+  cmd.on("exit", (code) => {
     if (code != 0) {
       setState({
         state: AppUpdateStage.Error,
-        error: "Failed to run update binary"
+        error: "Failed to run update binary",
       });
     }
   });
@@ -147,19 +147,19 @@ async function installMacOS(updateProgress) {
     [
       "--update",
       updateProgress.readyToInstallBinary,
-      updateProgress.readyToInstallSignatureFile
+      updateProgress.readyToInstallSignatureFile,
     ],
     {
       stdio: "ignore",
-      detached: true
+      detached: true,
     }
   );
 
-  cmd.on("exit", code => {
+  cmd.on("exit", (code) => {
     if (code != 0) {
       setState({
         state: AppUpdateStage.Error,
-        error: "Failed to run update binary"
+        error: "Failed to run update binary",
       });
     }
   });
@@ -183,7 +183,7 @@ export async function Install() {
   );
 
   setState({
-    state: AppUpdateStage.Installing
+    state: AppUpdateStage.Installing,
   });
 
   try {
@@ -196,7 +196,7 @@ export async function Install() {
     ) {
       setState({
         state: AppUpdateStage.Error,
-        error: "Unable to start update: signature verification error"
+        error: "Unable to start update: signature verification error",
       });
       return;
     }
@@ -214,7 +214,7 @@ export async function Install() {
   } catch (err) {
     setState({
       state: AppUpdateStage.Error,
-      error: "Unable to start update: " + err
+      error: "Unable to start update: " + err,
     });
   }
   return true;
@@ -235,18 +235,18 @@ export async function Upgrade(latestVersionInfo) {
       require("electron").shell.openExternal(config.URLApps);
     } else {
       // Start downloading an update binary
-      let onDownloadProgress = function(contentLength, received) {
+      let onDownloadProgress = function (contentLength, received) {
         setState({
           state: AppUpdateStage.Downloading,
           downloadStatus: {
             contentLength: contentLength,
-            downloaded: received
-          }
+            downloaded: received,
+          },
         });
       };
 
       setState({
-        state: AppUpdateStage.Downloading
+        state: AppUpdateStage.Downloading,
       });
       // DOWNLOAD SIGNATURE
       let downloadedSignatureFile = null;
@@ -258,14 +258,14 @@ export async function Upgrade(latestVersionInfo) {
         // failed to download (or failed or save)
         setState({
           state: AppUpdateStage.Error,
-          error: "Failed to download signature. Check connectivity"
+          error: "Failed to download signature. Check connectivity",
         });
         return;
       }
 
       if (DownloadUpdateCancelled) {
         setState({
-          updateState: AppUpdateStage.CancelledDownload
+          updateState: AppUpdateStage.CancelledDownload,
         });
         return;
       }
@@ -281,14 +281,14 @@ export async function Upgrade(latestVersionInfo) {
         // failed to download (or failed or save) binary
         setState({
           state: AppUpdateStage.Error,
-          error: "Failed to download binary. Check connectivity"
+          error: "Failed to download binary. Check connectivity",
         });
         return;
       }
 
       if (DownloadUpdateCancelled) {
         setState({
-          updateState: AppUpdateStage.CancelledDownload
+          updateState: AppUpdateStage.CancelledDownload,
         });
         return;
       }
@@ -297,7 +297,7 @@ export async function Upgrade(latestVersionInfo) {
       setState({
         state: AppUpdateStage.ReadyToInstall,
         readyToInstallBinary: downloadedFile,
-        readyToInstallSignatureFile: downloadedSignatureFile
+        readyToInstallSignatureFile: downloadedSignatureFile,
       });
     }
   } catch (e) {
@@ -319,7 +319,7 @@ async function Download(link, onProgress) {
 
       let isConnectionEstablished = false;
       DownloadRequest = https
-        .get(link, res => {
+        .get(link, (res) => {
           if (res.statusCode != 200) {
             if (DownloadRequest) DownloadRequest.destroy();
             DownloadRequest = null;
@@ -336,7 +336,7 @@ async function Download(link, onProgress) {
           let received = 0;
 
           // listening for progress event
-          res.on("data", d => {
+          res.on("data", (d) => {
             received += d.length;
             if (onProgress) onProgress(contentLength, received);
           });
@@ -347,7 +347,7 @@ async function Download(link, onProgress) {
             resolve(outFilePath);
           });
         })
-        .on("error", e => {
+        .on("error", (e) => {
           console.log("Download error:", e);
           DownloadRequest = null;
           reject(e);
@@ -358,7 +358,7 @@ async function Download(link, onProgress) {
         if (isConnectionEstablished != true) CancelDownload();
       }, 5000);
 
-      DownloadRequest.setTimeout(10000, function() {
+      DownloadRequest.setTimeout(10000, function () {
         console.log("Download timeout");
         reject("Timeout");
       });

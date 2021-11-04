@@ -12,29 +12,29 @@ function removeServers(key, value) {
   if (key == "serversHashed") return { DEBUG: `DEBUG: excluded from output` };
   if (key == "servers")
     return {
-      DEBUG: `DEBUG: excluded from output (ovpn ${value.wireguard.length}; wg ${value.openvpn.length} )`
+      DEBUG: `DEBUG: excluded from output (ovpn ${value.wireguard.length}; wg ${value.openvpn.length} )`,
     };
   else return value;
 }
 
 export default {
   components: {},
-  data: function() {
+  data: function () {
     return {
-      show: true
+      show: true,
     };
   },
 
   computed: {
-    theGetters: function() {
+    theGetters: function () {
       return JSON.stringify(this.$store.getters, removeServers, 2);
     },
-    theState: function() {
+    theState: function () {
       return JSON.stringify(this.$store.state, removeServers, 2);
-    }
+    },
   },
 
-  methods: {}
+  methods: {},
 };
 </script>
 

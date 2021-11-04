@@ -2,9 +2,7 @@
   <div>
     <div class="settingsTitle">FIREWALL SETTINGS</div>
 
-    <div class="settingsBoldFont">
-      Non-VPN traffic blocking:
-    </div>
+    <div class="settingsBoldFont">Non-VPN traffic blocking:</div>
 
     <div>
       <div class="settingsRadioBtn">
@@ -56,9 +54,7 @@
     </div>
 
     <!-- On-demand Firewall -->
-    <div class="settingsBoldFont">
-      On-demand Firewall:
-    </div>
+    <div class="settingsBoldFont">On-demand Firewall:</div>
 
     <div class="param">
       <input
@@ -84,9 +80,7 @@
     </div>
 
     <!-- LAN settings -->
-    <div class="settingsBoldFont">
-      LAN settings:
-    </div>
+    <div class="settingsBoldFont">LAN settings:</div>
     <div class="param">
       <input type="checkbox" id="firewallAllowLan" v-model="firewallAllowLan" />
       <label class="defColor" for="firewallAllowLan"
@@ -115,12 +109,12 @@ function processError(e) {
   sender.showMessageBox({
     type: "error",
     buttons: ["OK"],
-    message: e.toString()
+    message: e.toString(),
   });
 }
 
 export default {
-  data: function() {
+  data: function () {
     return {};
   },
   mounted() {
@@ -144,15 +138,15 @@ export default {
         processError(e);
       }
       this.updatePersistentFwUiState();
-    }
+    },
   },
   watch: {
     IsPersistent() {
       this.updatePersistentFwUiState();
-    }
+    },
   },
   computed: {
-    IsPersistent: function() {
+    IsPersistent: function () {
       return this.$store.state.vpnState.firewallState.IsPersistent;
     },
     firewallAllowApiServers: {
@@ -161,7 +155,7 @@ export default {
       },
       async set(value) {
         await sender.KillSwitchSetAllowApiServers(value);
-      }
+      },
     },
     firewallAllowLan: {
       get() {
@@ -169,7 +163,7 @@ export default {
       },
       async set(value) {
         await sender.KillSwitchSetAllowLAN(value);
-      }
+      },
     },
     firewallAllowMulticast: {
       get() {
@@ -177,7 +171,7 @@ export default {
       },
       async set(value) {
         await sender.KillSwitchSetAllowLANMulticast(value);
-      }
+      },
     },
 
     firewallActivateOnConnect: {
@@ -186,7 +180,7 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/firewallActivateOnConnect", value);
-      }
+      },
     },
     firewallDeactivateOnDisconnect: {
       get() {
@@ -194,9 +188,9 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/firewallDeactivateOnDisconnect", value);
-      }
-    }
-  }
+      },
+    },
+  },
 };
 </script>
 

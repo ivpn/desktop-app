@@ -4,7 +4,7 @@
     <div
       v-if="
         (!isIPv6View && isRequestingLocationIPv4) ||
-          (isIPv6View && isRequestingLocationIPv6)
+        (isIPv6View && isRequestingLocationIPv6)
       "
       style="text-align: center"
       class="descriptipn"
@@ -16,7 +16,7 @@
     <div
       v-if="
         (!isIPv6View && !isRequestingLocationIPv4) ||
-          (isIPv6View && !isRequestingLocationIPv6)
+        (isIPv6View && !isRequestingLocationIPv6)
       "
       style="width: 100%"
     >
@@ -31,7 +31,7 @@
           <button
             class="noBordersBtn"
             v-on:click="onRefreshCurrLocation"
-            style="pointer-events: auto;"
+            style="pointer-events: auto"
           >
             <img width="10" height="10" src="@/assets/refresh.svg" />
           </button>
@@ -47,7 +47,7 @@
                 class="badge"
                 v-bind:class="{ badgeSelected: !isIPv6View }"
                 v-on:click="onIPv4View"
-                style="pointer-events: auto;"
+                style="pointer-events: auto"
               >
                 IPv4
               </button>
@@ -56,7 +56,7 @@
                 class="badge"
                 v-bind:class="{ badgeSelected: isIPv6View }"
                 v-on:click="onIPv6View"
-                style="pointer-events: auto;"
+                style="pointer-events: auto"
               >
                 IPv6
               </button>
@@ -68,22 +68,29 @@
         </div>
 
         <div class="flexRow row">
-          <div class="descriptipn">
-            IP Address
-          </div>
+          <div class="descriptipn">IP Address</div>
 
-          <div class="flexRow" style="overflow: hidden;">
+          <div class="flexRow" style="overflow: hidden">
             <div
-              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+              style="
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              "
             >
               {{ ip }}
             </div>
 
-            <div style="vertical-align:top">
+            <div style="vertical-align: top">
               <button
                 class="noBordersBtn"
                 v-on:click="onRefreshCurrLocation"
-                style="padding: 0px; margin: 0px; margin-left: 4px; pointer-events: auto;"
+                style="
+                  padding: 0px;
+                  margin: 0px;
+                  margin-left: 4px;
+                  pointer-events: auto;
+                "
               >
                 <img width="10" height="10" src="@/assets/refresh.svg" />
               </button>
@@ -121,38 +128,38 @@ export default {
     },
     onIPv6View() {
       this.$store.dispatch("uiState/isIPv6View", true);
-    }
+    },
   },
   computed: {
-    isIPv6View: function() {
+    isIPv6View: function () {
       return this.$store.getters["getIsIPv6View"];
     },
-    isIPv4andIPv6LocationsEqual: function() {
+    isIPv4andIPv6LocationsEqual: function () {
       return this.$store.getters["isIPv4andIPv6LocationsEqual"];
     },
-    isInfoAvailableIPv4: function() {
+    isInfoAvailableIPv4: function () {
       return this.$store.getters["getIsInfoAvailableIPv4"];
     },
-    isInfoAvailableIPv6: function() {
+    isInfoAvailableIPv6: function () {
       return this.$store.getters["getIsInfoAvailableIPv6"];
     },
 
     // isRequestingLocation
-    isRequestingLocationIPv4: function() {
+    isRequestingLocationIPv4: function () {
       return this.$store.state.isRequestingLocation;
     },
-    isRequestingLocationIPv6: function() {
+    isRequestingLocationIPv6: function () {
       return this.$store.state.isRequestingLocationIPv6;
     },
 
-    ip: function() {
+    ip: function () {
       let l = this.$store.state.location;
       if (this.isIPv6View) l = this.$store.state.locationIPv6;
       if (!l || !l.ip_address) return null;
       return l.ip_address;
     },
 
-    locationName: function() {
+    locationName: function () {
       let l = this.$store.state.location;
       if (this.isIPv6View) l = this.$store.state.locationIPv6;
       if (!l) return null;
@@ -163,15 +170,15 @@ export default {
       } else if (l.country) return `${l.country}`;
       return null;
     },
-    isp: function() {
+    isp: function () {
       let l = this.$store.state.location;
       if (this.isIPv6View) l = this.$store.state.locationIPv6;
       if (!l) return null;
       if (l.isIvpnServer == true) return "IVPN";
       if (!l.isp) return null;
       return l.isp;
-    }
-  }
+    },
+  },
 };
 </script>
 

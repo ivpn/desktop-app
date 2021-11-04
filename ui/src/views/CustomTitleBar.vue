@@ -33,11 +33,11 @@ import { IsWindowHasFrame } from "@/platform/platform";
 const sender = window.ipcSender;
 
 export default {
-  data: function() {
+  data: function () {
     return {
       closable: true,
       maximizable: true,
-      minimizable: true
+      minimizable: true,
     };
   },
   mounted() {
@@ -51,19 +51,19 @@ export default {
     }, 0);
   },
   computed: {
-    isWindowHasFrame: function() {
+    isWindowHasFrame: function () {
       return IsWindowHasFrame();
-    }
+    },
   },
   watch: {},
   methods: {
-    onMinimize: function() {
+    onMinimize: function () {
       sender.minimizeCurrentWindow();
     },
-    onClose: function() {
+    onClose: function () {
       sender.closeCurrentWindow();
-    }
-  }
+    },
+  },
 };
 </script>
 

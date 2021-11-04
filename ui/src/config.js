@@ -44,5 +44,5 @@ export default {
   URLApps: "https://www.ivpn.net/apps/",
 
   IsDebug,
-  GetResourcesPath
+  GetResourcesPath,
 };

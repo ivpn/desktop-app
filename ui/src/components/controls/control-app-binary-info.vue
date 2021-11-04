@@ -3,7 +3,13 @@
     <binaryIconControl
       :binaryPath="app.AppBinaryPath"
       :preloadedBase64Icon="app.AppIcon"
-      style="min-width:32px; min-height:32px; max-width:32px; max-height:32px; padding: 4px;"
+      style="
+        min-width: 32px;
+        min-height: 32px;
+        max-width: 32px;
+        max-height: 32px;
+        padding: 4px;
+      "
     />
 
     <div class="flexRowRestSpace" style="padding-left: 5px">
@@ -38,7 +44,7 @@ import binaryIconControl from "@/components/controls/control-app-binary-icon.vue
 export default {
   props: ["app"],
   components: {
-    binaryIconControl
+    binaryIconControl,
   },
   methods: {
     getFileFolder(filePath) {
@@ -49,13 +55,9 @@ export default {
 
     getFileName(filePath) {
       if (!filePath) return null;
-      return filePath
-        .split("\\")
-        .pop()
-        .split("/")
-        .pop();
-    }
-  }
+      return filePath.split("\\").pop().split("/").pop();
+    },
+  },
 };
 </script>
 

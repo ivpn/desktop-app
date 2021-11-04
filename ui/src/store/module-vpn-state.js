@@ -23,13 +23,13 @@
 import {
   enumValueName,
   isStrNullOrEmpty,
-  getDistanceFromLatLonInKm
+  getDistanceFromLatLonInKm,
 } from "../helpers/helpers";
 import {
   VpnTypeEnum,
   VpnStateEnum,
   PingQuality,
-  PauseStateEnum
+  PauseStateEnum,
 } from "./types";
 
 export default {
@@ -49,7 +49,7 @@ export default {
     }*/,
 
     disconnectedInfo: {
-      ReasonDescription: ""
+      ReasonDescription: "",
     },
 
     pauseState: PauseStateEnum.Resumed,
@@ -59,13 +59,13 @@ export default {
       IsPersistent: null,
       IsAllowLAN: null,
       IsAllowMulticast: null,
-      IsAllowApiServers: null
+      IsAllowApiServers: null,
     },
 
     // Split-Tunnelling
     splitTunnelling: {
       enabled: false,
-      apps: null // []string
+      apps: null, // []string
     },
 
     dns: "",
@@ -78,7 +78,7 @@ export default {
     servers: { wireguard: [], openvpn: [], config: {} },
 
     // true when servers pinging in progress
-    isPingingServers: false
+    isPingingServers: false,
 
     /*
     // SERVERS
@@ -191,17 +191,17 @@ export default {
     },
     availableWiFiNetworks(state, availableWiFiNetworks) {
       state.availableWiFiNetworks = availableWiFiNetworks;
-    }
+    },
   },
 
   getters: {
-    isDisconnecting: state => {
+    isDisconnecting: (state) => {
       return state.connectionState === VpnStateEnum.DISCONNECTING;
     },
-    isDisconnected: state => {
+    isDisconnected: (state) => {
       return state.connectionState === VpnStateEnum.DISCONNECTED;
     },
-    isConnecting: state => {
+    isConnecting: (state) => {
       switch (state.connectionState) {
         case VpnStateEnum.CONNECTING:
         case VpnStateEnum.WAIT:
@@ -216,10 +216,10 @@ export default {
           return false;
       }
     },
-    isConnected: state => {
+    isConnected: (state) => {
       return state.connectionState === VpnStateEnum.CONNECTED;
     },
-    vpnStateText: state => {
+    vpnStateText: (state) => {
       return enumValueName(VpnStateEnum, state.connectionState);
     },
     activeServers(state, getters, rootState) {
@@ -240,10 +240,10 @@ export default {
       // OpenVPN
       return rootState.settings.isMultiHop ? atIPs["multihop-ip"] : atIPs.ip;
     },
-    isAntitrackerEnabled: state => {
+    isAntitrackerEnabled: (state) => {
       return isAntitrackerActive(state);
     },
-    isAntitrackerHardcoreEnabled: state => {
+    isAntitrackerHardcoreEnabled: (state) => {
       return isAntitrackerHardcoreActive(state);
     },
     fastestServer(state, getters, rootState) {
@@ -280,7 +280,7 @@ export default {
         if (l) {
           try {
             // distance compare
-            let compare = function(a, b) {
+            let compare = function (a, b) {
               var distA = getDistanceFromLatLonInKm(
                 l.latitude,
                 l.longitude,
@@ -318,7 +318,7 @@ export default {
       }
 
       return retSvr;
-    }
+    },
   },
 
   // can be called from renderer
@@ -364,8 +364,8 @@ export default {
       // save current state to settings
       const isAntitracker = isAntitrackerActive(context.state);
       context.dispatch("settings/isAntitracker", isAntitracker, { root: true });
-    }
-  }
+    },
+  },
 };
 
 function getActiveServers(state, rootState) {
@@ -381,7 +381,7 @@ function getActiveServers(state, rootState) {
   let wgServers = state.servers.wireguard;
   if (enableIPv6InTunnel == true && showGatewaysWithoutIPv6 != true) {
     // show only servers which support IPv6
-    return wgServers.filter(s => {
+    return wgServers.filter((s) => {
       return s.isIPv6;
     });
   }
@@ -433,7 +433,7 @@ function updateServersPings(state, pings) {
     return PingQuality.Bad;
   }
 
-  let funcGetPing = function(s) {
+  let funcGetPing = function (s) {
     for (let i = 0; i < s.hosts.length; i++) {
       let pingValFoHost = hashedPings[s.hosts[i].host];
       if (pingValFoHost != null) {
@@ -444,11 +444,11 @@ function updateServersPings(state, pings) {
     }
   };
 
-  state.servers.wireguard.forEach(s => {
+  state.servers.wireguard.forEach((s) => {
     funcGetPing(s);
   });
 
-  state.servers.openvpn.forEach(s => {
+  state.servers.openvpn.forEach((s) => {
     funcGetPing(s);
   });
 }
@@ -473,10 +473,10 @@ function updateServers(state, newServers) {
     config: {
       antitracker: {
         default: {},
-        hardcore: {}
+        hardcore: {},
       },
-      api: { ips: [], ipv6s: [] }
-    }
+      api: { ips: [], ipv6s: [] },
+    },
   };
   newServers = Object.assign(serversEmpty, newServers);
 

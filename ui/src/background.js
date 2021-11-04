@@ -31,10 +31,10 @@ import {
   nativeImage,
   ipcMain,
   nativeTheme,
-  screen
+  screen,
 } from "electron";
 import {
-  createProtocol
+  createProtocol,
   //installVueDevtools
 } from "vue-cli-plugin-electron-builder/lib";
 
@@ -140,7 +140,7 @@ if (gotTheLock) {
   }
   // Scheme must be registered before the app is ready
   protocol.registerSchemesAsPrivileged([
-    { scheme: "app", privileges: { secure: true, standard: true } }
+    { scheme: "app", privileges: { secure: true, standard: true } },
   ]);
 
   const isMac = process.platform === "darwin";
@@ -156,15 +156,15 @@ if (gotTheLock) {
               { role: "hideothers" },
               { role: "unhide" },
               { type: "separator" },
-              { role: "quit" }
-            ]
-          }
+              { role: "quit" },
+            ],
+          },
         ]
       : []),
     // { role: 'fileMenu' }
     {
       label: "File",
-      submenu: [isMac ? { role: "close" } : { role: "quit" }]
+      submenu: [isMac ? { role: "close" } : { role: "quit" }],
     },
     // { role: 'windowMenu' }
     {
@@ -176,10 +176,10 @@ if (gotTheLock) {
               { type: "separator" },
               { role: "front" },
               { type: "separator" },
-              { role: "window" }
+              { role: "window" },
             ]
-          : [{ role: "close" }])
-      ]
+          : [{ role: "close" }]),
+      ],
     },
     {
       role: "help",
@@ -189,10 +189,10 @@ if (gotTheLock) {
           click: async () => {
             const { shell } = require("electron");
             await shell.openExternal("https://www.ivpn.net/knowledgebase");
-          }
-        }
-      ]
-    }
+          },
+        },
+      ],
+    },
   ];
   if (process.env.IS_DEBUG) {
     // DEBUG: TESTING MENU
@@ -204,23 +204,23 @@ if (gotTheLock) {
           click() {
             if (win !== null) win.webContents.openDevTools();
             if (updateWindow !== null) updateWindow.webContents.openDevTools();
-          }
+          },
         },
         {
           label: "Switch to test view",
           click() {
             if (win !== null)
               win.webContents.send("main-change-view-request", "/test");
-          }
+          },
         },
         {
           label: "Switch to main view",
           click() {
             if (win !== null)
               win.webContents.send("main-change-view-request", "/");
-          }
-        }
-      ]
+          },
+        },
+      ],
     });
   }
   const menu = Menu.buildFromTemplate(template);
@@ -241,7 +241,7 @@ if (gotTheLock) {
           message: "Unable to start IVPN Client",
           detail:
             "IVPN client can only run from the Applications folder. Please move the IVPN.app into the /Applications folder",
-          buttons: ["Quit"]
+          buttons: ["Quit"],
         });
 
         console.log(`Exiting ...`);
@@ -311,7 +311,7 @@ if (gotTheLock) {
     app.quit();
   });
 
-  app.on("before-quit", async event => {
+  app.on("before-quit", async (event) => {
     // save last window position in order to be able to restore it
     if (win) store.commit("settings/windowRestorePosition", win.getBounds());
     // if we are waiting to save settings - save it immediately
@@ -330,7 +330,7 @@ if (gotTheLock) {
   // Exit cleanly on request from parent process in development mode.
   if (isDevelopment) {
     if (process.platform === "win32") {
-      process.on("message", data => {
+      process.on("message", (data) => {
         if (data === "graceful-exit") {
           app.quit();
         }
@@ -343,7 +343,7 @@ if (gotTheLock) {
   }
 
   // subscribe to any changes in a store
-  store.subscribe(mutation => {
+  store.subscribe((mutation) => {
     try {
       switch (mutation.type) {
         case "settings/resetToDefaults":
@@ -402,8 +402,8 @@ async function isCanQuit() {
         buttons: [
           "Cancel",
           "Keep Firewall activated & Quit",
-          "Deactivate Firewall & Quit"
-        ]
+          "Deactivate Firewall & Quit",
+        ],
       };
 
       // temporary enable application icon in system dock
@@ -439,7 +439,7 @@ async function isCanQuit() {
       type: "question",
       message: "Are you sure you want to quit?",
       detail: "You are connected to the VPN.",
-      buttons: ["Cancel", "Disconnect VPN & Quit"]
+      buttons: ["Cancel", "Disconnect VPN & Quit"],
     };
 
     // temporary enable application icon in system dock
@@ -500,7 +500,7 @@ function createBrowserWindow(config) {
     nodeIntegration: false,
     contextIsolation: true,
     sandbox: true,
-    "disableBlinkFeatures ": "Auxclick"
+    "disableBlinkFeatures ": "Auxclick",
   };
 
   let icon = getWindowIcon();
@@ -538,7 +538,7 @@ function createWindow(doNotShowWhenReady) {
 
     frame: IsWindowHasFrame(),
     titleBarStyle: "hidden", // applicable only for macOS
-    autoHideMenuBar: true
+    autoHideMenuBar: true,
   };
 
   win = createBrowserWindow(windowConfig);
@@ -548,7 +548,7 @@ function createWindow(doNotShowWhenReady) {
   if (lastPos && lastPos.x && lastPos.y) {
     const displays = screen.getAllDisplays();
     let isWindowVisibleOnScreen = false;
-    displays.forEach(display => {
+    displays.forEach((display) => {
       if (
         lastPos.x > display.workArea.x &&
         lastPos.x + 50 < display.workArea.x + display.workArea.width &&
@@ -581,7 +581,7 @@ function createWindow(doNotShowWhenReady) {
     });
   }
 
-  win.on("close", async event => {
+  win.on("close", async (event) => {
     // save last window position in order to be able to restore it
     if (win) store.commit("settings/windowRestorePosition", win.getBounds());
 
@@ -646,7 +646,7 @@ function createSettingsWindow(viewName) {
 
     autoHideMenuBar: true,
 
-    frame: IsWindowHasFrame()
+    frame: IsWindowHasFrame(),
   };
 
   settingsWindow = createBrowserWindow(windowConfig);
@@ -699,7 +699,7 @@ function createUpdateWindow() {
 
     autoHideMenuBar: true,
 
-    frame: IsWindowHasFrame()
+    frame: IsWindowHasFrame(),
   };
 
   updateWindow = createBrowserWindow(windowConfig);
@@ -739,9 +739,9 @@ async function connectToDaemon(
         console.log("Installing daemon...");
         store.commit("daemonIsInstalling", true);
       }, //onInstallationStarted,
-      exitCode => {
+      (exitCode) => {
         // check if we still need to install helper
-        darwinDaemonInstaller.IsDaemonInstallationRequired(code => {
+        darwinDaemonInstaller.IsDaemonInstallationRequired((code) => {
           if (code == 0) {
             // error: the helper not installed (we still detecting that helper must be installed (code == 0))
             console.error(
@@ -789,11 +789,11 @@ async function connectToDaemon(
     return;
   }
 
-  let setConnState = function(state) {
+  let setConnState = function (state) {
     setTimeout(() => store.commit("daemonConnectionState", state), 0);
   };
 
-  let onSetConnState = function(state) {
+  let onSetConnState = function (state) {
     // do not set 'NotConnected' state if we still trying to reconnect
     if (
       state === DaemonConnectionType.NotConnected &&
@@ -805,7 +805,7 @@ async function connectToDaemon(
   };
 
   setConnState(DaemonConnectionType.Connecting);
-  let connect = async function(retryNo) {
+  let connect = async function (retryNo) {
     try {
       await daemonClient.ConnectToDaemon(onSetConnState, onDaemonExiting);
 
@@ -856,7 +856,7 @@ function showSettings(settingsViewName) {
     if (win !== null) {
       lastRouteArgs = {
         name: "settings",
-        params: { view: settingsViewName }
+        params: { view: settingsViewName },
       };
 
       // Temporary navigate to '\'. This is required only if we already showing 'settings' view

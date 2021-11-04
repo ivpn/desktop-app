@@ -10,7 +10,7 @@
         <div
           v-if="isCanResume"
           class="buttonWithPopup"
-          style="position: absolute;"
+          style="position: absolute"
         >
           <button
             class="noBordersBtn"
@@ -18,30 +18,28 @@
             v-on:click="onAddPauseTimeMenu"
             v-click-outside="onPauseMenuClickOutside"
           >
-            <div class="small_text" align="left" style="min-width:80px;">
+            <div class="small_text" align="left" style="min-width: 80px">
               {{ pauseTimeLeftText }}
             </div>
           </button>
 
           <!-- Popup -->
           <div
-            style="background:red; margin-top:-5px"
+            style="background: red; margin-top: -5px"
             class="popup"
             v-bind:class="{
-              popupMinShiftedRight: true
+              popupMinShiftedRight: true,
             }"
           >
             <div
               class="popuptext"
               v-bind:class="{
                 show: isPauseExtendMenuShow,
-                popuptextMinShiftedRight: true
+                popuptextMinShiftedRight: true,
               }"
             >
               <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(null)">
-                  Resume now
-                </button>
+                <button v-on:click="onPauseMenuItem(null)">Resume now</button>
               </div>
               <div class="popup_dividing_line" />
               <div class="popup_menu_block">
@@ -74,11 +72,11 @@
     </div>
 
     <div class="buttons">
-      <div class="buttonWithPopup" style="margin-right:17px;">
+      <div class="buttonWithPopup" style="margin-right: 17px">
         <transition name="fade">
           <button
             class="settingsBtn"
-            style="background: var(--background-color);"
+            style="background: var(--background-color)"
             v-if="isCanPause"
             v-on:click="onPauseMenu"
             v-click-outside="onPauseMenuClickOutside"
@@ -99,14 +97,14 @@
         <div
           class="popup"
           v-bind:class="{
-            popupMin: isMinimizedUI
+            popupMin: isMinimizedUI,
           }"
         >
           <div
             class="popuptext"
             v-bind:class="{
               show: isCanShowPauseMenu,
-              popuptextMin: isMinimizedUI
+              popuptextMin: isMinimizedUI,
             }"
           >
             <div class="popup_menu_block">
@@ -136,7 +134,7 @@
         </div>
       </div>
 
-      <div style="min-width: 50px; margin-left:auto; margin-right:0;">
+      <div style="min-width: 50px; margin-left: auto; margin-right: 0">
         <SwitchProgress
           v-bind:class="{ lowOpacity: isCanResume }"
           :onChecked="onChecked"
@@ -157,31 +155,31 @@ import ClickOutside from "vue-click-outside";
 
 export default {
   directives: {
-    ClickOutside
+    ClickOutside,
   },
   components: {
     SwitchProgress,
-    imgPause
+    imgPause,
   },
   props: [
     "onChecked",
     "onPauseResume",
     "pauseState",
     "isChecked",
-    "isProgress"
+    "isProgress",
   ],
   data: () => ({
     isPauseMenuAllowed: false,
     isPauseExtendMenuShow: false,
     pauseTimeUpdateTimer: null,
-    pauseTimeLeftText: ""
+    pauseTimeLeftText: "",
   }),
   mounted() {
     this.startPauseTimer();
   },
-  created: function() {
+  created: function () {
     let self = this;
-    window.addEventListener("click", function(e) {
+    window.addEventListener("click", function (e) {
       // close dropdown when clicked outside
       if (!self.$el.contains(e.target)) {
         self.isPauseMenuAllowed = false;
@@ -189,27 +187,27 @@ export default {
     });
   },
   computed: {
-    isMinimizedUI: function() {
+    isMinimizedUI: function () {
       return this.$store.state.settings.minimizedUI;
     },
-    protectedText: function() {
+    protectedText: function () {
       if (this.$store.state.vpnState.pauseState === PauseStateEnum.Paused)
         return "paused";
       if (this.isChecked !== true || this.isCanResume) return "disconnected";
       return "connected";
     },
-    isConnected: function() {
+    isConnected: function () {
       return this.$store.getters["vpnState/isConnected"];
     },
-    pauseConnectionTill: function() {
+    pauseConnectionTill: function () {
       return this.$store.state.uiState.pauseConnectionTill;
     },
-    isPaused: function() {
+    isPaused: function () {
       if (this.$store.state.vpnState.pauseState !== PauseStateEnum.Paused)
         return false;
       return this.pauseConnectionTill != null;
     },
-    isCanPause: function() {
+    isCanPause: function () {
       if (!this.isConnected) return false;
       if (this.isProgress === true) return false;
 
@@ -219,7 +217,7 @@ export default {
         return true;
       return false;
     },
-    isCanResume: function() {
+    isCanResume: function () {
       if (this.isCanPause) return false;
       if (!this.isConnected) return false;
       if (this.isProgress === true) return false;
@@ -227,14 +225,14 @@ export default {
         return true;
       return false;
     },
-    isCanShowPauseMenu: function() {
+    isCanShowPauseMenu: function () {
       return this.isCanPause && this.isPauseMenuAllowed;
-    }
+    },
   },
   watch: {
     isPaused() {
       this.startPauseTimer();
-    }
+    },
   },
   methods: {
     onPauseMenuClickOutside() {
@@ -272,8 +270,8 @@ export default {
       this.pauseTimeLeftText = GetTimeLeftText(
         this.$store.state.uiState.pauseConnectionTill
       );
-    }
-  }
+    },
+  },
 };
 </script>
 

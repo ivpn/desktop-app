@@ -93,7 +93,7 @@ import { isStrNullOrEmpty } from "@/helpers/helpers";
 const viewTypeEnum = Object.freeze({
   default: "default",
   serversEntry: "serversEntry",
-  serversExit: "serversExit"
+  serversExit: "serversExit",
 });
 
 async function connect(me, isConnect) {
@@ -106,7 +106,7 @@ async function connect(me, isConnect) {
     sender.showMessageBoxSync({
       type: "error",
       buttons: ["OK"],
-      message: `Failed to ${isConnect ? "connect" : "disconnect"}: ` + e
+      message: `Failed to ${isConnect ? "connect" : "disconnect"}: ` + e,
     });
   } finally {
     me.isConnectProgress = false;
@@ -121,7 +121,7 @@ export default {
   props: {
     onConnectionSettings: Function,
     onWifiSettings: Function,
-    onDefaultView: Function
+    onDefaultView: Function,
   },
 
   components: {
@@ -129,7 +129,7 @@ export default {
     Servers,
     ConnectBlock,
     SelectedServerBlock,
-    ConnectionDetailsBlock
+    ConnectionDetailsBlock,
   },
   mounted() {
     this.recalcScrollButtonVisiblity();
@@ -139,30 +139,30 @@ export default {
     //const resizeObserver = new ResizeObserver(this.recalcScrollButtonVisiblity);
     //resizeObserver.observe(this.$refs.scrollArea);
   },
-  data: function() {
+  data: function () {
     return {
       isShowScrollButton: false,
       isConnectProgress: false,
       uiView: viewTypeEnum.default,
-      lastServersPingRequestTime: null
+      lastServersPingRequestTime: null,
     };
   },
 
   computed: {
-    isConnected: function() {
+    isConnected: function () {
       return connected(this);
     },
-    isOpenVPN: function() {
+    isOpenVPN: function () {
       return this.$store.state.settings.vpnType === VpnTypeEnum.OpenVPN;
     },
-    isMultihopAllowed: function() {
+    isMultihopAllowed: function () {
       return this.$store.getters["account/isMultihopAllowed"];
     },
-    port: function() {
+    port: function () {
       // needed for watcher
       return this.$store.getters["settings/getPort"];
     },
-    isInProgress: function() {
+    isInProgress: function () {
       if (this.isConnectProgress) return this.isConnectProgress;
       return (
         this.$store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED &&
@@ -170,15 +170,15 @@ export default {
       );
     },
     // needed for watcher
-    conectionState: function() {
+    conectionState: function () {
       return this.$store.state.vpnState.connectionState;
     },
-    isMinimizedUI: function() {
+    isMinimizedUI: function () {
       return this.$store.state.settings.minimizedUI;
     },
-    isMultiHop: function() {
+    isMultiHop: function () {
       return this.$store.state.settings.isMultiHop;
-    }
+    },
   },
 
   watch: {
@@ -198,7 +198,7 @@ export default {
         type: "error",
         buttons: ["OK"],
         message: `Failed to connect`,
-        detail: failureInfo.ReasonDescription
+        detail: failureInfo.ReasonDescription,
       });
     },
     port(newValue, oldValue) {
@@ -213,7 +213,7 @@ export default {
     },
     isMultiHop() {
       setTimeout(() => this.recalcScrollButtonVisiblity(), 1000);
-    }
+    },
   },
 
   methods: {
@@ -309,7 +309,7 @@ export default {
         return;
       }
 
-      const isNeedToShow = function() {
+      const isNeedToShow = function () {
         let pixelsToTheEndScroll =
           sa.scrollHeight - (sa.clientHeight + sa.scrollTop);
         // hide if the 'pixels to scroll' < 20
@@ -330,10 +330,10 @@ export default {
       if (sa == null) return;
       sa.scrollTo({
         top: sa.scrollHeight,
-        behavior: "smooth"
+        behavior: "smooth",
       });
-    }
-  }
+    },
+  },
 };
 </script>
 

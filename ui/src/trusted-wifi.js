@@ -26,7 +26,7 @@ import daemonClient from "./daemon-client";
 let lastProcessedRule = null; //{ SSID: null, isTrusted: null}
 
 export function InitTrustedNetworks() {
-  store.subscribe(mutation => {
+  store.subscribe((mutation) => {
     try {
       if (
         mutation.type === "vpnState/currentWiFiInfo" ||
@@ -118,7 +118,7 @@ async function processWifiChange() {
       await applyTrustRule(trustRule, wifi.actions);
       lastProcessedRule = {
         SSID: currSSID,
-        isTrusted: trustRule
+        isTrusted: trustRule,
       };
       return true;
     }
@@ -147,7 +147,7 @@ async function processWifiChange() {
     await daemonClient.Connect();
     lastProcessedRule = {
       SSID: currSSID,
-      isTrusted: null
+      isTrusted: null,
     };
     return true;
   }
@@ -160,7 +160,7 @@ function getTrustRuleForConfiguredNetwork(currSSID, networks) {
   if (!currSSID || networks == null) return null;
 
   // check configuration for current network
-  let networkConfigArr = networks.filter(wifi => wifi.ssid == currSSID);
+  let networkConfigArr = networks.filter((wifi) => wifi.ssid == currSSID);
   if (networkConfigArr == null || networkConfigArr.length == 0) return null;
   let networkConfig = networkConfigArr[0];
 

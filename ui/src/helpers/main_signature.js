@@ -27,12 +27,12 @@ async function executeOpenSSlCommand(opensslArgs) {
     try {
       let cmd = spawn(opensslBin, opensslArgs);
 
-      cmd.on("error", err => {
+      cmd.on("error", (err) => {
         console.log(`[ERROR] ${logStringPrefix}: ${err}`);
         reject(err);
       });
 
-      cmd.on("exit", code => {
+      cmd.on("exit", (code) => {
         resolve(code);
       });
     } catch (e) {
@@ -61,7 +61,7 @@ export async function ValidateFileOpenSSLCertificate(
       "-in",
       signSha256FileBase64,
       "-out",
-      tmpSignSha256File
+      tmpSignSha256File,
     ]);
     if (retCode != 0) return false;
 
@@ -74,7 +74,7 @@ export async function ValidateFileOpenSSLCertificate(
       pubKeyPath,
       "-signature",
       tmpSignSha256File,
-      fileToValidate
+      fileToValidate,
     ]);
     if (retCode != 0) return false;
   } catch (err) {

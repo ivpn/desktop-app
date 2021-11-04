@@ -34,7 +34,7 @@ import "@/main_style.js";
 new Vue({
   router,
   store,
-  render: h => h(App)
+  render: (h) => h(App),
 }).$mount("#app");
 
 // Waiting for "change view" requests from main thread

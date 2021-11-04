@@ -56,14 +56,14 @@ export default new Vuex.Store({
     daemonIsInstalling: false,
 
     configParams: {
-      UserDefinedOvpnFile: ""
+      UserDefinedOvpnFile: "",
     },
 
     disabledFunctions: {
       WireGuardError: "",
       OpenVPNError: "",
       ObfsproxyError: "",
-      SplitTunnelError: ""
+      SplitTunnelError: "",
     },
 
     // true when we are requesting geo-lookup info on current moment
@@ -126,17 +126,17 @@ export default new Vuex.Store({
         ]
       }
     }*/
-    latestVersionInfo: null
+    latestVersionInfo: null,
   },
 
   getters: {
-    getLastRealLocation: state => state.lastRealLocation,
-    isCanUseIPv6InTunnel: state => {
+    getLastRealLocation: (state) => state.lastRealLocation,
+    isCanUseIPv6InTunnel: (state) => {
       return (
         state.settings.vpnType !== VpnTypeEnum.OpenVPN // IPv6 is not implemented for OpenVPN yet
       );
     },
-    isIPv4andIPv6LocationsEqual: state => {
+    isIPv4andIPv6LocationsEqual: (state) => {
       let l4 = state.location;
       let l6 = state.locationIPv6;
 
@@ -151,12 +151,12 @@ export default new Vuex.Store({
 
       return true;
     },
-    getIsInfoAvailableIPv4: state => {
+    getIsInfoAvailableIPv4: (state) => {
       let l = state.location;
       if (l && l.ip_address) return true;
       return false;
     },
-    getIsInfoAvailableIPv6: state => {
+    getIsInfoAvailableIPv6: (state) => {
       let l = state.locationIPv6;
       if (l && l.ip_address) return true;
       return false;
@@ -175,14 +175,14 @@ export default new Vuex.Store({
       );
     },
 
-    isWireGuardEnabled: state =>
+    isWireGuardEnabled: (state) =>
       isStrNullOrEmpty(state.disabledFunctions.WireGuardError),
-    isOpenVPNEnabled: state =>
+    isOpenVPNEnabled: (state) =>
       isStrNullOrEmpty(state.disabledFunctions.OpenVPNError),
-    isObfsproxyEnabled: state =>
+    isObfsproxyEnabled: (state) =>
       isStrNullOrEmpty(state.disabledFunctions.ObfsproxyError),
-    isSplitTunnelEnabled: state =>
-      isStrNullOrEmpty(state.disabledFunctions.SplitTunnelError)
+    isSplitTunnelEnabled: (state) =>
+      isStrNullOrEmpty(state.disabledFunctions.SplitTunnelError),
   },
 
   // can be called from main process
@@ -235,9 +235,9 @@ export default new Vuex.Store({
     },
     isRequestingLocationIPv6(state, value) {
       state.isRequestingLocationIPv6 = value;
-    }
+    },
   },
 
   // can be called from renderer
-  actions: {}
+  actions: {},
 });

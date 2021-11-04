@@ -7,7 +7,7 @@
             v-if="isMinimizedButtonsVisible"
             class="minimizedButtonsPanel leftPanelTopMinimizedButtonsPanel"
             v-bind:class="{
-              minimizedButtonsPanelRightElements: isWindowHasFrame
+              minimizedButtonsPanelRightElements: isWindowHasFrame,
             }"
           >
             <button v-on:click="onAccountSettings()">
@@ -64,21 +64,21 @@ export default {
     Init,
     Login,
     Control,
-    Map
+    Map,
   },
-  data: function() {
+  data: function () {
     return {
-      isCanShowMinimizedButtons: true
+      isCanShowMinimizedButtons: true,
     };
   },
   computed: {
-    isWindowHasFrame: function() {
+    isWindowHasFrame: function () {
       return IsWindowHasFrame();
     },
-    isLoggedIn: function() {
+    isLoggedIn: function () {
       return this.$store.getters["account/isLoggedIn"];
     },
-    currentViewComponent: function() {
+    currentViewComponent: function () {
       const daemonConnection = this.$store.state.daemonConnectionState;
       if (
         daemonConnection == null ||
@@ -89,54 +89,54 @@ export default {
       if (!this.isLoggedIn) return Login;
       return Control;
     },
-    isMapBlured: function() {
+    isMapBlured: function () {
       if (this.currentViewComponent !== Control) return "true";
       return "false";
     },
-    isMinimizedButtonsVisible: function() {
+    isMinimizedButtonsVisible: function () {
       if (this.currentViewComponent !== Control) return false;
       if (this.isCanShowMinimizedButtons !== true) return false;
       return this.isMinimizedUI;
     },
-    isMinimizedUI: function() {
+    isMinimizedUI: function () {
       return this.$store.state.settings.minimizedUI;
     },
-    minimizedButtonsTransition: function() {
+    minimizedButtonsTransition: function () {
       if (Platform() === PlatformEnum.Linux) return "smooth-display";
       return "fade";
-    }
+    },
   },
   watch: {
     isMinimizedUI() {
       this.updateUIState();
-    }
+    },
   },
   methods: {
-    onAccountSettings: function() {
+    onAccountSettings: function () {
       //if (this.$store.state.settings.minimizedUI)
       sender.ShowAccountSettings();
       //else this.$router.push({ name: "settings", params: { view: "account" } });
     },
-    onSettings: function() {
+    onSettings: function () {
       sender.ShowSettings();
     },
-    onConnectionSettings: function() {
+    onConnectionSettings: function () {
       sender.ShowConnectionSettings();
     },
-    onWifiSettings: function() {
+    onWifiSettings: function () {
       sender.ShowWifiSettings();
     },
-    onDefaultLeftView: function(isDefaultView) {
+    onDefaultLeftView: function (isDefaultView) {
       this.isCanShowMinimizedButtons = isDefaultView;
     },
-    onMaximize: function(isMaximize) {
+    onMaximize: function (isMaximize) {
       this.$store.dispatch("settings/minimizedUI", !isMaximize);
       this.updateUIState();
     },
-    updateUIState: function() {
+    updateUIState: function () {
       sender.uiMinimize(this.isMinimizedUI);
-    }
-  }
+    },
+  },
 };
 </script>
 

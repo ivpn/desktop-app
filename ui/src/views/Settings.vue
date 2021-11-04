@@ -19,7 +19,7 @@
                 class="noBordersBtn tabTitleBtn"
                 v-on:click="onView('account')"
                 v-bind:class="{
-                  activeBtn: view === 'account'
+                  activeBtn: view === 'account',
                 }"
               >
                 Account
@@ -30,7 +30,7 @@
                 class="noBordersBtn tabTitleBtn"
                 v-on:click="onView('general')"
                 v-bind:class="{
-                  activeBtn: view === 'general'
+                  activeBtn: view === 'general',
                 }"
               >
                 General
@@ -41,7 +41,7 @@
                 class="noBordersBtn tabTitleBtn"
                 v-on:click="onView('connection')"
                 v-bind:class="{
-                  activeBtn: view === 'connection'
+                  activeBtn: view === 'connection',
                 }"
               >
                 Connection
@@ -51,7 +51,7 @@
                 class="noBordersBtn tabTitleBtn"
                 v-on:click="onView('firewall')"
                 v-bind:class="{
-                  activeBtn: view === 'firewall'
+                  activeBtn: view === 'firewall',
                 }"
               >
                 IVPN Firewall
@@ -61,7 +61,7 @@
                 class="noBordersBtn tabTitleBtn"
                 v-on:click="onView('splittunnel')"
                 v-bind:class="{
-                  activeBtn: view === 'splittunnel'
+                  activeBtn: view === 'splittunnel',
                 }"
               >
                 Split Tunnel
@@ -71,7 +71,7 @@
                 class="noBordersBtn tabTitleBtn"
                 v-on:click="onView('networks')"
                 v-bind:class="{
-                  activeBtn: view === 'networks'
+                  activeBtn: view === 'networks',
                 }"
               >
                 WiFi control
@@ -82,7 +82,7 @@
                 class="noBordersBtn tabTitleBtn"
                 v-on:click="onView('antitracker')"
                 v-bind:class="{
-                  activeBtn: view === 'antitracker'
+                  activeBtn: view === 'antitracker',
                 }"
               >
                 AntiTracker
@@ -92,7 +92,7 @@
                 class="noBordersBtn tabTitleBtn"
                 v-on:click="onView('dns')"
                 v-bind:class="{
-                  activeBtn: view === 'dns'
+                  activeBtn: view === 'dns',
                 }"
               >
                 DNS
@@ -113,8 +113,8 @@
 
           <!-- VERSION -->
           <div class="flexRow" style="flex-grow: 1">
-            <div class="flexRow" style="margin: 20px; flex-grow: 1;">
-              <div style="flex-grow: 1; text-align: center;">
+            <div class="flexRow" style="margin: 20px; flex-grow: 1">
+              <div style="flex-grow: 1; text-align: center">
                 <div v-if="versionSingle" class="version">
                   <!-- single version -->
                   {{ versionSingle }}
@@ -131,7 +131,7 @@
         </div>
       </div>
 
-      <div class="rightPanel ">
+      <div class="rightPanel">
         <div class="flexColumn" v-if="view === 'connection'">
           <connectionView />
         </div>
@@ -187,51 +187,51 @@ export default {
     networksView,
     antitrackerView,
     dnsView,
-    imgArrowLeft
+    imgArrowLeft,
   },
   mounted() {
     if (this.$route.params.view != null) this.view = this.$route.params.view;
     this.$store.dispatch("uiState/currentSettingsViewName", this.view);
   },
-  data: function() {
+  data: function () {
     return {
-      view: "general"
+      view: "general",
     };
   },
   computed: {
-    isLoggedIn: function() {
+    isLoggedIn: function () {
       return this.$store.getters["account/isLoggedIn"];
     },
     isSplitTunnelVisible() {
       return this.$store.getters["isSplitTunnelEnabled"];
     },
-    versionSingle: function() {
+    versionSingle: function () {
       if (this.versionDaemon === this.versionUI) return this.versionDaemon;
       return null;
     },
-    versionDaemon: function() {
+    versionDaemon: function () {
       let v = this.$store.state.daemonVersion;
       if (!v) return "version unknown";
       return `v${v}`;
     },
-    versionUI: function() {
+    versionUI: function () {
       let v = sender.appGetVersion();
       if (!v) return "version unknown";
       return `v${v}`;
-    }
+    },
   },
   methods: {
-    goBack: function() {
+    goBack: function () {
       if (this.$store.state.settings.minimizedUI) {
         sender.closeCurrentWindow();
       } else this.$router.push("/");
       this.$store.dispatch("uiState/currentSettingsViewName", null);
     },
-    onView: function(viewName) {
+    onView: function (viewName) {
       this.view = viewName;
       this.$store.dispatch("uiState/currentSettingsViewName", this.view);
-    }
-  }
+    },
+  },
 };
 </script>
 

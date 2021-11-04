@@ -3,11 +3,9 @@
     <div>
       <div class="horizontalLine" />
       <div id="connection_header">
-        <div style="height: 24px;"></div>
+        <div style="height: 24px"></div>
 
-        <span class="block datails_text">
-          CONNECTION DETAILS
-        </span>
+        <span class="block datails_text"> CONNECTION DETAILS </span>
       </div>
       <div class="horizontalLine" />
     </div>
@@ -94,7 +92,7 @@ import {
   VpnTypeEnum,
   PortTypeEnum,
   PauseStateEnum,
-  VpnStateEnum
+  VpnStateEnum,
 } from "@/store/types";
 
 function processError(e) {
@@ -102,7 +100,7 @@ function processError(e) {
   sender.showMessageBox({
     type: "error",
     buttons: ["OK"],
-    message: e.toString()
+    message: e.toString(),
   });
 }
 
@@ -110,18 +108,18 @@ export default {
   components: {
     OnOffButtonControl,
     SelectButtonControl,
-    GeolocationInfoControl
+    GeolocationInfoControl,
   },
   props: ["onShowPorts", "onShowWifiConfig"],
-  data: function() {
+  data: function () {
     return {
       antitrackerIsProgress: false,
-      firewallIsProgress: false
+      firewallIsProgress: false,
     };
   },
 
   computed: {
-    portProtocolText: function() {
+    portProtocolText: function () {
       let port = this.$store.getters["settings/getPort"];
       let protocol = this.$store.getters["settings/vpnType"];
       return `${enumValueName(VpnTypeEnum, protocol)}/${enumValueName(
@@ -134,7 +132,7 @@ export default {
       if (wifiSettings == null) return false;
       return wifiSettings.trustedNetworksControl;
     },
-    isConnectVPNOnInsecureNetwork: function() {
+    isConnectVPNOnInsecureNetwork: function () {
       let wifiSettings = this.$store.state.settings.wifi;
       if (wifiSettings == null) return false;
       return wifiSettings.connectVPNOnInsecureNetwork;
@@ -149,7 +147,7 @@ export default {
       if (currWifi == null || currWifi.SSID == null) return "";
       return currWifi.SSID;
     },
-    WiFiMarkerText: function() {
+    WiFiMarkerText: function () {
       if (this.wifiSSID == "") return null;
       const TRUSTED = "TRUSTED";
       const UNTRUSTED = "UNTRUSTED";
@@ -162,7 +160,7 @@ export default {
       if (this.isTrustedNetworksControlActive == true) return NOTRUSTSTATUS;
       return null;
     },
-    WiFiMarkerColor: function() {
+    WiFiMarkerColor: function () {
       if (this.wifiSSID == "") return null;
       const TRUSTED = "#64ad07";
       const UNTRUSTED = "#FF6258";
@@ -176,14 +174,14 @@ export default {
       if (this.isTrustedNetworksControlActive == true) return NOTRUSTSTATUS;
       return NOTRUSTSTATUS;
     },
-    IsPaused: function() {
+    IsPaused: function () {
       return this.$store.state.vpnState.pauseState == PauseStateEnum.Paused;
     },
-    IsConnected: function() {
+    IsConnected: function () {
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.CONNECTED
       );
-    }
+    },
   },
 
   methods: {
@@ -234,8 +232,8 @@ export default {
           ret.isInsecure = true;
       }
       return ret;
-    }
-  }
+    },
+  },
 };
 </script>
 

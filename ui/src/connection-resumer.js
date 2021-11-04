@@ -26,7 +26,7 @@ import { PauseStateEnum } from "@/store/types";
 
 let resumerTimer = null;
 export function InitConnectionResumer() {
-  store.subscribe(mutation => {
+  store.subscribe((mutation) => {
     try {
       if (
         mutation.type === "uiState/pauseConnectionTill" ||

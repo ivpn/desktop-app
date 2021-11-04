@@ -2,9 +2,9 @@
   <div id="main" class="row">
     <div id="leftPanel">
       <div style="margin: 20px">
-        <div class="large_text ">Devices limit reached</div>
+        <div class="large_text">Devices limit reached</div>
         <div style="height: 22px"></div>
-        <div class="small_text ">
+        <div class="small_text">
           According to your subscription plan you can use your IVPN account only
           on {{ devicesMaxLimit }} devices.
         </div>
@@ -20,7 +20,7 @@
         <button
           v-bind:class="{
             master: isCanUpgrade !== true,
-            slave: isCanUpgrade === true
+            slave: isCanUpgrade === true,
           }"
           v-if="isCanForceLogout"
           v-on:click="onForceLogout"
@@ -30,16 +30,12 @@
 
         <div style="height: 16px"></div>
         <div class="centered">
-          <button class="link linkFont" v-on:click="onTryAgain">
-            Go back
-          </button>
+          <button class="link linkFont" v-on:click="onTryAgain">Go back</button>
         </div>
       </div>
 
       <div class="elementFooter">
-        <div class="small_text2 ">
-          Do you think there is some issue?
-        </div>
+        <div class="small_text2">Do you think there is some issue?</div>
         <div style="height: 2px"></div>
         <button class="link linkFont" v-on:click="onContactSupport">
           Contact Support Team
@@ -72,7 +68,7 @@ export default {
 
     this.extraArgs = this.$route.params.extraArgs; //{ confirmation2FA }
   },
-  data: function() {
+  data: function () {
     return {
       accountID: null,
       devicesMaxLimit: 0,
@@ -81,37 +77,40 @@ export default {
       UpgradeToPlan: null,
       UpgradeToURL: null,
 
-      extraArgs: null
+      extraArgs: null,
     };
   },
   computed: {
-    isCanUpgrade: function() {
+    isCanUpgrade: function () {
       return this.Upgradable;
     },
-    isCanForceLogout: function() {
+    isCanForceLogout: function () {
       if (this.accountID == null || this.accountID === "") return false;
       return true;
-    }
+    },
   },
   methods: {
-    onTryAgain: function() {
+    onTryAgain: function () {
       this.$router.push("/");
     },
-    onForceLogout: async function() {
+    onForceLogout: async function () {
       this.$router.push({
         name: "Main",
-        params: { forceLoginAccount: this.accountID, extraArgs: this.extraArgs }
+        params: {
+          forceLoginAccount: this.accountID,
+          extraArgs: this.extraArgs,
+        },
       });
     },
-    onUpgrade: function() {
+    onUpgrade: function () {
       if (isValidURL(this.UpgradeToURL))
         sender.shellOpenExternal(this.UpgradeToURL);
       else sender.shellOpenExternal(`https://www.ivpn.net/account`);
     },
-    onContactSupport: function() {
+    onContactSupport: function () {
       sender.shellOpenExternal(`https://www.ivpn.net/contactus`);
-    }
-  }
+    },
+  },
 };
 </script>
 

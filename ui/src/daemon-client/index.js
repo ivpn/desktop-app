@@ -38,7 +38,7 @@ import {
   VpnTypeEnum,
   VpnStateEnum,
   PauseStateEnum,
-  DaemonConnectionType
+  DaemonConnectionType,
 } from "@/store/types";
 import store from "@/store";
 
@@ -86,7 +86,7 @@ const daemonRequests = Object.freeze({
   WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval",
 
   WiFiAvailableNetworks: "WiFiAvailableNetworks",
-  WiFiCurrentNetwork: "WiFiCurrentNetwork"
+  WiFiCurrentNetwork: "WiFiCurrentNetwork",
 });
 
 const daemonResponses = Object.freeze({
@@ -113,7 +113,7 @@ const daemonResponses = Object.freeze({
   WiFiCurrentNetworkResp: "WiFiCurrentNetworkResp",
 
   ErrorResp: "ErrorResp",
-  ServiceExitingResp: "ServiceExitingResp"
+  ServiceExitingResp: "ServiceExitingResp",
 });
 
 // JavaScript does not support int64 (and do not know how to serialize it)
@@ -214,7 +214,7 @@ function sendRecv(request, waitRespCommandsList, timeoutMs) {
 
   const waiter = {
     responseNo: requestNo,
-    waitForCommandsList: waitRespCommandsList
+    waitForCommandsList: waitRespCommandsList,
   };
 
   if (socket == null) {
@@ -239,7 +239,7 @@ function commitSession(sessionRespObj) {
     WgPublicKey: sessionRespObj.WgPublicKey,
     WgLocalIP: sessionRespObj.WgLocalIP,
     WgKeyGenerated: new Date(sessionRespObj.WgKeyGenerated * 1000),
-    WgKeysRegenIntervalSec: sessionRespObj.WgKeysRegenInerval // note! spelling error in received parameter name
+    WgKeysRegenIntervalSec: sessionRespObj.WgKeysRegenInerval, // note! spelling error in received parameter name
   };
   store.commit(`account/session`, session);
   if (session.Session)
@@ -340,7 +340,7 @@ async function processResponse(response) {
         ServerIP: obj.ServerIP,
         ExitServerID: obj.ExitServerID,
         ManualDNS: obj.ManualDNS,
-        IsCanPause: "IsCanPause" in obj ? obj.IsCanPause : null
+        IsCanPause: "IsCanPause" in obj ? obj.IsCanPause : null,
       });
 
       if (store.state.vpnState.pauseState == PauseStateEnum.Paused)
@@ -387,7 +387,7 @@ async function processResponse(response) {
     case daemonResponses.WiFiCurrentNetworkResp:
       store.commit(`vpnState/currentWiFiInfo`, {
         SSID: obj.SSID,
-        IsInsecureNetwork: obj.IsInsecureNetwork
+        IsInsecureNetwork: obj.IsInsecureNetwork,
       });
       break;
     case daemonResponses.WiFiAvailableNetworksResp:
@@ -397,7 +397,7 @@ async function processResponse(response) {
     case daemonResponses.SplitTunnelConfig:
       store.commit(`vpnState/splitTunnelling`, {
         enabled: obj.IsEnabled,
-        apps: obj.SplitTunnelApps
+        apps: obj.SplitTunnelApps,
       });
 
       break;
@@ -496,7 +496,7 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
   }
 
   if (setConnState === undefined)
-    setConnState = function(state) {
+    setConnState = function (state) {
       store.commit("daemonConnectionState", state);
     };
 
@@ -549,11 +549,11 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
           GetConfigParams: true,
           KeepDaemonAlone: true,
           GetSplitTunnelConfig: true,
-          GetWiFiCurrentState: true
+          GetWiFiCurrentState: true,
         };
 
         try {
-          const disconnectDaemonFunc = function(err) {
+          const disconnectDaemonFunc = function (err) {
             if (!err) return;
             setConnState(DaemonConnectionType.NotConnected);
 
@@ -568,7 +568,7 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
 
           let promiseWaiterServers = addWaiter(
             {
-              waitForCommandsList: [daemonResponses.ServerListResp]
+              waitForCommandsList: [daemonResponses.ServerListResp],
             },
             11000
           );
@@ -636,7 +636,7 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
       socket = null;
     });
 
-    socket.on("error", e => {
+    socket.on("error", (e) => {
       log.error(`Connection error: ${e}`);
       reject(e);
 
@@ -659,7 +659,7 @@ async function Login(accountID, force, captchaID, captcha, confirmation2FA) {
     ForceLogin: force,
     CaptchaID: captchaID,
     Captcha: captcha,
-    Confirmation2FA: confirmation2FA
+    Confirmation2FA: confirmation2FA,
   });
 
   if (resp.APIStatus === API_SUCCESS) commitSession(resp.Session);
@@ -683,7 +683,7 @@ async function Logout(
       Command: daemonRequests.SessionDelete,
       NeedToResetSettings: needToResetSettings,
       NeedToDisableFirewall: needToDisableFirewall,
-      IsCanDeleteSessionLocally: isCanDeleteSessionLocally
+      IsCanDeleteSessionLocally: isCanDeleteSessionLocally,
     });
   } catch (e) {
     if (isExpectedAccountToBeLoggedIn)
@@ -748,14 +748,14 @@ async function GetAppUpdateInfo(doManualUpdateCheck) {
 
     let updateInfoResp = await sendRecv({
       Command: daemonRequests.APIRequest,
-      APIPath: apiAlias
+      APIPath: apiAlias,
     });
 
     let updateInfoSignResp = null;
     if (apiAliasSign) {
       updateInfoSignResp = await sendRecv({
         Command: daemonRequests.APIRequest,
-        APIPath: apiAliasSign
+        APIPath: apiAliasSign,
       });
     }
 
@@ -766,7 +766,7 @@ async function GetAppUpdateInfo(doManualUpdateCheck) {
 
     return {
       updateInfoRespRaw: respRaw,
-      updateInfoSignRespRaw: signRespRaw
+      updateInfoSignRespRaw: signRespRaw,
     };
   } catch (e) {
     console.error("Failed to check latest update info: ", e);
@@ -805,7 +805,7 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
     isIPv6 == true ? "isRequestingLocationIPv6" : "isRequestingLocation";
 
   // Function returns 'true' then we received location info in disconnected state
-  let isRealGeoLocationCheck = function() {
+  let isRealGeoLocationCheck = function () {
     return (
       store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED ||
       store.state.vpnState.pauseState === PauseStateEnum.Paused
@@ -814,7 +814,7 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
 
   // Set correct geo-lookup IPvX view based on the data which is already exists
   // (e.g. if there is no IPv6 data but IPv4 is already exists -> switch to IPv4 view)
-  let setCorrectGeoIPView = function() {
+  let setCorrectGeoIPView = function () {
     const isIPv6View = store.state.uiState.isIPv6View;
     if (
       isIPv6View === true &&
@@ -857,7 +857,7 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
     let resp = await sendRecv({
       Command: daemonRequests.APIRequest,
       APIPath: "geo-lookup",
-      IPProtocolRequired: isIPv6 ? 2 : 1 // IPvAny = 0, IPv4 = 1, IPv6 = 2
+      IPProtocolRequired: isIPv6 ? 2 : 1, // IPvAny = 0, IPv4 = 1, IPv6 = 2
     });
 
     if (resp.Error !== "") {
@@ -904,7 +904,7 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
 
       log.warn(`Geo-lookup request failed ${ipVerStr}. Retrying (${r})...`);
 
-      let promise = new Promise(resolve => {
+      let promise = new Promise((resolve) => {
         store.commit(propName_IsRequestingLocation, true); // mark 'Checking geolookup...'
         setTimeout(() => {
           if (!requestID == _geoLookupLastRequestId) {
@@ -936,7 +936,7 @@ async function PingServers(RetryCount, TimeOutMs) {
       {
         Command: daemonRequests.PingServers,
         RetryCount: RetryCount ? RetryCount : PingServersRetriesCnt,
-        TimeOutMs: TimeOutMs ? TimeOutMs : PingServersTimeoutMs
+        TimeOutMs: TimeOutMs ? TimeOutMs : PingServersTimeoutMs,
       },
       [daemonResponses.PingServersResp]
     );
@@ -1003,7 +1003,7 @@ async function Connect(entryServer, exitServer) {
         let servers = store.getters["vpnState/activeServers"];
         if (!isRandomExitSvr) {
           servers = servers.filter(
-            s => s.country_code !== settings.serverExit.country_code
+            (s) => s.country_code !== settings.serverExit.country_code
           );
         }
         let randomIdx = Math.floor(Math.random() * Math.floor(servers.length));
@@ -1015,7 +1015,7 @@ async function Connect(entryServer, exitServer) {
       else if (isRandomExitSvr) {
         const servers = store.getters["vpnState/activeServers"];
         const exitServers = servers.filter(
-          s => s.country_code !== settings.serverEntry.country_code
+          (s) => s.country_code !== settings.serverEntry.country_code
         );
         const randomIdx = Math.floor(
           Math.random() * Math.floor(exitServers.length)
@@ -1035,14 +1035,14 @@ async function Connect(entryServer, exitServer) {
 
       vpnParamsObj = {
         EntryVpnServer: {
-          Hosts: settings.serverEntry.hosts
+          Hosts: settings.serverEntry.hosts,
         },
         MultihopExitSrvID: multihopExitSrvID,
 
         Port: {
           Port: port.port,
-          Protocol: port.type // 0 === UDP
-        }
+          Protocol: port.type, // 0 === UDP
+        },
       };
 
       const ProxyType = settings.ovpnProxyType;
@@ -1064,19 +1064,19 @@ async function Connect(entryServer, exitServer) {
       vpnParamsPropName = "WireGuardParameters";
       vpnParamsObj = {
         EntryVpnServer: {
-          Hosts: settings.serverEntry.hosts
+          Hosts: settings.serverEntry.hosts,
         },
 
         MultihopExitServer: settings.isMultiHop
           ? {
               ExitSrvID: multihopExitSrvID,
-              Hosts: settings.serverExit.hosts
+              Hosts: settings.serverExit.hosts,
             }
           : null,
 
         Port: {
-          Port: port.port
-        }
+          Port: port.port,
+        },
       };
     }
 
@@ -1107,7 +1107,7 @@ async function Connect(entryServer, exitServer) {
     IPv6: settings.enableIPv6InTunnel,
     // Use ONLY IPv6 hosts (use IPv6 connection inside tunnel)
     // (ignored when IPv6!=true)
-    IPv6Only: settings.showGatewaysWithoutIPv6 != true
+    IPv6Only: settings.showGatewaysWithoutIPv6 != true,
   });
 }
 
@@ -1124,7 +1124,7 @@ async function Disconnect() {
     store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTING);
   await sendRecv(
     {
-      Command: daemonRequests.Disconnect
+      Command: daemonRequests.Disconnect,
     },
     [daemonResponses.DisconnectedResp]
   );
@@ -1153,7 +1153,7 @@ async function ApplyPauseConnection() {
 
   store.dispatch("vpnState/pauseState", PauseStateEnum.Pausing);
   await sendRecv({
-    Command: daemonRequests.PauseConnection
+    Command: daemonRequests.PauseConnection,
   });
 
   try {
@@ -1172,7 +1172,7 @@ async function ResumeConnection() {
 
   store.dispatch("vpnState/pauseState", PauseStateEnum.Resuming);
   await sendRecv({
-    Command: daemonRequests.ResumeConnection
+    Command: daemonRequests.ResumeConnection,
   });
   store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
 
@@ -1200,19 +1200,19 @@ async function EnableFirewall(enable) {
 
   await sendRecv({
     Command: daemonRequests.KillSwitchSetEnabled,
-    IsEnabled: enable
+    IsEnabled: enable,
   });
 }
 
 async function KillSwitchGetStatus() {
   await sendRecv({
-    Command: daemonRequests.KillSwitchGetStatus
+    Command: daemonRequests.KillSwitchGetStatus,
   });
 }
 async function KillSwitchSetAllowApiServers(IsAllowApiServers) {
   await sendRecv({
     Command: daemonRequests.KillSwitchSetAllowApiServers,
-    IsAllowApiServers
+    IsAllowApiServers,
   });
 }
 
@@ -1221,7 +1221,7 @@ async function KillSwitchSetAllowLANMulticast(AllowLANMulticast) {
   await sendRecv({
     Command: daemonRequests.KillSwitchSetAllowLANMulticast,
     AllowLANMulticast,
-    Synchronously
+    Synchronously,
   });
 }
 async function KillSwitchSetAllowLAN(AllowLAN) {
@@ -1229,7 +1229,7 @@ async function KillSwitchSetAllowLAN(AllowLAN) {
   await sendRecv({
     Command: daemonRequests.KillSwitchSetAllowLAN,
     AllowLAN,
-    Synchronously
+    Synchronously,
   });
 }
 async function KillSwitchSetIsPersistent(IsPersistent) {
@@ -1238,7 +1238,7 @@ async function KillSwitchSetIsPersistent(IsPersistent) {
   }
   await sendRecv({
     Command: daemonRequests.KillSwitchSetIsPersistent,
-    IsPersistent
+    IsPersistent,
   });
 }
 
@@ -1247,7 +1247,7 @@ async function SplitTunnelSetConfig(IsEnabled, SplitTunnelApps) {
     {
       Command: daemonRequests.SplitTunnelSetConfig,
       IsEnabled,
-      SplitTunnelApps
+      SplitTunnelApps,
     },
     [daemonResponses.SplitTunnelConfig]
   );
@@ -1266,7 +1266,7 @@ async function GetInstalledApps() {
     let appsResp = await sendRecv(
       {
         Command: daemonRequests.GetInstalledApps,
-        ExtraArgsJSON: extraArgsJson
+        ExtraArgsJSON: extraArgsJson,
       },
       [daemonResponses.InstalledAppsResp],
       responseTimeoutMs
@@ -1286,7 +1286,7 @@ async function GetAppIcon(binaryPath) {
   try {
     let resp = await sendRecv({
       Command: daemonRequests.GetAppIcon,
-      AppBinaryPath: binaryPath
+      AppBinaryPath: binaryPath,
     });
 
     if (resp == null) {
@@ -1320,7 +1320,7 @@ async function SetDNS(antitrackerIsEnabled) {
   // send change-request
   await sendRecv({
     Command: daemonRequests.SetAlternateDns,
-    DNS
+    DNS,
   });
 }
 
@@ -1332,7 +1332,7 @@ async function SetLogging() {
   await send({
     Command: daemonRequests.SetPreference,
     Key,
-    Value
+    Value,
   });
 }
 
@@ -1344,26 +1344,26 @@ async function SetObfsproxy() {
   await send({
     Command: daemonRequests.SetPreference,
     Key,
-    Value
+    Value,
   });
 }
 
 async function WgRegenerateKeys() {
   await sendRecv({
-    Command: daemonRequests.WireGuardGenerateNewKeys
+    Command: daemonRequests.WireGuardGenerateNewKeys,
   });
 }
 
 async function WgSetKeysRotationInterval(intervalSec) {
   await sendRecv({
     Command: daemonRequests.WireGuardSetKeysRotationInterval,
-    Interval: intervalSec
+    Interval: intervalSec,
   });
 }
 
 async function GetWiFiAvailableNetworks() {
   await send({
-    Command: daemonRequests.WiFiAvailableNetworks
+    Command: daemonRequests.WiFiAvailableNetworks,
   });
 }
 
@@ -1402,5 +1402,5 @@ export default {
   WgRegenerateKeys,
   WgSetKeysRotationInterval,
 
-  GetWiFiAvailableNetworks
+  GetWiFiAvailableNetworks,
 };

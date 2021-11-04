@@ -22,7 +22,7 @@
 
 import {
   SentrySendDiagnosticReport,
-  SentryIsAbleToUse
+  SentryIsAbleToUse,
 } from "@/sentry/sentry.js";
 
 import { ipcMain, nativeTheme, dialog, app, shell } from "electron";
@@ -178,7 +178,7 @@ ipcMain.handle("renderer-request-wifi-get-available-networks", async () => {
 });
 
 // Diagnostic reports
-ipcMain.on("renderer-request-is-can-send-diagnostic-logs", event => {
+ipcMain.on("renderer-request-is-can-send-diagnostic-logs", (event) => {
   event.returnValue = SentryIsAbleToUse();
 });
 ipcMain.handle("renderer-request-get-diagnostic-logs", async () => {
@@ -211,7 +211,7 @@ ipcMain.handle(
 );
 
 // UPDATES
-ipcMain.on("renderer-request-app-updates-is-able-to-update", event => {
+ipcMain.on("renderer-request-app-updates-is-able-to-update", (event) => {
   try {
     event.returnValue = IsAbleToCheckUpdate();
   } catch {
@@ -240,7 +240,7 @@ ipcMain.handle("renderer-request-auto-launch-set", async (event, isEnabled) => {
 });
 
 // COLOR SCHEME
-ipcMain.on("renderer-request-ui-color-scheme-get", event => {
+ipcMain.on("renderer-request-ui-color-scheme-get", (event) => {
   event.returnValue = nativeTheme.themeSource;
 });
 ipcMain.handle("renderer-request-ui-color-scheme-set", (event, theme) => {
@@ -289,21 +289,21 @@ ipcMain.handle("renderer-request-UI-minimize", async (event, isMinimize) => {
     return await win.setBounds({ width: config.MinimizedUIWidth }, animate);
   else return await win.setBounds({ width: config.MaximizedUIWidth }, animate);
 });
-ipcMain.handle("renderer-request-close-current-window", async event => {
+ipcMain.handle("renderer-request-close-current-window", async (event) => {
   return await event.sender.getOwnerBrowserWindow().close();
 });
-ipcMain.handle("renderer-request-minimize-current-window", async event => {
+ipcMain.handle("renderer-request-minimize-current-window", async (event) => {
   return await event.sender.getOwnerBrowserWindow().minimize();
 });
 
-ipcMain.on("renderer-request-properties-current-window", event => {
+ipcMain.on("renderer-request-properties-current-window", (event) => {
   const wnd = event.sender.getOwnerBrowserWindow();
   let retVal = null;
   if (wnd)
     retVal = {
       closable: wnd.closable,
       maximizable: wnd.maximizable,
-      minimizable: wnd.minimizable
+      minimizable: wnd.minimizable,
     };
   event.returnValue = retVal;
 });
@@ -337,15 +337,15 @@ ipcMain.handle("renderer-request-shell-open-external", async (event, uri) => {
 });
 
 // OS
-ipcMain.on("renderer-request-os-release", event => {
+ipcMain.on("renderer-request-os-release", (event) => {
   event.returnValue = os.release();
 });
-ipcMain.on("renderer-request-platform", event => {
+ipcMain.on("renderer-request-platform", (event) => {
   event.returnValue = Platform();
 });
 
 // APP
-ipcMain.on("renderer-request-app-getversion", event => {
+ipcMain.on("renderer-request-app-getversion", (event) => {
   event.returnValue = app.getVersion();
 });
 

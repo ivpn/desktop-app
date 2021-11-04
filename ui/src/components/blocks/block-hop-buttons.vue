@@ -5,7 +5,7 @@
       <button
         class="hopButton"
         v-bind:class="{
-          hopButtonActive: !this.$store.state.settings.isMultiHop
+          hopButtonActive: !this.$store.state.settings.isMultiHop,
         }"
         v-on:click="ChangeHop(false)"
       >
@@ -17,7 +17,7 @@
       <button
         class="hopButton"
         v-bind:class="{
-          hopButtonActive: this.$store.state.settings.isMultiHop
+          hopButtonActive: this.$store.state.settings.isMultiHop,
         }"
         v-on:click="ChangeHop(true)"
       >
@@ -48,7 +48,7 @@ export default {
           buttons: ["OK"],
           message: "You are now connected to IVPN",
           detail:
-            "You can change Multi-Hop settings only when IVPN is disconnected."
+            "You can change Multi-Hop settings only when IVPN is disconnected.",
         });
         return;
       }
@@ -60,8 +60,8 @@ export default {
     },
     showServersList(isExitServer) {
       this.onShowServersPressed(isExitServer);
-    }
-  }
+    },
+  },
 };
 </script>
 

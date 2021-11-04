@@ -42,7 +42,7 @@ export default {
     //    downloaded:    0
     //  }
     //}
-    appUpdateProgress: null
+    appUpdateProgress: null,
   },
 
   mutations: {
@@ -60,7 +60,7 @@ export default {
     },
     isIPv6View(state, value) {
       state.isIPv6View = value;
-    }
+    },
   },
 
   // can be called from renderer
@@ -76,6 +76,6 @@ export default {
     },
     isIPv6View(context, value) {
       context.commit("isIPv6View", value);
-    }
-  }
+    },
+  },
 };

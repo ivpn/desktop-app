@@ -1,7 +1,7 @@
 <template>
   <div id="main">
     <button class="serverSelectBtn" v-on:click="showServersList()">
-      <div class="flexRow" style="height: 100%;">
+      <div class="flexRow" style="height: 100%">
         <div class="flexColumn" align="left">
           <div class="small_text" style="margin-top: 8px">
             {{
@@ -18,7 +18,7 @@
           <div class="flexRow">
             <serverNameControl
               class="serverName"
-              style="max-width: 245px;"
+              style="max-width: 245px"
               :isLargeText="true"
               :server="this.server"
               :isFastestServer="isFastestServer"
@@ -33,7 +33,7 @@
         <serverPingInfoControl
           v-show="!(isFastestServer || isRandomServer)"
           :server="this.server"
-          style="margin-left: 9px; margin-right:8px"
+          style="margin-left: 9px; margin-right: 8px"
         />
 
         <div class="arrowRightSimple"></div>
@@ -51,28 +51,28 @@ export default {
   props: ["onShowServersPressed", "isExitServer"],
   components: {
     serverNameControl,
-    serverPingInfoControl
+    serverPingInfoControl,
   },
   computed: {
-    server: function() {
+    server: function () {
       return this.isExitServer
         ? this.$store.state.settings.serverExit
         : this.$store.state.settings.serverEntry;
     },
-    isConnected: function() {
+    isConnected: function () {
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.CONNECTED
       );
     },
-    isConnecting: function() {
+    isConnecting: function () {
       return this.$store.getters["vpnState/isConnecting"];
     },
-    isDisconnected: function() {
+    isDisconnected: function () {
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
       );
     },
-    isFastestServer: function() {
+    isFastestServer: function () {
       if (
         (this.isDisconnected || this.$store.state.vpnState.isPingingServers) &&
         this.$store.getters["settings/isFastestServer"]
@@ -80,19 +80,19 @@ export default {
         return true;
       return false;
     },
-    isRandomServer: function() {
+    isRandomServer: function () {
       if (!this.isDisconnected) return false;
       return this.isExitServer
         ? this.$store.getters["settings/isRandomExitServer"]
         : this.$store.getters["settings/isRandomServer"];
-    }
+    },
   },
   methods: {
     showServersList() {
       if (this.onShowServersPressed != null)
         this.onShowServersPressed(this.isExitServer);
-    }
-  }
+    },
+  },
 };
 </script>
 

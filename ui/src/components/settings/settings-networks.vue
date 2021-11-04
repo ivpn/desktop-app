@@ -33,13 +33,13 @@
         Actions
       </button>
       <button
-        style="cursor: auto; flex-grow: 1;"
+        style="cursor: auto; flex-grow: 1"
         class="selectableButtonSeparator"
       ></button>
     </div>
-    <div class="flexColumn" style="min-height: 0px;">
+    <div class="flexColumn" style="min-height: 0px">
       <!-- ACTIONS -->
-      <div v-if="isActionsView" style="flex-grow: 1;">
+      <div v-if="isActionsView" style="flex-grow: 1">
         <div class="settingsBoldFont">Actions for Untrusted WiFi</div>
         <div class="param">
           <input
@@ -87,7 +87,7 @@
 
       <!-- NETWORKS -->
       <div v-if="!isActionsView" class="flexColumn">
-        <div class="flexRow" style="margin-top: 12px; margin-bottom:12px">
+        <div class="flexRow" style="margin-top: 12px; margin-bottom: 12px">
           <div class="flexRowRestSpace">
             Default trust status for undefined networks:
           </div>
@@ -95,10 +95,10 @@
             <select
               v-model="defaultTrustStatusIsTrusted"
               class="trustedConfigBase"
-              style="background: var(--background-color);"
+              style="background: var(--background-color)"
               v-bind:class="{
                 trustedConfigUntrusted: defaultTrustStatusIsTrusted == false,
-                trustedConfigTrusted: defaultTrustStatusIsTrusted == true
+                trustedConfigTrusted: defaultTrustStatusIsTrusted == true,
               }"
             >
               <option :value="false">Untrusted</option>
@@ -112,7 +112,13 @@
 
         <div
           class="scrollableColumnContainer"
-          style="padding:1px; margin-top: 8px; margin-bottom:8px; max-height: 235px;  height: 235px;"
+          style="
+            padding: 1px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            max-height: 235px;
+            height: 235px;
+          "
         >
           <div v-for="wifi of networks" v-bind:key="wifi.SSID">
             <trustedNetConfigControl
@@ -124,16 +130,16 @@
       </div>
 
       <!-- FOOTER -->
-      <div style="position: sticky; bottom: 20px;">
+      <div style="position: sticky; bottom: 20px">
         <div class="horizontalLine" />
 
-        <div class="flexRow" style="margin-top: 15px;">
+        <div class="flexRow" style="margin-top: 15px">
           <div class="param" v-if="isActionsView == false">
             <input
               type="checkbox"
               id="showAllWifi"
               v-on:click="onShowAllNetworks"
-              style="margin:0px 5px 0px 0px"
+              style="margin: 0px 5px 0px 0px"
             />
             <label class="defColor" for="showAllWifi">
               Show all WiFi networks</label
@@ -157,15 +163,15 @@ const sender = window.ipcSender;
 
 export default {
   components: {
-    trustedNetConfigControl
+    trustedNetConfigControl,
   },
   mounted() {
     //if (this.trustedNetworksControl === true) sender.GetWiFiAvailableNetworks();
   },
-  data: function() {
+  data: function () {
     return {
       isActionsView: false,
-      showAllNetworks: false
+      showAllNetworks: false,
     };
   },
   methods: {
@@ -189,15 +195,15 @@ export default {
       if (this.$store.state.settings.wifi?.networks != null)
         nets = [...this.$store.state.settings.wifi.networks];
       if (isTrusted == null) {
-        nets = nets.filter(wifi => wifi.ssid != ssid);
+        nets = nets.filter((wifi) => wifi.ssid != ssid);
       } else {
-        let alreadyExists = nets.filter(wifi => wifi.ssid == ssid);
+        let alreadyExists = nets.filter((wifi) => wifi.ssid == ssid);
         if (alreadyExists != null && alreadyExists.length > 0) {
           // replace item with a new value
           nets = [
-            ...nets.map(item =>
+            ...nets.map((item) =>
               item.ssid !== ssid ? item : { ssid: ssid, isTrusted: isTrusted }
-            )
+            ),
           ];
         } else nets.push({ ssid: ssid, isTrusted: isTrusted });
       }
@@ -210,7 +216,7 @@ export default {
         type: "question",
         buttons: ["Yes", "Cancel"],
         message: "Reset all settings to default values",
-        detail: `Are you sure you want to reset the trust status for all networks and actions to default settings?`
+        detail: `Are you sure you want to reset the trust status for all networks and actions to default settings?`,
       });
       if (actionNo == 1) return;
 
@@ -220,25 +226,25 @@ export default {
         unTrustedEnableFirewall: true,
 
         trustedDisconnectVpn: true,
-        trustedDisableFirewall: true
+        trustedDisableFirewall: true,
       };
       wifi.networks = null;
       wifi.defaultTrustStatusTrusted = null;
       this.$store.dispatch("settings/wifi", wifi);
-    }
+    },
   },
   computed: {
-    availableWiFiNetworks: function() {
+    availableWiFiNetworks: function () {
       var nets = [];
       try {
         let allNets = this.$store.state.vpnState.availableWiFiNetworks;
-        if (allNets != null) nets = allNets.filter(w => w.SSID);
+        if (allNets != null) nets = allNets.filter((w) => w.SSID);
       } catch (e) {
         console.error(e);
       }
       return nets;
     },
-    networks: function() {
+    networks: function () {
       var nets = [];
       try {
         if (this.$store.state.settings.wifi?.networks != null)
@@ -246,7 +252,7 @@ export default {
 
         let currWiFi = this.$store.state.vpnState.currentWiFiInfo;
         if (currWiFi != null && currWiFi.SSID != "") {
-          let alreadyExists = nets.filter(wifi => wifi.ssid == currWiFi.SSID);
+          let alreadyExists = nets.filter((wifi) => wifi.ssid == currWiFi.SSID);
 
           // check is curent wifi already exists
           if (alreadyExists == null || alreadyExists.length == 0)
@@ -259,7 +265,7 @@ export default {
               for (let w of restNetworks) {
                 if (
                   w.SSID != "" &&
-                  nets.findIndex(t => t.ssid === w.SSID) == -1
+                  nets.findIndex((t) => t.ssid === w.SSID) == -1
                 )
                   nets.push({ ssid: w.SSID, isTrusted: null });
               }
@@ -279,7 +285,7 @@ export default {
         let wifi = Object.assign({}, this.$store.state.settings.wifi);
         wifi.defaultTrustStatusTrusted = value;
         this.$store.dispatch("settings/wifi", wifi);
-      }
+      },
     },
     trustedNetworksControl: {
       get() {
@@ -289,7 +295,7 @@ export default {
         let wifi = Object.assign({}, this.$store.state.settings.wifi);
         wifi.trustedNetworksControl = value;
         this.$store.dispatch("settings/wifi", wifi);
-      }
+      },
     },
     unTrustedConnectVpn: {
       get() {
@@ -300,7 +306,7 @@ export default {
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.unTrustedConnectVpn = value;
         this.$store.dispatch("settings/wifi", wifi);
-      }
+      },
     },
     unTrustedEnableFirewall: {
       get() {
@@ -312,7 +318,7 @@ export default {
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.unTrustedEnableFirewall = value;
         this.$store.dispatch("settings/wifi", wifi);
-      }
+      },
     },
     trustedDisconnectVpn: {
       get() {
@@ -323,7 +329,7 @@ export default {
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.trustedDisconnectVpn = value;
         this.$store.dispatch("settings/wifi", wifi);
-      }
+      },
     },
     trustedDisableFirewall: {
       get() {
@@ -334,9 +340,9 @@ export default {
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.trustedDisableFirewall = value;
         this.$store.dispatch("settings/wifi", wifi);
-      }
-    }
-  }
+      },
+    },
+  },
 };
 </script>
 

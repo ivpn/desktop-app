@@ -23,7 +23,7 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
   const pTypeString = 3;
 
   // copy value from `oldSettings` to `settingsToMerge` (only if destProp is exist in `origSettings`)
-  let copyProp = function(srcPropName, destPropName, pType) {
+  let copyProp = function (srcPropName, destPropName, pType) {
     if (
       old[srcPropName] === undefined ||
       origSettings[destPropName] === undefined
@@ -139,7 +139,7 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
     ) {
       const p = {
         OpenVPN: Ports.OpenVPN[old.PreferredPortIndex],
-        WireGuard: Ports.WireGuard[old.WireGuardPreferredPortIndex]
+        WireGuard: Ports.WireGuard[old.WireGuardPreferredPortIndex],
       };
       settingsToMerge.port = p;
     }
@@ -174,12 +174,12 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
       if (svrs) {
         if (svrs.WireGuard && svrs.WireGuard.length > 0) {
           _fastestSvrListSkipWg = false;
-          svrs.WireGuard.forEach(element => {
+          svrs.WireGuard.forEach((element) => {
             _fastestSvrList[element] = VpnTypeEnum.WireGuard;
           });
         }
         if (svrs.OpenVPN && svrs.OpenVPN.length > 0) {
-          svrs.OpenVPN.forEach(element => {
+          svrs.OpenVPN.forEach((element) => {
             _fastestSvrListSkipOvpn = false;
             _fastestSvrList[element] = VpnTypeEnum.OpenVPN;
           });
@@ -204,7 +204,7 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
         unTrustedEnableFirewall: oldWifiConf.UnTrustedEnableKillSwitch,
 
         trustedDisconnectVpn: oldWifiConf.TrustedDisconnectFromVPN,
-        trustedDisableFirewall: oldWifiConf.TrustedDisableKillSwitch
+        trustedDisableFirewall: oldWifiConf.TrustedDisableKillSwitch,
       };
 
       // defaultTrustStatusTrusted
@@ -217,7 +217,7 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
       // configured networks list
       if (oldWifiConf.Actions) {
         let newNetworks = [];
-        oldWifiConf.Actions.forEach(action => {
+        oldWifiConf.Actions.forEach((action) => {
           if (!action.Network || !action.Network.SSID || !action.Action) return;
 
           let isTrusted = false;
@@ -227,7 +227,7 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
 
           let newNetwork = {
             ssid: action.Network.SSID,
-            isTrusted: isTrusted
+            isTrusted: isTrusted,
           };
           newNetworks.push(newNetwork);
         });
@@ -256,7 +256,7 @@ export function ImportAndDeleteOldSettingsIfExists(mergeMethod) {
   // selected servers can not be imported immediately (because servers list still not initialized)
   // we keeping this properties locally until "vpnState/servers" will be updated
   if (_svrId || _svrExitId || (_fastestSvrList && _fastestSvrList.length > 0)) {
-    let unsubscribeMethod = store.subscribe(mutation => {
+    let unsubscribeMethod = store.subscribe((mutation) => {
       try {
         if (mutation.type === "vpnState/servers" && (_svrId || _svrExitId)) {
           const hashedSvrs = store.state.vpnState.serversHashed;
@@ -331,7 +331,7 @@ function readOldSettingsMacOS() {
     var re = new RegExp("([a-zA-Z0-9]+) = (.*);");
 
     let retObj = {};
-    arrayOfLines.forEach(element => {
+    arrayOfLines.forEach((element) => {
       const match = re.exec(element);
       if (match && match[1] && match[2]) {
         try {
@@ -378,7 +378,7 @@ function readOldSettingsWindows() {
       ignoreAttributes: false,
       parseAttributeValue: false,
       parseNodeValue: true,
-      trimValues: true
+      trimValues: true,
     };
 
     var parser = require("fast-xml-parser");
@@ -388,7 +388,7 @@ function readOldSettingsWindows() {
       jsonObj.configuration.userSettings["IVPN.Properties.Settings"].setting;
 
     let retObj = {};
-    settings.forEach(element => {
+    settings.forEach((element) => {
       try {
         if (element.value === "False") retObj[element["@_name"]] = 0;
         else if (element.value === "True") retObj[element["@_name"]] = 1;

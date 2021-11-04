@@ -7,9 +7,7 @@
 
       <div class="flexRowSpace">
         <div class="flexColumn">
-          <div class="settingsGrayDescriptionFont">
-            Account ID
-          </div>
+          <div class="settingsGrayDescriptionFont">Account ID</div>
 
           <div class="settingsBigBoldFont" id="accountID">
             <label class="settingsBigBoldFont selectable">
@@ -56,9 +54,9 @@
         </div>
 
         <div class="flexRowAlignTop">
-          <div style="min-width: 170px; margin-right:17px">
+          <div style="min-width: 170px; margin-right: 17px">
             <div class="settingsGrayDescriptionFont">Subscription</div>
-            <div class="defColor" style="margin-top: 5px; margin-bottom:4px;">
+            <div class="defColor" style="margin-top: 5px; margin-bottom: 4px">
               {{ CurrentPlan }}
             </div>
 
@@ -73,7 +71,7 @@
 
           <div v-if="IsActive">
             <div class="settingsGrayDescriptionFont">Active until</div>
-            <div class="defColor" style="margin-top: 5px; margin-bottom:4px;">
+            <div class="defColor" style="margin-top: 5px; margin-bottom: 4px">
               {{ ActiveUntil }}
             </div>
 
@@ -105,9 +103,7 @@
           <div class="i">*</div>
           Turn on <strong>Port forwarding</strong>
         </div>
-        <p>
-          Login to the website to change subscription plan
-        </p>
+        <p>Login to the website to change subscription plan</p>
       </div>
     </div>
 
@@ -127,11 +123,11 @@ const sender = window.ipcSender;
 
 export default {
   components: {
-    spinner
+    spinner,
   },
-  data: function() {
+  data: function () {
     return {
-      isProcessing: false
+      isProcessing: false,
     };
   },
   mounted() {
@@ -187,7 +183,7 @@ export default {
             detail:
               "The Firewall is enabled. All network access will be blocked.",
             checkboxLabel: mesResetSettings,
-            buttons: ["Turn Firewall off and log out", "Log out", "Cancel"]
+            buttons: ["Turn Firewall off and log out", "Log out", "Cancel"],
           },
           true
         );
@@ -201,7 +197,7 @@ export default {
             type: "question",
             message: mes,
             checkboxLabel: mesResetSettings,
-            buttons: ["Log out", "Cancel"]
+            buttons: ["Log out", "Cancel"],
           },
           true
         );
@@ -230,7 +226,7 @@ export default {
               "Unable to contact server to log out. Please check Internet connectivity.\nDo you want to force log out?",
             detail:
               "This device will continue to count towards your device limit.",
-            buttons: ["Force log out", "Cancel"]
+            buttons: ["Force log out", "Cancel"],
           });
           if (ret == 1) return; // Cancel
 
@@ -247,7 +243,7 @@ export default {
             type: "error",
             message: "Failed to log out.",
             detail: e,
-            buttons: ["OK"]
+            buttons: ["OK"],
           });
         }
       } finally {
@@ -262,32 +258,32 @@ export default {
     },
     addMoreTime() {
       sender.shellOpenExternal(`https://www.ivpn.net/account`);
-    }
+    },
   },
   computed: {
-    IsAccountStateExists: function() {
+    IsAccountStateExists: function () {
       return this.$store.getters["account/isAccountStateExists"];
     },
-    CurrentPlan: function() {
+    CurrentPlan: function () {
       return this.$store.state.account.accountStatus.CurrentPlan;
     },
-    ActiveUntil: function() {
+    ActiveUntil: function () {
       return dateDefaultFormat(
         new Date(this.$store.state.account.accountStatus.ActiveUntil * 1000)
       );
     },
-    IsActive: function() {
+    IsActive: function () {
       return this.$store.state.account.accountStatus.Active;
     },
-    IsCanUpgradeToPro: function() {
+    IsCanUpgradeToPro: function () {
       return (
         this.IsAccountStateExists &&
         this.$store.state.account.accountStatus.Upgradable &&
         this.$store.state.account.accountStatus.CurrentPlan.toLowerCase() !=
           "ivpn pro"
       );
-    }
-  }
+    },
+  },
 };
 </script>
 

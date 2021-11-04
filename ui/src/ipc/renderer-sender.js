@@ -46,10 +46,10 @@ export default {
     // NOTE! in case of extending functionality,
     // do not forget to ensure that 'allowedChannels' contains correct (required) channels
     return {
-      send: function(channel, ...args) {
+      send: function (channel, ...args) {
         const allowedChannels = [
           "vuex-mutations-notify-main",
-          "vuex-mutations-connect"
+          "vuex-mutations-connect",
         ];
 
         if (allowedChannels.includes(channel)) {
@@ -61,10 +61,10 @@ export default {
             channel
           );
       },
-      on: function(channel, listener) {
+      on: function (channel, listener) {
         const allowedChannels = [
           "main-change-view-request",
-          "vuex-mutations-notify-renderers"
+          "vuex-mutations-notify-renderers",
         ];
 
         if (allowedChannels.includes(channel)) {
@@ -75,12 +75,12 @@ export default {
             "[ERROR] SafeIpcRenderer: unsupported channel to for registering event receiver: ",
             channel
           );
-      }
+      },
     };
   },
 
   // After initialized, ask main thread about initial route
-  GetInitRouteArgs: async function() {
+  GetInitRouteArgs: async function () {
     return await ipcRenderer.invoke("renderer-request-ui-initial-route-args");
   },
 
@@ -132,7 +132,7 @@ export default {
     return await invoke("renderer-request-disconnect");
   },
 
-  PauseConnection: async pauseSeconds => {
+  PauseConnection: async (pauseSeconds) => {
     if (pauseSeconds == null) return;
     //var pauseTill = new Date();
     //pauseTill.setSeconds(pauseTill.getSeconds() + pauseSeconds);
@@ -142,26 +142,26 @@ export default {
     return await invoke("renderer-request-resume-connection");
   },
 
-  EnableFirewall: async isEnable => {
+  EnableFirewall: async (isEnable) => {
     return await invoke("renderer-request-firewall", isEnable);
   },
 
-  KillSwitchSetAllowApiServers: async isEnable => {
+  KillSwitchSetAllowApiServers: async (isEnable) => {
     return await invoke(
       "renderer-request-KillSwitchSetAllowApiServers",
       isEnable
     );
   },
-  KillSwitchSetAllowLANMulticast: async isEnable => {
+  KillSwitchSetAllowLANMulticast: async (isEnable) => {
     return await invoke(
       "renderer-request-KillSwitchSetAllowLANMulticast",
       isEnable
     );
   },
-  KillSwitchSetAllowLAN: async isEnable => {
+  KillSwitchSetAllowLAN: async (isEnable) => {
     return await invoke("renderer-request-KillSwitchSetAllowLAN", isEnable);
   },
-  KillSwitchSetIsPersistent: async isEnable => {
+  KillSwitchSetIsPersistent: async (isEnable) => {
     return await invoke("renderer-request-KillSwitchSetIsPersistent", isEnable);
   },
 
@@ -180,7 +180,7 @@ export default {
     return await invoke("renderer-request-set-obfsproxy");
   },
 
-  SetDNS: async antitrackerIsEnabled => {
+  SetDNS: async (antitrackerIsEnabled) => {
     return await invoke("renderer-request-set-dns", antitrackerIsEnabled);
   },
   GeoLookup: async () => {
@@ -190,7 +190,7 @@ export default {
   WgRegenerateKeys: async () => {
     return await invoke("renderer-request-wg-regenerate-keys");
   },
-  WgSetKeysRotationInterval: async intervalSec => {
+  WgSetKeysRotationInterval: async (intervalSec) => {
     return await invoke(
       "renderer-request-wg-set-keys-rotation-interval",
       intervalSec
@@ -245,7 +245,7 @@ export default {
   AutoLaunchIsEnabled: async () => {
     return invoke("renderer-request-auto-launch-is-enabled");
   },
-  AutoLaunchSet: async isEnabled => {
+  AutoLaunchSet: async (isEnabled) => {
     return invoke("renderer-request-auto-launch-set", isEnabled);
   },
 
@@ -253,34 +253,34 @@ export default {
   ColorScheme: () => {
     return ipcRenderer.sendSync("renderer-request-ui-color-scheme-get");
   },
-  ColorSchemeSet: scheme => {
+  ColorSchemeSet: (scheme) => {
     return invoke("renderer-request-ui-color-scheme-set", scheme);
   },
 
   // NAVIGATION
-  ShowAccountSettings: function() {
+  ShowAccountSettings: function () {
     ipcRenderer.send("renderer-request-show-settings-account");
   },
-  ShowSettings: function() {
+  ShowSettings: function () {
     ipcRenderer.send("renderer-request-show-settings-general");
   },
-  ShowConnectionSettings: function() {
+  ShowConnectionSettings: function () {
     ipcRenderer.send("renderer-request-show-settings-connection");
   },
-  ShowWifiSettings: function() {
+  ShowWifiSettings: function () {
     ipcRenderer.send("renderer-request-show-settings-networks");
   },
 
   // CONTEXT MENU
-  ShowContextMenuCopy: function() {
+  ShowContextMenuCopy: function () {
     ipcRenderer.send("renderer-request-show-context-menu-copy");
   },
-  ShowContextMenuEdit: function() {
+  ShowContextMenuEdit: function () {
     ipcRenderer.send("renderer-request-show-context-menu-edit");
   },
 
   // DIALOG
-  showMessageBoxSync: diagConfig => {
+  showMessageBoxSync: (diagConfig) => {
     return ipcRenderer.sendSync("renderer-request-showmsgboxsync", diagConfig);
   },
   showMessageBox: (diagConfig, doNotAttachToWindow) => {
@@ -291,10 +291,10 @@ export default {
     );
   },
 
-  showOpenDialogSync: options => {
+  showOpenDialogSync: (options) => {
     return ipcRenderer.sendSync("renderer-request-showOpenDialogSync", options);
   },
-  showOpenDialog: options => {
+  showOpenDialog: (options) => {
     return invoke("renderer-request-showOpenDialog", options);
   },
 
@@ -308,15 +308,15 @@ export default {
   getCurrentWindowProperties: () => {
     return ipcRenderer.sendSync("renderer-request-properties-current-window");
   },
-  uiMinimize: isMinimize => {
+  uiMinimize: (isMinimize) => {
     return invoke("renderer-request-UI-minimize", isMinimize);
   },
 
   // SHELL
-  shellShowItemInFolder: file => {
+  shellShowItemInFolder: (file) => {
     return invoke("renderer-request-shell-show-item-in-folder", file);
   },
-  shellOpenExternal: uri => {
+  shellOpenExternal: (uri) => {
     return invoke("renderer-request-shell-open-external", uri);
   },
 
@@ -334,7 +334,7 @@ export default {
   },
 
   // HELPERS
-  getAppIcon: binaryPath => {
+  getAppIcon: (binaryPath) => {
     return invoke("renderer-request-getAppIcon", binaryPath);
-  }
+  },
 };
