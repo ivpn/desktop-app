@@ -127,7 +127,7 @@ func (m *KeysManager) StartKeysRotation() error {
 			}
 
 			// update immediately, if it is a time
-			if lastUpdate.Add(waitInterval).Before(time.Now()) {
+			if lastUpdate.Add(interval).Before(time.Now()) {
 				waitInterval = time.Second
 			}
 
