@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.4.1 - 2021-11-09
+
+[IMPROVED] (Windows) The TAP driver is signed by new certificate  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.4.1.exe)  
+SHA256: 58f084098edbaeaadc3e4ee13a4bbbd9af9e6ce74cc4e5fba0cc1be73f2d3cfd  
 
 ## Version 3.4.0 - 2021-11-08
 
