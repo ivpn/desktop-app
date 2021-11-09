@@ -152,6 +152,10 @@ goto :success
 
 :build_installer
 	echo [*] Building installer...
+	if NOT "%CERT_SHA1%" == "" (
+		call "%PATH_UI_REPO%\References\Windows\verify-bin-signs.bat" || exit /b 1
+	)
+
 	cd %SCRIPTDIR%\Installer
 
 	SET OUT_FILE="%INSTALLER_OUT_DIR%\IVPN-Client-v%APPVER%.exe"
