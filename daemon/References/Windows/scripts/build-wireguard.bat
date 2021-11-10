@@ -2,7 +2,7 @@
 
 setlocal
 set SCRIPTDIR=%~dp0
-set WGVER=v0.4.9
+set WGVER=v0.5.2
 
 echo ### Buildind WireGuard binaries  ###
 
@@ -27,7 +27,7 @@ if not exist "%SCRIPTDIR%..\.deps\wireguard-windows\.deps\prepared" (
   cd "%SCRIPTDIR%..\.deps"
 
   echo [*] Cloning wireguard-windows...
-  git clone https://git.zx2c4.com/wireguard-windows || exit /b 1
+  git clone git://git.zx2c4.com/wireguard-windows || exit /b 1
   cd wireguard-windows || exit /b 1
 
   echo [*] Checking out wireguard-windows version [%WGVER%]...
