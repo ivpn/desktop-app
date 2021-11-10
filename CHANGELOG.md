@@ -2,6 +2,56 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.4.1 - 2021-11-09
+
+[IMPROVED] (Windows) The TAP driver is signed by new certificate  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.4.1.exe)  
+SHA256: 58f084098edbaeaadc3e4ee13a4bbbd9af9e6ce74cc4e5fba0cc1be73f2d3cfd  
+
+## Version 3.4.0 - 2021-11-08
+
+[NEW] Multi-Hop for WireGuard protocol  
+[NEW] Option to reset app settings on logout  
+[NEW] Option to keep Firewall state on logout  
+[NEW] CLI option to show all servers and to connect to specific server  
+[NEW] (Linux) Obfsproxy now works on Linux  
+[IMPROVED] Speed up the response timeout to API server  
+[IMPROVED] Force automatic WireGuard key regeneration if the rotation interval has passed  
+[IMPROVED] (Windows) Updated WireGuard: v0.4.9  
+[IMPROVED] (Windows) Updated: OpenVPN: v2.5.3; OpenSSL: 1.1.1k  
+[IMPROVED] (macOS) Updated: OpenVPN: v2.5.3; OpenSSL: 1.1.1k  
+[IMPROVED] (macOS) Updated WireGuard binaries: wireguard-go: v0.0.20210424; wireguard-tools v1.0.20210914  
+[IMPROVED] (Linux) WireGuard-tools integrated into a package (for a kernel since 5.6, no dependencies required to use WireGuard)  
+[FIX] Fastest server settings were ignored in some cases  
+[FIX] Option to run multiple UI instances in some cases  
+[FIX] Server selection issues  
+[FIX] Other minor issues and improvements  
+[FIX] (Windows) Compatibility with Windows Server  
+[FIX] (Windows) IVPN Firewall rules overlap blocking rules from Windows Firewall  
+[FIX] (Windows) Icons created in %temp% each time app is launched  
+[FIX] (macOS) Unable to start WireGuard connection if more than 10 utunX devices configured  
+[FIX] (Linux) "Allow LAN traffic" does not persist after a restart  
+[FIX] (Linux) UI crash after some Linux distribution updates  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.4.0.exe)  
+SHA256: 01d876ad506ccf9def6c8ded2c104b740bb3093d728ad52168aecf597113f7d4   
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.4.0.dmg)  
+SHA256: ca9d45f7df2eb95fa5f57ada9012d6add95113635b74f21df36c40725687b3f2  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.4.0-arm64.dmg)  
+SHA256: 8a1f4bb2c01f289b2ca241b86c0b5eec4b1225de06777d076d2ef534e20e7481  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.4.0_amd64.deb)  
+SHA256: fad328c95679c983d162d117e909c4c0b5eacd7b5dd54b8de7e1a1c4dbeca64c   
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.4.0-1.x86_64.rpm)  
+SHA256: 933c397078be24eba87cce63c3d49b507e62efb623a34f9349725461de719130 
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.4.0_amd64.deb)  
+SHA256: 7e50c58ed16c5817e79b253e7b198a76c4660218a1e236598a59a288eaaf89e3  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.4.0-1.x86_64.rpm)  
+SHA256: cf95c4e07912aa03c7596d56b31d323664efbf44469cc9fee54771800d96d1db 
+
 ## Version 3.3.40 - 2021-09-14
 
 [NEW] (Windows) Split Tunneling  
