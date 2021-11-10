@@ -301,12 +301,12 @@ func doEnable() (retErr error) {
 			return fmt.Errorf("failed to add filter 'block all IPv6': %w", err)
 		}
 
-		for _, ip := range addressesV6 {
-			_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ip.IP, 128, isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow remote IP': %w", err)
-			}
+		_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", net.ParseIP("::1"), 128, isPersistant))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'allow remote IP': %w", err)
+		}
 
+		for _, ip := range addressesV6 {
 			if isAllowLAN {
 				prefixLen, _ := ip.Mask.Size()
 				_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ip.IP, byte(prefixLen), isPersistant))
@@ -376,12 +376,12 @@ func doEnable() (retErr error) {
 			return fmt.Errorf("failed to add filter 'allow application - obfsproxy': %w", err)
 		}
 
-		for _, ip := range addressesV4 {
-			_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIP(providerKey, layer, sublayerKey, filterDName, "", ip.IP, net.IPv4(255, 255, 255, 255), isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow remote IP': %w", err)
-			}
+		_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIP(providerKey, layer, sublayerKey, filterDName, "", net.ParseIP("127.0.0.1"), net.IPv4(255, 255, 255, 255), isPersistant))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'allow remote IP': %w", err)
+		}
 
+		for _, ip := range addressesV4 {
 			if isAllowLAN {
 				_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIP(providerKey, layer, sublayerKey, filterDName, "", ip.IP, net.IP(ip.Mask), isPersistant))
 				if err != nil {
