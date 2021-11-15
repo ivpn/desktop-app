@@ -296,24 +296,16 @@ func doEnable() (retErr error) {
 
 	// IPv6 filters
 	for _, layer := range v6Layers {
+		// block all
 		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", true, isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block all IPv6': %w", err)
 		}
 
-		_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", net.ParseIP("::1"), 128, isPersistant))
+		// block DNS
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "", nil, isPersistant))
 		if err != nil {
-			return fmt.Errorf("failed to add filter 'allow remote IP': %w", err)
-		}
-
-		for _, ip := range addressesV6 {
-			if isAllowLAN {
-				prefixLen, _ := ip.Mask.Size()
-				_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ip.IP, byte(prefixLen), isPersistant))
-				if err != nil {
-					return fmt.Errorf("failed to add filter 'allow lan IPv6': %w", err)
-				}
-			}
+			return fmt.Errorf("failed to add filter 'block dns': %w", err)
 		}
 
 		ipv6loopback := net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}     // LOOPBACK 		::1/128
@@ -327,6 +319,16 @@ func doEnable() (retErr error) {
 		_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6llocal, 10, isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow remote IP' for ipv6llocal: %w", err)
+		}
+
+		for _, ip := range addressesV6 {
+			if isAllowLAN {
+				prefixLen, _ := ip.Mask.Size()
+				_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ip.IP, byte(prefixLen), isPersistant))
+				if err != nil {
+					return fmt.Errorf("failed to add filter 'allow lan IPv6': %w", err)
+				}
+			}
 		}
 	}
 

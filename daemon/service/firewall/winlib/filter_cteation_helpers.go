@@ -31,18 +31,22 @@ import (
 
 // filter Weights
 const (
-	weightAllowLocalPort   = 10
-	weightAllowRemotePort  = 10
-	weightAllowApplication = 6
-	weightAllowRemoteIP    = 4
-	weightAllowRemoteIPV6  = 6
-	weightAllowLocalIP     = 10
-	weightAllowLocalIPV6   = 10
-	weightBlockAll         = 2
+	// IMPORTANT! Use only for Local IP/IPv6 of VPN connection
+	weightAllowLocalIP = 10
+
+	// IMPORTANT! Blocking DNS must have highest priority
+	// (only VPN connection have higher priority: weightAllowLocalIP;weightAllowLocalIPV6) //5
+	weightBlockDNS = 9
+
+	weightAllowLocalPort   = 3
+	weightAllowApplication = 3
+	weightAllowRemoteIP    = 3
+
+	weightBlockAll = 2
 	// NOTE: If split-tunnelling not enabled (driver not registered callouts) - this filter will BLOCK everything
 	// But it is ok since ST-filters weight = weightBlockAll + 1
-	weightAllowSplittedApps = 3
-	weightBlockDNS          = 5
+	// weightAllowSplittedApps = 3
+
 )
 
 // NewFilterAllowLocalPort creates a filter to allow local port
@@ -68,6 +72,7 @@ func NewFilterAllowLocalPort(
 	return f
 }
 
+/*
 // NewFilterAllowRemotePort creates a filter to allow remote port
 func NewFilterAllowRemotePort(
 	keyProvider syscall.GUID,
@@ -90,6 +95,7 @@ func NewFilterAllowRemotePort(
 	f.AddCondition(&ConditionIPRemotePort{Match: FwpMatchEqual, Port: port})
 	return f
 }
+*/
 
 // NewFilterAllowApplication creates a filter to allow application
 func NewFilterAllowApplication(
@@ -150,7 +156,7 @@ func NewFilterAllowRemoteIPV6(
 	isPersistent bool) Filter {
 
 	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
-	f.Weight = weightAllowRemoteIPV6
+	f.Weight = weightAllowRemoteIP
 	f.Action = FwpActionPermit
 
 	f.Flags = FwpmFilterFlagClearActionRight
@@ -166,6 +172,7 @@ func NewFilterAllowRemoteIPV6(
 }
 
 // NewFilterAllowLocalIP creates a filter to allow local IP
+// (IMPORTANT! Use only for Local IP of VPN connection)
 func NewFilterAllowLocalIP(
 	keyProvider syscall.GUID,
 	keyLayer syscall.GUID,
@@ -194,6 +201,7 @@ func NewFilterAllowLocalIP(
 }
 
 // NewFilterAllowLocalIPV6 creates a filter to allow local IP v6
+// (IMPORTANT! Use only for Local IPv6 of VPN connection)
 func NewFilterAllowLocalIPV6(
 	keyProvider syscall.GUID,
 	keyLayer syscall.GUID,
@@ -205,7 +213,7 @@ func NewFilterAllowLocalIPV6(
 	isPersistent bool) Filter {
 
 	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
-	f.Weight = weightAllowLocalIPV6
+	f.Weight = weightAllowLocalIP
 	f.Action = FwpActionPermit
 
 	// Do not set FwpmFilterFlagClearActionRight (f.Flags = FwpmFilterFlagClearActionRight)
