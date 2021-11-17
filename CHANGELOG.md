@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.4.4 - 2021-11-17
+
+[IMPROVED] (Windows) Updated WireGuard: v0.5.2  
+[IMPROVED] (Windows) Firewall rules  
+[FIX] (Windows) The Wireguard binary is signed to avoid false positive detections by antiviruses  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.4.4.exe)  
+SHA256: e8ec9a4a5c15fadf8343e3852d0cbb6dbb7ba8b9f5893a28fa9e37aa7c631b64  
+
 ## Version 3.4.1 - 2021-11-09
 
 [IMPROVED] (Windows) The TAP driver is signed by new certificate  
