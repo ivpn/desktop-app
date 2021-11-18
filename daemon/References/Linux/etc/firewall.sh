@@ -33,6 +33,8 @@ IPv6BIN=ip6tables
 
 LOCKWAITTIME=2
 
+SPLITTUN_CGROUP_CLASSID=0x4956504e 
+
 # main chains for IVPN firewall
 IN_IVPN=IVPN-IN
 OUT_IVPN=IVPN-OUT
@@ -93,6 +95,10 @@ function enable_firewall {
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -o lo -j ACCEPT
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -i lo -j ACCEPT
 
+      # allow packets from split-tunnel group 
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j ACCEPT
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j ACCEPT  
+
       # IPv6: assign our chains to global (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
       ${IPv6BIN} -w ${LOCKWAITTIME} -A OUTPUT -j ${OUT_IVPN}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A INPUT -j ${IN_IVPN}
@@ -129,6 +135,10 @@ function enable_firewall {
     # allow DHCP port (67out 68in)
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -p udp --dport 67 -j ACCEPT
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -p udp --dport 68 -j ACCEPT
+
+    # allow packets from split-tunnel group 
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j ACCEPT
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j ACCEPT    
 
     # enable all ICMP ping outgoing request (needed to be able to ping VPN servers)
     #${IPv4BIN} -A ${OUT_IVPN} -p icmp --icmp-type 8 -d 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
