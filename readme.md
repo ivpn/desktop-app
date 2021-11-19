@@ -54,7 +54,7 @@ To compile the OpenVPN\OpenSSL binaries locally, additional packages are needed:
 
 <a name="requirements_linux"></a>
 #### Linux
-[npm](https://www.npmjs.com/get-npm); packages: [FPM](https://fpm.readthedocs.io/en/latest/installing.html), curl, rpm, libiw-dev; [Go 1.13+](https://golang.org/); Git
+[npm](https://www.npmjs.com/get-npm); packages: [FPM](https://fpm.readthedocs.io/en/latest/installation.html), curl, rpm, libiw-dev; [Go 1.13+](https://golang.org/); Git
 
 <a name="compilation"></a>
 ### Compilation
