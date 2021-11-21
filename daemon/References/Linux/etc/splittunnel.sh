@@ -183,4 +183,6 @@ if [[ $1 = "-manual" ]] ; then
     shift
     echo "Running manual command: ${_FUNCNAME}($@) "
     ${_FUNCNAME} $@
+else
+    echo "[!] Unknown comand!"
 fi
