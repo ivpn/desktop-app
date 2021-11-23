@@ -95,9 +95,12 @@ function enable_firewall {
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -o lo -j ACCEPT
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -i lo -j ACCEPT
 
-      # allow packets from split-tunnel group 
-      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j ACCEPT
-      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j ACCEPT  
+      # allow packets from split-tunnel group
+      #${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j ACCEPT
+      #${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j ACCEPT 
+      # split tunnelling for IPv6 is currently not supported
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j DROP
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j DROP  
 
       # IPv6: assign our chains to global (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
       ${IPv6BIN} -w ${LOCKWAITTIME} -A OUTPUT -j ${OUT_IVPN}
@@ -224,11 +227,22 @@ function disable_firewall {
 
 function client_connected {
   IFACE=$1
+
+  # drop split tunnel packets to VPN interface
+  #${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_IF} -o ${IFACE} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j DROP
+  #${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN_IF} -i ${IFACE} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j DROP 
+
+  # allow all packets to VPN interface
   ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_IF} -o ${IFACE} -j ACCEPT
   ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN_IF} -i ${IFACE} -j ACCEPT
 
   if [ -f /proc/net/if_inet6 ]; then
       ### IPv6 ###
+      # drop split tunnel packets to VPN interface
+      #${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_IF} -o ${IFACE} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j DROP
+      #${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN_IF} -i ${IFACE} -m cgroup --cgroup ${SPLITTUN_CGROUP_CLASSID} -j DROP 
+
+      # allow all packets to VPN interface
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_IF} -o ${IFACE} -j ACCEPT
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN_IF} -i ${IFACE} -j ACCEPT
     fi

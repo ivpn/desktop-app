@@ -25,7 +25,7 @@ package cliplatform
 import "runtime"
 
 func IsMultiHopSupported() bool {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" || runtime.GOOS == "linux" {
 		return true
 	}
 	return false
