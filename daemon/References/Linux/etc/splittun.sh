@@ -43,13 +43,23 @@ _bin_sudo=/usr/bin/sudo
 _bin_iptables=/sbin/iptables
 _bin_awk=/usr/bin/awk
 
-# Routing tabel configuration for packets coming from Split-Tunneling environnement
+# Routing tabel configuration for packets coming from Split-Tunneling environment
 _routing_table_name=ivpnstrt
 _routing_table_weight=17            # Anything from 1 to 252
 
 # Additional parameters
 _iptables_locktime=2
-_packets_fwmark_value=1230393422    # Anything from 1 to 2147483647
+
+# Info: The 'mark' value for packets coming from the Split-Tunneling environment.
+# Using here value 0xca6c. It is the same as WireGuard marking packets which were processed.
+# That allows us not to be aware of changes in the routing policy database on each new connection of WireGuard.
+# Otherwise, it would be necessary to call this script with parameter "update" each time of new WG connection.
+# Extended description: 
+# The WG is updating its routing policy rule (ip rule) on every new connection:
+#   32761:	not from all fwmark 0xca6c lookup 51820
+# The problem is that each time this rule appears with the highest priority. 
+# So, this rule absorbs all packets which are not marked as 0xca6c
+_packets_fwmark_value=0xca6c        # Anything from 1 to 2147483647
 
 # Returns 0 in case if split tunneling enabled
 function status()
@@ -213,6 +223,9 @@ function init()
     ${_bin_iptables} -w ${_iptables_locktime} -t mangle -A PREROUTING -i ${_link_out} -j MARK --set-mark ${_packets_fwmark_value}
     # Packets with mark will use splittun table
     ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}  
+    # Ensure rule 'from all fwmark 0xca6c lookup ivpnstrt' has higher priority
+    ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
+    ${_bin_ip} rule add from all lookup main suppress_prefixlength 0
 }
 
 # Update (restore) routing policy rule
@@ -226,10 +239,14 @@ function update()
         exit 1
     fi
 
-    # remove our routing policy rule
-    ${_bin_ip} rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}  
-    # add the same rule again rule will be added with higher priority (smaller weight) than other rules 
+    # Remove our routing policy rule
+    # and add the same rule again rule will be added with higher priority (smaller weight) than other rules 
+    ${_bin_ip} rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}      
     ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}  
+
+    # Ensure rule 'from all fwmark 0xca6c lookup ivpnstrt' has higher priority
+    ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
+    ${_bin_ip} rule add from all lookup main suppress_prefixlength 0
 }
 
 # UnInitialize split tunneling
@@ -271,17 +288,18 @@ function clean()
     ############################################## 
 
     # remove rule: packets with mark will use splittun table
+    # ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 #do not remove this rulle (it can be used by active WireGuard connection)
     ${_bin_ip} rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}
     # remove: add mark to all packets coming from namespace (from ${_link_out})
     ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D PREROUTING -i ${_link_out} -j MARK --set-mark ${_packets_fwmark_value}
 
-    # remove: splittun table has a default gateway to the default interface
+    # remove: splittun table has a default gateway to the default interface    
     ${_bin_ip} route del default table ${_routing_table_name}
     # remove routing table for splitunneling
     sed -i "/${_routing_table_name}\s*$/d" /etc/iproute2/rt_tables    
 }
 
-# Execute command n split tunneling environnement
+# Execute command n split tunneling environment
 # (note: the '-init' command must be started before)
 function execute()
 {   
@@ -313,7 +331,7 @@ function execute()
     ${_bin_ip} netns exec ivpnst ${_bin_runuser} -u ${_user} -- ${_app} 
 }
 
-if [[ $1 = "init" ]] || [[ $1 = "start" ]] ; then    
+if [[ $1 = "start" ]] ; then    
     _interface_name=""
     _gateway_ip=""
     _dns_ip=""
@@ -329,11 +347,24 @@ if [[ $1 = "init" ]] || [[ $1 = "start" ]] ; then
     
     init  ${_interface_name} ${_gateway_ip} ${_dns_ip}
 
-elif [[ $1 = "execute" ]] || [[ $1 = "run" ]] ; then   
-    _command="$2"
-    _user="$3"     
+elif [[ $1 = "run" ]] ; then   
+    _command=""
+    _user=""     
+    
+    shift
+    while getopts ":u:" opt; do
+        case $opt in
+            u) _user="$OPTARG"   ;;
+        esac
+    done
+
+    if [ ! -z ${_user} ]; then
+        shift
+        shift
+    fi    
+    _command=$@
     execute "${_user}" "${_command}"
-elif [[ $1 = "clean" ]] || [[ $1 = "stop" ]]; then    
+elif [[ $1 = "stop" ]]; then    
     _interface_name=""
     shift
 
@@ -369,34 +400,34 @@ else
     echo "Note! The script have to be started under privilaged user (sudo $0 ...)"
     echo "    $0 <command> [parameters]"
     echo "Parameters:"
-    echo "    init [-i <interface_name>] [-g <gateway_ip>] [-d <dns>]"
+    echo "    start [-i <interface_name>] [-g <gateway_ip>] [-d <dns>]"
     echo "        Initialize split-tunneling functionality"
-    echo "        - interface_name - (optional) name of network interface to be used for ST environnement"
-    echo "        - gateway_ip     - (optional) gateway IP to be used for ST environnement"
-    echo "        - dns            - (optional) DNS IP to be used for ST environnement"
-    echo "    clean [-i <interface_name>]"
+    echo "        - interface_name - (optional) name of network interface to be used for ST environment"
+    echo "        - gateway_ip     - (optional) gateway IP to be used for ST environment"
+    echo "        - dns            - (optional) DNS IP to be used for ST environment"
+    echo "    stop [-i <interface_name>]"
     echo "        Uninitialize split-tunneling functionality"
     echo "        - interface_name - (optional) name of network interface which was previously used for '-init' command"
-    echo "    execute '<command>' [username]"    
-    echo "        Start commands in split-tunneling environnement"
-    echo "        - command        - the command or path to binary to be executed (must be between '' symbols)"
+    echo "    run [-u <username>] <command>"    
+    echo "        Start commands in split-tunneling environment"
+    echo "        - command        - the command or path to binary to be executed"
     echo "        - username       - (optional) the account under which the command have to be executed"
-    echo "    update"
-    echo "        Update (restore) routing policy rule"
-    echo "        It can be useful if there were changes in the routing policy database (e.g. new WireGuard connection established)"
+    #echo "    update"
+    #echo "        Update (restore) routing policy rule"
+    #echo "        It can be useful if there were changes in the routing policy database (e.g. new WireGuard connection established)"
     echo "    status"
     echo "        Check split-tunneling status"
     echo "Examples:"
     echo "    Initialize split-tunneling functionality:"
-    echo "        $0 init"
-    echo "        $0 init -i wlp3s0 -g 192.168.1.1 -d 1.1.1.1"
-    echo "    Start commands in split-tunneling environnement:"
-    echo "        $0 execute 'firefox'"
-    echo "        $0 execute '/usr/bin/firefox'"
-    echo "        $0 execute 'ping 8.8.8.8'"
+    echo "        $0 start"
+    echo "        $0 start -i wlp3s0 -g 192.168.1.1 -d 1.1.1.1"
+    echo "    Start commands in split-tunneling environment:"
+    echo "        $0 run firefox"
+    echo "        $0 run '/usr/bin/firefox'"
+    echo "        $0 run 'ping 8.8.8.8'"
     echo "    Uninitialize split-tunneling functionality:"
-    echo "        $0 clean"
-    echo "        $0 clean -i wlp3s0"
+    echo "        $0 stop"
+    echo "        $0 stop -i wlp3s0"
     echo "    Check split-tunneling status:"
     echo "        $0 status"
 fi
