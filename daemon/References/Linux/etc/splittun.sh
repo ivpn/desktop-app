@@ -42,6 +42,8 @@ _bin_runuser=/usr/sbin/runuser
 _bin_sudo=/usr/bin/sudo
 _bin_iptables=/sbin/iptables
 _bin_awk=/usr/bin/awk
+_bin_dirname=/usr/bin/dirname
+_bin_pwd=/usr/bin/pwd
 
 # Routing tabel configuration for packets coming from Split-Tunneling environment
 _routing_table_name=ivpnstrt
@@ -124,6 +126,51 @@ function info()
     echo
 }
 
+function backupUserConfig()
+{
+    # Directory where current script is located
+    _script_dir="$( cd "$(${_bin_dirname} "$0")" >/dev/null 2>&1 ; ${_bin_pwd} -P )"
+
+    if [ -z "${_script_dir}" ]; then 
+        return 1
+    fi
+
+    _tempDir="${_script_dir}/splittun_tmp"
+    if [ -d "${_script_dir}/../mutable" ]; then
+        _tempDir="${_script_dir}/../mutable/splittun_tmp"
+    fi
+
+    mkdir -p ${_tempDir}
+    cp /proc/sys/net/ipv4/ip_forward ${_tempDir}/ip_forward
+}
+
+function restoreUserConfig()
+{
+    # Directory where current script is located
+    _script_dir="$( cd "$(${_bin_dirname} "$0")" >/dev/null 2>&1 ; ${_bin_pwd} -P )"
+
+    if [ -z "${_script_dir}" ]; then 
+        return 1
+    fi
+
+    _tempDir="${_script_dir}/splittun_tmp"
+    if [ -d "${_script_dir}/../mutable" ]; then
+        _tempDir="${_script_dir}/../mutable/splittun_tmp"
+    fi
+
+    if [ ! -d "${_tempDir}" ]; then
+        return 2
+    fi
+
+    if [ -f "${_tempDir}/ip_forward" ]; then 
+        cp ${_tempDir}/ip_forward /proc/sys/net/ipv4/ip_forward
+        rm ${_tempDir}/ip_forward
+    fi
+
+    rm -fr ${_tempDir}
+
+}
+
 # Initialize split tunneling
 function init()
 {
@@ -181,13 +228,16 @@ function init()
     # Setup IP forwarding
     ##############################################
 
-    # Activate router functions
+    # Reverse path filtering
+    echo 2 > /proc/sys/net/ipv4/conf/${_link_out}/rp_filter
+
+    # backup the original value of "/proc/sys/net/ipv4/ip_forward"
+    backupUserConfig 
+    # Activate router functions (/proc/sys/net/ipv4/ip_forward 
     # Has side effects: e.g. net.ipv4.conf.all.accept_redirects=0,secure_redirects=1
     # Resets ipv4 kernel interface 'all' config values to default for HOST or ROUTER
     # https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
-    # TODO: save original value (0 ?)
     echo 1 > /proc/sys/net/ipv4/ip_forward 
-    # TODO: /proc/sys/net/ipv4/conf/*/rp_filter
 
     # Enable masquerading. Force the packets to exit through default interface (eg. eth0, enp0s3 ...) with NAT
     ${_bin_iptables} -w ${_iptables_locktime} -t nat -A POSTROUTING -s ${_link_out_ipv4}/${_link_mask_bits} -o ${_def_interface_name} -j MASQUERADE
@@ -223,9 +273,21 @@ function init()
     ${_bin_iptables} -w ${_iptables_locktime} -t mangle -A PREROUTING -i ${_link_out} -j MARK --set-mark ${_packets_fwmark_value}
     # Packets with mark will use splittun table
     ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}  
-    # Ensure rule 'from all fwmark 0xca6c lookup ivpnstrt' has higher priority
-    ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
-    ${_bin_ip} rule add from all lookup main suppress_prefixlength 0
+
+    # do required operations for compatibility with WireGuard
+    applyWireGuardCompatibility
+}
+
+function applyWireGuardCompatibility()
+{
+    # Check iw WG connected
+    _ret=$(${_bin_ip} rule list not from all fwmark 0xca6c) # WG rule 
+    if [ ! -z "${_ret}" ]; then
+        # Only for WireGuard connection:
+        # Ensure rule 'from all fwmark 0xca6c lookup ivpnstrt' has higher priority
+        ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
+        ${_bin_ip} rule add from all lookup main suppress_prefixlength 0
+    fi
 }
 
 # Update (restore) routing policy rule
@@ -244,9 +306,8 @@ function update()
     ${_bin_ip} rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}      
     ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}  
 
-    # Ensure rule 'from all fwmark 0xca6c lookup ivpnstrt' has higher priority
-    ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
-    ${_bin_ip} rule add from all lookup main suppress_prefixlength 0
+    # do required operations for compatibility with WireGuard
+    applyWireGuardCompatibility
 }
 
 # UnInitialize split tunneling
@@ -265,14 +326,19 @@ function clean()
     ##############################################
     # Delete namespace
     ##############################################
+
+    #${_bin_ip} link delete ${_link_out}
+    #${_bin_ip} netns exec ${_namespace} ${_bin_ip} link delete ${_link_in}
+
     # The pair of 'veth' interfaces (${_link_in},  ${_link_out}) will be deleted automatically
     ${_bin_ip} netns del ${_namespace}
 
     ##############################################
     # IP forwarding
     ##############################################
-    # TODO: restore original value
-    echo 0 > /proc/sys/net/ipv4/ip_forward 
+    # restore the original value of "/proc/sys/net/ipv4/ip_forward"
+    restoreUserConfig 
+
     # Erase forward rules
     ${_bin_iptables} -w ${_iptables_locktime} -t nat -D POSTROUTING -s ${_link_out_ipv4}/${_link_mask_bits} -o ${_def_interface_name} -j MASQUERADE
     ${_bin_iptables} -w ${_iptables_locktime} -D FORWARD -i ${_def_interface_name} -o ${_link_out} -j ACCEPT
