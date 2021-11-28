@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  win:
+    runs-on: windows-latest
+
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v2
+
+      - name: setup-msbuild
+        uses: microsoft/setup-msbuild@v1
+
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build
+        shell: cmd
+        run: |
+          cd ui\References\Windows
+          build.bat
