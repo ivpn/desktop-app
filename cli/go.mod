@@ -1,6 +1,6 @@
 module github.com/ivpn/desktop-app/cli
 
-go 1.13
+go 1.16
 
 require (
 	github.com/ivpn/desktop-app/daemon v0.0.0
