@@ -31,3 +31,34 @@ jobs:
         run: |
           cd ui\References\Windows
           build.bat
+
+  linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install deps
+        run: sudo apt-get install rpm libiw-dev
+
+      - uses: actions/setup-ruby@v1
+
+      - name: Install fpm
+        run: gem install fpm
+
+      - name: Build
+        run: |
+          cd ui/References/Linux
+          ./build.sh -v $(cat ../../package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g')
