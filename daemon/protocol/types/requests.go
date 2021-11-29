@@ -287,6 +287,6 @@ type SplitTunnelGetConfig struct {
 // SplitTunnelStartCommand start command in split-tunnel environment
 type SplitTunnelStartCommand struct {
 	CommandBase
-	Command string
-	OSUser  string
+	CmdToStart string
+	OSUser     string
 }

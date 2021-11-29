@@ -73,5 +73,5 @@ func FirewallScript() string {
 
 // SplitTunScript returns path to script which control split-tunneling functionality
 func SplitTunScript() string {
-	return firewallScript
+	return splitTunScript
 }

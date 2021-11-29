@@ -27,9 +27,9 @@ import "runtime"
 func IsSplitTunSupported() bool {
 	return runtime.GOOS == "windows" || runtime.GOOS == "linux"
 }
-func IsSplitTunAddAppSupported() bool {
+func IsSplitTunCanAddApp() bool {
 	return runtime.GOOS == "windows"
 }
-func IsSplitTunRunAppSupported() bool {
+func IsSplitTunCanRunApp() bool {
 	return runtime.GOOS == "linux"
 }

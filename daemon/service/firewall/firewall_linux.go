@@ -66,8 +66,8 @@ func implGetEnabled() (bool, error) {
 		if err != nil {
 			return false, fmt.Errorf("failed to get Cmd exit code: %w", err)
 		}
-		if exitCode == 1 {
-			return false, nil
+		if exitCode == 0 {
+			return true, nil
 		}
 		return false, nil
 	}
@@ -439,7 +439,7 @@ func removeHostsFromExceptions(IPs []string, isPersistant bool, onlyForICMP bool
 				toRemoveIPs = append(toRemoveIPs, ip)
 			}
 		}
-	} else if (allowedForICMP != nil){
+	} else if allowedForICMP != nil {
 		for _, ip := range IPs {
 			if _, exists := allowedForICMP[ip]; exists {
 				delete(allowedForICMP, ip) // remove from map

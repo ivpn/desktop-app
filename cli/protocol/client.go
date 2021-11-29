@@ -332,6 +332,21 @@ func (c *Client) SetSplitTunnelConfig(cfg types.SplitTunnelConfig) (err error) {
 	return nil
 }
 
+// RunSplitTunnelCommand start command in split-tunnel environment
+func (c *Client) RunSplitTunnelCommand(command, username string) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.SplitTunnelStartCommand{CmdToStart: command, OSUser: username}
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetServers gets servers list
 func (c *Client) GetServers() (apitypes.ServersInfoResponse, error) {
 	if err := c.ensureConnected(); err != nil {

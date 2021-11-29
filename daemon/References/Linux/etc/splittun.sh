@@ -398,6 +398,7 @@ function execute()
 }
 
 if [[ $1 = "start" ]] ; then    
+    # TODO: implement return value (0 when succes)
     _interface_name=""
     _gateway_ip=""
     _dns_ip=""
@@ -414,6 +415,7 @@ if [[ $1 = "start" ]] ; then
     init  ${_interface_name} ${_gateway_ip} ${_dns_ip}
 
 elif [[ $1 = "run" ]] ; then   
+    # TODO: implement return value (0 when succes)
     _command=""
     _user=""     
     
@@ -431,6 +433,7 @@ elif [[ $1 = "run" ]] ; then
     _command=$@
     execute "${_user}" "${_command}"
 elif [[ $1 = "stop" ]]; then    
+    # TODO: implement return value (0 when succes)
     _interface_name=""
     shift
 
@@ -440,7 +443,8 @@ elif [[ $1 = "stop" ]]; then
         esac
     done
     clean ${_interface_name} 
-elif [[ $1 = "update" ]] || [[ $1 = "restart" ]] ; then    
+elif [[ $1 = "update" ]] || [[ $1 = "restart" ]] ; then   
+    # TODO: implement return value (0 when succes) 
     shift 
     update $@     
 elif [[ $1 = "status" ]] ; then    

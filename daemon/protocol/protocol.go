@@ -602,7 +602,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		if err := p._service.SplitTunnelling_RunCommand(req.Command, req.OSUser); err != nil {
+		if err := p._service.SplitTunnelling_RunCommand(req.CmdToStart, req.OSUser); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
