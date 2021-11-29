@@ -634,18 +634,6 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 		// Ensure that routing-change detector is stopped (we do not need it when VPN disconnected)
 		s._netChangeDetector.Stop()
 
-		// disabling Split-Tunnelling
-		if splittun.IsConnectted() {
-			err := splittun.StopAndClean()
-			if err != nil {
-				log.Error("(stopping) error on stopping Split-Tunnelling:", err)
-			}
-			err = splittun.Disconnect()
-			if err != nil {
-				log.Error("(stopping) error on disconnecting Split-Tunnelling:", err)
-			}
-		}
-
 		// notify firewall that client is disconnected
 		err := firewall.ClientDisconnected()
 		if err != nil {
@@ -673,6 +661,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 		// Forget VPN object
 		s._vpn = nil
+
+		// Notify Split-Tunneling module about disconnected VPN status
+		s.SplitTunnelling_ApplyConfig()
 
 		log.Info("VPN process stopped")
 	}()
@@ -753,7 +744,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 					sInfo.VpnLocalIPv6 = state.ClientIPv6
 					s.SetVpnSessionInfo(sInfo)
 
-					// enable Split-Tunnelling (if necessary)
+					// Notify Split-Tunneling module about connected VPN status
 					s.SplitTunnelling_ApplyConfig()
 				default:
 				}
@@ -1195,64 +1186,21 @@ func (s *Service) SplitTunnelling_ApplyConfig() error {
 		return nil
 	}
 
-	if !s.Connected() {
-		// VPM not connected. No sense to enable split-tunnelling
-		return nil
-	}
-
 	prefs := s.Preferences()
 	sInf := s.GetVpnSessionInfo()
 
-	// If ST connected:
-	//	- stop and erase old configuration
-	//  - if ST have to be disabled - disconnect ST driver
-	if splittun.IsConnectted() {
-		if err := splittun.StopAndClean(); err != nil {
-			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
-		}
-		if !prefs.IsSplitTunnel {
-			if err := splittun.Disconnect(); err != nil {
-				return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
-			}
-		}
-	}
-
-	if !prefs.IsSplitTunnel || len(prefs.SplitTunnelApps) == 0 || ((sInf.OutboundIPv4 == nil || sInf.VpnLocalIPv4 == nil) && (sInf.OutboundIPv6 == nil || sInf.VpnLocalIPv6 == nil)) {
-		// no configuration
-		return nil
-	}
-
-	// If ST not connected:
-	//	- connect driver
-	//  - stop and erase old configuration
-	if !splittun.IsConnectted() {
-		if err := splittun.Connect(); err != nil {
-			return log.ErrorE(fmt.Errorf("failed to start split-tunnelling: %w", err), 0)
-		}
-		if err := splittun.StopAndClean(); err != nil {
-			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
-		}
-	}
-
-	// Set new configuration
-	cfg := splittun.Config{}
-	cfg.Apps = splittun.ConfigApps{ImagesPathToSplit: prefs.SplitTunnelApps}
-	cfg.Addr = splittun.ConfigAddresses{
+	addressesCfg := splittun.ConfigAddresses{
 		IPv4Tunnel: sInf.VpnLocalIPv4,
 		IPv4Public: sInf.OutboundIPv4,
 		IPv6Tunnel: sInf.VpnLocalIPv6,
 		IPv6Public: sInf.OutboundIPv6}
 
-	if err := splittun.SetConfig(cfg); err != nil {
-		log.Error(fmt.Errorf("error on configuring Split-Tunnelling: %w", err))
-	} else {
-		if err := splittun.Start(); err != nil {
-			log.Error(fmt.Errorf("error on start Split-Tunnelling: %w", err))
-		} else {
-			log.Info(fmt.Sprintf("Split-Tunnelling started: IPv4: (%s) => (%s) IPv6: (%s) => (%s)", sInf.VpnLocalIPv4, sInf.OutboundIPv4, sInf.VpnLocalIPv6, sInf.OutboundIPv6))
-		}
-	}
-	return nil
+	return splittun.ApplyConfig(prefs.IsSplitTunnel, s.Connected(), addressesCfg, prefs.SplitTunnelApps)
+}
+
+// Start command in split-tunnel environment
+func (s *Service) SplitTunnelling_RunCommand(command, osUser string) error {
+	return splittun.RunCmdInSplittunEnvironment(command, osUser)
 }
 
 func (s *Service) GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error) {

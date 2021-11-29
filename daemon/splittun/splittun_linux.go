@@ -26,7 +26,16 @@ import (
 	"fmt"
 )
 
+var (
+	stScriptPath string
+)
+
 func implInitialize() error {
+	stScriptPath = platform.SplitTunScript()
+	if len(stScriptPath) <= 0 {
+		return fmt.Errorf("Split-Tunnelling script is not defined")
+	}
+
 	return fmt.Errorf("Split-Tunnelling is not implemented for Linux")
 }
 
@@ -34,29 +43,10 @@ func implFuncNotAvailableError() error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for Linux")
 }
 
-func implConnect() error {
+func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for Linux")
 }
 
-func implDisconnect() (err error) {
-	return nil
-}
-
-func implStopAndClean() error {
-	return nil
-}
-
-func implGetState() (State, error) {
-	return State{}, nil
-}
-
-func implSetConfig(config Config) error {
-	return nil
-}
-func implGetConfig() (Config, error) {
-	return Config{}, nil
-}
-
-func implStart() error {
-	return nil
+func implRunCmdInSplittunEnvironment(commandToExecute, osUser string) error {
+	return fmt.Errorf("Split-Tunnelling is not implemented for Linux")
 }

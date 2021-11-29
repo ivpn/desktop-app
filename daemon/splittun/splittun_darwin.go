@@ -34,29 +34,10 @@ func implFuncNotAvailableError() error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }
 
-func implConnect() error {
+func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }
 
-func implDisconnect() (err error) {
-	return nil
-}
-
-func implStopAndClean() error {
-	return nil
-}
-
-func implGetState() (State, error) {
-	return State{}, nil
-}
-
-func implSetConfig(config Config) error {
-	return nil
-}
-func implGetConfig() (Config, error) {
-	return Config{}, nil
-}
-
-func implStart() error {
-	return nil
+func implRunCmdInSplittunEnvironment(commandToExecute, osUser string) error {
+	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }

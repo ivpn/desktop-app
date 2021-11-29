@@ -56,6 +56,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	installDir = path.Join(installDir, "References/Linux")
 
 	firewallScript = path.Join(installDir, "etc/firewall.sh")
+	splitTunScript = path.Join(installDir, "etc/splittun.sh")
 	openvpnCaKeyFile = path.Join(installDir, "etc/ca.crt")
 	openvpnTaKeyFile = path.Join(installDir, "etc/ta.key")
 	openvpnUpScript = path.Join(installDir, "etc/client.up")

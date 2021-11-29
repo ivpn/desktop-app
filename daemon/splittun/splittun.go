@@ -36,8 +36,7 @@ func init() {
 }
 
 var (
-	isConnected bool
-	mutex       sync.Mutex
+	mutex sync.Mutex
 )
 
 type State struct {
@@ -46,10 +45,10 @@ type State struct {
 }
 
 type ConfigAddresses struct {
-	IPv4Public net.IP
-	IPv4Tunnel net.IP
-	IPv6Public net.IP
-	IPv6Tunnel net.IP
+	IPv4Public net.IP // OutboundIPv4
+	IPv4Tunnel net.IP // VpnLocalIPv4
+	IPv6Public net.IP // OutboundIPv6
+	IPv6Tunnel net.IP // VpnLocalIPv6
 }
 type ConfigApps struct {
 	ImagesPathToSplit []string
@@ -60,13 +59,9 @@ type Config struct {
 	Apps ConfigApps
 }
 
-func IsConnectted() bool {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	return isConnected
-}
-
+// Initialize must be called first (before accessing any ST functionality)
+// Normally, it should check if the ST functionality available
+// Returns non-nil error object if Split-Tunneling functionality not available
 func Initialize() error {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -80,80 +75,25 @@ func Initialize() error {
 	return nil
 }
 
-// IsFuncNotAvailableError - returns non-nil error object if Split-Tunneling functionality not available
+// IsFuncNotAvailableError returns non-nil error object if Split-Tunneling functionality not available
+// The return value is the same as Initialize()
 func GetFuncNotAvailableError() error {
 	return implFuncNotAvailableError()
 }
 
-func Connect() error {
+// ApplyConfig control split-tunnel functionality
+func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if isConnected {
-		return nil
+	if !isVpnEnabled {
+		addrConfig.IPv4Tunnel = nil
+		addrConfig.IPv6Tunnel = nil
 	}
 
-	log.Info("Split-Tunnelling: Connect...")
-	ret := implConnect()
-	if ret == nil {
-		isConnected = true
-		log.Info("Split-Tunnelling: ready")
-	}
-	return ret
+	return implApplyConfig(isStEnabled, isVpnEnabled, addrConfig, splitTunnelApps)
 }
 
-func Disconnect() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: Disconnect...")
-	isConnected = false
-	return implDisconnect()
+func RunCmdInSplittunEnvironment(commandToExecute, osUser string) error {
+	return implRunCmdInSplittunEnvironment(commandToExecute, osUser)
 }
-
-func StopAndClean() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: StopAndClean...")
-
-	return implStopAndClean()
-}
-
-func GetState() (State, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	return implGetState()
-}
-
-func SetConfig(config Config) error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: SetConfig...")
-	return implSetConfig(config)
-}
-func GetConfig() (Config, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	return implGetConfig()
-}
-
-func Start() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: Start...")
-	return implStart()
-}
-
-/*
-func Stop() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: stopping")
-	return implStop()
-}*/

@@ -93,7 +93,7 @@ func main() {
 	addCommand(&commands.CmdDisconnect{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
-	if cliplatform.IsMultiHopSupported() {
+	if cliplatform.IsSplitTunSupported() {
 		// Split tunnel functionality is currently only available on Windows
 		addCommand(&commands.SplitTun{})
 	}

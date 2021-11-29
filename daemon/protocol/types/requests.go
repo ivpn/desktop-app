@@ -283,3 +283,10 @@ type SplitTunnelSetConfig struct {
 type SplitTunnelGetConfig struct {
 	CommandBase
 }
+
+// SplitTunnelStartCommand start command in split-tunnel environment
+type SplitTunnelStartCommand struct {
+	CommandBase
+	Command string
+	OSUser  string
+}

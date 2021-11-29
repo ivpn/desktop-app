@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ivpn/desktop-app/cli/cliplatform"
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
@@ -38,16 +39,25 @@ type SplitTun struct {
 	reset     bool
 	appadd    string
 	appremove string
+	execute   string
 }
 
 func (c *SplitTun) Init() {
 	c.Initialize("splittun", "Split Tunnel management\nBy enabling this feature you can exclude traffic for a specific applications from the VPN tunnel")
+
 	c.BoolVar(&c.status, "status", false, "(default) Show Split Tunnel status and configuration")
 	c.BoolVar(&c.on, "on", false, "Enable")
 	c.BoolVar(&c.off, "off", false, "Disable")
-	c.BoolVar(&c.reset, "clean", false, "Erase configuration (delete all applications from configuration and disable)")
-	c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to binary)")
-	c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to binary)")
+
+	if cliplatform.IsSplitTunAddAppSupported() {
+		c.BoolVar(&c.reset, "clean", false, "Erase configuration (delete all applications from configuration and disable)")
+		c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to binary)")
+		c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to binary)")
+	}
+
+	if cliplatform.IsSplitTunRunAppSupported() {
+		c.StringVar(&c.execute, "execute", "", "COMMAND", "Run command in Split-Tunneling environment")
+	}
 }
 
 func (c *SplitTun) Run() error {
