@@ -47,6 +47,9 @@ func implInitialize() error {
 		return funcNotAvailableError
 	}
 
+	// Ensure that ST is disable on daemon startup
+	enable(false)
+
 	return nil
 }
 

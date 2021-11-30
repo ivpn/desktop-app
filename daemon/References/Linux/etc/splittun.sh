@@ -25,7 +25,7 @@
 
 # Split-Tunneling namespace name
 _namespace=ivpnst
-# Virtual interfaces to link connectivity between main and ST namespace 
+# Virtual interfaces to link connectivity between main and ST namespace
 _link_out=ivpnstout
 _link_in=ivpnstin
 # IP addresses and mask for virtual interfaces
@@ -56,10 +56,10 @@ _iptables_locktime=2
 # Using here value 0xca6c. It is the same as WireGuard marking packets which were processed.
 # That allows us not to be aware of changes in the routing policy database on each new connection of WireGuard.
 # Otherwise, it would be necessary to call this script with parameter "update" each time of new WG connection.
-# Extended description: 
+# Extended description:
 # The WG is updating its routing policy rule (ip rule) on every new connection:
 #   32761:	not from all fwmark 0xca6c lookup 51820
-# The problem is that each time this rule appears with the highest priority. 
+# The problem is that each time this rule appears with the highest priority.
 # So, this rule absorbs all packets which are not marked as 0xca6c
 _packets_fwmark_value=0xca6c        # Anything from 1 to 2147483647
 
@@ -69,10 +69,10 @@ function status()
     ${_bin_sudo} ${_bin_ip} netns exec ${_namespace} ${_bin_ip} netns identify > /dev/null 2>&1
     _ret=$?
     if [ ${_ret} == 0 ]; then
-      echo "Split Tunneling: ENABLED" 
+      echo "Split Tunneling: ENABLED"
       return 0
     fi
-    echo "Split Tunneling: DISABLED" 
+    echo "Split Tunneling: DISABLED"
     return ${_ret}
 }
 
@@ -80,46 +80,46 @@ function status()
 function info()
 {
     status
-    echo 
-    
+    echo
+
     echo "[*] Interfaces (${_bin_ip} link):"
     ${_bin_ip} link
-    echo 
+    echo
 
     _val=`cat /proc/sys/net/ipv4/ip_forward`
     echo "[*] /proc/sys/net/ipv4/ip_forward: ${_val}"
     echo
 
     echo "[*] /proc/sys/net/ipv4/conf/*/rp_filter:"
-    for i in /proc/sys/net/ipv4/conf/*/rp_filter; do 
+    for i in /proc/sys/net/ipv4/conf/*/rp_filter; do
         _val=`cat $i`
         echo $i: ${_val}
     done
-    echo  
+    echo
 
     echo "[*] Default rules (${_bin_iptables} -S):"
     ${_bin_iptables} -S
-    echo 
+    echo
 
     echo "[*] Namespaces (${_bin_ip} netns list):"
     ${_bin_ip} netns list
-    echo 
+    echo
 
     echo "[*] File '/etc/iproute2/rt_tables':"
     cat /etc/iproute2/rt_tables
-    echo 
+    echo
 
     echo "[*] iptables -t mangle -S:"
     ${_bin_iptables} -t mangle -S
-    echo 
+    echo
 
     echo "[*] iptables -t nat -S:"
     ${_bin_iptables} -t nat -S
-    echo 
+    echo
 
     echo "[*] ip rule:"
     ${_bin_ip} rule
-    echo 
+    echo
 
     echo "[*] ip route show table ${_routing_table_name}"
     ${_bin_ip} route show table ${_routing_table_name}
@@ -131,13 +131,18 @@ function backupUserConfig()
     # Directory where current script is located
     _script_dir="$( cd "$(${_bin_dirname} "$0")" >/dev/null 2>&1 ; ${_bin_pwd} -P )"
 
-    if [ -z "${_script_dir}" ]; then 
+    if [ -z "${_script_dir}" ]; then
         return 1
     fi
 
     _tempDir="${_script_dir}/splittun_tmp"
     if [ -d "${_script_dir}/../mutable" ]; then
         _tempDir="${_script_dir}/../mutable/splittun_tmp"
+    fi
+
+    if [ -f ${_tempDir}/ip_forward ]; then
+      # the backup is already exists
+      return
     fi
 
     mkdir -p ${_tempDir}
@@ -149,7 +154,7 @@ function restoreUserConfig()
     # Directory where current script is located
     _script_dir="$( cd "$(${_bin_dirname} "$0")" >/dev/null 2>&1 ; ${_bin_pwd} -P )"
 
-    if [ -z "${_script_dir}" ]; then 
+    if [ -z "${_script_dir}" ]; then
         return 1
     fi
 
@@ -162,7 +167,7 @@ function restoreUserConfig()
         return 2
     fi
 
-    if [ -f "${_tempDir}/ip_forward" ]; then 
+    if [ -f "${_tempDir}/ip_forward" ]; then
         cp ${_tempDir}/ip_forward /proc/sys/net/ipv4/ip_forward
         rm ${_tempDir}/ip_forward
     fi
@@ -183,14 +188,22 @@ function init()
 
     # Ensure the input parameters not empty
     if [ -z ${_def_interface_name} ]; then
-        echo "[!] Default network interface is not defined. Trying to determine it automatically..."
+        echo "[i] Default network interface is not defined. Trying to determine it automatically..."
         _def_interface_name=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $5 }')
         echo "[+] Default network interface: '${_def_interface_name}'"
     fi
     if [ -z ${_def_gateway} ]; then
-        echo "[!] Default gateway is not defined. Trying to determine it automatically..."
+        echo "[i] Default gateway is not defined. Trying to determine it automatically..."
         _def_gateway=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $3 }')
         echo "[+] Default gateway: '${_def_gateway}'"
+    fi
+    if [ -z ${_def_interface_name} ]; then
+        echo "[!] Default network interface is not defined."
+        return 2
+    fi
+    if [ -z ${_def_gateway} ]; then
+        echo "[!] Default gateway is not defined."
+        return 3
     fi
 
     ##############################################
@@ -210,7 +223,7 @@ function init()
     # Create a veth virtual-interface pair
     # ${_link_out} - live in default namespace
     # ${_link_in} - live in namespace for splittuneling (${_namespace})
-    ${_bin_ip} link add ${_link_out} type veth peer name ${_link_in} netns ${_namespace} 
+    ${_bin_ip} link add ${_link_out} type veth peer name ${_link_in} netns ${_namespace}
 
     # Assign an address to each interface
     ${_bin_ip} addr add ${_link_out_ipv4}/${_link_mask_bits} dev ${_link_out}
@@ -232,12 +245,12 @@ function init()
     echo 2 > /proc/sys/net/ipv4/conf/${_link_out}/rp_filter
 
     # backup the original value of "/proc/sys/net/ipv4/ip_forward"
-    backupUserConfig 
-    # Activate router functions (/proc/sys/net/ipv4/ip_forward 
+    backupUserConfig
+    # Activate router functions (/proc/sys/net/ipv4/ip_forward
     # Has side effects: e.g. net.ipv4.conf.all.accept_redirects=0,secure_redirects=1
     # Resets ipv4 kernel interface 'all' config values to default for HOST or ROUTER
     # https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
-    echo 1 > /proc/sys/net/ipv4/ip_forward 
+    echo 1 > /proc/sys/net/ipv4/ip_forward
 
     # Enable masquerading. Force the packets to exit through default interface (eg. eth0, enp0s3 ...) with NAT
     ${_bin_iptables} -w ${_iptables_locktime} -t nat -A POSTROUTING -s ${_link_out_ipv4}/${_link_mask_bits} -o ${_def_interface_name} -j MASQUERADE
@@ -245,7 +258,7 @@ function init()
     ${_bin_iptables} -w ${_iptables_locktime} -A FORWARD -o ${_def_interface_name} -i ${_link_out} -j ACCEPT
     # OR
     #${_bin_iptables} -t nat -A POSTROUTING -s ${_link_in_ipv4}/${_link_mask_bits} -j SNAT --to-source 192.168.1.167
-    
+
     ##############################################
     # Setup DNS for 'splitted' namespace
     ##############################################
@@ -256,14 +269,27 @@ function init()
         _def_dns=${_the_fallback_dns}
         echo "[!] DNS IP not defined. Using default '${_def_dns}'"
     fi
-    mkdir -p /etc/netns/${_namespace} && echo "nameserver ${_def_dns}" > /etc/netns/${_namespace}/resolv.conf        
+    mkdir -p /etc/netns/${_namespace} && echo "nameserver ${_def_dns}" > /etc/netns/${_namespace}/resolv.conf
     # (optional) copy hosts file
     mkdir -p /etc/netns/${_namespace} && cp /etc/hosts /etc/netns/${_namespace}/hosts
 
     ##############################################
+    # When 'firewalld' is in use - add specific firewalld rules
+    ##############################################
+    firewall-cmd --state > /dev/null 2>&1
+    if [ $? == 0 ]; then
+        firewall-cmd --zone=trusted --add-interface=${_link_out}
+    fi
+
+    ##############################################
+    # INFO: Some Linux configurations blocks the ping packets from the namespace
+    ##############################################
+    # Example how to allow ping:
+    # ip netns exec sysctl net.ipv4.ping_group_range="0 2147483647"
+
+    ##############################################
     # Use different routing for packets coming from the 'splitted' namespaces
     ##############################################
-     
     # create routing table for splitunneling
     echo "${_routing_table_weight}      ${_routing_table_name}" >> /etc/iproute2/rt_tables
     # Set default gateway for the 'splittun' table
@@ -272,7 +298,7 @@ function init()
     # add mark to all packets coming from namespace (from ${_link_out})
     ${_bin_iptables} -w ${_iptables_locktime} -t mangle -A PREROUTING -i ${_link_out} -j MARK --set-mark ${_packets_fwmark_value}
     # Packets with mark will use splittun table
-    ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}  
+    ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}
 
     # do required operations for compatibility with WireGuard
     applyWireGuardCompatibility
@@ -281,7 +307,7 @@ function init()
 function applyWireGuardCompatibility()
 {
     # Check iw WG connected
-    _ret=$(${_bin_ip} rule list not from all fwmark 0xca6c) # WG rule 
+    _ret=$(${_bin_ip} rule list not from all fwmark 0xca6c) # WG rule
     if [ ! -z "${_ret}" ]; then
         # Only for WireGuard connection:
         # Ensure rule 'from all fwmark 0xca6c lookup ivpnstrt' has higher priority
@@ -302,42 +328,41 @@ function update()
     fi
 
     # Remove our routing policy rule
-    # and add the same rule again rule will be added with higher priority (smaller weight) than other rules 
-    ${_bin_ip} rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}      
-    ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}  
+    # and add the same rule again rule will be added with higher priority (smaller weight) than other rules
+    ${_bin_ip} rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}
+    ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}
 
     # do required operations for compatibility with WireGuard
     applyWireGuardCompatibility
 }
 
 # UnInitialize split tunneling
-function clean() 
+function clean()
 {
     # default interface name
     _def_interface_name=$1
-    
+
     # Ensure the input parameters not empty
     if [ -z ${_def_interface_name} ]; then
-        echo "[!] Default network interface is not defined. Trying to determine it automatically..."
+        echo "[i] Default network interface is not defined. Trying to determine it automatically..."
         _def_interface_name=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $5 }')
         echo "[+] Default network interface: '${_def_interface_name}'"
     fi
-    
+
     ##############################################
     # Delete namespace
     ##############################################
 
-    #${_bin_ip} link delete ${_link_out}
-    #${_bin_ip} netns exec ${_namespace} ${_bin_ip} link delete ${_link_in}
-
     # The pair of 'veth' interfaces (${_link_in},  ${_link_out}) will be deleted automatically
     ${_bin_ip} netns del ${_namespace}
+    #just to ensure that everything cleaned up
+    ${_bin_ip} link delete ${_link_out} > /dev/null 2>&1
 
     ##############################################
     # IP forwarding
     ##############################################
     # restore the original value of "/proc/sys/net/ipv4/ip_forward"
-    restoreUserConfig 
+    restoreUserConfig
 
     # Erase forward rules
     ${_bin_iptables} -w ${_iptables_locktime} -t nat -D POSTROUTING -s ${_link_out_ipv4}/${_link_mask_bits} -o ${_def_interface_name} -j MASQUERADE
@@ -350,8 +375,16 @@ function clean()
     rm -fr /etc/netns/${_namespace}
 
     ##############################################
+    # When 'firewalld' is in use - add specific firewalld rules
+    ##############################################
+    firewall-cmd --state > /dev/null 2>&1
+    if [ $? == 0 ]; then
+        firewall-cmd --zone=trusted --remove-interface=${_link_out}
+    fi
+
+    ##############################################
     # Remove routing for packets coming from the 'splitted' namespaces
-    ############################################## 
+    ##############################################
 
     # remove rule: packets with mark will use splittun table
     # ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 #do not remove this rulle (it can be used by active WireGuard connection)
@@ -359,26 +392,26 @@ function clean()
     # remove: add mark to all packets coming from namespace (from ${_link_out})
     ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D PREROUTING -i ${_link_out} -j MARK --set-mark ${_packets_fwmark_value}
 
-    # remove: splittun table has a default gateway to the default interface    
+    # remove: splittun table has a default gateway to the default interface
     ${_bin_ip} route del default table ${_routing_table_name}
     # remove routing table for splitunneling
-    sed -i "/${_routing_table_name}\s*$/d" /etc/iproute2/rt_tables    
+    sed -i "/${_routing_table_name}\s*$/d" /etc/iproute2/rt_tables
 }
 
 # Execute command n split tunneling environment
 # (note: the '-init' command must be started before)
 function execute()
-{   
+{
     _user="$1"
     _app="$2"
 
     #echo "App: ${_app}"
-    #echo "User: ${_user}"  
+    #echo "User: ${_user}"
 
     if [ -z "${_app}" ]; then
         echo "[!] ERROR: Application not defined"
         exit 1
-    fi   
+    fi
 
     # Check if split tunneling enabled
     status > /dev/null 2>&1
@@ -386,24 +419,24 @@ function execute()
         echo "ERROR: split tunneling DISABLED. Please call '-init' command first"
         exit 1
     fi
-   
+
     # Obtaining information about user running the script
     # (script must be executed with 'sudo', but we should get real user)
     if [ -z ${_user} ]; then
         _user="${SUDO_USER:-$USER}"
-    fi   
+    fi
 
     echo "[+] Starting '${_app}' for a user '${_user}'..."
-    ${_bin_ip} netns exec ivpnst ${_bin_runuser} -u ${_user} -- ${_app} 
+    ${_bin_ip} netns exec ${_namespace} ${_bin_runuser} -u ${_user} -- ${_app}
 }
 
-if [[ $1 = "start" ]] ; then    
+if [[ $1 = "start" ]] ; then
     # TODO: implement return value (0 when succes)
     _interface_name=""
     _gateway_ip=""
     _dns_ip=""
     shift
-    
+
     while getopts ":i:g:d:" opt; do
         case $opt in
             i) _interface_name="$OPTARG"   ;;
@@ -411,14 +444,14 @@ if [[ $1 = "start" ]] ; then
             d) _dns_ip="$OPTARG"    ;;
         esac
     done
-    
+
     init  ${_interface_name} ${_gateway_ip} ${_dns_ip}
 
-elif [[ $1 = "run" ]] ; then   
+elif [[ $1 = "run" ]] ; then
     # TODO: implement return value (0 when succes)
     _command=""
-    _user=""     
-    
+    _user=""
+
     shift
     while getopts ":u:" opt; do
         case $opt in
@@ -429,10 +462,10 @@ elif [[ $1 = "run" ]] ; then
     if [ ! -z ${_user} ]; then
         shift
         shift
-    fi    
+    fi
     _command=$@
     execute "${_user}" "${_command}"
-elif [[ $1 = "stop" ]]; then    
+elif [[ $1 = "stop" ]]; then
     # TODO: implement return value (0 when succes)
     _interface_name=""
     shift
@@ -442,20 +475,20 @@ elif [[ $1 = "stop" ]]; then
             i) _interface_name="$OPTARG"   ;;
         esac
     done
-    clean ${_interface_name} 
-elif [[ $1 = "update" ]] || [[ $1 = "restart" ]] ; then   
-    # TODO: implement return value (0 when succes) 
-    shift 
-    update $@     
-elif [[ $1 = "status" ]] ; then    
-    shift 
-    status $@       
-elif [[ $1 = "info" ]] ; then    
-    shift 
-    info $@    
+    clean ${_interface_name}
+elif [[ $1 = "update" ]] || [[ $1 = "restart" ]] ; then
+    # TODO: implement return value (0 when succes)
+    shift
+    update $@
+elif [[ $1 = "status" ]] ; then
+    shift
+    status $@
+elif [[ $1 = "info" ]] ; then
+    shift
+    info $@
 elif [[ $1 = "manual" ]] ; then
     _FUNCNAME=$2
-    shift 
+    shift
     shift
     echo "Running manual command: ${_FUNCNAME}($@) "
     ${_FUNCNAME} $@
@@ -478,7 +511,7 @@ else
     echo "    stop [-i <interface_name>]"
     echo "        Uninitialize split-tunneling functionality"
     echo "        - interface_name - (optional) name of network interface which was previously used for '-init' command"
-    echo "    run [-u <username>] <command>"    
+    echo "    run [-u <username>] <command>"
     echo "        Start commands in split-tunneling environment"
     echo "        - command        - the command or path to binary to be executed"
     echo "        - username       - (optional) the account under which the command have to be executed"
