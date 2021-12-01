@@ -310,7 +310,7 @@ function applyWireGuardCompatibility()
     _ret=$(${_bin_ip} rule list not from all fwmark 0xca6c) # WG rule
     if [ ! -z "${_ret}" ]; then
         # Only for WireGuard connection:
-        # Ensure rule 'from all fwmark 0xca6c lookup ivpnstrt' has higher priority
+        # Ensure rule 'rule add from all lookup main suppress_prefixlength 0' has higher priority
         ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
         ${_bin_ip} rule add from all lookup main suppress_prefixlength 0
     fi
@@ -416,7 +416,7 @@ function execute()
     # Check if split tunneling enabled
     status > /dev/null 2>&1
     if [ $? != 0 ]; then
-        echo "ERROR: split tunneling DISABLED. Please call '-init' command first"
+        echo "ERROR: split tunneling DISABLED. Please call 'start' command first"
         exit 1
     fi
 
