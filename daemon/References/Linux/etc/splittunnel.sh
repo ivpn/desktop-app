@@ -35,10 +35,13 @@ _routing_table_weight=17            # Anything from 1 to 252
 # Additional parameters
 _iptables_locktime=2
 
+# Backup folder name.
+# This folder contains temporary data to be able to clean everything correctly 
+_backup_folder_name=ivpn-exclude-tmp
+
 # Info: The 'mark' value for packets coming from the Split-Tunneling environment.
 # Using here value 0xca6c. It is the same as WireGuard marking packets which were processed.
 # That allows us not to be aware of changes in the routing policy database on each new connection of WireGuard.
-# Otherwise, it would be necessary to call this script with parameter "update" each time of new WG connection.
 # Extended description:
 # The WG is updating its routing policy rule (ip rule) on every new connection:
 #   32761:	not from all fwmark 0xca6c lookup 51820
@@ -52,6 +55,24 @@ _bin_runuser=/usr/sbin/runuser
 _bin_ip=/sbin/ip
 _bin_awk=/usr/bin/awk
 _bin_grep=/usr/bin/grep
+_bin_pwd=/usr/bin/pwd
+_bin_sed=/usr/bin/sed
+
+#Variables vill be initialized later:
+_def_interface_name=""
+_def_gateway=""
+
+function test()
+{
+    if [ ! -f ${_bin_iptables} ];   then echo "ERROR: Binary Not Found (${_bin_iptables})"; return 1; fi    
+    if [ ! -f ${_bin_ip} ];         then echo "ERROR: Binary Not Found (${_bin_ip})"; return 1; fi    
+    if [ ! -f ${_bin_grep} ];       then echo "ERROR: Binary Not Found (${_bin_grep})"; return 1; fi
+    if [ ! -f ${_bin_pwd} ];        then echo "ERROR: Binary Not Found (${_bin_pwd})"; return 1; fi
+    if [ ! -f ${_bin_sed} ];        then echo "ERROR: Binary Not Found (${_bin_sed})"; return 1; fi
+
+    if [ ! -f ${_bin_awk} ];        then echo "WARNING: Binary Not Found (${_bin_awk})"; fi
+    if [ ! -f ${_bin_runuser} ];    then echo "WARNING: Binary Not Found (${_bin_runuser})"; fi
+}
 
 function init()
 {
@@ -59,9 +80,7 @@ function init()
     _def_interface_name=$1
     # default gateway IP
     _def_gateway=$2
-    # default DNS IP
-    _def_dns=$3
-
+    
     # Ensure the input parameters not empty
     if [ -z ${_def_interface_name} ]; then
         echo "[i] Default network interface is not defined. Trying to determine it automatically..."
@@ -83,16 +102,26 @@ function init()
     fi
 
     ##############################################
+    # Ensure previous configuration erased
+    ##############################################
+    clean $@  > /dev/null 2>&1
+    
+    ##############################################
+    # Backup some parameters for restore function (_def_interface_name, /proc/sys/net/ipv4/conf/${_def_interface_name}/rp_filter )
+    ##############################################
+    backup
+    # Set required reverse path filtering parameter
+    if [ -f /proc/sys/net/ipv4/conf/${_def_interface_name}/rp_filter ]; then
+        echo 2 > /proc/sys/net/ipv4/conf/${_def_interface_name}/rp_filter
+    fi
+
+    ##############################################
     # Create cgroup
     ##############################################
     if [ ! -d ${_cgroup_folder} ]; then
         mkdir -p ${_cgroup_folder}
         echo ${_cgroup_classid} > ${_cgroup_folder}/net_cls.classid
     fi
-
-    #TODO: update files
-    # /proc/sys/net/ipv4/ip_forward ???
-    # /proc/sys/net/ipv4/conf/*/rp_filter ???
     
     ##############################################
     # Firewall rules for packets coming from cgroup
@@ -132,8 +161,11 @@ function init()
 
 function clean()
 {
-    # default interface name
-    _def_interface_name=$1
+    ##############################################
+    # Restore parameters
+    ##############################################
+    # read ${_def_interface_name} from backup
+    restore
 
     # Ensure the input parameters not empty
     if [ -z ${_def_interface_name} ]; then
@@ -168,7 +200,58 @@ function clean()
     ##############################################
     ${_bin_ip} rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}    
     ${_bin_ip} route del default table ${_routing_table_name}
-    sed -i "/${_routing_table_name}\s*$/d" /etc/iproute2/rt_tables
+    ${_bin_sed} -i "/${_routing_table_name}\s*$/d" /etc/iproute2/rt_tables    
+}
+
+function getBackupFolderPath()
+{
+    # Directory where current script is located
+    _script_dir="$( cd "$(${_bin_dirname} "$0")" >/dev/null 2>&1 ; ${_bin_pwd} -P )"
+
+    if [ -z "${_script_dir}" ]; then
+        return 1
+    fi
+
+    local _tempDir="${_script_dir}/${_backup_folder_name}"
+    if [ -d "${_script_dir}/../mutable" ]; then
+        _tempDir="${_script_dir}/../mutable/${_backup_folder_name}"
+    fi
+
+    # return value in stdout
+    echo ${_tempDir}
+    return 0
+}
+
+function backup()
+{
+    if [ -z ${_def_interface_name} ]; then
+        return 1
+    fi
+
+    local _tempDir="$( getBackupFolderPath )"
+    mkdir -p ${_tempDir}
+
+    echo ${_def_interface_name} > ${_tempDir}/def_interface
+    if [ -f /proc/sys/net/ipv4/conf/${_def_interface_name}/rp_filter ]; then        
+        cat /proc/sys/net/ipv4/conf/${_def_interface_name}/rp_filter >  ${_tempDir}/${_def_interface_name}-rp_filter
+    fi
+}
+
+function restore()
+{
+    local _tempDir="$( getBackupFolderPath )"
+    
+    if [ ! -f ${_tempDir}/def_interface ]; then 
+        return 1
+    fi
+
+    _def_interface_name="$( cat ${_tempDir}/def_interface )"
+
+    if [ -f ${_tempDir}/${_def_interface_name}-rp_filter ]; then
+        cat ${_tempDir}/${_def_interface_name}-rp_filter > /proc/sys/net/ipv4/conf/${_def_interface_name}/rp_filter
+    fi
+
+    rm -fr ${_tempDir}
 }
 
 function execute()
@@ -317,6 +400,16 @@ elif [[ $1 = "status" ]] ; then
     shift
     status $@
 
+elif [[ $1 = "test" ]] ; then
+    shift
+    test $@
+
+elif [[ $1 = "manual" ]] ; then
+    _FUNCNAME=$2
+    shift
+    shift
+    echo "Running manual command: ${_FUNCNAME}($@) "
+    ${_FUNCNAME} $@
 else
     echo "Script to control the Split-Tunneling functionality for Linux."
     echo "It is a part of Daemon for IVPN Client Desktop."
