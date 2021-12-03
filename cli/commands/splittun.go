@@ -34,18 +34,76 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
+type Exclude struct {
+	flags.CmdInfo
+	execute              string // this parameter is not in use. We need it just for help info. (using executeSpecParseArgs after special parsing)
+	executeSpecParseArgs []string
+}
+
+func (c *Exclude) Init() {
+	// register special parse function (for -execute)
+	c.SetParseSpecialFunc(c.specialParse)
+
+	c.Initialize("exclude", "Run command in Split Tunnel environment\n(exclude it's traffic from the VPN tunnel)\nIt is short version of 'ivpn splittun -execute <command>'\nExamples:\n    ivpn exclude firefox\n    ivpn exclude ping 1.1.1.1\n    ivpn exclude /usr/bin/google-chrome")
+	c.DefaultStringVar(&c.execute, "COMMAND")
+}
+func (c *Exclude) Run() error {
+	return doExecute(c.executeSpecParseArgs)
+}
+func (c *Exclude) specialParse(arguments []string) bool {
+	if strings.ToLower(arguments[0]) == "-h" {
+		return false
+	}
+	c.executeSpecParseArgs = arguments
+	return true
+}
+
+// ================================================================
+func doExecute(args []string) error {
+	binary := args[0]
+	pid := os.Getpid()
+
+	cfg, err := _proto.GetSplitTunnelConfig()
+	if err != nil {
+		return err
+	}
+	if !cfg.IsEnabled {
+		fmt.Println("Split Tunneling not enabled")
+		PrintTips([]TipType{TipSplittunEnable})
+		return fmt.Errorf("unable to start command: Split Tunneling not enabled")
+	}
+	fmt.Printf("Running command in Split Tunneling environment (pid:%d): %v\n", pid, strings.Trim(fmt.Sprint(args), "[]"))
+
+	binary, err = exec.LookPath(binary)
+	if err != nil {
+		return err
+	}
+
+	err = _proto.SplitTunnelAddPid(os.Getpid(), binary)
+	if err != nil {
+		return err
+	}
+
+	return syscall.Exec(binary, args, os.Environ())
+}
+
+// ================================================================
 type SplitTun struct {
 	flags.CmdInfo
-	status    bool
-	on        bool
-	off       bool
-	reset     bool
-	appadd    string
-	appremove string
-	execute   string
+	status               bool
+	on                   bool
+	off                  bool
+	reset                bool
+	appadd               string
+	appremove            string
+	execute              string // this parameter is not in use. We need it just for help info. (using executeSpecParseArgs after special parsing)
+	executeSpecParseArgs []string
 }
 
 func (c *SplitTun) Init() {
+	// register special parse function (for -execute)
+	c.SetParseSpecialFunc(c.specialParse)
+
 	c.Initialize("splittun", "Split Tunnel management\nBy enabling this feature you can exclude traffic for a specific applications from the VPN tunnel")
 
 	c.BoolVar(&c.status, "status", false, "(default) Show Split Tunnel status and configuration")
@@ -60,7 +118,8 @@ func (c *SplitTun) Init() {
 	c.BoolVar(&c.off, "off", false, "Disable")
 
 	if cliplatform.IsSplitTunCanRunApp() {
-		c.StringVar(&c.execute, "execute", "", "COMMAND", "Run command in Split Tunnel environment (and enable Split Tunnel if not enabled yet)")
+		// this parameter is not in use. We need it just for help info. (using executeSpecParseArgs after special parsing)
+		c.StringVar(&c.execute, "execute", "", "COMMAND", "Run command (binary) in Split Tunnel environment (exclude it's traffic from the VPN tunnel)\nInfo: short version of this command is 'ivpn exclude <command>'\nExamples:\n    ivpn splittun -execute firefox\n    ivpn splittun -execute ping 1.1.1.1\n    ivpn splittun -execute /usr/bin/google-chrome")
 	}
 }
 
@@ -134,21 +193,8 @@ func (c *SplitTun) Run() error {
 		}
 	}
 
-	if len(c.execute) > 0 {
-		fmt.Printf("Running command '%s' in Split Tunneling environment\n", c.execute)
-
-		args := strings.Split(c.execute, " ")
-		binary, err := exec.LookPath(args[0])
-		if err != nil {
-			return err
-		}
-
-		err = _proto.SplitTunnelAddPid(os.Getpid(), binary)
-		if err != nil {
-			return err
-		}
-
-		return syscall.Exec(binary, args, os.Environ())
+	if len(c.executeSpecParseArgs) > 0 {
+		return doExecute(c.executeSpecParseArgs)
 	}
 
 	return c.doShowStatus(cfg)
@@ -164,4 +210,12 @@ func (c *SplitTun) doShowStatusShort(cfg types.SplitTunnelConfig) error {
 	w := printSplitTunState(nil, true, cfg.IsEnabled, cfg.SplitTunnelApps)
 	w.Flush()
 	return nil
+}
+
+func (c *SplitTun) specialParse(arguments []string) bool {
+	if len(arguments) > 1 && strings.ToLower(arguments[0]) == "-execute" {
+		c.executeSpecParseArgs = arguments[1:]
+		return true
+	}
+	return false
 }

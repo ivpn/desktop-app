@@ -44,6 +44,7 @@ import (
 type ICommand interface {
 	Init()
 	Parse(arguments []string) error
+	ParseSpecial(arguments []string) (parsedSpecial bool)
 	Run() error
 
 	Name() string
@@ -96,6 +97,9 @@ func main() {
 	if cliplatform.IsSplitTunSupported() {
 		// Split tunnel functionality is currently only available on Windows
 		addCommand(&commands.SplitTun{})
+		if cliplatform.IsSplitTunCanRunApp() {
+			addCommand(&commands.Exclude{})
+		}
 	}
 	addCommand(&commands.CmdWireGuard{})
 	addCommand(&commands.CmdDns{})
@@ -160,12 +164,15 @@ func main() {
 }
 
 func runCommand(c ICommand, args []string) {
-	if err := c.Parse(args); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		if _, ok := err.(flags.BadParameter); ok == true {
-			c.Usage(false)
+	parsedSpecial := c.ParseSpecial(args)
+	if !parsedSpecial {
+		if err := c.Parse(args); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			if _, ok := err.(flags.BadParameter); ok == true {
+				c.Usage(false)
+			}
+			os.Exit(1)
 		}
-		os.Exit(1)
 	}
 
 	if err := c.Run(); err != nil {
