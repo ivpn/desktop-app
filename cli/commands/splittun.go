@@ -24,8 +24,10 @@ package commands
 
 import (
 	"fmt"
-	"os/user"
+	"os"
+	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/ivpn/desktop-app/cli/cliplatform"
 	"github.com/ivpn/desktop-app/cli/flags"
@@ -52,12 +54,12 @@ func (c *SplitTun) Init() {
 		c.BoolVar(&c.reset, "clean", false, "Erase configuration (delete all applications from configuration and disable)")
 		c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to binary)")
 		c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to binary)")
-		c.BoolVar(&c.on, "on", false, "Enable")
-		c.BoolVar(&c.off, "off", false, "Disable")
 	}
 
+	c.BoolVar(&c.on, "on", false, "Enable")
+	c.BoolVar(&c.off, "off", false, "Disable")
+
 	if cliplatform.IsSplitTunCanRunApp() {
-		c.BoolVar(&c.off, "off", false, "Disable Split Tunnel and kill all applications started in its environment (see parameter 'execute')")
 		c.StringVar(&c.execute, "execute", "", "COMMAND", "Run command in Split Tunnel environment (and enable Split Tunnel if not enabled yet)")
 	}
 }
@@ -133,16 +135,20 @@ func (c *SplitTun) Run() error {
 	}
 
 	if len(c.execute) > 0 {
-		user, err := user.Current()
-		if err != nil {
-			return fmt.Errorf("failed to start command in Split Tunneling environment (unable to detect current user name): %w", err)
-		}
-		fmt.Printf("Running command '%s' in Split Tunneling environment (user '%s')\n", c.execute, user.Username)
-		err = _proto.RunSplitTunnelCommand(c.execute, user.Username)
+		fmt.Printf("Running command '%s' in Split Tunneling environment\n", c.execute)
+
+		args := strings.Split(c.execute, " ")
+		binary, err := exec.LookPath(args[0])
 		if err != nil {
 			return err
 		}
-		return nil
+
+		err = _proto.SplitTunnelAddPid(os.Getpid(), binary)
+		if err != nil {
+			return err
+		}
+
+		return syscall.Exec(binary, args, os.Environ())
 	}
 
 	return c.doShowStatus(cfg)

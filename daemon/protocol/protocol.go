@@ -86,7 +86,7 @@ type Service interface {
 	SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string) error
 	GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error)
 	GetBinaryIcon(binaryPath string) (string, error)
-	SplitTunnelling_RunCommand(command, osUser string) error
+	SplitTunnelling_AddPid(pid int, command string) error
 
 	Preferences() preferences.Preferences
 	SetPreference(key string, val string) error
@@ -595,14 +595,14 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 		// all clients will be notified in case of successfull change by OnSplitTunnelConfigChanged() handler
 
-	case "SplitTunnelStartCommand":
-		var req types.SplitTunnelStartCommand
+	case "SplitTunnelAddPid":
+		var req types.SplitTunnelAddPid
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		if err := p._service.SplitTunnelling_RunCommand(req.CmdToStart, req.OSUser); err != nil {
+		if err := p._service.SplitTunnelling_AddPid(req.Pid, req.Cmd); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}

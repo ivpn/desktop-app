@@ -24,13 +24,11 @@ package splittun
 
 import (
 	"fmt"
+	"strconv"
 
-	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
-
-var logDebug *logger.Logger
 
 var (
 	// error describing details if functionality not available
@@ -39,7 +37,7 @@ var (
 )
 
 func implInitialize() error {
-	logDebug = logger.NewLogger("stdbg")
+	funcNotAvailableError = nil
 
 	stScriptPath = platform.SplitTunScript()
 	if len(stScriptPath) <= 0 {
@@ -47,10 +45,23 @@ func implInitialize() error {
 		return funcNotAvailableError
 	}
 
+	// check if ST functionality accessible
+	outProcessFunc := func(text string, isError bool) {
+		if isError {
+			log.Error("Split Tunneling test: " + text)
+		} else {
+			log.Info("Split Tunneling test: " + text)
+		}
+	}
+	err := shell.ExecAndProcessOutput(nil, outProcessFunc, "", stScriptPath, "test")
+	if err != nil {
+		funcNotAvailableError = err
+	}
+
 	// Ensure that ST is disable on daemon startup
 	enable(false)
 
-	return nil
+	return funcNotAvailableError
 }
 
 func implFuncNotAvailableError() error {
@@ -58,39 +69,24 @@ func implFuncNotAvailableError() error {
 }
 
 func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	if !isStEnabled {
-		return enable(false)
-	}
-	return nil
+	return enable(isStEnabled)
 }
 
-func implRunCmdInSplittunEnvironment(commandToExecute, osUser string) error {
-	err := enable(true)
+func implAddPid(pid int, commandToExecute string) error {
+	enabled, err := isEnabled()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to check Split Tunneling status")
 	}
-	if len(osUser) <= 0 {
-		return fmt.Errorf("username not defined")
-	}
-	if len(commandToExecute) <= 0 {
-		return fmt.Errorf("command not defined")
+	if !enabled {
+		return fmt.Errorf("the Split Tunneling not enabled")
 	}
 
-	go runCommand(commandToExecute, osUser)
-	return nil
+	return shell.Exec(nil, stScriptPath, "addpid", strconv.Itoa(pid))
 }
 
 func isEnabled() (bool, error) {
-	err := shell.Exec(logDebug, stScriptPath, "status")
-
+	err := shell.Exec(nil, stScriptPath, "status")
 	if err != nil {
-		exitCode, err := shell.GetCmdExitCode(err)
-		if err != nil {
-			return false, fmt.Errorf("failed to get Cmd exit code: %w", err)
-		}
-		if exitCode == 0 {
-			return true, nil
-		}
 		return false, nil
 	}
 	return true, nil
@@ -103,10 +99,11 @@ func enable(isEnable bool) error {
 		if err == nil && !enabled {
 			return nil
 		}
-		err = shell.Exec(logDebug, stScriptPath, "stop")
+		err = shell.Exec(nil, stScriptPath, "stop")
 		if err != nil {
 			return fmt.Errorf("failed to disable Split Tunneling: %w", err)
 		}
+		log.Info("Split Tunneling disabled")
 	} else {
 		enabled, err := isEnabled()
 		if err != nil {
@@ -116,28 +113,14 @@ func enable(isEnable bool) error {
 		if enabled {
 			return nil
 		}
-		err = shell.Exec(logDebug, stScriptPath, "start")
+		err = shell.Exec(nil, stScriptPath, "start")
 		if err != nil {
+			// if ST start failed - clean everything (by command 'stop')
+			shell.Exec(nil, stScriptPath, "stop")
+
 			return fmt.Errorf("failed to enable Split Tunneling: %w", err)
 		}
+		log.Info("Split Tunneling enabled")
 	}
 	return nil
-}
-
-func runCommand(command, user string) {
-	log.Info(fmt.Sprintf("Starting command '%s' (user '%s')", command, user[0:1]+"***"))
-	defer log.Info(fmt.Sprintf("Stopped command '%s' (user '%s')", command, user[0:1]+"***"))
-
-	outProcessFunc := func(text string, isError bool) {
-		if isError {
-			logDebug.Info("CMD (error)>>", text)
-		} else {
-			logDebug.Info("CMD >>", text)
-		}
-	}
-	err := shell.ExecAndProcessOutput(logDebug, outProcessFunc, "", stScriptPath, "run", "-u", user, command)
-	//err := shell.Exec(logDebug, stScriptPath, "run", "-u", user, command)
-	if err != nil {
-		log.Error(fmt.Errorf("fcommand execution error: %w", err))
-	}
 }

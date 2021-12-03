@@ -161,6 +161,9 @@ func (s *Service) init() error {
 
 	if err := splittun.Initialize(); err != nil {
 		log.Warning(fmt.Errorf("Split-Tunnelling initialization error : %w", err))
+	} else {
+		// apply Split Tunneling configuration
+		s.SplitTunnelling_ApplyConfig()
 	}
 
 	// Logging mus be already initialized (by launcher). Do nothing here.
@@ -1199,8 +1202,8 @@ func (s *Service) SplitTunnelling_ApplyConfig() error {
 }
 
 // Start command in split-tunnel environment
-func (s *Service) SplitTunnelling_RunCommand(command, osUser string) error {
-	return splittun.RunCmdInSplittunEnvironment(command, osUser)
+func (s *Service) SplitTunnelling_AddPid(pid int, command string) error {
+	return splittun.AddPid(pid, command)
 }
 
 func (s *Service) GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error) {

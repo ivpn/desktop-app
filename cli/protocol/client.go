@@ -333,12 +333,12 @@ func (c *Client) SetSplitTunnelConfig(cfg types.SplitTunnelConfig) (err error) {
 }
 
 // RunSplitTunnelCommand start command in split-tunnel environment
-func (c *Client) RunSplitTunnelCommand(command, username string) error {
+func (c *Client) SplitTunnelAddPid(pid int, command string) error {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
 
-	req := types.SplitTunnelStartCommand{CmdToStart: command, OSUser: username}
+	req := types.SplitTunnelAddPid{Pid: pid, Cmd: command}
 	var resp types.EmptyResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err

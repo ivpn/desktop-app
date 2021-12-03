@@ -38,6 +38,6 @@ func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddre
 	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }
 
-func implRunCmdInSplittunEnvironment(commandToExecute, osUser string) error {
+func implAddPid(pid int, commandToExecute string) error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }

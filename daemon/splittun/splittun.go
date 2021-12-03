@@ -23,6 +23,7 @@
 package splittun
 
 import (
+	"fmt"
 	"net"
 	"sync"
 
@@ -94,6 +95,7 @@ func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses
 	return implApplyConfig(isStEnabled, isVpnEnabled, addrConfig, splitTunnelApps)
 }
 
-func RunCmdInSplittunEnvironment(commandToExecute, osUser string) error {
-	return implRunCmdInSplittunEnvironment(commandToExecute, osUser)
+func AddPid(pid int, commandToExecute string) error {
+	log.Info(fmt.Sprintf("Adding PID:%d", pid))
+	return implAddPid(pid, commandToExecute)
 }

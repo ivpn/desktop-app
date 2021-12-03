@@ -80,7 +80,7 @@ func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, time
 
 	// waiting for response
 	if err := receiver.Wait(timeout); err != nil {
-		return fmt.Errorf("failed to receive response: %w", err)
+		return err
 	}
 
 	return nil
@@ -117,7 +117,7 @@ func (c *Client) sendRecvAny(request interface{}, waitingObjects ...interface{})
 
 	// waiting for response
 	if err := receiver.Wait(c._defaultTimeout); err != nil {
-		return nil, types.CommandBase{}, fmt.Errorf("failed to receive response: %w", err)
+		return nil, types.CommandBase{}, err
 	}
 
 	data, cmdBase = receiver.GetReceivedRawData()

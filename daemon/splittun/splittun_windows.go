@@ -155,7 +155,7 @@ func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddre
 	return nil
 }
 
-func implRunCmdInSplittunEnvironment(commandToExecute, osUser string) error {
+func implAddPid(pid int, commandToExecute string) error {
 	return fmt.Errorf("operation not implemented for current platform")
 }
 
