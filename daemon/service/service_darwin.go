@@ -38,3 +38,12 @@ func (s *Service) implPingServersStopped(hosts []net.IP) error {
 	const isPersistent = false
 	return firewall.RemoveHostsFromExceptions(hosts, onlyForICMP, isPersistent)
 }
+
+func (s *Service) implSplitTunnelling_AddApp(binaryFile string) (requiredCmdToExec string, err error) {
+	// Split Tunneling is not implemented for macOS
+	return "", nil
+}
+func (s *Service) implSplitTunnelling_RemoveApp(pid int, binaryPath string) (err error) {
+	// Split Tunneling is not implemented for macOS
+	return nil
+}

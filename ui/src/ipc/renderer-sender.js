@@ -165,8 +165,18 @@ export default {
     return await invoke("renderer-request-KillSwitchSetIsPersistent", isEnable);
   },
 
-  SplitTunnelSetConfig: async (enabled, apps) => {
-    return await invoke("renderer-request-SplitTunnelSetConfig", enabled, apps);
+  SplitTunnelSetConfig: async (enabled, doReset) => {
+    return await invoke(
+      "renderer-request-SplitTunnelSetConfig",
+      enabled,
+      doReset
+    );
+  },
+  SplitTunnelAddApp: async (execCmd) => {
+    return await invoke("renderer-request-SplitTunnelAddApp", execCmd);
+  },
+  SplitTunnelRemoveApp: async (pid, execCmd) => {
+    return await invoke("renderer-request-SplitTunnelRemoveApp", pid, execCmd);
   },
 
   GetInstalledApps: async () => {

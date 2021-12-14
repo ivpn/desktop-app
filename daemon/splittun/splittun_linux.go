@@ -20,11 +20,15 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+// +build linux
+
 package splittun
 
 import (
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
@@ -35,6 +39,8 @@ var (
 	funcNotAvailableError error
 	stScriptPath          string
 )
+
+const stPidsFile = "/sys/fs/cgroup/net_cls/ivpn-exclude/cgroup.procs"
 
 func implInitialize() error {
 	funcNotAvailableError = nil
@@ -84,6 +90,49 @@ func implAddPid(pid int, commandToExecute string) error {
 	return shell.Exec(nil, stScriptPath, "addpid", strconv.Itoa(pid))
 }
 
+func implGetRunningApps() ([]RunningApp, error) {
+	// read all PIDs which are active in ST environment
+	bytes, err := os.ReadFile(stPidsFile)
+	if err != nil {
+		return nil, err
+	}
+
+	pidStrings := strings.Split(string(bytes), "\n")
+
+	ret := make([]RunningApp, 0, len(pidStrings))
+
+	for _, s := range pidStrings {
+		if len(s) <= 0 {
+			continue
+		}
+
+		pid, err := strconv.Atoi(s)
+		if err != nil {
+			log.Warning(err)
+			continue
+		}
+
+		// read cmdline for each pid
+		cmdlineBytes, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+		if err != nil {
+			log.Warning(err)
+			continue
+		}
+		for i, b := range cmdlineBytes {
+			if b == 0 {
+				cmdlineBytes[i] = ' '
+			}
+		}
+		cmdline := string(cmdlineBytes)
+		// TODO: do not forget update prefices in cese if CLI interface change
+		cmdline = strings.TrimPrefix(cmdline, "ivpn exclude ")
+		cmdline = strings.TrimPrefix(cmdline, "ivpn splittun -execute ")
+		ret = append(ret, RunningApp{Pid: pid, Cmdline: cmdline})
+	}
+
+	return ret, nil
+}
+
 func isEnabled() (bool, error) {
 	err := shell.Exec(nil, stScriptPath, "status")
 	if err != nil {
@@ -95,6 +144,7 @@ func isEnabled() (bool, error) {
 func enable(isEnable bool) error {
 
 	if !isEnable {
+
 		enabled, err := isEnabled()
 		if err == nil && !enabled {
 			return nil

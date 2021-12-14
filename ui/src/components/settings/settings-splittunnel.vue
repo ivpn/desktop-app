@@ -10,21 +10,46 @@
       Exclude traffic from specific applications from being routed through the
       VPN
     </div>
-    <div class="fwDescription" style="margin-top: 0px; margin-bottom: 0px">
-      <span class="settingsGrayLongDescriptionFont" style="font-weight: bold"
-        >Warning:</span
-      >
-      When adding a running application, any connections already established by
-      the application will continue to be routed through the VPN tunnel until
-      the TCP connection/s are reset or the application is restarted
-    </div>
 
-    <div class="fwDescription" style="margin-top: 0px">
-      For more information refer to the
-      <button class="link" v-on:click="onLearnMoreLink">
-        Split Tunnel Uses and Limitations
-      </button>
-      webpage
+    <div>
+      <!-- functionality description: LINUX -->
+      <div
+        v-if="isLinux"
+        class="fwDescription"
+        style="margin-top: 0px; margin-bottom: 0px"
+      >
+        <span class="settingsGrayLongDescriptionFont" style="font-weight: bold"
+          >Warning:</span
+        >
+        Already running applications can not use Split Tunneling.
+        <br />
+        <span class="settingsGrayLongDescriptionFont" style="font-weight: bold"
+          >Warning:</span
+        >
+        Some applications (e.g. Web browsers) need to be closed before launching
+        them in the Split Tunneling environment. Otherwise, it might not be
+        excluded from the VPN tunnel.
+      </div>
+      <!-- functionality description: WINDOWS -->
+      <div v-else>
+        <div class="fwDescription" style="margin-top: 0px; margin-bottom: 0px">
+          <span
+            class="settingsGrayLongDescriptionFont"
+            style="font-weight: bold"
+            >Warning:</span
+          >
+          When adding a running application, any connections already established
+          by the application will continue to be routed through the VPN tunnel
+          until the TCP connection/s are reset or the application is restarted
+        </div>
+        <div class="fwDescription" style="margin-top: 0px">
+          For more information refer to the
+          <button class="link" v-on:click="onLearnMoreLink">
+            Split Tunnel Uses and Limitations
+          </button>
+          webpage
+        </div>
+      </div>
     </div>
 
     <!-- APPS -->
@@ -34,7 +59,7 @@
           class="flexRowRestSpace settingsBoldFont settingsDefaultTextColor"
           style="margin-top: 0px; margin-bottom: 0px; white-space: nowrap"
         >
-          Applications
+          {{ textApplicationsHeader }}
         </div>
 
         <!-- CONFIGURED APPS FILETR -->
@@ -55,7 +80,7 @@
             style="min-width: 156px"
             v-on:click="showAddApplicationPopup(true)"
           >
-            {{ addAppButtonText }}
+            {{ textAddAppButton }}
           </button>
         </div>
       </div>
@@ -75,7 +100,7 @@
           "
         >
           <div class="settingsGrayTextColor">
-            No applications in Split Tunnel configuration
+            {{ textNoAppInSplittunConfig }}
           </div>
         </div>
 
@@ -111,14 +136,7 @@
             !isNoConfiguredApps &&
             !isNoConfiguredAppsMatchFilter
           "
-          style="
-            overflow: auto;
-            width: 100%;
-            position: relative;
-            height: 244px;
-            min-height: 244px;
-            max-height: 244px;
-          "
+          :style="appsListStyle"
         >
           <spinner
             :loading="isLoadingAllApps"
@@ -248,7 +266,7 @@
                     height: 40px;
                     width: 100%;
                   "
-                  v-on:click="onManuaAddNewApplication"
+                  v-on:click="onManualAddNewApplication"
                 >
                   <div class="flexRowRestSpace"></div>
                   <div class="flexRow">
@@ -314,6 +332,15 @@ import Image_search_linux from "@/assets/search-linux.svg";
 import binaryInfoControl from "@/components/controls/control-app-binary-info.vue";
 
 import spinner from "@/components/controls/control-spinner.vue";
+
+function processError(e) {
+  console.error(e);
+  sender.showMessageBox({
+    type: "error",
+    buttons: ["OK"],
+    message: e.toString(),
+  });
+}
 
 export default {
   components: {
@@ -433,14 +460,15 @@ export default {
         this.filterAppsToAdd = "";
         let appsToAdd = this.filteredAppsToAdd;
         if (!appsToAdd || appsToAdd.length == 0) {
-          this.onManuaAddNewApplication();
+          // if no info about all installed applications - show dialog to manually select binary
+          this.onManualAddNewApplication();
           return;
         }
         this.isShowAppAddPopup = true;
       } else this.isShowAppAddPopup = false;
     },
 
-    async onManuaAddNewApplication() {
+    async onManualAddNewApplication() {
       try {
         var diagConfig = {
           properties: ["openFile"],
@@ -452,21 +480,23 @@ export default {
         var ret = await sender.showOpenDialog(diagConfig);
         if (!ret || ret.canceled || ret.filePaths.length == 0) return;
 
-        var st = this.$store.state.vpnState.splitTunnelling;
-        var stApps = [];
-        if (st.apps) stApps = Object.assign(stApps, st.apps);
-
-        ret.filePaths.forEach((appPath) => {
-          if (stApps.includes(appPath) == false) stApps.push(appPath);
-        });
-
-        await sender.SplitTunnelSetConfig(st.enabled, stApps);
+        await sender.SplitTunnelAddApp(ret.filePaths[0]);
+      } catch (e) {
+        processError(e);
       } finally {
         this.showAddApplicationPopup(false);
       }
     },
 
     async removeApp(appPath) {
+      try {
+        await sender.SplitTunnelRemoveApp(0, appPath);
+      } catch (e) {
+        processError(e);
+      } finally {
+        this.showAddApplicationPopup(false);
+      }
+      /*
       var st = this.$store.state.vpnState.splitTunnelling;
       var stApps = [];
       if (st.apps) stApps = Object.assign(stApps, st.apps);
@@ -486,17 +516,14 @@ export default {
       }
 
       await sender.SplitTunnelSetConfig(st.enabled, stApps);
+      */
     },
 
     async addApp(appPath) {
       try {
-        var st = this.$store.state.vpnState.splitTunnelling;
-        var stApps = [];
-        if (st.apps) stApps = Object.assign(stApps, st.apps);
-
-        stApps.push(appPath);
-
-        await sender.SplitTunnelSetConfig(st.enabled, stApps);
+        await sender.SplitTunnelAddApp(appPath);
+      } catch (e) {
+        processError(e);
       } finally {
         this.showAddApplicationPopup(false);
       }
@@ -512,7 +539,7 @@ export default {
       if (actionNo == 1) return;
 
       this.resetFilters();
-      await sender.SplitTunnelSetConfig(false, null);
+      await sender.SplitTunnelSetConfig(false, true);
     },
 
     appsFiletrFunc(filter, appInfo) {
@@ -542,8 +569,35 @@ export default {
   },
 
   computed: {
-    addAppButtonText: function () {
+    textApplicationsHeader: function () {
+      return "Applications";
+    },
+
+    textNoAppInSplittunConfig: function () {
+      return "No applications in Split Tunnel configuration";
+    },
+
+    textAddAppButton: function () {
+      if (Platform() === PlatformEnum.Linux) return "Launch application...";
       return "Add application...";
+    },
+
+    appsListStyle: function () {
+      // TODO: avoid hardcoding element height.
+      let height = 244;
+      if (Platform() === PlatformEnum.Linux) height = 268;
+
+      return `\
+            overflow: auto;\
+            width: 100%;\
+            position: relative;\
+            height: ${height}px;\
+            min-height: ${height}px;\
+            max-height: ${height}px;\
+          `;
+    },
+    isLinux: function () {
+      return Platform() === PlatformEnum.Linux;
     },
 
     isSTEnabled: {

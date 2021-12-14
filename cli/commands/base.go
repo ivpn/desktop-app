@@ -33,6 +33,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/protocol"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/splittun"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -136,7 +137,7 @@ func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN
 	return w
 }
 
-func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, apps []string) *tabwriter.Writer {
+func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, apps []string, runningApps []splittun.RunningApp) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
@@ -148,9 +149,9 @@ func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, 
 	state := "Disabled"
 	if isEnabled {
 		state = "Enabled"
-		if len(apps) == 0 {
-			state += " (not configured)"
-		}
+		//if len(apps) == 0 {
+		//	state += " (not configured)"
+		//}
 	}
 
 	fmt.Fprintln(w, fmt.Sprintf("Split Tunnel\t:\t%v", state))
@@ -161,6 +162,14 @@ func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, 
 				fmt.Fprintln(w, fmt.Sprintf("Split Tunnel apps\t:\t%v", path))
 			} else {
 				fmt.Fprintln(w, fmt.Sprintf("\t\t%v", path))
+			}
+		}
+
+		for i, exec := range runningApps {
+			if i == 0 {
+				fmt.Fprintln(w, fmt.Sprintf("Running processes\t:\t[pid:%d] %s", exec.Pid, exec.Cmdline))
+			} else {
+				fmt.Fprintln(w, fmt.Sprintf("\t\t[pid:%d] %s", exec.Pid, exec.Cmdline))
 			}
 		}
 	}

@@ -26,6 +26,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -302,14 +305,14 @@ func (c *Client) FirewallStatus() (state types.KillSwitchStatusResp, err error) 
 	return state, nil
 }
 
-// GetSplitTunnelConfig requests the Split-Tunnelling configuration
-func (c *Client) GetSplitTunnelConfig() (cfg types.SplitTunnelConfig, err error) {
+// GetSplitTunnelStatus requests the Split-Tunnelling configuration
+func (c *Client) GetSplitTunnelStatus() (cfg types.SplitTunnelStatus, err error) {
 	if err := c.ensureConnected(); err != nil {
 		return cfg, err
 	}
 
 	// requesting status
-	req := types.SplitTunnelGetConfig{}
+	req := types.SplitTunnelGetStatus{}
 	if err := c.sendRecv(&req, &cfg); err != nil {
 		return cfg, err
 	}
@@ -318,13 +321,13 @@ func (c *Client) GetSplitTunnelConfig() (cfg types.SplitTunnelConfig, err error)
 }
 
 // SetSplitTunnelConfig sets the split-tunnelling configuration
-func (c *Client) SetSplitTunnelConfig(cfg types.SplitTunnelConfig) (err error) {
+func (c *Client) SetSplitTunnelConfig(isEnable, reset bool) (err error) {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
 
-	req := types.SplitTunnelSetConfig{IsEnabled: cfg.IsEnabled, SplitTunnelApps: cfg.SplitTunnelApps}
-	resp := types.SplitTunnelConfig{}
+	req := types.SplitTunnelSetConfig{IsEnabled: isEnable, Reset: reset}
+	resp := types.SplitTunnelStatus{}
 	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
 		return err
 	}
@@ -332,13 +335,63 @@ func (c *Client) SetSplitTunnelConfig(cfg types.SplitTunnelConfig) (err error) {
 	return nil
 }
 
-// RunSplitTunnelCommand start command in split-tunnel environment
-func (c *Client) SplitTunnelAddPid(pid int, command string) error {
+func (c *Client) SplitTunnelAddApp(execCmd string) (isRequiredToExecuteCommand bool, retErr error) {
+	if err := c.ensureConnected(); err != nil {
+		return false, err
+	}
+
+	// Description of Split Tunneling commands sequence to run the application:
+	//	[client]					          [daemon]
+	//	SplitTunnelAddApp		    ->
+	//							            <-	windows:	types.EmptyResp (success)
+	//							            <-	linux:		types.SplitTunnelAddAppCmdResp (some operations required on client side)
+	//	<windows: done>
+	// 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
+	//  SplitTunnelAddedPidInfo	->
+	// 							            <-	types.EmptyResp (success)
+
+	req := types.SplitTunnelAddApp{Exec: execCmd}
+	var respEmpty types.EmptyResp
+	var respAppCmdResp types.SplitTunnelAddAppCmdResp
+
+	_, _, err := c.sendRecvAny(&req, &respEmpty, &respAppCmdResp)
+	if err != nil {
+		return false, err
+	}
+
+	if len(respEmpty.Command) > 0 {
+		// success. No additional operations required
+		return false, nil
+	}
+
+	if len(respAppCmdResp.Command) <= 0 {
+		return false, fmt.Errorf("unexpected response from the daemon")
+	}
+
+	// register new PID and inform that command must be executed
+	reqAddedePid := types.SplitTunnelAddedPidInfo{Pid: os.Getpid(), Exec: execCmd, CmdToExecute: strings.Join(os.Args[:], " ")}
+	if err := c.sendRecv(&reqAddedePid, &respEmpty); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (c *Client) SplitTunnelRemoveApp(cmdOrPid string) error {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
 
-	req := types.SplitTunnelAddPid{Pid: pid, Cmd: command}
+	pid := 0
+	cmd := ""
+
+	if p, err := strconv.Atoi(cmdOrPid); err == nil {
+		pid = p
+	} else {
+		cmd = cmdOrPid
+	}
+
+	req := types.SplitTunnelRemoveApp{Exec: cmd, Pid: pid}
 	var resp types.EmptyResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err

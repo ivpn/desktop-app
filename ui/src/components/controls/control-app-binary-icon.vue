@@ -1,5 +1,5 @@
 <template>
-  <img :src="base64Icon" />
+  <img :src="base64Icon" /> 
 </template>
 
 <script>
@@ -17,7 +17,7 @@ export default {
   }),
   mounted() {
     if (this.preloadedBase64Icon)
-      this.base64Icon = "data:image/x-icon;base64," + this.preloadedBase64Icon;
+      this.base64Icon = this.preloadedBase64Icon;
     else this.loadIcon();
   },
   methods: {
@@ -25,7 +25,6 @@ export default {
       if (this.binaryPath == null) return null;
       try {
         let ico = await sender.getAppIcon(this.binaryPath);
-        if (ico) ico = "data:image/x-icon;base64," + ico;
         this.base64Icon = ico;
       } catch (e) {
         console.error(`Error receiving appicon '${this.binaryPath}': `, e);

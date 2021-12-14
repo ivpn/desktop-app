@@ -97,7 +97,9 @@ func (c *Client) sendRecvAny(request interface{}, waitingObjects ...interface{})
 
 		c._requestIdx++
 		reqIdx = c._requestIdx
-		receiver = createReceiver(0, waitingObjects...)
+
+		receiver = createReceiver(c._requestIdx, waitingObjects...)
+		//receiver = createReceiver(0, waitingObjects...)
 
 		c._receivers[receiver] = struct{}{}
 	}()

@@ -56,7 +56,7 @@ _bin_runuser=/usr/sbin/runuser
 _bin_ip=/sbin/ip
 _bin_awk=/usr/bin/awk
 _bin_grep=/usr/bin/grep
-_bin_pwd=/usr/bin/pwd
+_bin_dirname=/usr/bin/dirname
 _bin_sed=/usr/bin/sed
 
 #Variables vill be initialized later:
@@ -68,7 +68,7 @@ function test()
     if [ ! -f ${_bin_iptables} ];       then echo "ERROR: Binary Not Found (${_bin_iptables})"; return 1; fi    
     if [ ! -f ${_bin_ip} ];             then echo "ERROR: Binary Not Found (${_bin_ip})"; return 1; fi    
     if [ ! -f ${_bin_grep} ];           then echo "ERROR: Binary Not Found (${_bin_grep})"; return 1; fi
-    if [ ! -f ${_bin_pwd} ];            then echo "ERROR: Binary Not Found (${_bin_pwd})"; return 1; fi
+    if [ ! -f ${_bin_dirname} ];        then echo "ERROR: Binary Not Found (${_bin_dirname})"; return 1; fi
     if [ ! -f ${_bin_sed} ];            then echo "ERROR: Binary Not Found (${_bin_sed})"; return 1; fi
 
     if [ ! -d /sys/fs/cgroup/ ];        then echo "ERROR: CGROUP folder Not Found (/sys/fs/cgroup/)"; return 1; fi    
@@ -244,7 +244,7 @@ function clean()
 function getBackupFolderPath()
 {
     # Directory where current script is located
-    _script_dir="$( cd "$(${_bin_dirname} "$0")" >/dev/null 2>&1 ; ${_bin_pwd} -P )"
+    _script_dir=$(${_bin_dirname} "$0")
 
     if [ -z "${_script_dir}" ]; then
         return 1

@@ -40,24 +40,16 @@ var (
 	mutex sync.Mutex
 )
 
-type State struct {
-	IsConfigOk         bool
-	IsEnabledSplitting bool
-}
-
 type ConfigAddresses struct {
 	IPv4Public net.IP // OutboundIPv4
 	IPv4Tunnel net.IP // VpnLocalIPv4
 	IPv6Public net.IP // OutboundIPv6
 	IPv6Tunnel net.IP // VpnLocalIPv6
 }
-type ConfigApps struct {
-	ImagesPathToSplit []string
-}
 
-type Config struct {
-	Addr ConfigAddresses
-	Apps ConfigApps
+type RunningApp struct {
+	Pid     int
+	Cmdline string
 }
 
 // Initialize must be called first (before accessing any ST functionality)
@@ -95,7 +87,15 @@ func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses
 	return implApplyConfig(isStEnabled, isVpnEnabled, addrConfig, splitTunnelApps)
 }
 
+// AddPid adds process to Split-Tunnel environment
+// (applicable for Linux)
 func AddPid(pid int, commandToExecute string) error {
 	log.Info(fmt.Sprintf("Adding PID:%d", pid))
 	return implAddPid(pid, commandToExecute)
+}
+
+// Get information about active applications running in Split-Tunnel environement
+// (applicable for Linux)
+func GetRunningApps() ([]RunningApp, error) {
+	return implGetRunningApps()
 }

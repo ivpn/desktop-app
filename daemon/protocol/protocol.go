@@ -83,10 +83,14 @@ type Service interface {
 	SetKillSwitchAllowLAN(isAllowLan bool) error
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
 
-	SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string) error
+	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
+	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
+	SplitTunnelling_AddApp(exec string) (cmdToExecute string, err error)
+	SplitTunnelling_RemoveApp(pid int, exec string) (err error)
+	SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error
+
 	GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error)
 	GetBinaryIcon(binaryPath string) (string, error)
-	SplitTunnelling_AddPid(pid int, command string) error
 
 	Preferences() preferences.Preferences
 	SetPreference(key string, val string) error
@@ -411,9 +415,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				reqCmd.Idx)
 		}
 
-		if req.GetSplitTunnelConfig {
+		if req.GetSplitTunnelStatus {
 			// sending split-tunnelling configuration
-			p.OnSplitTunnelConfigChanged()
+			p.OnSplitTunnelStatusChanged()
 		}
 
 		if req.GetWiFiCurrentState {
@@ -579,9 +583,13 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
 
-	case "SplitTunnelGetConfig":
-		var prefs = p._service.Preferences()
-		p.sendResponse(conn, &types.SplitTunnelConfig{IsEnabled: prefs.IsSplitTunnel, SplitTunnelApps: prefs.SplitTunnelApps}, reqCmd.Idx)
+	case "SplitTunnelGetStatus":
+		status, err := p._service.SplitTunnelling_GetStatus()
+		if err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		p.sendResponse(conn, &status, reqCmd.Idx)
 
 	case "SplitTunnelSetConfig":
 		var req types.SplitTunnelSetConfig
@@ -589,20 +597,60 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
-		if err := p._service.SplitTunnelling_SetConfig(req.IsEnabled, req.SplitTunnelApps); err != nil {
+		if err := p._service.SplitTunnelling_SetConfig(req.IsEnabled, req.Reset); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
-		// all clients will be notified in case of successfull change by OnSplitTunnelConfigChanged() handler
+		// all clients will be notified about configuration change by service in OnSplitTunnelStatusChanged() handler
 
-	case "SplitTunnelAddPid":
-		var req types.SplitTunnelAddPid
+	case "SplitTunnelAddApp":
+		var req types.SplitTunnelAddApp
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		// Description of Split Tunneling commands sequence to run the application:
+		//	[client]					[daemon]
+		//	SplitTunnelAddApp		->
+		//							<-	windows:	types.EmptyResp (success)
+		//							<-	linux:		types.SplitTunnelAddAppCmdResp (some operations required on client side)
+		//	<windows: done>
+		// 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
+		//  SplitTunnelAddedPidInfo	->
+		// 							<-	types.EmptyResp (success)
+		cmdToExecute, err := p._service.SplitTunnelling_AddApp(req.Exec)
+		if err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		if len(cmdToExecute) <= 0 {
+			p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+			return
+		}
+		p.sendResponse(conn, &types.SplitTunnelAddAppCmdResp{Exec: req.Exec, CmdToExecute: cmdToExecute}, reqCmd.Idx)
+		// all clients will be notified about configuration change by service in OnSplitTunnelStatusChanged() handler
+
+	case "SplitTunnelRemoveApp":
+		var req types.SplitTunnelRemoveApp
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		if err := p._service.SplitTunnelling_RemoveApp(req.Pid, req.Exec); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+		// all clients will be notified about configuration change by service in OnSplitTunnelStatusChanged() handler
+
+	case "SplitTunnelAddedPidInfo":
+		var req types.SplitTunnelAddedPidInfo
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		if err := p._service.SplitTunnelling_AddPid(req.Pid, req.Cmd); err != nil {
+		if err := p._service.SplitTunnelling_AddedPidInfo(req.Pid, req.Exec, req.CmdToExecute); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}

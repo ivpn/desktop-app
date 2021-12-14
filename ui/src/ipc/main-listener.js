@@ -136,10 +136,20 @@ ipcMain.handle(
 
 ipcMain.handle(
   "renderer-request-SplitTunnelSetConfig",
-  async (event, enabled, apps) => {
-    return await client.SplitTunnelSetConfig(enabled, apps);
+  async (event, enabled, doReset) => {
+    return await client.SplitTunnelSetConfig(enabled, doReset);
   }
 );
+ipcMain.handle("renderer-request-SplitTunnelAddApp", async (event, execCmd) => {
+  return await client.SplitTunnelAddApp(execCmd);
+});
+ipcMain.handle(
+  "renderer-request-SplitTunnelRemoveApp",
+  async (event, pid, execCmd) => {
+    return await client.SplitTunnelRemoveApp(pid, execCmd);
+  }
+);
+
 ipcMain.handle("renderer-request-GetInstalledApps", async () => {
   return await client.GetInstalledApps();
 });

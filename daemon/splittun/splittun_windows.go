@@ -56,6 +56,15 @@ var (
 	isDriverConnected bool
 )
 
+type ConfigApps struct {
+	ImagesPathToSplit []string
+}
+
+type Config struct {
+	Addr ConfigAddresses
+	Apps ConfigApps
+}
+
 // Initialize doing initialization stuff (called on application start)
 func implInitialize() error {
 	wfpDllPath := platform.WindowsWFPDllPath()
@@ -156,7 +165,11 @@ func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddre
 }
 
 func implAddPid(pid int, commandToExecute string) error {
-	return fmt.Errorf("operation not implemented for current platform")
+	return fmt.Errorf("operation not applicable for current platform")
+}
+
+func implGetRunningApps() ([]LaunchedApps, error) {
+	return fmt.Errorf("operation not applicable for current platform")
 }
 
 func catchPanic(err *error) {

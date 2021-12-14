@@ -77,6 +77,9 @@ const daemonRequests = Object.freeze({
   KillSwitchSetIsPersistent: "KillSwitchSetIsPersistent",
 
   SplitTunnelSetConfig: "SplitTunnelSetConfig",
+  SplitTunnelAddApp: "SplitTunnelAddApp",
+  SplitTunnelRemoveApp: "SplitTunnelRemoveApp",
+  SplitTunnelAddedPidInfo: "SplitTunnelAddedPidInfo",
   GetInstalledApps: "GetInstalledApps",
   GetAppIcon: "GetAppIcon",
 
@@ -90,6 +93,7 @@ const daemonRequests = Object.freeze({
 });
 
 const daemonResponses = Object.freeze({
+  EmptyResp: "EmptyResp",
   HelloResp: "HelloResp",
   APIResponse: "APIResponse",
 
@@ -105,7 +109,8 @@ const daemonResponses = Object.freeze({
   KillSwitchStatusResp: "KillSwitchStatusResp",
   AccountStatusResp: "AccountStatusResp",
 
-  SplitTunnelConfig: "SplitTunnelConfig",
+  SplitTunnelStatus: "SplitTunnelStatus",
+  SplitTunnelAddAppCmdResp: "SplitTunnelAddAppCmdResp",
   InstalledAppsResp: "InstalledAppsResp",
   AppIconResp: "AppIconResp",
 
@@ -394,7 +399,7 @@ async function processResponse(response) {
       store.commit(`vpnState/availableWiFiNetworks`, obj.Networks);
       break;
 
-    case daemonResponses.SplitTunnelConfig:
+    case daemonResponses.SplitTunnelStatus:
       store.commit(`vpnState/splitTunnelling`, {
         enabled: obj.IsEnabled,
         apps: obj.SplitTunnelApps,
@@ -548,7 +553,7 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
           GetStatus: true,
           GetConfigParams: true,
           KeepDaemonAlone: true,
-          GetSplitTunnelConfig: true,
+          GetSplitTunnelStatus: true,
           GetWiFiCurrentState: true,
         };
 
@@ -1242,24 +1247,135 @@ async function KillSwitchSetIsPersistent(IsPersistent) {
   });
 }
 
-async function SplitTunnelSetConfig(IsEnabled, SplitTunnelApps) {
+async function SplitTunnelSetConfig(IsEnabled, doReset) {
   await sendRecv(
     {
       Command: daemonRequests.SplitTunnelSetConfig,
       IsEnabled,
-      SplitTunnelApps,
+      Reset: doReset === true,
     },
-    [daemonResponses.SplitTunnelConfig]
+    [daemonResponses.SplitTunnelStatus]
   );
+}
+
+async function SplitTunnelAddApp(execCmd) {
+  let ret = await sendRecv(
+    {
+      Command: daemonRequests.SplitTunnelAddApp,
+      Exec: execCmd,
+    },
+    [daemonResponses.SplitTunnelAddAppCmdResp, daemonResponses.EmptyResp]
+  );
+
+  // Description of Split Tunneling commands sequence to run the application:
+  //	[client]					          [daemon]
+  //	SplitTunnelAddApp		    ->
+  //							            <-	windows:	types.EmptyResp (success)
+  //							            <-	linux:		types.SplitTunnelAddAppCmdResp (some operations required on client side)
+  //	<windows: done>
+  // 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
+  //  SplitTunnelAddedPidInfo	->
+  // 							            <-	types.EmptyResp (success)
+
+  if (ret != null && ret.Command == daemonResponses.EmptyResp) {
+    // (Windows) Success
+    return;
+  }
+
+  if (ret != null && ret.Command == daemonResponses.SplitTunnelAddAppCmdResp) {
+    if (Platform() != PlatformEnum.Linux) {
+      throw new Error(
+        "Launching external commands in the Split Tunnel environment is not supported for this platform"
+      );
+    }
+
+    try {
+      let XDG_CURRENT_DESKTOP = process.env["ORIGINAL_XDG_CURRENT_DESKTOP"];
+      if (!XDG_CURRENT_DESKTOP)
+        XDG_CURRENT_DESKTOP = process.env["XDG_CURRENT_DESKTOP"];
+
+      var exec = require("child_process").exec;
+
+      // For a security reasons, we are not using SplitTunnelAddAppCmdResp.CmdToExecute command
+      // Instead, use hardcoded binary path to execute '/usr/bin/ivpn'
+      let shellCommandToRun = "/usr/bin/ivpn exclude " + execCmd;
+      let child = exec(shellCommandToRun, {
+        env: { ...process.env, XDG_CURRENT_DESKTOP: XDG_CURRENT_DESKTOP },
+      });
+
+      console.log(
+        "Started command in Split Tunnel environment: PID=",
+        child.pid
+      );
+
+      // No necessary to send 'SplitTunnelAddedPidInfo'
+      // It will ne sent by '/usr/bin/ivpn'
+      //    await sendRecv({
+      //      Command: daemonRequests.SplitTunnelAddedPidInfo,
+      //      Pid: child.pid,
+      //      Exec: execCmd,
+      //      CmdToExecute: shellCommandToRun,
+      //});
+    } catch (e) {
+      console.error(e);
+    }
+  }
+}
+
+async function SplitTunnelRemoveApp(Pid, Exec) {
+  await sendRecv({
+    Command: daemonRequests.SplitTunnelRemoveApp,
+    Pid,
+    Exec,
+  });
 }
 
 async function GetInstalledApps() {
   try {
     let extraArgsJson = "";
     if (Platform() == PlatformEnum.Windows) {
+      // Windows
       let appData = process.env["APPDATA"];
       if (appData)
         extraArgsJson = JSON.stringify({ WindowsEnvAppdata: appData });
+    } else if (Platform() == PlatformEnum.Linux) {
+      // Linux
+
+      let XDG_CURRENT_DESKTOP = process.env["ORIGINAL_XDG_CURRENT_DESKTOP"];
+      if (!XDG_CURRENT_DESKTOP)
+        XDG_CURRENT_DESKTOP = process.env["XDG_CURRENT_DESKTOP"];
+
+      // get icons theme name
+      let iconsThemeName = "";
+      try {
+        var execSync = require("child_process").execSync;
+        let envs = { ...process.env, XDG_CURRENT_DESKTOP: XDG_CURRENT_DESKTOP };
+        iconsThemeName = execSync(
+          "/usr/bin/gsettings get org.gnome.desktop.interface icon-theme",
+          { env: envs }
+        )
+          .toString()
+          .trim()
+          .replace(/^'/, "")
+          .replace(/'$/, "");
+      } catch (e) {
+        console.error(e);
+      }
+
+      // get environment variables
+
+      if (process.env.IS_DEBUG) {
+        XDG_CURRENT_DESKTOP = "ubuntu:GNOME";
+      }
+
+      let XDG_DATA_DIRS = process.env["XDG_DATA_DIRS"];
+      let HOME = process.env["HOME"];
+      extraArgsJson = JSON.stringify({
+        IconsTheme: iconsThemeName,
+        EnvVar_XDG_CURRENT_DESKTOP: XDG_CURRENT_DESKTOP,
+        EnvVar_XDG_DATA_DIRS: XDG_DATA_DIRS,
+        EnvVar_HOME: HOME,
+      });
     }
 
     const responseTimeoutMs = 25 * 1000;
@@ -1393,6 +1509,8 @@ export default {
   KillSwitchSetIsPersistent,
 
   SplitTunnelSetConfig,
+  SplitTunnelAddApp,
+  SplitTunnelRemoveApp,
   GetInstalledApps,
   GetAppIcon,
 

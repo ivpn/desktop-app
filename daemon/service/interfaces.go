@@ -66,5 +66,5 @@ type IServiceEventsReceiver interface {
 	OnWiFiChanged(ssid string, isInsecureNetwork bool)
 	OnPingStatus(retMap map[string]int)
 	OnServersUpdated(*types.ServersInfoResponse)
-	OnSplitTunnelConfigChanged()
+	OnSplitTunnelStatusChanged()
 }
