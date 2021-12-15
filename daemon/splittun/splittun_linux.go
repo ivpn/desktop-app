@@ -27,6 +27,8 @@ package splittun
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -91,6 +93,9 @@ func implAddPid(pid int, commandToExecute string) error {
 }
 
 func implGetRunningApps() ([]RunningApp, error) {
+	// TODO: https://man7.org/linux/man-pages/man5/proc.5.html
+	// '/proc/[pid]/stat' - Contains info about PPID
+
 	// read all PIDs which are active in ST environment
 	bytes, err := os.ReadFile(stPidsFile)
 	if err != nil {
@@ -101,6 +106,8 @@ func implGetRunningApps() ([]RunningApp, error) {
 
 	ret := make([]RunningApp, 0, len(pidStrings))
 
+	regexpStat := regexp.MustCompile(`^([0-9]*) (\([\S ]*\)) \S ([0-9]+) ([0-9]+) ([0-9]+)`)
+
 	for _, s := range pidStrings {
 		if len(s) <= 0 {
 			continue
@@ -110,6 +117,38 @@ func implGetRunningApps() ([]RunningApp, error) {
 		if err != nil {
 			log.Warning(err)
 			continue
+		}
+
+		// read PPID, ProgessGroup, Session for each pid
+		ppid := 0
+		pgrp := 0
+		psess := 0
+		statBytes, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
+		if err != nil {
+			log.Warning(err)
+		} else {
+			statCols := regexpStat.FindStringSubmatch(string(statBytes))
+			if len(statCols) >= 4 {
+				if v, err := strconv.Atoi(statCols[3]); err == nil {
+					ppid = v
+				}
+			}
+			if len(statCols) >= 5 {
+				if v, err := strconv.Atoi(statCols[4]); err == nil {
+					pgrp = v
+				}
+			}
+			if len(statCols) >= 6 {
+				if v, err := strconv.Atoi(statCols[5]); err == nil {
+					psess = v
+				}
+			}
+		}
+
+		// Read the actual pathname of the executed command
+		exe := ""
+		if sl, err := filepath.EvalSymlinks(fmt.Sprintf("/proc/%d/exe", pid)); err == nil && len(sl) > 0 {
+			exe = sl
 		}
 
 		// read cmdline for each pid
@@ -125,9 +164,18 @@ func implGetRunningApps() ([]RunningApp, error) {
 		}
 		cmdline := string(cmdlineBytes)
 		// TODO: do not forget update prefices in cese if CLI interface change
+		cmdline = strings.TrimPrefix(cmdline, "/usr/bin/ivpn exclude ")
+		cmdline = strings.TrimPrefix(cmdline, "/usr/bin/ivpn splittun -execute ")
 		cmdline = strings.TrimPrefix(cmdline, "ivpn exclude ")
 		cmdline = strings.TrimPrefix(cmdline, "ivpn splittun -execute ")
-		ret = append(ret, RunningApp{Pid: pid, Cmdline: cmdline})
+		cmdline = strings.TrimSpace(cmdline)
+		ret = append(ret, RunningApp{
+			Pid:     pid,
+			Ppid:    ppid,
+			Pgrp:    pgrp,
+			Session: psess,
+			Cmdline: cmdline,
+			Exe:     exe})
 	}
 
 	return ret, nil

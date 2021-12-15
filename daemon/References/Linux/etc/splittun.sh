@@ -201,7 +201,12 @@ function clean()
         _def_interface_name=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $5 }')
         echo "[+] Default network interface: '${_def_interface_name}'"
     fi
-    
+
+    ##############################################
+    # Move all processes from the IVPN cgroup to the main cgroup
+    ##############################################    
+    removeAllPids
+
     ##############################################
     # Remove cgroup    
     ##############################################
@@ -290,6 +295,15 @@ function restore()
     fi
 
     rm -fr ${_tempDir}
+}
+
+# Move all processes from the IVPN cgroup to the main cgroup
+function removeAllPids() 
+{    
+    while IFS= read -r line
+    do
+        echo $line >> /sys/fs/cgroup/net_cls/cgroup.procs
+    done < "${_cgroup_folder}/cgroup.procs"
 }
 
 function addpid()

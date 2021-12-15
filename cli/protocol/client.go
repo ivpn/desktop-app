@@ -350,24 +350,29 @@ func (c *Client) SplitTunnelAddApp(execCmd string) (isRequiredToExecuteCommand b
 	//  SplitTunnelAddedPidInfo	->
 	// 							            <-	types.EmptyResp (success)
 
-	req := types.SplitTunnelAddApp{Exec: execCmd}
 	var respEmpty types.EmptyResp
-	var respAppCmdResp types.SplitTunnelAddAppCmdResp
 
-	_, _, err := c.sendRecvAny(&req, &respEmpty, &respAppCmdResp)
-	if err != nil {
-		return false, err
+	if val, ok := os.LookupEnv("IVPN_STARTED_BY_PARENT"); !ok || val != "IVPN_UI" {
+		// If the CLI was started by IVPN UI - skip sending 'SplitTunnelAddApp'
+		// It is already done by IVPN UI
+
+		req := types.SplitTunnelAddApp{Exec: execCmd}
+
+		var respAppCmdResp types.SplitTunnelAddAppCmdResp
+		_, _, err := c.sendRecvAny(&req, &respEmpty, &respAppCmdResp)
+		if err != nil {
+			return false, err
+		}
+
+		if len(respEmpty.Command) > 0 {
+			// success. No additional operations required
+			return false, nil
+		}
+
+		if len(respAppCmdResp.Command) <= 0 {
+			return false, fmt.Errorf("unexpected response from the daemon")
+		}
 	}
-
-	if len(respEmpty.Command) > 0 {
-		// success. No additional operations required
-		return false, nil
-	}
-
-	if len(respAppCmdResp.Command) <= 0 {
-		return false, fmt.Errorf("unexpected response from the daemon")
-	}
-
 	// register new PID and inform that command must be executed
 	reqAddedePid := types.SplitTunnelAddedPidInfo{Pid: os.Getpid(), Exec: execCmd, CmdToExecute: strings.Join(os.Args[:], " ")}
 	if err := c.sendRecv(&reqAddedePid, &respEmpty); err != nil {

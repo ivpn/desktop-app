@@ -76,6 +76,7 @@ const daemonRequests = Object.freeze({
   KillSwitchSetAllowLAN: "KillSwitchSetAllowLAN",
   KillSwitchSetIsPersistent: "KillSwitchSetIsPersistent",
 
+  SplitTunnelGetStatus: "SplitTunnelGetStatus",
   SplitTunnelSetConfig: "SplitTunnelSetConfig",
   SplitTunnelAddApp: "SplitTunnelAddApp",
   SplitTunnelRemoveApp: "SplitTunnelRemoveApp",
@@ -400,11 +401,7 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.SplitTunnelStatus:
-      store.commit(`vpnState/splitTunnelling`, {
-        enabled: obj.IsEnabled,
-        apps: obj.SplitTunnelApps,
-      });
-
+      store.commit(`vpnState/splitTunnelling`, obj);
       break;
 
     case daemonResponses.ServiceExitingResp:
@@ -1247,6 +1244,15 @@ async function KillSwitchSetIsPersistent(IsPersistent) {
   });
 }
 
+async function SplitTunnelGetStatus() {
+  let ret = await sendRecv(
+    {
+      Command: daemonRequests.SplitTunnelGetStatus,
+    },
+    [daemonResponses.SplitTunnelStatus]
+  );
+  return ret;
+}
 async function SplitTunnelSetConfig(IsEnabled, doReset) {
   await sendRecv(
     {
@@ -1294,14 +1300,37 @@ async function SplitTunnelAddApp(execCmd) {
       if (!XDG_CURRENT_DESKTOP)
         XDG_CURRENT_DESKTOP = process.env["XDG_CURRENT_DESKTOP"];
 
-      var exec = require("child_process").exec;
-
+      //-------------------
       // For a security reasons, we are not using SplitTunnelAddAppCmdResp.CmdToExecute command
       // Instead, use hardcoded binary path to execute '/usr/bin/ivpn'
       let shellCommandToRun = "/usr/bin/ivpn exclude " + execCmd;
+
+      var exec = require("child_process").exec;
       let child = exec(shellCommandToRun, {
-        env: { ...process.env, XDG_CURRENT_DESKTOP: XDG_CURRENT_DESKTOP },
+        env: {
+          ...process.env,
+          XDG_CURRENT_DESKTOP: XDG_CURRENT_DESKTOP,
+          // Inform CLI that it started by the UI
+          // The CLI will skip sending 'SplitTunnelAddApp' in this case
+          IVPN_STARTED_BY_PARENT: "IVPN_UI",
+        },
       });
+      //-------------------
+      /*
+      var spawn = require("child_process").spawn;
+      let child = spawn("/usr/bin/ivpn", ["exclude", execCmd], {
+        detached: true,
+        env: {
+          ...process.env,
+          XDG_CURRENT_DESKTOP: XDG_CURRENT_DESKTOP,
+          // Inform CLI that it started by the UI
+          // The CLI will skip sending 'SplitTunnelAddApp' in this case
+          IVPN_STARTED_BY_PARENT: "IVPN_UI",
+        },
+      });
+      // do not exit child process when parent application stops
+      child.unref();*/
+      //-------------------
 
       console.log(
         "Started command in Split Tunnel environment: PID=",
@@ -1399,6 +1428,9 @@ async function GetInstalledApps() {
 }
 
 async function GetAppIcon(binaryPath) {
+  if (store.state.vpnState.splitTunnelling.IsCanGetAppIconForBinary !== true) {
+    return null;
+  }
   try {
     let resp = await sendRecv({
       Command: daemonRequests.GetAppIcon,
@@ -1508,6 +1540,7 @@ export default {
   KillSwitchSetAllowLAN,
   KillSwitchSetIsPersistent,
 
+  SplitTunnelGetStatus,
   SplitTunnelSetConfig,
   SplitTunnelAddApp,
   SplitTunnelRemoveApp,

@@ -165,6 +165,9 @@ export default {
     return await invoke("renderer-request-KillSwitchSetIsPersistent", isEnable);
   },
 
+  SplitTunnelGetStatus: async () => {
+    return await invoke("renderer-request-SplitTunnelGetStatus");
+  },
   SplitTunnelSetConfig: async (enabled, doReset) => {
     return await invoke(
       "renderer-request-SplitTunnelSetConfig",

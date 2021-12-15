@@ -35,10 +35,9 @@ import (
 )
 
 type DesktopEntry struct {
-	Name     string
-	Icon     string
-	Exec     string
-	Terminal bool
+	Name string
+	Icon string
+	Exec string
 }
 
 // GetAppsList returns list of DesktopEntry with an information about installed apps in the system
@@ -48,7 +47,7 @@ type DesktopEntry struct {
 //		vHOME				- environment variable $HOME (e.g. '/home/user')
 // Specification:
 // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html
-func GetAppsList(evXDG_DATA_DIRS string, evXDG_CURRENT_DESKTOP string, evHOME string) []DesktopEntry {
+func GetAppsList(evXDG_DATA_DIRS string, evXDG_CURRENT_DESKTOP string, evHOME string, excludeApps map[string]struct{}) []DesktopEntry {
 	var XDG_DATA_DIRS []string
 	var XDG_CURRENT_DESKTOP = make(map[string]struct{})
 	var HOME = ""
@@ -106,10 +105,17 @@ func GetAppsList(evXDG_DATA_DIRS string, evXDG_CURRENT_DESKTOP string, evHOME st
 			continue
 		}
 		execBin := strings.Trim(cols[1], "\"")
-		_, err := exec.LookPath(execBin)
+		execBinFull, err := exec.LookPath(execBin)
 		if err != nil {
 			continue
 		}
+
+		// check if the entry is not in excluded apps list
+		if _, found := excludeApps[execBinFull]; found {
+			continue
+		}
+
+		e.Exec = strings.TrimSpace(e.Exec)
 
 		retValues = append(retValues, e)
 	}
@@ -207,6 +213,10 @@ func parseDesktopFile(filepath string, XDG_CURRENT_DESKTOP map[string]struct{}) 
 			if _, err := exec.LookPath(val); err != nil {
 				return DesktopEntry{}, fmt.Errorf("the TryExec check failed")
 			}
+		case "Terminal":
+			if strings.ToLower(val) == "true" {
+				return DesktopEntry{}, fmt.Errorf("terminal app")
+			}
 
 		case "NotShowIn":
 			for _, desktop := range strings.Split(val, ";") {
@@ -236,8 +246,6 @@ func parseDesktopFile(filepath string, XDG_CURRENT_DESKTOP map[string]struct{}) 
 			ret.Icon = val
 		case "Exec":
 			ret.Exec = val
-		case "Terminal":
-			ret.Terminal = strings.ToLower(val) == "true"
 		}
 	}
 	return ret, nil

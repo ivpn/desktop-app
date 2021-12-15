@@ -75,7 +75,7 @@ type SplitTunnelGetStatus struct {
 	CommandBase
 }
 
-// SplitTunnelStatusuration (response) returns the split-tunnelling configuration
+// SplitTunnelStatus (response) returns the split-tunnelling configuration
 type SplitTunnelStatus struct {
 	CommandBase
 	// is ST enabled
@@ -86,7 +86,7 @@ type SplitTunnelStatus struct {
 	// Information about applications added to ST configuration
 	// (applicable for Windows)
 	SplitTunnelApps []string
-	// Information about active applications running in Split-Tunnel environement
+	// Information about active applications running in Split-Tunnel environment
 	// (applicable for Linux)
 	RunningApps []splittun.RunningApp
 }

@@ -62,10 +62,25 @@ export default {
       IsAllowApiServers: null,
     },
 
-    // Split-Tunnelling
+    // The split-tunnelling configuration
     splitTunnelling: {
-      enabled: false,
-      apps: null, // []string
+      IsEnabled: false,
+      IsCanGetAppIconForBinary: false,
+      // Split-Tunnelling (SplitTunnelStatus)
+      // IsEnabled bool                     - Is ST enabled
+      // IsCanGetAppIconForBinary bool      - This parameter informs availability of the functionality to get icon for particular binary
+      //                                      (true - if commands GetAppIcon/AppIconResp  applicable for this platform)
+      // SplitTunnelApps []string           - Information about applications added to ST configuration
+      //                                      (applicable for Windows)
+      // RunningApps []splittun.RunningApp  - Information about active applications running in Split-Tunnel environment
+      //                                      (applicable for Linux)
+      //                                      type RunningApp struct:
+      //                                        Pid     int
+      //                                        Ppid    int // The PID of the parent of this process.
+      //                                        Pgrp    int // The process group ID of the process.
+      //                                        Session int // The session ID of the process.
+      //                                        Cmdline string
+      //                                        Exe     string // The actual pathname of the executed command
     },
 
     dns: "",

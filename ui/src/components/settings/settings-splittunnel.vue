@@ -152,7 +152,6 @@
             <div class="flexRow grayedOnHover" style="padding-top: 4px">
               <!-- APP INFO  -->
               <binaryInfoControl :app="app" style="width: 100%" />
-
               <!-- APP BUTTONS -->
               <div>
                 <button
@@ -342,6 +341,8 @@ function processError(e) {
   });
 }
 
+let timerBackgroundCheckOfStatus = 0;
+
 export default {
   components: {
     spinner,
@@ -352,11 +353,22 @@ export default {
     return {
       isLoadingAllApps: false,
       isShowAppAddPopup: false,
+
       filter: "",
       filterAppsToAdd: "",
-      allInstalledApps: null, // []; array of configured application path's (only absolute file path)
-      // Heshed info about all available applications.
-      //  allAppsHashed[binaryPath] = AppInfo
+
+      // allInstalledApps [] - an array of configured application path's
+      // Type:
+      //    AppName       string
+      //    AppGroup      string // optional
+      //    AppIcon       string - base64 icon of the executable binary
+      //    AppBinaryPath string - The unique parameter describing an application
+      //                    Windows: absolute path to application binary
+      //                    Linux: program to execute, possibly with arguments.
+      allInstalledApps: null,
+
+      // Hashed info about all available applications.
+      //    allAppsHashed[binaryPath] = AppInfo
       // Where the AppInfo object:
       //	  AppBinaryPath string
       //    AppName  string
@@ -364,10 +376,12 @@ export default {
       //    AppIcon string
       //    isSplitted (true or (false/null))
       allAppsHashed: {},
+
       appsToShow: null, // []; array of appInfo
       configAppsHashed: {}, // hashed list of splitted apps (needed to avoid duplicates in final list)
     };
   },
+
   async mounted() {
     // show base information about splitted apps immediately
     //this.updateAppsToShow();
@@ -376,6 +390,8 @@ export default {
     try {
       this.isLoadingAllApps = true;
       allApps = await sender.GetInstalledApps();
+      // Request status after installed apps info received (to be able to assign icons for the running apps)
+      await sender.SplitTunnelGetStatus();
     } finally {
       this.isLoadingAllApps = false;
     }
@@ -396,10 +412,46 @@ export default {
   watch: {
     STConfig() {
       this.updateAppsToShow();
+
+      // if there are running apps - start requesting ST status
+      this.startBackgroundCheckOfStatus();
     },
   },
 
   methods: {
+    isRunningAppsAvailable() {
+      let stStatus = this.$store.state.vpnState.splitTunnelling;
+      return (
+        Array.isArray(stStatus.RunningApps) && stStatus.RunningApps.length > 0
+      );
+    },
+    stopBackgroundCheckOfStatus() {
+      if (timerBackgroundCheckOfStatus != 0) {
+        clearInterval(timerBackgroundCheckOfStatus);
+        timerBackgroundCheckOfStatus = 0;
+      }
+    },
+    startBackgroundCheckOfStatus() {
+      // timer already started
+      if (timerBackgroundCheckOfStatus) return;
+
+      if (this.isRunningAppsAvailable()) {
+        timerBackgroundCheckOfStatus = setInterval(() => {
+          if (
+            !this.isRunningAppsAvailable() ||
+            this.$store.state.uiState.currentSettingsViewName != "splittunnel"
+          ) {
+            this.stopBackgroundCheckOfStatus();
+            return;
+          }
+          try {
+            sender.SplitTunnelGetStatus();
+          } catch (e) {
+            console.error(e);
+          }
+        }, 5000);
+      }
+    },
     onLearnMoreLink: () => {
       sender.shellOpenExternal(
         `https://www.ivpn.net/knowledgebase/general/split-tunnel-uses-and-limitations`
@@ -408,7 +460,17 @@ export default {
 
     updateAppsToShow() {
       // 'splitted' applications
-      let configApps = this.$store.state.vpnState.splitTunnelling.apps;
+      let stStatus = this.$store.state.vpnState.splitTunnelling;
+      let configApps = stStatus.SplitTunnelApps;
+      if (
+        Array.isArray(stStatus.RunningApps) &&
+        (!Array.isArray(configApps) || configApps.length <= 0)
+      ) {
+        configApps = [];
+        stStatus.RunningApps.forEach((rApp) => {
+          configApps.push(rApp.Cmdline);
+        });
+      }
 
       // erase hashed list of configured apps
       this.configAppsHashed = {};
@@ -542,7 +604,7 @@ export default {
       await sender.SplitTunnelSetConfig(false, true);
     },
 
-    appsFiletrFunc(filter, appInfo) {
+    appsFilterFunc(filter, appInfo) {
       // file name of binary (without extension)
       let binaryFname = "";
       try {
@@ -602,11 +664,10 @@ export default {
 
     isSTEnabled: {
       get() {
-        return this.$store.state.vpnState.splitTunnelling.enabled;
+        return this.$store.state.vpnState.splitTunnelling.IsEnabled;
       },
       async set(value) {
-        var st = this.$store.state.vpnState.splitTunnelling;
-        await sender.SplitTunnelSetConfig(value, st.apps);
+        await sender.SplitTunnelSetConfig(value);
       },
     },
 
@@ -641,7 +702,7 @@ export default {
 
       let filter = this.filter.toLowerCase();
       return this.appsToShow.filter((appInfo) =>
-        this.appsFiletrFunc(filter, appInfo)
+        this.appsFilterFunc(filter, appInfo)
       );
     },
 
@@ -664,7 +725,7 @@ export default {
       let filter = this.filterAppsToAdd.toLowerCase();
       if (filter && filter.length > 0)
         retApps = retApps.filter((appInfo) =>
-          this.appsFiletrFunc(filter, appInfo)
+          this.appsFilterFunc(filter, appInfo)
         );
 
       return retApps;

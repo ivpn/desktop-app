@@ -12,7 +12,11 @@
       "
     />
 
-    <div class="flexRowRestSpace" style="padding-left: 5px">
+    <!--Note: The width value (the style in element bellow) does not set real width
+    On fact it can have any value.
+    But if it is not defined - thw with of the element can grow outside of the window
+     -->
+    <div class="flexRowRestSpace text" style="padding-left: 5px; width: 200px">
       <!-- Manually added application -->
       <div v-if="!app.AppName">
         <div class="text">

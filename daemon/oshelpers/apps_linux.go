@@ -67,7 +67,9 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 	}
 
 	// read info about all installed apps
-	entries := applist.GetAppsList(XDG_DATA_DIRS, XDG_CURRENT_DESKTOP, HOME)
+	excludeApps := make(map[string]struct{}, 0)
+	excludeApps["/usr/bin/gnome-terminal"] = struct{}{} // Terminal is not possible to run in ST
+	entries := applist.GetAppsList(XDG_DATA_DIRS, XDG_CURRENT_DESKTOP, HOME, excludeApps)
 
 	// Initialize icons theme
 	theme, err := icotheme.GetTheme(IconsThemeName, HOME, XDG_DATA_DIRS)

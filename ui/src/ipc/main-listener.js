@@ -134,6 +134,9 @@ ipcMain.handle(
   }
 );
 
+ipcMain.handle("renderer-request-SplitTunnelGetStatus", async () => {
+  return await client.SplitTunnelGetStatus();
+});
 ipcMain.handle(
   "renderer-request-SplitTunnelSetConfig",
   async (event, enabled, doReset) => {

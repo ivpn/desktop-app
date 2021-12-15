@@ -167,9 +167,11 @@ func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, 
 
 		for i, exec := range runningApps {
 			if i == 0 {
-				fmt.Fprintln(w, fmt.Sprintf("Running processes\t:\t[pid:%d] %s", exec.Pid, exec.Cmdline))
+				fmt.Fprintln(w, fmt.Sprintf("Running processes\t:\t[pid:%d ppid:%d pgrp:%d sess:%d] [exe:%s] %s", exec.Pid, exec.Ppid, exec.Pgrp, exec.Session,
+					exec.Exe, exec.Cmdline))
 			} else {
-				fmt.Fprintln(w, fmt.Sprintf("\t\t[pid:%d] %s", exec.Pid, exec.Cmdline))
+				fmt.Fprintln(w, fmt.Sprintf("\t\t[pid:%d ppid:%d pgrp:%d sess:%d] [exe:%s] %s", exec.Pid, exec.Ppid, exec.Pgrp, exec.Session,
+					exec.Exe, exec.Cmdline))
 			}
 		}
 	}
