@@ -306,6 +306,17 @@ function removeAllPids()
     done < "${_cgroup_folder}/cgroup.procs"
 }
 
+function removepid()
+{
+    local _pid="$1"    
+    if [ -z "${_pid}" ]; then
+        echo "[!] ERROR: PID not defined"
+        exit 1
+    fi   
+    echo "[+] Removing PID ${_pid} from Split Tunneling group..."
+    echo ${_pid} >> /sys/fs/cgroup/net_cls/cgroup.procs
+}
+
 function addpid()
 {
     local _pid="$1"    
@@ -440,7 +451,11 @@ elif [[ $1 = "stop" ]] ; then
 
 elif [[ $1 = "addpid" ]] ; then
     shift 
-    addpid $@  
+    addpid $@
+
+elif [[ $1 = "removepid" ]] ; then
+    shift 
+    removepid $@
 
 elif [[ $1 = "run" ]] ; then    
     _command=""
@@ -499,6 +514,12 @@ else
     echo "        Start commands in split-tunneling environment"
     echo "        - command        - the command or path to binary to be executed"
     echo "        - username       - (optional) the account under which the command have to be executed"
+    echo "    addpid <PID>"
+    echo "        Add process to Split Tunneling environment"
+    echo "        - PID             - process ID"
+    echo "    removepid <PID>"
+    echo "        Remove process from Split Tunneling environment"
+    echo "        - PID             - process ID"
     echo "    status"
     echo "        Check split-tunneling status"
     echo "Examples:"

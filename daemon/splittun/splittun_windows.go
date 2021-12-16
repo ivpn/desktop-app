@@ -168,6 +168,10 @@ func implAddPid(pid int, commandToExecute string) error {
 	return fmt.Errorf("operation not applicable for current platform")
 }
 
+func implRemovePid(pid int) error {
+	return fmt.Errorf("operation not applicable for current platform")
+}
+
 func implGetRunningApps() ([]LaunchedApps, error) {
 	return fmt.Errorf("operation not applicable for current platform")
 }

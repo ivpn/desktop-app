@@ -75,9 +75,7 @@ func (s *Service) implSplitTunnelling_AddApp(execCmd string) (requiredCmdToExec 
 }
 
 func (s *Service) implSplitTunnelling_RemoveApp(pid int, binaryPath string) (err error) {
-
-	// TODO: not implemented yet
-	return fmt.Errorf("not implemented")
+	return splittun.RemovePid(pid)
 }
 
 // Inform the daemon about started process in ST environment

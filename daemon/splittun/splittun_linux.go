@@ -42,6 +42,10 @@ var (
 	stScriptPath          string
 )
 
+// Information about added running process to the ST (by implAddPid())
+// (map[<PID>]<command>)
+var _addedRootProcesses map[int]string = map[int]string{}
+
 const stPidsFile = "/sys/fs/cgroup/net_cls/ivpn-exclude/cgroup.procs"
 
 func implInitialize() error {
@@ -81,6 +85,11 @@ func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddre
 }
 
 func implAddPid(pid int, commandToExecute string) error {
+	if pid <= 0 {
+		return fmt.Errorf("PID is not defined")
+	}
+	log.Info(fmt.Sprintf("Adding PID:%d", pid))
+
 	enabled, err := isEnabled()
 	if err != nil {
 		return fmt.Errorf("unable to check Split Tunneling status")
@@ -89,10 +98,49 @@ func implAddPid(pid int, commandToExecute string) error {
 		return fmt.Errorf("the Split Tunneling not enabled")
 	}
 
-	return shell.Exec(nil, stScriptPath, "addpid", strconv.Itoa(pid))
+	err = shell.Exec(nil, stScriptPath, "addpid", strconv.Itoa(pid))
+	if err == nil {
+		_addedRootProcesses[pid] = commandToExecute
+	}
+	return err
 }
 
-func implGetRunningApps() ([]RunningApp, error) {
+func implRemovePid(pid int) error {
+	if pid <= 0 {
+		return fmt.Errorf("PID is not defined")
+	}
+	var retErr error
+
+	// Remove PID and all it's child processes
+	pids := make(map[int]struct{}, 0)
+	pids[pid] = struct{}{}
+
+	// looking for all childs
+	if runningApps, err := implGetRunningApps(); err == nil {
+		for _, app := range runningApps {
+			if _, ok := pids[app.Ppid]; ok {
+				pids[app.Pid] = struct{}{}
+			}
+		}
+	} else {
+		retErr = err
+	}
+
+	// remove all required pids
+	for pidToRemove := range pids {
+		log.Info(fmt.Sprintf("Removing PID:%d", pidToRemove))
+		err := shell.Exec(nil, stScriptPath, "removepid", strconv.Itoa(pidToRemove))
+		if err != nil && retErr == nil {
+			retErr = err
+		}
+		if err == nil {
+			delete(_addedRootProcesses, pidToRemove)
+		}
+	}
+	return retErr
+}
+
+func implGetRunningApps() (allProcesses []RunningApp, err error) {
 	// TODO: https://man7.org/linux/man-pages/man5/proc.5.html
 	// '/proc/[pid]/stat' - Contains info about PPID
 
@@ -104,7 +152,7 @@ func implGetRunningApps() ([]RunningApp, error) {
 
 	pidStrings := strings.Split(string(bytes), "\n")
 
-	ret := make([]RunningApp, 0, len(pidStrings))
+	retMapAll := make(map[int]RunningApp, len(pidStrings))
 
 	regexpStat := regexp.MustCompile(`^([0-9]*) (\([\S ]*\)) \S ([0-9]+) ([0-9]+) ([0-9]+)`)
 
@@ -163,22 +211,60 @@ func implGetRunningApps() ([]RunningApp, error) {
 			}
 		}
 		cmdline := string(cmdlineBytes)
-		// TODO: do not forget update prefices in cese if CLI interface change
+		// TODO: do not forget update prefices in case if CLI interface change
 		cmdline = strings.TrimPrefix(cmdline, "/usr/bin/ivpn exclude ")
 		cmdline = strings.TrimPrefix(cmdline, "/usr/bin/ivpn splittun -execute ")
 		cmdline = strings.TrimPrefix(cmdline, "ivpn exclude ")
 		cmdline = strings.TrimPrefix(cmdline, "ivpn splittun -execute ")
 		cmdline = strings.TrimSpace(cmdline)
-		ret = append(ret, RunningApp{
+		retMapAll[pid] = RunningApp{
 			Pid:     pid,
 			Ppid:    ppid,
 			Pgrp:    pgrp,
 			Session: psess,
 			Cmdline: cmdline,
-			Exe:     exe})
+			Exe:     exe}
 	}
 
-	return ret, nil
+	// remove from _addedRootProcesses PIDs which are not exists anumore
+	toRemoveRootPids := make([]int, 0)
+	for p := range _addedRootProcesses {
+		if _, ok := retMapAll[p]; !ok {
+			toRemoveRootPids = append(toRemoveRootPids, p)
+		}
+	}
+	for _, p := range toRemoveRootPids {
+		delete(_addedRootProcesses, p)
+	}
+
+	// recursive anonymous function to find root PID
+	var funcIsHasRoot func(ppid int) bool
+	funcIsHasRoot = func(ppid int) bool {
+		if _, ok := _addedRootProcesses[ppid]; ok {
+			return true
+		}
+		if parentProc, ok := retMapAll[ppid]; ok {
+			if ppid <= parentProc.Ppid {
+				return false //just to ensure there is no infinite recursion
+			}
+			return funcIsHasRoot(parentProc.Ppid)
+		}
+		return false
+	}
+
+	// make result slice and mark required elements as 'ExtIsChild'
+	retAll := make([]RunningApp, 0, len(retMapAll))
+	for _, value := range retMapAll {
+		value.ExtIsChild = funcIsHasRoot(value.Ppid)
+		// for know root processes - replace command by the original command used to run process
+		if cmdLine, ok := _addedRootProcesses[value.Pid]; ok {
+			value.Cmdline = cmdLine
+		}
+
+		retAll = append(retAll, value)
+	}
+
+	return retAll, nil
 }
 
 func isEnabled() (bool, error) {

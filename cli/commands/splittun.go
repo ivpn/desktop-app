@@ -131,7 +131,7 @@ func (c *SplitTun) Init() {
 		// Linux
 		c.BoolVar(&c.reset, "clean", false, "Erase configuration (delete all applications from configuration and disable)")
 		c.StringVar(&c.appadd, "appadd", "", "COMMAND", "Execute command (binary) in Split Tunnel environment (exclude it's traffic from the VPN tunnel)\nInfo: short version of this command is 'ivpn exclude <command>'\nExamples:\n    ivpn splittun -appadd firefox\n    ivpn splittun -appadd ping 1.1.1.1\n    ivpn splittun -appadd /usr/bin/google-chrome")
-		c.StringVar(&c.appremove, "appremove", "", "PID|COMMAND", "Remove application from Split Tunnel environment\n(argument: Process ID or the same command used to start the application)")
+		c.StringVar(&c.appremove, "appremove", "", "PID", "Remove application from Split Tunnel environment\n(argument: Process ID)")
 	}
 
 	c.BoolVar(&c.on, "on", false, "Enable")

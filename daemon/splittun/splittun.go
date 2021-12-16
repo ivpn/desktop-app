@@ -23,7 +23,6 @@
 package splittun
 
 import (
-	"fmt"
 	"net"
 	"sync"
 
@@ -50,12 +49,13 @@ type ConfigAddresses struct {
 // Information about running application
 // https://man7.org/linux/man-pages/man5/proc.5.html
 type RunningApp struct {
-	Pid     int
-	Ppid    int // The PID of the parent of this process.
-	Pgrp    int // The process group ID of the process.
-	Session int // The session ID of the process.
-	Cmdline string
-	Exe     string // The actual pathname of the executed command
+	Pid        int
+	Ppid       int // The PID of the parent of this process.
+	Pgrp       int // The process group ID of the process.
+	Session    int // The session ID of the process.
+	Cmdline    string
+	Exe        string // The actual pathname of the executed command
+	ExtIsChild bool   // true when this process is a child of already known process registered by AddPid() function
 }
 
 // Initialize must be called first (before accessing any ST functionality)
@@ -93,15 +93,20 @@ func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses
 	return implApplyConfig(isStEnabled, isVpnEnabled, addrConfig, splitTunnelApps)
 }
 
-// AddPid adds process to Split-Tunnel environment
+// AddPid add process to Split-Tunnel environment
 // (applicable for Linux)
 func AddPid(pid int, commandToExecute string) error {
-	log.Info(fmt.Sprintf("Adding PID:%d", pid))
 	return implAddPid(pid, commandToExecute)
 }
 
-// Get information about active applications running in Split-Tunnel environement
+// RemovePid remove process to Split-Tunnel environment
 // (applicable for Linux)
-func GetRunningApps() ([]RunningApp, error) {
+func RemovePid(pid int) error {
+	return implRemovePid(pid)
+}
+
+// Get information about active applications running in Split-Tunnel environment
+// (applicable for Linux)
+func GetRunningApps() (allProcesses []RunningApp, err error) {
 	return implGetRunningApps()
 }

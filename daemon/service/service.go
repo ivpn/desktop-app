@@ -1202,16 +1202,16 @@ func (s *Service) GetBinaryIcon(binaryPath string) (string, error) {
 
 func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, error) {
 	var prefs = s.Preferences()
-	runningApps, err := splittun.GetRunningApps()
+	runningProcesses, err := splittun.GetRunningApps()
 	if err != nil {
-		runningApps = []splittun.RunningApp{}
+		runningProcesses = []splittun.RunningApp{}
 	}
 
 	ret := protocolTypes.SplitTunnelStatus{
 		IsEnabled:                prefs.IsSplitTunnel,
 		IsCanGetAppIconForBinary: oshelpers.IsCanGetAppIconForBinary(),
 		SplitTunnelApps:          prefs.SplitTunnelApps,
-		RunningApps:              runningApps}
+		RunningApps:              runningProcesses}
 
 	return ret, nil
 }
