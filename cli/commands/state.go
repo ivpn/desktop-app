@@ -88,7 +88,7 @@ func showState() error {
 	}
 	if state == vpn.CONNECTED {
 		tips = append(tips, TipDisconnect)
-		if fwstate.IsEnabled == false {
+		if !fwstate.IsEnabled {
 			tips = append(tips, TipFirewallEnable)
 		}
 	} else if fwstate.IsEnabled {

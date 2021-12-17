@@ -117,8 +117,13 @@ func implRemovePid(pid int) error {
 
 	// looking for all childs
 	if runningApps, err := implGetRunningApps(); err == nil {
+		allPids := make(map[int]RunningApp, len(runningApps))
 		for _, app := range runningApps {
-			if _, ok := pids[app.Ppid]; ok {
+			allPids[app.Pid] = app
+		}
+
+		for _, app := range runningApps {
+			if isChildOf(app, pid, allPids) {
 				pids[app.Pid] = struct{}{}
 			}
 		}
@@ -141,8 +146,7 @@ func implRemovePid(pid int) error {
 }
 
 func implGetRunningApps() (allProcesses []RunningApp, err error) {
-	// TODO: https://man7.org/linux/man-pages/man5/proc.5.html
-	// '/proc/[pid]/stat' - Contains info about PPID
+	// https://man7.org/linux/man-pages/man5/proc.5.html
 
 	// read all PIDs which are active in ST environment
 	bytes, err := os.ReadFile(stPidsFile)
@@ -151,9 +155,7 @@ func implGetRunningApps() (allProcesses []RunningApp, err error) {
 	}
 
 	pidStrings := strings.Split(string(bytes), "\n")
-
 	retMapAll := make(map[int]RunningApp, len(pidStrings))
-
 	regexpStat := regexp.MustCompile(`^([0-9]*) (\([\S ]*\)) \S ([0-9]+) ([0-9]+) ([0-9]+)`)
 
 	for _, s := range pidStrings {
@@ -169,8 +171,6 @@ func implGetRunningApps() (allProcesses []RunningApp, err error) {
 
 		// read PPID, ProgessGroup, Session for each pid
 		ppid := 0
-		pgrp := 0
-		psess := 0
 		statBytes, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
 		if err != nil {
 			log.Warning(err)
@@ -179,16 +179,6 @@ func implGetRunningApps() (allProcesses []RunningApp, err error) {
 			if len(statCols) >= 4 {
 				if v, err := strconv.Atoi(statCols[3]); err == nil {
 					ppid = v
-				}
-			}
-			if len(statCols) >= 5 {
-				if v, err := strconv.Atoi(statCols[4]); err == nil {
-					pgrp = v
-				}
-			}
-			if len(statCols) >= 6 {
-				if v, err := strconv.Atoi(statCols[5]); err == nil {
-					psess = v
 				}
 			}
 		}
@@ -211,7 +201,7 @@ func implGetRunningApps() (allProcesses []RunningApp, err error) {
 			}
 		}
 		cmdline := string(cmdlineBytes)
-		// TODO: do not forget update prefices in case if CLI interface change
+		// TODO: do not forget update prefixes to trim in case if IVPN CLI arguments change name ('exclude' or 'splittun -execute')
 		cmdline = strings.TrimPrefix(cmdline, "/usr/bin/ivpn exclude ")
 		cmdline = strings.TrimPrefix(cmdline, "/usr/bin/ivpn splittun -execute ")
 		cmdline = strings.TrimPrefix(cmdline, "ivpn exclude ")
@@ -220,50 +210,91 @@ func implGetRunningApps() (allProcesses []RunningApp, err error) {
 		retMapAll[pid] = RunningApp{
 			Pid:     pid,
 			Ppid:    ppid,
-			Pgrp:    pgrp,
-			Session: psess,
 			Cmdline: cmdline,
 			Exe:     exe}
 	}
 
 	// remove from _addedRootProcesses PIDs which are not exists anumore
-	toRemoveRootPids := make([]int, 0)
-	for p := range _addedRootProcesses {
-		if _, ok := retMapAll[p]; !ok {
-			toRemoveRootPids = append(toRemoveRootPids, p)
+	diedRootPids := make(map[int]string, 0)
+	for rootPid, rootCmd := range _addedRootProcesses {
+		if _, ok := retMapAll[rootPid]; !ok {
+			diedRootPids[rootPid] = rootCmd
 		}
 	}
-	for _, p := range toRemoveRootPids {
-		delete(_addedRootProcesses, p)
+	for diedPid := range diedRootPids {
+		delete(_addedRootProcesses, diedPid)
+
+		// Find new root pid for current command (if exists)
+		// As new root pid will be used process with minimal PID which have ExtIvpnRootPid same as deleted PID
 	}
 
-	// recursive anonymous function to find root PID
-	var funcIsHasRoot func(ppid int) bool
-	funcIsHasRoot = func(ppid int) bool {
-		if _, ok := _addedRootProcesses[ppid]; ok {
-			return true
+	detachedProcessesMinPid := make(map[int]int) // map[<rootPidFromEnvVar>]<pid>
+
+	// mark required elements as 'ExtIvpnRootPid'
+	for pid, value := range retMapAll {
+		if rootPid, isKnown := getRootPid(value, retMapAll); isKnown {
+			value.ExtIvpnRootPid = rootPid
 		}
-		if parentProc, ok := retMapAll[ppid]; ok {
-			if ppid <= parentProc.Ppid {
-				return false //just to ensure there is no infinite recursion
+
+		if value.ExtIvpnRootPid == 0 {
+			// Could happen a situations when we can not to determine to which command the process belongs.
+			// It occurs when ppid->pid->... sequence not ending by any element from '_addedRootProcesses'.
+			// In such situations, we are trying to read environment variable 'IVPN_STARTED_ST_ID' of that process,
+			// it contains the PID of the initial (root) process.
+			// The IVPN CLI sets this variable for each process it starting in ST environment.
+			pidEnv, err := readProcEnvVarIvpnId(value.Pid)
+			if err != nil {
+				log.Warning(err)
+			} else {
+				if _, ok := _addedRootProcesses[pidEnv]; ok {
+					value.ExtIvpnRootPid = pidEnv
+				} else {
+					// For the situations when the root process id not exist anymore -
+					// mark as root a process with minimum PID which has correspond value of IVPN_STARTED_ST_ID
+					// Here we are looking for a minimal PID.
+					if minPid, ok := detachedProcessesMinPid[pidEnv]; ok {
+						if minPid > pid {
+							detachedProcessesMinPid[pidEnv] = pid
+						}
+					} else {
+						detachedProcessesMinPid[pidEnv] = pid
+					}
+				}
 			}
-			return funcIsHasRoot(parentProc.Ppid)
 		}
-		return false
+
+		retMapAll[pid] = value
 	}
 
-	// make result slice and mark required elements as 'ExtIsChild'
+	// For the situations when the root process id not exist anymore -
+	// mark as root a process with minimum PID which has correspond value of IVPN_STARTED_ST_ID
+	for rootPidEnv, pid := range detachedProcessesMinPid {
+		if diedRootCmd, ok := diedRootPids[rootPidEnv]; ok {
+			proc := retMapAll[pid]
+			retMapAll[pid] = proc
+			_addedRootProcesses[proc.Pid] = diedRootCmd
+		}
+		for pid, value := range retMapAll {
+			if value.ExtIvpnRootPid > 0 {
+				continue
+			}
+			if rootPid, isKnown := getRootPid(value, retMapAll); isKnown {
+				value.ExtIvpnRootPid = rootPid
+				retMapAll[pid] = value
+			}
+		}
+	}
+
+	// make result slice
 	retAll := make([]RunningApp, 0, len(retMapAll))
 	for _, value := range retMapAll {
-		value.ExtIsChild = funcIsHasRoot(value.Ppid)
-		// for know root processes - replace command by the original command used to run process
+		// for known root processes - replace command by the original command used to run process
 		if cmdLine, ok := _addedRootProcesses[value.Pid]; ok {
-			value.Cmdline = cmdLine
+			value.ExtModifiedCmdLine = cmdLine
 		}
 
 		retAll = append(retAll, value)
 	}
-
 	return retAll, nil
 }
 
@@ -307,4 +338,64 @@ func enable(isEnable bool) error {
 		log.Info("Split Tunneling enabled")
 	}
 	return nil
+}
+
+func getRootPid(p RunningApp, allPids map[int]RunningApp) (rootPid int, isKnownRoot bool) {
+	if _, ok := _addedRootProcesses[p.Ppid]; ok {
+		return p.Ppid, true
+	}
+	if _, ok := _addedRootProcesses[p.Pid]; ok {
+		return p.Pid, true
+	}
+	if p.ExtIvpnRootPid > 0 {
+		if _, ok := _addedRootProcesses[p.ExtIvpnRootPid]; ok {
+			return p.ExtIvpnRootPid, true
+		}
+	}
+
+	if parentProc, ok := allPids[p.Ppid]; ok {
+		if p.Ppid <= parentProc.Ppid {
+			return 0, false //just to ensure there is no infinite recursion
+		}
+		return getRootPid(parentProc, allPids)
+	}
+	return p.Ppid, false
+}
+
+func isChildOf(p RunningApp, parentPid int, allPids map[int]RunningApp) bool {
+	if p.Ppid == parentPid {
+		return true
+	}
+	if p.ExtIvpnRootPid > 0 && p.ExtIvpnRootPid == parentPid {
+		return true
+	}
+
+	if parentProc, ok := allPids[p.Ppid]; ok {
+		if p.Ppid <= parentProc.Ppid {
+			return false //just to ensure there is no infinite recursion
+		}
+		return isChildOf(parentProc, parentPid, allPids)
+	}
+	return false
+}
+
+func readProcEnvVarIvpnId(pid int) (int, error) {
+	bytes, err := os.ReadFile(fmt.Sprintf("/proc/%d/environ", pid))
+	if err != nil {
+		return 0, err
+	}
+
+	id := 0
+	vars := strings.Split(string(bytes), string(0))
+	for _, line := range vars {
+		cols := strings.Split(line, "=")
+		if len(cols) != 2 {
+			continue
+		}
+		if cols[0] == "IVPN_STARTED_ST_ID" {
+			return strconv.Atoi(cols[1])
+		}
+	}
+
+	return id, nil
 }

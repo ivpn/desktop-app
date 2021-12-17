@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -48,9 +49,17 @@ func (c *Exclude) Init() {
 	c.DefaultStringVar(&c.execute, "COMMAND")
 }
 func (c *Exclude) Run() error {
+	if len(c.executeSpecParseArgs) <= 0 {
+		c.Usage(false)
+		return fmt.Errorf("no parameters defined")
+	}
 	return doAddApp(c.executeSpecParseArgs)
 }
 func (c *Exclude) specialParse(arguments []string) bool {
+	if len(arguments) <= 0 {
+		return false
+	}
+
 	if strings.ToLower(arguments[0]) == "-h" {
 		return false
 	}
@@ -60,6 +69,9 @@ func (c *Exclude) specialParse(arguments []string) bool {
 
 // ================================================================
 func doAddApp(args []string) error {
+	if len(args) <= 0 {
+		return fmt.Errorf("no arguments defined")
+	}
 	// Description of Split Tunneling commands sequence to run the application:
 	//	[client]					          [daemon]
 	//	SplitTunnelAddApp		    ->
@@ -97,6 +109,13 @@ func doAddApp(args []string) error {
 		fmt.Println("Split Tunneling not enabled")
 		PrintTips([]TipType{TipSplittunEnable})
 		return fmt.Errorf("unable to start command: Split Tunneling not enabled")
+	}
+
+	pid := os.Getpid()
+	// Set unique environment var for the process.
+	// All child processes will use the same var. It will help us to distinguish processes which belongs to specific command
+	if err := os.Setenv("IVPN_STARTED_ST_ID", strconv.Itoa(pid)); err != nil {
+		return fmt.Errorf("failed to start command (unable to set environment variable): %w", err)
 	}
 	fmt.Printf("Running command in Split Tunneling environment (pid:%d): %v\n", os.Getpid(), strings.Trim(fmt.Sprint(args), "[]"))
 	return syscall.Exec(binary, args, os.Environ())

@@ -77,11 +77,10 @@ export default {
       //                                      type RunningApp struct:
       //                                        Pid     int
       //                                        Ppid    int // The PID of the parent of this process.
-      //                                        Pgrp    int // The process group ID of the process.
-      //                                        Session int // The session ID of the process.
       //                                        Cmdline string
       //                                        Exe         string  // The actual pathname of the executed command
-      //                                        ExtIsChild  bool    // 'true' when this process is a child of already known process registered by AddPid() function
+      //                                        ExtIvpnRootPid int  // PID of the known parent process registered by AddPid() function
+      //                                        ExtModifiedCmdLine string
     },
 
     dns: "",

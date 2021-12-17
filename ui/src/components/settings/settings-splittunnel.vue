@@ -318,12 +318,11 @@ export default {
       //  AppInfo fields
       //  + RunningApp: (Linux: info about running apps in ST environment):
       //      RunningApp.Pid     int
-      //      RunningApp.Ppid    int    // The PID of the parent of this process.
-      //      RunningApp.Pgrp    int    // The process group ID of the process.
-      //      RunningApp.Session int    // The session ID of the process.
+      //      RunningApp.Ppid    int        // The PID of the parent of this process.
       //      RunningApp.Cmdline string
-      //      RunningApp.Exe     string  // The actual pathname of the executed command
-      //      RunningApp.ExtIsChild bool // 'true' when this process is a child of already known process registered by AddPid() function
+      //      RunningApp.Exe     string     // The actual pathname of the executed command
+      //      RunningApp.ExtIvpnRootPid int // PID of the known parent process registered by AddPid() function
+      //      RunningApp.ExtModifiedCmdLine string
       appsToShow: null,
     };
   },
@@ -415,11 +414,25 @@ export default {
           // Linux:
           let runningApps = splitTunnelling.RunningApps;
           runningApps.forEach((runningApp) => {
+            console.log(runningApp);
             // check if we can get info from the installed apps list
-            let cmdLine = runningApp.Cmdline.toLowerCase();
+            let cmdLine = "";
+            if (
+              runningApp.ExtModifiedCmdLine &&
+              runningApp.ExtModifiedCmdLine.length > 0
+            ) {
+              cmdLine = runningApp.ExtModifiedCmdLine.toLowerCase();
+            } else {
+              cmdLine = runningApp.Cmdline.toLowerCase();
+            }
+
             let knownApp = this.allInstalledAppsHashed[cmdLine];
-            // do not show child processes (child processes of known root PID)
-            if (runningApp.ExtIsChild === true) return;
+            // Do not show child processes (child processes of known root PID)
+            if (
+              runningApp.ExtIvpnRootPid > 0 &&
+              runningApp.ExtIvpnRootPid !== runningApp.Pid
+            )
+              return;
             if (!knownApp)
               // app is not found in 'installed apps list'
               appsToShowTmp.push({
@@ -465,6 +478,22 @@ export default {
 
       // sorting the list
       appsToShowTmp.sort(function (a, b) {
+        if (a.RunningApp && b.RunningApp) {
+          if (
+            a.RunningApp.ExtIvpnRootPid > 0 &&
+            b.RunningApp.ExtIvpnRootPid === 0
+          )
+            return -1;
+          if (
+            a.RunningApp.ExtIvpnRootPid === 0 &&
+            b.RunningApp.ExtIvpnRootPid > 0
+          )
+            return 1;
+
+          if (a.RunningApp.Pid < b.RunningApp.Pid) return -1;
+          if (a.RunningApp.Pid > b.RunningApp.Pid) return 1;
+        }
+
         if (a.AppName && b.AppName) {
           let app1 = a.AppName.toUpperCase();
           let app2 = b.AppName.toUpperCase();
