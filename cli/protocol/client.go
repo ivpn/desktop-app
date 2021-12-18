@@ -23,6 +23,7 @@
 package protocol
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"net"
@@ -351,14 +352,12 @@ func (c *Client) SplitTunnelAddApp(execCmd string) (isRequiredToExecuteCommand b
 	// 							            <-	types.EmptyResp (success)
 
 	var respEmpty types.EmptyResp
-
+	var respAppCmdResp types.SplitTunnelAddAppCmdResp
 	if val, ok := os.LookupEnv("IVPN_STARTED_BY_PARENT"); !ok || val != "IVPN_UI" {
 		// If the CLI was started by IVPN UI - skip sending 'SplitTunnelAddApp'
 		// It is already done by IVPN UI
 
 		req := types.SplitTunnelAddApp{Exec: execCmd}
-
-		var respAppCmdResp types.SplitTunnelAddAppCmdResp
 		_, _, err := c.sendRecvAny(&req, &respEmpty, &respAppCmdResp)
 		if err != nil {
 			return false, err
@@ -373,6 +372,29 @@ func (c *Client) SplitTunnelAddApp(execCmd string) (isRequiredToExecuteCommand b
 			return false, fmt.Errorf("unexpected response from the daemon")
 		}
 	}
+
+	if respAppCmdResp.IsAlreadyRunning {
+		warningMes := respAppCmdResp.IsAlreadyRunningMessage
+		if len(warningMes) <= 0 {
+			warningMes = "It looks like the application is already running.\nSome applications need to be closed before launching them in the Split Tunneling environment.\nOtherwise, it might not be excluded from the VPN tunnel."
+		}
+		fmt.Println("WARNING! " + warningMes)
+
+		fmt.Print("Do you really want to launch the command? [y/n]: ")
+		reader := bufio.NewReader(os.Stdin)
+		yn, _ := reader.ReadString('\n')
+		yn = strings.TrimSuffix(yn, "\n")
+		yn = strings.TrimSuffix(yn, "\r")
+		if yn == "" {
+			yn = "yes"
+			fmt.Println(yn)
+		}
+		yn = strings.ToUpper(yn)
+		if yn != "Y" && yn != "YES" {
+			return false, fmt.Errorf("canceled")
+		}
+	}
+
 	// register new PID and inform that command must be executed
 	reqAddedePid := types.SplitTunnelAddedPidInfo{Pid: os.Getpid(), Exec: execCmd, CmdToExecute: strings.Join(os.Args[:], " ")}
 	if err := c.sendRecv(&reqAddedePid, &respEmpty); err != nil {

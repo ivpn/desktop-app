@@ -43,10 +43,10 @@ func (s *Service) implPingServersStopped(hosts []net.IP) error {
 	return nil
 }
 
-func (s *Service) implSplitTunnelling_AddApp(binaryFile string) (requiredCmdToExec string, err error) {
+func (s *Service) implSplitTunnelling_AddApp(binaryFile string) (requiredCmdToExec string, isAlreadyRunning bool, err error) {
 	binaryFile = strings.TrimSpace(binaryFile)
 	if len(binaryFile) <= 0 {
-		return "", nil
+		return "", false, nil
 	}
 
 	prefs := s._preferences
@@ -58,25 +58,25 @@ func (s *Service) implSplitTunnelling_AddApp(binaryFile string) (requiredCmdToEx
 
 	// Ensure no binaries from IVPN package is included into apps list to Split-Tunnel
 	if strings.HasPrefix(binaryFile, exeDir) {
-		return "", fmt.Errorf("Split-Tunnelling for IVPN binaries is forbidden (%s)", binaryFile)
+		return "", false, fmt.Errorf("Split-Tunnelling for IVPN binaries is forbidden (%s)", binaryFile)
 	}
 	// Ensure file is exists
 	if _, err := os.Stat(binaryFile); os.IsNotExist(err) {
-		return "", err
+		return "", false, err
 	}
 
 	binaryPathLowCase := strings.ToLower(binaryFile)
 	for _, a := range prefs.SplitTunnelApps {
 		if strings.ToLower(a) == binaryPathLowCase {
 			// the binary is already in configuration
-			return "", nil
+			return "", false, nil
 		}
 	}
 
 	prefs.SplitTunnelApps = append(prefs.SplitTunnelApps, binaryFile)
 	s.setPreferences(prefs)
 
-	return "", nil
+	return "", false, nil
 }
 
 func (s *Service) implSplitTunnelling_RemoveApp(pid int, binaryPath string) (err error) {

@@ -1264,7 +1264,7 @@ async function SplitTunnelSetConfig(IsEnabled, doReset) {
   );
 }
 
-async function SplitTunnelAddApp(execCmd) {
+async function SplitTunnelAddApp(execCmd, funcShowMessageBox) {
   let ret = await sendRecv(
     {
       Command: daemonRequests.SplitTunnelAddApp,
@@ -1288,11 +1288,32 @@ async function SplitTunnelAddApp(execCmd) {
     return;
   }
 
+  if (ret.Command != daemonResponses.SplitTunnelAddAppCmdResp)
+    throw new Error("Unexpected response");
+
   if (ret != null && ret.Command == daemonResponses.SplitTunnelAddAppCmdResp) {
     if (Platform() != PlatformEnum.Linux) {
       throw new Error(
         "Launching external commands in the Split Tunnel environment is not supported for this platform"
       );
+    }
+
+    if (ret.IsAlreadyRunning && funcShowMessageBox) {
+      let warningMes = ret.IsAlreadyRunningMessage;
+      if (!warningMes || warningMes.length <= 0)
+        warningMes =
+          "It looks like the application is already running.\nSome applications need to be closed before launching them in the Split Tunneling environment.\nOtherwise, it might not be excluded from the VPN tunnel.";
+
+      let msgBoxConfig = {
+        type: "question",
+        message: "Do you really want to launch the application?",
+        detail: warningMes,
+        buttons: ["Cancel", "Launch"],
+      };
+      let action = await funcShowMessageBox(msgBoxConfig);
+      if (action.response == 0) {
+        return;
+      }
     }
 
     try {
@@ -1316,20 +1337,19 @@ async function SplitTunnelAddApp(execCmd) {
         },
       });
       //-------------------
-      /*
-      var spawn = require("child_process").spawn;
-      let child = spawn("/usr/bin/ivpn", ["exclude", execCmd], {
-        detached: true,
-        env: {
-          ...process.env,
-          XDG_CURRENT_DESKTOP: XDG_CURRENT_DESKTOP,
-          // Inform CLI that it started by the UI
-          // The CLI will skip sending 'SplitTunnelAddApp' in this case
-          IVPN_STARTED_BY_PARENT: "IVPN_UI",
-        },
-      });
-      // do not exit child process when parent application stops
-      child.unref();*/
+      //var spawn = require("child_process").spawn;
+      //let child = spawn("/usr/bin/ivpn", ["exclude", execCmd], {
+      //  detached: true,
+      //  env: {
+      //    ...process.env,
+      //    XDG_CURRENT_DESKTOP: XDG_CURRENT_DESKTOP,
+      //    // Inform CLI that it started by the UI
+      //    // The CLI will skip sending 'SplitTunnelAddApp' in this case
+      //    IVPN_STARTED_BY_PARENT: "IVPN_UI",
+      //  },
+      //});
+      //// do not exit child process when parent application stops
+      //child.unref();
       //-------------------
 
       console.log(

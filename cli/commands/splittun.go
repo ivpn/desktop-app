@@ -100,6 +100,7 @@ func doAddApp(args []string) error {
 	}
 
 	// Linux: the command have to be executed
+
 	cfg, err := _proto.GetSplitTunnelStatus()
 	if err != nil {
 		return err
@@ -124,10 +125,11 @@ func doAddApp(args []string) error {
 // ================================================================
 type SplitTun struct {
 	flags.CmdInfo
-	status bool
-	on     bool
-	off    bool
-	reset  bool
+	status     bool
+	statusFull bool
+	on         bool
+	off        bool
+	reset      bool
 
 	appremove  string
 	appadd     string // this parameter is not in use. We need it just for help info (using 'appaddArgs' parsed with specific logic)
@@ -148,6 +150,7 @@ func (c *SplitTun) Init() {
 		c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to binary)")
 	} else {
 		// Linux
+		c.BoolVar(&c.statusFull, "status_full", false, "(extended status info) Show detailed Split Tunnel status")
 		c.BoolVar(&c.reset, "clean", false, "Erase configuration (delete all applications from configuration and disable)")
 		c.StringVar(&c.appadd, "appadd", "", "COMMAND", "Execute command (binary) in Split Tunnel environment (exclude it's traffic from the VPN tunnel)\nInfo: short version of this command is 'ivpn exclude <command>'\nExamples:\n    ivpn splittun -appadd firefox\n    ivpn splittun -appadd ping 1.1.1.1\n    ivpn splittun -appadd /usr/bin/google-chrome")
 		c.StringVar(&c.appremove, "appremove", "", "PID", "Remove application from Split Tunnel environment\n(argument: Process ID)")
@@ -181,7 +184,7 @@ func (c *SplitTun) Run() error {
 		if err != nil {
 			return err
 		}
-		return c.doShowStatus(cfg)
+		return c.doShowStatus(cfg, c.statusFull)
 	}
 
 	if c.on || c.off {
@@ -216,17 +219,17 @@ func (c *SplitTun) Run() error {
 		}
 	}
 
-	return c.doShowStatus(cfg)
+	return c.doShowStatus(cfg, c.statusFull)
 }
 
-func (c *SplitTun) doShowStatus(cfg types.SplitTunnelStatus) error {
-	w := printSplitTunState(nil, false, cfg.IsEnabled, cfg.SplitTunnelApps, cfg.RunningApps)
+func (c *SplitTun) doShowStatus(cfg types.SplitTunnelStatus, isFull bool) error {
+	w := printSplitTunState(nil, false, isFull, cfg.IsEnabled, cfg.SplitTunnelApps, cfg.RunningApps)
 	w.Flush()
 	return nil
 }
 
 func (c *SplitTun) doShowStatusShort(status types.SplitTunnelStatus) error {
-	w := printSplitTunState(nil, true, status.IsEnabled, status.SplitTunnelApps, status.RunningApps)
+	w := printSplitTunState(nil, true, false, status.IsEnabled, status.SplitTunnelApps, status.RunningApps)
 	w.Flush()
 	return nil
 }

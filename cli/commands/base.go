@@ -139,7 +139,7 @@ func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN
 	return w
 }
 
-func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, apps []string, runningApps []splittun.RunningApp) *tabwriter.Writer {
+func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isFullPrint bool, isEnabled bool, apps []string, runningApps []splittun.RunningApp) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
@@ -168,25 +168,6 @@ func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, 
 			return runningApps[i].Pid < runningApps[j].Pid
 		})
 
-		regexpBinaryArgs := regexp.MustCompile("(\".*\"|\\S*)(.*)")
-		funcTruncateCmdStr := func(cmd string, maxLenSoftLimit int) string {
-			cols := regexpBinaryArgs.FindStringSubmatch(cmd)
-			if len(cols) != 3 {
-				return cmd
-			}
-			ret := cols[1] // bin
-			args := strings.Split(cols[2], " ")
-			for _, arg := range args {
-				if len(ret)+len(arg) <= maxLenSoftLimit {
-					ret += " " + arg
-				} else {
-					ret += " ..."
-					break
-				}
-			}
-			return ret
-		}
-
 		isFirstLineShown := false
 		for _, exec := range runningApps {
 			if exec.Pid != exec.ExtIvpnRootPid {
@@ -199,41 +180,62 @@ func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, 
 			}
 			if !isFirstLineShown {
 				isFirstLineShown = true
-				fmt.Fprintf(w, "Running apps\t:\t[pid:%d] %s\n", exec.Pid, cmd)
+				fmt.Fprintf(w, "Running commands\t:\t[pid:%d] %s\n", exec.Pid, cmd)
 			} else {
 				fmt.Fprintf(w, "\t\t[pid:%d] %s\n", exec.Pid, cmd)
 			}
 		}
 
-		/*
+		if isFullPrint {
+			regexpBinaryArgs := regexp.MustCompile("(\".*\"|\\S*)(.*)")
+			funcTruncateCmdStr := func(cmd string, maxLenSoftLimit int) string {
+				cols := regexpBinaryArgs.FindStringSubmatch(cmd)
+				if len(cols) != 3 {
+					return cmd
+				}
+				ret := cols[1] // bin
+
+				args := cmd[len(ret):]
+				if len(ret) < maxLenSoftLimit && len(args) > 0 {
+					ret += " " + args
+					if len(ret) > maxLenSoftLimit {
+						ret = ret[:maxLenSoftLimit] + "..."
+					}
+				}
+				return ret
+				//cols := regexpBinaryArgs.FindStringSubmatch(cmd)
+				//if len(cols) != 3 {
+				//	return cmd
+				//}
+				//ret := cols[1] // bin
+				//args := strings.Split(cols[2], " ")
+				//for _, arg := range args {
+				//	if len(arg) <= 0 {
+				//		continue
+				//	}
+				//	if len(ret)+len(arg) <= maxLenSoftLimit {
+				//		ret += " " + arg
+				//	} else {
+				//		ret += "..."
+				//		break
+				//	}
+				//}
+				//return ret
+			}
+
 			if len(runningApps) > 0 {
 				fmt.Fprintf(w, "All running processes\t:\t\n")
 
 				for _, exec := range runningApps {
 					detachedProcWarning := ""
-					if !exec.ExtIsChild && !exec.ExtIsRoot {
-						detachedProcWarning = " [DETACHED PROCESS!]"
+					if exec.ExtIvpnRootPid <= 0 {
+						detachedProcWarning = "*"
 					}
-					fmt.Fprintf(w, "\t\t[pid:%d ppid:%d]%s [exe:%s] %s\n", exec.Pid, exec.Ppid, detachedProcWarning,
-						exec.Exe, funcTruncateCmdStr(exec.Cmdline, 64))
+
+					fmt.Fprintf(w, "  [pid:%d ppid:%d exe:%s]%s %s\n", exec.Pid, exec.Ppid, exec.Exe, detachedProcWarning, funcTruncateCmdStr(exec.Cmdline, 60))
 				}
-			}
-		*/
-
-		if len(runningApps) > 0 {
-			fmt.Fprintf(w, "All running processes\t:\t\n")
-
-			for _, exec := range runningApps {
-				detachedProcWarning := ""
-				if exec.ExtIvpnRootPid <= 0 {
-					detachedProcWarning = "*"
-				}
-
-				fmt.Fprintf(w, "\t\t[pid:%d ppid:%d]%s [exe:%s] %s\n", exec.Pid, exec.Ppid, detachedProcWarning,
-					exec.Exe, funcTruncateCmdStr(exec.Cmdline, 64))
 			}
 		}
-
 	}
 
 	return w

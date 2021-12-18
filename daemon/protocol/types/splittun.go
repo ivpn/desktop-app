@@ -121,6 +121,9 @@ type SplitTunnelAddAppCmdResp struct {
 	Exec string
 	// Shell command which have to be executed in user space environment
 	CmdToExecute string
+
+	IsAlreadyRunning        bool
+	IsAlreadyRunningMessage string
 }
 
 // SplitTunnelAddedPidInfo (request) informs the daemon about started process in ST environment

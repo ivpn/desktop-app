@@ -1250,7 +1250,7 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 	return splittun.ApplyConfig(prefs.IsSplitTunnel, s.Connected(), addressesCfg, prefs.SplitTunnelApps)
 }
 
-func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, err error) {
+func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error) {
 	// apply ST configuration after function ends
 	defer s.splitTunnelling_ApplyConfig()
 	return s.implSplitTunnelling_AddApp(exec)

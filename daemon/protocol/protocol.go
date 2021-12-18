@@ -85,7 +85,7 @@ type Service interface {
 
 	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
-	SplitTunnelling_AddApp(exec string) (cmdToExecute string, err error)
+	SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error)
 	SplitTunnelling_RemoveApp(pid int, exec string) (err error)
 	SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error
 
@@ -618,7 +618,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
 		//  SplitTunnelAddedPidInfo	->
 		// 							<-	types.EmptyResp (success)
-		cmdToExecute, err := p._service.SplitTunnelling_AddApp(req.Exec)
+		cmdToExecute, isAlreadyRunning, err := p._service.SplitTunnelling_AddApp(req.Exec)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
@@ -627,7 +627,18 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 			return
 		}
-		p.sendResponse(conn, &types.SplitTunnelAddAppCmdResp{Exec: req.Exec, CmdToExecute: cmdToExecute}, reqCmd.Idx)
+
+		isRunningWarningMes := ""
+		if isAlreadyRunning {
+			isRunningWarningMes = "It looks like the application is already running.\nSome applications need to be closed before launching them in the Split Tunneling environment.\nOtherwise, it might not be excluded from the VPN tunnel."
+		}
+		p.sendResponse(conn,
+			&types.SplitTunnelAddAppCmdResp{
+				Exec:                    req.Exec,
+				CmdToExecute:            cmdToExecute,
+				IsAlreadyRunning:        isAlreadyRunning,
+				IsAlreadyRunningMessage: isRunningWarningMes},
+			reqCmd.Idx)
 		// all clients will be notified about configuration change by service in OnSplitTunnelStatusChanged() handler
 
 	case "SplitTunnelRemoveApp":

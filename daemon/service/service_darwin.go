@@ -39,9 +39,9 @@ func (s *Service) implPingServersStopped(hosts []net.IP) error {
 	return firewall.RemoveHostsFromExceptions(hosts, onlyForICMP, isPersistent)
 }
 
-func (s *Service) implSplitTunnelling_AddApp(binaryFile string) (requiredCmdToExec string, err error) {
+func (s *Service) implSplitTunnelling_AddApp(binaryFile string) (requiredCmdToExec string, isAlreadyRunning bool, err error) {
 	// Split Tunneling is not implemented for macOS
-	return "", nil
+	return "", false, nil
 }
 func (s *Service) implSplitTunnelling_RemoveApp(pid int, binaryPath string) (err error) {
 	// Split Tunneling is not implemented for macOS

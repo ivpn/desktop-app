@@ -144,7 +144,13 @@ ipcMain.handle(
   }
 );
 ipcMain.handle("renderer-request-SplitTunnelAddApp", async (event, execCmd) => {
-  return await client.SplitTunnelAddApp(execCmd);
+  let funcShowMessageBox = function (dlgConfig) {
+    return dialog.showMessageBox(
+      event.sender.getOwnerBrowserWindow(),
+      dlgConfig
+    );
+  };
+  return await client.SplitTunnelAddApp(execCmd, funcShowMessageBox);
 });
 ipcMain.handle(
   "renderer-request-SplitTunnelRemoveApp",
