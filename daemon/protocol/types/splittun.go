@@ -79,7 +79,8 @@ type SplitTunnelGetStatus struct {
 type SplitTunnelStatus struct {
 	CommandBase
 	// is ST enabled
-	IsEnabled bool
+	IsEnabled                   bool
+	IsFunctionalityNotAvailable bool
 	// This parameter informs availability of the functionality to get icon for particular binary
 	// (true - if commands GetAppIcon/AppIconResp  applicable for this platform)
 	IsCanGetAppIconForBinary bool

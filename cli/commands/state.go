@@ -77,7 +77,9 @@ func showState() error {
 	if state == vpn.CONNECTED {
 		printDNSState(w, connected.ManualDNS, &servers)
 	}
-	printSplitTunState(w, true, false, stStatus.IsEnabled, stStatus.SplitTunnelApps, stStatus.RunningApps)
+	if !stStatus.IsFunctionalityNotAvailable {
+		printSplitTunState(w, true, false, stStatus.IsEnabled, stStatus.SplitTunnelApps, stStatus.RunningApps)
+	}
 	printFirewallState(w, fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast, fwstate.IsAllowApiServers)
 	w.Flush()
 

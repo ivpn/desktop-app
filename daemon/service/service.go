@@ -1208,10 +1208,11 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 	}
 
 	ret := protocolTypes.SplitTunnelStatus{
-		IsEnabled:                prefs.IsSplitTunnel,
-		IsCanGetAppIconForBinary: oshelpers.IsCanGetAppIconForBinary(),
-		SplitTunnelApps:          prefs.SplitTunnelApps,
-		RunningApps:              runningProcesses}
+		IsFunctionalityNotAvailable: splittun.GetFuncNotAvailableError() != nil,
+		IsEnabled:                   prefs.IsSplitTunnel,
+		IsCanGetAppIconForBinary:    oshelpers.IsCanGetAppIconForBinary(),
+		SplitTunnelApps:             prefs.SplitTunnelApps,
+		RunningApps:                 runningProcesses}
 
 	return ret, nil
 }
@@ -1220,7 +1221,7 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, reset bool) error {
 	prefs := s._preferences
 
 	prefs.IsSplitTunnel = isEnabled
-	if reset {
+	if reset || splittun.GetFuncNotAvailableError() != nil {
 		prefs.IsSplitTunnel = false
 		prefs.SplitTunnelApps = make([]string, 0)
 	}
@@ -1230,13 +1231,13 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, reset bool) error {
 	return s.splitTunnelling_ApplyConfig()
 }
 func (s *Service) splitTunnelling_ApplyConfig() error {
+	// notify changed ST configuration status (even if functionality not available)
+	defer s._evtReceiver.OnSplitTunnelStatusChanged()
+
 	if splittun.GetFuncNotAvailableError() != nil {
 		// Split-Tunneling not accessable (not able to connect to a driver or not implemented for current platform)
 		return nil
 	}
-
-	// notify changed ST configuration status
-	defer s._evtReceiver.OnSplitTunnelStatusChanged()
 
 	prefs := s.Preferences()
 	sInf := s.GetVpnSessionInfo()

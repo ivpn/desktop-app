@@ -87,6 +87,11 @@ func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, time
 }
 
 func (c *Client) sendRecvAny(request interface{}, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
+	isIgnoreResponseIndex := true
+	return c.sendRecvAnyEx(request, isIgnoreResponseIndex, waitingObjects...)
+}
+
+func (c *Client) sendRecvAnyEx(request interface{}, isIgnoreResponseIndex bool, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
 	var receiver *receiverChannel
 
 	var reqIdx int
@@ -98,8 +103,11 @@ func (c *Client) sendRecvAny(request interface{}, waitingObjects ...interface{})
 		c._requestIdx++
 		reqIdx = c._requestIdx
 
-		receiver = createReceiver(c._requestIdx, waitingObjects...)
-		//receiver = createReceiver(0, waitingObjects...)
+		if isIgnoreResponseIndex {
+			receiver = createReceiver(0, waitingObjects...)
+		} else {
+			receiver = createReceiver(c._requestIdx, waitingObjects...)
+		}
 
 		c._receivers[receiver] = struct{}{}
 	}()

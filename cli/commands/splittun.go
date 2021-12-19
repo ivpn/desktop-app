@@ -106,6 +106,10 @@ func doAddApp(args []string) error {
 		return err
 	}
 
+	if cfg.IsFunctionalityNotAvailable {
+		return fmt.Errorf("the Split Tunneling functionality not available")
+	}
+
 	if !cfg.IsEnabled {
 		fmt.Println("Split Tunneling not enabled")
 		PrintTips([]TipType{TipSplittunEnable})
@@ -171,6 +175,10 @@ func (c *SplitTun) Run() error {
 	cfg, err := _proto.GetSplitTunnelStatus()
 	if err != nil {
 		return err
+	}
+
+	if cfg.IsFunctionalityNotAvailable {
+		return fmt.Errorf("the Split Tunneling functionality not available")
 	}
 
 	if c.reset {

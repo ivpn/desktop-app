@@ -50,14 +50,14 @@ _backup_folder_name=ivpn-exclude-tmp
 _packets_fwmark_value=0xca6c        # Anything from 1 to 2147483647
 
 # Paths to standard binaries
-_bin_iptables=/sbin/iptables
-_bin_ip6tables=/sbin/ip6tables
-_bin_runuser=/usr/sbin/runuser
-_bin_ip=/sbin/ip
-_bin_awk=/usr/bin/awk
-_bin_grep=/usr/bin/grep
-_bin_dirname=/usr/bin/dirname
-_bin_sed=/usr/bin/sed
+_bin_iptables=iptables
+_bin_ip6tables=ip6tables
+_bin_runuser=runuser
+_bin_ip=ip
+_bin_awk=awk
+_bin_grep=grep
+_bin_dirname=dirname
+_bin_sed=sed
 
 #Variables vill be initialized later:
 _def_interface_name=""
@@ -65,18 +65,17 @@ _def_gateway=""
 
 function test()
 {
-    if [ ! -f ${_bin_iptables} ];       then echo "ERROR: Binary Not Found (${_bin_iptables})"; return 1; fi    
-    if [ ! -f ${_bin_ip} ];             then echo "ERROR: Binary Not Found (${_bin_ip})"; return 1; fi    
-    if [ ! -f ${_bin_grep} ];           then echo "ERROR: Binary Not Found (${_bin_grep})"; return 1; fi
-    if [ ! -f ${_bin_dirname} ];        then echo "ERROR: Binary Not Found (${_bin_dirname})"; return 1; fi
-    if [ ! -f ${_bin_sed} ];            then echo "ERROR: Binary Not Found (${_bin_sed})"; return 1; fi
+    if [ ! -d /sys/fs/cgroup/ ];                then echo "ERROR: CGROUP folder Not Found (/sys/fs/cgroup/)"; return 1; fi        
 
-    if [ ! -d /sys/fs/cgroup/ ];        then echo "ERROR: CGROUP folder Not Found (/sys/fs/cgroup/)"; return 1; fi    
-    if [ ! -d /sys/fs/cgroup/net_cls ]; then echo "ERROR: CGROUP folder Not Found (/sys/fs/cgroup/net_cls)"; return 1; fi    
+    if ! which ${_bin_iptables} &>/dev/null ;   then echo "ERROR: Binary Not Found (${_bin_iptables})"; return 1; fi
+    if ! which ${_bin_ip} &>/dev/null ;         then echo "ERROR: Binary Not Found (${_bin_ip})"; return 1; fi    
+    if ! which ${_bin_grep} &>/dev/null ;       then echo "ERROR: Binary Not Found (${_bin_grep})"; return 1; fi
+    if ! which ${_bin_dirname} &>/dev/null ;    then echo "ERROR: Binary Not Found (${_bin_dirname})"; return 1; fi
+    if ! which ${_bin_sed} &>/dev/null ;        then echo "ERROR: Binary Not Found (${_bin_sed})"; return 1; fi
 
-    if [ ! -f ${_bin_ip6tables} ];      then echo "WARNING: Binary Not Found (${_bin_ip6tables})"; fi
-    if [ ! -f ${_bin_awk} ];            then echo "WARNING: Binary Not Found (${_bin_awk})"; fi
-    if [ ! -f ${_bin_runuser} ];        then echo "WARNING: Binary Not Found (${_bin_runuser})"; fi    
+    if ! which ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})"; fi
+    if ! which ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})"; fi
+    if ! which ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})"; fi    
 }
 
 function init()

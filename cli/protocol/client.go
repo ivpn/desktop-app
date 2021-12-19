@@ -358,7 +358,7 @@ func (c *Client) SplitTunnelAddApp(execCmd string) (isRequiredToExecuteCommand b
 		// It is already done by IVPN UI
 
 		req := types.SplitTunnelAddApp{Exec: execCmd}
-		_, _, err := c.sendRecvAny(&req, &respEmpty, &respAppCmdResp)
+		_, _, err := c.sendRecvAnyEx(&req, false, &respEmpty, &respAppCmdResp)
 		if err != nil {
 			return false, err
 		}
