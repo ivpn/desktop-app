@@ -96,6 +96,7 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 	//				1.1) binary (script) path: "/usr/lib/firefox/firefox.sh"
 	//				1.2) first three parent directories: "/usr/lib/firefox"
 	//				1.3) list of all running processes and CHECK if there any processes from "/usr/lib/firefox"
+	//					1.3.1) for the paths from  "/usr/lib/...", check also "/usr/lib64/..."
 	// 2. Detection based on the list of opened GUI windows in the system and binary filename
 	//		2.1. Get full paths for all binaries in the command
 	//		2.2. Get binary file name
@@ -158,7 +159,14 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 		if len(grepParam) > 0 {
 			grepParam += `\|`
 		}
-		grepParam += "/" + dirs[1] + "/" + dirs[2] + "/" + dirs[3]
+		rgFilter := "/" + dirs[1] + "/" + dirs[2] + "/" + dirs[3]
+		grepParam += rgFilter
+
+		// Step 1.3.1 : for the paths from  "/usr/lib/...", check also "/usr/lib64/..."
+		if strings.HasPrefix(rgFilter, "/usr/lib/") {
+			grepParam += `\|` + "/usr/lib64/" + dirs[3]
+		}
+		
 	}
 
 	// Step 1.3 : list of all running processes and CHECK if there any processes from the directories detected in previous step
@@ -169,13 +177,13 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 			retIsAlreadyRunning = true
 		}
 	}
-
+	
 	if !retIsAlreadyRunning {
 		// Step 2.2 : binary file name: "google-chrome"
 		grepParam := ""
 		for _, fpath := range binPathsToCheck {
 			_, file := path.Split(fpath)
-			file = strings.TrimSuffix(file, filepath.Ext(file))
+			file = strings.TrimSpace(strings.TrimSuffix(file, filepath.Ext(file)))
 
 			if len(grepParam) > 0 {
 				grepParam += `\|`
