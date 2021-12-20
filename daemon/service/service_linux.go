@@ -94,9 +94,9 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 	//		1.3. Check is there any running processes from the path detected in previous step (`ps -aux`)
 	//			 Example: command "firefox"
 	//				1.1) binary (script) path: "/usr/lib/firefox/firefox.sh"
-	//				1.2) first three parent directories: "/usr/lib/firefox"
-	//				1.3) list of all running processes and CHECK if there any processes from "/usr/lib/firefox"
-	//					1.3.1) for the paths from  "/usr/lib/...", check also "/usr/lib64/..."
+	//				1.2) first three parent directories: "/usr/lib/firefox/"
+	//				1.3) list of all running processes and CHECK if there any processes from "/usr/lib/firefox/"
+	//					1.3.1) for the paths from  "/usr/lib/<xxx>/" or "/usr/bin/<xxx>" , check also "/usr/lib64/<xxx>"
 	// 2. Detection based on the list of opened GUI windows in the system and binary filename
 	//		2.1. Get full paths for all binaries in the command
 	//		2.2. Get binary file name
@@ -159,12 +159,15 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 		if len(grepParam) > 0 {
 			grepParam += `\|`
 		}
-		rgFilter := "/" + dirs[1] + "/" + dirs[2] + "/" + dirs[3]
+		rgFilter := "/" + dirs[1] + "/" + dirs[2] + "/" + dirs[3] + "/"
 		grepParam += rgFilter
 
-		// Step 1.3.1 : for the paths from  "/usr/lib/...", check also "/usr/lib64/..."
+		// Step 1.3.1 : for the paths from  "/usr/lib/<xxx>/" or "/usr/bin/<xxx>" , check also "/usr/lib64/<xxx>"
 		if strings.HasPrefix(rgFilter, "/usr/lib/") {
-			grepParam += `\|` + "/usr/lib64/" + dirs[3]
+			grepParam += `\|` + "/usr/lib64/" + dirs[3] + "/"
+		}
+		if strings.HasPrefix(rgFilter, "/usr/bin/") {
+			grepParam += `\|` + "/usr/lib64/" + dirs[3] + "/"
 		}
 		
 	}
