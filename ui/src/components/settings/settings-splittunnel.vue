@@ -533,12 +533,21 @@ export default {
 
     async onManualAddNewApplication() {
       try {
-        var diagConfig = {
-          properties: ["openFile"],
-          filters: [
+        let dlgFilters = []
+        if (Platform() === PlatformEnum.Windows) {
+          dlgFilters = [
             { name: "Executables", extensions: ["exe"] },
             { name: "All files", extensions: ["*"] },
-          ],
+          ]
+        } else {
+          dlgFilters = [
+            { name: "All files", extensions: ["*"] },
+          ]
+        }
+
+        var diagConfig = {
+          properties: ["openFile"],
+          filters: dlgFilters,
         };
         var ret = await sender.showOpenDialog(diagConfig);
         if (!ret || ret.canceled || ret.filePaths.length == 0) return;

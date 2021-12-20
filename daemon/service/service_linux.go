@@ -92,16 +92,24 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 	//		1.1. Get full paths for all binaries in the command
 	//		1.2. Get first 3 parent directories from the binary path
 	//		1.3. Check is there any running processes from the path detected in previous step (`ps -aux`)
-	//			 Example: command "firefox"
+	//		    1.3.1. only for the paths  "/usr/..." , check filter is "/usr/*/<xxx>"
+	//
+	//		Example: command "google-chrome"
+	//				1.1) binary (script) path: "/opt/google/chrome/google-chrome"
+	//				1.2) first three parent directories: "/opt/google/chrome/"
+	//				1.3) list of all running processes and CHECK if there any processes from "/opt/google/chrome/"
+	//		Example: command "firefox"
 	//				1.1) binary (script) path: "/usr/lib/firefox/firefox.sh"
 	//				1.2) first three parent directories: "/usr/lib/firefox/"
-	//				1.3) list of all running processes and CHECK if there any processes from "/usr/lib/firefox/"
-	//					1.3.1) for the paths from  "/usr/lib/<xxx>/" or "/usr/bin/<xxx>" , check also "/usr/lib64/<xxx>"
+	//				1.3) list of all running processes and CHECK if there any processes from "/usr/*/firefox/"
+	//					1.3.1) because binary path is in "/usr/..." the filter is "/usr/*/firefox/"
+	//
 	// 2. Detection based on the list of opened GUI windows in the system and binary filename
 	//		2.1. Get full paths for all binaries in the command
 	//		2.2. Get binary file name
 	//		2.3. Check is there any running GUI window in the system with the name same as binary file name (`xwininfo -root -children`)
-	//			 Example: command "google-chrome"
+	//
+	//		Example: command "google-chrome"
 	//				2.1) binary (script) path: "/opt/google/chrome/google-chrome"
 	//				2.2) binary file name: "google-chrome"
 	//				2.3) list of all running windows and CHECK if there any window has name "google-chrome"
@@ -159,17 +167,14 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 		if len(grepParam) > 0 {
 			grepParam += `\|`
 		}
-		rgFilter := "/" + dirs[1] + "/" + dirs[2] + "/" + dirs[3] + "/"
-		grepParam += rgFilter
-
-		// Step 1.3.1 : for the paths from  "/usr/lib/<xxx>/" or "/usr/bin/<xxx>" , check also "/usr/lib64/<xxx>"
-		if strings.HasPrefix(rgFilter, "/usr/lib/") {
-			grepParam += `\|` + "/usr/lib64/" + dirs[3] + "/"
+				
+		// Step 1.2 : first three parent directories
+		//	* 1.3.1 : Only for the paths  "/usr/..." -> check filter is "/usr/*/<xxx>"
+		if dirs[1] == "usr" {
+			grepParam += `[ \t]/usr/[^/ ]\+/` + dirs[3] + "/"
+		} else {
+			grepParam += "[ \t]/" + dirs[1] + "/" + dirs[2] + "/" + dirs[3] + "/"
 		}
-		if strings.HasPrefix(rgFilter, "/usr/bin/") {
-			grepParam += `\|` + "/usr/lib64/" + dirs[3] + "/"
-		}
-		
 	}
 
 	// Step 1.3 : list of all running processes and CHECK if there any processes from the directories detected in previous step
