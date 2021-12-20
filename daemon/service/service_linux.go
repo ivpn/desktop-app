@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -78,27 +79,33 @@ func (s *Service) implSplitTunnelling_AddedPidInfo(pid int, exec string, cmdToEx
 }
 
 // Function: Check if the same process already running
-// IMPORTANT: The result is NOT RELIABLE!
-// The function must return 'true' when the same binary is already launched.
-// In most standard cases, it works. But there is no guarantee that it will work everywhere with all commands!
+// The function must return 'true' when the same command is already running.
+// IMPORTANT: The result is NOT RELIABLE! In most standard cases, it works. But there is no guarantee that it will work on every Linux distributive with all commands!
 func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunError error) {
 	cmd = strings.TrimSpace(cmd)
 	if len(cmd) <= 0 {
 		return false, fmt.Errorf("empty command")
 	}
 
-	// Function is trying to get the real path to binary
-	getBinaryOriginalLocation := func(bin string) string {
-		binPath, err := exec.LookPath(bin)
-		if err != nil {
-			return ""
-		}
-		realpath, err := filepath.EvalSymlinks(binPath)
-		if err != nil {
-			return ""
-		}
-		return realpath
-	}
+	// Here are implemented two machanisms for non-reliable detection of already started applications:
+	// 1. Detection based on binary location (e.g. applicable for Ubuntu):
+	//		1.1. Get full paths for all binaries in the command
+	//		1.2. Get first 3 parent directories from the binary path
+	//		1.3. Check is there any running processes from the path detected in previous step (`ps -aux`)
+	//			 Example: command "firefox"
+	//				1.1) binary (script) path: "/usr/lib/firefox/firefox.sh"
+	//				1.2) first three parent directories: "/usr/lib/firefox"
+	//				1.3) list of all running processes and CHECK if there any processes from "/usr/lib/firefox"
+	// 2. Detection based on the list of opened GUI windows in the system and binary filename
+	//		2.1. Get full paths for all binaries in the command
+	//		2.2. Get binary file name
+	//		2.3. Check is there any running GUI window in the system with the name same as binary file name (`xwininfo -root -children`)
+	//			 Example: command "google-chrome"
+	//				2.1) binary (script) path: "/opt/google/chrome/google-chrome"
+	//				2.2) binary file name: "google-chrome"
+	//				2.3) list of all running windows and CHECK if there any window has name "google-chrome"
+
+	// Step 1.1 / 2.1 : Get full paths for all binaries in the command
 
 	// list of binaries to check
 	binPathsToCheck := make([]string, 0, 2)
@@ -121,6 +128,19 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 		binPathsToCheck = append(binPathsToCheck, fpath)
 	}
 
+	// Function is trying to get the real path to binary
+	getBinaryOriginalLocation := func(bin string) string {
+		binPath, err := exec.LookPath(bin)
+		if err != nil {
+			return ""
+		}
+		realpath, err := filepath.EvalSymlinks(binPath)
+		if err != nil {
+			return ""
+		}
+		return realpath
+	}
+
 	for _, arg := range strings.Split(cols[2], " ") {
 		fpath := getBinaryOriginalLocation(arg)
 		if len(fpath) > 0 {
@@ -128,6 +148,7 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 		}
 	}
 
+	// Step 1.2 : first three parent directories
 	grepParam := ""
 	for _, path := range binPathsToCheck {
 		dirs := strings.Split(path, "/")
@@ -139,11 +160,37 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 		}
 		grepParam += "/" + dirs[1] + "/" + dirs[2] + "/" + dirs[3]
 	}
+
+	// Step 1.3 : list of all running processes and CHECK if there any processes from the directories detected in previous step
 	retIsAlreadyRunning := false
 	if len(grepParam) > 0 {
-		err := shell.Exec(nil, "/usr/bin/bash", "-c", "/usr/bin/ps -aux | /usr/bin/grep '"+grepParam+"' | /usr/bin/grep -v /usr/bin/grep &>/dev/null")
+		err := shell.Exec(nil, "bash", "-c", "ps -aux | grep '"+grepParam+"' | grep -v grep &>/dev/null")
 		if err == nil {
 			retIsAlreadyRunning = true
+		}
+	}
+
+	if !retIsAlreadyRunning {
+		// Step 2.2 : binary file name: "google-chrome"
+		grepParam := ""
+		for _, fpath := range binPathsToCheck {
+			_, file := path.Split(fpath)
+			file = strings.TrimSuffix(file, filepath.Ext(file))
+
+			if len(grepParam) > 0 {
+				grepParam += `\|`
+			}
+			grepParam += "\"" + file + "\""
+		}
+
+		//Step 2.3 : Check is there any running GUI window in the system with the name same as binary file name (`xwininfo -root -children`)
+
+		// xwininfo -root -children | grep --ignore-case '"google-chroMe"\|"Atom"\|("firefOx"'
+		if len(grepParam) > 0 {
+			err := shell.Exec(nil, "bash", "-c", "xwininfo -root -children | grep --ignore-case '"+grepParam+"' | grep -v grep &>/dev/null")
+			if err == nil {
+				retIsAlreadyRunning = true
+			}
 		}
 	}
 
