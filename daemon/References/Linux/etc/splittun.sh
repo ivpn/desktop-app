@@ -65,7 +65,21 @@ _def_gateway=""
 
 function test()
 {
-    if [ ! -d /sys/fs/cgroup/ ];                then echo "ERROR: CGROUP folder Not Found (/sys/fs/cgroup/)"; return 1; fi        
+    #if [ ! -d /sys/fs/cgroup/ ];                then echo "ERROR: CGROUP folder Not Found (/sys/fs/cgroup/)"; return 1; fi        
+    if [ ! -d /sys/fs/cgroup/net_cls ]; then
+        echo "Creating '/sys/fs/cgroup/net_cls' folder ..."
+        if ! mkdir -p /sys/fs/cgroup/net_cls;   then 
+            echo "ERROR: Failed to create CGROUP folder Not Found (/sys/fs/cgroup/net_cls)"; 
+            return 1; 
+        fi
+    fi
+    if ! mount | grep "/sys/fs/cgroup/net_cls" &>/dev/null ; then
+        echo "Mounting CGROUP subsystem '/sys/fs/cgroup/net_cls'..."
+        if ! mount -t cgroup -o net_cls net_cls /sys/fs/cgroup/net_cls ; then
+            echo "ERROR: Failed to mount CGROUP subsystem (net_cls)"; 
+            return 1; 
+        fi
+    fi
 
     if ! which ${_bin_iptables} &>/dev/null ;   then echo "ERROR: Binary Not Found (${_bin_iptables})"; return 1; fi
     if ! which ${_bin_ip} &>/dev/null ;         then echo "ERROR: Binary Not Found (${_bin_ip})"; return 1; fi    

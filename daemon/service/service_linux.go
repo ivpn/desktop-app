@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -86,35 +85,20 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 	if len(cmd) <= 0 {
 		return false, fmt.Errorf("empty command")
 	}
-
-	// Here are implemented two machanisms for non-reliable detection of already started applications:
+	
 	// 1. Detection based on binary location (e.g. applicable for Ubuntu):
 	//		1.1. Get full paths for all binaries in the command
-	//		1.2. Get first 3 parent directories from the binary path
-	//		1.3. Check is there any running processes from the path detected in previous step (`ps -aux`)
-	//		    1.3.1. only for the paths  "/usr/..." , check filter is "/usr/*/<xxx>"
-	//
-	//		Example: command "google-chrome"
-	//				1.1) binary (script) path: "/opt/google/chrome/google-chrome"
-	//				1.2) first three parent directories: "/opt/google/chrome/"
-	//				1.3) list of all running processes and CHECK if there any processes from "/opt/google/chrome/"
-	//		Example: command "firefox"
-	//				1.1) binary (script) path: "/usr/lib/firefox/firefox.sh"
-	//				1.2) first three parent directories: "/usr/lib/firefox/"
-	//				1.3) list of all running processes and CHECK if there any processes from "/usr/*/firefox/"
-	//					1.3.1) because binary path is in "/usr/..." the filter is "/usr/*/firefox/"
-	//
-	// 2. Detection based on the list of opened GUI windows in the system and binary filename
-	//		2.1. Get full paths for all binaries in the command
-	//		2.2. Get binary file name
-	//		2.3. Check is there any running GUI window in the system with the name same as binary file name (`xwininfo -root -children`)
-	//
-	//		Example: command "google-chrome"
-	//				2.1) binary (script) path: "/opt/google/chrome/google-chrome"
-	//				2.2) binary file name: "google-chrome"
-	//				2.3) list of all running windows and CHECK if there any window has name "google-chrome"
+	//		1.2. Find running processes by mask (`ps -aux`):
+	//			1.2.1.	mask: full path to binary
+	//					Example: file "/usr/bin/atom" mask "/usr/bin/atom"
+	//			1.2.2.	mask: (if binary starts from "/opt/") "/opt/<dir2>/<dir3>/"
+	//					Example: file "/opt/google/chrome/google-chrome" mask "/opt/google/chrome/"
+	//			1.2.3.	mask: (if binary starts from "/usr/") "/usr/<anything>/<filename>"
+	//					Example: file "/usr/bin/firefox" mask "/usr/*/firefox"
+	//			1.2.4.	mask: (if symlink to a binary starts from "/snap/") " /snap/<filename>/"
+	//					Example: file "/snap/bin/git-cola" mask " /snap/git-cola/"
 
-	// Step 1.1 / 2.1 : Get full paths for all binaries in the command
+	// Step 1.1 sssss: Get full paths for all binaries in the command
 
 	// list of binaries to check
 	binPathsToCheck := make([]string, 0, 2)
@@ -134,7 +118,7 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 	}
 	fpath, err := filepath.EvalSymlinks(binPath)
 	if err == nil {
-		binPathsToCheck = append(binPathsToCheck, fpath)
+		binPathsToCheck = append(binPathsToCheck, strings.TrimSuffix(fpath, filepath.Ext(fpath)))
 	}
 
 	// Function is trying to get the real path to binary
@@ -142,6 +126,9 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 		binPath, err := exec.LookPath(bin)
 		if err != nil {
 			return ""
+		}
+		if strings.HasPrefix(binPath, "/snap/") {
+			return binPath
 		}
 		realpath, err := filepath.EvalSymlinks(binPath)
 		if err != nil {
@@ -151,64 +138,118 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 	}
 
 	for _, arg := range strings.Split(cols[2], " ") {
-		fpath := getBinaryOriginalLocation(arg)
-		if len(fpath) > 0 {
-			binPathsToCheck = append(binPathsToCheck, fpath)
-		}
-	}
-
-	// Step 1.2 : first three parent directories
-	grepParam := ""
-	for _, path := range binPathsToCheck {
-		dirs := strings.Split(path, "/")
-		if len(dirs) < 4 {
+		if len(arg) <=0 {
 			continue
 		}
-		if len(grepParam) > 0 {
-			grepParam += `\|`
+		fpath := getBinaryOriginalLocation(arg)
+		if len(fpath) > 0 {
+			binPathsToCheck = append(binPathsToCheck, strings.TrimSuffix(fpath, filepath.Ext(fpath)))
 		}
-				
-		// Step 1.2 : first three parent directories
-		//	* 1.3.1 : Only for the paths  "/usr/..." -> check filter is "/usr/*/<xxx>"
-		if dirs[1] == "usr" {
-			grepParam += `[ \t]/usr/[^/ ]\+/` + dirs[3] + "/"
-		} else {
-			grepParam += "[ \t]/" + dirs[1] + "/" + dirs[2] + "/" + dirs[3] + "/"
+	}	
+
+	// prepare search masks
+	regexParam := ""
+	for _, path := range binPathsToCheck {
+		if len(regexParam) > 0 {
+			regexParam += `|`
+		}
+		//	1.2.1.	mask: full path to binary
+		//	Example: file "/usr/bin/atom" mask "/usr/bin/atom"
+		regexParam += `(\s`+path+`\s)`
+
+		dirs := strings.Split(path, "/")
+		
+		if len(dirs) >= 4 {
+			if strings.HasPrefix(path, "/opt/") {
+				//	1.2.2.	mask: (if binary starts from "/opt/") "/opt/<dir2>/<dir3>/"
+				//	Example: file "/opt/google/chrome/google-chrome" mask " /opt/google/chrome/"
+				regexParam += `|(\s/opt/` + dirs[2] + "/" + dirs[3] + "/)"
+			} else if strings.HasPrefix(path, "/usr/") {
+				//	1.2.3.	mask: (if binary starts from "/usr/") " /usr/<anything>/<filename> "
+				//	Example: file "/usr/bin/firefox" mask " /usr/*/firefox "
+				regexParam += `|(\s/usr/[^ ]+/` + dirs[len(dirs)-1] + `(\s|$))`
+			} else if strings.HasPrefix(path, "/snap/") {
+				//	1.2.4.	mask: (if symlink to a binary starts from "/snap/") " /snap/<filename>/"
+				//	Example: file "/snap/bin/git-cola" mask " /snap/git-cola/"
+				regexParam += `|(\s/snap/` + dirs[len(dirs)-1] + `/)`
+			}
 		}
 	}
 
-	// Step 1.3 : list of all running processes and CHECK if there any processes from the directories detected in previous step
+	//	Step 1.2 : Find running processes by mask (`ps -aux`):
 	retIsAlreadyRunning := false
-	if len(grepParam) > 0 {
-		err := shell.Exec(nil, "bash", "-c", "ps -aux | grep '"+grepParam+"' | grep -v grep &>/dev/null")
-		if err == nil {
-			retIsAlreadyRunning = true
+	if len(regexParam) > 0 {
+		outRegexp := regexp.MustCompile(regexParam)
+		outProcessFunc := func(text string, isError bool) {			
+			if isError || retIsAlreadyRunning{
+				return
+			}
+			found  := outRegexp.FindString(text)
+			if len(found) > 0 {
+				retIsAlreadyRunning = true
+				// log.Debug("(running app detection: looks like the application is already started) found: ", found)
+			}
+		}
+
+		err := shell.ExecAndProcessOutput(nil, outProcessFunc, "", "ps", "-aux")
+		if err != nil {
+			log.Debug("(running app detection ERROR): ", err)
 		}
 	}
 	
+	/*
+	// INFO: running commands by the daemon (as a service) 'xlsclients' or 'xwininfo' failing 
+	// Therefore we do not use this mechanism
+	//
+	// 2. Detection based on the list of opened GUI windows in the system and binary filename
+	//		2.1. Get full paths for all binaries in the command
+	//		2.2. Get binary file name
+	//		2.3. Check is there any running GUI window in the system with the name same as binary file name (`xwininfo -root -children`)
+	//
+	//		Example: command "google-chrome"
+	//				2.1) binary (script) path: "/opt/google/chrome/google-chrome"
+	//				2.2) binary file name: "google-chrome"
+	//				2.3) list of all running windows and CHECK if there any window has name "google-chrome"
 	if !retIsAlreadyRunning {
-		// Step 2.2 : binary file name: "google-chrome"
-		grepParam := ""
+		// Step 2.2 : binary file name: like "google-chrome"
+		
+		regexParam := ""
 		for _, fpath := range binPathsToCheck {
 			_, file := path.Split(fpath)
 			file = strings.TrimSpace(strings.TrimSuffix(file, filepath.Ext(file)))
 
-			if len(grepParam) > 0 {
-				grepParam += `\|`
+			if len(regexParam) > 0 {
+				regexParam += `|`
 			}
-			grepParam += "\"" + file + "\""
+			regexParam += `\s` + file + `(\s|$)`
 		}
 
-		//Step 2.3 : Check is there any running GUI window in the system with the name same as binary file name (`xwininfo -root -children`)
-
+		
+		// Step 2.3 : Check is there any running GUI window in the system with the name same as binary file name (`xlsclients -a`)
 		// xwininfo -root -children | grep --ignore-case '"google-chroMe"\|"Atom"\|("firefOx"'
-		if len(grepParam) > 0 {
-			err := shell.Exec(nil, "bash", "-c", "xwininfo -root -children | grep --ignore-case '"+grepParam+"' | grep -v grep &>/dev/null")
-			if err == nil {
-				retIsAlreadyRunning = true
+		// xlsclients -a
+		if len(regexParam) > 0 {
+			outRegexp := regexp.MustCompile(regexParam)
+			outProcessFunc := func(text string, isError bool) {			
+				if isError || retIsAlreadyRunning{
+					return
+				}
+				log.Debug(isError, " (xlsclients -a):", text)
+				found  := outRegexp.FindString(text)
+				if len(found) > 0 {
+					retIsAlreadyRunning = true
+					log.Debug("**** FOUND! *****", found)
+				}
+			}
+
+			log.Debug("REGEXP (xlsclients -a): ", "'"+regexParam+"'")
+			err := shell.ExecAndProcessOutput(nil, outProcessFunc, "", "xlsclients", "-a")
+			if err != nil {
+				log.Debug("EXEC ERROR (xlsclients -a): ", err)
 			}
 		}
 	}
+	*/
 
 	return retIsAlreadyRunning, nil
 }
