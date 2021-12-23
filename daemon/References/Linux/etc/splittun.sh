@@ -49,6 +49,9 @@ _backup_folder_name=ivpn-exclude-tmp
 # So, this rule absorbs all packets which are not marked as 0xca6c
 _packets_fwmark_value=0xca6c        # Anything from 1 to 2147483647
 
+# iptables rules comment
+_comment="IVPN Split Tunneling"
+
 # Paths to standard binaries
 _bin_iptables=iptables
 _bin_ip6tables=ip6tables
@@ -65,7 +68,11 @@ _def_gateway=""
 
 function test()
 {
-    #if [ ! -d /sys/fs/cgroup/ ];                then echo "ERROR: CGROUP folder Not Found (/sys/fs/cgroup/)"; return 1; fi        
+    # TODO: the real mount path have to be taken from /proc/mounts
+    # It has format: <devtype> <mount path> <fstype> <options>
+    # Example: cgroup /sys/fs/cgroup/net_cls,net_prio cgroup rw,nosuid,nodev,noexec,relatime,net_cls,net_prio 0 0
+    # We have to check <fstype>=='cgroup'; <options> contain 'net_cls'
+
     if [ ! -d /sys/fs/cgroup/net_cls ]; then
         echo "Creating '/sys/fs/cgroup/net_cls' folder ..."
         if ! mkdir -p /sys/fs/cgroup/net_cls;   then 
@@ -98,6 +105,7 @@ function init()
     _def_interface_name=$1
     # default gateway IP
     _def_gateway=$2
+    #_def_gatewayIPv6=$3
     
     # Ensure the input parameters not empty
     if [ -z ${_def_interface_name} ]; then
@@ -110,6 +118,11 @@ function init()
         _def_gateway=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $3 }')
         echo "[+] Default gateway: '${_def_gateway}'"
     fi
+    #if [ -z ${_def_gatewayIPv6} ]; then
+    #    echo "[i] Default IPv6 gateway is not defined. Trying to determine it automatically..."
+    #    _def_gatewayIPv6=$(${_bin_ip} -6 route | ${_bin_awk} '/default/ { print $3 }')
+    #    echo "[+] Default IPv6 gateway: '${_def_gatewayIPv6}'"
+    #fi
     if [ -z ${_def_interface_name} ]; then
         echo "[!] Default network interface is not defined."
         return 2
@@ -118,6 +131,9 @@ function init()
         echo "[!] Default gateway is not defined."
         return 3
     fi
+    #if [ -z ${_def_gatewayIPv6} ]; then
+    #    echo "[!] Warning: Default IPv6 gateway is not defined."
+    #fi
 
     ##############################################
     # Ensure previous configuration erased
@@ -150,25 +166,37 @@ function init()
     # So, the original rules sequence will be the reverse sequence to the list below.
 
     # Save packets mark (to be able to restore mark for incoming packets of the same connection)
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I POSTROUTING -j CONNMARK --save-mark    
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I POSTROUTING -m comment --comment  "${_comment}" -j CONNMARK --save-mark    
     # Force the packets to exit through default interface (eg. eth0, enp0s3 ...) with NAT
-    ${_bin_iptables} -w ${_iptables_locktime} -t nat -I POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -j MASQUERADE
+    ${_bin_iptables} -w ${_iptables_locktime} -t nat -I POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment  "${_comment}" -j MASQUERADE
     # Add mark on packets of classid ${_cgroup_classid}
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -j MARK --set-mark ${_packets_fwmark_value}
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
     # Important! allow DNS request before setting mark rule (DNS request should not be marked)
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -j ACCEPT
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
     # Allow packets from/to cgroup (bypass IVPN firewall)
-    ${_bin_iptables} -w ${_iptables_locktime} -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -I INPUT -m cgroup --cgroup ${_cgroup_classid} -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
-    ${_bin_iptables} -w ${_iptables_locktime} -I INPUT -m mark --mark ${_packets_fwmark_value} -j ACCEPT
-
+    ${_bin_iptables} -w ${_iptables_locktime} -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
+    ${_bin_iptables} -w ${_iptables_locktime} -I INPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+    ${_bin_iptables} -w ${_iptables_locktime} -I INPUT -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j ACCEPT
     # Restore packets mark for incoming packets
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I PREROUTING -j CONNMARK --restore-mark
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I PREROUTING -m comment --comment  "${_comment}" -j CONNMARK --restore-mark
 
     if [ -f /proc/net/if_inet6 ]; then
-        # Block IPv6 traffic (IPv6 not supported in current version)
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -j DROP
+        # Save packets mark (to be able to restore mark for incoming packets of the same connection)
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I POSTROUTING -m comment --comment  "${_comment}" -j CONNMARK --save-mark 
+        # Force the packets to exit through default interface (eg. eth0, enp0s3 ...) with NAT
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t nat -I POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment  "${_comment}" -j MASQUERADE
+        # Add mark on packets of classid ${_cgroup_classid}
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
+        # Important! allow DNS request before setting mark rule (DNS request should not be marked)
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT        
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
+        # Allow packets from/to cgroup (bypass IVPN firewall)
+        ${_bin_ip6tables} -w ${_iptables_locktime} -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
+        ${_bin_ip6tables} -w ${_iptables_locktime} -I INPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${_bin_ip6tables} -w ${_iptables_locktime} -I INPUT -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j ACCEPT
+        # Restore packets mark for incoming packets
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I PREROUTING -m comment --comment  "${_comment}" -j CONNMARK --restore-mark
     fi
 
     ##############################################
@@ -177,10 +205,21 @@ function init()
     if ! ${_bin_grep} -E "^[0-9]+\s+${_routing_table_name}\s*$" /etc/iproute2/rt_tables &>/dev/null ; then
         # initialize new routing table
         echo "${_routing_table_weight}      ${_routing_table_name}" >> /etc/iproute2/rt_tables
-        # splittun table has a default gateway to the default interface
-        ${_bin_ip} route add default via ${_def_gateway} table ${_routing_table_name}  
+        
         # Packets with mark will use splittun table
         ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}
+        # splittun table has a default gateway to the default interface
+        ${_bin_ip} route add default via ${_def_gateway} table ${_routing_table_name}  
+
+        #if [ ! -z ${_def_gatewayIPv6} ]; then
+        #    if [ -f /proc/net/if_inet6 ]; then
+        #        # Packets with mark will use splittun table
+        #        ${_bin_ip} -6 rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}
+        #        # splittun table has a default gateway to the default interface
+        #        ${_bin_ip} -6 route add default via ${_def_gatewayIPv6} dev ${_def_interface_name} table ${_routing_table_name}
+        #    fi
+        #fi
+        
     fi
 
     ##############################################
@@ -218,7 +257,7 @@ function clean()
     ##############################################
     # Move all processes from the IVPN cgroup to the main cgroup
     ##############################################    
-    removeAllPids
+    # removeAllPids
 
     ##############################################
     # Remove cgroup    
@@ -233,30 +272,44 @@ function clean()
     ##############################################
     # Remove firewall rules
     ##############################################
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D PREROUTING -j CONNMARK --restore-mark
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -j MARK --set-mark ${_packets_fwmark_value}
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D POSTROUTING -j CONNMARK --save-mark  
-    ${_bin_iptables} -w ${_iptables_locktime} -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -D INPUT -m cgroup --cgroup ${_cgroup_classid} -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
-    ${_bin_iptables} -w ${_iptables_locktime} -D INPUT -m mark --mark ${_packets_fwmark_value} -j ACCEPT
-
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D PREROUTING -m comment --comment "${_comment}" -j CONNMARK --restore-mark
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment "${_comment}" -j ACCEPT
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment "${_comment}" -j ACCEPT
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
+    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D POSTROUTING -m comment --comment "${_comment}" -j CONNMARK --save-mark  
+    ${_bin_iptables} -w ${_iptables_locktime} -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT
+    ${_bin_iptables} -w ${_iptables_locktime} -D INPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+    ${_bin_iptables} -w ${_iptables_locktime} -D INPUT -m mark --mark ${_packets_fwmark_value} -m comment --comment "${_comment}" -j ACCEPT
     if [ ! -z ${_def_interface_name} ]; then
-        ${_bin_iptables} -w ${_iptables_locktime} -t nat -D POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -j MASQUERADE
+        ${_bin_iptables} -w ${_iptables_locktime} -t nat -D POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment "${_comment}" -j MASQUERADE
     fi
 
     if [ -f /proc/net/if_inet6 ]; then
-        # Block IPv6 traffic (IPv6 not supported in current version)
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -j DROP    
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D PREROUTING -m comment --comment "${_comment}" -j CONNMARK --restore-mark
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment "${_comment}" -j ACCEPT
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment "${_comment}" -j ACCEPT
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D POSTROUTING -m comment --comment "${_comment}" -j CONNMARK --save-mark  
+        ${_bin_ip6tables} -w ${_iptables_locktime} -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT
+        ${_bin_ip6tables} -w ${_iptables_locktime} -D INPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${_bin_ip6tables} -w ${_iptables_locktime} -D INPUT -m mark --mark ${_packets_fwmark_value} -m comment --comment "${_comment}" -j ACCEPT
+        if [ ! -z ${_def_interface_name} ]; then
+            ${_bin_ip6tables} -w ${_iptables_locktime} -t nat -D POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment "${_comment}" -j MASQUERADE
+        fi
     fi
 
     ##############################################
     # Remove routing
     ##############################################
+    if [ -f /proc/net/if_inet6 ]; then
+        ${_bin_ip} -6 rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}    
+        ${_bin_ip} -6 route flush table ${_routing_table_name}    
+    fi 
+
     ${_bin_ip} rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}    
-    ${_bin_ip} route del default table ${_routing_table_name}
-    ${_bin_sed} -i "/${_routing_table_name}\s*$/d" /etc/iproute2/rt_tables    
+    ${_bin_ip} route flush table ${_routing_table_name}
+
+    ${_bin_sed} -i "/${_routing_table_name}\s*$/d" /etc/iproute2/rt_tables   
 }
 
 function getBackupFolderPath()
@@ -421,21 +474,34 @@ function info()
     cat /etc/iproute2/rt_tables
     echo
 
+    echo "[*] ip6tables -t mangle -S:"
+    ${_bin_ip6tables} -t mangle -S
+    echo 
     echo "[*] iptables -t mangle -S:"
     ${_bin_iptables} -t mangle -S
     echo 
 
+    echo "[*] ip6tables -t nat -S:"
+    ${_bin_ip6tables} -t nat -S
+    echo 
     echo "[*] iptables -t nat -S:"
     ${_bin_iptables} -t nat -S
     echo 
 
+    echo "[*] ip -6 rule:"
+    ${_bin_ip} -6 rule
+    echo 
     echo "[*] ip rule:"
     ${_bin_ip} rule
     echo 
 
-    echo "[*] ip route show table ${_routing_table_name}"
-    ${_bin_ip} route show table ${_routing_table_name}
+    echo "[*] ip -6 route show table ${_routing_table_weight}"
+    ${_bin_ip} -6 route show table ${_routing_table_weight}
+    echo   
+    echo "[*] ip route show table ${_routing_table_weight}"
+    ${_bin_ip} route show table ${_routing_table_weight} #${_routing_table_name}
     echo    
+
 }
 
 if [[ $1 = "start" ]] ; then    

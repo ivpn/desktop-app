@@ -93,6 +93,14 @@ function enable_firewall {
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -o lo -j ACCEPT
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -i lo -j ACCEPT
 
+      # allow link-local addresses
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -s FE80::/10 -j ACCEPT
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -d FE80::/10 -j ACCEPT
+
+      # allow DHCP port (547out 546in)
+      # ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -p udp --dport 547 -j ACCEPT
+      # ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -p udp --dport 546 -j ACCEPT
+
       # IPv6: assign our chains to global (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
       ${IPv6BIN} -w ${LOCKWAITTIME} -A OUTPUT -j ${OUT_IVPN}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A INPUT -j ${IN_IVPN}

@@ -3,7 +3,12 @@
     <div class="settingsTitle flexRow">SPLIT TUNNEL SETTINGS</div>
 
     <div class="param">
-      <input type="checkbox" id="isSTEnabled" v-model="isSTEnabled" />
+      <input
+        ref="checkboxIsSTEnabled"
+        type="checkbox"
+        id="isSTEnabled"
+        v-model="isSTEnabled"
+      />
       <label class="defColor" for="isSTEnabled">Split Tunnel (Beta) </label>
     </div>
     <div class="fwDescription" style="margin-bottom: 0px">
@@ -356,6 +361,12 @@ export default {
 
   watch: {
     STConfig() {
+      if (this.$refs.checkboxIsSTEnabled) {
+        // we have to update checkbox manually
+        this.$refs.checkboxIsSTEnabled.checked =
+          this.$store.state.vpnState.splitTunnelling.IsEnabled;
+      }
+
       this.updateAppsToShow();
 
       // if there are running apps - start requesting ST status
@@ -414,7 +425,6 @@ export default {
           // Linux:
           let runningApps = splitTunnelling.RunningApps;
           runningApps.forEach((runningApp) => {
-            console.log(runningApp);
             // check if we can get info from the installed apps list
             let cmdLine = "";
             if (
@@ -533,16 +543,14 @@ export default {
 
     async onManualAddNewApplication() {
       try {
-        let dlgFilters = []
+        let dlgFilters = [];
         if (Platform() === PlatformEnum.Windows) {
           dlgFilters = [
             { name: "Executables", extensions: ["exe"] },
             { name: "All files", extensions: ["*"] },
-          ]
+          ];
         } else {
-          dlgFilters = [
-            { name: "All files", extensions: ["*"] },
-          ]
+          dlgFilters = [{ name: "All files", extensions: ["*"] }];
         }
 
         var diagConfig = {
@@ -651,8 +659,10 @@ export default {
       get() {
         return this.$store.state.vpnState.splitTunnelling.IsEnabled;
       },
-      async set(value) {
-        await sender.SplitTunnelSetConfig(value);
+      set(value) {
+        (async function () {
+          await sender.SplitTunnelSetConfig(value);
+        })();
       },
     },
 
