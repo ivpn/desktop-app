@@ -172,8 +172,8 @@ func implRemovePid(pid int) error {
 	return fmt.Errorf("operation not applicable for current platform")
 }
 
-func implGetRunningApps() ([]LaunchedApps, error) {
-	return fmt.Errorf("operation not applicable for current platform")
+func implGetRunningApps() ([]RunningApp, error) {
+	return nil, fmt.Errorf("operation not applicable for current platform")
 }
 
 func catchPanic(err *error) {

@@ -46,6 +46,6 @@ func implRemovePid(pid int) error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }
 
-func implGetRunningApps() ([]LaunchedApps, error) {
+func implGetRunningApps() ([]RunningApp, error) {
 	return nil, fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }

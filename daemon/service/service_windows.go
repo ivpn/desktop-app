@@ -28,8 +28,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/ivpn/desktop-app/daemon/splittun"
 )
 
 func (s *Service) implPingServersStarting(hosts []net.IP) error {
@@ -100,4 +98,8 @@ func (s *Service) implSplitTunnelling_RemoveApp(pid int, binaryPath string) (err
 	s.setPreferences(prefs)
 
 	return nil
+}
+
+func (s *Service) implSplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error {
+	return fmt.Errorf("function not applicable for this platform")
 }

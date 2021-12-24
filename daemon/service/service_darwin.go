@@ -47,3 +47,6 @@ func (s *Service) implSplitTunnelling_RemoveApp(pid int, binaryPath string) (err
 	// Split Tunneling is not implemented for macOS
 	return nil
 }
+func (s *Service) implSplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error {
+	return fmt.Errorf("function not applicable for this platform")
+}

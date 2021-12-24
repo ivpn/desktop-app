@@ -66,6 +66,13 @@ func getInstallDir() string {
 		panic(fmt.Sprintf("Failed to obtain folder of current binary: %s", err.Error()))
 	}
 
+	if len(os.Args) > 2 {
+		firstArg := strings.Split(os.Args[1], "=")
+		if len(firstArg) == 2 && firstArg[0] == "-debug_install_dir" {
+			installDir = firstArg[1]
+		}
+	}
+
 	installDir = strings.ReplaceAll(installDir, `\`, `/`)
 
 	// When running tests, the installDir is detected as a dir where test located
