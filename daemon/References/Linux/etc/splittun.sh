@@ -65,6 +65,7 @@ _bin_sed=sed
 #Variables vill be initialized later:
 _def_interface_name=""
 _def_gateway=""
+_def_gatewayIPv6=""
 
 function test()
 {
@@ -101,12 +102,6 @@ function test()
 
 function init()
 {
-    # default interface name
-    _def_interface_name=$1
-    # default gateway IP
-    _def_gateway=$2
-    #_def_gatewayIPv6=$3
-    
     # Ensure the input parameters not empty
     if [ -z ${_def_interface_name} ]; then
         echo "[i] Default network interface is not defined. Trying to determine it automatically..."
@@ -118,11 +113,11 @@ function init()
         _def_gateway=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $3 }')
         echo "[+] Default gateway: '${_def_gateway}'"
     fi
-    #if [ -z ${_def_gatewayIPv6} ]; then
-    #    echo "[i] Default IPv6 gateway is not defined. Trying to determine it automatically..."
-    #    _def_gatewayIPv6=$(${_bin_ip} -6 route | ${_bin_awk} '/default/ { print $3 }')
-    #    echo "[+] Default IPv6 gateway: '${_def_gatewayIPv6}'"
-    #fi
+    if [ -z ${_def_gatewayIPv6} ]; then
+        echo "[i] Default IPv6 gateway is not defined. Trying to determine it automatically..."
+        _def_gatewayIPv6=$(${_bin_ip} -6 route | ${_bin_awk} '/default/ { print $3 }')
+        echo "[+] Default IPv6 gateway: '${_def_gatewayIPv6}'"
+    fi
     if [ -z ${_def_interface_name} ]; then
         echo "[!] Default network interface is not defined."
         return 2
@@ -131,9 +126,9 @@ function init()
         echo "[!] Default gateway is not defined."
         return 3
     fi
-    #if [ -z ${_def_gatewayIPv6} ]; then
-    #    echo "[!] Warning: Default IPv6 gateway is not defined."
-    #fi
+    if [ -z ${_def_gatewayIPv6} ]; then
+        echo "[!] Warning: Default IPv6 gateway is not defined."
+    fi
 
     ##############################################
     # Ensure previous configuration erased
@@ -211,14 +206,14 @@ function init()
         # splittun table has a default gateway to the default interface
         ${_bin_ip} route add default via ${_def_gateway} table ${_routing_table_name}  
 
-        #if [ ! -z ${_def_gatewayIPv6} ]; then
-        #    if [ -f /proc/net/if_inet6 ]; then
-        #        # Packets with mark will use splittun table
-        #        ${_bin_ip} -6 rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}
-        #        # splittun table has a default gateway to the default interface
-        #        ${_bin_ip} -6 route add default via ${_def_gatewayIPv6} dev ${_def_interface_name} table ${_routing_table_name}
-        #    fi
-        #fi
+        if [ ! -z ${_def_gatewayIPv6} ]; then
+            if [ -f /proc/net/if_inet6 ]; then
+                # Packets with mark will use splittun table
+                ${_bin_ip} -6 rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}
+                # splittun table has a default gateway to the default interface
+                ${_bin_ip} -6 route add default via ${_def_gatewayIPv6} dev ${_def_interface_name} table ${_routing_table_name}
+            fi
+        fi
         
     fi
 
@@ -232,6 +227,11 @@ function init()
         # Ensure rule 'rule add from all lookup main suppress_prefixlength 0' has higher priority
         ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
         ${_bin_ip} rule add from all lookup main suppress_prefixlength 0
+
+        if [ -f /proc/net/if_inet6 ]; then
+            ${_bin_ip} -6 rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
+            ${_bin_ip} -6 rule add from all lookup main suppress_prefixlength 0
+        fi
     fi
 
     set +e
@@ -505,28 +505,21 @@ function info()
 }
 
 if [[ $1 = "start" ]] ; then    
-    _interface_name=""
-    _gateway_ip=""
-    _dns_ip=""
+    _def_interface_name=""
+    _def_gateway=""
+    _def_gatewayIPv6=""
     shift
-    while getopts ":i:g:d:" opt; do
+    while getopts ":i:g:6:" opt; do
         case $opt in
-            i) _interface_name="$OPTARG"   ;;
-            g) _gateway_ip="$OPTARG"    ;;
-            d) _dns_ip="$OPTARG"    ;;
+            i) _def_interface_name="$OPTARG"   ;;
+            g) _def_gateway="$OPTARG"    ;;
+            6) _def_gatewayIPv6="$OPTARG"    ;;
         esac
     done
-    init  ${_interface_name} ${_gateway_ip} ${_dns_ip}   
+    init
 
 elif [[ $1 = "stop" ]] ; then    
-    _interface_name=""
-    shift
-    while getopts ":i:" opt; do
-        case $opt in
-            i) _interface_name="$OPTARG"   ;;
-        esac
-    done
-    clean ${_interface_name}
+    clean
 
 elif [[ $1 = "addpid" ]] ; then
     shift 
@@ -581,14 +574,13 @@ else
     echo "Note! The script have to be started under privilaged user (sudo $0 ...)"
     echo "    $0 <command> [parameters]"
     echo "Parameters:"
-    echo "    start [-i <interface_name>] [-g <gateway_ip>] [-d <dns>]"
+    echo "    start [-i <interface_name>] [-g <gateway_ip>] [-6 <gateway_IPv6_ip>]"
     echo "        Initialize split-tunneling functionality"
     echo "        - interface_name - (optional) name of network interface to be used for ST environment"
     echo "        - gateway_ip     - (optional) gateway IP to be used for ST environment"
-    echo "        - dns            - (optional) DNS IP to be used for ST environment"
-    echo "    stop [-i <interface_name>]"
+    echo "        - gateway_IPv6_ip- (optional) IPv6 gateway IP to be used for ST environment"
+    echo "    stop"
     echo "        Uninitialize split-tunneling functionality"
-    echo "        - interface_name - (optional) name of network interface which was previously used for '-init' command"
     echo "    run [-u <username>] <command>"
     echo "        Start commands in split-tunneling environment"
     echo "        - command        - the command or path to binary to be executed"
@@ -604,14 +596,13 @@ else
     echo "Examples:"
     echo "    Initialize split-tunneling functionality:"
     echo "        $0 start"
-    echo "        $0 start -i wlp3s0 -g 192.168.1.1 -d 1.1.1.1"
+    echo "        $0 start -i wlp3s0 -g 192.168.1.1 -6 fe80::1111:2222:3333:4444"
     echo "    Start commands in split-tunneling environment:"
     echo "        $0 run firefox"
     echo "        $0 run /usr/bin/firefox"
     echo "        $0 run ping 8.8.8.8"
     echo "    Uninitialize split-tunneling functionality:"
     echo "        $0 stop"
-    echo "        $0 stop -i wlp3s0"
     echo "    Check split-tunneling status:"
     echo "        $0 status"
 fi
