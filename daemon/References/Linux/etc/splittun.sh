@@ -229,8 +229,11 @@ function init()
         ${_bin_ip} rule add from all lookup main suppress_prefixlength 0
 
         if [ -f /proc/net/if_inet6 ]; then
-            ${_bin_ip} -6 rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
-            ${_bin_ip} -6 rule add from all lookup main suppress_prefixlength 0
+            _ret=$(${_bin_ip} -6 rule list not from all fwmark 0xca6c) # WG rule
+            if [ ! -z "${_ret}" ]; then
+                ${_bin_ip} -6 rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
+                ${_bin_ip} -6 rule add from all lookup main suppress_prefixlength 0
+            fi
         fi
     fi
 
