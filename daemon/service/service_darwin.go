@@ -23,6 +23,7 @@
 package service
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/ivpn/desktop-app/daemon/service/firewall"

@@ -10,6 +10,6 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 	return nil, fmt.Errorf("not implemented for macOS")
 }
 
-func implGetFunc_BinaryIconBase64(binaryPath string) (icon string, err error) {
+func implGetFunc_BinaryIconBase64() func(binaryPath string) (icon string, err error) {
 	return nil
 }
