@@ -104,6 +104,11 @@ func implFuncNotAvailableError() error {
 	return funcNotAvailableError
 }
 
+func implReset() error {
+	// not applicable for Windows. Sane effect has implApplyConfig(false, , , [])
+	return nil
+}
+
 func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	if GetFuncNotAvailableError() != nil {
 		// Split-Tunneling not accessable (not able to connect to a driver or not implemented for current platform)

@@ -1218,16 +1218,24 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 }
 
 func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, reset bool) error {
-	prefs := s._preferences
-
-	prefs.IsSplitTunnel = isEnabled
 	if reset || splittun.GetFuncNotAvailableError() != nil {
-		prefs.IsSplitTunnel = false
-		prefs.SplitTunnelApps = make([]string, 0)
+		return s.splitTunnelling_Reset()
 	}
 
+	prefs := s._preferences
+	prefs.IsSplitTunnel = isEnabled
 	s.setPreferences(prefs)
 
+	return s.splitTunnelling_ApplyConfig()
+}
+func (s *Service) splitTunnelling_Reset() error {
+	prefs := s._preferences
+	prefs.IsSplitTunnel = false
+	prefs.SplitTunnelApps = make([]string, 0)
+	s.setPreferences(prefs)
+
+	splittun.Reset()
+	
 	return s.splitTunnelling_ApplyConfig()
 }
 func (s *Service) splitTunnelling_ApplyConfig() error {

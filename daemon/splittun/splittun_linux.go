@@ -80,6 +80,12 @@ func implFuncNotAvailableError() error {
 	return funcNotAvailableError
 }
 
+func implReset() error {
+	log.Info(fmt.Sprintf("Removing all PIDs"))
+
+	return shell.Exec(nil, stScriptPath, "reset")
+}
+
 func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	return enable(isStEnabled)
 }

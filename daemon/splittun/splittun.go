@@ -79,6 +79,13 @@ func GetFuncNotAvailableError() error {
 	return implFuncNotAvailableError()
 }
 
+func Reset() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+	
+	return implReset()
+}
+
 // ApplyConfig control split-tunnel functionality
 func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	mutex.Lock()

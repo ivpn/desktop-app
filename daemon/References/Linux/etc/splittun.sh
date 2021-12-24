@@ -521,6 +521,9 @@ if [[ $1 = "start" ]] ; then
 elif [[ $1 = "stop" ]] ; then    
     clean
 
+elif [[ $1 = "reset" ]] ; then 
+    removeAllPids
+
 elif [[ $1 = "addpid" ]] ; then
     shift 
     addpid $@
@@ -591,6 +594,8 @@ else
     echo "    removepid <PID>"
     echo "        Remove process from Split Tunneling environment"
     echo "        - PID             - process ID"
+    echo "    reset"
+    echo "        Remove all processes from Split Tunneling environment"
     echo "    status"
     echo "        Check split-tunneling status"
     echo "Examples:"

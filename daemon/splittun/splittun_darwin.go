@@ -34,6 +34,10 @@ func implFuncNotAvailableError() error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }
 
+func implReset() error {
+	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+}
+
 func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
 }
