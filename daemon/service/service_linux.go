@@ -60,6 +60,12 @@ func (s *Service) implSplitTunnelling_AddApp(execCmd string) (requiredCmdToExec 
 		return "", isRunning, err
 	}
 
+	// ensure ST is initialized
+	err = s.splitTunnelling_ApplyConfig()
+	if err != nil {
+		return "", false, err
+	}
+
 	return fmt.Sprintf("ivpn splittun -execute %s", execCmd), isRunning, nil
 }
 
@@ -85,7 +91,7 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 	if len(cmd) <= 0 {
 		return false, fmt.Errorf("empty command")
 	}
-	
+
 	// 1. Detection based on binary location (e.g. applicable for Ubuntu):
 	//		1.1. Get full paths for all binaries in the command
 	//		1.2. Find running processes by mask (`ps -aux`):
@@ -138,14 +144,14 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 	}
 
 	for _, arg := range strings.Split(cols[2], " ") {
-		if len(arg) <=0 {
+		if len(arg) <= 0 {
 			continue
 		}
 		fpath := getBinaryOriginalLocation(arg)
 		if len(fpath) > 0 {
 			binPathsToCheck = append(binPathsToCheck, strings.TrimSuffix(fpath, filepath.Ext(fpath)))
 		}
-	}	
+	}
 
 	// prepare search masks
 	regexParam := ""
@@ -155,10 +161,10 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 		}
 		//	1.2.1.	mask: full path to binary
 		//	Example: file "/usr/bin/atom" mask "/usr/bin/atom"
-		regexParam += `(\s`+path+`\s)`
+		regexParam += `(\s` + path + `\s)`
 
 		dirs := strings.Split(path, "/")
-		
+
 		if len(dirs) >= 4 {
 			if strings.HasPrefix(path, "/opt/") {
 				//	1.2.2.	mask: (if binary starts from "/opt/") "/opt/<dir2>/<dir3>/"
@@ -180,11 +186,11 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 	retIsAlreadyRunning := false
 	if len(regexParam) > 0 {
 		outRegexp := regexp.MustCompile(regexParam)
-		outProcessFunc := func(text string, isError bool) {			
-			if isError || retIsAlreadyRunning{
+		outProcessFunc := func(text string, isError bool) {
+			if isError || retIsAlreadyRunning {
 				return
 			}
-			found  := outRegexp.FindString(text)
+			found := outRegexp.FindString(text)
 			if len(found) > 0 {
 				retIsAlreadyRunning = true
 				// log.Debug("(running app detection: looks like the application is already started) found: ", found)
@@ -196,59 +202,59 @@ func isAbleToAddAppToConfig(cmd string) (isAlreadyRunning bool, notAbleToRunErro
 			log.Debug("(running app detection ERROR): ", err)
 		}
 	}
-	
+
 	/*
-	// INFO: running commands by the daemon (as a service) 'xlsclients' or 'xwininfo' failing 
-	// Therefore we do not use this mechanism
-	//
-	// 2. Detection based on the list of opened GUI windows in the system and binary filename
-	//		2.1. Get full paths for all binaries in the command
-	//		2.2. Get binary file name
-	//		2.3. Check is there any running GUI window in the system with the name same as binary file name (`xwininfo -root -children`)
-	//
-	//		Example: command "google-chrome"
-	//				2.1) binary (script) path: "/opt/google/chrome/google-chrome"
-	//				2.2) binary file name: "google-chrome"
-	//				2.3) list of all running windows and CHECK if there any window has name "google-chrome"
-	if !retIsAlreadyRunning {
-		// Step 2.2 : binary file name: like "google-chrome"
-		
-		regexParam := ""
-		for _, fpath := range binPathsToCheck {
-			_, file := path.Split(fpath)
-			file = strings.TrimSpace(strings.TrimSuffix(file, filepath.Ext(file)))
+		// INFO: running commands by the daemon (as a service) 'xlsclients' or 'xwininfo' failing
+		// Therefore we do not use this mechanism
+		//
+		// 2. Detection based on the list of opened GUI windows in the system and binary filename
+		//		2.1. Get full paths for all binaries in the command
+		//		2.2. Get binary file name
+		//		2.3. Check is there any running GUI window in the system with the name same as binary file name (`xwininfo -root -children`)
+		//
+		//		Example: command "google-chrome"
+		//				2.1) binary (script) path: "/opt/google/chrome/google-chrome"
+		//				2.2) binary file name: "google-chrome"
+		//				2.3) list of all running windows and CHECK if there any window has name "google-chrome"
+		if !retIsAlreadyRunning {
+			// Step 2.2 : binary file name: like "google-chrome"
 
+			regexParam := ""
+			for _, fpath := range binPathsToCheck {
+				_, file := path.Split(fpath)
+				file = strings.TrimSpace(strings.TrimSuffix(file, filepath.Ext(file)))
+
+				if len(regexParam) > 0 {
+					regexParam += `|`
+				}
+				regexParam += `\s` + file + `(\s|$)`
+			}
+
+
+			// Step 2.3 : Check is there any running GUI window in the system with the name same as binary file name (`xlsclients -a`)
+			// xwininfo -root -children | grep --ignore-case '"google-chroMe"\|"Atom"\|("firefOx"'
+			// xlsclients -a
 			if len(regexParam) > 0 {
-				regexParam += `|`
-			}
-			regexParam += `\s` + file + `(\s|$)`
-		}
-
-		
-		// Step 2.3 : Check is there any running GUI window in the system with the name same as binary file name (`xlsclients -a`)
-		// xwininfo -root -children | grep --ignore-case '"google-chroMe"\|"Atom"\|("firefOx"'
-		// xlsclients -a
-		if len(regexParam) > 0 {
-			outRegexp := regexp.MustCompile(regexParam)
-			outProcessFunc := func(text string, isError bool) {			
-				if isError || retIsAlreadyRunning{
-					return
+				outRegexp := regexp.MustCompile(regexParam)
+				outProcessFunc := func(text string, isError bool) {
+					if isError || retIsAlreadyRunning{
+						return
+					}
+					log.Debug(isError, " (xlsclients -a):", text)
+					found  := outRegexp.FindString(text)
+					if len(found) > 0 {
+						retIsAlreadyRunning = true
+						log.Debug("**** FOUND! *****", found)
+					}
 				}
-				log.Debug(isError, " (xlsclients -a):", text)
-				found  := outRegexp.FindString(text)
-				if len(found) > 0 {
-					retIsAlreadyRunning = true
-					log.Debug("**** FOUND! *****", found)
+
+				log.Debug("REGEXP (xlsclients -a): ", "'"+regexParam+"'")
+				err := shell.ExecAndProcessOutput(nil, outProcessFunc, "", "xlsclients", "-a")
+				if err != nil {
+					log.Debug("EXEC ERROR (xlsclients -a): ", err)
 				}
 			}
-
-			log.Debug("REGEXP (xlsclients -a): ", "'"+regexParam+"'")
-			err := shell.ExecAndProcessOutput(nil, outProcessFunc, "", "xlsclients", "-a")
-			if err != nil {
-				log.Debug("EXEC ERROR (xlsclients -a): ", err)
-			}
 		}
-	}
 	*/
 
 	return retIsAlreadyRunning, nil

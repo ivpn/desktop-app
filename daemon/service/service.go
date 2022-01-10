@@ -1235,7 +1235,7 @@ func (s *Service) splitTunnelling_Reset() error {
 	s.setPreferences(prefs)
 
 	splittun.Reset()
-	
+
 	return s.splitTunnelling_ApplyConfig()
 }
 func (s *Service) splitTunnelling_ApplyConfig() error {
@@ -1256,17 +1256,13 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 		IPv6Tunnel: sInf.VpnLocalIPv6,
 		IPv6Public: sInf.OutboundIPv6}
 
-	err := splittun.ApplyConfig(prefs.IsSplitTunnel, s.Connected(), addressesCfg, prefs.SplitTunnelApps)
-	if err != nil {
-		prefs = s._preferences
-		prefs.IsSplitTunnel = false
-		s.setPreferences(prefs)
-		splittun.ApplyConfig(prefs.IsSplitTunnel, s.Connected(), addressesCfg, prefs.SplitTunnelApps)
-	}
-	return err
+	return splittun.ApplyConfig(prefs.IsSplitTunnel, s.Connected(), addressesCfg, prefs.SplitTunnelApps)
 }
 
 func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error) {
+	if !s._preferences.IsSplitTunnel {
+		return "", false, fmt.Errorf("the Split Tunneling not enabled")
+	}
 	// apply ST configuration after function ends
 	defer s.splitTunnelling_ApplyConfig()
 	return s.implSplitTunnelling_AddApp(exec)

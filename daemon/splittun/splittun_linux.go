@@ -20,6 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build linux
 // +build linux
 
 package splittun
@@ -81,13 +82,17 @@ func implFuncNotAvailableError() error {
 }
 
 func implReset() error {
-	log.Info(fmt.Sprintf("Removing all PIDs"))
+	log.Info("Removing all PIDs")
 
 	return shell.Exec(nil, stScriptPath, "reset")
 }
 
 func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	return enable(isStEnabled)
+	err := enable(isStEnabled)
+	if err != nil {
+		log.Error(err)
+	}
+	return err
 }
 
 func implAddPid(pid int, commandToExecute string) error {
@@ -334,8 +339,12 @@ func enable(isEnable bool) error {
 		if enabled {
 			return nil
 		}
-		err = shell.Exec(nil, stScriptPath, "start")
+
+		_, outErrText, _, err := shell.ExecAndGetOutput(nil, 1024, "", stScriptPath, "start")
 		if err != nil {
+			if len(outErrText) > 0 {
+				err = fmt.Errorf("(%w) %s", err, outErrText)
+			}
 			// if ST start failed - clean everything (by command 'stop')
 			shell.Exec(nil, stScriptPath, "stop")
 

@@ -77,27 +77,27 @@ function test()
     if [ ! -d /sys/fs/cgroup/net_cls ]; then
         echo "Creating '/sys/fs/cgroup/net_cls' folder ..."
         if ! mkdir -p /sys/fs/cgroup/net_cls;   then 
-            echo "ERROR: Failed to create CGROUP folder Not Found (/sys/fs/cgroup/net_cls)"; 
+            echo "ERROR: Failed to create CGROUP folder Not Found (/sys/fs/cgroup/net_cls)" 1>&2
             return 1; 
         fi
     fi
     if ! mount | grep "/sys/fs/cgroup/net_cls" &>/dev/null ; then
         echo "Mounting CGROUP subsystem '/sys/fs/cgroup/net_cls'..."
         if ! mount -t cgroup -o net_cls net_cls /sys/fs/cgroup/net_cls ; then
-            echo "ERROR: Failed to mount CGROUP subsystem (net_cls)"; 
-            return 1; 
+            echo "ERROR: Failed to mount CGROUP subsystem (net_cls)" 1>&2
+            return 2; 
         fi
     fi
 
-    if ! which ${_bin_iptables} &>/dev/null ;   then echo "ERROR: Binary Not Found (${_bin_iptables})"; return 1; fi
-    if ! which ${_bin_ip} &>/dev/null ;         then echo "ERROR: Binary Not Found (${_bin_ip})"; return 1; fi    
-    if ! which ${_bin_grep} &>/dev/null ;       then echo "ERROR: Binary Not Found (${_bin_grep})"; return 1; fi
-    if ! which ${_bin_dirname} &>/dev/null ;    then echo "ERROR: Binary Not Found (${_bin_dirname})"; return 1; fi
-    if ! which ${_bin_sed} &>/dev/null ;        then echo "ERROR: Binary Not Found (${_bin_sed})"; return 1; fi
+    if ! which ${_bin_iptables} &>/dev/null ;   then echo "ERROR: Binary Not Found (${_bin_iptables})" 1>&2; return 1; fi
+    if ! which ${_bin_ip} &>/dev/null ;         then echo "ERROR: Binary Not Found (${_bin_ip})" 1>&2; return 1; fi    
+    if ! which ${_bin_grep} &>/dev/null ;       then echo "ERROR: Binary Not Found (${_bin_grep})" 1>&2; return 1; fi
+    if ! which ${_bin_dirname} &>/dev/null ;    then echo "ERROR: Binary Not Found (${_bin_dirname})" 1>&2; return 1; fi
+    if ! which ${_bin_sed} &>/dev/null ;        then echo "ERROR: Binary Not Found (${_bin_sed})" 1>&2; return 1; fi
 
-    if ! which ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})"; fi
-    if ! which ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})"; fi
-    if ! which ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})"; fi    
+    if ! which ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})" 1>&2; fi
+    if ! which ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})" 1>&2; fi
+    if ! which ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})" 1>&2; fi    
 }
 
 function init()
@@ -119,15 +119,15 @@ function init()
         echo "[+] Default IPv6 gateway: '${_def_gatewayIPv6}'"
     fi
     if [ -z ${_def_interface_name} ]; then
-        echo "[!] Default network interface is not defined."
+        echo "[!] Default network interface is not defined." 1>&2
         return 2
     fi
     if [ -z ${_def_gateway} ]; then
-        echo "[!] Default gateway is not defined."
+        echo "[!] Default gateway is not defined." 1>&2
         return 3
     fi
     if [ -z ${_def_gatewayIPv6} ]; then
-        echo "[!] Warning: Default IPv6 gateway is not defined."
+        echo "[!] Warning: Default IPv6 gateway is not defined." 1>&2
     fi
 
     ##############################################
@@ -379,7 +379,7 @@ function removepid()
 {
     local _pid="$1"    
     if [ -z "${_pid}" ]; then
-        echo "[!] ERROR: PID not defined"
+        echo "[!] ERROR: PID not defined" 1>&2
         exit 1
     fi   
     echo "[+] Removing PID ${_pid} from Split Tunneling group..."
@@ -403,14 +403,14 @@ function execute()
     _app="$2"
 
     if [ -z "${_app}" ]; then
-        echo "[!] ERROR: Application not defined"
+        echo "[!] ERROR: Application not defined" 1>&2
         exit 1
     fi   
 
     # Check if split tunneling enabled
     status > /dev/null 2>&1
     if [ $? != 0 ]; then
-        echo "ERROR: split tunneling DISABLED. Please call 'start' command first"
+        echo "ERROR: split tunneling DISABLED. Please call 'start' command first" 1>&2
         exit 1
     fi
 
@@ -420,14 +420,14 @@ function execute()
         _user="${SUDO_USER:-$USER}"
     fi    
     if [ -z "${_user}" ]; then
-        echo "[!] User not defined"
+        echo "[!] User not defined" 1>&2
         exit 2
     fi
 
     addpid $$
     
     if [ $? != 0 ]; then
-        echo "[!] Failed "
+        echo "[!] Failed " 1>&2
         exit 3
     fi
 
