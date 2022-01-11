@@ -106,7 +106,7 @@ func implAddPid(pid int, commandToExecute string) error {
 		return fmt.Errorf("unable to check Split Tunneling status")
 	}
 	if !enabled {
-		return fmt.Errorf("the Split Tunneling not enabled")
+		return fmt.Errorf("the Split Tunneling is disabled")
 	}
 
 	err = shell.Exec(nil, stScriptPath, "addpid", strconv.Itoa(pid))

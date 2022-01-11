@@ -119,15 +119,15 @@ function init()
         echo "[+] Default IPv6 gateway: '${_def_gatewayIPv6}'"
     fi
     if [ -z ${_def_interface_name} ]; then
-        echo "[!] Default network interface is not defined." 1>&2
+        echo "Default network interface is not defined. Please, check internet connectivity." 1>&2
         return 2
     fi
     if [ -z ${_def_gateway} ]; then
-        echo "[!] Default gateway is not defined." 1>&2
+        echo "Default gateway is not defined. Please, check internet connectivity." 1>&2
         return 3
     fi
     if [ -z ${_def_gatewayIPv6} ]; then
-        echo "[!] Warning: Default IPv6 gateway is not defined." 1>&2
+        echo "Warning: Default IPv6 gateway is not defined." 1>&2
     fi
 
     ##############################################

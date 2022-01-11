@@ -1302,7 +1302,7 @@ async function SplitTunnelAddApp(execCmd, funcShowMessageBox) {
       let warningMes = ret.IsAlreadyRunningMessage;
       if (!warningMes || warningMes.length <= 0)
         warningMes =
-          "It looks like the application is already running.\nSome applications need to be closed before launching them in the Split Tunneling environment.\nOtherwise, it might not be excluded from the VPN tunnel.";
+          "It appears the application is already running. Some applications must be closed before launching them in the Split Tunneling environment or they may not be excluded from the VPN tunnel.";
 
       let msgBoxConfig = {
         type: "question",

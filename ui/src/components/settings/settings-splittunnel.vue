@@ -26,14 +26,10 @@
         <span class="settingsGrayLongDescriptionFont" style="font-weight: bold"
           >Warning:</span
         >
-        Already running applications can not use Split Tunneling.
-        <br />
-        <span class="settingsGrayLongDescriptionFont" style="font-weight: bold"
-          >Warning:</span
-        >
-        Some applications (e.g. Web browsers) need to be closed before launching
-        them in the Split Tunneling environment. Otherwise, it might not be
-        excluded from the VPN tunnel.
+        Applications must be launched from the button below. Already running
+        applications or instances can not use Split Tunneling. Some applications
+        using shared resources (e.g. Web browsers) must be closed before
+        launching them or they may not be excluded from the VPN tunnel.
       </div>
       <!-- functionality description: WINDOWS -->
       <div v-else>
@@ -284,11 +280,17 @@ import binaryInfoControl from "@/components/controls/control-app-binary-info.vue
 import spinner from "@/components/controls/control-spinner.vue";
 
 function processError(e) {
+  let errMes = e.toString();
+
+  if (errMes && errMes.length > 0) {
+    errMes = errMes.charAt(0).toUpperCase() + errMes.slice(1);
+  }
+
   console.error(e);
   sender.showMessageBox({
     type: "error",
     buttons: ["OK"],
-    message: e.toString(),
+    message: errMes,
   });
 }
 

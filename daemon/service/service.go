@@ -1261,7 +1261,7 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 
 func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error) {
 	if !s._preferences.IsSplitTunnel {
-		return "", false, fmt.Errorf("the Split Tunneling not enabled")
+		return "", false, fmt.Errorf("unable to run application in Split Tunneling environment: Split Tunneling is disabled")
 	}
 	// apply ST configuration after function ends
 	defer s.splitTunnelling_ApplyConfig()

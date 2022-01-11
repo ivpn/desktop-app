@@ -97,6 +97,10 @@ function enable_firewall {
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -s FE80::/10 -j ACCEPT
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -d FE80::/10 -j ACCEPT
 
+      # allow unique-local addresses
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -s FD00::/8 -j ACCEPT
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -d FD00::/8 -j ACCEPT
+
       # allow DHCP port (547out 546in)
       # ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -p udp --dport 547 -j ACCEPT
       # ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -p udp --dport 546 -j ACCEPT
