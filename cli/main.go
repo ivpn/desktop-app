@@ -75,7 +75,7 @@ func printUsageAll(short bool) {
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	for _, c := range _commands {
 		c.UsageFormetted(writer, short)
-		if short == false {
+		if !short {
 			fmt.Fprintln(writer, "\t")
 		}
 	}
@@ -110,8 +110,19 @@ func main() {
 	addCommand(&commands.CmdAccount{})
 
 	if len(os.Args) >= 2 {
-		if os.Args[1] == "?" || os.Args[1] == "-?" || os.Args[1] == "-h" || os.Args[1] == "--h" || os.Args[1] == "-help" || os.Args[1] == "--help" {
-			if len(os.Args) >= 3 && strings.ToLower(os.Args[2]) == "-full" {
+		arg1 := strings.TrimLeft(strings.ToLower(os.Args[1]), "-")
+		arg2 := ""
+		if len(os.Args) >= 3 {
+			arg2 = strings.TrimLeft(strings.ToLower(os.Args[2]), "-")
+		}
+
+		if arg1 == "v" || arg1 == "version" {
+			printHeader()
+			os.Exit(0)
+		}
+
+		if arg1 == "?" || arg1 == "h" || arg1 == "help" {
+			if arg2 == "full" {
 				printUsageAll(false) // detailed commans descriptions
 			} else {
 				printUsageAll(true) // short commands descriptions

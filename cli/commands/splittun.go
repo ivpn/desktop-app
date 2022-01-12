@@ -144,7 +144,7 @@ func (c *SplitTun) Init() {
 	// register special parse function for '-appadd' (parsing appaddArgs)
 	c.SetParseSpecialFunc(c.specialParse)
 
-	c.Initialize("splittun", "Split Tunnel management\nBy enabling this feature you can exclude traffic for a specific applications from the VPN tunnel")
+	c.Initialize("splittun", "Split Tunnel management\nBy enabling this feature you can exclude traffic from specific applications from the VPN tunnel")
 	c.BoolVar(&c.status, "status", false, "(default) Show Split Tunnel status and configuration")
 
 	if !cliplatform.IsSplitTunRunsApp() {
