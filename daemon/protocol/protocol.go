@@ -630,7 +630,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		isRunningWarningMes := ""
 		if isAlreadyRunning {
-			isRunningWarningMes = "It looks like the application is already running.\nSome applications need to be closed before launching them in the Split Tunneling environment.\nOtherwise, it might not be excluded from the VPN tunnel."
+			isRunningWarningMes = "It appears the application is already running.\nSome applications must be closed before launching them in the Split Tunneling environment or they may not be excluded from the VPN tunnel."
 		}
 		p.sendResponse(conn,
 			&types.SplitTunnelAddAppCmdResp{

@@ -376,7 +376,8 @@ func (c *Client) SplitTunnelAddApp(execCmd string) (isRequiredToExecuteCommand b
 	if respAppCmdResp.IsAlreadyRunning {
 		warningMes := respAppCmdResp.IsAlreadyRunningMessage
 		if len(warningMes) <= 0 {
-			warningMes = "It looks like the application is already running.\nSome applications need to be closed before launching them in the Split Tunneling environment.\nOtherwise, it might not be excluded from the VPN tunnel."
+			// Note! Normally, this message will be never used. The text will come from daemon in 'IsAlreadyRunningMessage'
+			warningMes = "It appears the application is already running.\nSome applications must be closed before launching them in the Split Tunneling environment or they may not be excluded from the VPN tunnel."
 		}
 		fmt.Println("WARNING! " + warningMes)
 
