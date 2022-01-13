@@ -66,7 +66,7 @@ func (s *Service) implSplitTunnelling_AddApp(execCmd string) (requiredCmdToExec 
 		return "", false, err
 	}
 
-	return fmt.Sprintf("ivpn splittun -execute %s", execCmd), isRunning, nil
+	return fmt.Sprintf("ivpn exclude %s", execCmd), isRunning, nil
 }
 
 func (s *Service) implSplitTunnelling_RemoveApp(pid int, binaryPath string) (err error) {
