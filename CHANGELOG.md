@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.  
 
+
+## Version 3.4.5 - 2021-11-23
+
+[FIX] (Windows|Linux) Fixed the problem of opening a minimized application  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.4.5.exe)  
+SHA256: 6569254e6368a20e306ff36d7bd49d90197f93a4dc71a98de56a5f23b48bdfda  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.4.5_amd64.deb)  
+SHA256: 5956cb9e99a4133b29680c7e29e081850b0f8e06c3dfd5b966fbaa17d466bedf   
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.4.5-1.x86_64.rpm)  
+SHA256: d04dad1c4c0d197fdac5a7555aa0823ce02012e1e416100e78184474b67f123d 
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.4.5_amd64.deb)  
+SHA256: 49f3be89d3758b41b7057ea411be3fda16b785b1af9ce46b87539602ca8246ea  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.4.5-1.x86_64.rpm)  
+SHA256: 6773d51a14cf5f9ecc469a29889c7b8abc1f3408db8fdaa70b3fb9c54a074f6b 
+
 ## Version 3.4.4 - 2021-11-17
 
 [IMPROVED] (Windows) Updated WireGuard: v0.5.2  
