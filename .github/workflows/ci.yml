@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  win:
+    runs-on: windows-latest
+
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+
+      - name: setup-msbuild
+        uses: microsoft/setup-msbuild@v1
+
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build
+        shell: cmd
+        run: |
+          cd ui\References\Windows
+          build.bat
+  linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install deps
+        run: sudo apt-get install rpm libiw-dev
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+          bundler-cache: false
+
+      - name: Install fpm
+        run: gem install fpm
+
+      - name: Build
+        run: |
+          cd ui/References/Linux
+          ./build.sh -v $(cat ../../package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g')
+  macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install deps
+        run: brew install autoconf automake libtool
+
+      - name: Build
+        run: |
+          cd ui/References/macOS
+          ./build.sh -v $(cat ../../package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g') -c ${{ env.APPLE_DEVID_CERTIFICATE }}
+        env:
+          APPLE_DEVID_CERTIFICATE: ${{ secrets.APPLE_DEVID_CERTIFICATE || 'DUMMY' }} 
