@@ -209,7 +209,7 @@ func readDaemonPort() (port int, secret uint64, err error) {
 		return 0, 0, fmt.Errorf("connection-info check error: %s", err)
 	}
 
-	data, err := ioutil.ReadFile(file)
+	data, err := ioutil.ReadFile(filepath.Clean(file))
 	if err != nil {
 		log.Fatal(err)
 	}

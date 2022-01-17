@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -75,7 +76,7 @@ func (c *CmdLogs) doShow() error {
 	isSomethingPrinted := false
 
 	fname := platform.LogFile()
-	file, err := os.Open(fname)
+	file, err := os.Open(filepath.Clean(fname))
 	if err != nil {
 		return err
 	}

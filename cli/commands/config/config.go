@@ -96,7 +96,7 @@ func GetConfig() (Configuration, error) {
 		return conf, nil
 	}
 
-	data, err := ioutil.ReadFile(file)
+	data, err := ioutil.ReadFile(filepath.Clean(file))
 	if err != nil {
 		return conf, fmt.Errorf("failed to read configuration: %w", err)
 	}
