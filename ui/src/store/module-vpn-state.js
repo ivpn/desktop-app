@@ -427,24 +427,15 @@ function findServerByExitId(servers, id) {
 }
 
 function updateServersPings(state, pings) {
-  let minPing = -1;
-  let maxPing = -1;
-
   // hash new ping result by host
   let hashedPings = {};
   for (let i = 0; i < pings.length; i++) {
     hashedPings[pings[i].Host] = pings[i].Ping;
-    if (pings[i].Ping > maxPing) maxPing = pings[i].Ping;
-    if (minPing < 0 || pings[i].Ping < minPing) minPing = pings[i].Ping;
   }
 
-  const pingMinMaxDiff = maxPing - minPing;
-
-  function getPingQuality(ping) {
-    if (ping == null || pingMinMaxDiff <= 0) return null;
-    let relativePing = (ping - minPing) / pingMinMaxDiff;
-    if (relativePing <= 0.5) return PingQuality.Good;
-    else if (relativePing <= 0.8) return PingQuality.Moderate;
+  function getPingQuality(pingMs) {
+    if (pingMs < 100) return PingQuality.Good;
+    if (pingMs < 300) return PingQuality.Moderate;
     return PingQuality.Bad;
   }
 
