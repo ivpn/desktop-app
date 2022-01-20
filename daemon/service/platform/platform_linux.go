@@ -28,6 +28,7 @@ import (
 
 var (
 	firewallScript string
+	splitTunScript string
 	logDir         string = "/opt/ivpn/log"
 	tmpDir         string = "/opt/ivpn/mutable"
 )
@@ -56,6 +57,9 @@ func doOsInit() (warnings []string, errors []error) {
 	if err := checkFileAccessRightsExecutable("firewallScript", firewallScript); err != nil {
 		errors = append(errors, err)
 	}
+	if err := checkFileAccessRightsExecutable("splitTunScript", splitTunScript); err != nil {
+		errors = append(errors, err)
+	}
 
 	return warnings, errors
 }
@@ -65,4 +69,9 @@ func doInitOperations() (w string, e error) { return "", nil }
 // FirewallScript returns path to firewal script
 func FirewallScript() string {
 	return firewallScript
+}
+
+// SplitTunScript returns path to script which control split-tunneling functionality
+func SplitTunScript() string {
+	return splitTunScript
 }

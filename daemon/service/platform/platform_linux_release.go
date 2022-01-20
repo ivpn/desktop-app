@@ -32,12 +32,13 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	installDir := "/opt/ivpn"
 
 	firewallScript = path.Join(installDir, "etc/firewall.sh")
+	splitTunScript = path.Join(installDir, "etc/splittun.sh")
 	openvpnCaKeyFile = path.Join(installDir, "etc/ca.crt")
 	openvpnTaKeyFile = path.Join(installDir, "etc/ta.key")
 	openvpnUpScript = path.Join(installDir, "etc/client.up")
 	openvpnDownScript = path.Join(installDir, "etc/client.down")
 	serversFile = path.Join(installDir, "etc/servers.json")
-	
+
 	obfsproxyStartScript = path.Join(installDir, "obfsproxy/obfs4proxy")
 
 	wgBinaryPath = path.Join(installDir, "wireguard-tools/wg-quick")

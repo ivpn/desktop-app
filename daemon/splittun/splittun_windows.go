@@ -52,6 +52,19 @@ var (
 	//fSplitTun_SplitStop              *syscall.LazyProc
 )
 
+var (
+	isDriverConnected bool
+)
+
+type ConfigApps struct {
+	ImagesPathToSplit []string
+}
+
+type Config struct {
+	Addr ConfigAddresses
+	Apps ConfigApps
+}
+
 // Initialize doing initialization stuff (called on application start)
 func implInitialize() error {
 	wfpDllPath := platform.WindowsWFPDllPath()
@@ -79,12 +92,93 @@ func implInitialize() error {
 	//fSplitTun_SplitStop = dll.NewProc("SplitTun_SplitStop")
 
 	// to ensure that functionality works - just try to start/stop driver
-	defer implDisconnect()
-	if connectErr := implConnect(); connectErr != nil {
+	defer disconnect(false)
+	if connectErr := connect(false); connectErr != nil {
 		funcNotAvailableError = fmt.Errorf("Split-Tunnel functionality test failed: %w", connectErr)
 	}
 
 	return funcNotAvailableError
+}
+
+func implFuncNotAvailableError() error {
+	return funcNotAvailableError
+}
+
+func implReset() error {
+	// not applicable for Windows. Sane effect has implApplyConfig(false, , , [])
+	return nil
+}
+
+func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
+	if GetFuncNotAvailableError() != nil {
+		// Split-Tunneling not accessable (not able to connect to a driver or not implemented for current platform)
+		return nil
+	}
+
+	// If ST connected:
+	//	- stop and erase old configuration
+	//  - if ST have to be disabled - disconnect ST driver
+	if isDriverConnected {
+		if err := stopAndClean(); err != nil {
+			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
+		}
+		if !isStEnabled {
+			if err := disconnect(true); err != nil {
+				return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
+			}
+		}
+	}
+
+	if !isVpnEnabled {
+		// VPN not connected. No sense to enable split-tunnelling
+		return nil
+	}
+
+	if !isStEnabled || len(splitTunnelApps) == 0 || ((addrConfig.IPv4Public == nil || addrConfig.IPv4Tunnel == nil) && (addrConfig.IPv6Public == nil || addrConfig.IPv6Tunnel == nil)) {
+		// no configuration
+		return nil
+	}
+
+	// If ST not connected:
+	//	- connect driver
+	//  - stop and erase old configuration
+	if !isDriverConnected {
+		if err := connect(true); err != nil {
+			return log.ErrorE(fmt.Errorf("failed to start split-tunnelling: %w", err), 0)
+		}
+		if err := stopAndClean(); err != nil {
+			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
+		}
+	}
+
+	// Set new configuration
+	cfg := Config{}
+	cfg.Apps = ConfigApps{ImagesPathToSplit: splitTunnelApps}
+	cfg.Addr = addrConfig
+
+	if err := setConfig(cfg); err != nil {
+		log.Error(fmt.Errorf("error on configuring Split-Tunnelling: %w", err))
+	} else {
+		if err := start(); err != nil {
+			log.Error(fmt.Errorf("error on start Split-Tunnelling: %w", err))
+		} else {
+			log.Info(fmt.Sprintf("Split-Tunnelling started: IPv4: (%s) => (%s) IPv6: (%s) => (%s)", addrConfig.IPv4Tunnel, addrConfig.IPv4Public, addrConfig.IPv6Tunnel, addrConfig.IPv6Public))
+		}
+	}
+
+	return nil
+}
+
+func implAddPid(pid int, commandToExecute string) error {
+	return fmt.Errorf("operation not applicable for current platform")
+}
+
+func implRemovePid(pid int) error {
+	return fmt.Errorf("operation not applicable for current platform")
+}
+
+func implGetRunningApps() ([]RunningApp, error) {
+	return nil, fmt.Errorf("operation not applicable for current platform")
 }
 
 func catchPanic(err *error) {
@@ -108,12 +202,16 @@ func checkCallErrResp(retval uintptr, err error, mName string) error {
 	return nil
 }
 
-func implFuncNotAvailableError() error {
-	return funcNotAvailableError
-}
-
-func implConnect() (err error) {
+func connect(logging bool) (err error) {
 	defer catchPanic(&err)
+
+	if isDriverConnected {
+		return nil
+	}
+
+	if logging {
+		log.Info("Split-Tunnelling: Connect driver...")
+	}
 
 	drvPath := platform.WindowsSplitTunnelDriverPath()
 	utfDrvPath, err := syscall.UTF16PtrFromString(drvPath)
@@ -131,11 +229,23 @@ func implConnect() (err error) {
 	if retval != 1 {
 		return fmt.Errorf("Split-Tunnelling operation failed (SplitTun_Connect)")
 	}
+
+	isDriverConnected = true
+	if logging {
+		log.Info("Split-Tunnelling: driver ready")
+	}
+
 	return nil
 }
 
-func implDisconnect() (err error) {
+func disconnect(logging bool) (err error) {
 	defer catchPanic(&err)
+
+	if logging {
+		log.Info("Split-Tunnelling: Disconnect driver...")
+	}
+	isDriverConnected = false
+
 	retval, _, err := fSplitTun_Disconnect.Call()
 	if err := checkCallErrResp(retval, err, "SplitTun_Disconnect"); err != nil {
 		return err
@@ -144,8 +254,11 @@ func implDisconnect() (err error) {
 	return nil
 }
 
-func implStopAndClean() (err error) {
+func stopAndClean() (err error) {
 	defer catchPanic(&err)
+
+	log.Info("Split-Tunnelling: StopAndClean...")
+
 	/// Stop and clean everything:
 	///		Stop splitting
 	///		Stop processes monitoring
@@ -158,8 +271,10 @@ func implStopAndClean() (err error) {
 	return nil
 }
 
-func implStart() (err error) {
+func start() (err error) {
 	defer catchPanic(&err)
+
+	log.Info("Split-Tunnelling: Start...")
 
 	/// Start splitting.
 	/// If "process monitor" not running - it will be started.
@@ -192,26 +307,10 @@ func implStart() (err error) {
 	return nil
 }
 
-func implGetState() (state State, err error) {
+func setConfig(config Config) (err error) {
 	defer catchPanic(&err)
 
-	var isConfigOk uint32
-	var isEnabledProcessMonitor uint32
-	var isEnabledSplitting uint32
-
-	retval, _, err := fSplitTun_GetState.Call(
-		uintptr(unsafe.Pointer(&isConfigOk)),
-		uintptr(unsafe.Pointer(&isEnabledProcessMonitor)),
-		uintptr(unsafe.Pointer(&isEnabledSplitting)))
-	if err := checkCallErrResp(retval, err, "fSplitTun_GetState"); err != nil {
-		return State{}, err
-	}
-
-	return State{IsConfigOk: isConfigOk != 0, IsEnabledSplitting: isEnabledSplitting != 0}, nil
-}
-
-func implSetConfig(config Config) (err error) {
-	defer catchPanic(&err)
+	log.Info("Split-Tunnelling: SetConfig...")
 
 	// SET IP ADDRESSES
 	IPv4Public := config.Addr.IPv4Public.To4()
@@ -256,54 +355,6 @@ func implSetConfig(config Config) (err error) {
 	}
 
 	return nil
-}
-func implGetConfig() (cfg Config, err error) {
-	defer catchPanic(&err)
-
-	// ADDRESSES
-	IPv4Public := make([]byte, 4)
-	IPv4Tunnel := make([]byte, 4)
-	IPv6Public := make([]byte, 16)
-	IPv6Tunnel := make([]byte, 16)
-
-	retval, _, err := fSplitTun_ConfigGetAddresses.Call(
-		uintptr(unsafe.Pointer(&IPv4Public[0])),
-		uintptr(unsafe.Pointer(&IPv4Tunnel[0])),
-		uintptr(unsafe.Pointer(&IPv6Public[0])),
-		uintptr(unsafe.Pointer(&IPv6Tunnel[0])))
-	if err := checkCallErrResp(retval, err, "SplitTun_ConfigGetAddresses"); err != nil {
-		return Config{}, err
-	}
-
-	addr := ConfigAddresses{IPv4Public: IPv4Public, IPv4Tunnel: IPv4Tunnel, IPv6Public: IPv6Public, IPv6Tunnel: IPv6Tunnel}
-
-	// APPS
-
-	// get required buffer size
-	var buffSize uint32 = 0
-	var emptyBuff []byte
-	_, _, err = fSplitTun_ConfigGetSplitAppRaw.Call(
-		uintptr(unsafe.Pointer(&emptyBuff)),
-		uintptr(unsafe.Pointer(&buffSize)))
-	if err := checkCallErrResp(retval, err, "SplitTun_ConfigGetSplitAppRaw"); err != nil {
-		return Config{}, err
-	}
-
-	// get data
-	buff := make([]byte, buffSize)
-	retval, _, err = fSplitTun_ConfigGetSplitAppRaw.Call(
-		uintptr(unsafe.Pointer(&buff[0])),
-		uintptr(unsafe.Pointer(&buffSize)))
-	if err := checkCallErrResp(retval, err, "SplitTun_ConfigGetSplitAppRaw"); err != nil {
-		return Config{}, err
-	}
-
-	apps, err := parseRawBuffAppsConfig(buff)
-	if err != nil {
-		return Config{}, log.ErrorE(fmt.Errorf("failed to obtain split-tinnelling configuration (apps): %w", err), 0)
-	}
-
-	return Config{Addr: addr, Apps: apps}, nil
 }
 
 func makeRawBuffAppsConfig(apps ConfigApps) (bytesArr []byte, err error) {
@@ -354,6 +405,55 @@ func makeRawBuffAppsConfig(apps ConfigApps) (bytesArr []byte, err error) {
 	return buff.Bytes(), nil
 }
 
+/*
+func getConfig() (cfg Config, err error) {
+	defer catchPanic(&err)
+
+	// ADDRESSES
+	IPv4Public := make([]byte, 4)
+	IPv4Tunnel := make([]byte, 4)
+	IPv6Public := make([]byte, 16)
+	IPv6Tunnel := make([]byte, 16)
+
+	retval, _, err := fSplitTun_ConfigGetAddresses.Call(
+		uintptr(unsafe.Pointer(&IPv4Public[0])),
+		uintptr(unsafe.Pointer(&IPv4Tunnel[0])),
+		uintptr(unsafe.Pointer(&IPv6Public[0])),
+		uintptr(unsafe.Pointer(&IPv6Tunnel[0])))
+	if err := checkCallErrResp(retval, err, "SplitTun_ConfigGetAddresses"); err != nil {
+		return Config{}, err
+	}
+
+	addr := ConfigAddresses{IPv4Public: IPv4Public, IPv4Tunnel: IPv4Tunnel, IPv6Public: IPv6Public, IPv6Tunnel: IPv6Tunnel}
+
+	// APPS
+
+	// get required buffer size
+	var buffSize uint32 = 0
+	var emptyBuff []byte
+	_, _, err = fSplitTun_ConfigGetSplitAppRaw.Call(
+		uintptr(unsafe.Pointer(&emptyBuff)),
+		uintptr(unsafe.Pointer(&buffSize)))
+	if err := checkCallErrResp(retval, err, "SplitTun_ConfigGetSplitAppRaw"); err != nil {
+		return Config{}, err
+	}
+
+	// get data
+	buff := make([]byte, buffSize)
+	retval, _, err = fSplitTun_ConfigGetSplitAppRaw.Call(
+		uintptr(unsafe.Pointer(&buff[0])),
+		uintptr(unsafe.Pointer(&buffSize)))
+	if err := checkCallErrResp(retval, err, "SplitTun_ConfigGetSplitAppRaw"); err != nil {
+		return Config{}, err
+	}
+
+	apps, err := parseRawBuffAppsConfig(buff)
+	if err != nil {
+		return Config{}, log.ErrorE(fmt.Errorf("failed to obtain split-tinnelling configuration (apps): %w", err), 0)
+	}
+
+	return Config{Addr: addr, Apps: apps}, nil
+}
 func parseRawBuffAppsConfig(bytesArr []byte) (apps ConfigApps, err error) {
 	//	DWORD common size bytes
 	//	DWORD strings cnt
@@ -401,7 +501,24 @@ func parseRawBuffAppsConfig(bytesArr []byte) (apps ConfigApps, err error) {
 	return ConfigApps{ImagesPathToSplit: files}, nil
 }
 
-/*
+func implGetState() (state State, err error) {
+	defer catchPanic(&err)
+
+	var isConfigOk uint32
+	var isEnabledProcessMonitor uint32
+	var isEnabledSplitting uint32
+
+	retval, _, err := fSplitTun_GetState.Call(
+		uintptr(unsafe.Pointer(&isConfigOk)),
+		uintptr(unsafe.Pointer(&isEnabledProcessMonitor)),
+		uintptr(unsafe.Pointer(&isEnabledSplitting)))
+	if err := checkCallErrResp(retval, err, "fSplitTun_GetState"); err != nil {
+		return State{}, err
+	}
+
+	return State{IsConfigOk: isConfigOk != 0, IsEnabledSplitting: isEnabledSplitting != 0}, nil
+}
+
 func implStop() (err error) {
 	defer catchPanic(&err)
 

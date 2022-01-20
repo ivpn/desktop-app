@@ -1,5 +1,27 @@
 //+build windows
 
+//
+//  Daemon for IVPN Client Desktop
+//  https://github.com/ivpn/desktop-app
+//
+//  Created by Stelnykovych Alexandr.
+//  Copyright (c) 2021 Privatus Limited.
+//
+//  This file is part of the Daemon for IVPN Client Desktop.
+//
+//  The Daemon for IVPN Client Desktop is free software: you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License as published by the Free
+//  Software Foundation, either version 3 of the License, or (at your option) any later version.
+//
+//  The Daemon for IVPN Client Desktop is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+//  details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
+//
+
 package oshelpers
 
 import (
@@ -9,7 +31,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -310,15 +331,14 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 		}
 	}
 
-	// sort by app name
-	sort.Slice(retValues[:], func(i, j int) bool {
-		return strings.Compare(retValues[i].AppName, retValues[j].AppName) == -1
-	})
-
 	return retValues, nil
 }
 
-func implGetBinaryIconBase64Png(binaryPath string) (icon string, err error) {
+func implGetFunc_BinaryIconBase64() func(binaryPath string) (icon string, err error) {
+	return getBinaryIconBase64
+}
+
+func getBinaryIconBase64(binaryPath string) (icon string, err error) {
 	binaryIconReaderInit()
 	defer binaryIconReaderUnInit()
 	return binaryIconReaderGetBase64PngIcon(binaryPath)
@@ -446,5 +466,5 @@ func binaryIconReaderGetBase64PngIcon(binaryPath string) (icon string, err error
 		return "", err
 	}
 
-	return string(iconReaderBuff[:buffSize]), nil
+	return "data:image/x-icon;base64," + string(iconReaderBuff[:buffSize]), nil
 }

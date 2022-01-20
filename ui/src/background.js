@@ -291,6 +291,23 @@ if (gotTheLock) {
     }
   });
 
+  // Disable navigation + Disable creation of new windows
+  app.on("web-contents-created", (event, contents) => {
+    // Disable navigation
+    // https://www.electronjs.org/docs/latest/tutorial/security#13-disable-or-limit-navigation
+    contents.on("will-navigate", (event, navigationUrl) => {
+      console.log("[WARNING] Preventing navigation to:", navigationUrl);
+      event.preventDefault();
+    });
+
+    // Disable creation of new windows
+    // https://www.electronjs.org/docs/latest/tutorial/security#14-disable-or-limit-creation-of-new-windows
+    contents.setWindowOpenHandler(({ url }) => {
+      console.log("[WARNING] Preventing creating new window:", url);
+      return { action: "deny" };
+    });
+  });
+
   app.on("activate", () => {
     menuOnShow();
   });
@@ -504,12 +521,9 @@ function createBrowserWindow(config) {
   let icon = getWindowIcon();
   if (icon != null) config.icon = icon;
 
-  let retWnd = new BrowserWindow(config);
-  retWnd.webContents.on("will-navigate", (event, newURL) => {
-    console.log("[WARNING] Preventing navigation to:", newURL);
-    event.preventDefault();
-  });
-  return retWnd;
+  // Note: the navigation and opening new windows is disabled for this window
+  // For details, refer to definition (above): "app.on("web-contents-created",..."
+  return new BrowserWindow(config);
 }
 
 // CREATE WINDOW

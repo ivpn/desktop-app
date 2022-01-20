@@ -25,6 +25,8 @@ package commands
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -33,6 +35,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/protocol"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/splittun"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -52,7 +55,7 @@ func printAccountInfo(w *tabwriter.Writer, accountID string) *tabwriter.Writer {
 		return w // Do nothing in case of logged in
 	}
 
-	fmt.Fprintln(w, fmt.Sprintf("Account\t:\t%v", "Not logged in"))
+	fmt.Fprintf(w, "Account\t:\t%v", "Not logged in\n")
 
 	return w
 }
@@ -63,12 +66,12 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
 
-	fmt.Fprintln(w, fmt.Sprintf("VPN\t:\t%v", state))
+	fmt.Fprintf(w, "VPN\t:\t%v\n", state)
 
 	if len(serverInfo) > 0 {
-		fmt.Fprintln(w, fmt.Sprintf("\t\t%v", serverInfo))
+		fmt.Fprintf(w, "\t\t%v\n", serverInfo)
 		if len(exitServerInfo) > 0 {
-			fmt.Fprintln(w, fmt.Sprintf("\t\t%v (Multi-Hop exit server)", exitServerInfo))
+			fmt.Fprintf(w, "\t\t%v (Multi-Hop exit server)\n", exitServerInfo)
 		}
 	}
 
@@ -76,13 +79,13 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 		return w
 	}
 	since := time.Unix(connected.TimeSecFrom1970, 0)
-	fmt.Fprintln(w, fmt.Sprintf("    Protocol\t:\t%v", connected.VpnType))
-	fmt.Fprintln(w, fmt.Sprintf("    Local IP\t:\t%v", connected.ClientIP))
+	fmt.Fprintf(w, "    Protocol\t:\t%v\n", connected.VpnType)
+	fmt.Fprintf(w, "    Local IP\t:\t%v\n", connected.ClientIP)
 	if len(connected.ClientIPv6) > 0 {
-		fmt.Fprintln(w, fmt.Sprintf("    Local IPv6\t:\t%v", connected.ClientIPv6))
+		fmt.Fprintf(w, "    Local IPv6\t:\t%v\n", connected.ClientIPv6)
 	}
-	fmt.Fprintln(w, fmt.Sprintf("    Server IP\t:\t%v", connected.ServerIP))
-	fmt.Fprintln(w, fmt.Sprintf("    Connected\t:\t%v", since))
+	fmt.Fprintf(w, "    Server IP\t:\t%v\n", connected.ServerIP)
+	fmt.Fprintf(w, "    Connected\t:\t%v\n", since)
 
 	return w
 }
@@ -94,7 +97,7 @@ func printDNSState(w *tabwriter.Writer, dns string, servers *apitypes.ServersInf
 
 	dns = strings.TrimSpace(dns)
 	if len(dns) == 0 {
-		fmt.Fprintln(w, fmt.Sprintf("DNS\t:\tDefault (auto)"))
+		fmt.Fprintf(w, "DNS\t:\tDefault (auto)\n")
 		return w
 	}
 
@@ -108,9 +111,9 @@ func printDNSState(w *tabwriter.Writer, dns string, servers *apitypes.ServersInf
 	}
 
 	if antitrackerText.Len() > 0 {
-		fmt.Fprintln(w, fmt.Sprintf("AntiTracker\t:\t%v", antitrackerText.String()))
+		fmt.Fprintf(w, "AntiTracker\t:\t%v\n", antitrackerText.String())
 	} else {
-		fmt.Fprintln(w, fmt.Sprintf("DNS\t:\t%v", dns))
+		fmt.Fprintf(w, "DNS\t:\t%v\n", dns)
 	}
 
 	return w
@@ -126,41 +129,111 @@ func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN
 		fwState = "Enabled"
 	}
 
-	fmt.Fprintln(w, fmt.Sprintf("Firewall\t:\t%v", fwState))
-	fmt.Fprintln(w, fmt.Sprintf("    Allow LAN\t:\t%v", isAllowLAN))
+	fmt.Fprintf(w, "Firewall\t:\t%v\n", fwState)
+	fmt.Fprintf(w, "    Allow LAN\t:\t%v\n", isAllowLAN)
 	if isPersistent {
-		fmt.Fprintln(w, fmt.Sprintf("    Persistent\t:\t%v", isPersistent))
+		fmt.Fprintf(w, "    Persistent\t:\t%v\n", isPersistent)
 	}
-	fmt.Fprintln(w, fmt.Sprintf("    Allow IVPN servers\t:\t%v", isAllowApiServers))
+	fmt.Fprintf(w, "    Allow IVPN servers\t:\t%v\n", isAllowApiServers)
 
 	return w
 }
 
-func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isEnabled bool, apps []string) *tabwriter.Writer {
+func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isFullPrint bool, isEnabled bool, apps []string, runningApps []splittun.RunningApp) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
 
-	if !cliplatform.IsMultiHopSupported() {
+	if !cliplatform.IsSplitTunSupported() {
 		return w
 	}
 
 	state := "Disabled"
 	if isEnabled {
 		state = "Enabled"
-		if len(apps) == 0 {
-			state += " (not configured)"
-		}
 	}
 
-	fmt.Fprintln(w, fmt.Sprintf("Split Tunnel\t:\t%v", state))
+	fmt.Fprintf(w, "Split Tunnel\t:\t%v\n", state)
 
 	if !isShortPrint {
 		for i, path := range apps {
 			if i == 0 {
-				fmt.Fprintln(w, fmt.Sprintf("Split Tunnel apps\t:\t%v", path))
+				fmt.Fprintf(w, "Split Tunnel apps\t:\t%v\n", path)
 			} else {
-				fmt.Fprintln(w, fmt.Sprintf("\t\t%v", path))
+				fmt.Fprintf(w, "\t\t%v\n", path)
+			}
+		}
+
+		sort.Slice(runningApps, func(i, j int) bool {
+			return runningApps[i].Pid < runningApps[j].Pid
+		})
+
+		isFirstLineShown := false
+		for _, exec := range runningApps {
+			if exec.Pid != exec.ExtIvpnRootPid {
+				continue
+			}
+
+			cmd := exec.ExtModifiedCmdLine
+			if len(cmd) <= 0 {
+				cmd = exec.Cmdline
+			}
+			if !isFirstLineShown {
+				isFirstLineShown = true
+				fmt.Fprintf(w, "Running commands\t:\t[pid:%d] %s\n", exec.Pid, cmd)
+			} else {
+				fmt.Fprintf(w, "\t\t[pid:%d] %s\n", exec.Pid, cmd)
+			}
+		}
+
+		if isFullPrint {
+			regexpBinaryArgs := regexp.MustCompile("(\".*\"|\\S*)(.*)")
+			funcTruncateCmdStr := func(cmd string, maxLenSoftLimit int) string {
+				cols := regexpBinaryArgs.FindStringSubmatch(cmd)
+				if len(cols) != 3 {
+					return cmd
+				}
+				ret := cols[1] // bin
+
+				args := cmd[len(ret):]
+				if len(ret) < maxLenSoftLimit && len(args) > 0 {
+					ret += " " + args
+					if len(ret) > maxLenSoftLimit {
+						ret = ret[:maxLenSoftLimit] + "..."
+					}
+				}
+				return ret
+				//cols := regexpBinaryArgs.FindStringSubmatch(cmd)
+				//if len(cols) != 3 {
+				//	return cmd
+				//}
+				//ret := cols[1] // bin
+				//args := strings.Split(cols[2], " ")
+				//for _, arg := range args {
+				//	if len(arg) <= 0 {
+				//		continue
+				//	}
+				//	if len(ret)+len(arg) <= maxLenSoftLimit {
+				//		ret += " " + arg
+				//	} else {
+				//		ret += "..."
+				//		break
+				//	}
+				//}
+				//return ret
+			}
+
+			if len(runningApps) > 0 {
+				fmt.Fprintf(w, "All running processes\t:\t\n")
+
+				for _, exec := range runningApps {
+					detachedProcWarning := ""
+					if exec.ExtIvpnRootPid <= 0 {
+						detachedProcWarning = "*"
+					}
+
+					fmt.Fprintf(w, "  [pid:%d ppid:%d exe:%s]%s %s\n", exec.Pid, exec.Ppid, exec.Exe, detachedProcWarning, funcTruncateCmdStr(exec.Cmdline, 60))
+				}
 			}
 		}
 	}

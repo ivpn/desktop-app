@@ -36,37 +36,30 @@ func init() {
 }
 
 var (
-	isConnected bool
-	mutex       sync.Mutex
+	mutex sync.Mutex
 )
 
-type State struct {
-	IsConfigOk         bool
-	IsEnabledSplitting bool
-}
-
 type ConfigAddresses struct {
-	IPv4Public net.IP
-	IPv4Tunnel net.IP
-	IPv6Public net.IP
-	IPv6Tunnel net.IP
-}
-type ConfigApps struct {
-	ImagesPathToSplit []string
+	IPv4Public net.IP // OutboundIPv4
+	IPv4Tunnel net.IP // VpnLocalIPv4
+	IPv6Public net.IP // OutboundIPv6
+	IPv6Tunnel net.IP // VpnLocalIPv6
 }
 
-type Config struct {
-	Addr ConfigAddresses
-	Apps ConfigApps
+// Information about running application
+// https://man7.org/linux/man-pages/man5/proc.5.html
+type RunningApp struct {
+	Pid                int
+	Ppid               int // The PID of the parent of this process.
+	Cmdline            string
+	Exe                string // The actual pathname of the executed command
+	ExtIvpnRootPid     int    // PID of the known parent process registered by AddPid() function
+	ExtModifiedCmdLine string
 }
 
-func IsConnectted() bool {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	return isConnected
-}
-
+// Initialize must be called first (before accessing any ST functionality)
+// Normally, it should check if the ST functionality available
+// Returns non-nil error object if Split-Tunneling functionality not available
 func Initialize() error {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -80,80 +73,46 @@ func Initialize() error {
 	return nil
 }
 
-// IsFuncNotAvailableError - returns non-nil error object if Split-Tunneling functionality not available
+// IsFuncNotAvailableError returns non-nil error object if Split-Tunneling functionality not available
+// The return value is the same as Initialize()
 func GetFuncNotAvailableError() error {
 	return implFuncNotAvailableError()
 }
 
-func Connect() error {
+func Reset() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+	
+	return implReset()
+}
+
+// ApplyConfig control split-tunnel functionality
+func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if isConnected {
-		return nil
+	if !isVpnEnabled {
+		addrConfig.IPv4Tunnel = nil
+		addrConfig.IPv6Tunnel = nil
 	}
 
-	log.Info("Split-Tunnelling: Connect...")
-	ret := implConnect()
-	if ret == nil {
-		isConnected = true
-		log.Info("Split-Tunnelling: ready")
-	}
-	return ret
+	return implApplyConfig(isStEnabled, isVpnEnabled, addrConfig, splitTunnelApps)
 }
 
-func Disconnect() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: Disconnect...")
-	isConnected = false
-	return implDisconnect()
+// AddPid add process to Split-Tunnel environment
+// (applicable for Linux)
+func AddPid(pid int, commandToExecute string) error {
+	return implAddPid(pid, commandToExecute)
 }
 
-func StopAndClean() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: StopAndClean...")
-
-	return implStopAndClean()
+// RemovePid remove process to Split-Tunnel environment
+// (applicable for Linux)
+func RemovePid(pid int) error {
+	return implRemovePid(pid)
 }
 
-func GetState() (State, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	return implGetState()
+// Get information about active applications running in Split-Tunnel environment
+// (applicable for Linux)
+func GetRunningApps() (allProcesses []RunningApp, err error) {
+	return implGetRunningApps()
 }
-
-func SetConfig(config Config) error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: SetConfig...")
-	return implSetConfig(config)
-}
-func GetConfig() (Config, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	return implGetConfig()
-}
-
-func Start() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: Start...")
-	return implStart()
-}
-
-/*
-func Stop() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	log.Info("Split-Tunnelling: stopping")
-	return implStop()
-}*/

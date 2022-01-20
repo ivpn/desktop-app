@@ -12,27 +12,26 @@
       "
     />
 
-    <div class="flexRowRestSpace" style="padding-left: 5px">
-      <!-- Manually added application -->
-      <div v-if="!app.AppName">
-        <div class="text">
-          {{ getFileName(app.AppBinaryPath) }}
-        </div>
-        <div class="settingsGrayLongDescriptionFont text">
-          {{ getFileFolder(app.AppBinaryPath) }}
-        </div>
+    <!--Note: The width value (the style in element bellow) does not set real width
+    On fact it can have any value.
+    But if it is not defined - thw with of the element can grow outside of the window
+     -->
+    <div class="flexRowRestSpace text" style="padding-left: 5px; width: 200px">
+      <div class="text">
+        {{ app.AppName }}
       </div>
-      <div v-else>
-        <!-- Application from the installed apps list (AppName and AppGroup is known)-->
-        <div class="text">
-          {{ app.AppName }}
-        </div>
-        <div
-          class="settingsGrayLongDescriptionFont text"
-          v-if="app.AppName != app.AppGroup"
-        >
-          {{ app.AppGroup }}
-        </div>
+
+      <div
+        class="settingsGrayLongDescriptionFont text"
+        v-if="app.AppName != app.AppGroup && !app.RunningApp"
+      >
+        {{ app.AppGroup }}
+      </div>
+      <div
+        class="settingsGrayLongDescriptionFont text"
+        v-else-if="app.RunningApp && app.RunningApp.Pid"
+      >
+        [ PID: {{ app.RunningApp.Pid }} ] {{ app.AppGroup }}
       </div>
     </div>
   </div>
@@ -42,22 +41,20 @@
 import binaryIconControl from "@/components/controls/control-app-binary-icon.vue";
 
 export default {
-  props: ["app"],
+  props: [
+    // App:
+    //    AppName       string
+    //    AppGroup      string // optional
+    //    AppIcon       string - base64 icon of the executable binary
+    //    AppBinaryPath string - The unique parameter describing an application
+    //                    Windows: absolute path to application binary
+    //                    Linux: program to execute, possibly with arguments.
+    "app",
+  ],
   components: {
     binaryIconControl,
   },
-  methods: {
-    getFileFolder(filePath) {
-      let fname = this.getFileName(filePath);
-      if (!fname) return filePath;
-      return filePath.substring(0, filePath.length - fname.length);
-    },
-
-    getFileName(filePath) {
-      if (!filePath) return null;
-      return filePath.split("\\").pop().split("/").pop();
-    },
-  },
+  methods: {},
 };
 </script>
 

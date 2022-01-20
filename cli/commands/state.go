@@ -53,7 +53,7 @@ func showState() error {
 		return err
 	}
 
-	stConfig, err := _proto.GetSplitTunnelConfig()
+	stStatus, err := _proto.GetSplitTunnelStatus()
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,9 @@ func showState() error {
 	if state == vpn.CONNECTED {
 		printDNSState(w, connected.ManualDNS, &servers)
 	}
-	printSplitTunState(w, true, stConfig.IsEnabled, stConfig.SplitTunnelApps)
+	if !stStatus.IsFunctionalityNotAvailable {
+		printSplitTunState(w, true, false, stStatus.IsEnabled, stStatus.SplitTunnelApps, stStatus.RunningApps)
+	}
 	printFirewallState(w, fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast, fwstate.IsAllowApiServers)
 	w.Flush()
 
@@ -88,7 +90,7 @@ func showState() error {
 	}
 	if state == vpn.CONNECTED {
 		tips = append(tips, TipDisconnect)
-		if fwstate.IsEnabled == false {
+		if !fwstate.IsEnabled {
 			tips = append(tips, TipFirewallEnable)
 		}
 	} else if fwstate.IsEnabled {

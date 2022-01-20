@@ -11,9 +11,9 @@
             "mode": "auto",
             "program": "${workspaceRoot}",
             "env": {},
-            "args": ["-logging"],
+            "args": ["-debug_install_dir=${workspaceRoot}", "-logging"],
             //"buildFlags": "-tags debug",
-            "buildFlags": "-tags debug -ldflags '-X github.com/ivpn/desktop-app/daemon/version._version=3.4.0'"
+            "buildFlags": "-tags debug -ldflags '-X github.com/ivpn/desktop-app/daemon/version._version=3.4.25'"
             //"buildFlags": ""
             //"buildFlags": "-tags nowifi"
         }

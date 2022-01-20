@@ -45,6 +45,7 @@ type CmdInfo struct {
 	defaultArg     *string
 	defaultArgName string
 	argNames       map[string]string // variable name -> argument description
+	parseSpecial   func(arguments []string) bool
 }
 
 // Initialize initialises object
@@ -77,6 +78,17 @@ func (c *CmdInfo) Parse(arguments []string) error {
 		return BadParameter{}
 	}
 	return nil
+}
+
+func (c *CmdInfo) ParseSpecial(arguments []string) (haveParseSpecial bool) {
+	if c.parseSpecial != nil {
+		return c.parseSpecial(arguments)
+	}
+	return false
+}
+
+func (c *CmdInfo) SetParseSpecialFunc(f func(arguments []string) bool) {
+	c.parseSpecial = f
 }
 
 // NFlag returns the number of flags that have been set.

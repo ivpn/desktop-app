@@ -101,21 +101,21 @@ func (r *receiverChannel) Wait(timeout time.Duration) (err error) {
 
 		// check type of response
 		if err := deserialize(r._receivedData, &r._receivedCmdBase); err != nil {
-			return fmt.Errorf("response deserialisation failed: %w", err)
+			return fmt.Errorf("response deserialization failed: %w", err)
 		}
 
 		if len(r._waitingObjects) > 0 {
 			if wo, ok := r._waitingObjects[r._receivedCmdBase.Command]; ok {
 				// deserialize response into expected object type
 				if err := deserialize(r._receivedData, wo); err != nil {
-					return fmt.Errorf("response deserialisation failed: %w", err)
+					return fmt.Errorf("response deserialization failed: %w", err)
 				}
 			} else {
 				// check is it Error object
 				var errObj types.ErrorResp
 				if r._receivedCmdBase.Command == types.GetTypeName(errObj) {
 					if err := deserialize(r._receivedData, &errObj); err != nil {
-						return fmt.Errorf("response deserialisation failed: %w", err)
+						return fmt.Errorf("response deserialization failed: %w", err)
 					}
 					return fmt.Errorf(errObj.ErrorMessage)
 				}

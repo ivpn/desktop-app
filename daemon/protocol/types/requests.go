@@ -43,8 +43,8 @@ type Hello struct {
 	// GetConfigParams == true - client requests config parameters (user-defined OpevVPN file location ... etc.)
 	GetConfigParams bool
 
-	// GetSplitTunnelConfig == true - client requests configuration of SplitTunnelling
-	GetSplitTunnelConfig bool
+	// GetSplitTunnelStatus == true - client requests configuration of SplitTunnelling
+	GetSplitTunnelStatus bool
 
 	// GetWiFiCurrentState == true - client requests info about current WiFi
 	GetWiFiCurrentState bool
@@ -253,33 +253,4 @@ type APIRequest struct {
 	CommandBase
 	APIPath            string
 	IPProtocolRequired RequiredIPProtocol
-}
-
-// GetInstalledApps requests information about installed applications on the system
-type GetInstalledApps struct {
-	CommandBase
-	// (optional) Platform-depended: extra parameters (in JSON)
-	// For Windows:
-	//		{ "WindowsEnvAppdata": "..." }
-	// 		Applicable only for Windows: APPDATA environment variable
-	// 		Needed to know path of current user's (not root) StartMenu folder location
-	ExtraArgsJSON string
-}
-
-// GetAppIcon requests shell icon for binary file (application)
-type GetAppIcon struct {
-	CommandBase
-	AppBinaryPath string
-}
-
-// SplitTunnelSet sets the split-tunnelling configuration
-type SplitTunnelSetConfig struct {
-	CommandBase
-	IsEnabled       bool // is ST enabled (will be automatically activated on VPN connect)
-	SplitTunnelApps []string
-}
-
-// GetSplitTunnelConfig requests the Split-Tunnelling configuration
-type SplitTunnelGetConfig struct {
-	CommandBase
 }

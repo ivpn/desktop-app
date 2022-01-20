@@ -38,6 +38,13 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 		panic(fmt.Sprintf("Failed to obtain folder of current binary: %s", err.Error()))
 	}
 
+	if len(os.Args) > 2 {
+		firstArg := strings.Split(os.Args[1], "=")
+		if len(firstArg) == 2 && firstArg[0] == "-debug_install_dir" {
+			installDir = firstArg[1]
+		}
+	}
+
 	// When running tests, the installDir is detected as a dir where test located
 	// we need to point installDir to project root
 	// Therefore, we cutting rest after "desktop-app/daemon"
@@ -49,6 +56,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	installDir = path.Join(installDir, "References/Linux")
 
 	firewallScript = path.Join(installDir, "etc/firewall.sh")
+	splitTunScript = path.Join(installDir, "etc/splittun.sh")
 	openvpnCaKeyFile = path.Join(installDir, "etc/ca.crt")
 	openvpnTaKeyFile = path.Join(installDir, "etc/ta.key")
 	openvpnUpScript = path.Join(installDir, "etc/client.up")

@@ -24,9 +24,12 @@ package cliplatform
 
 import "runtime"
 
-func IsMultiHopSupported() bool {
-	if runtime.GOOS == "windows" {
-		return true
+func IsSplitTunSupported() bool {
+	return runtime.GOOS == "windows" || runtime.GOOS == "linux"
+}
+func IsSplitTunRunsApp() bool {
+	if !IsSplitTunSupported() {
+		return false
 	}
-	return false
+	return runtime.GOOS == "linux"
 }

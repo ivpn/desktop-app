@@ -68,7 +68,7 @@ func Exec(logger *logger.Logger, name string, args ...string) error {
 // error received from 'Exec(...)'
 func GetCmdExitCode(err error) (retCode int, retErr error) {
 	if err == nil {
-		return 0, fmt.Errorf("unable to get the command exit-code. Error object os nil")
+		return 0, fmt.Errorf("unable to get the command exit-code. Error object is nil")
 	}
 
 	if exitError, ok := err.(*exec.ExitError); ok {
@@ -150,7 +150,7 @@ func ExecAndGetOutput(logger *logger.Logger, maxRetBuffSize int, textToHideInLog
 
 	retExitCode := 0
 	if retErr != nil {
-		if code, e := GetCmdExitCode(err); e == nil {
+		if code, e := GetCmdExitCode(retErr); e == nil {
 			retExitCode = code
 		}
 	}

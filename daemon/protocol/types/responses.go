@@ -25,7 +25,6 @@ package types
 import (
 	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
-	"github.com/ivpn/desktop-app/daemon/oshelpers"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
@@ -129,13 +128,6 @@ type KillSwitchStatusResp struct {
 	IsAllowLAN        bool
 	IsAllowMulticast  bool
 	IsAllowApiServers bool
-}
-
-// SplitTunnelConfiguration returns the split-tunnelling configuration
-type SplitTunnelConfig struct {
-	CommandBase
-	IsEnabled       bool // is ST enabled (will be automatically activated on VPN connect)
-	SplitTunnelApps []string
 }
 
 // KillSwitchGetIsPestistentResp returns kill-switch persistance status
@@ -243,17 +235,4 @@ type APIResponse struct {
 	APIPath      string
 	ResponseData string
 	Error        string
-}
-
-// InstalledAppsResp contains information about installed applications on the system
-type InstalledAppsResp struct {
-	CommandBase
-	Apps []oshelpers.AppInfo
-}
-
-// AppIconResp contains information about shell icon for binary file (application)
-type AppIconResp struct {
-	CommandBase
-	AppBinaryPath string
-	AppIcon       string // base64 png image
 }

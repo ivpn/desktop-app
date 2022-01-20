@@ -364,17 +364,17 @@ func (c *CmdConnect) Run() (retError error) {
 		var exitSvrWg *apitypes.WireGuardServerInfo = nil
 		// exit server
 		if len(c.multihopExitSvr) > 0 {
-			for _, s := range servers.WireguardServers {
+			for i, s := range servers.WireguardServers {
 				if s.Gateway == c.multihopExitSvr {
-					exitSvrWg = &s
+					exitSvrWg = &servers.WireguardServers[i]
 					break
 				}
 			}
 		}
 		// entry server
-		for _, s := range servers.WireguardServers {
+		for i, s := range servers.WireguardServers {
 			if s.Gateway == c.gateway {
-				entrySvrWg = &s
+				entrySvrWg = &servers.WireguardServers[i]
 
 				serverFound = true
 				req.VpnType = vpn.WireGuard
@@ -415,9 +415,9 @@ func (c *CmdConnect) Run() (retError error) {
 
 		// exit server
 		if len(c.multihopExitSvr) > 0 {
-			for _, s := range servers.OpenvpnServers {
+			for i, s := range servers.OpenvpnServers {
 				if s.Gateway == c.multihopExitSvr {
-					exitSvrOvpn = &s
+					exitSvrOvpn = &servers.OpenvpnServers[i]
 					break
 				}
 			}
@@ -425,9 +425,9 @@ func (c *CmdConnect) Run() (retError error) {
 
 		var destPort port
 		// entry server
-		for _, s := range servers.OpenvpnServers {
+		for i, s := range servers.OpenvpnServers {
 			if s.Gateway == c.gateway {
-				entrySvrOvpn = &s
+				entrySvrOvpn = &servers.OpenvpnServers[i]
 				// TODO: obfsproxy configuration for this connection must be sent in 'Connect' request (avoid using daemon preferences)
 				if err = _proto.SetPreferences("enable_obfsproxy", fmt.Sprint(c.obfsproxy)); err != nil {
 					return err

@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -161,6 +160,9 @@ func (s *Service) init() error {
 
 	if err := splittun.Initialize(); err != nil {
 		log.Warning(fmt.Errorf("Split-Tunnelling initialization error : %w", err))
+	} else {
+		// apply Split Tunneling configuration
+		s.splitTunnelling_ApplyConfig()
 	}
 
 	// Logging mus be already initialized (by launcher). Do nothing here.
@@ -634,18 +636,6 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 		// Ensure that routing-change detector is stopped (we do not need it when VPN disconnected)
 		s._netChangeDetector.Stop()
 
-		// disabling Split-Tunnelling
-		if splittun.IsConnectted() {
-			err := splittun.StopAndClean()
-			if err != nil {
-				log.Error("(stopping) error on stopping Split-Tunnelling:", err)
-			}
-			err = splittun.Disconnect()
-			if err != nil {
-				log.Error("(stopping) error on disconnecting Split-Tunnelling:", err)
-			}
-		}
-
 		// notify firewall that client is disconnected
 		err := firewall.ClientDisconnected()
 		if err != nil {
@@ -673,6 +663,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 		// Forget VPN object
 		s._vpn = nil
+
+		// Notify Split-Tunneling module about disconnected VPN status
+		s.splitTunnelling_ApplyConfig()
 
 		log.Info("VPN process stopped")
 	}()
@@ -753,8 +746,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 					sInfo.VpnLocalIPv6 = state.ClientIPv6
 					s.SetVpnSessionInfo(sInfo)
 
-					// enable Split-Tunnelling (if necessary)
-					s.SplitTunnelling_ApplyConfig()
+					// Notify Split-Tunneling module about connected VPN status
+					s.splitTunnelling_ApplyConfig()
 				default:
 				}
 
@@ -1069,6 +1062,10 @@ func (s *Service) getHostsToPing(currentLocation *types.GeoLookupResponse) ([]ne
 	return ret, nil
 }
 
+//////////////////////////////////////////////////////////
+// KillSwitch
+//////////////////////////////////////////////////////////
+
 // SetKillSwitchState enable\disable killswitch
 func (s *Service) SetKillSwitchState(isEnabled bool) error {
 
@@ -1144,132 +1141,9 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 	return nil
 }
 
-func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, appsToSplit []string) error {
-	prefs := s._preferences
-
-	parsedApps := make(map[string]string, len(appsToSplit))
-
-	// current binary folder path
-	var exeDir string
-
-	if ex, err := os.Executable(); err == nil && len(ex) > 0 {
-		exeDir = filepath.Dir(ex)
-	}
-
-	for _, app := range appsToSplit {
-		if len(app) > 0 {
-
-			// Ensure no binaries from IVPN package is included into apps list to Split-Tunnel
-			if strings.HasPrefix(app, exeDir) {
-				log.Warning(fmt.Sprintf("Split-Tunnelling for IVPN binaries is forbidden (%s)", app))
-				continue
-			}
-
-			// Ensure file is exists
-			if _, err := os.Stat(app); os.IsNotExist(err) {
-				log.Warning(fmt.Sprintf("File not exists: %s", app))
-				continue
-			}
-
-			// Using map to avoid duplicates
-			// Ignore case: not possible to add files with same name but different case
-			parsedApps[strings.ToLower(app)] = app
-		}
-	}
-
-	appsToSplit = make([]string, 0, len(parsedApps))
-	for _, v := range parsedApps {
-		appsToSplit = append(appsToSplit, v)
-	}
-
-	prefs.IsSplitTunnel = isEnabled
-	prefs.SplitTunnelApps = appsToSplit
-	s.setPreferences(prefs)
-	s._evtReceiver.OnSplitTunnelConfigChanged()
-
-	return s.SplitTunnelling_ApplyConfig()
-}
-func (s *Service) SplitTunnelling_ApplyConfig() error {
-	if splittun.GetFuncNotAvailableError() != nil {
-		// Split-Tunneling not accessable (not able to connect to a driver or not implemented for current platform)
-		return nil
-	}
-
-	if !s.Connected() {
-		// VPM not connected. No sense to enable split-tunnelling
-		return nil
-	}
-
-	prefs := s.Preferences()
-	sInf := s.GetVpnSessionInfo()
-
-	// If ST connected:
-	//	- stop and erase old configuration
-	//  - if ST have to be disabled - disconnect ST driver
-	if splittun.IsConnectted() {
-		if err := splittun.StopAndClean(); err != nil {
-			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
-		}
-		if !prefs.IsSplitTunnel {
-			if err := splittun.Disconnect(); err != nil {
-				return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
-			}
-		}
-	}
-
-	if !prefs.IsSplitTunnel || len(prefs.SplitTunnelApps) == 0 || ((sInf.OutboundIPv4 == nil || sInf.VpnLocalIPv4 == nil) && (sInf.OutboundIPv6 == nil || sInf.VpnLocalIPv6 == nil)) {
-		// no configuration
-		return nil
-	}
-
-	// If ST not connected:
-	//	- connect driver
-	//  - stop and erase old configuration
-	if !splittun.IsConnectted() {
-		if err := splittun.Connect(); err != nil {
-			return log.ErrorE(fmt.Errorf("failed to start split-tunnelling: %w", err), 0)
-		}
-		if err := splittun.StopAndClean(); err != nil {
-			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
-		}
-	}
-
-	// Set new configuration
-	cfg := splittun.Config{}
-	cfg.Apps = splittun.ConfigApps{ImagesPathToSplit: prefs.SplitTunnelApps}
-	cfg.Addr = splittun.ConfigAddresses{
-		IPv4Tunnel: sInf.VpnLocalIPv4,
-		IPv4Public: sInf.OutboundIPv4,
-		IPv6Tunnel: sInf.VpnLocalIPv6,
-		IPv6Public: sInf.OutboundIPv6}
-
-	if err := splittun.SetConfig(cfg); err != nil {
-		log.Error(fmt.Errorf("error on configuring Split-Tunnelling: %w", err))
-	} else {
-		if err := splittun.Start(); err != nil {
-			log.Error(fmt.Errorf("error on start Split-Tunnelling: %w", err))
-		} else {
-			log.Info(fmt.Sprintf("Split-Tunnelling started: IPv4: (%s) => (%s) IPv6: (%s) => (%s)", sInf.VpnLocalIPv4, sInf.OutboundIPv4, sInf.VpnLocalIPv6, sInf.OutboundIPv6))
-		}
-	}
-	return nil
-}
-
-func (s *Service) GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error) {
-	start := time.Now() // TODO: just for test
-	defer func() {
-		elapsed := time.Since(start)
-		if elapsed > time.Second*4 {
-			log.Debug(fmt.Sprintf("GetInstalledApps: elapsed %v", elapsed))
-		}
-	}()
-
-	return oshelpers.GetInstalledApps(extraArgsJSON)
-}
-
-func (s *Service) GetBinaryIcon(binaryPath string) (string, error) {
-	return oshelpers.GetBinaryIconBase64Png(binaryPath)
-}
+//////////////////////////////////////////////////////////
+// PREFERENCES
+//////////////////////////////////////////////////////////
 
 // SetPreference set preference value
 func (s *Service) SetPreference(key string, val string) error {
@@ -1308,8 +1182,108 @@ func (s *Service) Preferences() preferences.Preferences {
 
 func (s *Service) ResetPreferences() error {
 	s._preferences = *preferences.Create()
-	s.SplitTunnelling_SetConfig(false, []string{})
+
+	// erase ST config
+	s.SplitTunnelling_SetConfig(false, true)
 	return nil
+}
+
+//////////////////////////////////////////////////////////
+// SPLIT TUNNEL
+//////////////////////////////////////////////////////////
+
+func (s *Service) GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error) {
+	return oshelpers.GetInstalledApps(extraArgsJSON)
+}
+
+func (s *Service) GetBinaryIcon(binaryPath string) (string, error) {
+	return oshelpers.GetBinaryIconBase64(binaryPath)
+}
+
+func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, error) {
+	var prefs = s.Preferences()
+	runningProcesses, err := splittun.GetRunningApps()
+	if err != nil {
+		runningProcesses = []splittun.RunningApp{}
+	}
+
+	ret := protocolTypes.SplitTunnelStatus{
+		IsFunctionalityNotAvailable: splittun.GetFuncNotAvailableError() != nil,
+		IsEnabled:                   prefs.IsSplitTunnel,
+		IsCanGetAppIconForBinary:    oshelpers.IsCanGetAppIconForBinary(),
+		SplitTunnelApps:             prefs.SplitTunnelApps,
+		RunningApps:                 runningProcesses}
+
+	return ret, nil
+}
+
+func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, reset bool) error {
+	if reset || splittun.GetFuncNotAvailableError() != nil {
+		return s.splitTunnelling_Reset()
+	}
+
+	prefs := s._preferences
+	prefs.IsSplitTunnel = isEnabled
+	s.setPreferences(prefs)
+
+	return s.splitTunnelling_ApplyConfig()
+}
+func (s *Service) splitTunnelling_Reset() error {
+	prefs := s._preferences
+	prefs.IsSplitTunnel = false
+	prefs.SplitTunnelApps = make([]string, 0)
+	s.setPreferences(prefs)
+
+	splittun.Reset()
+
+	return s.splitTunnelling_ApplyConfig()
+}
+func (s *Service) splitTunnelling_ApplyConfig() error {
+	// notify changed ST configuration status (even if functionality not available)
+	defer s._evtReceiver.OnSplitTunnelStatusChanged()
+
+	if splittun.GetFuncNotAvailableError() != nil {
+		// Split-Tunneling not accessable (not able to connect to a driver or not implemented for current platform)
+		return nil
+	}
+
+	prefs := s.Preferences()
+	sInf := s.GetVpnSessionInfo()
+
+	addressesCfg := splittun.ConfigAddresses{
+		IPv4Tunnel: sInf.VpnLocalIPv4,
+		IPv4Public: sInf.OutboundIPv4,
+		IPv6Tunnel: sInf.VpnLocalIPv6,
+		IPv6Public: sInf.OutboundIPv6}
+
+	return splittun.ApplyConfig(prefs.IsSplitTunnel, s.Connected(), addressesCfg, prefs.SplitTunnelApps)
+}
+
+func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error) {
+	if !s._preferences.IsSplitTunnel {
+		return "", false, fmt.Errorf("unable to run application in Split Tunneling environment: Split Tunneling is disabled")
+	}
+	// apply ST configuration after function ends
+	defer s.splitTunnelling_ApplyConfig()
+	return s.implSplitTunnelling_AddApp(exec)
+}
+
+func (s *Service) SplitTunnelling_RemoveApp(pid int, exec string) (err error) {
+	// apply ST configuration after function ends
+	defer s.splitTunnelling_ApplyConfig()
+	return s.implSplitTunnelling_RemoveApp(pid, exec)
+}
+
+// Inform the daemon about started process in ST environment
+// Parameters:
+// pid 			- process PID
+// exec 		- Command executed in ST environment (e.g. binary + arguments)
+// 				  (identical to SplitTunnelAddApp.Exec and SplitTunnelAddAppCmdResp.Exec)
+// cmdToExecute - Shell command used to perform this operation
+func (s *Service) SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error {
+	// notify changed ST configuration status
+	defer s._evtReceiver.OnSplitTunnelStatusChanged()
+	return s.implSplitTunnelling_AddedPidInfo(pid, exec, cmdToExecute)
 }
 
 //////////////////////////////////////////////////////////

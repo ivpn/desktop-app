@@ -45,6 +45,7 @@ const (
 	TipFirewallEnable            TipType = iota
 	TipFirewallDisablePersistent TipType = iota
 	TipLastConnection            TipType = iota
+	TipSplittunEnable            TipType = iota
 )
 
 func PrintTips(tips []TipType) {
@@ -106,6 +107,9 @@ func PrintTip(w *tabwriter.Writer, tip TipType) {
 		break
 	case TipLastConnection:
 		str = newTip("connect -last", "Connect with last successful connection parameters")
+		break
+	case TipSplittunEnable:
+		str = newTip("splittun -on", "Enable Split Tunnel functionality")
 		break
 	}
 

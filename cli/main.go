@@ -44,6 +44,7 @@ import (
 type ICommand interface {
 	Init()
 	Parse(arguments []string) error
+	ParseSpecial(arguments []string) (parsedSpecial bool)
 	Run() error
 
 	Name() string
@@ -74,7 +75,7 @@ func printUsageAll(short bool) {
 	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	for _, c := range _commands {
 		c.UsageFormetted(writer, short)
-		if short == false {
+		if !short {
 			fmt.Fprintln(writer, "\t")
 		}
 	}
@@ -93,9 +94,12 @@ func main() {
 	addCommand(&commands.CmdDisconnect{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
-	if cliplatform.IsMultiHopSupported() {
+	if cliplatform.IsSplitTunSupported() {
 		// Split tunnel functionality is currently only available on Windows
 		addCommand(&commands.SplitTun{})
+		if cliplatform.IsSplitTunRunsApp() {
+			addCommand(&commands.Exclude{})
+		}
 	}
 	addCommand(&commands.CmdWireGuard{})
 	addCommand(&commands.CmdDns{})
@@ -106,8 +110,19 @@ func main() {
 	addCommand(&commands.CmdAccount{})
 
 	if len(os.Args) >= 2 {
-		if os.Args[1] == "?" || os.Args[1] == "-?" || os.Args[1] == "-h" || os.Args[1] == "--h" || os.Args[1] == "-help" || os.Args[1] == "--help" {
-			if len(os.Args) >= 3 && strings.ToLower(os.Args[2]) == "-full" {
+		arg1 := strings.TrimLeft(strings.ToLower(os.Args[1]), "-")
+		arg2 := ""
+		if len(os.Args) >= 3 {
+			arg2 = strings.TrimLeft(strings.ToLower(os.Args[2]), "-")
+		}
+
+		if arg1 == "v" || arg1 == "version" {
+			printHeader()
+			os.Exit(0)
+		}
+
+		if arg1 == "?" || arg1 == "h" || arg1 == "help" {
+			if arg2 == "full" {
 				printUsageAll(false) // detailed commans descriptions
 			} else {
 				printUsageAll(true) // short commands descriptions
@@ -160,12 +175,15 @@ func main() {
 }
 
 func runCommand(c ICommand, args []string) {
-	if err := c.Parse(args); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		if _, ok := err.(flags.BadParameter); ok == true {
-			c.Usage(false)
+	parsedSpecial := c.ParseSpecial(args)
+	if !parsedSpecial {
+		if err := c.Parse(args); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			if _, ok := err.(flags.BadParameter); ok == true {
+				c.Usage(false)
+			}
+			os.Exit(1)
 		}
-		os.Exit(1)
 	}
 
 	if err := c.Run(); err != nil {
@@ -191,7 +209,7 @@ func readDaemonPort() (port int, secret uint64, err error) {
 		return 0, 0, fmt.Errorf("connection-info check error: %s", err)
 	}
 
-	data, err := ioutil.ReadFile(file)
+	data, err := ioutil.ReadFile(filepath.Clean(file))
 	if err != nil {
 		log.Fatal(err)
 	}
