@@ -55,6 +55,10 @@ func GetAppsList(evXDG_DATA_DIRS string, evXDG_CURRENT_DESKTOP string, evHOME st
 	// parse arguments
 	HOME = evHOME
 	XDG_DATA_DIRS = strings.Split(evXDG_DATA_DIRS, ":")
+	if len(XDG_DATA_DIRS)==1 && XDG_DATA_DIRS[0]=="" {
+		XDG_DATA_DIRS = []string{}
+	}
+
 	for _, deskval := range strings.Split(evXDG_CURRENT_DESKTOP, ":") {
 		XDG_CURRENT_DESKTOP[deskval] = struct{}{}
 	}
