@@ -58,6 +58,9 @@ type Theme struct {
 func GetTheme(themeName string, evHOME string, evXDG_DATA_DIRS string) (Theme, error) {
 	// parse arguments
 	XDG_DATA_DIRS := strings.Split(evXDG_DATA_DIRS, ":")
+	if len(XDG_DATA_DIRS)==1 && XDG_DATA_DIRS[0]=="" {
+		XDG_DATA_DIRS = []string{}
+	}
 	if len(XDG_DATA_DIRS) == 0 {
 		XDG_DATA_DIRS = append(XDG_DATA_DIRS, "/usr/local/share/")
 		XDG_DATA_DIRS = append(XDG_DATA_DIRS, "/usr/share/")
@@ -130,7 +133,7 @@ func readTheme(themeName string, iconsBaseDirs []string) (Theme, error) {
 		}
 	}
 	if len(themeFile) <= 0 {
-		return Theme{}, fmt.Errorf("theme not fpound")
+		return Theme{}, fmt.Errorf("theme not found")
 	}
 
 	// reading parents info

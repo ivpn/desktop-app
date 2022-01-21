@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.5.1 - 2022-01-20
+
+[NEW] (Linux) Split Tunneling  
+[IMPROVED] Ping marker coloring logic 
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.5.1_amd64.deb)  
+SHA256: 34937d312a6e69bc2f72bf92d3b791dff222157941e0b616578be2cb5410c5eb   
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.5.1-1.x86_64.rpm)  
+SHA256: 7fb0c81db801abe1e3e751750fed671ffce508159f2de665ba69b755ec37a86a 
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.5.1_amd64.deb)  
+SHA256: c9c0c1ed554bd44a3d3ba7f25b5720f40528e40b281a4872264b24555c78c8a5  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.5.1-1.x86_64.rpm)  
+SHA256: 9ab6d4507c455d957dfe027c008b8644520ea1a82936a38718b7facc25120be6 
 
 ## Version 3.4.5 - 2021-11-23
 
