@@ -24,9 +24,38 @@ namespace wfp
 
 		filter.action.type = FWP_ACTION_CALLOUT_UNKNOWN;
 		filter.action.calloutKey = calloutKey;
+				
+		if (layerKey == FWPM_LAYER_ALE_BIND_REDIRECT_V4 || layerKey == FWPM_LAYER_ALE_BIND_REDIRECT_V6)
+		{
+			// catch NOT TCP connections
+			FWPM_FILTER_CONDITION0 cond;
 
-		// catch all connections
-		filter.numFilterConditions = 0;
+			cond.fieldKey = FWPM_CONDITION_IP_PROTOCOL;
+			cond.matchType = FWP_MATCH_NOT_EQUAL;
+			cond.conditionValue.type = FWP_UINT8;
+			cond.conditionValue.uint8 = IPPROTO_TCP;
+
+			filter.filterCondition = &cond;
+			filter.numFilterConditions = 1;
+		}
+		else if (layerKey == FWPM_LAYER_ALE_CONNECT_REDIRECT_V4 || layerKey == FWPM_LAYER_ALE_CONNECT_REDIRECT_V6)
+		{
+			// catch only TCP connections
+			FWPM_FILTER_CONDITION0 cond;
+
+			cond.fieldKey = FWPM_CONDITION_IP_PROTOCOL;
+			cond.matchType = FWP_MATCH_EQUAL;
+			cond.conditionValue.type = FWP_UINT8;
+			cond.conditionValue.uint8 = IPPROTO_TCP;
+
+			filter.filterCondition = &cond;
+			filter.numFilterConditions = 1;
+		}
+		else 
+		{
+			// catch all connections
+			filter.numFilterConditions = 0;
+		}
 
 		NTSTATUS status = FwpmFilterAdd0(wfpEngineHandle, &filter, NULL, NULL);
 		if (!NT_SUCCESS(status))
