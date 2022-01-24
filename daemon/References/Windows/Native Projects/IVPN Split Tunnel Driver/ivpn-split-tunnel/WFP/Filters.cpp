@@ -26,7 +26,7 @@ namespace wfp
 		filter.action.calloutKey = calloutKey;
 			
 		FWPM_FILTER_CONDITION0 cond = { 0 };
-		if (layerKey == FWPM_LAYER_ALE_BIND_REDIRECT_V4 || layerKey == FWPM_LAYER_ALE_BIND_REDIRECT_V6)
+		if (layerKey == FWPM_LAYER_ALE_BIND_REDIRECT_V4)
 		{
 			// catch NOT TCP connections
 			cond.fieldKey = FWPM_CONDITION_IP_PROTOCOL;
@@ -37,7 +37,7 @@ namespace wfp
 			filter.filterCondition = &cond;
 			filter.numFilterConditions = 1;
 		}
-		else if (layerKey == FWPM_LAYER_ALE_CONNECT_REDIRECT_V4 || layerKey == FWPM_LAYER_ALE_CONNECT_REDIRECT_V6)
+		else if (layerKey == FWPM_LAYER_ALE_CONNECT_REDIRECT_V4)
 		{
 			// catch only TCP connections
 			cond.fieldKey = FWPM_CONDITION_IP_PROTOCOL;
