@@ -12,6 +12,9 @@ jobs:
   testsLinux:
     name: Tests (runs on Linux)
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      
     env:
       GO111MODULE: on
     steps:
