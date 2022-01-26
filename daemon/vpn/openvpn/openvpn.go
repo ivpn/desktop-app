@@ -442,6 +442,10 @@ func (o *OpenVPN) Pause() error {
 		}
 	}
 
+	if retErr != nil {
+		return retErr
+	}
+
 	// OS-specific operation (if required)
 	retErr = o.implOnPause()
 	if retErr != nil {
@@ -481,6 +485,10 @@ func (o *OpenVPN) Resume() error {
 			retErr = err
 			log.Error(err)
 		}
+	}
+
+	if retErr != nil {
+		return retErr
 	}
 
 	// OS-specific operation (if required)

@@ -174,6 +174,9 @@ func (c *CmdAntitracker) Run() error {
 			} else {
 				if cfg.Antitracker || cfg.AntitrackerHardcore {
 					dns, err = GetAntitrackerIP(connectInfo.VpnType, cfg.AntitrackerHardcore, len(connectInfo.ExitServerID) > 0, &servers)
+					if err != nil {
+						return err
+					}
 				}
 				if err := _proto.SetManualDNS(dns); err != nil {
 					return err

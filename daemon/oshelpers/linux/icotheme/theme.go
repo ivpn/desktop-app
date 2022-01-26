@@ -58,7 +58,7 @@ type Theme struct {
 func GetTheme(themeName string, evHOME string, evXDG_DATA_DIRS string) (Theme, error) {
 	// parse arguments
 	XDG_DATA_DIRS := strings.Split(evXDG_DATA_DIRS, ":")
-	if len(XDG_DATA_DIRS)==1 && XDG_DATA_DIRS[0]=="" {
+	if len(XDG_DATA_DIRS) == 1 && XDG_DATA_DIRS[0] == "" {
 		XDG_DATA_DIRS = []string{}
 	}
 	if len(XDG_DATA_DIRS) == 0 {
@@ -229,7 +229,7 @@ func readTheme(themeName string, iconsBaseDirs []string) (Theme, error) {
 }
 
 func getIconBaseDirs(HOME string, XDG_DATA_DIRS []string) []string {
-	ret := make([]string, 0, len(XDG_DATA_DIRS)+3)
+	ret := make([]string, 0, uint(len(XDG_DATA_DIRS)+3))
 	if len(HOME) > 0 {
 		ret = append(ret, path.Join(HOME, ".icons"))
 		ret = append(ret, path.Join(HOME, ".local", "share", "icons"))

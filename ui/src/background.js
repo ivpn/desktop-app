@@ -336,7 +336,7 @@ if (gotTheLock) {
 
     // discard exiting
     event.preventDefault();
-    if ((await isCanQuit(event)) == true) {
+    if ((await isCanQuit()) == true) {
       isAppReadyToQuit = true;
       app.quit();
     }
