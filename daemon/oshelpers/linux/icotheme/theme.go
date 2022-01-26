@@ -229,7 +229,7 @@ func readTheme(themeName string, iconsBaseDirs []string) (Theme, error) {
 }
 
 func getIconBaseDirs(HOME string, XDG_DATA_DIRS []string) []string {
-	ret := make([]string, 0, uint(len(XDG_DATA_DIRS)+3))
+	ret := make([]string, 0, uint16(len(XDG_DATA_DIRS)+3))
 	if len(HOME) > 0 {
 		ret = append(ret, path.Join(HOME, ".icons"))
 		ret = append(ret, path.Join(HOME, ".local", "share", "icons"))

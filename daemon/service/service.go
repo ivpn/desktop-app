@@ -1022,7 +1022,7 @@ func (s *Service) getHostsToPing(currentLocation *types.GeoLookupResponse) ([]ne
 		host      net.IP
 	}
 
-	hosts := make([]hostInfo, 0, uint(len(servers.OpenvpnServers)+len(servers.WireguardServers)))
+	hosts := make([]hostInfo, 0, uint16(len(servers.OpenvpnServers)+len(servers.WireguardServers)))
 
 	// OpenVPN servers
 	for _, s := range servers.OpenvpnServers {
