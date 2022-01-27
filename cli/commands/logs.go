@@ -92,6 +92,9 @@ func (c *CmdLogs) doShow() error {
 	}()
 
 	stat, err := os.Stat(fname)
+	if err != nil {
+		return err
+	}
 	size := stat.Size()
 
 	maxBytesToRead := int64(60 * 50)

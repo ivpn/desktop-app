@@ -2,16 +2,19 @@ name: "Security Scan (gosec)"
 
 on:
   push:
-    branches:
-      - master
+    branches: [ master ]
   pull_request:
-    branches:
-      - master
+    branches: [ master ]
+
+permissions: read-all
 
 jobs:
   testsLinux:
     name: Tests (runs on Linux)
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      
     env:
       GO111MODULE: on
     steps:

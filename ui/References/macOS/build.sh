@@ -50,12 +50,17 @@ fi
 echo "[+] *** COMPILING IVPN BINARIES AND MAKING DMG ***";
 echo "    Version:                 '${_VERSION}'"
 if [ -z "${_SIGN_CERT}" ]; then
-  echo "    ERROR: Apple DevID not defined (signing & notarization will be skipped)"
-  echo "           It is not possible to build helper and uninstaller projects."
-  echo "           Signing & notarization not possible too."
-  echo "    Usage:"
-  echo "          $0 -v <version> -c <APPLE_DEVID_CERTIFICATE>"
-  exit 1
+  if [ ! -z "$GITHUB_ACTIONS" ]; then
+    echo "! GITHUB_ACTIONS detected ! It is just a build test."
+    echo "! No signinnng certificate required !"
+  else
+    echo "    ERROR: Apple DevID not defined (signing & notarization will be skipped)"
+    echo "           It is not possible to build helper and uninstaller projects."
+    echo "           Signing & notarization not possible too."
+    echo "    Usage:"
+    echo "          $0 -v <version> -c <APPLE_DEVID_CERTIFICATE>"
+    exit 1
+  fi
 else
   echo "    Apple DevID certificate: '${_SIGN_CERT}'"
 fi
@@ -168,6 +173,15 @@ CheckLastResult
 echo "[+] Building UI: Build..."
 npm run electron:build
 CheckLastResult
+
+# ============================== STOP IF GITHUB_ACTIONS ==============================
+if [ ! -z "$GITHUB_ACTIONS" ]; then
+  echo "! GITHUB_ACTIONS detected !"
+  echo "(skipped: signing; DMG creation)"
+  echo ""
+  echo "GITHUB_ACTIONS Build TEST: SUCCESS"
+  exit 0
+fi
 
 # ============================== PREPARING DMG ==============================
 echo ======================================================

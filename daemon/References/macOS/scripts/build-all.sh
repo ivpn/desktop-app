@@ -72,42 +72,46 @@ function BuildObfs4proxy
   ./build-obfs4proxy.sh
 }
 
-if [[ "$@" == *"-norebuild"* ]]
-then
-    # check if we need to compile openvpn
-    if [[ ! -f "../_deps/openvpn_inst/bin/openvpn" ]]
-    then
-      echo "OpenVPN not compiled"
-      BuildOpenVPN
-    else
-      echo "OpenVPN already compiled. Skipping build."
-    fi
-
-    # check if we need to compile WireGuard
-    if [[ ! -f "../_deps/wg_inst/wg" ]] || [[ ! -f "../_deps/wg_inst/wireguard-go" ]]
-    then
-      echo "WireGuard not compiled"
-      BuildWireGuard
-    else
-      echo "WireGuard already compiled. Skipping build."
-    fi
-
-    # check if we need to compile obfs4proxy
-    if [[ ! -f "../_deps/obfs4proxy_inst/obfs4proxy" ]]
-    then
-      echo "obfs4proxy not compiled"
-      BuildObfs4proxy
-    else
-      echo "obfs4proxy already compiled. Skipping build."
-    fi
-
+if [ ! -z "$GITHUB_ACTIONS" ]; then
+  echo "! GITHUB_ACTIONS detected ! It is just a build test."
+  echo "! Skipped compilation of third-party dependencies: OpenVPN, WireGuard, obfs4proxy !"
 else
-  # recompile openvpn, WireGuard, obfs4proxy
-  BuildOpenVPN
-  BuildWireGuard
-  BuildObfs4proxy
-fi
+  if [[ "$@" == *"-norebuild"* ]]
+  then
+      # check if we need to compile openvpn
+      if [[ ! -f "../_deps/openvpn_inst/bin/openvpn" ]]
+      then
+        echo "OpenVPN not compiled"
+        BuildOpenVPN
+      else
+        echo "OpenVPN already compiled. Skipping build."
+      fi
 
+      # check if we need to compile WireGuard
+      if [[ ! -f "../_deps/wg_inst/wg" ]] || [[ ! -f "../_deps/wg_inst/wireguard-go" ]]
+      then
+        echo "WireGuard not compiled"
+        BuildWireGuard
+      else
+        echo "WireGuard already compiled. Skipping build."
+      fi
+
+      # check if we need to compile obfs4proxy
+      if [[ ! -f "../_deps/obfs4proxy_inst/obfs4proxy" ]]
+      then
+        echo "obfs4proxy not compiled"
+        BuildObfs4proxy
+      else
+        echo "obfs4proxy already compiled. Skipping build."
+      fi
+
+  else
+    # recompile openvpn, WireGuard, obfs4proxy
+    BuildOpenVPN
+    BuildWireGuard
+    BuildObfs4proxy
+  fi
+fi
 # updating servers.json
 ./update-servers.sh
 

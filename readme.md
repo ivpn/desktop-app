@@ -1,3 +1,6 @@
+[![CodeQL](https://github.com/ivpn/desktop-app/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/ivpn/desktop-app/actions/workflows/codeql-analysis.yml)
+[![Security Scan (gosec)](https://github.com/ivpn/desktop-app/actions/workflows/gosec.yml/badge.svg)](https://github.com/ivpn/desktop-app/actions/workflows/gosec.yml)
+[![CI](https://github.com/ivpn/desktop-app/actions/workflows/ci.yml/badge.svg)](https://github.com/ivpn/desktop-app/actions/workflows/ci.yml)
 # IVPN for Desktop (Windows/macOS/Linux)
 
 **IVPN for Desktop** is the official IVPN app for desktop platforms. Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Multi-Hop, Trusted Networks, AntiTracker, Custom DNS, Dark mode, and more.  
@@ -44,17 +47,17 @@ These instructions enable you to get the project up and running on your local ma
 <a name="requirements_windows"></a>
 #### Windows
 
-[npm](https://www.npmjs.com/get-npm); [nsis2](https://nsis.sourceforge.io/Download); Build Tools for Visual Studio 2019 ('Windows SDK 10.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools'); gcc compiler e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/); [Go 1.13+](https://golang.org/); Git
+[npm](https://www.npmjs.com/get-npm); [nsis2](https://nsis.sourceforge.io/Download); Build Tools for Visual Studio 2019 ('Windows SDK 10.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools'); gcc compiler e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/); [Go 1.16+](https://golang.org/); Git
 
 <a name="requirements_macos"></a>
 #### macOS
 
-[npm](https://www.npmjs.com/get-npm); Xcode Command Line Tools; [Go 1.13+](https://golang.org/); Git  
+[npm](https://www.npmjs.com/get-npm); Xcode Command Line Tools; [Go 1.16+](https://golang.org/); Git  
 To compile the OpenVPN\OpenSSL binaries locally, additional packages are needed: `brew install autoconf automake libtool`
 
 <a name="requirements_linux"></a>
 #### Linux
-[npm](https://www.npmjs.com/get-npm); packages: [FPM](https://fpm.readthedocs.io/en/latest/installation.html), curl, rpm, libiw-dev; [Go 1.13+](https://golang.org/); Git
+[npm](https://www.npmjs.com/get-npm); packages: [FPM](https://fpm.readthedocs.io/en/latest/installation.html), curl, rpm, libiw-dev; [Go 1.16+](https://golang.org/); Git
 
 <a name="compilation"></a>
 ### Compilation

@@ -202,12 +202,14 @@ func (s *Service) init() error {
 	s.updateAPIAddrInFWExceptions()
 	// servers updated notifier
 	go func() {
-		if r := recover(); r != nil {
-			log.Error("PANIC in Servers update notifier!: ", r)
-			if err, ok := r.(error); ok {
-				log.ErrorTrace(err)
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error("PANIC in Servers update notifier!: ", r)
+				if err, ok := r.(error); ok {
+					log.ErrorTrace(err)
+				}
 			}
-		}
+		}()
 
 		log.Info("Servers update notifier started")
 		for {
@@ -1020,7 +1022,7 @@ func (s *Service) getHostsToPing(currentLocation *types.GeoLookupResponse) ([]ne
 		host      net.IP
 	}
 
-	hosts := make([]hostInfo, 0, len(servers.OpenvpnServers)+len(servers.WireguardServers))
+	hosts := make([]hostInfo, 0, uint16(len(servers.OpenvpnServers)+len(servers.WireguardServers)))
 
 	// OpenVPN servers
 	for _, s := range servers.OpenvpnServers {

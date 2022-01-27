@@ -387,7 +387,7 @@ func (i *ManagementInterface) miCommunication() {
 						isAuthError = true
 					}
 				} else if state == vpn.RECONNECTING {
-					if len(params[2]) >= 3 {
+					if len(params) > 2 && len(params[2]) >= 3 {
 						additionalInfo = params[2]
 					}
 				}
