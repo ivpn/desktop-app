@@ -105,7 +105,7 @@ func implFuncNotAvailableError() error {
 }
 
 func implReset() error {
-	// not applicable for Windows. Sane effect has implApplyConfig(false, , , [])
+	// not applicable for Windows. Same effect has implApplyConfig(false, , , [])
 	return nil
 }
 
@@ -117,12 +117,12 @@ func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddre
 
 	// If ST connected:
 	//	- stop and erase old configuration
-	//  - if ST have to be disabled - disconnect ST driver
+	//  - if ST have to be disabled (or VPN is not connected) - disconnect ST driver
 	if isDriverConnected {
 		if err := stopAndClean(); err != nil {
 			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
 		}
-		if !isStEnabled {
+		if !isStEnabled || !isVpnEnabled {
 			if err := disconnect(true); err != nil {
 				return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
 			}
