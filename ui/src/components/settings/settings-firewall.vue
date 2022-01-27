@@ -7,12 +7,12 @@
     <div>
       <div class="settingsRadioBtn">
         <input
+          id="onDemand"
           ref="radioFWOnDemand"
           type="radio"
-          id="onDemand"
           name="firewall"
           value="false"
-          v-on:click="onPersistentFWChange(false)"
+          @click="onPersistentFWChange(false)"
         />
         <label class="defColor" for="onDemand">On-demand</label>
       </div>
@@ -25,12 +25,12 @@
       <div>
         <div class="settingsRadioBtn">
           <input
+            id="alwaysOn"
             ref="radioFWPersistent"
             type="radio"
-            id="alwaysOn"
             name="firewall"
             value="true"
-            v-on:click="onPersistentFWChange(true)"
+            @click="onPersistentFWChange(true)"
           />
           <label class="defColor" for="alwaysOn">Always-on firewall</label>
         </div>
@@ -44,9 +44,9 @@
 
     <div class="param">
       <input
-        type="checkbox"
         id="firewallAllowApiServers"
         v-model="firewallAllowApiServers"
+        type="checkbox"
       />
       <label class="defColor" for="firewallAllowApiServers"
         >Allow access to IVPN servers when Firewall is enabled</label
@@ -58,10 +58,10 @@
 
     <div class="param">
       <input
-        type="checkbox"
         id="firewallActivateOnConnect"
-        :disabled="IsPersistent === true"
         v-model="firewallActivateOnConnect"
+        type="checkbox"
+        :disabled="IsPersistent === true"
       />
       <label class="defColor" for="firewallActivateOnConnect"
         >Activate IVPN Firewall on connect to VPN</label
@@ -69,10 +69,10 @@
     </div>
     <div class="param">
       <input
-        type="checkbox"
         id="firewallDeactivateOnDisconnect"
-        :disabled="IsPersistent === true"
         v-model="firewallDeactivateOnDisconnect"
+        type="checkbox"
+        :disabled="IsPersistent === true"
       />
       <label class="defColor" for="firewallDeactivateOnDisconnect"
         >Deactivate IVPN Firewall on disconnect from VPN</label
@@ -82,17 +82,17 @@
     <!-- LAN settings -->
     <div class="settingsBoldFont">LAN settings:</div>
     <div class="param">
-      <input type="checkbox" id="firewallAllowLan" v-model="firewallAllowLan" />
+      <input id="firewallAllowLan" v-model="firewallAllowLan" type="checkbox" />
       <label class="defColor" for="firewallAllowLan"
         >Allow LAN traffic when IVPN Firewall is enabled</label
       >
     </div>
     <div class="param">
       <input
-        type="checkbox"
         id="firewallAllowMulticast"
-        :disabled="firewallAllowLan === false"
         v-model="firewallAllowMulticast"
+        type="checkbox"
+        :disabled="firewallAllowLan === false"
       />
       <label class="defColor" for="firewallAllowMulticast"
         >Allow Multicast when LAN traffic is allowed</label
@@ -116,34 +116,6 @@ function processError(e) {
 export default {
   data: function () {
     return {};
-  },
-  mounted() {
-    this.updatePersistentFwUiState();
-  },
-
-  methods: {
-    updatePersistentFwUiState() {
-      if (this.$store.state.vpnState.firewallState.IsPersistent) {
-        this.$refs.radioFWPersistent.checked = true;
-        this.$refs.radioFWOnDemand.checked = false;
-      } else {
-        this.$refs.radioFWPersistent.checked = false;
-        this.$refs.radioFWOnDemand.checked = true;
-      }
-    },
-    async onPersistentFWChange(value) {
-      try {
-        await sender.KillSwitchSetIsPersistent(value);
-      } catch (e) {
-        processError(e);
-      }
-      this.updatePersistentFwUiState();
-    },
-  },
-  watch: {
-    IsPersistent() {
-      this.updatePersistentFwUiState();
-    },
   },
   computed: {
     IsPersistent: function () {
@@ -189,6 +161,34 @@ export default {
       set(value) {
         this.$store.dispatch("settings/firewallDeactivateOnDisconnect", value);
       },
+    },
+  },
+  watch: {
+    IsPersistent() {
+      this.updatePersistentFwUiState();
+    },
+  },
+  mounted() {
+    this.updatePersistentFwUiState();
+  },
+
+  methods: {
+    updatePersistentFwUiState() {
+      if (this.$store.state.vpnState.firewallState.IsPersistent) {
+        this.$refs.radioFWPersistent.checked = true;
+        this.$refs.radioFWOnDemand.checked = false;
+      } else {
+        this.$refs.radioFWPersistent.checked = false;
+        this.$refs.radioFWOnDemand.checked = true;
+      }
+    },
+    async onPersistentFWChange(value) {
+      try {
+        await sender.KillSwitchSetIsPersistent(value);
+      } catch (e) {
+        processError(e);
+      }
+      this.updatePersistentFwUiState();
     },
   },
 };

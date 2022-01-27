@@ -4,10 +4,10 @@
 
     <div class="param">
       <input
-        ref="checkboxIsSTEnabled"
-        type="checkbox"
         id="isSTEnabled"
+        ref="checkboxIsSTEnabled"
         v-model="isSTEnabled"
+        type="checkbox"
       />
       <label class="defColor" for="isSTEnabled">Split Tunnel (Beta) </label>
     </div>
@@ -45,7 +45,7 @@
         </div>
         <div class="fwDescription" style="margin-top: 0px">
           For more information refer to the
-          <button class="link" v-on:click="onLearnMoreLink">
+          <button class="link" @click="onLearnMoreLink">
             Split Tunnel Uses and Limitations
           </button>
           webpage
@@ -69,7 +69,7 @@
           <button
             class="settingsButton opacityOnHoverLight"
             style="min-width: 156px"
-            v-on:click="showAddApplicationPopup(true)"
+            @click="showAddApplicationPopup(true)"
           >
             {{ textAddAppButton }}
           </button>
@@ -112,7 +112,7 @@
 
           <div
             v-for="app of filteredApps"
-            v-bind:key="app.RunningApp ? app.RunningApp.Pid : app.AppBinaryPath"
+            :key="app.RunningApp ? app.RunningApp.Pid : app.AppBinaryPath"
           >
             <div class="flexRow grayedOnHover" style="padding-top: 4px">
               <!-- APP INFO  -->
@@ -121,9 +121,9 @@
               <div>
                 <button
                   class="noBordersBtn opacityOnHover"
-                  v-on:click="removeApp(app)"
                   style="pointer-events: auto"
                   title="Remove"
+                  @click="removeApp(app)"
                 >
                   <img width="24" height="24" src="@/assets/minus.svg" />
                 </button>
@@ -144,7 +144,7 @@
                 <button
                   class="noBordersBtn opacityOnHoverLight settingsGrayTextColor"
                   style="pointer-events: auto"
-                  v-on:click="showAddApplicationPopup(false)"
+                  @click="showAddApplicationPopup(false)"
                 >
                   CANCEL
                 </button>
@@ -152,12 +152,12 @@
 
               <!-- filter -->
               <input
-                ref="installedAppsFilterInput"
                 id="filter"
+                ref="installedAppsFilterInput"
+                v-model="filterAppsToAdd"
                 class="styled"
                 placeholder="Search for app"
-                v-model="filterAppsToAdd"
-                v-bind:style="{
+                :style="{
                   backgroundImage: 'url(' + searchImageInstalledApps + ')',
                 }"
                 style="margin: 0px; margin-bottom: 10px"
@@ -198,14 +198,14 @@
                 </div>
 
                 <div
-                  v-else
                   v-for="app of filteredAppsToAdd"
-                  v-bind:key="app.AppBinaryPath"
+                  v-else
+                  :key="app.AppBinaryPath"
                 >
                   <div
-                    v-on:click="addApp(app.AppBinaryPath)"
                     class="flexRow grayedOnHover"
                     style="padding-top: 4px"
+                    @click="addApp(app.AppBinaryPath)"
                   >
                     <binaryInfoControl :app="app" style="width: 100%" />
                   </div>
@@ -223,7 +223,7 @@
                     height: 40px;
                     width: 100%;
                   "
-                  v-on:click="onManualAddNewApplication"
+                  @click="onManualAddNewApplication"
                 >
                   <div class="flexRowRestSpace"></div>
                   <div class="flexRow">
@@ -255,8 +255,8 @@
         <div class="flexRowRestSpace" />
         <button
           class="settingsButton opacityOnHoverLight"
-          v-on:click="onResetToDefaultSettings"
           style="white-space: nowrap"
+          @click="onResetToDefaultSettings"
         >
           Reset to default settings
         </button>
@@ -334,6 +334,150 @@ export default {
     };
   },
 
+  computed: {
+    textApplicationsHeader: function () {
+      if (Platform() === PlatformEnum.Linux) return "Launched applications";
+      return "Applications";
+    },
+
+    textNoAppInSplittunConfig: function () {
+      return "No applications in Split Tunnel configuration";
+    },
+
+    textAddAppButton: function () {
+      if (Platform() === PlatformEnum.Linux) return "Launch application...";
+      return "Add application...";
+    },
+    textAddAppFromInstalledAppsHeader: function () {
+      if (Platform() === PlatformEnum.Linux)
+        return "Launch application in Split Tunnel configuration";
+      return "Add application to Split Tunnel configuration";
+    },
+    textAddAppManuallyButton: function () {
+      if (Platform() === PlatformEnum.Linux)
+        return "Launch application manually...";
+      return "Add application manually ...";
+    },
+
+    appsListStyle: function () {
+      // TODO: avoid hardcoding element height.
+      let height = 244;
+      if (Platform() === PlatformEnum.Linux) height = 268;
+
+      return `\
+            overflow: auto;\
+            width: 100%;\
+            position: relative;\
+            height: ${height}px;\
+            min-height: ${height}px;\
+            max-height: ${height}px;\
+          `;
+    },
+    isLinux: function () {
+      return Platform() === PlatformEnum.Linux;
+    },
+
+    isSTEnabled: {
+      get() {
+        return this.$store.state.vpnState.splitTunnelling.IsEnabled;
+      },
+      set(value) {
+        (async function () {
+          await sender.SplitTunnelSetConfig(value);
+        })();
+      },
+    },
+
+    // needed for 'watch'
+    STConfig: function () {
+      return this.$store.state.vpnState.splitTunnelling;
+    },
+
+    isNoConfiguredApps: function () {
+      if (
+        this.isLoadingAllApps == false &&
+        (!this.appsToShow || this.appsToShow.length == 0)
+      )
+        return true;
+      return false;
+    },
+
+    filteredApps: function () {
+      return this.appsToShow;
+    },
+
+    filteredAppsToAdd: function () {
+      let retInstalledApps = [];
+      if (this.allInstalledApps)
+        retInstalledApps = Object.assign(
+          retInstalledApps,
+          this.allInstalledApps
+        );
+
+      // filter: exclude already configured apps (not a running apps)
+      // from the list installed apps
+      let confAppsHashed = {};
+      this.appsToShow.forEach((appInfo) => {
+        confAppsHashed[appInfo.AppBinaryPath.toLowerCase()] = appInfo;
+      });
+
+      let funcFilter = function (appInfo) {
+        let confApp = confAppsHashed[appInfo.AppBinaryPath.toLowerCase()];
+        if (confApp && (!confApp.RunningApp || !confApp.RunningApp.Pid))
+          return false;
+        return true;
+      };
+      retInstalledApps = retInstalledApps.filter((appInfo) =>
+        funcFilter(appInfo)
+      );
+
+      // filter: default (filtering apps according to user input)
+      let filter = this.filterAppsToAdd.toLowerCase();
+      if (filter && filter.length > 0) {
+        let funcFilter = function (appInfo) {
+          return (
+            appInfo.AppName.toLowerCase().includes(filter) ||
+            appInfo.AppGroup.toLowerCase().includes(filter)
+          );
+        };
+
+        retInstalledApps = retInstalledApps.filter((appInfo) =>
+          funcFilter(appInfo)
+        );
+      }
+
+      return retInstalledApps;
+    },
+
+    searchImageInstalledApps: function () {
+      if (!isStrNullOrEmpty(this.filterAppsToAdd)) return null;
+
+      switch (Platform()) {
+        case PlatformEnum.Windows:
+          return Image_search_windows;
+        case PlatformEnum.macOS:
+          return Image_search_macos;
+        default:
+          return Image_search_linux;
+      }
+    },
+  },
+
+  watch: {
+    STConfig() {
+      if (this.$refs.checkboxIsSTEnabled) {
+        // we have to update checkbox manually
+        this.$refs.checkboxIsSTEnabled.checked =
+          this.$store.state.vpnState.splitTunnelling.IsEnabled;
+      }
+
+      this.updateAppsToShow();
+
+      // if there are running apps - start requesting ST status
+      this.startBackgroundCheckOfStatus();
+    },
+  },
+
   async mounted() {
     // show base information about splitted apps immediately
     //this.updateAppsToShow();
@@ -359,21 +503,6 @@ export default {
 
     // now we are able to update information about splitted apps
     this.updateAppsToShow();
-  },
-
-  watch: {
-    STConfig() {
-      if (this.$refs.checkboxIsSTEnabled) {
-        // we have to update checkbox manually
-        this.$refs.checkboxIsSTEnabled.checked =
-          this.$store.state.vpnState.splitTunnelling.IsEnabled;
-      }
-
-      this.updateAppsToShow();
-
-      // if there are running apps - start requesting ST status
-      this.startBackgroundCheckOfStatus();
-    },
   },
 
   methods: {
@@ -611,135 +740,6 @@ export default {
 
     resetFilters: function () {
       this.filterAppsToAdd = "";
-    },
-  },
-
-  computed: {
-    textApplicationsHeader: function () {
-      if (Platform() === PlatformEnum.Linux) return "Launched applications";
-      return "Applications";
-    },
-
-    textNoAppInSplittunConfig: function () {
-      return "No applications in Split Tunnel configuration";
-    },
-
-    textAddAppButton: function () {
-      if (Platform() === PlatformEnum.Linux) return "Launch application...";
-      return "Add application...";
-    },
-    textAddAppFromInstalledAppsHeader: function () {
-      if (Platform() === PlatformEnum.Linux)
-        return "Launch application in Split Tunnel configuration";
-      return "Add application to Split Tunnel configuration";
-    },
-    textAddAppManuallyButton: function () {
-      if (Platform() === PlatformEnum.Linux)
-        return "Launch application manually...";
-      return "Add application manually ...";
-    },
-
-    appsListStyle: function () {
-      // TODO: avoid hardcoding element height.
-      let height = 244;
-      if (Platform() === PlatformEnum.Linux) height = 268;
-
-      return `\
-            overflow: auto;\
-            width: 100%;\
-            position: relative;\
-            height: ${height}px;\
-            min-height: ${height}px;\
-            max-height: ${height}px;\
-          `;
-    },
-    isLinux: function () {
-      return Platform() === PlatformEnum.Linux;
-    },
-
-    isSTEnabled: {
-      get() {
-        return this.$store.state.vpnState.splitTunnelling.IsEnabled;
-      },
-      set(value) {
-        (async function () {
-          await sender.SplitTunnelSetConfig(value);
-        })();
-      },
-    },
-
-    // needed for 'watch'
-    STConfig: function () {
-      return this.$store.state.vpnState.splitTunnelling;
-    },
-
-    isNoConfiguredApps: function () {
-      if (
-        this.isLoadingAllApps == false &&
-        (!this.appsToShow || this.appsToShow.length == 0)
-      )
-        return true;
-      return false;
-    },
-
-    filteredApps: function () {
-      return this.appsToShow;
-    },
-
-    filteredAppsToAdd: function () {
-      let retInstalledApps = [];
-      if (this.allInstalledApps)
-        retInstalledApps = Object.assign(
-          retInstalledApps,
-          this.allInstalledApps
-        );
-
-      // filter: exclude already configured apps (not a running apps)
-      // from the list installed apps
-      let confAppsHashed = {};
-      this.appsToShow.forEach((appInfo) => {
-        confAppsHashed[appInfo.AppBinaryPath.toLowerCase()] = appInfo;
-      });
-
-      let funcFilter = function (appInfo) {
-        let confApp = confAppsHashed[appInfo.AppBinaryPath.toLowerCase()];
-        if (confApp && (!confApp.RunningApp || !confApp.RunningApp.Pid))
-          return false;
-        return true;
-      };
-      retInstalledApps = retInstalledApps.filter((appInfo) =>
-        funcFilter(appInfo)
-      );
-
-      // filter: default (filtering apps according to user input)
-      let filter = this.filterAppsToAdd.toLowerCase();
-      if (filter && filter.length > 0) {
-        let funcFilter = function (appInfo) {
-          return (
-            appInfo.AppName.toLowerCase().includes(filter) ||
-            appInfo.AppGroup.toLowerCase().includes(filter)
-          );
-        };
-
-        retInstalledApps = retInstalledApps.filter((appInfo) =>
-          funcFilter(appInfo)
-        );
-      }
-
-      return retInstalledApps;
-    },
-
-    searchImageInstalledApps: function () {
-      if (!isStrNullOrEmpty(this.filterAppsToAdd)) return null;
-
-      switch (Platform()) {
-        case PlatformEnum.Windows:
-          return Image_search_windows;
-        case PlatformEnum.macOS:
-          return Image_search_macos;
-        default:
-          return Image_search_linux;
-      }
     },
   },
 };

@@ -5,7 +5,7 @@
       <div
         ref="popup"
         class="popuptext"
-        v-bind:class="{
+        :class="{
           show:
             isPopupVisible &&
             isMapLoaded &&
@@ -15,41 +15,41 @@
       >
         <popupControl
           :location="selectedPopupLocation"
-          :onConnect="connect"
-          :onDisconnect="disconnect"
-          :onMouseClick="onPopupMouseClick"
-          :onResume="resume"
+          :on-connect="connect"
+          :on-disconnect="disconnect"
+          :on-mouse-click="onPopupMouseClick"
+          :on-resume="resume"
         />
       </div>
     </div>
 
     <!-- Buttons panel LEFT-->
-    <div class="buttonsPanelTopLeft" v-if="isBlured !== 'true'">
-      <button class="settingsBtn" v-on:click="onMinimize">
+    <div v-if="isBlured !== 'true'" class="buttonsPanelTopLeft">
+      <button class="settingsBtn" @click="onMinimize">
         <img src="@/assets/minimize.svg" />
       </button>
     </div>
 
     <!-- Buttons panel RIGHT-->
     <div
+      v-if="isBlured !== 'true'"
       class="buttonsPanelTopRight"
-      v-bind:class="{
+      :class="{
         buttonsPanelTopRightNoFrameWindow: !isWindowHasFrame,
       }"
-      v-if="isBlured !== 'true'"
     >
-      <button class="settingsBtn settingsBtnMarginLeft" v-on:click="onSettings">
+      <button class="settingsBtn settingsBtnMarginLeft" @click="onSettings">
         <img src="@/assets/settings.svg" />
       </button>
 
       <button
         class="settingsBtn settingsBtnMarginLeft"
-        v-on:click="onAccountSettings"
+        @click="onAccountSettings"
       >
         <img src="@/assets/user.svg" />
       </button>
 
-      <button class="settingsBtn" v-on:click="centerCurrentLocation()">
+      <button class="settingsBtn" @click="centerCurrentLocation()">
         <img src="@/assets/crosshair.svg" />
       </button>
     </div>
@@ -71,20 +71,18 @@
         <div calsss="flexRowRestSpace"></div>
       </div>
       <div
-        class="accountWillExpire"
         v-if="$store.getters['account/messageAccountExpiration']"
+        class="accountWillExpire"
       >
         <img src="@/assets/alert-triangle.svg" style="margin-right: 12px" />
         {{ $store.getters["account/messageAccountExpiration"] }}
         <div class="flexRowRestSpace" />
-        <button class="noBordersBtn" v-on:click="onAccountRenew()">
-          RENEW
-        </button>
+        <button class="noBordersBtn" @click="onAccountRenew()">RENEW</button>
       </div>
       <div
-        class="trialWillExpire"
-        v-on:click="onAccountRenew()"
         v-if="$store.getters['account/messageFreeTrial']"
+        class="trialWillExpire"
+        @click="onAccountRenew()"
       >
         <img src="@/assets/alert-circle.svg" style="margin-right: 12px" />
         {{ $store.getters["account/messageFreeTrial"] }}
@@ -93,11 +91,11 @@
       </div>
     </div>
     <!-- Map -->
-    <div class="mapcontainer" ref="combined">
+    <div ref="combined" class="mapcontainer">
       <canvas
-        class="canvas"
         ref="canvas"
-        v-bind:class="{ blured: isBlured === 'true' }"
+        class="canvas"
+        :class="{ blured: isBlured === 'true' }"
         @mousedown="mouseDown"
         @mouseup="mouseUp"
         @mousemove="mouseMove"
@@ -108,10 +106,10 @@
       <!-- Top-located canvas to be able to blure map -->
       <canvas
         class="canvasTop"
-        v-bind:class="{ blured: isBlured === 'true' }"
+        :class="{ blured: isBlured === 'true' }"
       ></canvas>
 
-      <div class="bigMapArea" ref="bigMapArea">
+      <div ref="bigMapArea" class="bigMapArea">
         <img ref="map" class="map" :src="mapImage" @load="mapLoaded" />
 
         <!-- Hidden element to calculate styled text size-->
@@ -121,16 +119,14 @@
           style="opacity: 0; pointer-events: none; z-index: -1"
         ></div>
 
-        <div class="mapLocationsContainer" ref="mapLocationsContainer">
+        <div ref="mapLocationsContainer" class="mapLocationsContainer">
           <!-- Location point -->
           <div
-            v-show="isMapLoaded"
-            class="mapLocationPoint"
             v-for="l of locationsToDisplay"
-            @wheel="wheel"
-            v-on:click="locationClicked(l.location)"
-            v-bind:key="'point_' + l.location.city"
-            v-bind:class="{
+            v-show="isMapLoaded"
+            :key="'point_' + l.location.city"
+            class="mapLocationPoint"
+            :class="{
               mapLocationPointCurrent: l.location === location,
               mapLocationPointConnected:
                 l.location === connectedLocation && isConnected,
@@ -141,21 +137,23 @@
               height: l.pointRadius * 2 + 'px',
               width: l.pointRadius * 2 + 'px',
             }"
+            @wheel="wheel"
+            @click="locationClicked(l.location)"
           ></div>
           <!-- Location name -->
           <div
-            v-show="isMapLoaded"
-            class="mapLocationName"
             v-for="l of locationsToDisplay"
-            @wheel="wheel"
-            v-on:click="locationClicked(l.location)"
-            v-bind:key="'name_' + l.location.city"
-            v-bind:class="{
+            v-show="isMapLoaded"
+            :key="'name_' + l.location.city"
+            class="mapLocationName"
+            :class="{
               mapLocationNameCurrent: l.location === location,
               mapLocationNameConnected:
                 l.location === connectedLocation && isConnected,
             }"
             :style="{ left: l.left + 'px', top: l.top + 'px' }"
+            @wheel="wheel"
+            @click="locationClicked(l.location)"
           >
             {{ l.width > 0 ? l.location.city : "" }}
           </div>
@@ -182,7 +180,7 @@
             v-show="isMapLoaded"
             ref="animationConnectedWaves"
             class="mapLocationCircleConnectedWaves"
-            v-bind:class="{
+            :class="{
               mapLocationCircleConnectedWavesRunning: isConnected,
             }"
           ></div>
@@ -375,41 +373,6 @@ export default {
     },
   },
 
-  mounted() {
-    // COLOR SCHEME
-    window.matchMedia("(prefers-color-scheme: dark)").addListener(() => {
-      this.updateColorScheme();
-    });
-    this.updateColorScheme();
-
-    this.canvas = this.$refs.canvas;
-
-    this.popup = this.$refs.popup;
-    this.bigMapArea = this.$refs.bigMapArea;
-    this.map = this.$refs.map;
-    this.combinedDiv = this.$refs.combined;
-    this.mapLocationsContainer = this.$refs.mapLocationsContainer;
-    this.hiddenTestTextMeter = this.$refs.hiddenTestTextMeter;
-
-    this.animSelCircles.push(this.$refs.animationSelectedCirecle1);
-    this.animSelCircles.push(this.$refs.animationSelectedCirecle2);
-    this.animCurrLocCircle = this.$refs.animationCurrLoactionCirecle;
-    this.animConnectedWaves = this.$refs.animationConnectedWaves;
-
-    // resize canvas on window resize
-    // (this method should be called each time when main window resizing)
-    this.windowResizing();
-
-    this.updateAnimations();
-  },
-
-  created: function () {
-    window.addEventListener("mousemove", this.windowsmousemove);
-  },
-  destroyed: function () {
-    window.removeEventListener("mousemove", this.windowsmousemove);
-  },
-
   watch: {
     servers() {
       this.updateCities();
@@ -469,6 +432,41 @@ export default {
         }, 300);
       }
     },
+  },
+
+  mounted() {
+    // COLOR SCHEME
+    window.matchMedia("(prefers-color-scheme: dark)").addListener(() => {
+      this.updateColorScheme();
+    });
+    this.updateColorScheme();
+
+    this.canvas = this.$refs.canvas;
+
+    this.popup = this.$refs.popup;
+    this.bigMapArea = this.$refs.bigMapArea;
+    this.map = this.$refs.map;
+    this.combinedDiv = this.$refs.combined;
+    this.mapLocationsContainer = this.$refs.mapLocationsContainer;
+    this.hiddenTestTextMeter = this.$refs.hiddenTestTextMeter;
+
+    this.animSelCircles.push(this.$refs.animationSelectedCirecle1);
+    this.animSelCircles.push(this.$refs.animationSelectedCirecle2);
+    this.animCurrLocCircle = this.$refs.animationCurrLoactionCirecle;
+    this.animConnectedWaves = this.$refs.animationConnectedWaves;
+
+    // resize canvas on window resize
+    // (this method should be called each time when main window resizing)
+    this.windowResizing();
+
+    this.updateAnimations();
+  },
+
+  created: function () {
+    window.addEventListener("mousemove", this.windowsmousemove);
+  },
+  destroyed: function () {
+    window.removeEventListener("mousemove", this.windowsmousemove);
   },
 
   methods: {

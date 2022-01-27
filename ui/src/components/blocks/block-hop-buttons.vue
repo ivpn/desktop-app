@@ -4,10 +4,10 @@
       <div />
       <button
         class="hopButton"
-        v-bind:class="{
-          hopButtonActive: !this.$store.state.settings.isMultiHop,
+        :class="{
+          hopButtonActive: !$store.state.settings.isMultiHop,
         }"
-        v-on:click="ChangeHop(false)"
+        @click="ChangeHop(false)"
       >
         SINGLE-HOP
       </button>
@@ -16,10 +16,10 @@
 
       <button
         class="hopButton"
-        v-bind:class="{
-          hopButtonActive: this.$store.state.settings.isMultiHop,
+        :class="{
+          hopButtonActive: $store.state.settings.isMultiHop,
         }"
-        v-on:click="ChangeHop(true)"
+        @click="ChangeHop(true)"
       >
         MULTI-HOP
       </button>

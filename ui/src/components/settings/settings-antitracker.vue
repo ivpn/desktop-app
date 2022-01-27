@@ -5,15 +5,15 @@
     <div class="defColor" style="margin-bottom: 24px">
       When AntiTracker is enabled, IVPN blocks ads, malicious websites, and
       third-party trackers using our private DNS servers.
-      <button class="link" v-on:click="onLearnMoreLink">Learn more</button>
+      <button class="link" @click="onLearnMoreLink">Learn more</button>
       about how IVPN AntiTracker is implemented.
     </div>
 
     <div class="param">
       <input
-        type="checkbox"
         id="isAntitrackerHardcore"
         v-model="isAntitrackerHardcore"
+        type="checkbox"
       />
       <label class="defColor" for="isAntitrackerHardcore">Hardcore Mode</label>
     </div>
@@ -24,8 +24,7 @@
     <div class="fwDescription">
       To better understand how this may impact your experience please refer to
       our
-      <button class="link" v-on:click="onHardcodeLink">hardcore mode FAQ</button
-      >.
+      <button class="link" @click="onHardcodeLink">hardcore mode FAQ</button>.
     </div>
   </div>
 </template>
@@ -37,14 +36,6 @@ export default {
   data: function () {
     return {};
   },
-  methods: {
-    onLearnMoreLink: () => {
-      sender.shellOpenExternal(`https://www.ivpn.net/antitracker`);
-    },
-    onHardcodeLink: () => {
-      sender.shellOpenExternal(`https://www.ivpn.net/antitracker/hardcore`);
-    },
-  },
   computed: {
     isAntitrackerHardcore: {
       get() {
@@ -54,6 +45,14 @@ export default {
         this.$store.dispatch("settings/isAntitrackerHardcore", value);
         await sender.SetDNS();
       },
+    },
+  },
+  methods: {
+    onLearnMoreLink: () => {
+      sender.shellOpenExternal(`https://www.ivpn.net/antitracker`);
+    },
+    onHardcodeLink: () => {
+      sender.shellOpenExternal(`https://www.ivpn.net/antitracker/hardcore`);
     },
   },
 };

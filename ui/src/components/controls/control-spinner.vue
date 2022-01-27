@@ -1,7 +1,7 @@
 <template>
   <transition name="fade">
-    <div id="preloader" v-if="loading">
-      <div id="loader" v-bind:style="spinnerStyle"></div>
+    <div v-if="loading" id="preloader">
+      <div id="loader" :style="spinnerStyle"></div>
     </div>
   </transition>
 </template>

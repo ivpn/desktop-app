@@ -6,8 +6,8 @@
     <div>
       <div class="settingsRadioBtn">
         <input
-          type="radio"
           id="openvpn"
+          type="radio"
           name="vpntype"
           value="openvpn"
           :checked="isOpenVPN"
@@ -18,8 +18,8 @@
 
       <div class="settingsRadioBtn">
         <input
-          type="radio"
           id="wireguard"
+          type="radio"
           name="vpntype"
           value="wireguard"
           :checked="!isOpenVPN"
@@ -33,9 +33,9 @@
     <div>
       <div class="param">
         <input
-          type="checkbox"
           id="enableIPv6InTunnel"
           v-model="enableIPv6InTunnel"
+          type="checkbox"
           :disabled="!isCanUseIPv6InTunnel"
         />
         <label class="defColor" for="enableIPv6InTunnel"
@@ -45,9 +45,9 @@
 
       <div class="param">
         <input
-          type="checkbox"
           id="showGatewaysWithoutIPv6"
           v-model="showGatewaysWithoutIPv6"
+          type="checkbox"
           :disabled="!isCanUseIPv6InTunnel || enableIPv6InTunnel === false"
         />
         <label class="defColor" for="showGatewaysWithoutIPv6"
@@ -65,79 +65,79 @@
         <select v-model="port" style="background: var(--background-color)">
           <option
             v-for="item in prefferedPorts"
-            :value="item.port"
             :key="item.text"
+            :value="item.port"
           >
             {{ item.text }}
           </option>
         </select>
       </div>
 
-      <div v-bind:class="{ disabled: connectionUseObfsproxy }">
+      <div :class="{ disabled: connectionUseObfsproxy }">
         <div class="flexRow paramBlock">
           <div class="defColor paramName">Network proxy:</div>
           <div class="settingsRadioBtnProxy">
             <input
-              type="radio"
               id="proxyNone"
-              name="proxy"
               v-model="ovpnProxyType"
+              type="radio"
+              name="proxy"
               value=""
             />
             <label class="defColor" for="proxyNone">None</label>
           </div>
           <div class="settingsRadioBtnProxy">
             <input
-              type="radio"
               id="proxyHTTP"
-              name="proxy"
               v-model="ovpnProxyType"
+              type="radio"
+              name="proxy"
               value="http"
             />
             <label class="defColor" for="proxyHTTP">HTTP</label>
           </div>
           <div class="settingsRadioBtnProxy">
             <input
-              type="radio"
               id="proxySocks"
-              name="proxy"
               v-model="ovpnProxyType"
+              type="radio"
+              name="proxy"
               value="socks"
             />
             <label class="defColor" for="proxySocks">Socks</label>
           </div>
         </div>
 
-        <div v-bind:class="{ disabled: ovpnProxyType.length == 0 }">
+        <div :class="{ disabled: ovpnProxyType.length == 0 }">
           <div class="flexRow">
             <div class="paramBlockText">
               <div>Server:</div>
               <input
+                v-model="ovpnProxyServer"
                 class="settingsTextInput proxyParam"
                 placeholder="0.0.0.0"
-                v-model="ovpnProxyServer"
               />
             </div>
             <div class="paramBlockText">
               <div>Port:</div>
               <input
-                class="settingsTextInput proxyParam"
                 v-model="ovpnProxyPort"
+                class="settingsTextInput proxyParam"
               />
             </div>
             <div class="paramBlockText">
               <div>Login:</div>
               <input
-                class="settingsTextInput proxyParam"
                 v-model="ovpnProxyUser"
+                class="settingsTextInput proxyParam"
               />
             </div>
             <div class="paramBlockText">
               <div>Password:</div>
               <input
+                v-model="ovpnProxyPass"
                 type="password"
                 class="settingsTextInput proxyParam"
-                v-model="ovpnProxyPass"
               />
             </div>
           </div>
@@ -147,9 +147,9 @@
       <div class="settingsBoldFont">Additional settings:</div>
       <div class="param">
         <input
-          type="checkbox"
           id="connectionUseObfsproxy"
           v-model="connectionUseObfsproxy"
+          type="checkbox"
         />
         <label class="defColor" for="connectionUseObfsproxy"
           >Use obfsproxy</label
@@ -157,11 +157,11 @@
       </div>
       <div class="description">Only enable if you have trouble connecting</div>
 
-      <div class="param" v-if="userDefinedOvpnFile">
+      <div v-if="userDefinedOvpnFile" class="param">
         <input
-          type="checkbox"
           id="openvpnManualConfig"
           v-model="openvpnManualConfig"
+          type="checkbox"
         />
         <label class="defColor" for="openvpnManualConfig"
           >Add additional OpenVPN configuration parameters</label
@@ -177,7 +177,7 @@
           <button
             style="margin-top: 4px"
             class="settingsButton"
-            v-on:click="onVPNConfigFileLocation"
+            @click="onVPNConfigFileLocation"
           >
             Open configuration file location ...
           </button>
@@ -208,8 +208,8 @@
         <select v-model="port" style="background: var(--background-color)">
           <option
             v-for="item in prefferedPorts"
-            :value="item.port"
             :key="item.text"
+            :value="item.port"
           >
             {{ item.text }}
           </option>
@@ -224,8 +224,8 @@
         >
           <option
             v-for="item in wgRegenerationIntervals"
-            :value="item.seconds"
             :key="item.seconds"
+            :value="item.seconds"
           >
             {{ item.text }}
           </option>
@@ -239,13 +239,13 @@
         <div class="flexRow paramBlock">
           <div class="defColor paramName">Local IP Address:</div>
           <div class="detailedParamValue">
-            {{ this.$store.state.account.session.WgLocalIP }}
+            {{ $store.state.account.session.WgLocalIP }}
           </div>
         </div>
         <div class="flexRow paramBlockDetailedConfig">
           <div class="defColor paramName">Public key:</div>
           <div class="detailedParamValue">
-            {{ this.$store.state.account.session.WgPublicKey }}
+            {{ $store.state.account.session.WgPublicKey }}
           </div>
         </div>
         <div class="flexRow paramBlockDetailedConfig">
@@ -270,7 +270,7 @@
         <button
           class="settingsButton paramBlock"
           style="margin-top: 10px; height: 24px"
-          v-on:click="onWgKeyRegenerate"
+          @click="onWgKeyRegenerate"
         >
           Regenerate
         </button>
@@ -295,68 +295,6 @@ export default {
       isProcessing: false,
       openvpnManualConfig: false,
     };
-  },
-  methods: {
-    isAbleToChangeVpnSettings: function () {
-      if (
-        this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
-      )
-        return true;
-
-      sender.showMessageBoxSync({
-        type: "info",
-        buttons: ["OK"],
-        message: "You are now connected to IVPN",
-        detail:
-          "You can change VPN protocol settings only when IVPN is disconnected.",
-      });
-
-      return false;
-    },
-    onVpnChange: function (e) {
-      if (this.isAbleToChangeVpnSettings() != true) {
-        e.preventDefault();
-        return;
-      }
-
-      let type = VpnTypeEnum.OpenVPN;
-      if (e.target.value === "wireguard") type = VpnTypeEnum.WireGuard;
-      else type = VpnTypeEnum.OpenVPN;
-      this.$store.dispatch("settings/vpnType", type);
-    },
-    onVPNConfigFileLocation: function () {
-      const file = this.userDefinedOvpnFile;
-      if (file) sender.shellShowItemInFolder(file);
-    },
-    onWgKeyRegenerate: async function () {
-      try {
-        this.isProcessing = true;
-        await sender.WgRegenerateKeys();
-      } catch (e) {
-        console.log(`ERROR: ${e}`);
-        sender.showMessageBoxSync({
-          type: "error",
-          buttons: ["OK"],
-          message: "Error generating WireGuard keys",
-          detail: e,
-        });
-      } finally {
-        this.isProcessing = false;
-      }
-    },
-    getWgKeysGenerated: function () {
-      if (
-        this.$store.state.account == null ||
-        this.$store.state.account.session == null ||
-        this.$store.state.account.session.WgKeyGenerated == null
-      )
-        return null;
-      return new Date(this.$store.state.account.session.WgKeyGenerated);
-    },
-    formatDate: function (d) {
-      if (d == null) return null;
-      return dateDefaultFormat(d);
-    },
   },
   computed: {
     isCanUseIPv6InTunnel: function () {
@@ -513,6 +451,68 @@ export default {
       );
 
       return ret;
+    },
+  },
+  methods: {
+    isAbleToChangeVpnSettings: function () {
+      if (
+        this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
+      )
+        return true;
+
+      sender.showMessageBoxSync({
+        type: "info",
+        buttons: ["OK"],
+        message: "You are now connected to IVPN",
+        detail:
+          "You can change VPN protocol settings only when IVPN is disconnected.",
+      });
+
+      return false;
+    },
+    onVpnChange: function (e) {
+      if (this.isAbleToChangeVpnSettings() != true) {
+        e.preventDefault();
+        return;
+      }
+
+      let type = VpnTypeEnum.OpenVPN;
+      if (e.target.value === "wireguard") type = VpnTypeEnum.WireGuard;
+      else type = VpnTypeEnum.OpenVPN;
+      this.$store.dispatch("settings/vpnType", type);
+    },
+    onVPNConfigFileLocation: function () {
+      const file = this.userDefinedOvpnFile;
+      if (file) sender.shellShowItemInFolder(file);
+    },
+    onWgKeyRegenerate: async function () {
+      try {
+        this.isProcessing = true;
+        await sender.WgRegenerateKeys();
+      } catch (e) {
+        console.log(`ERROR: ${e}`);
+        sender.showMessageBoxSync({
+          type: "error",
+          buttons: ["OK"],
+          message: "Error generating WireGuard keys",
+          detail: e,
+        });
+      } finally {
+        this.isProcessing = false;
+      }
+    },
+    getWgKeysGenerated: function () {
+      if (
+        this.$store.state.account == null ||
+        this.$store.state.account.session == null ||
+        this.$store.state.account.session.WgKeyGenerated == null
+      )
+        return null;
+      return new Date(this.$store.state.account.session.WgKeyGenerated);
+    },
+    formatDate: function (d) {
+      if (d == null) return null;
+      return dateDefaultFormat(d);
     },
   },
 };

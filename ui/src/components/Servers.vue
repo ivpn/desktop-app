@@ -3,21 +3,21 @@
     <!-- HEADER -->
     <div class="flexRow serversButtonsHeader">
       <div>
-        <button v-on:click="goBack" class="stateButtonOff">
+        <button class="stateButtonOff" @click="goBack">
           <imgArrowLeft class="serversButtonsBack" />
         </button>
       </div>
 
       <div class="serversButtonsSpace" />
 
-      <div style="width: 100%" v-if="isFastestServerConfig === false">
+      <div v-if="isFastestServerConfig === false" style="width: 100%">
         <div class="flexRow" style="flex-grow: 1">
           <div style="flex-grow: 1">
             <button
               style="width: 100%"
-              v-on:click="showAll"
               class="stateButtonOff stateButtonLeft"
-              v-bind:class="{ stateButtonOn: !isFavoritesView }"
+              :class="{ stateButtonOn: !isFavoritesView }"
+              @click="showAll"
             >
               all servers
             </button>
@@ -26,9 +26,9 @@
           <div style="flex-grow: 1">
             <button
               style="width: 100%"
-              v-on:click="showFavorites"
               class="stateButtonOff stateButtonRight"
-              v-bind:class="{ stateButtonOn: isFavoritesView }"
+              :class="{ stateButtonOn: isFavoritesView }"
+              @click="showFavorites"
             >
               favorites
             </button>
@@ -36,14 +36,14 @@
         </div>
       </div>
 
-      <div style="width: 100%" v-if="isFastestServerConfig">
+      <div v-if="isFastestServerConfig" style="width: 100%">
         <div class="flexRow" style="flex-grow: 1">
           <div style="flex-grow: 1">
             <button
               style="width: 100%"
-              v-on:click="showAll"
               class="stateButtonOff"
-              v-bind:class="{ stateButtonOn: !isFavoritesView }"
+              :class="{ stateButtonOn: !isFavoritesView }"
+              @click="showAll"
             >
               fastest server settings
             </button>
@@ -61,20 +61,20 @@
     </div>
 
     <!-- FILTER -->
-    <div class="commonMargins flexRow" v-if="!isShowFavoriteDescriptionBlock">
+    <div v-if="!isShowFavoriteDescriptionBlock" class="commonMargins flexRow">
       <input
         id="filter"
+        v-model="filter"
         class="styled"
         placeholder="Search for a server"
-        v-model="filter"
-        v-bind:style="{ backgroundImage: 'url(' + searchImage + ')' }"
+        :style="{ backgroundImage: 'url(' + searchImage + ')' }"
       />
 
       <div class="buttonWithPopup">
         <button
-          class="noBordersBtn sortBtn sortBtnPlatform"
-          v-on:click="onSortMenuClicked()"
           v-click-outside="onSortMenuClickedOutside"
+          class="noBordersBtn sortBtn sortBtnPlatform"
+          @click="onSortMenuClicked()"
         >
           <img :src="sortImage" />
         </button>
@@ -82,23 +82,23 @@
         <!-- Popup -->
         <div
           class="popup popupMinShifted"
-          v-bind:class="{
+          :class="{
             popupMinShifted: isMinimizedUI,
           }"
         >
           <div
             ref="pausePopup"
             class="popuptext"
-            v-bind:class="{
+            :class="{
               show: isSortMenu,
               popuptextMinShifted: isMinimizedUI,
             }"
           >
             <div class="popup_menu_block">
               <div class="sortSelectedImg">
-                <img :src="selectedImage" v-if="sortTypeStr === 'City'" />
+                <img v-if="sortTypeStr === 'City'" :src="selectedImage" />
               </div>
-              <button class="flexRowRestSpace" v-on:click="onSortType('City')">
+              <button class="flexRowRestSpace" @click="onSortType('City')">
                 City
               </button>
             </div>
@@ -106,12 +106,9 @@
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
               <div class="sortSelectedImg">
-                <img :src="selectedImage" v-if="sortTypeStr === 'Country'" />
+                <img v-if="sortTypeStr === 'Country'" :src="selectedImage" />
               </div>
-              <button
-                class="flexRowRestSpace"
-                v-on:click="onSortType('Country')"
-              >
+              <button class="flexRowRestSpace" @click="onSortType('Country')">
                 Country
               </button>
             </div>
@@ -119,12 +116,9 @@
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
               <div class="sortSelectedImg">
-                <img :src="selectedImage" v-if="sortTypeStr === 'Latency'" />
+                <img v-if="sortTypeStr === 'Latency'" :src="selectedImage" />
               </div>
-              <button
-                class="flexRowRestSpace"
-                v-on:click="onSortType('Latency')"
-              >
+              <button class="flexRowRestSpace" @click="onSortType('Latency')">
                 Latency
               </button>
             </div>
@@ -132,12 +126,9 @@
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
               <div class="sortSelectedImg">
-                <img :src="selectedImage" v-if="sortTypeStr === 'Proximity'" />
+                <img v-if="sortTypeStr === 'Proximity'" :src="selectedImage" />
               </div>
-              <button
-                class="flexRowRestSpace"
-                v-on:click="onSortType('Proximity')"
-              >
+              <button class="flexRowRestSpace" @click="onSortType('Proximity')">
                 Proximity
               </button>
             </div>
@@ -157,77 +148,77 @@
     <!-- SERVERS LIST BLOCK -->
     <div
       ref="scrollArea"
-      @scroll="recalcScrollButtonVisiblity()"
       class="commonMargins flexColumn scrollableColumnContainer"
+      @scroll="recalcScrollButtonVisiblity()"
     >
       <!-- FASTEST & RANDOMM SERVER -->
       <div v-if="isFavoritesView == false && isFastestServerConfig === false">
-        <div class="flexRow" v-if="!isMultihop">
+        <div v-if="!isMultihop" class="flexRow">
           <button
             class="serverSelectBtn flexRow"
-            v-on:click="onFastestServerClicked()"
+            @click="onFastestServerClicked()"
           >
-            <serverNameControl class="serverName" :isFastestServer="true" />
+            <serverNameControl class="serverName" :is-fastest-server="true" />
           </button>
-          <button class="noBordersBtn" v-on:click="onFastestServerConfig()">
+          <button class="noBordersBtn" @click="onFastestServerConfig()">
             <img :src="settingsImage" />
           </button>
         </div>
         <!-- RANDOM -->
         <button
           class="serverSelectBtn flexRow"
-          v-on:click="onRandomServerClicked()"
+          @click="onRandomServerClicked()"
         >
-          <serverNameControl class="serverName" :isRandomServer="true" />
+          <serverNameControl class="serverName" :is-random-server="true" />
         </button>
       </div>
 
       <!-- SERVERS LIST -->
       <div
-        class="flexRow"
         v-for="server of filteredServers"
-        v-bind:key="server.gateway"
+        :key="server.gateway"
+        class="flexRow"
       >
         <button
           class="serverSelectBtn flexRow"
-          v-on:click="onServerSelected(server)"
-          v-bind:class="{ disabledButton: isInaccessibleServer(server) }"
+          :class="{ disabledButton: isInaccessibleServer(server) }"
+          @click="onServerSelected(server)"
         >
           <serverNameControl
             class="serverName"
             :server="server"
-            :isCountryFirst="sortTypeStr === 'Country'"
+            :is-country-first="sortTypeStr === 'Country'"
           />
 
           <div
-            class="flexColumn"
             v-if="isFastestServerConfig === false"
+            class="flexColumn"
             style="margin-top: 11px"
           >
             <div class="flexRow">
               <serverPingInfoControl
                 class="pingInfo"
                 :server="server"
-                :isShowPingTime="true"
+                :is-show-ping-time="true"
               />
 
               <img
                 :src="favoriteImage(server)"
-                v-on:click="favoriteClicked($event, server)"
+                @click="favoriteClicked($event, server)"
               />
             </div>
           </div>
         </button>
 
-        <div class="flexRow" v-if="isFastestServerConfig">
+        <div v-if="isFastestServerConfig" class="flexRow">
           <!-- CONFIG -->
           <SwitchProgress
-            :onChecked="
+            :on-checked="
               (value, event) => {
                 configFastestSvrClicked(server, event);
               }
             "
-            :isChecked="!isSvrExcludedFomFastest(server)"
+            :is-checked="!isSvrExcludedFomFastest(server)"
           />
         </div>
       </div>
@@ -235,9 +226,9 @@
       <!-- SCROOL DOWN BUTTON -->
       <transition name="fade">
         <button
-          class="btnScrollDown"
           v-if="isShowScrollButton"
-          v-on:click="onScrollDown()"
+          class="btnScrollDown"
+          @click="onScrollDown()"
         >
           <img src="@/assets/arrow-bottom.svg" />
         </button>
@@ -277,6 +268,12 @@ export default {
   directives: {
     ClickOutside,
   },
+  components: {
+    serverNameControl,
+    serverPingInfoControl,
+    SwitchProgress,
+    imgArrowLeft,
+  },
   props: [
     "onBack",
     "onServerChanged",
@@ -284,12 +281,6 @@ export default {
     "onFastestServer",
     "onRandomServer",
   ],
-  components: {
-    serverNameControl,
-    serverPingInfoControl,
-    SwitchProgress,
-    imgArrowLeft,
-  },
   data: function () {
     return {
       filter: "",
@@ -297,20 +288,6 @@ export default {
       isSortMenu: false,
       isShowScrollButton: false,
     };
-  },
-  created: function () {
-    let self = this;
-    window.addEventListener("click", function (e) {
-      // close dropdown when clicked outside
-      if (!self.$el.contains(e.target)) {
-        self.isSortMenu = false;
-      }
-    });
-  },
-  mounted() {
-    this.recalcScrollButtonVisiblity();
-    const resizeObserver = new ResizeObserver(this.recalcScrollButtonVisiblity);
-    resizeObserver.observe(this.$refs.scrollArea);
   },
   computed: {
     isMinimizedUI: function () {
@@ -449,6 +426,20 @@ export default {
     selectedImage: function () {
       return Image_check_thin;
     },
+  },
+  created: function () {
+    let self = this;
+    window.addEventListener("click", function (e) {
+      // close dropdown when clicked outside
+      if (!self.$el.contains(e.target)) {
+        self.isSortMenu = false;
+      }
+    });
+  },
+  mounted() {
+    this.recalcScrollButtonVisiblity();
+    const resizeObserver = new ResizeObserver(this.recalcScrollButtonVisiblity);
+    resizeObserver.observe(this.$refs.scrollArea);
   },
 
   methods: {

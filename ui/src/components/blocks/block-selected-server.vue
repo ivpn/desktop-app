@@ -1,11 +1,11 @@
 <template>
   <div id="main">
-    <button class="serverSelectBtn" v-on:click="showServersList()">
+    <button class="serverSelectBtn" @click="showServersList()">
       <div class="flexRow" style="height: 100%">
         <div class="flexColumn" align="left">
           <div class="small_text" style="margin-top: 8px">
             {{
-              this.isExitServer
+              isExitServer
                 ? "Exit server"
                 : isConnected
                 ? "Connected to"
@@ -19,11 +19,11 @@
             <serverNameControl
               class="serverName"
               style="max-width: 245px"
-              :isLargeText="true"
-              :server="this.server"
-              :isFastestServer="isFastestServer"
-              :isRandomServer="isRandomServer"
-              :isShowPingPicture="!(isFastestServer || isRandomServer)"
+              :is-large-text="true"
+              :server="server"
+              :is-fastest-server="isFastestServer"
+              :is-random-server="isRandomServer"
+              :is-show-ping-picture="!(isFastestServer || isRandomServer)"
             />
           </div>
         </div>
@@ -32,7 +32,7 @@
 
         <serverPingInfoControl
           v-show="!(isFastestServer || isRandomServer)"
-          :server="this.server"
+          :server="server"
           style="margin-left: 9px; margin-right: 8px"
         />
 
@@ -48,11 +48,11 @@ import serverPingInfoControl from "@/components/controls/control-server-ping.vue
 import { VpnStateEnum } from "@/store/types";
 
 export default {
-  props: ["onShowServersPressed", "isExitServer"],
   components: {
     serverNameControl,
     serverPingInfoControl,
   },
+  props: ["onShowServersPressed", "isExitServer"],
   computed: {
     server: function () {
       return this.isExitServer

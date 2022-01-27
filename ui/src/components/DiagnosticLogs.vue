@@ -6,21 +6,21 @@
         The following information will be submited to IVPN for further analysis:
       </div>
 
-      <textarea readonly id="logsBlock" v-model="diagDataText" />
+      <textarea id="logsBlock" v-model="diagDataText" readonly />
 
       <div style="margin-top: 20px; margin-bottom: 5px">
         Please write a description of the problem you are experiencing:
       </div>
       <textarea id="commentBlock" v-model="userComment"></textarea>
       <div class="flexRow" style="margin-top: 20px">
-        <button class="slave btn" v-on:click="onCancel">Cancel</button>
+        <button class="slave btn" @click="onCancel">Cancel</button>
 
         <div style="width: 50px" />
 
         <button
           class="master btn"
-          v-bind:class="{ btnDisabled: userComment.length <= 0 }"
-          v-on:click="onSendLogs"
+          :class="{ btnDisabled: userComment.length <= 0 }"
+          @click="onSendLogs"
         >
           Send logs
         </button>
@@ -43,17 +43,17 @@ export default {
       userComment: "",
     };
   },
-  mounted() {
-    setTimeout(async () => {
-      this.getDiagnosticData();
-    }, 0);
-  },
   computed: {
     diagDataText: function () {
       if (this.diagnosticDataObj == null) return null;
       let text = JSON.stringify(this.diagnosticDataObj, null, 2);
       return text.replace(/\\n/g, "\n");
     },
+  },
+  mounted() {
+    setTimeout(async () => {
+      this.getDiagnosticData();
+    }, 0);
   },
   methods: {
     async getDiagnosticData() {

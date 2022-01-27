@@ -26,11 +26,6 @@ export default {
   components: {
     CustomTitleBar,
   },
-  beforeCreate() {
-    // function using to re-apply all mutations
-    // This is required to send to renderer processes current storage state
-    sender.RefreshStorage();
-  },
   computed: {
     isWindowHasFrame: function () {
       return IsWindowHasFrame();
@@ -43,6 +38,11 @@ export default {
     isLoggedIn() {
       if (this.isLoggedIn === false) this.$router.push("/");
     },
+  },
+  beforeCreate() {
+    // function using to re-apply all mutations
+    // This is required to send to renderer processes current storage state
+    sender.RefreshStorage();
   },
 };
 

@@ -3,7 +3,7 @@
     <div class="settingsTitle">DNS SETTINGS</div>
 
     <div class="param">
-      <input type="checkbox" id="dnsIsCustom" v-model="dnsIsCustom" />
+      <input id="dnsIsCustom" v-model="dnsIsCustom" type="checkbox" />
       <label class="defColor" for="dnsIsCustom"
         >Use custom DNS server when connected to IVPN</label
       >
@@ -12,9 +12,9 @@
       <div class="defColor">IP address:</div>
 
       <input
+        v-model="dnsCustom"
         class="settingsTextInput"
         placeholder="0.0.0.0"
-        v-model="dnsCustom"
         :disabled="dnsIsCustom === false"
       />
 
@@ -29,18 +29,11 @@
 const sender = window.ipcSender;
 
 export default {
-  async beforeDestroy() {
-    // when component closing ->  update changed DNS (if necessary)
-    if (this.isDnsValueChanged) await sender.SetDNS();
-    this.isDnsValueChanged = false;
-  },
-
   data: function () {
     return {
       isDnsValueChanged: false,
     };
   },
-  methods: {},
   computed: {
     dnsIsCustom: {
       get() {
@@ -61,6 +54,12 @@ export default {
       },
     },
   },
+  async beforeDestroy() {
+    // when component closing ->  update changed DNS (if necessary)
+    if (this.isDnsValueChanged) await sender.SetDNS();
+    this.isDnsValueChanged = false;
+  },
+  methods: {},
 };
 </script>
 

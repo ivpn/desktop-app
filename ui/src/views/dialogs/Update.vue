@@ -20,10 +20,10 @@
                 </div>
 
                 <div class="buttons">
-                  <button class="master btn" v-on:click="onCheckUpdates">
+                  <button class="master btn" @click="onCheckUpdates">
                     Retry
                   </button>
-                  <button class="slave btn" v-on:click="onCancel">Close</button>
+                  <button class="slave btn" @click="onCancel">Close</button>
                 </div>
               </div>
               <div v-else>
@@ -43,9 +43,7 @@
                     </div>
                   </div>
                   <div class="buttons">
-                    <button class="slave btn" v-on:click="onCancel">
-                      Close
-                    </button>
+                    <button class="slave btn" @click="onCancel">Close</button>
                   </div>
                 </div>
                 <!-- NEW UPDATE -->
@@ -92,7 +90,7 @@
                     <div v-if="versionLatestGeneric">
                       <div class="relNotesPreText">Release notes:</div>
                       <releaseNotes
-                        :releaseNotes="latestVersionInfo.generic.releaseNotes"
+                        :release-notes="latestVersionInfo.generic.releaseNotes"
                       >
                       </releaseNotes>
                     </div>
@@ -101,7 +99,7 @@
                       <div v-if="latestVersionInfo.daemon.releaseNotes">
                         <div class="relNotesPreText">Daemon release notes:</div>
                         <releaseNotes
-                          :releaseNotes="latestVersionInfo.daemon.releaseNotes"
+                          :release-notes="latestVersionInfo.daemon.releaseNotes"
                         >
                         </releaseNotes>
                       </div>
@@ -109,7 +107,7 @@
                       <div v-if="latestVersionInfo.uiClient.releaseNotes">
                         <div class="relNotesPreText">UI app release notes:</div>
                         <releaseNotes
-                          :releaseNotes="
+                          :release-notes="
                             latestVersionInfo.uiClient.releaseNotes
                           "
                         >
@@ -134,11 +132,11 @@
                       <button
                         v-if="isReadyToInstall"
                         class="master btn"
-                        v-on:click="onInstall"
+                        @click="onInstall"
                       >
                         Install
                       </button>
-                      <button class="slave btn" v-on:click="onCancel">
+                      <button class="slave btn" @click="onCancel">
                         Cancel
                       </button>
                     </div>
@@ -163,19 +161,16 @@
                         <button
                           class="slave btn"
                           style="margin: 0px"
-                          v-on:click="onCancel"
+                          @click="onCancel"
                         >
                           Remind Me Later
                         </button>
-                        <button
-                          class="slave btn"
-                          v-on:click="onSkipThisVersion"
-                        >
+                        <button class="slave btn" @click="onSkipThisVersion">
                           Skip This Version
                         </button>
                         <div class="flexRow flexRowRestSpace" />
                       </div>
-                      <button class="master btn" v-on:click="onUpgrade">
+                      <button class="master btn" @click="onUpgrade">
                         <span v-if="!isUpdateError" style="color: inherit">
                           Update
                         </span>
@@ -184,7 +179,7 @@
                       <button
                         v-if="isUpdateError"
                         class="slave btn"
-                        v-on:click="onCancel"
+                        @click="onCancel"
                       >
                         Cancel
                       </button>
@@ -219,14 +214,6 @@ export default {
     return {
       lastWindowHeight: 0,
     };
-  },
-
-  mounted() {},
-  updated: function () {
-    this.$nextTick(function () {
-      // All DOM elements updated (https://ru.vuejs.org/v2/api/#updated)
-      this.updateWindowSize();
-    });
   },
 
   computed: {
@@ -303,6 +290,15 @@ export default {
       return this.$store.state.latestVersionInfo?.daemon?.version;
     },
   },
+  watch: {},
+
+  mounted() {},
+  updated: function () {
+    this.$nextTick(function () {
+      // All DOM elements updated (https://ru.vuejs.org/v2/api/#updated)
+      this.updateWindowSize();
+    });
+  },
 
   methods: {
     onMainScrollChange() {
@@ -346,7 +342,6 @@ export default {
       await sender.AppUpdatesInstall();
     },
   },
-  watch: {},
 };
 </script>
 

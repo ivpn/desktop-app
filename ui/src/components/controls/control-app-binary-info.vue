@@ -1,8 +1,8 @@
 <template>
   <div class="flexRow">
     <binaryIconControl
-      :binaryPath="app.AppBinaryPath"
-      :preloadedBase64Icon="app.AppIcon"
+      :binary-path="app.AppBinaryPath"
+      :preloaded-base64-icon="app.AppIcon"
       style="
         min-width: 32px;
         min-height: 32px;
@@ -22,14 +22,14 @@
       </div>
 
       <div
-        class="settingsGrayLongDescriptionFont text"
         v-if="app.AppName != app.AppGroup && !app.RunningApp"
+        class="settingsGrayLongDescriptionFont text"
       >
         {{ app.AppGroup }}
       </div>
       <div
-        class="settingsGrayLongDescriptionFont text"
         v-else-if="app.RunningApp && app.RunningApp.Pid"
+        class="settingsGrayLongDescriptionFont text"
       >
         [ PID: {{ app.RunningApp.Pid }} ] {{ app.AppGroup }}
       </div>
@@ -41,6 +41,9 @@
 import binaryIconControl from "@/components/controls/control-app-binary-icon.vue";
 
 export default {
+  components: {
+    binaryIconControl,
+  },
   props: [
     // App:
     //    AppName       string
@@ -51,9 +54,6 @@ export default {
     //                    Linux: program to execute, possibly with arguments.
     "app",
   ],
-  components: {
-    binaryIconControl,
-  },
   methods: {},
 };
 </script>

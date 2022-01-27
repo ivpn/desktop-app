@@ -42,8 +42,8 @@
     "babel-eslint": "10.1.0",
     "electron": "14.2.3",
     "eslint": "6.8.0",
-    "eslint-plugin-prettier": "3.1.4",
-    "eslint-plugin-vue": "6.2.2",
+    "eslint-plugin-prettier": "3.4.1",
+    "eslint-plugin-vue": "8.4.0",
     "prettier": "2.5.1",
     "sass": "1.47.0",
     "sass-loader": "10.2.0",
@@ -56,14 +56,16 @@
       "node": true
     },
     "extends": [
-      "plugin:vue/essential",
       "eslint:recommended",
-      "@vue/prettier"
+      "plugin:vue/recommended",
+      "@vue/eslint-config-prettier"
     ],
     "parserOptions": {
       "parser": "babel-eslint"
     },
-    "rules": {}
+    "rules": {
+      "vue/multi-word-component-names": "off"
+    }
   },
   "browserslist": [
     "> 1%",

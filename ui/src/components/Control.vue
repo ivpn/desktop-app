@@ -2,39 +2,39 @@
   <div class="flexColumn">
     <transition name="fade-super-quick" mode="out-in">
       <div
-        class="flexColumn"
         v-if="uiView === 'serversEntry'"
         key="entryServers"
+        class="flexColumn"
       >
         <Servers
-          :onBack="backToMainView"
-          :onServerChanged="onServerChanged"
-          :onFastestServer="onFastestServer"
-          :onRandomServer="onRandomServer"
+          :on-back="backToMainView"
+          :on-server-changed="onServerChanged"
+          :on-fastest-server="onFastestServer"
+          :on-random-server="onRandomServer"
         />
       </div>
 
       <div
-        class="flexColumn"
         v-else-if="uiView === 'serversExit'"
         key="exitServers"
+        class="flexColumn"
       >
         <Servers
-          :onBack="backToMainView"
-          isExitServer="true"
-          :onServerChanged="onServerChanged"
-          :onRandomServer="() => onRandomServer(true)"
+          :on-back="backToMainView"
+          is-exit-server="true"
+          :on-server-changed="onServerChanged"
+          :on-random-server="() => onRandomServer(true)"
         />
       </div>
 
       <div v-else class="flexColumn">
         <div>
           <ConnectBlock
-            :onChecked="switchChecked"
-            :isChecked="isConnected"
-            :isProgress="isInProgress"
-            :onPauseResume="onPauseResume"
-            :pauseState="this.$store.state.vpnState.pauseState"
+            :on-checked="switchChecked"
+            :is-checked="isConnected"
+            :is-progress="isInProgress"
+            :on-pause-resume="onPauseResume"
+            :pause-state="$store.state.vpnState.pauseState"
           />
           <div class="horizontalLine hopButtonsSeparator" />
         </div>
@@ -49,26 +49,28 @@
             <div class="horizontalLine hopButtonsSeparator" />
           </div>
 
-          <SelectedServerBlock :onShowServersPressed="onShowServersPressed" />
+          <SelectedServerBlock
+            :on-show-servers-pressed="onShowServersPressed"
+          />
 
-          <div v-if="this.$store.state.settings.isMultiHop">
+          <div v-if="$store.state.settings.isMultiHop">
             <div class="horizontalLine" />
             <SelectedServerBlock
-              :onShowServersPressed="onShowServersPressed"
-              isExitServer="true"
+              :on-show-servers-pressed="onShowServersPressed"
+              is-exit-server="true"
             />
           </div>
 
           <ConnectionDetailsBlock
-            :onShowPorts="onShowPorts"
-            :onShowWifiConfig="onShowWifiConfig"
+            :on-show-ports="onShowPorts"
+            :on-show-wifi-config="onShowWifiConfig"
           />
 
           <transition name="fade">
             <button
-              class="btnScrollDown"
               v-if="isShowScrollButton"
-              v-on:click="onScrollDown()"
+              class="btnScrollDown"
+              @click="onScrollDown()"
             >
               <img src="@/assets/arrow-bottom.svg" />
             </button>
@@ -118,12 +120,6 @@ function connected(me) {
 }
 
 export default {
-  props: {
-    onConnectionSettings: Function,
-    onWifiSettings: Function,
-    onDefaultView: Function,
-  },
-
   components: {
     HopButtonsBlock,
     Servers,
@@ -131,13 +127,10 @@ export default {
     SelectedServerBlock,
     ConnectionDetailsBlock,
   },
-  mounted() {
-    this.recalcScrollButtonVisiblity();
-
-    // ResizeObserver sometimes is stopping to work for unknown reason. So, We do not use it for now
-    // Instead, watchers are in use: isMinimizedUI, isMultiHop
-    //const resizeObserver = new ResizeObserver(this.recalcScrollButtonVisiblity);
-    //resizeObserver.observe(this.$refs.scrollArea);
+  props: {
+    onConnectionSettings: Function,
+    onWifiSettings: Function,
+    onDefaultView: Function,
   },
   data: function () {
     return {
@@ -214,6 +207,14 @@ export default {
     isMultiHop() {
       setTimeout(() => this.recalcScrollButtonVisiblity(), 1000);
     },
+  },
+  mounted() {
+    this.recalcScrollButtonVisiblity();
+
+    // ResizeObserver sometimes is stopping to work for unknown reason. So, We do not use it for now
+    // Instead, watchers are in use: isMinimizedUI, isMultiHop
+    //const resizeObserver = new ResizeObserver(this.recalcScrollButtonVisiblity);
+    //resizeObserver.observe(this.$refs.scrollArea);
   },
 
   methods: {

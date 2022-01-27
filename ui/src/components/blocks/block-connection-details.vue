@@ -13,17 +13,15 @@
     <!-- FIREWALL -->
 
     <OnOffButtonControl
-      v-bind:class="{ lowOpacity: IsPaused }"
+      :class="{ lowOpacity: IsPaused }"
       text="Firewall"
       description="Ensure that all traffic is routed through VPN"
-      :onChecked="firewallOnChecked"
-      :isChecked="this.$store.state.vpnState.firewallState.IsEnabled"
-      :checkedColor="
-        this.$store.state.vpnState.firewallState.IsPersistent
-          ? '#77152a77'
-          : null
+      :on-checked="firewallOnChecked"
+      :is-checked="$store.state.vpnState.firewallState.IsEnabled"
+      :checked-color="
+        $store.state.vpnState.firewallState.IsPersistent ? '#77152a77' : null
       "
-      :isProgress="firewallIsProgress"
+      :is-progress="firewallIsProgress"
     />
 
     <!-- ANTITRACKER -->
@@ -32,13 +30,13 @@
     <OnOffButtonControl
       text="AntiTracker"
       description="Block trackers whilst connected to VPN"
-      :onChecked="antitrackerOnChecked"
-      :isChecked="this.$store.state.settings.isAntitracker"
-      :switcherOpacity="!IsConnected ? 0.4 : 1"
-      :checkedColor="
-        this.$store.state.settings.isAntitrackerHardcore ? '#77152a' : null
+      :on-checked="antitrackerOnChecked"
+      :is-checked="$store.state.settings.isAntitracker"
+      :switcher-opacity="!IsConnected ? 0.4 : 1"
+      :checked-color="
+        $store.state.settings.isAntitrackerHardcore ? '#77152a' : null
       "
-      :isProgress="antitrackerIsProgress"
+      :is-progress="antitrackerIsProgress"
     />
 
     <!-- PROTOCOL -->
@@ -47,14 +45,14 @@
     <SelectButtonControl
       class="leftPanelBlock"
       :click="onShowPorts"
-      v-bind:text="portProtocolText"
+      :text="portProtocolText"
       description="Protocol/Port"
     />
 
     <!-- WIFI -->
     <transition
-      name="fade"
       v-if="isTrustedNetworksControlActive || isConnectVPNOnInsecureNetwork"
+      name="fade"
     >
       <div v-if="wifiSSID">
         <div class="horizontalLine" />
@@ -62,11 +60,11 @@
         <SelectButtonControl
           class="leftPanelBlock"
           :click="onShowWifiConfig"
-          v-bind:text="wifiSSID"
+          :text="wifiSSID"
           :description="wifiSSID == '' ? 'No WiFi connection' : 'WiFi network'"
-          :markerText="WiFiMarkerText"
-          :markerColor="WiFiMarkerColor"
-          :markerTextColor="'var(--text-color-details)'"
+          :marker-text="WiFiMarkerText"
+          :marker-color="WiFiMarkerColor"
+          :marker-text-color="'var(--text-color-details)'"
         />
       </div>
     </transition>

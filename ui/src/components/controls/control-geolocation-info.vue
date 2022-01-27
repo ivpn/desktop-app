@@ -30,8 +30,8 @@
         <div>
           <button
             class="noBordersBtn"
-            v-on:click="onRefreshCurrLocation"
             style="pointer-events: auto"
+            @click="onRefreshCurrLocation"
           >
             <img width="10" height="10" src="@/assets/refresh.svg" />
           </button>
@@ -40,23 +40,23 @@
       <!-- connection info -->
       <div v-if="isInfoAvailableIPv4 || isInfoAvailableIPv6">
         <!-- IPV4 / IPV6 buttons-->
-        <div class="flexRow" v-if="isInfoAvailableIPv4 && isInfoAvailableIPv6">
+        <div v-if="isInfoAvailableIPv4 && isInfoAvailableIPv6" class="flexRow">
           <div class="flexRow leftColumn">
             <div class="flexRow badgeContainer">
               <button
                 class="badge"
-                v-bind:class="{ badgeSelected: !isIPv6View }"
-                v-on:click="onIPv4View"
+                :class="{ badgeSelected: !isIPv6View }"
                 style="pointer-events: auto"
+                @click="onIPv4View"
               >
                 IPv4
               </button>
 
               <button
                 class="badge"
-                v-bind:class="{ badgeSelected: isIPv6View }"
-                v-on:click="onIPv6View"
+                :class="{ badgeSelected: isIPv6View }"
                 style="pointer-events: auto"
+                @click="onIPv6View"
               >
                 IPv6
               </button>
@@ -84,13 +84,13 @@
             <div style="vertical-align: top">
               <button
                 class="noBordersBtn"
-                v-on:click="onRefreshCurrLocation"
                 style="
                   padding: 0px;
                   margin: 0px;
                   margin-left: 4px;
                   pointer-events: auto;
                 "
+                @click="onRefreshCurrLocation"
               >
                 <img width="10" height="10" src="@/assets/refresh.svg" />
               </button>
@@ -115,21 +115,6 @@
 const sender = window.ipcSender;
 
 export default {
-  methods: {
-    onRefreshCurrLocation() {
-      try {
-        sender.GeoLookup();
-      } catch (e) {
-        console.error(e);
-      }
-    },
-    onIPv4View() {
-      this.$store.dispatch("uiState/isIPv6View", false);
-    },
-    onIPv6View() {
-      this.$store.dispatch("uiState/isIPv6View", true);
-    },
-  },
   computed: {
     isIPv6View: function () {
       return this.$store.getters["getIsIPv6View"];
@@ -177,6 +162,21 @@ export default {
       if (l.isIvpnServer == true) return "IVPN";
       if (!l.isp) return null;
       return l.isp;
+    },
+  },
+  methods: {
+    onRefreshCurrLocation() {
+      try {
+        sender.GeoLookup();
+      } catch (e) {
+        console.error(e);
+      }
+    },
+    onIPv4View() {
+      this.$store.dispatch("uiState/isIPv6View", false);
+    },
+    onIPv6View() {
+      this.$store.dispatch("uiState/isIPv6View", true);
     },
   },
 };

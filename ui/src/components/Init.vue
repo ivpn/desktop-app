@@ -3,7 +3,7 @@
     <spinner :loading="isProcessing" />
 
     <div v-if="isInitialization" class="main small_text"></div>
-    <div class="main" v-else-if="isDaemonInstalling">
+    <div v-else-if="isDaemonInstalling" class="main">
       Installing IVPN Daemon ...
       <div class="small_text" style="margin-top: 10px">
         Please follow the instructions in the dialog
@@ -22,7 +22,7 @@
             Please update daemon by downloading latest version from
             <button
               class="noBordersTextBtn settingsLinkText"
-              v-on:click="visitWebsite"
+              @click="visitWebsite"
             >
               IVPN website</button
             >.
@@ -37,18 +37,15 @@
             The latest daemon version can be downloaded from
             <button
               class="noBordersTextBtn settingsLinkText"
-              v-on:click="visitWebsite"
+              @click="visitWebsite"
             >
               IVPN website</button
             >.
           </div>
         </div>
-        <button class="btn" v-on:click="ConnectToDaemon">Retry ...</button>
+        <button class="btn" @click="ConnectToDaemon">Retry ...</button>
       </div>
-      <button
-        class="noBordersTextBtn settingsLinkText"
-        v-on:click="visitWebsite"
-      >
+      <button class="noBordersTextBtn settingsLinkText" @click="visitWebsite">
         www.ivpn.net
       </button>
     </div>
@@ -70,26 +67,6 @@ export default {
       isProcessing: false,
       isDelayElapsedAfterMount: false,
     };
-  },
-  mounted() {
-    // In order to avoid text blinking, we are showing blank view first few seconds
-    // untill 'daemonConnectionState' will not be initialised.
-    // The blank view also will be visible first few seconds even after 'daemonConnectionState' was intialized by 'Connecting'
-    setTimeout(() => {
-      this.isDelayElapsedAfterMount = true;
-    }, 3000);
-  },
-  methods: {
-    async ConnectToDaemon() {
-      try {
-        await sender.ConnectToDaemon();
-      } catch (e) {
-        console.error(e);
-      }
-    },
-    visitWebsite() {
-      sender.shellOpenExternal(`https://www.ivpn.net`);
-    },
   },
   computed: {
     isDaemonInstalling: function () {
@@ -122,6 +99,26 @@ export default {
   watch: {
     isConnecting() {
       this.isProcessing = this.isConnecting;
+    },
+  },
+  mounted() {
+    // In order to avoid text blinking, we are showing blank view first few seconds
+    // untill 'daemonConnectionState' will not be initialised.
+    // The blank view also will be visible first few seconds even after 'daemonConnectionState' was intialized by 'Connecting'
+    setTimeout(() => {
+      this.isDelayElapsedAfterMount = true;
+    }, 3000);
+  },
+  methods: {
+    async ConnectToDaemon() {
+      try {
+        await sender.ConnectToDaemon();
+      } catch (e) {
+        console.error(e);
+      }
+    },
+    visitWebsite() {
+      sender.shellOpenExternal(`https://www.ivpn.net`);
     },
   },
 };

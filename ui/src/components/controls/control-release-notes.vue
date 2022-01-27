@@ -1,11 +1,11 @@
 <template>
   <div class="flexColumn">
     <div v-if="releaseNotes">
-      <div v-for="note of releaseNotes" v-bind:key="note.description">
+      <div v-for="note of releaseNotes" :key="note.description">
         <div class="flexRow rnItem">
           <div
             class="badge"
-            v-bind:class="{
+            :class="{
               'badge-grey':
                 note.type && note.type.toLowerCase().startsWith('fix'),
               'badge-green':
@@ -31,9 +31,9 @@ export default {
   data: function () {
     return {};
   },
+  computed: {},
   mounted() {},
   methods: {},
-  computed: {},
 };
 </script>
 

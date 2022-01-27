@@ -4,9 +4,9 @@
 
     <div class="param">
       <input
-        type="checkbox"
         id="launchAtLogin"
         v-model="isLaunchAtLogin"
+        type="checkbox"
         :disabled="isLaunchAtLogin == null"
       />
       <label class="defColor" for="launchAtLogin">Launch at login</label>
@@ -14,9 +14,9 @@
 
     <div class="param">
       <input
-        type="checkbox"
         id="showAppInSystemDock"
         v-model="showAppInSystemDock"
+        type="checkbox"
         :disabled="minimizeToTray !== true"
       />
       <label class="defColor" for="showAppInSystemDock"
@@ -25,7 +25,7 @@
     </div>
 
     <div class="param">
-      <input type="checkbox" id="minimizeToTray" v-model="minimizeToTray" />
+      <input id="minimizeToTray" v-model="minimizeToTray" type="checkbox" />
       <label class="defColor" for="minimizeToTray">Minimize to tray</label>
     </div>
     <div v-if="isLinux">
@@ -38,9 +38,9 @@
     </div>
     <div class="param">
       <input
-        type="checkbox"
         id="connectSelectedMapLocation"
         v-model="connectSelectedMapLocation"
+        type="checkbox"
       />
       <label class="defColor" for="connectSelectedMapLocation"
         >Connect to location when selecting it on map screen</label
@@ -54,13 +54,13 @@
         v-model="colorTheme"
         style="margin-left: 30px; background: var(--background-color)"
       >
-        <option :value="colorThemeEnum.system" :key="colorThemeEnum.system">
+        <option :key="colorThemeEnum.system" :value="colorThemeEnum.system">
           System default
         </option>
-        <option :value="colorThemeEnum.light" :key="colorThemeEnum.light">
+        <option :key="colorThemeEnum.light" :value="colorThemeEnum.light">
           Light
         </option>
-        <option :value="colorThemeEnum.dark" :key="colorThemeEnum.dark">
+        <option :key="colorThemeEnum.dark" :value="colorThemeEnum.dark">
           Dark
         </option>
       </select>
@@ -77,17 +77,17 @@
     <div class="settingsBoldFont">Autoconnect:</div>
     <div class="param">
       <input
-        type="checkbox"
         id="connectOnLaunch"
         v-model="autoConnectOnLaunch"
+        type="checkbox"
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
-    <div class="param" v-if="!isLinux">
+    <div v-if="!isLinux" class="param">
       <input
-        type="checkbox"
         id="connectVPNOnInsecureNetwork"
         v-model="connectVPNOnInsecureNetwork"
+        type="checkbox"
       />
       <label class="defColor" for="connectVPNOnInsecureNetwork"
         >On joining WiFi networks without encryption</label
@@ -97,9 +97,9 @@
     <div class="settingsBoldFont">On exit:</div>
     <div class="param">
       <input
-        type="checkbox"
         id="quitWithoutConfirmation"
         v-model="quitWithoutConfirmation"
+        type="checkbox"
       />
       <label class="defColor" for="quitWithoutConfirmation"
         >Quit without confirmation when closing application</label
@@ -107,9 +107,9 @@
     </div>
     <div class="param">
       <input
-        type="checkbox"
         id="disconnect"
         v-model="disconnectOnQuit"
+        type="checkbox"
         :disabled="quitWithoutConfirmation === false"
       />
       <label class="defColor" for="disconnect"
@@ -121,22 +121,18 @@
     <div class="settingsBoldFont">Diagnostics:</div>
     <div class="flexRow">
       <div class="param">
-        <input type="checkbox" id="logging" v-model="logging" />
+        <input id="logging" v-model="logging" type="checkbox" />
         <label class="defColor" for="logging">Allow logging</label>
       </div>
       <div class="flexRowRestSpace"></div>
 
-      <button
-        class="settingsButton"
-        v-on:click="onLogs"
-        v-if="isCanSendDiagLogs"
-      >
+      <button v-if="isCanSendDiagLogs" class="settingsButton" @click="onLogs">
         Diagnostic logs ...
       </button>
     </div>
-    <div id="diagnosticLogs" v-if="diagnosticLogsShown">
+    <div v-if="diagnosticLogsShown" id="diagnosticLogs">
       <ComponentDiagnosticLogs
-        :onClose="
+        :on-close="
           (evtId) => {
             diagnosticLogsShown = false;
           }
@@ -163,23 +159,6 @@ export default {
       isLaunchAtLoginValue: null,
       colorScheme: null,
     };
-  },
-  mounted() {
-    this.colorScheme = sender.ColorScheme();
-    this.doUpdateIsLaunchAtLogin();
-  },
-  methods: {
-    async onLogs() {
-      this.diagnosticLogsShown = true;
-    },
-    async doUpdateIsLaunchAtLogin() {
-      try {
-        this.isLaunchAtLoginValue = await sender.AutoLaunchIsEnabled();
-      } catch (err) {
-        console.error("Error obtaining 'LaunchAtLogin' value: ", err);
-        this.isLaunchAtLoginValue = null;
-      }
-    },
   },
   computed: {
     isLinux() {
@@ -288,6 +267,23 @@ export default {
         sender.ColorSchemeSet(value);
         this.colorScheme = value;
       },
+    },
+  },
+  mounted() {
+    this.colorScheme = sender.ColorScheme();
+    this.doUpdateIsLaunchAtLogin();
+  },
+  methods: {
+    async onLogs() {
+      this.diagnosticLogsShown = true;
+    },
+    async doUpdateIsLaunchAtLogin() {
+      try {
+        this.isLaunchAtLoginValue = await sender.AutoLaunchIsEnabled();
+      } catch (err) {
+        console.error("Error obtaining 'LaunchAtLogin' value: ", err);
+        this.isLaunchAtLoginValue = null;
+      }
     },
   },
 };

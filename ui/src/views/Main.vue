@@ -6,19 +6,19 @@
           <div
             v-if="isMinimizedButtonsVisible"
             class="minimizedButtonsPanel leftPanelTopMinimizedButtonsPanel"
-            v-bind:class="{
+            :class="{
               minimizedButtonsPanelRightElements: isWindowHasFrame,
             }"
           >
-            <button v-on:click="onAccountSettings()">
+            <button @click="onAccountSettings()">
               <img src="@/assets/user.svg" />
             </button>
 
-            <button v-on:click="onSettings()">
+            <button @click="onSettings()">
               <img src="@/assets/settings.svg" />
             </button>
 
-            <button v-on:click="onMaximize(true)">
+            <button @click="onMaximize(true)">
               <img src="@/assets/maximize.svg" />
             </button>
           </div>
@@ -27,22 +27,22 @@
       <div class="flexColumn" style="min-height: 0px">
         <transition name="fade" mode="out-in">
           <component
-            v-bind:is="currentViewComponent"
-            :onConnectionSettings="onConnectionSettings"
-            :onWifiSettings="onWifiSettings"
-            :onDefaultView="onDefaultLeftView"
+            :is="currentViewComponent"
             id="left"
+            :on-connection-settings="onConnectionSettings"
+            :on-wifi-settings="onWifiSettings"
+            :on-default-view="onDefaultLeftView"
           ></component>
         </transition>
       </div>
     </div>
-    <div id="right" v-if="!isMinimizedUI">
+    <div v-if="!isMinimizedUI" id="right">
       <transition name="fade" appear>
         <Map
-          :isBlured="isMapBlured"
-          :onAccountSettings="onAccountSettings"
-          :onSettings="onSettings"
-          :onMinimize="() => onMaximize(false)"
+          :is-blured="isMapBlured"
+          :on-account-settings="onAccountSettings"
+          :on-settings="onSettings"
+          :on-minimize="() => onMaximize(false)"
         />
       </transition>
     </div>

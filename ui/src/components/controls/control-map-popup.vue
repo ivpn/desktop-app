@@ -1,5 +1,5 @@
 <template>
-  <div calss="main" v-on:click="onMouseClick">
+  <div calss="main" @click="onMouseClick">
     <div class="popup_description_text">
       <div v-if="isTheCurrentLocation">Your current location</div>
     </div>
@@ -12,22 +12,22 @@
     <div class="flexRow">
       <serverNameControl
         :server="location"
-        isFullName="true"
+        is-full-name="true"
         style="max-width: 90%"
       />
       <serverPingInfoControl :server="location" style="margin-left: 9px" />
     </div>
 
     <div style="height: 12px" />
-    <button class="master" v-if="isCanConnect" v-on:click="onConnect(location)">
+    <button v-if="isCanConnect" class="master" @click="onConnect(location)">
       Connect to server
     </button>
-    <button class="master" v-if="isCanDisconnect" v-on:click="onDisconnect">
+    <button v-if="isCanDisconnect" class="master" @click="onDisconnect">
       Disconnect
     </button>
 
     <div v-if="isPaused">
-      <div style="height: 20px" v-if="isCanConnect || isCanDisconnect" />
+      <div v-if="isCanConnect || isCanDisconnect" style="height: 20px" />
       <div class="popup_description_text">
         Connection will resume automatically in
       </div>
@@ -54,18 +54,15 @@ import { VpnStateEnum, PauseStateEnum } from "@/store/types";
 import { GetTimeLeftText } from "@/helpers/renderer";
 
 export default {
-  props: ["location", "onConnect", "onDisconnect", "onMouseClick", "onResume"],
   components: {
     serverNameControl,
     serverPingInfoControl,
   },
+  props: ["location", "onConnect", "onDisconnect", "onMouseClick", "onResume"],
   data: () => ({
     pauseTimeUpdateTimer: null,
     pauseTimeLeftText: "",
   }),
-  mounted() {
-    this.startPauseTimer();
-  },
   computed: {
     // needed for watcher
     pauseConnectionTill: function () {
@@ -136,6 +133,9 @@ export default {
     isPaused() {
       this.startPauseTimer();
     },
+  },
+  mounted() {
+    this.startPauseTimer();
   },
   methods: {
     startPauseTimer() {

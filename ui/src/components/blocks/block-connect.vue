@@ -13,10 +13,10 @@
           style="position: absolute"
         >
           <button
+            v-click-outside="onPauseMenuClickOutside"
             class="noBordersBtn"
             style="padding: 0"
-            v-on:click="onAddPauseTimeMenu"
-            v-click-outside="onPauseMenuClickOutside"
+            @click="onAddPauseTimeMenu"
           >
             <div class="small_text" align="left" style="min-width: 80px">
               {{ pauseTimeLeftText }}
@@ -27,41 +27,41 @@
           <div
             style="background: red; margin-top: -5px"
             class="popup"
-            v-bind:class="{
+            :class="{
               popupMinShiftedRight: true,
             }"
           >
             <div
               class="popuptext"
-              v-bind:class="{
+              :class="{
                 show: isPauseExtendMenuShow,
                 popuptextMinShiftedRight: true,
               }"
             >
               <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(null)">Resume now</button>
+                <button @click="onPauseMenuItem(null)">Resume now</button>
               </div>
               <div class="popup_dividing_line" />
               <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(5 * 60)">
+                <button @click="onPauseMenuItem(5 * 60)">
                   Resume in 5 min
                 </button>
               </div>
               <div class="popup_dividing_line" />
               <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(30 * 60)">
+                <button @click="onPauseMenuItem(30 * 60)">
                   Resume in 30 min
                 </button>
               </div>
               <div class="popup_dividing_line" />
               <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(1 * 60 * 60)">
+                <button @click="onPauseMenuItem(1 * 60 * 60)">
                   Resume in 1 hour
                 </button>
               </div>
               <div class="popup_dividing_line" />
               <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(3 * 60 * 60)">
+                <button @click="onPauseMenuItem(3 * 60 * 60)">
                   Resume in 3 hours
                 </button>
               </div>
@@ -75,19 +75,19 @@
       <div class="buttonWithPopup" style="margin-right: 17px">
         <transition name="fade">
           <button
+            v-if="isCanPause"
+            v-click-outside="onPauseMenuClickOutside"
             class="settingsBtn"
             style="background: var(--background-color)"
-            v-if="isCanPause"
-            v-on:click="onPauseMenu"
-            v-click-outside="onPauseMenuClickOutside"
+            @click="onPauseMenu"
           >
             <imgPause />
           </button>
 
           <button
-            class="settingsBtnResume"
             v-else-if="isCanResume"
-            v-on:click="onPauseResume(null)"
+            class="settingsBtnResume"
+            @click="onPauseResume(null)"
           >
             <img src="@/assets/resume.svg" style="margin-left: 2px" />
           </button>
@@ -96,37 +96,35 @@
         <!-- Popup -->
         <div
           class="popup"
-          v-bind:class="{
+          :class="{
             popupMin: isMinimizedUI,
           }"
         >
           <div
             class="popuptext"
-            v-bind:class="{
+            :class="{
               show: isCanShowPauseMenu,
               popuptextMin: isMinimizedUI,
             }"
           >
             <div class="popup_menu_block">
-              <button v-on:click="onPauseMenuItem(5 * 60)">
-                Pause for 5 min
-              </button>
+              <button @click="onPauseMenuItem(5 * 60)">Pause for 5 min</button>
             </div>
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
-              <button v-on:click="onPauseMenuItem(30 * 60)">
+              <button @click="onPauseMenuItem(30 * 60)">
                 Pause for 30 min
               </button>
             </div>
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
-              <button v-on:click="onPauseMenuItem(1 * 60 * 60)">
+              <button @click="onPauseMenuItem(1 * 60 * 60)">
                 Pause for 1 hour
               </button>
             </div>
             <div class="popup_dividing_line" />
             <div class="popup_menu_block">
-              <button v-on:click="onPauseMenuItem(3 * 60 * 60)">
+              <button @click="onPauseMenuItem(3 * 60 * 60)">
                 Pause for 3 hours
               </button>
             </div>
@@ -136,10 +134,10 @@
 
       <div style="min-width: 50px; margin-left: auto; margin-right: 0">
         <SwitchProgress
-          v-bind:class="{ lowOpacity: isCanResume }"
-          :onChecked="onChecked"
-          :isChecked="isChecked"
-          :isProgress="isProgress"
+          :class="{ lowOpacity: isCanResume }"
+          :on-checked="onChecked"
+          :is-checked="isChecked"
+          :is-progress="isProgress"
         />
       </div>
     </div>
@@ -174,18 +172,6 @@ export default {
     pauseTimeUpdateTimer: null,
     pauseTimeLeftText: "",
   }),
-  mounted() {
-    this.startPauseTimer();
-  },
-  created: function () {
-    let self = this;
-    window.addEventListener("click", function (e) {
-      // close dropdown when clicked outside
-      if (!self.$el.contains(e.target)) {
-        self.isPauseMenuAllowed = false;
-      }
-    });
-  },
   computed: {
     isMinimizedUI: function () {
       return this.$store.state.settings.minimizedUI;
@@ -233,6 +219,18 @@ export default {
     isPaused() {
       this.startPauseTimer();
     },
+  },
+  mounted() {
+    this.startPauseTimer();
+  },
+  created: function () {
+    let self = this;
+    window.addEventListener("click", function (e) {
+      // close dropdown when clicked outside
+      if (!self.$el.contains(e.target)) {
+        self.isPauseMenuAllowed = false;
+      }
+    });
   },
   methods: {
     onPauseMenuClickOutside() {

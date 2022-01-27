@@ -2,7 +2,7 @@
   <div class="main flexRow">
     <img :src="pingStatusImg" />
 
-    <div class="pingtext marginLeft" v-if="isShowPingTime && server.ping > 0">
+    <div v-if="isShowPingTime && server.ping > 0" class="pingtext marginLeft">
       {{ server.ping }}ms
     </div>
   </div>

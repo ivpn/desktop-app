@@ -3,8 +3,8 @@
     <div id="main" class="row">
       <div id="leftPanel" class="settingsLeftPanel">
         <div class="flexColumn">
-          <div class="row settingsLeftPanelHeader" id="leftPanelHeader">
-            <button id="backBtn" class="noBordersBtn" v-on:click="goBack">
+          <div id="leftPanelHeader" class="row settingsLeftPanelHeader">
+            <button id="backBtn" class="noBordersBtn" @click="goBack">
               <!-- ARROW LEFT -->
               <imgArrowLeft />
             </button>
@@ -17,10 +17,10 @@
               <button
                 v-if="isLoggedIn"
                 class="noBordersBtn tabTitleBtn"
-                v-on:click="onView('account')"
-                v-bind:class="{
+                :class="{
                   activeBtn: view === 'account',
                 }"
+                @click="onView('account')"
               >
                 Account
               </button>
@@ -28,10 +28,10 @@
               <button
                 v-if="isLoggedIn"
                 class="noBordersBtn tabTitleBtn"
-                v-on:click="onView('general')"
-                v-bind:class="{
+                :class="{
                   activeBtn: view === 'general',
                 }"
+                @click="onView('general')"
               >
                 General
               </button>
@@ -39,40 +39,40 @@
               <button
                 v-if="isLoggedIn"
                 class="noBordersBtn tabTitleBtn"
-                v-on:click="onView('connection')"
-                v-bind:class="{
+                :class="{
                   activeBtn: view === 'connection',
                 }"
+                @click="onView('connection')"
               >
                 Connection
               </button>
               <button
                 v-if="isLoggedIn"
                 class="noBordersBtn tabTitleBtn"
-                v-on:click="onView('firewall')"
-                v-bind:class="{
+                :class="{
                   activeBtn: view === 'firewall',
                 }"
+                @click="onView('firewall')"
               >
                 IVPN Firewall
               </button>
               <button
                 v-if="isLoggedIn && isSplitTunnelVisible"
                 class="noBordersBtn tabTitleBtn"
-                v-on:click="onView('splittunnel')"
-                v-bind:class="{
+                :class="{
                   activeBtn: view === 'splittunnel',
                 }"
+                @click="onView('splittunnel')"
               >
                 Split Tunnel
               </button>
               <button
                 v-if="isLoggedIn"
                 class="noBordersBtn tabTitleBtn"
-                v-on:click="onView('networks')"
-                v-bind:class="{
+                :class="{
                   activeBtn: view === 'networks',
                 }"
+                @click="onView('networks')"
               >
                 WiFi control
               </button>
@@ -80,20 +80,20 @@
               <button
                 v-if="isLoggedIn"
                 class="noBordersBtn tabTitleBtn"
-                v-on:click="onView('antitracker')"
-                v-bind:class="{
+                :class="{
                   activeBtn: view === 'antitracker',
                 }"
+                @click="onView('antitracker')"
               >
                 AntiTracker
               </button>
               <button
                 v-if="isLoggedIn"
                 class="noBordersBtn tabTitleBtn"
-                v-on:click="onView('dns')"
-                v-bind:class="{
+                :class="{
                   activeBtn: view === 'dns',
                 }"
+                @click="onView('dns')"
               >
                 DNS
               </button>
@@ -132,31 +132,31 @@
       </div>
 
       <div class="rightPanel">
-        <div class="flexColumn" v-if="view === 'connection'">
+        <div v-if="view === 'connection'" class="flexColumn">
           <connectionView />
         </div>
-        <div class="flexColumn" v-else-if="view === 'account'">
+        <div v-else-if="view === 'account'" class="flexColumn">
           <accountView />
         </div>
-        <div class="flexColumn" v-else-if="view === 'general'">
+        <div v-else-if="view === 'general'" class="flexColumn">
           <generalView />
         </div>
-        <div class="flexColumn" v-else-if="view === 'firewall'">
+        <div v-else-if="view === 'firewall'" class="flexColumn">
           <firewallView />
         </div>
-        <div class="flexColumn" v-else-if="view === 'splittunnel'">
+        <div v-else-if="view === 'splittunnel'" class="flexColumn">
           <splittunnelView />
         </div>
-        <div class="flexColumn" v-else-if="view === 'networks'">
+        <div v-else-if="view === 'networks'" class="flexColumn">
           <networksView />
         </div>
-        <div class="flexColumn" v-else-if="view === 'antitracker'">
+        <div v-else-if="view === 'antitracker'" class="flexColumn">
           <antitrackerView />
         </div>
-        <div class="flexColumn" v-else-if="view === 'dns'">
+        <div v-else-if="view === 'dns'" class="flexColumn">
           <dnsView />
         </div>
-        <div class="flexColumn" v-else>
+        <div v-else class="flexColumn">
           <!-- no view defined -->
         </div>
       </div>
@@ -189,10 +189,6 @@ export default {
     dnsView,
     imgArrowLeft,
   },
-  mounted() {
-    if (this.$route.params.view != null) this.view = this.$route.params.view;
-    this.$store.dispatch("uiState/currentSettingsViewName", this.view);
-  },
   data: function () {
     return {
       view: "general",
@@ -219,6 +215,10 @@ export default {
       if (!v) return "version unknown";
       return `v${v}`;
     },
+  },
+  mounted() {
+    if (this.$route.params.view != null) this.view = this.$route.params.view;
+    this.$store.dispatch("uiState/currentSettingsViewName", this.view);
   },
   methods: {
     goBack: function () {

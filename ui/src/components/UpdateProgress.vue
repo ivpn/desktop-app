@@ -14,16 +14,6 @@ export default {
   data: function () {
     return {};
   },
-  mounted() {
-    this.updateProgressBarState();
-  },
-  methods: {
-    updateProgressBarState: function () {
-      if (!this.$refs.progress || !this.$refs.progress.style) return;
-      this.$refs.progress.style.width =
-        (Number(this.downloaded) / Number(this.contentLength)) * 100 + "%";
-    },
-  },
   computed: {
     updateProgress: function () {
       if (!this.$store.state.uiState) return null;
@@ -60,6 +50,16 @@ export default {
   watch: {
     downloaded() {
       this.updateProgressBarState();
+    },
+  },
+  mounted() {
+    this.updateProgressBarState();
+  },
+  methods: {
+    updateProgressBarState: function () {
+      if (!this.$refs.progress || !this.$refs.progress.style) return;
+      this.$refs.progress.style.width =
+        (Number(this.downloaded) / Number(this.contentLength)) * 100 + "%";
     },
   },
 };

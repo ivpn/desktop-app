@@ -9,21 +9,21 @@
         <div class="flexColumn">
           <div class="settingsGrayDescriptionFont">Account ID</div>
 
-          <div class="settingsBigBoldFont" id="accountID">
+          <div id="accountID" class="settingsBigBoldFont">
             <label class="settingsBigBoldFont selectable">
-              {{ this.$store.state.account.session.AccountID }}
+              {{ $store.state.account.session.AccountID }}
             </label>
           </div>
           <div>
             <div
-              class="statusButtonActive"
               v-if="IsAccountStateExists && IsActive"
+              class="statusButtonActive"
             >
               ACTIVE
             </div>
             <div
-              class="statusButtonNotActive"
               v-if="IsAccountStateExists && !IsActive"
+              class="statusButtonNotActive"
             >
               NOT ACTIVE
             </div>
@@ -35,20 +35,20 @@
 
       <!-- ACCOUNT EXPIRATION TEXT -->
       <div
-        style="margin-bottom: 12px; color: darkorange"
         v-if="$store.getters['account/messageAccountExpiration']"
+        style="margin-bottom: 12px; color: darkorange"
       >
         {{ $store.getters["account/messageAccountExpiration"] }}
       </div>
       <!-- FREE TRIAL EXPIRATION TEXT -->
       <div
-        style="margin-bottom: 12px; color: darkorange"
         v-if="$store.getters['account/messageFreeTrial']"
+        style="margin-bottom: 12px; color: darkorange"
       >
         {{ $store.getters["account/messageFreeTrial"] }}
       </div>
 
-      <div class="subscriptionDetails" v-if="IsAccountStateExists">
+      <div v-if="IsAccountStateExists" class="subscriptionDetails">
         <div class="settingsBoldFont" style="margin-bottom: 16px">
           Subscription details:
         </div>
@@ -61,9 +61,9 @@
             </div>
 
             <button
-              class="noBordersTextBtn settingsLinkText"
               v-if="IsCanUpgradeToPro"
-              v-on:click="upgrade"
+              class="noBordersTextBtn settingsLinkText"
+              @click="upgrade"
             >
               Upgrade
             </button>
@@ -77,7 +77,7 @@
 
             <button
               class="noBordersTextBtn settingsLinkText"
-              v-on:click="addMoreTime"
+              @click="addMoreTime"
             >
               Add more time
             </button>
@@ -85,7 +85,7 @@
         </div>
       </div>
 
-      <div class="proAcountDescriptionBlock" v-if="IsCanUpgradeToPro">
+      <div v-if="IsCanUpgradeToPro" class="proAcountDescriptionBlock">
         <p>
           <strong>IVPN PRO</strong> gives you more possibilities to stay safe
           and protected:
@@ -108,7 +108,7 @@
     </div>
 
     <div class="flexRow">
-      <button id="logoutButton" v-on:click="logOut()">LOG OUT</button>
+      <button id="logoutButton" @click="logOut()">LOG OUT</button>
     </div>
   </div>
 </template>
@@ -129,6 +129,30 @@ export default {
     return {
       isProcessing: false,
     };
+  },
+  computed: {
+    IsAccountStateExists: function () {
+      return this.$store.getters["account/isAccountStateExists"];
+    },
+    CurrentPlan: function () {
+      return this.$store.state.account.accountStatus.CurrentPlan;
+    },
+    ActiveUntil: function () {
+      return dateDefaultFormat(
+        new Date(this.$store.state.account.accountStatus.ActiveUntil * 1000)
+      );
+    },
+    IsActive: function () {
+      return this.$store.state.account.accountStatus.Active;
+    },
+    IsCanUpgradeToPro: function () {
+      return (
+        this.IsAccountStateExists &&
+        this.$store.state.account.accountStatus.Upgradable &&
+        this.$store.state.account.accountStatus.CurrentPlan.toLowerCase() !=
+          "ivpn pro"
+      );
+    },
   },
   mounted() {
     // generating QRcode
@@ -258,30 +282,6 @@ export default {
     },
     addMoreTime() {
       sender.shellOpenExternal(`https://www.ivpn.net/account`);
-    },
-  },
-  computed: {
-    IsAccountStateExists: function () {
-      return this.$store.getters["account/isAccountStateExists"];
-    },
-    CurrentPlan: function () {
-      return this.$store.state.account.accountStatus.CurrentPlan;
-    },
-    ActiveUntil: function () {
-      return dateDefaultFormat(
-        new Date(this.$store.state.account.accountStatus.ActiveUntil * 1000)
-      );
-    },
-    IsActive: function () {
-      return this.$store.state.account.accountStatus.Active;
-    },
-    IsCanUpgradeToPro: function () {
-      return (
-        this.IsAccountStateExists &&
-        this.$store.state.account.accountStatus.Upgradable &&
-        this.$store.state.account.accountStatus.CurrentPlan.toLowerCase() !=
-          "ivpn pro"
-      );
     },
   },
 };

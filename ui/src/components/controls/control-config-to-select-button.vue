@@ -1,6 +1,6 @@
 <template>
   <div>
-    <button id="selectBtn" class="flexRow" v-on:click="click">
+    <button id="selectBtn" class="flexRow" @click="click">
       <div align="left" class="flexRowRestSpace">
         <div class="small_text">{{ description }}</div>
         <div style="height: 5px" />
@@ -9,7 +9,7 @@
 
       <div v-if="isShowMarker" style="margin-right: 12px">
         <div :style="markerStyle">
-          {{ this.markerText }}
+          {{ markerText }}
         </div>
       </div>
       <div class="arrowRightSimple"></div>

@@ -1,11 +1,7 @@
 <template>
   <div>
-    <label class="switch" v-bind:class="{ load: isProgress }">
-      <input
-        type="checkbox"
-        :checked="isConnected"
-        v-on:click="DoSwitch($event)"
-      />
+    <label class="switch" :class="{ load: isProgress }">
+      <input type="checkbox" :checked="isConnected" @click="DoSwitch($event)" />
       <div :style="style"></div>
     </label>
   </div>

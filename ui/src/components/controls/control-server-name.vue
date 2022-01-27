@@ -2,24 +2,24 @@
   <div class="main">
     <div class="flexColumn" style="min-width: 22px">
       <img
+        v-show="isImgLoadError !== true"
         class="pic"
-        v-bind:class="{
+        :class="{
           flag: isCountryFlagInUse,
         }"
         :src="serverImage"
-        v-show="isImgLoadError !== true"
         @error="onImgLoadError"
       />
     </div>
 
     <div
-      class="textBloack text"
       v-if="isShowSingleLine"
-      v-bind:class="{ text_large: isLargeText, firstLine: !isSingleLine }"
+      class="textBloack text"
+      :class="{ text_large: isLargeText, firstLine: !isSingleLine }"
     >
       {{ singleLine }}
     </div>
-    <div class="textBloack text" v-else>
+    <div v-else class="textBloack text">
       <div class="text firstLine">
         {{ multilineFirstLine }}
       </div>

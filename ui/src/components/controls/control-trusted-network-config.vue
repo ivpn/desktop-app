@@ -8,13 +8,13 @@
     <div style="flex-grow: 1"></div>
 
     <select
+      v-model="isTrusted"
       class="trustedConfigBase"
       style="background: var(--background-color)"
-      v-bind:class="{
+      :class="{
         trustedConfigUntrusted: isTrusted == false,
         trustedConfigTrusted: isTrusted == true,
       }"
-      v-model="isTrusted"
     >
       <option :value="false">Untrusted</option>
       <option :value="true">Trusted</option>

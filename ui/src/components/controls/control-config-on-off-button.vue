@@ -12,10 +12,10 @@
       <div>
         <SwitchProgress
           :style="switcherStyle"
-          :onChecked="onChecked"
-          :isChecked="isChecked"
-          :isProgress="isProgress"
-          :checkedColor="checkedColor"
+          :on-checked="onChecked"
+          :is-checked="isChecked"
+          :is-progress="isProgress"
+          :checked-color="checkedColor"
         />
       </div>
     </div>

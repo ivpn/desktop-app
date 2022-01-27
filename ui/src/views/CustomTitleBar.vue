@@ -1,10 +1,10 @@
 <template>
-  <div class="titleBar" v-show="!isWindowHasFrame">
+  <div v-show="!isWindowHasFrame" class="titleBar">
     <button
-      style="margin-top: 1px"
       v-if="minimizable"
+      style="margin-top: 1px"
       class="noBordersBtn winBtns winBtnMinimize"
-      v-on:click="onMinimize()"
+      @click="onMinimize()"
     >
       <svg width="11" height="1" viewBox="0 0 11 1">
         <path d="m11 0v1h-11v-1z" stroke-width=".26208" fill="#888888" />
@@ -12,10 +12,10 @@
     </button>
 
     <button
-      style="margin-top: 1px; margin-right: 1px"
       v-if="closable"
+      style="margin-top: 1px; margin-right: 1px"
       class="noBordersBtn winBtns winBtnClose"
-      v-on:click="onClose()"
+      @click="onClose()"
     >
       <svg width="11" height="11" viewBox="0 0 12 12" color="red">
         <path
@@ -40,6 +40,12 @@ export default {
       minimizable: true,
     };
   },
+  computed: {
+    isWindowHasFrame: function () {
+      return IsWindowHasFrame();
+    },
+  },
+  watch: {},
   mounted() {
     let t = this;
     setTimeout(() => {
@@ -50,12 +56,6 @@ export default {
       if (props.minimizable !== undefined) t.minimizable = props.minimizable;
     }, 0);
   },
-  computed: {
-    isWindowHasFrame: function () {
-      return IsWindowHasFrame();
-    },
-  },
-  watch: {},
   methods: {
     onMinimize: function () {
       sender.minimizeCurrentWindow();

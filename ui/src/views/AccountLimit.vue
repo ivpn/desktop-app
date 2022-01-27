@@ -11,33 +11,33 @@
 
         <div style="height: 24px"></div>
 
-        <button class="master" v-if="isCanUpgrade" v-on:click="onUpgrade">
+        <button v-if="isCanUpgrade" class="master" @click="onUpgrade">
           Upgrade your subscription
         </button>
 
         <div style="height: 16px"></div>
 
         <button
-          v-bind:class="{
+          v-if="isCanForceLogout"
+          :class="{
             master: isCanUpgrade !== true,
             slave: isCanUpgrade === true,
           }"
-          v-if="isCanForceLogout"
-          v-on:click="onForceLogout"
+          @click="onForceLogout"
         >
           Log out from all devices
         </button>
 
         <div style="height: 16px"></div>
         <div class="centered">
-          <button class="link linkFont" v-on:click="onTryAgain">Go back</button>
+          <button class="link linkFont" @click="onTryAgain">Go back</button>
         </div>
       </div>
 
       <div class="elementFooter">
         <div class="small_text2">Do you think there is some issue?</div>
         <div style="height: 2px"></div>
-        <button class="link linkFont" v-on:click="onContactSupport">
+        <button class="link linkFont" @click="onContactSupport">
           Contact Support Team
         </button>
       </div>
@@ -56,18 +56,6 @@ import { isValidURL } from "@/helpers/helpers";
 const sender = window.ipcSender;
 
 export default {
-  mounted() {
-    this.accountID = this.$route.params.accountID;
-
-    this.devicesMaxLimit = this.$route.params.devicesMaxLimit;
-
-    this.CurrentPlan = this.$route.params.CurrentPlan;
-    this.Upgradable = this.$route.params.Upgradable;
-    this.UpgradeToPlan = this.$route.params.UpgradeToPlan;
-    this.UpgradeToURL = this.$route.params.UpgradeToURL;
-
-    this.extraArgs = this.$route.params.extraArgs; //{ confirmation2FA }
-  },
   data: function () {
     return {
       accountID: null,
@@ -88,6 +76,18 @@ export default {
       if (this.accountID == null || this.accountID === "") return false;
       return true;
     },
+  },
+  mounted() {
+    this.accountID = this.$route.params.accountID;
+
+    this.devicesMaxLimit = this.$route.params.devicesMaxLimit;
+
+    this.CurrentPlan = this.$route.params.CurrentPlan;
+    this.Upgradable = this.$route.params.Upgradable;
+    this.UpgradeToPlan = this.$route.params.UpgradeToPlan;
+    this.UpgradeToURL = this.$route.params.UpgradeToURL;
+
+    this.extraArgs = this.$route.params.extraArgs; //{ confirmation2FA }
   },
   methods: {
     onTryAgain: function () {
