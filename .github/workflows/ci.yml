@@ -71,7 +71,12 @@ jobs:
       - name: Install fpm
         run: gem install fpm
 
-      - name: Build
+      - name: Build CLI
+        run: |
+          cd cli/References/Linux 
+          ./build.sh -v $(cat ../../../ui/package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g')
+          
+      - name: Build UI
         run: |
           cd ui/References/Linux
           ./build.sh -v $(cat ../../package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g')
