@@ -36,9 +36,17 @@ IF %ERRORLEVEL% NEQ 0 (
 	goto :error
 )
 
+IF NOT "%GITHUB_ACTIONS%" == "" (
+	echo #
+	echo # GITHUB_ACTIONS detected! It is just a build test
+  	echo # Skipped compilation of third-party dependencies: WireGuard, obfs4proxy
+	echo #
+) else (
+	call :build_obfs4proxy || goto :error
+	call :build_wireguard || goto :error
+)
+
 call :build_native_libs || goto :error
-call :build_obfs4proxy || goto :error
-call :build_wireguard || goto :error
 call :update_servers_info || goto :error
 call :build_agent || goto :error
 
