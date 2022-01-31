@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.5.2 - 2022-02-01
+
+[FIX] (Windows) Split Tunneling issues  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.5.2.exe)  
+SHA256: 19c64882a2975c6c0db538c7698ae51ccf18fdbc32c983fec6ef8b621b3cfaa5  
+
 ## Version 3.5.1 - 2022-01-20
 
 [NEW] (Linux) Split Tunneling  
