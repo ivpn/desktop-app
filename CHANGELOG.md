@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.  
 
-## Version 3.5.2 - 2022-02-01
+## Version 3.5.2 - 2022-01-31
 
 [FIX] (Windows) Split Tunneling issues  
 
