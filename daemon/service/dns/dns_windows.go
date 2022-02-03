@@ -37,7 +37,6 @@ import (
 )
 
 var (
-	_fSetDNSByMAC     *syscall.LazyProc // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
 	_fSetDNSByLocalIP *syscall.LazyProc // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
 )
 
@@ -64,26 +63,8 @@ func implInitialize() error {
 	}
 
 	dll := syscall.NewLazyDLL(helpersDllPath)
-	_fSetDNSByMAC = dll.NewProc("SetDNSByMAC")         // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
 	_fSetDNSByLocalIP = dll.NewProc("SetDNSByLocalIP") // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
 	return nil
-}
-
-func fSetDNSByMAC(interfaceMACAddr net.HardwareAddr, dns net.IP, op Operation) error {
-	dnsString := dns.String()
-	if dns.Equal(net.IPv4zero) {
-		dnsString = ""
-	}
-
-	dnsMutex.Lock()
-	defer dnsMutex.Unlock()
-
-	retval, _, err := _fSetDNSByMAC.Call(
-		uintptr(unsafe.Pointer(syscall.StringBytePtr(interfaceMACAddr.String()))),
-		uintptr(unsafe.Pointer(syscall.StringBytePtr(dnsString))),
-		uintptr(op))
-
-	return checkDefaultAPIResp(retval, err)
 }
 
 func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dns net.IP, op Operation) error {
@@ -160,14 +141,14 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) (err error) {
 		// if there was defined DNS - remove it from non-VPN inerfaces (if necessary)
 		// (skipping VPN interface, because its data will be owerwrited)
 		if err := implDeleteManual(nil); err != nil {
-			return fmt.Errorf("Failed to set DNS: %w", err)
+			return fmt.Errorf("failed to set DNS: %w", err)
 		}
 	}
 
 	// non-VPN interfaces to update (if DNS located in local network)
-	notVpnIfcMACToUpdate, err := getMACAddrByIPinNetwork(addr, localInterfaceIP)
+	notVpnInterfacesToUpdate, err := getInterfacesIPsWhithContainsIP(addr, localInterfaceIP)
 
-	if localInterfaceIP == nil && len(notVpnIfcMACToUpdate) <= 0 {
+	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
 		return nil
 	}
 
@@ -188,11 +169,11 @@ func implSetManual(addr net.IP, localInterfaceIP net.IP) (err error) {
 		}
 	}
 
-	if len(notVpnIfcMACToUpdate) > 0 {
+	if len(notVpnInterfacesToUpdate) > 0 {
 		// ADD DNS to non-VPN interface (if necessary, when DNS is in local network)
 
-		for _, mac := range notVpnIfcMACToUpdate {
-			if err := fSetDNSByMAC(mac, addr, OperationAdd); err != nil {
+		for _, ifcAddr := range notVpnInterfacesToUpdate {
+			if err := fSetDNSByLocalIP(ifcAddr.IP, addr, OperationAdd); err != nil {
 				return fmt.Errorf("failed to set DNS for interface by MAC: %w", err)
 			}
 		}
@@ -208,9 +189,9 @@ func implDeleteManual(localInterfaceIP net.IP) (err error) {
 	defer catchPanic(&err)
 
 	// non-VPN interfaces to update (if DNS located in local network)
-	notVpnIfcMACToUpdate, err := getMACAddrByIPinNetwork(_lastDNS, localInterfaceIP)
+	notVpnInterfacesToUpdate, err := getInterfacesIPsWhithContainsIP(_lastDNS, localInterfaceIP)
 
-	if localInterfaceIP == nil && len(notVpnIfcMACToUpdate) <= 0 {
+	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
 		return nil
 	}
 
@@ -231,10 +212,10 @@ func implDeleteManual(localInterfaceIP net.IP) (err error) {
 		}
 	}
 
-	if len(notVpnIfcMACToUpdate) > 0 {
+	if len(notVpnInterfacesToUpdate) > 0 {
 		// REMOVE DNS from non-VPN interface (if necessary, when DNS is in local network)
-		for _, mac := range notVpnIfcMACToUpdate {
-			if err := fSetDNSByMAC(mac, _lastDNS, OperationDel); err != nil {
+		for _, ifcAddr := range notVpnInterfacesToUpdate {
+			if err := fSetDNSByLocalIP(ifcAddr.IP, _lastDNS, OperationDel); err != nil {
 				return fmt.Errorf("failed to reset DNS for interface by MAC: %w", err)
 			}
 		}
@@ -245,10 +226,11 @@ func implDeleteManual(localInterfaceIP net.IP) (err error) {
 	return nil
 }
 
-// getMACAddrByIPinNetwork - get hardware addresses (MAC) of the network interfaces to which belongs an IP address (MAC of interface which is in same network as 'addr')
-// 		addr - IP address from local network (which can be accessed by interface different to VPN interface)
+// getInterfacesIPsWhithContainsIP - get IP addresses of local network interfaces to which belongs an IP address
+// (interface which is in same network as 'addr')
+// 		addr - IP address from local network (which can be accessed by interface)
 //		localAddrToSkip - local IP of interface which can be excluded from output (e.g. VPN interface)
-func getMACAddrByIPinNetwork(addr net.IP, localAddrToSkip net.IP) (ret []net.HardwareAddr, err error) {
+func getInterfacesIPsWhithContainsIP(addr net.IP, localAddrToSkip net.IP) (ret []net.IPNet, err error) {
 	if addr == nil {
 		return ret, nil
 	}
@@ -266,18 +248,7 @@ func getMACAddrByIPinNetwork(addr net.IP, localAddrToSkip net.IP) (ret []net.Har
 		}
 
 		if network.Contains(addr) { // 'addr' is in 'network'
-			// trying to get MAC address of the network which must be updated
-			infs, err := netinfo.InterfaceByIPAddr(network.IP)
-			if err != nil {
-				log.Error("Failed to get interface for address ", network.IP, ":", err)
-				continue
-			}
-
-			if infs == nil || infs.HardwareAddr == nil {
-				continue
-			}
-
-			ret = append(ret, infs.HardwareAddr)
+			ret = append(ret, network)
 		}
 	}
 
