@@ -2,7 +2,9 @@
 
 #include "../dns.h"
 
-DWORD DoSetDNSByLocalIP(std::string interfaceLocalAddr, std::string dnsIP, Operation operation);
+DWORD DoSetDNSByLocalIP    (std::string interfaceLocalAddr, std::string dnsIP, Operation operation, bool ipv6);
+DWORD DoSetDNSByLocalIP_DoH(std::string interfaceLocalAddr, std::string dnsIP, std::string dohTemplate, Operation operation, bool ipv6);
+DWORD IsDnsOverHttpsAccessible();
 
 // The Windows versions older than WIN10 (e.g. Win8) does not have methods:
 //      GetInterfaceDnsSettings, SetInterfaceDnsSettings, FreeInterfaceDnsSettings

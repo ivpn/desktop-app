@@ -11,9 +11,13 @@
 
 extern "C" 
 {
-	EXPORT DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
+	EXPORT DWORD _cdecl IsCanUseDnsOverHttps()
 	{
+		return IsDnsOverHttpsAccessible();
+	}
 
+	EXPORT DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation, const char isDoH, const char* dohTemplateUrl, const char isIpv6)
+	{
 // The Windows versions older than WIN10 (e.g. Win8) does not have methods:
 //      GetInterfaceDnsSettings, SetInterfaceDnsSettings, FreeInterfaceDnsSettings
 // Removing preprocessor parameter MIN_WIN_VER_WIN10 allows us to build with mechanism of dynamic load of this functions.
@@ -33,7 +37,10 @@ extern "C"
 				(dnsIP == NULL) ? "" : dnsIP,
 				(Operation)operation);
 		}
-		return DoSetDNSByLocalIP(interfaceLocalAddr, dnsIP, (Operation)operation);
+		if (isDoH)
+			return DoSetDNSByLocalIP_DoH(interfaceLocalAddr, dnsIP, dohTemplateUrl, (Operation)operation, isIpv6);
+
+		return DoSetDNSByLocalIP(interfaceLocalAddr, dnsIP, (Operation)operation, isIpv6);
 #endif
 		
 	}
