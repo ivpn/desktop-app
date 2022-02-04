@@ -16,7 +16,7 @@ extern "C"
 		return IsDnsOverHttpsAccessible();
 	}
 
-	EXPORT DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation, const char isDoH, const char* dohTemplateUrl, const char isIpv6)
+	EXPORT DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation, byte isDoH, const char* dohTemplateUrl, byte isIpv6)
 	{
 // The Windows versions older than WIN10 (e.g. Win8) does not have methods:
 //      GetInterfaceDnsSettings, SetInterfaceDnsSettings, FreeInterfaceDnsSettings

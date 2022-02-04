@@ -37,7 +37,7 @@ import (
 )
 
 var (
-	_fSetDNSByLocalIP *syscall.LazyProc // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
+	_fSetDNSByLocalIP *syscall.LazyProc // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation, byte isDoH, const char* dohTemplateUrl, byte isIpv6)
 )
 
 var dnsMutex sync.Mutex
@@ -63,11 +63,17 @@ func implInitialize() error {
 	}
 
 	dll := syscall.NewLazyDLL(helpersDllPath)
-	_fSetDNSByLocalIP = dll.NewProc("SetDNSByLocalIP") // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
+	_fSetDNSByLocalIP = dll.NewProc("SetDNSByLocalIP") // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation, byte isDoH, const char* dohTemplateUrl, byte isIpv6)
 	return nil
 }
 
 func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dns net.IP, op Operation) error {
+
+	// TODO: implement arguments:
+	isDoH := uint32(0)
+	dohTemplateUrl := ""
+	isIpv6 := uint32(0)
+
 	dnsString := dns.String()
 	if dns.Equal(net.IPv4zero) {
 		dnsString = ""
@@ -79,7 +85,10 @@ func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dns net.IP, op Operation) error
 	retval, _, err := _fSetDNSByLocalIP.Call(
 		uintptr(unsafe.Pointer(syscall.StringBytePtr(interfaceLocalAddr.String()))),
 		uintptr(unsafe.Pointer(syscall.StringBytePtr(dnsString))),
-		uintptr(op))
+		uintptr(op),
+		uintptr(isDoH),
+		uintptr(unsafe.Pointer(syscall.StringBytePtr(dohTemplateUrl))),
+		uintptr(isIpv6))
 
 	return checkDefaultAPIResp(retval, err)
 }
