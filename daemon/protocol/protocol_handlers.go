@@ -23,10 +23,9 @@
 package protocol
 
 import (
-	"net"
-
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 )
 
@@ -49,13 +48,9 @@ func (p *Protocol) OnAccountStatus(sessionToken string, accountInfo preferences.
 }
 
 // OnDNSChanged - DNS changed handler
-func (p *Protocol) OnDNSChanged(dns net.IP) {
+func (p *Protocol) OnDNSChanged(dnsCfg dns.DnsSettings) {
 	// notify all clients
-	if dns == nil {
-		p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: ""})
-	} else {
-		p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: dns.String()})
-	}
+	p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: dnsCfg})
 }
 
 // OnKillSwitchStateChanged - Firewall change handler

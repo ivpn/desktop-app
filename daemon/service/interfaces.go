@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/service/wgkeys"
 )
@@ -61,7 +62,7 @@ type IWgKeysManager interface {
 type IServiceEventsReceiver interface {
 	OnServiceSessionChanged()
 	OnAccountStatus(sessionToken string, account preferences.AccountStatus)
-	OnDNSChanged(dns net.IP)
+	OnDNSChanged(dnsCfg dns.DnsSettings)
 	OnKillSwitchStateChanged()
 	OnWiFiChanged(ssid string, isInsecureNetwork bool)
 	OnPingStatus(retMap map[string]int)

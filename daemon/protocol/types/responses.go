@@ -25,6 +25,7 @@ package types
 import (
 	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
@@ -61,12 +62,18 @@ type DisabledFunctionality struct {
 	SplitTunnelError string
 }
 
+type DnsAbilities struct {
+	CanUseDnsOverTls   bool
+	CanUseDnsOverHttps bool
+}
+
 // HelloResp response on initial request
 type HelloResp struct {
 	CommandBase
 	Version           string
 	Session           SessionResp
 	DisabledFunctions DisabledFunctionality
+	Dns               DnsAbilities
 
 	// SettingsSessionUUID is unique for Preferences object
 	// It allow to detect situations when settings was erased (created new Preferences object)
@@ -150,7 +157,7 @@ type DiagnosticsGeneratedResp struct {
 type SetAlternateDNSResp struct {
 	CommandBase
 	IsSuccess  bool
-	ChangedDNS string
+	ChangedDNS dns.DnsSettings
 }
 
 // ConnectedResp notifying about established connection
@@ -162,7 +169,7 @@ type ConnectedResp struct {
 	ClientIPv6      string
 	ServerIP        string
 	ExitServerID    string
-	ManualDNS       string
+	ManualDNS       dns.DnsSettings
 	IsCanPause      bool
 }
 

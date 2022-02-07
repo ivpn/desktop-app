@@ -24,7 +24,6 @@ package wireguard
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,7 +54,7 @@ const (
 
 // internalVariables of wireguard implementation for macOS
 type internalVariables struct {
-	manualDNS             net.IP
+	manualDNS             dns.DnsSettings
 	isRestartRequired     bool           // if true - connection will be restarted
 	pauseRequireChan      chan operation // control connection pause\resume or disconnect from paused state
 	isDisconnectRequested bool
@@ -249,12 +248,12 @@ func (wg *WireGuard) requireOperation(o operation) error {
 	return nil
 }
 
-func (wg *WireGuard) setManualDNS(addr net.IP) error {
-	if addr.Equal(wg.internals.manualDNS) {
+func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
+	if dnsCfg.Equal(wg.internals.manualDNS) {
 		return nil
 	}
 
-	wg.internals.manualDNS = addr
+	wg.internals.manualDNS = dnsCfg
 
 	if running, err := wg.isServiceRunning(); err != nil || running == false {
 		return err
@@ -268,11 +267,11 @@ func (wg *WireGuard) setManualDNS(addr net.IP) error {
 }
 
 func (wg *WireGuard) resetManualDNS() error {
-	if wg.internals.manualDNS == nil {
+	if wg.internals.manualDNS.IsEmpty() {
 		return nil
 	}
 
-	wg.internals.manualDNS = nil
+	wg.internals.manualDNS = dns.DnsSettings{}
 
 	if running, err := wg.isServiceRunning(); err != nil || running == false {
 		return err
@@ -296,8 +295,14 @@ func (wg *WireGuard) getServiceName() string {
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
 
 	manualDNS := wg.internals.manualDNS
-	if manualDNS != nil {
-		interfaceCfg = append(interfaceCfg, "DNS = "+manualDNS.String())
+	if !manualDNS.IsEmpty() {
+		if manualDNS.Encryption == dns.EncryptionNone {
+			interfaceCfg = append(interfaceCfg, "DNS = "+manualDNS.Ip().String())
+		} else {
+			// TODO!!!
+			log.Debug("Skipped manual DNS configuration before the build (DoH/DoT must be configured after connection established)")
+		}
+
 	} else {
 		interfaceCfg = append(interfaceCfg, "DNS = "+wg.connectParams.hostLocalIP.String())
 	}
@@ -458,7 +463,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	// (it needed ONLY if DNS IP located in local network)
 	// Also, it is needed to inform 'dns' package about last DNS value (used by 'protocol' to ptovide dns status to clients)
 	manualDNS := wg.internals.manualDNS
-	if manualDNS != nil {
+	if !manualDNS.IsEmpty() {
 		dns.SetManual(manualDNS, nil)
 	} else {
 		// delete manual DNS (if defined)

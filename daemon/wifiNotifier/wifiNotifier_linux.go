@@ -1,4 +1,5 @@
-// +build linux
+//go:build linux && !nowifi
+// +build linux,!nowifi
 
 package wifiNotifier
 

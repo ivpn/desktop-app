@@ -46,7 +46,7 @@ const (
 
 // internalVariables of wireguard implementation for Linux
 type internalVariables struct {
-	manualDNS            net.IP
+	manualDNS            dns.DnsSettings
 	isRunning            bool
 	isPaused             bool
 	resumeDisconnectChan chan operation // control connection pause\resume or disconnect from paused state
@@ -120,8 +120,8 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 				}
 			}()
 			// update DNS configuration
-			dnsIP := wg.connectParams.hostLocalIP
-			if wg.internals.manualDNS != nil {
+			dnsIP := dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String(), Encryption: dns.EncryptionNone}
+			if !wg.internals.manualDNS.IsEmpty() {
 				dnsIP = wg.internals.manualDNS
 			}
 			if err := dns.SetManual(dnsIP, nil); err != nil {
@@ -214,26 +214,26 @@ func (wg *WireGuard) resume() error {
 	return nil
 }
 
-func (wg *WireGuard) setManualDNS(addr net.IP) error {
+func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
 	// set DNS called outside
-	wg.internals.manualDNS = addr
+	wg.internals.manualDNS = dnsCfg
 
 	if wg.isPaused() || wg.internals.isRunning == false {
 		return nil
 	}
-	return dns.SetManual(addr, nil)
+	return dns.SetManual(dnsCfg, nil)
 }
 
 func (wg *WireGuard) resetManualDNS() error {
 	// reset DNS called outside
-	wg.internals.manualDNS = nil
+	wg.internals.manualDNS = dns.DnsSettings{}
 	if wg.isPaused() {
 		return nil
 	}
 
 	if wg.internals.isRunning {
 		// changing DNS to default value for current WireGuard connection
-		return dns.SetManual(wg.connectParams.hostLocalIP, nil)
+		return dns.SetManual(dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String(), Encryption: dns.EncryptionNone}, nil)
 	}
 	return dns.DeleteManual(nil)
 }

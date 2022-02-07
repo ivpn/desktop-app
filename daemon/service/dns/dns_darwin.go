@@ -44,7 +44,7 @@ func implPause() error {
 }
 
 // defaultDNS - not in use for darwin platfrom
-func implResume(defaultDNS net.IP) error {
+func implResume(defaultDNS DnsSettings) error {
 	err := shell.Exec(log, platform.DNSScript(), "-resume")
 	if err != nil {
 		return fmt.Errorf("DNS resume: Failed to change DNS: %w", err)
@@ -53,11 +53,18 @@ func implResume(defaultDNS net.IP) error {
 	return nil
 }
 
+func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool) {
+	return false, false
+}
+
 // Set manual DNS.
-// 'addr' parameter - DNS IP value
 // 'localInterfaceIP' - not in use for macOS implementation
-func implSetManual(addr net.IP, localInterfaceIP net.IP) error {
-	err := shell.Exec(log, platform.DNSScript(), "-set_alternate_dns", addr.String())
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
+	if dnsCfg.Encryption != EncryptionNone {
+		return fmt.Errorf("DNS encryption is not supported on this platform")
+	}
+
+	err := shell.Exec(log, platform.DNSScript(), "-set_alternate_dns", dnsCfg.Ip().String())
 	if err != nil {
 		return fmt.Errorf("set manual DNS: Failed to change DNS: %w", err)
 	}

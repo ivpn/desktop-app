@@ -92,7 +92,7 @@ type Service struct {
 	_vpnSessionInfoMutex sync.Mutex
 
 	// manual DNS value (if not defined - nil)
-	_manualDNS net.IP
+	_manualDNS dns.DnsSettings
 
 	// Required VPN state which service is going to reach (disconnect->keep connection->connect)
 	// When KeepConnection - reconnects immediately after disconnection
@@ -353,7 +353,7 @@ func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr 
 }
 
 // ConnectOpenVPN start OpenVPN connection
-func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
@@ -437,7 +437,7 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 }
 
 // ConnectWireGuard start WireGuard connection
-func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	// stop active connection (if exists)
 	if err := s.Disconnect(); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
@@ -493,7 +493,7 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection, stateChan)
 }
 
-func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return srverrors.ErrorNotLoggedIn{}
@@ -575,7 +575,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 // Connect connect vpn.
 // Param 'firewallOn' - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored).
 // Param 'firewallDuringConnection' - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
-func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 	var connectRoutinesWaiter sync.WaitGroup
 
 	// stop active connection (if exists)
@@ -846,7 +846,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS net.IP, firewallOn bool
 
 	log.Info("Initializing DNS")
 	// set manual DNS
-	if manualDNS == nil || manualDNS.Equal(net.IPv4zero) || manualDNS.Equal(net.IPv4bcast) {
+	if manualDNS.IsEmpty() {
 		err = s.ResetManualDNS()
 	} else {
 		err = s.SetManualDNS(manualDNS)
@@ -971,20 +971,26 @@ func (s *Service) IsPaused() bool {
 }
 
 // SetManualDNS set dns
-func (s *Service) SetManualDNS(dns net.IP) error {
+func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings) error {
 	vpn := s._vpn
 	if vpn == nil {
 		return nil
 	}
 
-	s._manualDNS = dns
-	if err := firewall.SetManualDNS(dns); err != nil {
-		return fmt.Errorf("failed to set manual DNS: %w", err)
+	s._manualDNS = dnsCfg
+
+	if dnsCfg.Encryption == dns.EncryptionNone {
+		// for DoH/DoT - no sense to allow DNS port (53)
+		if err := firewall.SetManualDNS(s._manualDNS.Ip()); err != nil {
+			return fmt.Errorf("failed to set manual DNS: %w", err)
+		}
+	} else {
+		firewall.SetManualDNS(nil)
 	}
 
-	err := vpn.SetManualDNS(dns)
+	err := vpn.SetManualDNS(s._manualDNS)
 	if err == nil {
-		s._evtReceiver.OnDNSChanged(dns)
+		s._evtReceiver.OnDNSChanged(s._manualDNS)
 	}
 	return err
 }
@@ -996,14 +1002,14 @@ func (s *Service) ResetManualDNS() error {
 		return nil
 	}
 
-	s._manualDNS = nil
+	s._manualDNS = dns.DnsSettings{}
 	if err := firewall.SetManualDNS(nil); err != nil {
 		return fmt.Errorf("failed to reset manual DNS: %w", err)
 	}
 
 	err := vpn.ResetManualDNS()
 	if err == nil {
-		s._evtReceiver.OnDNSChanged(nil)
+		s._evtReceiver.OnDNSChanged(s._manualDNS)
 	}
 	return err
 }

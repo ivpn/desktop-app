@@ -36,6 +36,7 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 	"github.com/ivpn/desktop-app/daemon/vpn"
@@ -506,8 +507,8 @@ func (o *OpenVPN) IsPaused() bool {
 }
 
 // SetManualDNS changes DNS to manual IP
-func (o *OpenVPN) SetManualDNS(addr net.IP) error {
-	return o.implOnSetManualDNS(addr)
+func (o *OpenVPN) SetManualDNS(dnsCfg dns.DnsSettings) error {
+	return o.implOnSetManualDNS(dnsCfg)
 }
 
 // ResetManualDNS restores DNS

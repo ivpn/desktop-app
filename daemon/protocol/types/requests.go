@@ -24,6 +24,7 @@ package types
 
 import (
 	"github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -118,7 +119,7 @@ type SetPreference struct {
 // SetAlternateDns request to set custom DNS
 type SetAlternateDns struct {
 	CommandBase
-	DNS string
+	Dns dns.DnsSettings
 }
 
 // Connect request to establish new VPN connection
@@ -129,9 +130,10 @@ type Connect struct {
 	// but if there are no IPv6 hosts - we will use the IPv4 host.
 	IPv6 bool
 	// Use ONLY IPv6 hosts (ignored when IPv6!=true)
-	IPv6Only   bool
-	VpnType    vpn.Type
-	CurrentDNS string
+	IPv6Only  bool
+	VpnType   vpn.Type
+	ManualDNS dns.DnsSettings
+
 	// Enable firewall before connection
 	// (if true - the parameter 'firewallDuringConnection' will be ignored)
 	FirewallOn bool

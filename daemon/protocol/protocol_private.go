@@ -34,6 +34,7 @@ import (
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
@@ -186,6 +187,8 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 		stErr = splitTun.Error()
 	}
 
+	dnsOverHttps, dnsOverTls := dns.EncryptionAbilities()
+
 	// send back Hello message with account session info
 	helloResp := types.HelloResp{
 		Version:             version.Version(),
@@ -195,7 +198,12 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 			WireGuardError:   wgErr,
 			OpenVPNError:     ovpnErr,
 			ObfsproxyError:   obfspErr,
-			SplitTunnelError: stErr}}
+			SplitTunnelError: stErr},
+		Dns: types.DnsAbilities{
+			CanUseDnsOverTls:   dnsOverTls,
+			CanUseDnsOverHttps: dnsOverHttps,
+		},
+	}
 	return &helloResp
 }
 
@@ -219,7 +227,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		return fmt.Errorf("failed to unmarshal json 'Connect' request: %w", err)
 	}
 
-	retManualDNS := net.ParseIP(r.CurrentDNS)
+	retManualDNS := r.ManualDNS
 
 	if vpn.Type(r.VpnType) == vpn.OpenVPN {
 		// PARAMETERS VALIDATION

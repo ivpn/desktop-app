@@ -1,3 +1,4 @@
+//go:build darwin && !nowifi
 // +build darwin,!nowifi
 
 package wifiNotifier

@@ -23,8 +23,6 @@
 package openvpn
 
 import (
-	"net"
-
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 )
 
@@ -50,11 +48,11 @@ func (o *OpenVPN) implOnPause() error {
 }
 
 func (o *OpenVPN) implOnResume() error {
-	return dns.Resume(nil)
+	return dns.Resume(dns.DnsSettings{})
 }
 
-func (o *OpenVPN) implOnSetManualDNS(addr net.IP) error {
-	return dns.SetManual(addr, nil)
+func (o *OpenVPN) implOnSetManualDNS(dnsCfg dns.DnsSettings) error {
+	return dns.SetManual(dnsCfg, nil)
 }
 
 func (o *OpenVPN) implOnResetManualDNS() error {

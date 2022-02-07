@@ -96,11 +96,11 @@ type Service interface {
 	SetPreference(key string, val string) error
 	ResetPreferences() error
 
-	SetManualDNS(dns net.IP) error
+	SetManualDNS(dns dns.DnsSettings) error
 	ResetManualDNS() error
 
-	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
-	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
+	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
+	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
 	Disconnect() error
 	Connected() bool
 
@@ -682,10 +682,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		var err error
-		if ip := net.ParseIP(req.DNS); ip == nil || ip.Equal(net.IPv4zero) || ip.Equal(net.IPv4bcast) {
+		if req.Dns.IsEmpty() {
 			err = p._service.ResetManualDNS()
 		} else {
-			err = p._service.SetManualDNS(ip)
+			err = p._service.SetManualDNS(req.Dns)
 
 			if err != nil {
 				// DNS set failed. Trying to reset DNS
@@ -699,10 +699,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err != nil {
 			log.ErrorTrace(err)
 			// send the response to the requestor
-			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ChangedDNS: net.IPv4zero.String()}, req.Idx)
+			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false}, req.Idx)
 		} else {
 			// send the response to the requestor
-			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.DNS}, req.Idx)
+			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns}, req.Idx)
 			// all clients will be notified in case of successfull change by OnDNSChanged() handler
 		}
 

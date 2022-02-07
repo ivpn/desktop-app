@@ -24,7 +24,6 @@ package openvpn
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
@@ -83,16 +82,16 @@ func (o *OpenVPN) implOnResume() error {
 	return dns.Resume(o.getDefaultDNS())
 }
 
-func (o *OpenVPN) implOnSetManualDNS(addr net.IP) error {
-	return dns.SetManual(addr, nil)
+func (o *OpenVPN) implOnSetManualDNS(dnsCfg dns.DnsSettings) error {
+	return dns.SetManual(dnsCfg, nil)
 }
 
 func (o *OpenVPN) implOnResetManualDNS() error {
 	if o.IsPaused() == false {
 		// restore default DNS pushed by OpenVPN server
-		defaultDNS := o.getDefaultDNS()
-		if defaultDNS != nil {
-			return dns.SetManual(defaultDNS, nil)
+		defaultDns := o.getDefaultDNS()
+		if !defaultDns.IsEmpty() {
+			return dns.SetManual(defaultDns, nil)
 		}
 	}
 
@@ -100,10 +99,10 @@ func (o *OpenVPN) implOnResetManualDNS() error {
 }
 
 // getDefaultDNS returns default DNS pushed by OpenVPN server
-func (o *OpenVPN) getDefaultDNS() net.IP {
+func (o *OpenVPN) getDefaultDNS() dns.DnsSettings {
 	mi := o.managementInterface
 	if mi != nil && mi.isConnected && o.state != vpn.DISCONNECTED && o.state != vpn.EXITING {
-		return mi.pushReplyDNS
+		return dns.DnsSettings{DnsHost: mi.pushReplyDNS.String(), Encryption: dns.EncryptionNone}
 	}
-	return nil
+	return dns.DnsSettings{}
 }
