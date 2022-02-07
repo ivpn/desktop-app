@@ -36,6 +36,7 @@ import (
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -569,12 +570,12 @@ func (c *Client) PingServers() (pingResults []types.PingResultType, err error) {
 }
 
 // SetManualDNS - sets manual DNS for current VPN connection
-func (c *Client) SetManualDNS(dns string) error {
+func (c *Client) SetManualDNS(dnsStr string) error {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
 
-	req := types.SetAlternateDns{DNS: dns}
+	req := types.SetAlternateDns{Dns: dns.DnsSettings{DnsHost: dnsStr, Encryption: dns.EncryptionNone}}
 	var resp types.SetAlternateDNSResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err

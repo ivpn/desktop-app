@@ -66,6 +66,10 @@ export default new Vuex.Store({
       SplitTunnelError: "",
     },
 
+    dns: {
+      CanUseDnsOverHttps: false,
+    },
+
     // true when we are requesting geo-lookup info on current moment
     isRequestingLocation: false,
     // Current location (be careful, in 'connected' state this object will contain info about 'VPN location')

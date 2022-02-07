@@ -77,7 +77,7 @@ func (c *CmdDns) Run() error {
 		if state == vpn.CONNECTED {
 			svrs, _ := _proto.GetServers()
 			servers = &svrs
-			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectedInfo.ManualDNS, servers)
+			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectedInfo.ManualDNS.DnsHost, servers)
 			if c.reset && (isAntitracker || isAtHardcore) {
 				fmt.Println("Nothing to disable")
 			} else {
@@ -102,7 +102,7 @@ func (c *CmdDns) Run() error {
 			svrs, _ := _proto.GetServers()
 			servers = &svrs
 		}
-		w = printDNSState(w, connected.ManualDNS, servers)
+		w = printDNSState(w, connected.ManualDNS.DnsHost, servers)
 	}
 
 	w = printDNSConfigInfo(w, cfg.CustomDNS)
@@ -168,7 +168,7 @@ func (c *CmdAntitracker) Run() error {
 		}
 
 		if state == vpn.CONNECTED {
-			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectInfo.ManualDNS, &servers)
+			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectInfo.ManualDNS.DnsHost, &servers)
 			if c.off && !(isAntitracker || isAtHardcore) {
 				fmt.Println("AntiTracker already disabled")
 			} else {
@@ -196,7 +196,7 @@ func (c *CmdAntitracker) Run() error {
 
 	if state == vpn.CONNECTED {
 		servers, _ := _proto.GetServers()
-		w = printDNSState(w, connected.ManualDNS, &servers)
+		w = printDNSState(w, connected.ManualDNS.DnsHost, &servers)
 	}
 
 	w = printAntitrackerConfigInfo(w, cfg.Antitracker, cfg.AntitrackerHardcore)

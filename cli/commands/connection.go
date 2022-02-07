@@ -32,6 +32,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/flags"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
@@ -492,24 +493,24 @@ func (c *CmdConnect) Run() (retError error) {
 		if err != nil {
 			return err
 		}
-		req.CurrentDNS = atDNS
+		req.ManualDNS = dns.DnsSettings{DnsHost: atDNS, Encryption: dns.EncryptionNone}
 
 		if len(c.dns) > 0 {
 			fmt.Println("WARNING! Manual DNS configuration ignored due to AntiTracker")
 		}
 	}
 	// Set MANUAL DNS if defined (only in case if AntiTracker not defined)
-	if len(req.CurrentDNS) == 0 {
+	if req.ManualDNS.IsEmpty() {
 		if len(c.dns) > 0 {
-			dns := net.ParseIP(c.dns)
-			if dns == nil {
+			dnsIp := net.ParseIP(c.dns)
+			if dnsIp == nil {
 				return flags.BadParameter{}
 			}
-			req.CurrentDNS = dns.String()
+			req.ManualDNS = dns.DnsSettings{DnsHost: dnsIp.String(), Encryption: dns.EncryptionNone}
 		} else if len(cfg.CustomDNS) > 0 {
 			// using default DNS configuration
 			printDNSConfigInfo(nil, cfg.CustomDNS).Flush()
-			req.CurrentDNS = cfg.CustomDNS
+			req.ManualDNS = dns.DnsSettings{DnsHost: cfg.CustomDNS, Encryption: dns.EncryptionNone}
 		}
 	}
 

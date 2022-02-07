@@ -75,7 +75,7 @@ func showState() error {
 	w := printAccountInfo(nil, _proto.GetHelloResponse().Session.AccountID)
 	printState(w, state, connected, serverInfo, exitServerInfo)
 	if state == vpn.CONNECTED {
-		printDNSState(w, connected.ManualDNS, &servers)
+		printDNSState(w, connected.ManualDNS.DnsHost, &servers)
 	}
 	if !stStatus.IsFunctionalityNotAvailable {
 		printSplitTunState(w, true, false, stStatus.IsEnabled, stStatus.SplitTunnelApps, stStatus.RunningApps)
