@@ -2,12 +2,9 @@ name: "Security Scan (gosec)"
 
 on:
   pull_request:
-    branches: 
-	- master
+    branches: [ master ]
   push:
-    branches:
-	- master    
-	- feature/122_123_8_DoH_and_DoT_support
+    branches: [ master, feature/122_123_8_DoH_and_DoT_support ]
 
 permissions: read-all
 

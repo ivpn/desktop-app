@@ -2,12 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: 
-	- master
+    branches: [ master ]
   push:
-    branches:
-	- master    
-	- feature/122_123_8_DoH_and_DoT_support
+    branches: [ master, feature/122_123_8_DoH_and_DoT_support ]
 jobs:
   win:
     runs-on: windows-latest
