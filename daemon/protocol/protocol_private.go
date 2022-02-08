@@ -187,8 +187,12 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 		stErr = splitTun.Error()
 	}
 
-	dnsOverHttps, dnsOverTls := dns.EncryptionAbilities()
-
+	dnsOverHttps, dnsOverTls, err := dns.EncryptionAbilities()
+	if err != nil {
+		dnsOverHttps = false
+		dnsOverTls = false
+		log.Error(err)
+	}
 	// send back Hello message with account session info
 	helloResp := types.HelloResp{
 		Version:             version.Version(),

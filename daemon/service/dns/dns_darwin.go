@@ -53,8 +53,8 @@ func implResume(defaultDNS DnsSettings) error {
 	return nil
 }
 
-func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool) {
-	return false, false
+func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
+	return false, false, nil
 }
 
 // Set manual DNS.

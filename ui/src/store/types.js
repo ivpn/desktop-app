@@ -34,6 +34,12 @@ export const PauseStateEnum = Object.freeze({
   Resuming: 3,
 });
 
+export const DnsEncryption = Object.freeze({
+  None: 0,
+  DnsOverTls: 1,
+  DnsOverHttps: 2,
+});
+
 export const VpnStateEnum = Object.freeze({
   DISCONNECTED: 0,
   CONNECTING: 1, // OpenVPN's initial state.

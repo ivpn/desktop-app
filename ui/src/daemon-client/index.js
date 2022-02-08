@@ -39,6 +39,7 @@ import {
   VpnStateEnum,
   PauseStateEnum,
   DaemonConnectionType,
+  DnsEncryption,
 } from "@/store/types";
 import store from "@/store";
 
@@ -320,6 +321,8 @@ async function processResponse(response) {
           store.commit("settings/vpnType", VpnTypeEnum.OpenVPN);
         }
       }
+
+      store.commit("dnsAbilities", obj.Dns);
 
       break;
 
@@ -980,7 +983,12 @@ async function Connect(entryServer, exitServer) {
 
   store.commit("vpnState/connectionState", VpnStateEnum.CONNECTING);
 
-  let currentDNS = "";
+  let manualDNS = {
+    DnsHost: "",
+    Encryption: DnsEncryption.None,
+    DohTemplate: "",
+  };
+
   try {
     const isRandomExitSvr = store.getters["settings/isRandomExitServer"];
 
@@ -1082,9 +1090,19 @@ async function Connect(entryServer, exitServer) {
       };
     }
 
-    if (settings.dnsIsCustom) currentDNS = settings.dnsCustom;
+    if (settings.dnsIsCustom) {
+      manualDNS = {
+        DnsHost: settings.dnsCustom,
+        Encryption: DnsEncryption.None,
+        DohTemplate: "",
+      };
+    }
     if (settings.isAntitracker) {
-      currentDNS = store.getters["vpnState/antitrackerIp"];
+      manualDNS = {
+        DnsHost: store.getters["vpnState/antitrackerIp"],
+        Encryption: DnsEncryption.None,
+        DohTemplate: "",
+      };
     }
   } catch (e) {
     store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED);
@@ -1101,7 +1119,7 @@ async function Connect(entryServer, exitServer) {
     Command: daemonRequests.Connect,
     VpnType: settings.vpnType,
     [vpnParamsPropName]: vpnParamsObj,
-    CurrentDNS: currentDNS,
+    ManualDNS: manualDNS,
     FirewallOn: store.state.settings.firewallActivateOnConnect === true,
     // Can use IPv6 connection inside tunnel
     // IPv6 has higher priority, if it supported by a server - we will use IPv6.
@@ -1471,16 +1489,31 @@ async function GetAppIcon(binaryPath) {
 }
 
 async function SetDNS(antitrackerIsEnabled) {
-  let DNS = "";
-  if (store.state.settings.dnsIsCustom) DNS = store.state.settings.dnsCustom;
+  let Dns = {
+    DnsHost: "",
+    Encryption: DnsEncryption.None,
+    DohTemplate: "",
+  };
+  if (store.state.settings.dnsIsCustom) {
+    Dns = {
+      DnsHost: store.state.settings.dnsCustom,
+      Encryption: DnsEncryption.None,
+      DohTemplate: "",
+    };
+  }
 
   if (antitrackerIsEnabled != null) {
     // save antitracker configuration
     store.commit("settings/isAntitracker", antitrackerIsEnabled);
   }
 
-  if (store.state.settings.isAntitracker)
-    DNS = store.getters["vpnState/antitrackerIp"];
+  if (store.state.settings.isAntitracker) {
+    Dns = {
+      DnsHost: store.getters["vpnState/antitrackerIp"],
+      Encryption: DnsEncryption.None,
+      DohTemplate: "",
+    };
+  }
 
   if (store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED) {
     // no sense to send DNS-change request in disconnected state
@@ -1490,7 +1523,7 @@ async function SetDNS(antitrackerIsEnabled) {
   // send change-request
   await sendRecv({
     Command: daemonRequests.SetAlternateDns,
-    DNS,
+    Dns,
   });
 }
 

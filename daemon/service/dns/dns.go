@@ -64,7 +64,7 @@ func (d DnsSettings) IsIPv6() (bool, error) {
 	if ip == nil {
 		return false, fmt.Errorf("unable to determine IP protocol version for the DnsSettings object (object is not initialized)")
 	}
-	return ip.To4() != nil, nil
+	return ip.To4() == nil, nil
 }
 
 func (d DnsSettings) Ip() net.IP {
@@ -114,7 +114,7 @@ func Resume(defaultDNS DnsSettings) error {
 	return implResume(defaultDNS)
 }
 
-func EncryptionAbilities() (dnsOverHttps, dnsOverTls bool) {
+func EncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
 	return implGetDnsEncryptionAbilities()
 }
 

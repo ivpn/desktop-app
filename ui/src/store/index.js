@@ -66,7 +66,8 @@ export default new Vuex.Store({
       SplitTunnelError: "",
     },
 
-    dns: {
+    dnsAbilities: {
+      CanUseDnsOverTls: false,
       CanUseDnsOverHttps: false,
     },
 
@@ -187,6 +188,10 @@ export default new Vuex.Store({
       isStrNullOrEmpty(state.disabledFunctions.ObfsproxyError),
     isSplitTunnelEnabled: (state) =>
       isStrNullOrEmpty(state.disabledFunctions.SplitTunnelError),
+
+    getDnsAbilities: (state) => {
+      return state.dnsAbilities;
+    },
   },
 
   // can be called from main process
@@ -211,6 +216,12 @@ export default new Vuex.Store({
     },
     disabledFunctions(state, disabledFuncs) {
       state.disabledFunctions = disabledFuncs;
+    },
+    dnsAbilities(state, dnsAbilities) {
+      if (!dnsAbilities)
+        dnsAbilities = { CanUseDnsOverTls: false, CanUseDnsOverHttps: false };
+
+      state.dnsAbilities = dnsAbilities;
     },
     configParams(state, value) {
       state.configParams = value;

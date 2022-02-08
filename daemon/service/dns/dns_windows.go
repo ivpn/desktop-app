@@ -85,8 +85,7 @@ func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dnsCfg DnsSettings, ipv6 bool, 
 
 	dnsIpString := ""
 	if !dnsCfg.IsEmpty() {
-		ip := dnsCfg.Ip()
-		isAddrIpv6 := ip.To4() != nil
+		isAddrIpv6, _ := dnsCfg.IsIPv6()
 		if isAddrIpv6 != ipv6 {
 			return fmt.Errorf("unable to apply DNS configuration. IP address type mismatch to the IPv6 parameter")
 		}
@@ -114,7 +113,7 @@ func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dnsCfg DnsSettings, ipv6 bool, 
 
 func fIsCanUseDnsOverHttps() bool {
 	retval, _, err := _fIsCanUseDnsOverHttps.Call()
-	if retval != 0 || err != syscall.Errno(0) {
+	if retval == 0 || err != syscall.Errno(0) {
 		return false
 	}
 	return true
@@ -166,8 +165,9 @@ func implResume(defaultDNS DnsSettings) error {
 	return nil
 }
 
-func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool) {
-	return fIsCanUseDnsOverHttps(), false
+func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
+	defer catchPanic(&err)
+	return fIsCanUseDnsOverHttps(), false, err
 }
 
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (err error) {
@@ -202,7 +202,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (err error) {
 	log.Info(fmt.Sprintf("Changing DNS to %s ...", dnsCfg.InfoString()))
 	defer func() {
 		if err != nil {
-			log.Info(fmt.Sprintf("Changing DNS to %s done (%dms) with error: %s", dnsCfg.InfoString(), time.Since(start).Milliseconds(), err.Error()))
+			log.Error(fmt.Sprintf("Changing DNS to %s done (%dms) with error: %s", dnsCfg.InfoString(), time.Since(start).Milliseconds(), err.Error()))
 		} else {
 			log.Info(fmt.Sprintf("Changing DNS to %s: done (%dms)", dnsCfg.InfoString(), time.Since(start).Milliseconds()))
 		}
@@ -219,7 +219,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (err error) {
 		// ADD DNS to non-VPN interface (if necessary, when DNS is in local network)
 		for _, ifcAddr := range notVpnInterfacesToUpdate {
 			if err := fSetDNSByLocalIP(ifcAddr.IP, dnsCfg, isIpv6, OperationAdd); err != nil {
-				return fmt.Errorf("failed to set DNS for interface by MAC: %w", err)
+				return fmt.Errorf("failed to set DNS for non-VPN interface: %w", err)
 			}
 		}
 	}

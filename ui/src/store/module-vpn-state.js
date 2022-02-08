@@ -30,6 +30,7 @@ import {
   VpnStateEnum,
   PingQuality,
   PauseStateEnum,
+  DnsEncryption,
 } from "./types";
 
 export default {
@@ -44,7 +45,11 @@ export default {
       ClientIP: "",
       ServerIP: "",
       ExitServerID: "",
-      ManualDNS: "",
+      ManualDNS: {
+        DnsHost: "",      // string // DNS host IP address
+	      Encryption: 0,    // DnsEncryption [	EncryptionNone = 0,	EncryptionDnsOverTls = 1,	EncryptionDnsOverHttps = 2]
+	      DohTemplate: "",  // string // DoH/DoT template URI (for Encryption = DnsOverHttps or Encryption = DnsOverTls)
+      },
       IsCanPause: null //(true/false)
     }*/,
 
@@ -83,7 +88,11 @@ export default {
       //                                        ExtModifiedCmdLine string
     },
 
-    dns: "",
+    dns: {
+      DnsHost: "",
+      Encryption: DnsEncryption.None,
+      DohTemplate: "",
+    },
 
     currentWiFiInfo: null, //{ SSID: "", IsInsecureNetwork: false },
     availableWiFiNetworks: null, // []{SSID: ""}
@@ -532,9 +541,12 @@ function updateServers(state, newServers) {
 }
 
 function isAntitrackerActive(state) {
-  if (isStrNullOrEmpty(state.dns)) return false;
+  let dnsIP = state.dns.DnsHost;
+  if (isStrNullOrEmpty(dnsIP) || state.dns.Encryption != DnsEncryption.None)
+    return false;
+
   let atConfig = state.servers.config.antitracker;
-  switch (state.dns) {
+  switch (dnsIP) {
     case atConfig.default.ip:
     case atConfig.hardcore.ip:
     case atConfig.default["multihop-ip"]:
@@ -546,9 +558,12 @@ function isAntitrackerActive(state) {
 }
 
 function isAntitrackerHardcoreActive(state) {
-  if (isStrNullOrEmpty(state.dns)) return false;
+  let dnsIP = state.dns.DnsHost;
+  if (isStrNullOrEmpty(dnsIP) || state.dns.Encryption != DnsEncryption.None)
+    return false;
+
   let atConfig = state.servers.config.antitracker;
-  switch (state.dns) {
+  switch (dnsIP) {
     case atConfig.hardcore.ip:
     case atConfig.hardcore["multihop-ip"]:
       return true;
