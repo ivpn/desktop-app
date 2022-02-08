@@ -39,10 +39,8 @@ extern "C"
 				(dnsIP == NULL) ? "" : dnsIP,
 				(Operation)operation);
 		}
-		if (isDoH)
-			return DoSetDNSByLocalIP_DoH(interfaceLocalAddr, dnsIP, dohTemplateUrl, (Operation)operation, isIpv6);
-
-		return DoSetDNSByLocalIP(interfaceLocalAddr, dnsIP, (Operation)operation, isIpv6);
+		
+		return DoSetDNSByLocalIPEx(interfaceLocalAddr, dnsIP, isDoH, dohTemplateUrl, (Operation)operation, isIpv6);
 #endif
 		
 	}

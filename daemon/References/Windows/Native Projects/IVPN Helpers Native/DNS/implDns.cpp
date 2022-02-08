@@ -282,7 +282,7 @@ DWORD DoSetDNSByLocalIP(std::string interfaceLocalAddr, std::string dnsIP, Opera
     return 0;
 }
 
-DWORD DoSetDNSByLocalIP_DoH(std::string interfaceLocalAddr, std::string dnsIP, std::string dohTemplate, Operation operation, bool ipv6)
+DWORD DoSetDNSByLocalIPEx(std::string interfaceLocalAddr, std::string dnsIP, bool isDoH, std::string dohTemplate, Operation operation, bool ipv6)
 {
     if (interfaceLocalAddr.empty())
         return -1;
@@ -308,10 +308,10 @@ DWORD DoSetDNSByLocalIP_DoH(std::string interfaceLocalAddr, std::string dnsIP, s
     DNS_SERVER_PROPERTY* newServerProperties = NULL;
     ULONG svrPropertiesCntToDestroy = 0;
 
-    if (operation == Operation::Set)
+    if (isDoH && operation == Operation::Set)
     {
         // First element in newServerProperties is reserved for current (new) DNS settings
-        newCServerProperties = 1;
+        svrPropertiesCntToDestroy = newCServerProperties = 1;
         newServerProperties = new DNS_SERVER_PROPERTY[1]{ 0 };
     }
     else if (operation == Operation::Add || operation == Operation::Remove)
@@ -356,7 +356,7 @@ DWORD DoSetDNSByLocalIP_DoH(std::string interfaceLocalAddr, std::string dnsIP, s
         }
 
         // Get (copy) current ServerProperties (we have to keep the rest user-defined settings)        
-        if (operation == Operation::Add && (currDnsCfg.cServerProperties <= 0 || currDnsCfg.ServerProperties == NULL))
+        if (isDoH && operation == Operation::Add && (currDnsCfg.cServerProperties <= 0 || currDnsCfg.ServerProperties == NULL))
         {
             // First element in newServerProperties is reserved for current (new) DNS settings       
             svrPropertiesCntToDestroy = newCServerProperties = 1;
@@ -365,7 +365,7 @@ DWORD DoSetDNSByLocalIP_DoH(std::string interfaceLocalAddr, std::string dnsIP, s
         else
         {
             // in case of 'Add' - first element in newServerProperties is reserved for current (new) DNS settings            
-            newCServerProperties = (operation == Operation::Add) ? 1 : 0;
+            newCServerProperties = (isDoH && operation == Operation::Add) ? 1 : 0;
             svrPropertiesCntToDestroy = newCServerProperties + currDnsCfg.cServerProperties;
             newServerProperties = new DNS_SERVER_PROPERTY[svrPropertiesCntToDestroy]{ 0 };
 
@@ -406,7 +406,7 @@ DWORD DoSetDNSByLocalIP_DoH(std::string interfaceLocalAddr, std::string dnsIP, s
 
         // Set new DNS serverProperties (dnsIP+dohTemplate) as main config
         // The newServerProperties[0] already created for it
-        if (newServerProperties != NULL && newCServerProperties > 0)
+        if (isDoH && newServerProperties != NULL && newCServerProperties > 0)
         {
             // An array of DNS_SERVER_PROPERTY structures, containing cServerProperties elements. 
             // Only DNS - over - HTTPS properties are supported, with the additional restriction of at most 1 property for each server specified in the NameServer member.
