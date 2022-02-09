@@ -235,7 +235,9 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 						stateInf.ServerIP = o.connectParams.hostIP
 					}
 
-					o.implOnConnected() // process "on connected" event (if necessary)
+					// Process "on connected" event (if necessary)
+					// E.g. set custom DNS configuration on Windows
+					o.implOnConnected() // TODO: check execution status (do we need to disconnect when failed to apply custom DNS?)
 				} else {
 					o.clientIP = nil
 				}

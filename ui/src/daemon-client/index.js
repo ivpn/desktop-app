@@ -322,7 +322,25 @@ async function processResponse(response) {
         }
       }
 
-      store.commit("dnsAbilities", obj.Dns);
+      {
+        // Save DNS abilities
+        store.commit("dnsAbilities", obj.Dns);
+        // If the dns abilities does not fit the current custom dns configuration - reset custom dns configuration
+        let curDnsEncryption = store.state.settings.dnsCustomCfg.Encryption;
+        if (
+          (curDnsEncryption === DnsEncryption.DnsOverTls &&
+            obj.Dns.CanUseDnsOverTls !== true) ||
+          (curDnsEncryption === DnsEncryption.DnsOverHttps &&
+            obj.Dns.CanUseDnsOverHttps !== true)
+        ) {
+          store.commit("settings/dnsIsCustom", false);
+          store.commit("settings/dnsCustomCfg", {
+            DnsHost: "",
+            Encryption: DnsEncryption.None,
+            DohTemplate: "",
+          });
+        }
+      }
 
       break;
 
@@ -1091,11 +1109,7 @@ async function Connect(entryServer, exitServer) {
     }
 
     if (settings.dnsIsCustom) {
-      manualDNS = {
-        DnsHost: settings.dnsCustom,
-        Encryption: DnsEncryption.None,
-        DohTemplate: "",
-      };
+      manualDNS = settings.dnsCustomCfg;
     }
     if (settings.isAntitracker) {
       manualDNS = {
@@ -1495,11 +1509,7 @@ async function SetDNS(antitrackerIsEnabled) {
     DohTemplate: "",
   };
   if (store.state.settings.dnsIsCustom) {
-    Dns = {
-      DnsHost: store.state.settings.dnsCustom,
-      Encryption: DnsEncryption.None,
-      DohTemplate: "",
-    };
+    Dns = store.state.settings.dnsCustomCfg;
   }
 
   if (antitrackerIsEnabled != null) {

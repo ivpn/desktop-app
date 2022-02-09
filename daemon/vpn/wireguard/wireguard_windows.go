@@ -253,17 +253,19 @@ func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
 		return nil
 	}
 
-	wg.internals.manualDNS = dnsCfg
-
-	if running, err := wg.isServiceRunning(); err != nil || running == false {
+	if running, err := wg.isServiceRunning(); err != nil || !running {
+		if err == nil {
+			wg.internals.manualDNS = dnsCfg
+		}
 		return err
 	}
 
-	log.Info("Connection will be restarted due to DNS server IP configuration change...")
-	// request a restart with new connection parameters
-	wg.internals.isRestartRequired = true
+	err := dns.SetManual(dnsCfg, wg.connectParams.clientLocalIP)
+	if err == nil {
+		wg.internals.manualDNS = dnsCfg
+	}
 
-	return nil
+	return err
 }
 
 func (wg *WireGuard) resetManualDNS() error {
@@ -271,15 +273,17 @@ func (wg *WireGuard) resetManualDNS() error {
 		return nil
 	}
 
-	wg.internals.manualDNS = dns.DnsSettings{}
-
-	if running, err := wg.isServiceRunning(); err != nil || running == false {
+	if running, err := wg.isServiceRunning(); err != nil || !running {
+		if err == nil {
+			wg.internals.manualDNS = dns.DnsSettings{}
+		}
 		return err
 	}
 
-	log.Info("Connection will be restarted due to DNS server IP configuration change...")
-	// request a restart with new connection parameters
-	wg.internals.isRestartRequired = true
+	err := dns.SetManual(dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String()}, wg.connectParams.clientLocalIP)
+	if err == nil {
+		wg.internals.manualDNS = dns.DnsSettings{}
+	}
 
 	return nil
 }
@@ -293,16 +297,14 @@ func (wg *WireGuard) getServiceName() string {
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
-
 	manualDNS := wg.internals.manualDNS
 	if !manualDNS.IsEmpty() {
 		if manualDNS.Encryption == dns.EncryptionNone {
 			interfaceCfg = append(interfaceCfg, "DNS = "+manualDNS.Ip().String())
 		} else {
-			// TODO!!!
-			log.Debug("Skipped manual DNS configuration before the build (DoH/DoT must be configured after connection established)")
+			interfaceCfg = append(interfaceCfg, "DNS = "+wg.connectParams.hostLocalIP.String())
+			log.Info("(info) The DoH/DoT custom DNS configuration will be applied after connection established")
 		}
-
 	} else {
 		interfaceCfg = append(interfaceCfg, "DNS = "+wg.connectParams.hostLocalIP.String())
 	}
@@ -381,7 +383,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	isStarted := false
 
 	defer func() {
-		if isStarted == false || isInstalled == false {
+		if !isStarted || !isInstalled {
 			log.Info("Failed to install service. Uninstalling...")
 			err := wg.disconnectInternal()
 			if err != nil {
@@ -433,7 +435,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	}
 
 	// service install timeout
-	if isInstalled == false {
+	if !isInstalled {
 		return fmt.Errorf("service not installed (timeout)")
 	}
 
@@ -454,20 +456,20 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 		}
 	}
 
-	if isStarted == false {
+	if !isStarted {
 		return fmt.Errorf("service not started (timeout)")
 	}
 
-	// WireGuard interface is configured to correct DNS.
-	// But we must to be sure if non-ivpn interfaces are configured to our DNS
-	// (it needed ONLY if DNS IP located in local network)
+	// We must manually re-apply custom DNS configuration for such situations:
+	//	- the DoH/DoT configuration can be applyied only after natwork interface is activeted
+	//	- if non-ivpn interfaces must be configured to custom DNS (it needed ONLY if DNS IP located in local network)
 	// Also, it is needed to inform 'dns' package about last DNS value (used by 'protocol' to ptovide dns status to clients)
 	manualDNS := wg.internals.manualDNS
+	wg.internals.manualDNS = dns.DnsSettings{} // just to ensure that wg.setManualDNS() / wg.resetManualDNS() will not skip applying new changes
 	if !manualDNS.IsEmpty() {
-		dns.SetManual(manualDNS, nil)
+		wg.setManualDNS(manualDNS)
 	} else {
-		// delete manual DNS (if defined)
-		dns.DeleteManual(nil)
+		wg.resetManualDNS()
 	}
 
 	// CONNECTED

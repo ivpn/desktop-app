@@ -8,16 +8,79 @@
         >Use custom DNS server when connected to IVPN</label
       >
     </div>
+
+    <div v-bind:class="{ disabled: dnsIsCustom === false }">
+      <div class="flexRow paramProps">
+        <div class="defColor paramName">IP address:</div>
+
+        <input
+          class="settingsTextInput"
+          placeholder="0.0.0.0"
+          v-model="dnsHost"
+        />
+      </div>
+
+      <div v-if="CanUseDnsOverHttps || CanUseDnsOverTls">
+        <div class="paramProps">
+          <div class="flexRow paramBlock">
+            <div class="defColor paramName">DNS encryption:</div>
+            <div class="settingsRadioBtnEx">
+              <input
+                style="margin-left: 0px"
+                type="radio"
+                id="dnsEncryptionNone"
+                name="dnsEnc"
+                v-model="dnsEncryption"
+                value="None"
+              />
+              <label class="defColor" for="dnsEncryptionNone">None</label>
+            </div>
+            <div class="settingsRadioBtnEx" v-if="CanUseDnsOverHttps">
+              <input
+                type="radio"
+                id="dnsEncryptionHttps"
+                name="dnsEnc"
+                v-model="dnsEncryption"
+                value="DoH"
+              />
+              <label class="defColor" for="dnsEncryptionHttps"
+                >DNS over HTTPS</label
+              >
+            </div>
+            <div class="settingsRadioBtnEx" v-if="CanUseDnsOverTls">
+              <input
+                type="radio"
+                id="dnsEncryptionTls"
+                name="dnsEnc"
+                v-model="dnsEncryption"
+                value="DoT"
+              />
+              <label class="defColor" for="dnsEncryptionTls"
+                >DNS over TLS</label
+              >
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="flexRow paramProps"
+          v-bind:class="{ disabled: dnsIsEncrypted === false }"
+        >
+          <div class="defColor paramName">
+            {{ dnsEncryptionNameLabel }} URI template:
+          </div>
+
+          <input
+            style="width: 100%"
+            class="settingsTextInput"
+            placeholder="https://..."
+            v-model="dnsDohTemplate"
+          />
+        </div>
+      </div>
+    </div>
+
     <div class="paramProps">
-      <div class="defColor">IP address:</div>
-
-      <input
-        class="settingsTextInput"
-        placeholder="0.0.0.0"
-        v-model="dnsCustom"
-        :disabled="dnsIsCustom === false"
-      />
-
       <div class="fwDescription">
         AntiTracker will override the custom DNS when enabled.
       </div>
@@ -26,6 +89,8 @@
 </template>
 
 <script>
+import { DnsEncryption } from "@/store/types";
+
 const sender = window.ipcSender;
 
 export default {
@@ -42,6 +107,17 @@ export default {
   },
   methods: {},
   computed: {
+    CanUseDnsOverTls: {
+      get() {
+        return this.$store.state.dnsAbilities.CanUseDnsOverTls === true;
+      },
+    },
+    CanUseDnsOverHttps: {
+      get() {
+        return this.$store.state.dnsAbilities.CanUseDnsOverHttps === true;
+      },
+    },
+
     dnsIsCustom: {
       get() {
         return this.$store.state.settings.dnsIsCustom;
@@ -51,13 +127,83 @@ export default {
         await sender.SetDNS();
       },
     },
-    dnsCustom: {
+
+    dnsIsEncrypted: {
       get() {
-        return this.$store.state.settings.dnsCustom;
+        return (
+          this.$store.state.settings.dnsCustomCfg.Encryption !==
+          DnsEncryption.None
+        );
+      },
+    },
+
+    dnsEncryptionNameLabel: {
+      get() {
+        if (this.dnsEncryption === DnsEncryption.DnsOverTls) return "DoT";
+        return "DoH";
+      },
+    },
+
+    dnsHost: {
+      get() {
+        return this.$store.state.settings.dnsCustomCfg.DnsHost;
       },
       set(value) {
         this.isDnsValueChanged = true;
-        this.$store.dispatch("settings/dnsCustom", value);
+        let newDnsCfg = Object.assign(
+          {},
+          this.$store.state.settings.dnsCustomCfg
+        );
+        newDnsCfg.DnsHost = value;
+        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+      },
+    },
+
+    dnsEncryption: {
+      get() {
+        switch (this.$store.state.settings.dnsCustomCfg.Encryption) {
+          case DnsEncryption.DnsOverTls:
+            return "DoT";
+          case DnsEncryption.DnsOverHttps:
+            return "DoH";
+          default:
+            return "None";
+        }
+      },
+      set(value) {
+        let enc = DnsEncryption.None;
+        switch (value) {
+          case "DoT":
+            enc = DnsEncryption.DnsOverTls;
+            break;
+          case "DoH":
+            enc = DnsEncryption.DnsOverHttps;
+            break;
+          default:
+            enc = DnsEncryption.None;
+        }
+        this.isDnsValueChanged = true;
+        let newDnsCfg = Object.assign(
+          {},
+          this.$store.state.settings.dnsCustomCfg
+        );
+        newDnsCfg.Encryption = enc;
+        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+      },
+    },
+
+    dnsDohTemplate: {
+      get() {
+        return this.$store.state.settings.dnsCustomCfg.DohTemplate;
+      },
+      set(value) {
+        this.isDnsValueChanged = true;
+        let newDnsCfg = Object.assign(
+          {},
+          this.$store.state.settings.dnsCustomCfg
+        );
+        newDnsCfg.DohTemplate = value;
+        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
       },
     },
   },
@@ -87,6 +233,11 @@ div.param {
   margin-top: 3px;
 }
 
+div.paramName {
+  min-width: 120px;
+  max-width: 120px;
+}
+
 label {
   margin-left: 1px;
   font-weight: 500;
@@ -94,5 +245,15 @@ label {
 
 input:disabled {
   opacity: 0.5;
+}
+
+div.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+div.settingsRadioBtnEx {
+  @extend .settingsRadioBtn;
+  padding-right: 20px;
 }
 </style>
