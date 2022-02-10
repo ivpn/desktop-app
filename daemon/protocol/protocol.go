@@ -356,20 +356,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	sendState := func(reqIdx int, isOnlyIfConnected bool) {
 		vpnState := p._lastVPNState
 		if vpnState.State == vpn.CONNECTED {
-			ipv6 := ""
-			if vpnState.ClientIPv6 != nil {
-				ipv6 = vpnState.ClientIPv6.String()
-			}
-			p.sendResponse(conn, &types.ConnectedResp{
-				TimeSecFrom1970: vpnState.Time,
-				ClientIP:        vpnState.ClientIP.String(),
-				ClientIPv6:      ipv6,
-				ServerIP:        vpnState.ServerIP.String(),
-				VpnType:         vpnState.VpnType,
-				ExitServerID:    vpnState.ExitServerID,
-				ManualDNS:       dns.GetLastManualDNS(),
-				IsCanPause:      vpnState.IsCanPause},
-				reqIdx)
+			p.sendResponse(conn, p.createConnectedResponse(vpnState), reqIdx)
 		} else if !isOnlyIfConnected {
 			if vpnState.State == vpn.DISCONNECTED {
 				p.sendResponse(conn, &types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqIdx)
@@ -989,20 +976,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 					case vpn.CONNECTED:
 						// Do not send "Connected" notification if we are going to establish new connection immediately
 						if cnt, _ := p.vpnConnectReqCounter(); cnt == 1 || p._disconnectRequested {
-							ipv6 := ""
-							if state.ClientIPv6 != nil {
-								ipv6 = state.ClientIPv6.String()
-							}
-							p.notifyClients(&types.ConnectedResp{
-								TimeSecFrom1970: state.Time,
-								ClientIP:        state.ClientIP.String(),
-								ClientIPv6:      ipv6,
-								ServerIP:        state.ServerIP.String(),
-								VpnType:         state.VpnType,
-								ExitServerID:    state.ExitServerID,
-								ManualDNS:       dns.GetLastManualDNS(),
-								IsCanPause:      state.IsCanPause})
-
+							p.notifyClients(p.createConnectedResponse(state))
 						} else {
 							log.Debug("Skip sending 'Connected' notification. New connection request is awaiting ", cnt)
 						}

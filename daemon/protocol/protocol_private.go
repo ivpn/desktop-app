@@ -211,6 +211,24 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 	return &helloResp
 }
 
+func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.ConnectedResp {
+	ipv6 := ""
+	if state.ClientIPv6 != nil {
+		ipv6 = state.ClientIPv6.String()
+	}
+	ret := &types.ConnectedResp{
+		TimeSecFrom1970: state.Time,
+		ClientIP:        state.ClientIP.String(),
+		ClientIPv6:      ipv6,
+		ServerIP:        state.ServerIP.String(),
+		VpnType:         state.VpnType,
+		ExitServerID:    state.ExitServerID,
+		ManualDNS:       dns.GetLastManualDNS(),
+		IsCanPause:      state.IsCanPause}
+
+	return ret
+}
+
 // -------------- processing connection request ---------------
 func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vpn.StateInfo) (err error) {
 	defer func() {

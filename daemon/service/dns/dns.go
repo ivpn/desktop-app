@@ -122,8 +122,19 @@ func EncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
 	return implGetDnsEncryptionAbilities()
 }
 
+// SetDefault set DNS configuration treated as default (non-manual) configuration
+// 'dnsCfg' parameter - DNS configuration
+// 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
+func SetDefault(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
+	ret := implSetManual(dnsCfg, localInterfaceIP)
+	if ret == nil {
+		lastManualDNS = DnsSettings{}
+	}
+	return ret
+}
+
 // SetManual - set manual DNS.
-// 'addr' parameter - DNS IP value
+// 'dnsCfg' parameter - DNS configuration
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func SetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 	ret := implSetManual(dnsCfg, localInterfaceIP)

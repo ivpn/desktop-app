@@ -366,6 +366,10 @@ export default {
         const exitSvr = findServerByExitId(servers, ci.ExitServerID);
         context.commit("settings/serverExit", exitSvr, { root: true });
       }
+
+      // save last DNS state
+      context.commit("dns", ci.ManualDNS);
+      updateDnsSettings(context);
     },
     pauseState(context, val) {
       context.commit("pauseState", val);
@@ -386,11 +390,37 @@ export default {
     dns(context, dns) {
       context.commit("dns", dns);
       // save current state to settings
-      const isAntitracker = isAntitrackerActive(context.state);
-      context.dispatch("settings/isAntitracker", isAntitracker, { root: true });
+      updateDnsSettings(context);
     },
   },
 };
+
+function updateDnsSettings(context) {
+  // save current state to settings
+  const isAntitracker = isAntitrackerActive(context.state);
+  const isAntitrackerHardcore = isAntitrackerHardcoreActive(context.state);
+  context.dispatch("settings/isAntitracker", isAntitracker, { root: true });
+  context.dispatch("settings/isAntitrackerHardcore", isAntitrackerHardcore, {
+    root: true,
+  });
+
+  if (isAntitracker === false) {
+    let currDnsState = context.state.dns;
+    let isCustomDns = true;
+
+    if (currDnsState == null || !currDnsState.DnsHost) {
+      isCustomDns = false;
+      currDnsState = {
+        DnsHost: "",
+        Encryption: DnsEncryption.None,
+        DohTemplate: "",
+      };
+    }
+
+    context.dispatch("settings/dnsCustomCfg", currDnsState, { root: true });
+    context.dispatch("settings/dnsIsCustom", isCustomDns, { root: true });
+  }
+}
 
 function getActiveServers(state, rootState) {
   const vpnType = rootState.settings.vpnType;

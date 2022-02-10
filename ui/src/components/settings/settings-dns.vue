@@ -124,7 +124,6 @@ export default {
       },
       async set(value) {
         this.$store.dispatch("settings/dnsIsCustom", value);
-        await sender.SetDNS();
       },
     },
 

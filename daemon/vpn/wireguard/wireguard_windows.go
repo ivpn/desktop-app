@@ -280,7 +280,7 @@ func (wg *WireGuard) resetManualDNS() error {
 		return err
 	}
 
-	err := dns.SetManual(dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String()}, wg.connectParams.clientLocalIP)
+	err := dns.SetDefault(dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String()}, wg.connectParams.clientLocalIP)
 	if err == nil {
 		wg.internals.manualDNS = dns.DnsSettings{}
 	}
