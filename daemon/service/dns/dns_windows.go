@@ -74,7 +74,7 @@ func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dnsCfg DnsSettings, ipv6 bool, 
 	isDoH := uint32(0)
 	switch dnsCfg.Encryption {
 	case EncryptionDnsOverTls:
-		return fmt.Errorf("DnsOverTls settings not supported in Windows. Please, try to use DnsOverHttps")
+		return fmt.Errorf("DnsOverTls settings not supported by Windows. Please, try to use DnsOverHttps")
 	case EncryptionDnsOverHttps:
 		isDoH = 1
 	default:

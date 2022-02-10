@@ -156,8 +156,9 @@ type DiagnosticsGeneratedResp struct {
 // SetAlternateDNSResp returns status of changing DNS
 type SetAlternateDNSResp struct {
 	CommandBase
-	IsSuccess  bool
-	ChangedDNS dns.DnsSettings
+	IsSuccess    bool
+	ChangedDNS   dns.DnsSettings
+	ErrorMessage string
 }
 
 // ConnectedResp notifying about established connection

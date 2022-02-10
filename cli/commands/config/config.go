@@ -29,13 +29,15 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 )
 
 var _mutex sync.Mutex
 
 // Configuration - local configuration
 type Configuration struct {
-	CustomDNS           string
+	CustomDnsCfg        dns.DnsSettings
 	Antitracker         bool
 	AntitrackerHardcore bool
 }

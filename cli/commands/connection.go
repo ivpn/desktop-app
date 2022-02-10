@@ -507,10 +507,10 @@ func (c *CmdConnect) Run() (retError error) {
 				return flags.BadParameter{}
 			}
 			req.ManualDNS = dns.DnsSettings{DnsHost: dnsIp.String(), Encryption: dns.EncryptionNone}
-		} else if len(cfg.CustomDNS) > 0 {
+		} else if !cfg.CustomDnsCfg.IsEmpty() {
 			// using default DNS configuration
-			printDNSConfigInfo(nil, cfg.CustomDNS).Flush()
-			req.ManualDNS = dns.DnsSettings{DnsHost: cfg.CustomDNS, Encryption: dns.EncryptionNone}
+			printDNSConfigInfo(nil, cfg.CustomDnsCfg).Flush()
+			req.ManualDNS = cfg.CustomDnsCfg
 		}
 	}
 
@@ -523,6 +523,17 @@ func (c *CmdConnect) Run() (retError error) {
 			fmt.Printf("Failed to disconnect: %v\n", err2)
 		}
 		return err
+	}
+
+	if cState, stateResp, stateErr := _proto.GetVPNState(); stateErr == nil && cState == vpn.CONNECTED {
+		if !stateResp.ManualDNS.Equal(req.ManualDNS) {
+			fmt.Printf("Connected but failed to initialize custom DNS!\n")
+			fmt.Printf("Disconnecting...\n")
+			if err2 := _proto.DisconnectVPN(); err2 != nil {
+				fmt.Printf("Failed to disconnect: %v\n", err2)
+			}
+			return fmt.Errorf("failed to initialize custom DNS!")
+		}
 	}
 
 	// save last connection parameters

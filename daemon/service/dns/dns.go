@@ -25,6 +25,7 @@ package dns
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 )
@@ -72,7 +73,7 @@ func (d DnsSettings) Ip() net.IP {
 }
 
 func (d DnsSettings) IsEmpty() bool {
-	if d.DnsHost == "" {
+	if strings.TrimSpace(d.DnsHost) == "" {
 		return true
 	}
 	ip := d.Ip()
@@ -86,15 +87,18 @@ func (d DnsSettings) InfoString() string {
 	if d.IsEmpty() {
 		return "<none>"
 	}
+	host := strings.TrimSpace(d.DnsHost)
+	template := strings.TrimSpace(d.DohTemplate)
+
 	switch d.Encryption {
 	case EncryptionDnsOverTls:
-		return d.DnsHost + " (DoT " + d.DohTemplate + ")"
+		return host + " (DoT " + template + ")"
 	case EncryptionDnsOverHttps:
-		return d.DnsHost + " (DoH " + d.DohTemplate + ")"
+		return host + " (DoH " + template + ")"
 	case EncryptionNone:
-		return d.DnsHost
+		return host
 	default:
-		return d.DnsHost + " (UNKNOWN ENCRYPTION)"
+		return host + " (UNKNOWN ENCRYPTION)"
 	}
 }
 

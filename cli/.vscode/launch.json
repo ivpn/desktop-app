@@ -14,7 +14,7 @@
             //"args": [],
             //"args": ["-h"],
             //"args": ["splittun", "-execute", "echo", "this is a test"],
-            "args": ["splittun", "-appadd", "ping", "1.1.1.1"],
+            //"args": ["splittun", "-appadd", "ping", "1.1.1.1"],
             //"args": ["splittun", "-execute", "ping"],
             //"args": ["splittun", "-appadd", "firefox"],
             //"args": ["exclude", "firefox"],
@@ -32,6 +32,8 @@
             //"args": ["connect","-o", "-dns", "1.1.1.1", "-antitracker_hard", "-f", "sk.gw.ivpn.net"],
             //"args": ["state"],
             //"args": ["connect", "-s", "rs.gw.ivpn.net"],
+            //"args": ["dns", "-doh", "https://cloudflare-dns.com/dns-query", "1.1.1.1"],
+            "args": ["dns"],
             "buildFlags": "-tags debug"
         }
     ]

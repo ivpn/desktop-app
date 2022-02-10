@@ -699,7 +699,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err != nil {
 			log.ErrorTrace(err)
 			// send the response to the requestor
-			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false}, req.Idx)
+			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
 		} else {
 			// send the response to the requestor
 			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns}, req.Idx)
