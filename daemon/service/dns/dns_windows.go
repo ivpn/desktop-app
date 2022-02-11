@@ -281,6 +281,10 @@ func implDeleteManual(localInterfaceIP net.IP) (retErr error) {
 	return retErr
 }
 
+func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
+	return []DnsSettings{}, nil
+}
+
 // getInterfacesIPsWhichContainsIP - get IP addresses of local network interfaces to which belongs an IP address
 // (interface which is in same network as 'addr')
 // 		addr - IP address from local network (which can be accessed by interface)

@@ -161,6 +161,12 @@ type SetAlternateDNSResp struct {
 	ErrorMessage string
 }
 
+// DnsPredefinedConfigsResp list of predefined DoH/DoT configurations (if exists)
+type DnsPredefinedConfigsResp struct {
+	CommandBase
+	DnsConfigs []dns.DnsSettings
+}
+
 // ConnectedResp notifying about established connection
 type ConnectedResp struct {
 	CommandBase

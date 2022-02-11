@@ -159,3 +159,7 @@ func GetLastManualDNS() DnsSettings {
 	// TODO: get real DNS configuration of the OS
 	return lastManualDNS
 }
+
+func GetPredefinedDnsConfigurations() ([]DnsSettings, error) {
+	return implGetPredefinedDnsConfigurations()
+}

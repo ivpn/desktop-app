@@ -86,6 +86,8 @@ const daemonRequests = Object.freeze({
   GetAppIcon: "GetAppIcon",
 
   SetAlternateDns: "SetAlternateDns",
+  GetDnsPredefinedConfigs: "GetDnsPredefinedConfigs",
+
   WireGuardGenerateNewKeys: "WireGuardGenerateNewKeys",
   SetPreference: "SetPreference",
   WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval",
@@ -108,6 +110,7 @@ const daemonResponses = Object.freeze({
   ServerListResp: "ServerListResp",
   PingServersResp: "PingServersResp",
   SetAlternateDNSResp: "SetAlternateDNSResp",
+  DnsPredefinedConfigsResp: "DnsPredefinedConfigsResp",
   KillSwitchStatusResp: "KillSwitchStatusResp",
   AccountStatusResp: "AccountStatusResp",
 
@@ -323,6 +326,12 @@ async function processResponse(response) {
       }
 
       {
+        // TODO: JUST FOR TEST! REMOVE NECT LINES!!!
+        obj.Dns = {
+          CanUseDnsOverHttps: true,
+          CanUseDnsOverTls: true,
+        };
+
         // Save DNS abilities
         store.commit("dnsAbilities", obj.Dns);
         // If the dns abilities does not fit the current custom dns configuration - reset custom dns configuration
@@ -395,11 +404,20 @@ async function processResponse(response) {
       // update ping time info for selected servers
       store.dispatch("settings/notifySelectedServersPropsUpdated");
       break;
+
     case daemonResponses.SetAlternateDNSResp:
       if (obj.IsSuccess == null || obj.IsSuccess !== true) break;
       if (obj.ChangedDNS == null) break;
       store.dispatch(`vpnState/dns`, obj.ChangedDNS);
       break;
+
+    case daemonResponses.DnsPredefinedConfigsResp:
+      // NOTE: currently this code is not in use
+      // Please, refer to 'RequestDnsPredefinedConfigs()' for details
+      if (obj.DnsConfigs)
+        store.commit(`dnsPredefinedConfigurations`, obj.DnsConfigs);
+      break;
+
     case daemonResponses.KillSwitchStatusResp:
       store.commit(`vpnState/firewallState`, obj);
 
@@ -1537,6 +1555,16 @@ async function SetDNS(antitrackerIsEnabled) {
   });
 }
 
+import { GetSystemDohConfigurations } from "@/helpers/main_dns";
+async function RequestDnsPredefinedConfigs() {
+  //await sendRecv({
+  //  Command: daemonRequests.GetDnsPredefinedConfigs,
+  //});
+  let retCfgs = await GetSystemDohConfigurations();
+  if (retCfgs) store.commit(`dnsPredefinedConfigurations`, retCfgs);
+  else store.commit(`dnsPredefinedConfigurations`, []);
+}
+
 async function SetLogging() {
   const enable = store.state.settings.logging;
   const Key = "enable_logging";
@@ -1613,6 +1641,8 @@ export default {
   GetAppIcon,
 
   SetDNS,
+  RequestDnsPredefinedConfigs,
+
   SetLogging,
   SetObfsproxy,
   WgRegenerateKeys,

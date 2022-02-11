@@ -83,6 +83,10 @@ func implDeleteManual(localInterfaceIP net.IP) error {
 	return nil
 }
 
+func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
+	return []DnsSettings{}, nil
+}
+
 // IsPrimaryInterfaceFound (macOS specific implementation) returns 'true' when networking is available (primary interface is available)
 // When no networking available (WiFi off ?) - returns 'false'
 // <this method in use by macOS:WireGuard implementation>

@@ -177,6 +177,10 @@ ipcMain.handle(
   }
 );
 
+ipcMain.handle("renderer-request-RequestDnsPredefinedConfigs", async () => {
+  return await client.RequestDnsPredefinedConfigs();
+});
+
 ipcMain.handle("renderer-request-geolookup", async () => {
   return await client.GeoLookup();
 });

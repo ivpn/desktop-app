@@ -71,6 +71,8 @@ export default new Vuex.Store({
       CanUseDnsOverHttps: false,
     },
 
+    dnsPredefinedConfigurations: null, //[]  array elements: { DnsHost: "", Encryption: DnsEncryption.None, DohTemplate: "", }
+
     // true when we are requesting geo-lookup info on current moment
     isRequestingLocation: false,
     // Current location (be careful, in 'connected' state this object will contain info about 'VPN location')
@@ -223,6 +225,10 @@ export default new Vuex.Store({
 
       state.dnsAbilities = dnsAbilities;
     },
+    dnsPredefinedConfigurations(state, dnsPredefinedConfigurations) {
+      state.dnsPredefinedConfigurations = dnsPredefinedConfigurations;
+    },
+
     configParams(state, value) {
       state.configParams = value;
     },

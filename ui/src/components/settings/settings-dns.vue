@@ -76,6 +76,33 @@
             placeholder="https://..."
             v-model="dnsDohTemplate"
           />
+          <!-- Predefined DoH/DoT configs -->
+          <div v-if="isHasPredefinedDohConfigs">
+            <div>
+              <button
+                style="position: fixed"
+                class="noBordersBtn"
+                title="Predefined DoH configurations"
+              >
+                <img style="width: 18px" src="@/assets/clipboard.svg" />
+              </button>
+              <!-- Popup -->
+              <select
+                title="Predefined DoH configurations"
+                @change="onPredefinedDohConfigSelected()"
+                v-model="thePredefinedDohConfigSelected"
+                style="cursor: pointer; width: 24px; height: 22px; opacity: 0"
+              >
+                <option
+                  v-for="m in predefinedDohConfigs"
+                  v-bind:key="m.DohTemplate"
+                  v-bind:value="m"
+                >
+                  {{ m.DnsHost }} ({{ m.DohTemplate }})
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -103,9 +130,41 @@ export default {
   data: function () {
     return {
       isDnsValueChanged: false,
+      thePredefinedDohConfigSelected: null,
     };
   },
-  methods: {},
+  mounted() {
+    this.requestPredefinedDohConfigs();
+  },
+  methods: {
+    onPredefinedDohConfigSelected() {
+      const newVal = this.thePredefinedDohConfigSelected;
+      if (newVal && newVal.DnsHost && newVal.DohTemplate) {
+        this.isDnsValueChanged = true;
+        let newDnsCfg = Object.assign(
+          {},
+          this.$store.state.settings.dnsCustomCfg
+        );
+        newDnsCfg.DnsHost = newVal.DnsHost;
+        newDnsCfg.DohTemplate = newVal.DohTemplate;
+        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+      }
+    },
+    requestPredefinedDohConfigs() {
+      if (!this.dnsIsEncrypted) return;
+      let cfgs = this.$store.state.dnsPredefinedConfigurations;
+      if (cfgs) return null; // configurations already initialized - no sense to request them again
+      setTimeout(() => {
+        sender.RequestDnsPredefinedConfigs();
+      }, 0);
+    },
+  },
+  watch: {
+    dnsIsEncrypted() {
+      this.requestPredefinedDohConfigs();
+    },
+  },
+
   computed: {
     CanUseDnsOverTls: {
       get() {
@@ -203,6 +262,28 @@ export default {
         );
         newDnsCfg.DohTemplate = value;
         this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+      },
+    },
+
+    isHasPredefinedDohConfigs: {
+      get() {
+        return this.predefinedDohConfigs && this.predefinedDohConfigs.length > 0
+          ? true
+          : false;
+      },
+    },
+    predefinedDohConfigs: {
+      get() {
+        if (!this.dnsIsEncrypted) return null;
+        let cfgs = this.$store.state.dnsPredefinedConfigurations;
+        if (!cfgs) return null;
+
+        const expectedEnc = this.$store.state.settings.dnsCustomCfg.Encryption;
+        let filtered = cfgs.filter(
+          (cfg) =>
+            cfg.Encryption === expectedEnc && cfg.DnsHost && cfg.DohTemplate
+        );
+        return filtered;
       },
     },
   },

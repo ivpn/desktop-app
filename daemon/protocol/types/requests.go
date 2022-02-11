@@ -122,6 +122,11 @@ type SetAlternateDns struct {
 	Dns dns.DnsSettings
 }
 
+// GetDnsPredefinedConfigs request to get list of predefined DoH/DoT configurations (if exists)
+type GetDnsPredefinedConfigs struct {
+	CommandBase
+}
+
 // Connect request to establish new VPN connection
 type Connect struct {
 	CommandBase

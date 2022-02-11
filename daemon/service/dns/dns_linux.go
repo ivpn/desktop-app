@@ -229,6 +229,10 @@ func implDeleteManual(localInterfaceIP net.IP) error {
 	return restoreBackup(resolvBackupFile, isDeleteBackup)
 }
 
+func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
+	return []DnsSettings{}, nil
+}
+
 func stopDNSChangeMonitoring() {
 	// stop file change monitoring
 	select {

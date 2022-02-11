@@ -693,6 +693,15 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			// all clients will be notified in case of successfull change by OnDNSChanged() handler
 		}
 
+	case "GetDnsPredefinedConfigs":
+		cfgs, err := dns.GetPredefinedDnsConfigurations()
+		if err != nil {
+			log.ErrorTrace(err)
+			p.sendErrorResponse(conn, reqCmd, err)
+		} else {
+			p.sendResponse(conn, &types.DnsPredefinedConfigsResp{DnsConfigs: cfgs}, reqCmd.Idx)
+		}
+
 	case "PauseConnection":
 		if err := p._service.Pause(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
