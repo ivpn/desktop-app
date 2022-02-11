@@ -406,18 +406,12 @@ function updateDnsSettings(context) {
 
   if (isAntitracker === false) {
     let currDnsState = context.state.dns;
+
     let isCustomDns = true;
+    if (currDnsState == null || !currDnsState.DnsHost) isCustomDns = false;
+    else
+      context.dispatch("settings/dnsCustomCfg", currDnsState, { root: true });
 
-    if (currDnsState == null || !currDnsState.DnsHost) {
-      isCustomDns = false;
-      currDnsState = {
-        DnsHost: "",
-        Encryption: DnsEncryption.None,
-        DohTemplate: "",
-      };
-    }
-
-    context.dispatch("settings/dnsCustomCfg", currDnsState, { root: true });
     context.dispatch("settings/dnsIsCustom", isCustomDns, { root: true });
   }
 }

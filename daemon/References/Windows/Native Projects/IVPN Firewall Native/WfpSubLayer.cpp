@@ -28,7 +28,7 @@ extern "C" {
 
 	EXPORT FWPM_SUBLAYER0 * _cdecl FWPM_SUBLAYER0_Create(GUID subLayerKey, UINT32 weight)
 	{
-		FWPM_SUBLAYER0 *subLayer = new FWPM_SUBLAYER0();
+		FWPM_SUBLAYER0* subLayer = new FWPM_SUBLAYER0{0};
 		subLayer->subLayerKey = subLayerKey;
 		if (weight > 0 && weight<=0xFFFF)
 			subLayer->weight = (UINT16) weight;

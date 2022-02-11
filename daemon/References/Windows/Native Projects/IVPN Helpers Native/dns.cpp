@@ -24,9 +24,7 @@ extern "C"
 // Otherwise (when MIN_WIN_VER_WIN10 defined) it will not be possible to load current library under Windows8 (with error: 'specific procedure could not be found' )
 // TODO: if we will decide to not support an old windows version - just remove checks for MIN_WIN_VER_WIN10 and leave only sources related to WIN10
 #ifdef MIN_WIN_VER_WIN10
-		if (isDoH)
-			return DoSetDNSByLocalIP_DoH(interfaceLocalAddr, dnsIP, dohTemplateUrl, (Operation)operation, isIpv6);
-		return DoSetDNSByLocalIP(interfaceLocalAddr, dnsIP, (Operation)operation);
+		return DoSetDNSByLocalIPEx(interfaceLocalAddr, dnsIP, isDoH, dohTemplateUrl, (Operation)operation, isIpv6);		
 #else
 		if (InitializeWin10DnsApi() != 0)
 		{

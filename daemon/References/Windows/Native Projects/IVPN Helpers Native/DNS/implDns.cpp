@@ -178,7 +178,11 @@ DWORD getInterfaceGUIDByLocalIP(std::string interfaceLocalAddr, GUID& ret)
                 if (uaddr == interfaceLocalAddr)
                 {
                     if (ConvertInterfaceLuidToGuid(&pCurrAddresses->Luid, &ret) != NO_ERROR)
+                    {
+                        FREE(pAddresses);
                         return -3;
+                    }
+                    FREE(pAddresses);
                     return 0;
                 }
 
@@ -188,7 +192,7 @@ DWORD getInterfaceGUIDByLocalIP(std::string interfaceLocalAddr, GUID& ret)
 
         pCurrAddresses = pCurrAddresses->Next;
     }
-
+    FREE(pAddresses);
     return -4;
 }
 
@@ -284,6 +288,9 @@ DWORD DoSetDNSByLocalIP(std::string interfaceLocalAddr, std::string dnsIP, Opera
 
 DWORD DoSetDNSByLocalIPEx(std::string interfaceLocalAddr, std::string dnsIP, bool isDoH, std::string dohTemplate, Operation operation, bool ipv6)
 {
+    if (isDoH && !IsDnsOverHttpsAccessible())
+        return ERROR_INVALID_PARAMETER;
+
     if (interfaceLocalAddr.empty())
         return -1;
     if (dnsIP.empty() && (operation == Operation::Add || operation == Operation::Remove))
@@ -320,7 +327,11 @@ DWORD DoSetDNSByLocalIPEx(std::string interfaceLocalAddr, std::string dnsIP, boo
 
         // Get current DNS settings
         DNS_INTERFACE_SETTINGS3 currDnsCfg{ 0 };
-        currDnsCfg.Version = DNS_INTERFACE_SETTINGS_VERSION3;
+        if (IsDnsOverHttpsAccessible())
+            currDnsCfg.Version = DNS_INTERFACE_SETTINGS_VERSION3;
+        else
+            currDnsCfg.Version = DNS_INTERFACE_SETTINGS_VERSION1;
+
         DWORD err = callGetInterfaceDnsSettings(ifcGUID, (DNS_INTERFACE_SETTINGS*)&currDnsCfg);
         if (err != NO_ERROR)
             return err;
@@ -441,9 +452,16 @@ DWORD DoSetDNSByLocalIPEx(std::string interfaceLocalAddr, std::string dnsIP, boo
     newDnsSettingsV3.ServerProperties = newServerProperties;
     newDnsSettingsV3.cServerProperties = newCServerProperties;
     newDnsSettingsV3.NameServer = const_cast<PWSTR>(newNameServer.c_str());
-
-    newDnsSettingsV3.Version = DNS_INTERFACE_SETTINGS_VERSION3;
-    newDnsSettingsV3.Flags = DNS_SETTING_NAMESERVER | DNS_SETTING_DOH; // [NameServer , cServerProperties , ServerProperties ]
+    if (IsDnsOverHttpsAccessible())
+    {
+        newDnsSettingsV3.Version = DNS_INTERFACE_SETTINGS_VERSION3;
+        newDnsSettingsV3.Flags = DNS_SETTING_NAMESERVER | DNS_SETTING_DOH; // [NameServer , cServerProperties , ServerProperties ]
+    } 
+    else 
+    {
+        newDnsSettingsV3.Version = DNS_INTERFACE_SETTINGS_VERSION1;
+        newDnsSettingsV3.Flags = DNS_SETTING_NAMESERVER; // [NameServer]
+    }
     if (ipv6)
         newDnsSettingsV3.Flags |= DNS_SETTING_IPV6;
 

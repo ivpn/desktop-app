@@ -32,7 +32,7 @@ extern "C" {
 
 	EXPORT FWPM_PROVIDER0 * _cdecl FWPM_PROVIDER0_Create(GUID providerKey)
 	{
-		FWPM_PROVIDER0 *provider = new FWPM_PROVIDER0();
+		FWPM_PROVIDER0* provider = new FWPM_PROVIDER0{0};
 		provider->providerKey = providerKey;
 		return provider;
 	}

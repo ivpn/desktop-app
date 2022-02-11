@@ -7,7 +7,7 @@ extern "C" {
 		GUID layerKey, GUID subLayerKey, 
 		UINT8 weight, UINT32 flags)
 	{
-		FWPM_FILTER0 *filter = new FWPM_FILTER0();
+		FWPM_FILTER0* filter = new FWPM_FILTER0{0};
 
 		filter->filterKey = filterKey;		
 		filter->layerKey = layerKey;
@@ -41,13 +41,26 @@ extern "C" {
 			switch (filter->filterCondition[i].conditionValue.type)
 			{
 			case FWP_V4_ADDR_MASK:
-				delete filter->filterCondition[i].conditionValue.v4AddrMask;
+				if (filter->filterCondition[i].conditionValue.v4AddrMask!=0)
+					delete filter->filterCondition[i].conditionValue.v4AddrMask;
 				break;
+
+			case FWP_V6_ADDR_MASK:
+				if (filter->filterCondition[i].conditionValue.v6AddrMask != 0)
+					delete filter->filterCondition[i].conditionValue.v6AddrMask;
+				break;
+
 			case FWP_BYTE_BLOB_TYPE:
-				delete[] filter->filterCondition[i].conditionValue.byteBlob->data;
-				delete filter->filterCondition[i].conditionValue.byteBlob;
+				if (filter->filterCondition[i].conditionValue.byteBlob != 0)
+				{
+					FwpmFreeMemory0((void**)&(filter->filterCondition[i].conditionValue.byteBlob));					
+				}
 				break;
-			}
+			default:
+				// unknown filter type (bug?)
+				filter = filter;// just for breakpoint
+				break;
+			}			
 		}
 
 		if (filter->numFilterConditions != 0)
@@ -79,8 +92,8 @@ extern "C" {
 		if (descriptionLen > 256)
 			return -1;
 
-		filter->displayData.name = new wchar_t[nameLen + 1];
-		filter->displayData.description = new wchar_t[descriptionLen + 1];
+		filter->displayData.name = new wchar_t[nameLen + 1]{0};
+		filter->displayData.description = new wchar_t[descriptionLen + 1]{0};
 
 		wcscpy_s(filter->displayData.name, nameLen + 1, name);
 		wcscpy_s(filter->displayData.description, descriptionLen + 1, description);
@@ -97,8 +110,8 @@ extern "C" {
 			return -1;
 
 		filter->numFilterConditions = numFilterConditions;
-		filter->filterCondition = new FWPM_FILTER_CONDITION0[numFilterConditions];
-
+		filter->filterCondition = new FWPM_FILTER_CONDITION0[numFilterConditions]{0};
+		
 		return ERROR_SUCCESS;
 	}
 
@@ -147,7 +160,7 @@ extern "C" {
 			return checkFilterResult;
 
 		filter->filterCondition[conditionIndex].conditionValue.type = FWP_V4_ADDR_MASK;
-		filter->filterCondition[conditionIndex].conditionValue.v4AddrMask = new FWP_V4_ADDR_AND_MASK;
+		filter->filterCondition[conditionIndex].conditionValue.v4AddrMask = new FWP_V4_ADDR_AND_MASK{0};
 		filter->filterCondition[conditionIndex].conditionValue.v4AddrMask->addr = address;
 		filter->filterCondition[conditionIndex].conditionValue.v4AddrMask->mask = mask;
 
@@ -162,7 +175,7 @@ extern "C" {
 			return checkFilterResult;
 
 		filter->filterCondition[conditionIndex].conditionValue.type = FWP_V6_ADDR_MASK;
-		filter->filterCondition[conditionIndex].conditionValue.v6AddrMask = new FWP_V6_ADDR_AND_MASK;
+		filter->filterCondition[conditionIndex].conditionValue.v6AddrMask = new FWP_V6_ADDR_AND_MASK{0};
 		filter->filterCondition[conditionIndex].conditionValue.v6AddrMask->prefixLength = prefixLength;
 
 		for (int i = 0; i < FWP_V6_ADDR_SIZE; i++)
@@ -192,12 +205,15 @@ extern "C" {
 			return checkFilterResult;
 
 		FWP_BYTE_BLOB * blob;		
+		// NOTE! The caller must free the returned object by a call to FwpmFreeMemory0.
+		// We are doing that in FWPM_FILTER_Delete()
 		DWORD result = FwpmGetAppIdFromFileName0(blobString, &blob);
-		if (result != 0)
-			result;
+		if (result != ERROR_SUCCESS)
+			return result;
 			
 		filter->filterCondition[conditionIndex].conditionValue.type = FWP_BYTE_BLOB_TYPE;
 		filter->filterCondition[conditionIndex].conditionValue.byteBlob = blob;
+		
 
 		return ERROR_SUCCESS;
 	}
