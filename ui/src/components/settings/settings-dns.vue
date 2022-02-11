@@ -15,6 +15,7 @@
 
         <input
           class="settingsTextInput"
+          v-bind:class="{ badData: isIPError === true }"
           placeholder="0.0.0.0"
           v-model="dnsHost"
         />
@@ -73,19 +74,17 @@
           <input
             style="width: 100%"
             class="settingsTextInput"
+            v-bind:class="{ badData: isTemplateURIError === true }"
             placeholder="https://..."
             v-model="dnsDohTemplate"
           />
           <!-- Predefined DoH/DoT configs -->
           <div v-if="isHasPredefinedDohConfigs">
             <div>
-              <button
-                style="position: fixed"
-                class="noBordersBtn"
-                title="Predefined DoH configurations"
-              >
-                <img style="width: 18px" src="@/assets/clipboard.svg" />
-              </button>
+              <img
+                style="position: fixed; width: 18px; margin-left: 4px"
+                src="@/assets/clipboard.svg"
+              />
               <!-- Popup -->
               <select
                 title="Predefined DoH configurations"
@@ -95,7 +94,7 @@
               >
                 <option
                   v-for="m in predefinedDohConfigs"
-                  v-bind:key="m.DohTemplate"
+                  v-bind:key="m.DohTemplate + m.DnsHost"
                   v-bind:value="m"
                 >
                   {{ m.DnsHost }} ({{ m.DohTemplate }})
@@ -123,7 +122,12 @@ const sender = window.ipcSender;
 export default {
   async beforeDestroy() {
     // when component closing ->  update changed DNS (if necessary)
-    if (this.isDnsValueChanged) await sender.SetDNS();
+    if (
+      this.isDnsValueChanged &&
+      (!this.dnsIsCustom || (!this.isTemplateURIError && !this.isIPError))
+    )
+      await sender.SetDNS();
+
     this.isDnsValueChanged = false;
   },
 
@@ -151,9 +155,8 @@ export default {
       }
     },
     requestPredefinedDohConfigs() {
-      if (!this.dnsIsEncrypted) return;
-      let cfgs = this.$store.state.dnsPredefinedConfigurations;
-      if (cfgs) return null; // configurations already initialized - no sense to request them again
+      if (!this.CanUseDnsOverHttps && !this.CanUseDnsOverTls) return;
+      if (this.$store.state.dnsPredefinedConfigurations) return; // configurations already initialized - no sense to request them again
       setTimeout(() => {
         sender.RequestDnsPredefinedConfigs();
       }, 0);
@@ -182,6 +185,7 @@ export default {
         return this.$store.state.settings.dnsIsCustom;
       },
       async set(value) {
+        this.isDnsValueChanged = true;
         this.$store.dispatch("settings/dnsIsCustom", value);
       },
     },
@@ -267,6 +271,15 @@ export default {
 
     isHasPredefinedDohConfigs: {
       get() {
+        if (!this.CanUseDnsOverHttps && !this.CanUseDnsOverTls) return false;
+
+        // Next group of check is more for 'nice UI'
+        // We show "paste" image even when selected not-encrypted DNS
+        let cfgs = this.$store.state.dnsPredefinedConfigurations;
+        if (!cfgs) return false;
+        if (!this.dnsIsEncrypted && cfgs.length > 0) return true;
+
+        // check if there are any predefined configuration available (for current encryption)
         return this.predefinedDohConfigs && this.predefinedDohConfigs.length > 0
           ? true
           : false;
@@ -285,6 +298,21 @@ export default {
         );
         return filtered;
       },
+    },
+
+    isTemplateURIError: function () {
+      if (this.dnsIsEncrypted !== true) return false;
+      try {
+        new URL(this.dnsDohTemplate);
+      } catch (_) {
+        return true;
+      }
+      return !this.dnsDohTemplate.toLowerCase().startsWith("https://");
+    },
+    isIPError: function () {
+      var expression =
+        /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/;
+      return !expression.test(this.dnsHost);
     },
   },
 };
@@ -321,6 +349,10 @@ div.paramName {
 label {
   margin-left: 1px;
   font-weight: 500;
+}
+
+input.badData {
+  background: #ffdddd;
 }
 
 input:disabled {

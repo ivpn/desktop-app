@@ -1,5 +1,6 @@
 import { DnsEncryption } from "@/store/types";
 import { Platform, PlatformEnum } from "@/platform/platform";
+const log = require("electron-log");
 
 async function windowsGetSystemDohConfigurations() {
   var output = "";
@@ -54,7 +55,12 @@ async function windowsGetSystemDohConfigurations() {
 }
 
 export async function GetSystemDohConfigurations() {
-  if (Platform() === PlatformEnum.Windows)
-    return windowsGetSystemDohConfigurations();
-  return [];
+  let ret = [];
+
+  if (Platform() === PlatformEnum.Windows) {
+    log.debug(`windowsGetSystemDohConfigurations (enter)`);
+    ret = await windowsGetSystemDohConfigurations();
+    log.debug(`windowsGetSystemDohConfigurations (exit)`);
+  }
+  return ret;
 }

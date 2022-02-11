@@ -326,12 +326,6 @@ async function processResponse(response) {
       }
 
       {
-        // TODO: JUST FOR TEST! REMOVE NECT LINES!!!
-        obj.Dns = {
-          CanUseDnsOverHttps: true,
-          CanUseDnsOverTls: true,
-        };
-
         // Save DNS abilities
         store.commit("dnsAbilities", obj.Dns);
         // If the dns abilities does not fit the current custom dns configuration - reset custom dns configuration
