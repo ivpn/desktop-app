@@ -126,7 +126,7 @@ func EncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
 // 'dnsCfg' parameter - DNS configuration
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func SetDefault(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
-	ret := implSetManual(dnsCfg, localInterfaceIP)
+	ret := SetManual(dnsCfg, localInterfaceIP)
 	if ret == nil {
 		lastManualDNS = DnsSettings{}
 	}

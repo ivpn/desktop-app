@@ -331,6 +331,15 @@ func (p *Protocol) processClient(conn net.Conn) {
 	}
 }
 
+// normalizeField - wrapper around strings.Fields(). Returns only first field or empty string.
+func normalizeField(s string) string {
+	fields := strings.Fields(s)
+	if len(fields) <= 0 {
+		return ""
+	}
+	return fields[0]
+}
+
 func (p *Protocol) processRequest(conn net.Conn, message string) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -667,6 +676,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+		req.Dns.DnsHost = normalizeField(req.Dns.DnsHost)
+		req.Dns.DohTemplate = normalizeField(req.Dns.DohTemplate)
 
 		var err error
 		if req.Dns.IsEmpty() {

@@ -170,8 +170,12 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 	return fIsCanUseDnsOverHttps(), false, err
 }
 
-func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (err error) {
-	defer catchPanic(&err)
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+	defer catchPanic(&retErr)
+
+	if isIPv6, _ := dnsCfg.IsIPv6(); isIPv6 {
+		return fmt.Errorf("IPv6 DNS is not supported")
+	}
 
 	if dnsCfg.Equal(_lastDNS) {
 		return nil
@@ -209,7 +213,13 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (err error) {
 	}()
 
 	if localInterfaceIP != nil {
-		// SET DNS to VPN interface
+		// INFO: support of IPv6 DNS disabled in current implementation
+		// Reset DNS configuration for the protocol which is not in use
+		// if e := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, !isIpv6, OperationSet); err != nil {
+		//	log.Warning(fmt.Errorf("failed to reset DNS (IPv6=%v) for local interface: %w", !isIpv6, e))
+		// }
+
+		// SET DNS to VPN interface (for appropriate IPv4\IPv6 protocol)
 		if err := fSetDNSByLocalIP(localInterfaceIP, dnsCfg, isIpv6, OperationSet); err != nil {
 			return fmt.Errorf("failed to set DNS for local interface: %w", err)
 		}
@@ -227,7 +237,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (err error) {
 	// save last changed DNS address
 	_lastDNS = dnsCfg
 
-	return nil
+	return retErr
 }
 
 func implDeleteManual(localInterfaceIP net.IP) (retErr error) {
@@ -257,13 +267,15 @@ func implDeleteManual(localInterfaceIP net.IP) (retErr error) {
 
 	if localInterfaceIP != nil {
 		// RESET DNS for VPN interface
-		if err := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, false, OperationSet); err != nil {
-			retErr = fmt.Errorf("failed to reset DNS for local interface: %w", err)
-		}
-		if isIpv6 {
-			if err := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, true, OperationSet); err != nil {
-				log.Error(fmt.Errorf("failed to reset DNS (IPv6) for local interface: %w", err))
-			}
+
+		// INFO: support of IPv6 DNS disabled in current implementation
+		// (try to erase the DNS for both protocols (Ipv4 and IPv6))
+		// if e := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, !isIpv6, OperationSet); err != nil {
+		//	log.Warning(fmt.Errorf("failed to reset DNS (IPv6=%v) for local interface: %w", !isIpv6, e))
+		// }
+
+		if e := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, isIpv6, OperationSet); err != nil {
+			retErr = fmt.Errorf("failed to reset DNS (IPv6=%v) for local interface: %w", isIpv6, e)
 		}
 	}
 
