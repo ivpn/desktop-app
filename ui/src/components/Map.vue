@@ -1076,7 +1076,7 @@ export default {
       let textWidth = 0;
       let textHeight = 0;
       if (doNotShowName == null || doNotShowName == false) {
-        this.hiddenTestTextMeter.innerHTML = location.city;
+        this.hiddenTestTextMeter.innerText = location.city;
         textWidth = this.hiddenTestTextMeter.clientWidth;
         textHeight = this.hiddenTestTextMeter.clientHeight;
       }
