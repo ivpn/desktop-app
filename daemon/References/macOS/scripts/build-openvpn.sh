@@ -76,7 +76,7 @@ echo "************************************************"
 echo "******** Downloading LZO sources..."
 echo "************************************************"
 cd ${BUILD_DIR}
-curl http://www.oberhumer.com/opensource/lzo/download/lzo-2.08.tar.gz | tar zx
+curl https://www.oberhumer.com/opensource/lzo/download/lzo-2.08.tar.gz | tar zx
 cd lzo-2.08
 
 echo "************************************************"
