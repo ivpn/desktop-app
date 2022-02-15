@@ -23,16 +23,16 @@
 package openvpn
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
@@ -45,7 +45,6 @@ var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("ovpn")
-	rand.Seed(time.Now().UnixNano())
 }
 
 // GetOpenVPNVersion trying to get openvpn binary version
@@ -291,7 +290,15 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 	// 3. OpenVPN MI connects back to the daemon (to the listening TCP port)
 	// 4. daemon sends 'echo' command with secret string to MI
 	// 5. daemon checks OpenVPN console output for the secret string which were sent by TCP connection
-	miSecret := fmt.Sprintf("[IVPN_SECRET_%X%X]", rand.Uint64(), rand.Uint64())
+
+	var rnd1, rnd2 uint64
+	if err := binary.Read(rand.Reader, binary.BigEndian, &rnd1); err != nil {
+		return fmt.Errorf("failed to generete secret: %w", err)
+	}
+	if err := binary.Read(rand.Reader, binary.BigEndian, &rnd2); err != nil {
+		return fmt.Errorf("failed to generete secret: %w", err)
+	}
+	miSecret := fmt.Sprintf("[IVPN_SECRET_%X%X]", rnd1, rnd2)
 
 	// start new management interface
 	mi, err := StartManagementInterface(miSecret, o.connectParams.username, o.connectParams.password, internalStateChan)

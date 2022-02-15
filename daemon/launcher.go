@@ -23,8 +23,9 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
-	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -47,7 +48,6 @@ var activeProtocol IProtocol
 
 func init() {
 	log = logger.NewLogger("launch")
-	rand.Seed(time.Now().UnixNano())
 }
 
 // IProtocol - interface of communication protocol with IVPN application
@@ -122,7 +122,10 @@ func Launch() {
 		logger.Warning("------------------------------------")
 	}
 
-	secret := rand.Uint64()
+	var secret uint64
+	if err := binary.Read(rand.Reader, binary.BigEndian, &secret); err != nil {
+		log.Panic(fmt.Errorf("failed to generete secret: %w", err))
+	}
 
 	// obtain (over callback channel) a service listening port
 	startedOnPortChan := make(chan int, 1)

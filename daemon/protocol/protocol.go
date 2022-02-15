@@ -28,7 +28,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"net"
 	"regexp"
 	"strconv"
@@ -52,7 +51,6 @@ var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("prtcl")
-	rand.Seed(time.Now().UnixNano())
 }
 
 // Service - service interface

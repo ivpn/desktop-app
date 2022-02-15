@@ -25,7 +25,6 @@ package obfsproxy
 import (
 	"errors"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path"
@@ -42,7 +41,6 @@ var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("obfpxy")
-	rand.Seed(time.Now().UnixNano())
 }
 
 type startedCmd struct {

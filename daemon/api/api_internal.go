@@ -24,6 +24,7 @@ package api
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -32,7 +33,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
+	"math/big"
 	"net"
 	"net/http"
 	"path"
@@ -157,7 +158,12 @@ func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, ur
 				if errIPv6 != nil {
 					alIPs := a.getAlternateIPs(true)
 					if len(alIPs) > 0 {
-						_, errIPv6 = netinfo.GetOutboundIPEx(alIPs[rand.Intn(len(alIPs))])
+						rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(alIPs))))
+						if err != nil {
+							log.Warning(fmt.Errorf("failed to get random number: %w", err))
+							rnd = big.NewInt(0)
+						}
+						_, errIPv6 = netinfo.GetOutboundIPEx(alIPs[rnd.Int64()])
 					}
 				}
 

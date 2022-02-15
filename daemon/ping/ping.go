@@ -30,10 +30,10 @@ package ping
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"math"
-	"math/rand"
 	"net"
 	"sync"
 	"syscall"
@@ -70,18 +70,22 @@ func NewPinger(addr string) (*Pinger, error) {
 		ipv4 = false
 	}
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	var rndTracker int64
+	var rndId int
+	binary.Read(rand.Reader, binary.BigEndian, &rndTracker)
+	binary.Read(rand.Reader, binary.BigEndian, &rndId)
+
 	return &Pinger{
 		ipaddr:   ipaddr,
 		addr:     addr,
 		Interval: time.Second,
 		Timeout:  time.Second * 100000,
 		Count:    -1,
-		id:       r.Intn(math.MaxInt16),
+		id:       rndId,
 		network:  "udp",
 		ipv4:     ipv4,
 		Size:     timeSliceLength,
-		Tracker:  r.Int63n(math.MaxInt64),
+		Tracker:  rndTracker,
 		done:     make(chan bool),
 	}, nil
 }

@@ -23,10 +23,11 @@
 package protocol
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net"
 	"strings"
 	"time"
@@ -232,7 +233,12 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 			return fmt.Errorf("VPN host not defined")
 		}
 		// in case of multiple hosts - take random host from the list
-		host := hosts[rand.Intn(len(hosts))]
+		host := hosts[0]
+		if len(hosts) > 1 {
+			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(hosts)))); err == nil {
+				host = hosts[rnd.Int64()]
+			}
+		}
 
 		// only one-line parameter is allowed
 		multihopExitSrvID := strings.Split(r.OpenVpnParameters.MultihopExitSrvID, "\n")[0]
@@ -314,11 +320,21 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 			}
 		}
 
-		hostValue := hosts[rand.Intn(len(hosts))]
+		hostValue := hosts[0]
+		if len(hosts) > 1 {
+			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(hosts)))); err == nil {
+				hostValue = hosts[rnd.Int64()]
+			}
+		}
 
 		var exitHostValue *apitypes.WireGuardServerHostInfo
 		if len(multihopExitHosts) > 0 {
-			exitHostValue = &multihopExitHosts[rand.Intn(len(multihopExitHosts))]
+			exitHostValue = &multihopExitHosts[0]
+			if len(multihopExitHosts) > 1 {
+				if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(multihopExitHosts)))); err == nil {
+					exitHostValue = &multihopExitHosts[rnd.Int64()]
+				}
+			}
 		}
 		// only one-line parameter is allowed
 		multihopExitSrvID := strings.Split(r.WireGuardParameters.MultihopExitServer.ExitSrvID, "\n")[0]
