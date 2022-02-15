@@ -93,6 +93,10 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string,
 		}()
 
 		tlsConfig := &tls.Config{
+			// NOTE: Can't use SSLv3 because of POODLE and BEAST
+			// NOTE: Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
+			// NOTE: Can't use TLSv1.1 because of RC4 cipher usage
+			MinVersion:         tls.VersionTLS12,
 			InsecureSkipVerify: skipCAVerification,
 			ServerName:         serverName, // only have sense when skipCAVerification == false
 		}
@@ -248,6 +252,7 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 		transCfg = &http.Transport{
 			// NOTE: TLSClientConfig not in use in case of DialTLS defined
 			TLSClientConfig: &tls.Config{
+				MinVersion: tls.VersionTLS12,
 				ServerName: _apiHost,
 			},
 		}
