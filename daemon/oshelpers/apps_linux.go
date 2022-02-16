@@ -28,6 +28,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"io/ioutil"
 	"net/http"
 	"path"
@@ -108,6 +109,17 @@ func readImgToBase64(imagePath string) (string, error) {
 	if len(imagePath) <= 0 {
 		return "", fmt.Errorf("image path is empty")
 	}
+
+	// Ensure the file has read permissions for everyone	
+	if finfo, err := os.Stat(imagePath); err != nil {
+		return "", err
+	} else {
+		// check permissions: ---|---|r--
+		if finfo.Mode() & (1<<2) == 0 {
+			return "", fmt.Errorf("file '%s' is not allowed to read for everyone", imagePath)
+		}
+	}
+
 	// Read the entire file into a byte slice
 	bytes, err := ioutil.ReadFile(imagePath)
 	if err != nil {
