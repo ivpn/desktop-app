@@ -32,6 +32,7 @@ import {
   ipcMain,
   nativeTheme,
   screen,
+  session,
 } from "electron";
 import {
   createProtocol,
@@ -247,6 +248,15 @@ if (gotTheLock) {
         return;
       }
     }
+
+    // Deny all permission requests
+    // https://www.electronjs.org/docs/latest/tutorial/security#5-handle-session-permission-requests-from-remote-content
+    session.defaultSession.setPermissionRequestHandler(
+      (webContents, permission, callback) => {
+        console.log("Permission request blocked: ", permission);
+        callback(false);
+      }
+    );
 
     try {
       InitTray(menuOnShow, menuOnPreferences, menuOnAccount, () => {
