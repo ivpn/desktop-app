@@ -29,7 +29,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"io/ioutil"
 	"net/http"
 	"path"
 	"strings"
@@ -110,19 +109,37 @@ func readImgToBase64(imagePath string) (string, error) {
 		return "", fmt.Errorf("image path is empty")
 	}
 
-	// Ensure the file has read permissions for everyone	
-	if finfo, err := os.Stat(imagePath); err != nil {
+	// open file for reading
+	file, err := os.Open(imagePath) 
+	if err != nil {
 		return "", err
-	} else {
-		// check permissions: ---|---|r--
-		if finfo.Mode() & (1<<2) == 0 {
-			return "", fmt.Errorf("file '%s' is not allowed to read for everyone", imagePath)
-		}
+	}
+	defer file.Close()
+
+	finfo, err := file.Stat()
+	if err != nil {
+		return "", err
+	}
+
+	// Ensure the file has read permissions for everyone (check permissions: ---|---|r--)
+	if finfo.Mode() & (1<<2) == 0 {
+		return "", fmt.Errorf("file '%s' is not allowed to read for everyone", imagePath)
+	}	
+
+	// Check required buffer size
+	var size int
+	size64 := finfo.Size()
+	if int64(int(size64)) != size64 {
+		return "", fmt.Errorf("image size is too big")
+	}
+	size = int(size64) + 1
+	if size < 512 {
+		size = 512 // If a file claims a small size, read at least 512 bytes. 
 	}
 
 	// Read the entire file into a byte slice
-	bytes, err := ioutil.ReadFile(imagePath)
-	if err != nil {
+	bytes := make([]byte, size)	
+	if _, err = file.Read(bytes); err != nil {
 		return "", err
 	}
 
