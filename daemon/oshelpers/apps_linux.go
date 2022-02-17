@@ -28,9 +28,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
 	"net/http"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	_ "image/jpeg"
@@ -110,7 +111,7 @@ func readImgToBase64(imagePath string) (string, error) {
 	}
 
 	// open file for reading
-	file, err := os.Open(imagePath) 
+	file, err := os.Open(filepath.Clean(imagePath))
 	if err != nil {
 		return "", err
 	}
@@ -122,9 +123,9 @@ func readImgToBase64(imagePath string) (string, error) {
 	}
 
 	// Ensure the file has read permissions for everyone (check permissions: ---|---|r--)
-	if finfo.Mode() & (1<<2) == 0 {
+	if finfo.Mode()&(1<<2) == 0 {
 		return "", fmt.Errorf("file '%s' is not allowed to read for everyone", imagePath)
-	}	
+	}
 
 	// Check required buffer size
 	var size int
@@ -134,11 +135,11 @@ func readImgToBase64(imagePath string) (string, error) {
 	}
 	size = int(size64) + 1
 	if size < 512 {
-		size = 512 // If a file claims a small size, read at least 512 bytes. 
+		size = 512 // If a file claims a small size, read at least 512 bytes.
 	}
 
 	// Read the entire file into a byte slice
-	bytes := make([]byte, size)	
+	bytes := make([]byte, size)
 	if _, err = file.Read(bytes); err != nil {
 		return "", err
 	}
