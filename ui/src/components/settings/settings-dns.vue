@@ -95,6 +95,7 @@
                 <option
                   v-for="m in predefinedDohConfigs"
                   v-bind:key="m.DohTemplate + m.DnsHost"
+                  style="color: black; background-color: white"
                   v-bind:value="m"
                 >
                   {{ m.DnsHost }} ({{ m.DohTemplate }})
