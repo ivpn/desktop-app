@@ -67,7 +67,9 @@
         <!-- ADD APP BUTTON -->
         <div>
           <button
-            class="settingsButton opacityOnHoverLight"
+            class="settingsButton"
+            v-bind:class="{ opacityOnHoverLight: isSTEnabled === true }"
+            :disabled="isSTEnabled !== true"
             style="min-width: 156px"
             v-on:click="showAddApplicationPopup(true)"
           >
@@ -850,6 +852,15 @@ input#filter {
 
   background-position: 97% 50%; //right
   background-repeat: no-repeat;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+button:disabled + label {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 $popup-background: var(--background-color);
