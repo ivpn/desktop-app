@@ -1273,6 +1273,11 @@ async function SplitTunnelAddApp(execCmd, funcShowMessageBox) {
     [daemonResponses.SplitTunnelAddAppCmdResp, daemonResponses.EmptyResp]
   );
 
+  if (ret != null && ret.Command == daemonResponses.EmptyResp) {
+    // save info about added app into "apps favorite list"
+    store.dispatch("settings/saveAddedAppCounter", execCmd);
+  }
+
   // Description of Split Tunneling commands sequence to run the application:
   //	[client]					          [daemon]
   //	SplitTunnelAddApp		    ->
