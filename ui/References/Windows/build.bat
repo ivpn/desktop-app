@@ -52,13 +52,13 @@ goto :success
 
 	set VERSTR=???
 	set PackageJsonFile=%SCRIPTDIR%..\..\package.json
-	set VerRegExp=^ *\"version\": *\".*\", *$
+	set VerRegExp=^ *\"version\": *\".*\", *
 
 	set cmd=findstr /R /C:"%VerRegExp%" "%PackageJsonFile%"
 	rem Find string in file
 	FOR /F "tokens=* USEBACKQ" %%F IN (`%cmd%`) DO SET VERSTR=%%F
 	if	"%VERSTR%" == "???" (
-		echo "[!] ERROR: The file shall contain '"version": "X.X.X"' string"
+		echo [!] ERROR: The file shall contain '"version": "X.X.X"' string
 		exit /b 1
  	)
 	rem Get substring in quotes
