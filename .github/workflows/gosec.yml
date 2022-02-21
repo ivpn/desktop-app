@@ -2,9 +2,9 @@ name: "Security Scan (gosec)"
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ master, beta ]
   push:
-    branches: [ master, feature/122_123_8_DoH_and_DoT_support ]
+    branches: [ master, beta ]
 
 permissions: read-all
 
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
-      
+
     env:
       GO111MODULE: on
     steps:
@@ -29,4 +29,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v1
         with:
           # Path to SARIF file relative to the root of the repository
-          sarif_file: results.sarif   
+          sarif_file: results.sarif
