@@ -100,6 +100,14 @@ const getDefaultState = () => {
       },
     },
 
+    // Split-Tunnel
+    splitTunnel: {
+      // A list of applications which was selected from apps-list
+      // and date of last usage for each app.
+      // It allow us to sort app list in the order starting from last used apps.
+      favoriteAppsList: [], // {AppBinaryPath, LastUsedDate}
+    },
+
     // UI
     showGatewaysWithoutIPv6: true,
     minimizedUI: false,
@@ -275,6 +283,10 @@ export default {
       state.wifi = val;
     },
 
+    // SplitTunnel
+    splitTunnel(state, val) {
+      state.splitTunnel = val;
+    },
     // UI
     showGatewaysWithoutIPv6(state, val) {
       state.showGatewaysWithoutIPv6 = val;
@@ -443,6 +455,51 @@ export default {
     // WIFI
     wifi(context, val) {
       context.commit("wifi", val);
+    },
+
+    // SplitTunnel
+    saveAddedAppCounter(context, appBinaryPath) {
+      if (!appBinaryPath) return;
+
+      let favoriteAppsList = [];
+      if (
+        this.state.settings.splitTunnel &&
+        this.state.settings.splitTunnel.favoriteAppsList
+      ) {
+        // max len of 'favorite list' - 10 elements
+        favoriteAppsList =
+          this.state.settings.splitTunnel.favoriteAppsList.slice(0, 9);
+      }
+
+      let isFound = false;
+      favoriteAppsList.forEach(function (element, index, theArray) {
+        if (!element || !element.AppBinaryPath) return;
+        if (element.AppBinaryPath == appBinaryPath) {
+          theArray[index] = {
+            AppBinaryPath: element.AppBinaryPath,
+            LastUsedDate: new Date(),
+          };
+          isFound = true;
+        }
+      });
+      if (isFound !== true) {
+        favoriteAppsList.push({
+          AppBinaryPath: appBinaryPath,
+          LastUsedDate: new Date(),
+        });
+      }
+
+      favoriteAppsList.sort(function (a, b) {
+        return new Date(b.LastUsedDate) - new Date(a.LastUsedDate);
+      });
+
+      // create new (updated) splitTunnel object
+      let st = {};
+      if (this.state.settings.splitTunnel) {
+        st = Object.assign(st, this.state.settings.splitTunnel);
+      }
+      st.favoriteAppsList = favoriteAppsList;
+      context.commit("splitTunnel", st);
     },
 
     // UI

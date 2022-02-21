@@ -16,7 +16,11 @@
     On fact it can have any value.
     But if it is not defined - thw with of the element can grow outside of the window
      -->
-    <div class="flexRowRestSpace text" style="padding-left: 5px; width: 200px">
+    <div
+      class="flexRowRestSpace text"
+      style="padding-left: 5px; width: 200px"
+      v-bind:title="app.AppBinaryPath"
+    >
       <div class="text">
         {{ app.AppName }}
       </div>

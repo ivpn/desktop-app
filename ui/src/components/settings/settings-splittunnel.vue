@@ -67,7 +67,9 @@
         <!-- ADD APP BUTTON -->
         <div>
           <button
-            class="settingsButton opacityOnHoverLight"
+            class="settingsButton"
+            v-bind:class="{ opacityOnHoverLight: isSTEnabled === true }"
+            :disabled="isSTEnabled !== true"
             style="min-width: 156px"
             v-on:click="showAddApplicationPopup(true)"
           >
@@ -469,13 +471,11 @@ export default {
             // check if we can get info from the installed apps list
             let knownApp = this.allInstalledAppsHashed[appPath.toLowerCase()];
             if (!knownApp) {
-              let file = appPath.split("\\").pop().split("/").pop();
-              let folder = appPath.substring(0, appPath.length - file.length);
               // app is not found in 'installed apps list'
               appsToShowTmp.push({
                 AppBinaryPath: appPath,
-                AppName: file,
-                AppGroup: folder,
+                AppName: getFileName(appPath),
+                AppGroup: getFileFolder(appPath),
               });
             } else {
               // app is found in 'installed apps list'
@@ -694,6 +694,38 @@ export default {
           this.allInstalledApps
         );
 
+      // Add extra parameter 'LastUsedDate' to each element in app list (if exists in settings.splitTunnel.favoriteAppsList)
+      // And add apps from 'favorite list' which are not present in common app list
+      const s = this.$store.state.settings;
+      if (s.splitTunnel && s.splitTunnel.favoriteAppsList) {
+        const favApps = s.splitTunnel.favoriteAppsList;
+        let favAppsHashed = {};
+        favApps.forEach((appInfo) => {
+          favAppsHashed[appInfo.AppBinaryPath] = Object.assign({}, appInfo);
+        });
+
+        // add LastUsedDate info
+        retInstalledApps.forEach(function (element, index, theArray) {
+          const knownAppInfo = favAppsHashed[element.AppBinaryPath];
+          if (!knownAppInfo) return;
+          knownAppInfo.isManual = false;
+          theArray[index].LastUsedDate = knownAppInfo.LastUsedDate;
+        });
+
+        // add apps from 'favorite list' which are not present in common app list
+        for (const favAppBinaryPath in favAppsHashed) {
+          const favApp = favAppsHashed[favAppBinaryPath];
+
+          if (!favApp || favApp.isManual === false) continue;
+          if (!favApp.AppName) {
+            favApp.AppName = getFileName(favApp.AppBinaryPath);
+            favApp.AppGroup = getFileFolder(favApp.AppBinaryPath);
+          }
+
+          retInstalledApps.push(favApp);
+        }
+      }
+
       // filter: exclude already configured apps (not a running apps)
       // from the list installed apps
       let confAppsHashed = {};
@@ -726,6 +758,19 @@ export default {
         );
       }
 
+      // sort applications: LastUsedDate + appName
+      retInstalledApps.sort(function (a, b) {
+        if (b.LastUsedDate && a.LastUsedDate)
+          return new Date(b.LastUsedDate) - new Date(a.LastUsedDate);
+        if (b.LastUsedDate && !a.LastUsedDate) return 1;
+        if (!b.LastUsedDate && a.LastUsedDate) return -1;
+        let aName = a.AppName;
+        let bName = b.AppName;
+        if (!aName) aName = "";
+        if (!bName) bName = "";
+        return aName.localeCompare(bName);
+      });
+
       return retInstalledApps;
     },
 
@@ -743,6 +788,15 @@ export default {
     },
   },
 };
+
+function getFileName(appBinPath) {
+  return appBinPath.split("\\").pop().split("/").pop();
+}
+
+function getFileFolder(appBinPath) {
+  const fname = getFileName(appBinPath);
+  return appBinPath.substring(0, appBinPath.length - fname.length);
+}
 </script>
 
 <style scoped lang="scss">
@@ -798,6 +852,15 @@ input#filter {
 
   background-position: 97% 50%; //right
   background-repeat: no-repeat;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+button:disabled + label {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 $popup-background: var(--background-color);
