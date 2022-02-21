@@ -130,15 +130,15 @@ function checkIsDnsIPError(dnsIpString) {
 }
 
 export default {
-  async beforeDestroy() {
-    // when component closing ->  update changed DNS (if necessary)
-    if (
-      this.isDnsValueChanged &&
-      (!this.dnsIsCustom || (!this.isTemplateURIError && !this.isIPError))
-    )
-      await sender.SetDNS();
+  created() {
+    // We have to call applyChanges() even when Settings window was closed by user
+    // (the 'beforeDestroy()' is not called in this case)
+    window.addEventListener("beforeunload", this.applyChanges);
+  },
 
-    this.isDnsValueChanged = false;
+  async beforeDestroy() {
+    window.removeEventListener("beforeunload", this.applyChanges);
+    await this.applyChanges();
   },
 
   data: function () {
@@ -151,6 +151,17 @@ export default {
     this.requestPredefinedDohConfigs();
   },
   methods: {
+    async applyChanges() {
+      // when component closing ->  update changed DNS (if necessary)
+      if (
+        this.isDnsValueChanged &&
+        (!this.dnsIsCustom || (!this.isTemplateURIError && !this.isIPError))
+      )
+        await sender.SetDNS();
+
+      this.isDnsValueChanged = false;
+    },
+
     onPredefinedDohConfigSelected() {
       const newVal = this.thePredefinedDohConfigSelected;
       if (newVal && newVal.DnsHost && newVal.DohTemplate) {

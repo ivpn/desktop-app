@@ -37,6 +37,28 @@ func init() {
 	log = logger.NewLogger("dns")
 }
 
+type DnsError struct {
+	Err error
+}
+
+func (e *DnsError) Error() string {
+	if e.Err == nil {
+		return "DNS error"
+	}
+	return "DNS error: " + e.Err.Error()
+}
+func (e *DnsError) Unwrap() error { return e.Err }
+
+func wrapErrorIfFailed(err error) error {
+	if err == nil {
+		return nil
+	}
+	if _, ok := err.(*DnsError); ok {
+		return err
+	}
+	return &DnsError{Err: err}
+}
+
 type DnsEncryption int
 
 const (
@@ -105,21 +127,22 @@ func (d DnsSettings) InfoString() string {
 // Initialize is doing initialization stuff
 // Must be called on application start
 func Initialize() error {
-	return implInitialize()
+	return wrapErrorIfFailed(implInitialize())
 }
 
 // Pause pauses DNS (restore original DNS)
 func Pause() error {
-	return implPause()
+	return wrapErrorIfFailed(implPause())
 }
 
 // Resume resuming DNS (set DNS back which was before Pause)
 func Resume(defaultDNS DnsSettings) error {
-	return implResume(defaultDNS)
+	return wrapErrorIfFailed(implResume(defaultDNS))
 }
 
 func EncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
-	return implGetDnsEncryptionAbilities()
+	dnsOverHttps, dnsOverTls, err = implGetDnsEncryptionAbilities()
+	return dnsOverHttps, dnsOverTls, wrapErrorIfFailed(err)
 }
 
 // SetDefault set DNS configuration treated as default (non-manual) configuration
@@ -130,7 +153,7 @@ func SetDefault(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 	if ret == nil {
 		lastManualDNS = DnsSettings{}
 	}
-	return ret
+	return wrapErrorIfFailed(ret)
 }
 
 // SetManual - set manual DNS.
@@ -141,7 +164,7 @@ func SetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 	if ret == nil {
 		lastManualDNS = dnsCfg
 	}
-	return ret
+	return wrapErrorIfFailed(ret)
 }
 
 // DeleteManual - reset manual DNS configuration to default (DHCP)
@@ -151,7 +174,7 @@ func DeleteManual(localInterfaceIP net.IP) error {
 	if ret == nil {
 		lastManualDNS = DnsSettings{}
 	}
-	return ret
+	return wrapErrorIfFailed(ret)
 }
 
 // GetLastManualDNS - returns information about current manual DNS
@@ -161,5 +184,6 @@ func GetLastManualDNS() DnsSettings {
 }
 
 func GetPredefinedDnsConfigurations() ([]DnsSettings, error) {
-	return implGetPredefinedDnsConfigurations()
+	settings, err := implGetPredefinedDnsConfigurations()
+	return settings, wrapErrorIfFailed(err)
 }

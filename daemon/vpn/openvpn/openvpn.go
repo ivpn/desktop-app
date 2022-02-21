@@ -237,7 +237,11 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 
 					// Process "on connected" event (if necessary)
 					// E.g. set custom DNS configuration on Windows
-					o.implOnConnected() // TODO: check execution status (do we need to disconnect when failed to apply custom DNS?)
+					retErr = o.implOnConnected()
+					if retErr != nil {
+						o.doDisconnect()
+						break
+					}
 				} else {
 					o.clientIP = nil
 				}
@@ -381,7 +385,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		return fmt.Errorf("failed to start OpenVPN process: %w", err)
 	}
 
-	return nil
+	return retErr
 }
 
 // Disconnect stops the connection

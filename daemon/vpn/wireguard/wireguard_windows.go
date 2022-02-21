@@ -109,6 +109,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	defer m.Disconnect()
 
 	// install WireGuard service
+	defer wg.uninstallService()
 	err = wg.installService(stateChan)
 	if err != nil {
 		return fmt.Errorf("failed to install windows service: %w", err)
@@ -467,9 +468,13 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	manualDNS := wg.internals.manualDNS
 	wg.internals.manualDNS = dns.DnsSettings{} // just to ensure that wg.setManualDNS() / wg.resetManualDNS() will not skip applying new changes
 	if !manualDNS.IsEmpty() {
-		wg.setManualDNS(manualDNS)
+		if err := wg.setManualDNS(manualDNS); err != nil {
+			return fmt.Errorf("failed to set custom DNS: %w", err)
+		}
 	} else {
-		wg.resetManualDNS()
+		if err := wg.resetManualDNS(); err != nil {
+			return fmt.Errorf("failed to reset custom DNS: %w", err)
+		}
 	}
 
 	// CONNECTED

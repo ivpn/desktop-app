@@ -398,11 +398,14 @@ export default {
 function updateDnsSettings(context) {
   // save current state to settings
   const isAntitracker = isAntitrackerActive(context.state);
-  const isAntitrackerHardcore = isAntitrackerHardcoreActive(context.state);
   context.dispatch("settings/isAntitracker", isAntitracker, { root: true });
-  context.dispatch("settings/isAntitrackerHardcore", isAntitrackerHardcore, {
-    root: true,
-  });
+
+  if (isAntitracker === true) {
+    const isAntitrackerHardcore = isAntitrackerHardcoreActive(context.state);
+    context.dispatch("settings/isAntitrackerHardcore", isAntitrackerHardcore, {
+      root: true,
+    });
+  }
 
   if (isAntitracker === false) {
     let currDnsState = context.state.dns;

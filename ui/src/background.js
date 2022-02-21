@@ -228,6 +228,8 @@ if (gotTheLock) {
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
   app.on("ready", async () => {
+    daemonClient.RegisterMsgBoxFunc(dialog.showMessageBox);
+
     // MACOS: Check is application is located in correct place (path)
     if (Platform() === PlatformEnum.macOS && !process.env.IS_DEBUG) {
       let appPath = app.getAppPath();

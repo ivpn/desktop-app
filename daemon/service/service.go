@@ -988,11 +988,7 @@ func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings) error {
 		firewall.SetManualDNS(nil)
 	}
 
-	err := vpn.SetManualDNS(s._manualDNS)
-	if err == nil {
-		s._evtReceiver.OnDNSChanged(s._manualDNS)
-	}
-	return err
+	return vpn.SetManualDNS(s._manualDNS)
 }
 
 // ResetManualDNS set dns to default
@@ -1007,11 +1003,7 @@ func (s *Service) ResetManualDNS() error {
 		return fmt.Errorf("failed to reset manual DNS: %w", err)
 	}
 
-	err := vpn.ResetManualDNS()
-	if err == nil {
-		s._evtReceiver.OnDNSChanged(s._manualDNS)
-	}
-	return err
+	return vpn.ResetManualDNS()
 }
 
 // if 'currentLocation' defined - the output hosts list will be sorted by distance to current location

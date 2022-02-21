@@ -126,6 +126,15 @@ const daemonResponses = Object.freeze({
   ServiceExitingResp: "ServiceExitingResp",
 });
 
+var messageBoxFunction = null;
+function RegisterMsgBoxFunc(mbFunc) {
+  messageBoxFunction = mbFunc;
+}
+async function messageBox(cfg) {
+  if (!cfg || !messageBoxFunction) return null;
+  return await messageBoxFunction(cfg);
+}
+
 // JavaScript does not support int64 (and do not know how to serialize it)
 // Here we are serializing BigInt manually (if necessary)
 function toJson(data) {
@@ -400,7 +409,18 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.SetAlternateDNSResp:
-      if (obj.IsSuccess == null || obj.IsSuccess !== true) break;
+      if (obj.IsSuccess == null) break;
+      if (obj.IsSuccess !== true) {
+        if (obj.ErrorMessage) {
+          await messageBox({
+            type: "error",
+            buttons: ["OK"],
+            message: `Failed to change DNS`,
+            detail: obj.ErrorMessage,
+          });
+        }
+        break;
+      }
       if (obj.ChangedDNS == null) break;
       store.dispatch(`vpnState/dns`, obj.ChangedDNS);
       break;
@@ -1603,6 +1623,7 @@ async function GetWiFiAvailableNetworks() {
 }
 
 export default {
+  RegisterMsgBoxFunc,
   ConnectToDaemon,
 
   GetDiagnosticLogs,

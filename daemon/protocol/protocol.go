@@ -699,9 +699,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			// send the response to the requestor
 			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
 		} else {
+			// notify all connected clients
+			p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns})
 			// send the response to the requestor
 			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns}, req.Idx)
-			// all clients will be notified in case of successfull change by OnDNSChanged() handler
 		}
 
 	case "GetDnsPredefinedConfigs":
