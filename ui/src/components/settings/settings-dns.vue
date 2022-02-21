@@ -238,6 +238,14 @@ export default {
           this.$store.state.settings.dnsCustomCfg
         );
         newDnsCfg.DnsHost = value;
+
+        if (
+          this.$store.state.settings.dnsCustomCfg.Encryption ===
+          DnsEncryption.None
+        ) {
+          newDnsCfg.DohTemplate = "";
+        }
+
         this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
       },
     },

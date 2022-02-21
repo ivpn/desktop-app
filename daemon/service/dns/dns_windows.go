@@ -177,10 +177,6 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 		return fmt.Errorf("IPv6 DNS is not supported")
 	}
 
-	if dnsCfg.Equal(_lastDNS) {
-		return nil
-	}
-
 	if !_lastDNS.IsEmpty() {
 		// if there was defined DNS - remove it from non-VPN interfaces (if necessary)
 		// (skipping VPN interface, because its data will be overwritten)

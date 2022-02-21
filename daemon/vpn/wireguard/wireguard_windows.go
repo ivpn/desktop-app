@@ -54,9 +54,11 @@ const (
 
 // internalVariables of wireguard implementation for macOS
 type internalVariables struct {
-	manualDNS             dns.DnsSettings
-	isRestartRequired     bool           // if true - connection will be restarted
-	pauseRequireChan      chan operation // control connection pause\resume or disconnect from paused state
+	// required DNS state (temporary save required DNS value here because it is not possible set DNS when VPN is not connected)
+	manualDNSRequired     dns.DnsSettings
+	manualDNS             dns.DnsSettings // active DNS state
+	isRestartRequired     bool            // if true - connection will be restarted
+	pauseRequireChan      chan operation  // control connection pause\resume or disconnect from paused state
 	isDisconnectRequested bool
 	isPaused              bool
 }
@@ -250,15 +252,15 @@ func (wg *WireGuard) requireOperation(o operation) error {
 }
 
 func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
+	// required DNS state (temporary save required DNS value here because it is not possible set DNS when VPN is not connected)
+	wg.internals.manualDNSRequired = dnsCfg
+
 	if dnsCfg.Equal(wg.internals.manualDNS) {
 		return nil
 	}
 
 	if running, err := wg.isServiceRunning(); err != nil || !running {
-		if err == nil {
-			wg.internals.manualDNS = dnsCfg
-		}
-		return err
+		return err // it is not possible set DNS when VPN is not connected
 	}
 
 	err := dns.SetManual(dnsCfg, wg.connectParams.clientLocalIP)
@@ -270,15 +272,15 @@ func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
 }
 
 func (wg *WireGuard) resetManualDNS() error {
+	// required DNS state (temporary save required DNS value here because it is not possible set DNS when VPN is not connected)
+	wg.internals.manualDNSRequired = dns.DnsSettings{}
+
 	if wg.internals.manualDNS.IsEmpty() {
 		return nil
 	}
 
 	if running, err := wg.isServiceRunning(); err != nil || !running {
-		if err == nil {
-			wg.internals.manualDNS = dns.DnsSettings{}
-		}
-		return err
+		return err // it is not possible set DNS when VPN is not connected
 	}
 
 	err := dns.SetDefault(dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String()}, wg.connectParams.clientLocalIP)
@@ -298,7 +300,7 @@ func (wg *WireGuard) getServiceName() string {
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
-	manualDNS := wg.internals.manualDNS
+	manualDNS := wg.internals.manualDNSRequired
 	if !manualDNS.IsEmpty() {
 		if manualDNS.Encryption == dns.EncryptionNone {
 			interfaceCfg = append(interfaceCfg, "DNS = "+manualDNS.Ip().String())
@@ -465,8 +467,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	//	- the DoH/DoT configuration can be applyied only after natwork interface is activeted
 	//	- if non-ivpn interfaces must be configured to custom DNS (it needed ONLY if DNS IP located in local network)
 	// Also, it is needed to inform 'dns' package about last DNS value (used by 'protocol' to ptovide dns status to clients)
-	manualDNS := wg.internals.manualDNS
-	wg.internals.manualDNS = dns.DnsSettings{} // just to ensure that wg.setManualDNS() / wg.resetManualDNS() will not skip applying new changes
+	manualDNS := wg.internals.manualDNSRequired
 	if !manualDNS.IsEmpty() {
 		if err := wg.setManualDNS(manualDNS); err != nil {
 			return fmt.Errorf("failed to set custom DNS: %w", err)
