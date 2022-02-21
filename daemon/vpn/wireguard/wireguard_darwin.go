@@ -278,8 +278,8 @@ func (wg *WireGuard) resume() error {
 	return nil
 }
 
-func (wg *WireGuard) setManualDNS(addr net.IP) error {
-	return dns.SetManual(addr, nil)
+func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
+	return dns.SetManual(dnsCfg, nil)
 }
 
 func (wg *WireGuard) resetManualDNS() error {

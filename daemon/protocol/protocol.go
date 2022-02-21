@@ -94,11 +94,11 @@ type Service interface {
 	SetPreference(key string, val string) error
 	ResetPreferences() error
 
-	SetManualDNS(dns net.IP) error
+	SetManualDNS(dns dns.DnsSettings) error
 	ResetManualDNS() error
 
-	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
-	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS net.IP, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
+	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
+	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
 	Disconnect() error
 	Connected() bool
 
@@ -329,6 +329,15 @@ func (p *Protocol) processClient(conn net.Conn) {
 	}
 }
 
+// normalizeField - wrapper around strings.Fields(). Returns only first field or empty string.
+func normalizeField(s string) string {
+	fields := strings.Fields(s)
+	if len(fields) <= 0 {
+		return ""
+	}
+	return fields[0]
+}
+
 func (p *Protocol) processRequest(conn net.Conn, message string) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -354,20 +363,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	sendState := func(reqIdx int, isOnlyIfConnected bool) {
 		vpnState := p._lastVPNState
 		if vpnState.State == vpn.CONNECTED {
-			ipv6 := ""
-			if vpnState.ClientIPv6 != nil {
-				ipv6 = vpnState.ClientIPv6.String()
-			}
-			p.sendResponse(conn, &types.ConnectedResp{
-				TimeSecFrom1970: vpnState.Time,
-				ClientIP:        vpnState.ClientIP.String(),
-				ClientIPv6:      ipv6,
-				ServerIP:        vpnState.ServerIP.String(),
-				VpnType:         vpnState.VpnType,
-				ExitServerID:    vpnState.ExitServerID,
-				ManualDNS:       dns.GetLastManualDNS(),
-				IsCanPause:      vpnState.IsCanPause},
-				reqIdx)
+			p.sendResponse(conn, p.createConnectedResponse(vpnState), reqIdx)
 		} else if !isOnlyIfConnected {
 			if vpnState.State == vpn.DISCONNECTED {
 				p.sendResponse(conn, &types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqIdx)
@@ -678,12 +674,14 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+		req.Dns.DnsHost = normalizeField(req.Dns.DnsHost)
+		req.Dns.DohTemplate = normalizeField(req.Dns.DohTemplate)
 
 		var err error
-		if ip := net.ParseIP(req.DNS); ip == nil || ip.Equal(net.IPv4zero) || ip.Equal(net.IPv4bcast) {
+		if req.Dns.IsEmpty() {
 			err = p._service.ResetManualDNS()
 		} else {
-			err = p._service.SetManualDNS(ip)
+			err = p._service.SetManualDNS(req.Dns)
 
 			if err != nil {
 				// DNS set failed. Trying to reset DNS
@@ -697,11 +695,21 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err != nil {
 			log.ErrorTrace(err)
 			// send the response to the requestor
-			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ChangedDNS: net.IPv4zero.String()}, req.Idx)
+			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
 		} else {
+			// notify all connected clients
+			p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns})
 			// send the response to the requestor
-			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.DNS}, req.Idx)
-			// all clients will be notified in case of successfull change by OnDNSChanged() handler
+			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns}, req.Idx)
+		}
+
+	case "GetDnsPredefinedConfigs":
+		cfgs, err := dns.GetPredefinedDnsConfigurations()
+		if err != nil {
+			log.ErrorTrace(err)
+			p.sendErrorResponse(conn, reqCmd, err)
+		} else {
+			p.sendResponse(conn, &types.DnsPredefinedConfigsResp{DnsConfigs: cfgs}, reqCmd.Idx)
 		}
 
 	case "PauseConnection":
@@ -987,20 +995,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 					case vpn.CONNECTED:
 						// Do not send "Connected" notification if we are going to establish new connection immediately
 						if cnt, _ := p.vpnConnectReqCounter(); cnt == 1 || p._disconnectRequested {
-							ipv6 := ""
-							if state.ClientIPv6 != nil {
-								ipv6 = state.ClientIPv6.String()
-							}
-							p.notifyClients(&types.ConnectedResp{
-								TimeSecFrom1970: state.Time,
-								ClientIP:        state.ClientIP.String(),
-								ClientIPv6:      ipv6,
-								ServerIP:        state.ServerIP.String(),
-								VpnType:         state.VpnType,
-								ExitServerID:    state.ExitServerID,
-								ManualDNS:       dns.GetLastManualDNS(),
-								IsCanPause:      state.IsCanPause})
-
+							p.notifyClients(p.createConnectedResponse(state))
 						} else {
 							log.Debug("Skip sending 'Connected' notification. New connection request is awaiting ", cnt)
 						}

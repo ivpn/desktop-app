@@ -196,6 +196,11 @@ export default {
   SetDNS: async (antitrackerIsEnabled) => {
     return await invoke("renderer-request-set-dns", antitrackerIsEnabled);
   },
+
+  RequestDnsPredefinedConfigs: async () => {
+    return await invoke("renderer-request-RequestDnsPredefinedConfigs");
+  },
+
   GeoLookup: async () => {
     return await invoke("renderer-request-geolookup");
   },

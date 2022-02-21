@@ -13,21 +13,36 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="DNS">
+      <UniqueIdentifier>{018472ba-a68a-43cd-91b5-7feb7258179a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BinaryIcon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="dns.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BinaryIcon.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="DNS\implDnsWMI.cpp">
+      <Filter>DNS</Filter>
+    </ClCompile>
+    <ClCompile Include="DNS\implDns.cpp">
+      <Filter>DNS</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dns.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DNS\implDnsWMI.h">
+      <Filter>DNS</Filter>
+    </ClInclude>
+    <ClInclude Include="DNS\implDns.h">
+      <Filter>DNS</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

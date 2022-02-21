@@ -24,6 +24,7 @@ import {
   Ports,
   ServersSortTypeEnum,
   ColorTheme,
+  DnsEncryption,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -82,7 +83,11 @@ const getDefaultState = () => {
 
     // dns
     dnsIsCustom: false,
-    dnsCustom: "",
+    dnsCustomCfg: {
+      DnsHost: "",
+      Encryption: DnsEncryption.None,
+      DohTemplate: "",
+    },
 
     // wifi
     wifi: {
@@ -258,8 +263,8 @@ export default {
     dnsIsCustom(state, val) {
       state.dnsIsCustom = val;
     },
-    dnsCustom(state, val) {
-      state.dnsCustom = val;
+    dnsCustomCfg(state, val) {
+      state.dnsCustomCfg = val;
     },
 
     // WIFI
@@ -448,8 +453,8 @@ export default {
     dnsIsCustom(context, val) {
       context.commit("dnsIsCustom", val);
     },
-    dnsCustom(context, val) {
-      context.commit("dnsCustom", val);
+    dnsCustomCfg(context, val) {
+      context.commit("dnsCustomCfg", val);
     },
 
     // WIFI

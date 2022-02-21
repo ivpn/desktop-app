@@ -24,7 +24,6 @@ package wireguard
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,9 +54,11 @@ const (
 
 // internalVariables of wireguard implementation for macOS
 type internalVariables struct {
-	manualDNS             net.IP
-	isRestartRequired     bool           // if true - connection will be restarted
-	pauseRequireChan      chan operation // control connection pause\resume or disconnect from paused state
+	// required DNS state (temporary save required DNS value here because it is not possible set DNS when VPN is not connected)
+	manualDNSRequired     dns.DnsSettings
+	manualDNS             dns.DnsSettings // active DNS state
+	isRestartRequired     bool            // if true - connection will be restarted
+	pauseRequireChan      chan operation  // control connection pause\resume or disconnect from paused state
 	isDisconnectRequested bool
 	isPaused              bool
 }
@@ -110,6 +111,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	defer m.Disconnect()
 
 	// install WireGuard service
+	defer wg.uninstallService()
 	err = wg.installService(stateChan)
 	if err != nil {
 		return fmt.Errorf("failed to install windows service: %w", err)
@@ -249,38 +251,42 @@ func (wg *WireGuard) requireOperation(o operation) error {
 	return nil
 }
 
-func (wg *WireGuard) setManualDNS(addr net.IP) error {
-	if addr.Equal(wg.internals.manualDNS) {
+func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
+	// required DNS state (temporary save required DNS value here because it is not possible set DNS when VPN is not connected)
+	wg.internals.manualDNSRequired = dnsCfg
+
+	if dnsCfg.Equal(wg.internals.manualDNS) {
 		return nil
 	}
 
-	wg.internals.manualDNS = addr
-
-	if running, err := wg.isServiceRunning(); err != nil || running == false {
-		return err
+	if running, err := wg.isServiceRunning(); err != nil || !running {
+		return err // it is not possible set DNS when VPN is not connected
 	}
 
-	log.Info("Connection will be restarted due to DNS server IP configuration change...")
-	// request a restart with new connection parameters
-	wg.internals.isRestartRequired = true
+	err := dns.SetManual(dnsCfg, wg.connectParams.clientLocalIP)
+	if err == nil {
+		wg.internals.manualDNS = dnsCfg
+	}
 
-	return nil
+	return err
 }
 
 func (wg *WireGuard) resetManualDNS() error {
-	if wg.internals.manualDNS == nil {
+	// required DNS state (temporary save required DNS value here because it is not possible set DNS when VPN is not connected)
+	wg.internals.manualDNSRequired = dns.DnsSettings{}
+
+	if wg.internals.manualDNS.IsEmpty() {
 		return nil
 	}
 
-	wg.internals.manualDNS = nil
-
-	if running, err := wg.isServiceRunning(); err != nil || running == false {
-		return err
+	if running, err := wg.isServiceRunning(); err != nil || !running {
+		return err // it is not possible set DNS when VPN is not connected
 	}
 
-	log.Info("Connection will be restarted due to DNS server IP configuration change...")
-	// request a restart with new connection parameters
-	wg.internals.isRestartRequired = true
+	err := dns.SetDefault(dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String()}, wg.connectParams.clientLocalIP)
+	if err == nil {
+		wg.internals.manualDNS = dns.DnsSettings{}
+	}
 
 	return nil
 }
@@ -294,10 +300,14 @@ func (wg *WireGuard) getServiceName() string {
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
-
-	manualDNS := wg.internals.manualDNS
-	if manualDNS != nil {
-		interfaceCfg = append(interfaceCfg, "DNS = "+manualDNS.String())
+	manualDNS := wg.internals.manualDNSRequired
+	if !manualDNS.IsEmpty() {
+		if manualDNS.Encryption == dns.EncryptionNone {
+			interfaceCfg = append(interfaceCfg, "DNS = "+manualDNS.Ip().String())
+		} else {
+			interfaceCfg = append(interfaceCfg, "DNS = "+wg.connectParams.hostLocalIP.String())
+			log.Info("(info) The DoH/DoT custom DNS configuration will be applied after connection established")
+		}
 	} else {
 		interfaceCfg = append(interfaceCfg, "DNS = "+wg.connectParams.hostLocalIP.String())
 	}
@@ -376,7 +386,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	isStarted := false
 
 	defer func() {
-		if isStarted == false || isInstalled == false {
+		if !isStarted || !isInstalled {
 			log.Info("Failed to install service. Uninstalling...")
 			err := wg.disconnectInternal()
 			if err != nil {
@@ -428,7 +438,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	}
 
 	// service install timeout
-	if isInstalled == false {
+	if !isInstalled {
 		return fmt.Errorf("service not installed (timeout)")
 	}
 
@@ -449,20 +459,23 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 		}
 	}
 
-	if isStarted == false {
+	if !isStarted {
 		return fmt.Errorf("service not started (timeout)")
 	}
 
-	// WireGuard interface is configured to correct DNS.
-	// But we must to be sure if non-ivpn interfaces are configured to our DNS
-	// (it needed ONLY if DNS IP located in local network)
+	// We must manually re-apply custom DNS configuration for such situations:
+	//	- the DoH/DoT configuration can be applyied only after natwork interface is activeted
+	//	- if non-ivpn interfaces must be configured to custom DNS (it needed ONLY if DNS IP located in local network)
 	// Also, it is needed to inform 'dns' package about last DNS value (used by 'protocol' to ptovide dns status to clients)
-	manualDNS := wg.internals.manualDNS
-	if manualDNS != nil {
-		dns.SetManual(manualDNS, nil)
+	manualDNS := wg.internals.manualDNSRequired
+	if !manualDNS.IsEmpty() {
+		if err := wg.setManualDNS(manualDNS); err != nil {
+			return fmt.Errorf("failed to set custom DNS: %w", err)
+		}
 	} else {
-		// delete manual DNS (if defined)
-		dns.DeleteManual(nil)
+		if err := wg.resetManualDNS(); err != nil {
+			return fmt.Errorf("failed to reset custom DNS: %w", err)
+		}
 	}
 
 	// CONNECTED

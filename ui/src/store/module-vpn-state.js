@@ -30,6 +30,7 @@ import {
   VpnStateEnum,
   PingQuality,
   PauseStateEnum,
+  DnsEncryption,
 } from "./types";
 
 export default {
@@ -44,7 +45,11 @@ export default {
       ClientIP: "",
       ServerIP: "",
       ExitServerID: "",
-      ManualDNS: "",
+      ManualDNS: {
+        DnsHost: "",      // string // DNS host IP address
+	      Encryption: 0,    // DnsEncryption [	EncryptionNone = 0,	EncryptionDnsOverTls = 1,	EncryptionDnsOverHttps = 2]
+	      DohTemplate: "",  // string // DoH/DoT template URI (for Encryption = DnsOverHttps or Encryption = DnsOverTls)
+      },
       IsCanPause: null //(true/false)
     }*/,
 
@@ -83,7 +88,11 @@ export default {
       //                                        ExtModifiedCmdLine string
     },
 
-    dns: "",
+    dns: {
+      DnsHost: "",
+      Encryption: DnsEncryption.None,
+      DohTemplate: "",
+    },
 
     currentWiFiInfo: null, //{ SSID: "", IsInsecureNetwork: false },
     availableWiFiNetworks: null, // []{SSID: ""}
@@ -357,6 +366,10 @@ export default {
         const exitSvr = findServerByExitId(servers, ci.ExitServerID);
         context.commit("settings/serverExit", exitSvr, { root: true });
       }
+
+      // save last DNS state
+      context.commit("dns", ci.ManualDNS);
+      updateDnsSettings(context);
     },
     pauseState(context, val) {
       context.commit("pauseState", val);
@@ -377,11 +390,34 @@ export default {
     dns(context, dns) {
       context.commit("dns", dns);
       // save current state to settings
-      const isAntitracker = isAntitrackerActive(context.state);
-      context.dispatch("settings/isAntitracker", isAntitracker, { root: true });
+      updateDnsSettings(context);
     },
   },
 };
+
+function updateDnsSettings(context) {
+  // save current state to settings
+  const isAntitracker = isAntitrackerActive(context.state);
+  context.dispatch("settings/isAntitracker", isAntitracker, { root: true });
+
+  if (isAntitracker === true) {
+    const isAntitrackerHardcore = isAntitrackerHardcoreActive(context.state);
+    context.dispatch("settings/isAntitrackerHardcore", isAntitrackerHardcore, {
+      root: true,
+    });
+  }
+
+  if (isAntitracker === false) {
+    let currDnsState = context.state.dns;
+
+    let isCustomDns = true;
+    if (currDnsState == null || !currDnsState.DnsHost) isCustomDns = false;
+    else
+      context.dispatch("settings/dnsCustomCfg", currDnsState, { root: true });
+
+    context.dispatch("settings/dnsIsCustom", isCustomDns, { root: true });
+  }
+}
 
 function getActiveServers(state, rootState) {
   const vpnType = rootState.settings.vpnType;
@@ -532,9 +568,12 @@ function updateServers(state, newServers) {
 }
 
 function isAntitrackerActive(state) {
-  if (isStrNullOrEmpty(state.dns)) return false;
+  let dnsIP = state.dns.DnsHost;
+  if (isStrNullOrEmpty(dnsIP) || state.dns.Encryption != DnsEncryption.None)
+    return false;
+
   let atConfig = state.servers.config.antitracker;
-  switch (state.dns) {
+  switch (dnsIP) {
     case atConfig.default.ip:
     case atConfig.hardcore.ip:
     case atConfig.default["multihop-ip"]:
@@ -546,9 +585,12 @@ function isAntitrackerActive(state) {
 }
 
 function isAntitrackerHardcoreActive(state) {
-  if (isStrNullOrEmpty(state.dns)) return false;
+  let dnsIP = state.dns.DnsHost;
+  if (isStrNullOrEmpty(dnsIP) || state.dns.Encryption != DnsEncryption.None)
+    return false;
+
   let atConfig = state.servers.config.antitracker;
-  switch (state.dns) {
+  switch (dnsIP) {
     case atConfig.hardcore.ip:
     case atConfig.hardcore["multihop-ip"]:
       return true;

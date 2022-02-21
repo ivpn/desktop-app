@@ -229,6 +229,8 @@ if (gotTheLock) {
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
   app.on("ready", async () => {
+    daemonClient.RegisterMsgBoxFunc(dialog.showMessageBox);
+
     // MACOS: Check is application is located in correct place (path)
     if (Platform() === PlatformEnum.macOS && !process.env.IS_DEBUG) {
       let appPath = app.getAppPath();
@@ -686,6 +688,14 @@ function createSettingsWindow(viewName) {
 
   settingsWindow.once("ready-to-show", () => {
     settingsWindow.show();
+
+    if (isDevelopment) {
+      try {
+        settingsWindow.webContents.openDevTools();
+      } catch (e) {
+        console.error("Failed to open dev tools:", e.toString());
+      }
+    }
   });
   settingsWindow.on("closed", () => {
     settingsWindow = null;

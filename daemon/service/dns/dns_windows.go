@@ -37,8 +37,8 @@ import (
 )
 
 var (
-	_fSetDNSByMAC     *syscall.LazyProc // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
-	_fSetDNSByLocalIP *syscall.LazyProc // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
+	_fSetDNSByLocalIP      *syscall.LazyProc // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation, byte isDoH, const char* dohTemplateUrl, byte isIpv6)
+	_fIsCanUseDnsOverHttps *syscall.LazyProc // DWORD _cdecl IsCanUseDnsOverHttps()
 )
 
 var dnsMutex sync.Mutex
@@ -64,32 +64,37 @@ func implInitialize() error {
 	}
 
 	dll := syscall.NewLazyDLL(helpersDllPath)
-	_fSetDNSByMAC = dll.NewProc("SetDNSByMAC")         // DWORD _cdecl SetDNSByMAC(const char* interfaceMAC, const char* dnsIP, byte operation)
-	_fSetDNSByLocalIP = dll.NewProc("SetDNSByLocalIP") // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation)
+	_fSetDNSByLocalIP = dll.NewProc("SetDNSByLocalIP")           // DWORD _cdecl SetDNSByLocalIP(const char* interfaceLocalAddr, const char* dnsIP, byte operation, byte isDoH, const char* dohTemplateUrl, byte isIpv6)
+	_fIsCanUseDnsOverHttps = dll.NewProc("IsCanUseDnsOverHttps") // DWORD _cdecl IsCanUseDnsOverHttps()
 	return nil
 }
 
-func fSetDNSByMAC(interfaceMACAddr net.HardwareAddr, dns net.IP, op Operation) error {
-	dnsString := dns.String()
-	if dns.Equal(net.IPv4zero) {
-		dnsString = ""
+func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dnsCfg DnsSettings, ipv6 bool, op Operation) error {
+
+	isDoH := uint32(0)
+	switch dnsCfg.Encryption {
+	case EncryptionDnsOverTls:
+		return fmt.Errorf("DnsOverTls settings not supported by Windows. Please, try to use DnsOverHttps")
+	case EncryptionDnsOverHttps:
+		isDoH = 1
+	default:
+		isDoH = 0
 	}
 
-	dnsMutex.Lock()
-	defer dnsMutex.Unlock()
+	dohTemplateUrl := dnsCfg.DohTemplate
 
-	retval, _, err := _fSetDNSByMAC.Call(
-		uintptr(unsafe.Pointer(syscall.StringBytePtr(interfaceMACAddr.String()))),
-		uintptr(unsafe.Pointer(syscall.StringBytePtr(dnsString))),
-		uintptr(op))
+	dnsIpString := ""
+	if !dnsCfg.IsEmpty() {
+		isAddrIpv6, _ := dnsCfg.IsIPv6()
+		if isAddrIpv6 != ipv6 {
+			return fmt.Errorf("unable to apply DNS configuration. IP address type mismatch to the IPv6 parameter")
+		}
+		dnsIpString = dnsCfg.Ip().String()
+	}
 
-	return checkDefaultAPIResp(retval, err)
-}
-
-func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dns net.IP, op Operation) error {
-	dnsString := dns.String()
-	if dns.Equal(net.IPv4zero) {
-		dnsString = ""
+	isIpv6 := uint32(0)
+	if ipv6 {
+		isIpv6 = 1
 	}
 
 	dnsMutex.Lock()
@@ -97,10 +102,21 @@ func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dns net.IP, op Operation) error
 
 	retval, _, err := _fSetDNSByLocalIP.Call(
 		uintptr(unsafe.Pointer(syscall.StringBytePtr(interfaceLocalAddr.String()))),
-		uintptr(unsafe.Pointer(syscall.StringBytePtr(dnsString))),
-		uintptr(op))
+		uintptr(unsafe.Pointer(syscall.StringBytePtr(dnsIpString))),
+		uintptr(op),
+		uintptr(isDoH),
+		uintptr(unsafe.Pointer(syscall.StringBytePtr(dohTemplateUrl))),
+		uintptr(isIpv6))
 
 	return checkDefaultAPIResp(retval, err)
+}
+
+func fIsCanUseDnsOverHttps() bool {
+	retval, _, err := _fIsCanUseDnsOverHttps.Call()
+	if retval == 0 || err != syscall.Errno(0) {
+		return false
+	}
+	return true
 }
 
 func checkDefaultAPIResp(retval uintptr, err error) error {
@@ -115,7 +131,7 @@ func checkDefaultAPIResp(retval uintptr, err error) error {
 
 // last custom-DNS info which was enabled
 var (
-	_lastDNS net.IP
+	_lastDNS DnsSettings
 )
 
 func catchPanic(err *error) {
@@ -140,7 +156,7 @@ func implPause() error {
 }
 
 // Resume - (on vpn resumed) set VPN-defined DNS parameters
-func implResume(defaultDNS net.IP) error {
+func implResume(defaultDNS DnsSettings) error {
 	// Not in use for Windows implementation
 	// In paused state we are simply switching to the main network interface (to default routes)
 
@@ -149,68 +165,84 @@ func implResume(defaultDNS net.IP) error {
 	return nil
 }
 
-func implSetManual(addr net.IP, localInterfaceIP net.IP) (err error) {
+func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
 	defer catchPanic(&err)
+	return fIsCanUseDnsOverHttps(), false, err
+}
 
-	if addr.Equal(_lastDNS) {
-		return nil
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+	defer catchPanic(&retErr)
+
+	if isIPv6, _ := dnsCfg.IsIPv6(); isIPv6 {
+		return fmt.Errorf("IPv6 DNS is not supported")
 	}
 
-	if _lastDNS != nil {
-		// if there was defined DNS - remove it from non-VPN inerfaces (if necessary)
-		// (skipping VPN interface, because its data will be owerwrited)
+	if !_lastDNS.IsEmpty() {
+		// if there was defined DNS - remove it from non-VPN interfaces (if necessary)
+		// (skipping VPN interface, because its data will be overwritten)
 		if err := implDeleteManual(nil); err != nil {
-			return fmt.Errorf("Failed to set DNS: %w", err)
+			return fmt.Errorf("failed to set DNS: %w", err)
 		}
 	}
 
-	// non-VPN interfaces to update (if DNS located in local network)
-	notVpnIfcMACToUpdate, err := getMACAddrByIPinNetwork(addr, localInterfaceIP)
+	isIpv6 := false
+	if dnsCfg.IsEmpty() {
+		return fmt.Errorf("unable to change DNS (configuration is not defined)")
+	}
+	isIpv6, _ = dnsCfg.IsIPv6()
 
-	if localInterfaceIP == nil && len(notVpnIfcMACToUpdate) <= 0 {
+	// non-VPN interfaces to update (if DNS located in local network)
+	notVpnInterfacesToUpdate, err := getInterfacesIPsWhichContainsIP(dnsCfg.Ip(), localInterfaceIP)
+
+	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
 		return nil
 	}
 
 	start := time.Now()
-	log.Info("Changing DNS to ", addr, " ...")
+	log.Info(fmt.Sprintf("Changing DNS to %s ...", dnsCfg.InfoString()))
 	defer func() {
 		if err != nil {
-			log.Info(fmt.Sprintf("Changing DNS to %s done (%dms) with error: %s", addr.String(), time.Since(start).Milliseconds(), err.Error()))
+			log.Error(fmt.Sprintf("Changing DNS to %s done (%dms) with error: %s", dnsCfg.InfoString(), time.Since(start).Milliseconds(), err.Error()))
 		} else {
-			log.Info(fmt.Sprintf("Changing DNS to %s: done (%dms)", addr.String(), time.Since(start).Milliseconds()))
+			log.Info(fmt.Sprintf("Changing DNS to %s: done (%dms)", dnsCfg.InfoString(), time.Since(start).Milliseconds()))
 		}
 	}()
 
 	if localInterfaceIP != nil {
-		// SET DNS to VPN interface
-		if err := fSetDNSByLocalIP(localInterfaceIP, addr, OperationSet); err != nil {
+		// INFO: support of IPv6 DNS disabled in current implementation
+		// Reset DNS configuration for the protocol which is not in use
+		// if e := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, !isIpv6, OperationSet); err != nil {
+		//	log.Warning(fmt.Errorf("failed to reset DNS (IPv6=%v) for local interface: %w", !isIpv6, e))
+		// }
+
+		// SET DNS to VPN interface (for appropriate IPv4\IPv6 protocol)
+		if err := fSetDNSByLocalIP(localInterfaceIP, dnsCfg, isIpv6, OperationSet); err != nil {
 			return fmt.Errorf("failed to set DNS for local interface: %w", err)
 		}
 	}
 
-	if len(notVpnIfcMACToUpdate) > 0 {
+	if len(notVpnInterfacesToUpdate) > 0 {
 		// ADD DNS to non-VPN interface (if necessary, when DNS is in local network)
-
-		for _, mac := range notVpnIfcMACToUpdate {
-			if err := fSetDNSByMAC(mac, addr, OperationAdd); err != nil {
-				return fmt.Errorf("failed to set DNS for interface by MAC: %w", err)
+		for _, ifcAddr := range notVpnInterfacesToUpdate {
+			if err := fSetDNSByLocalIP(ifcAddr.IP, dnsCfg, isIpv6, OperationAdd); err != nil {
+				return fmt.Errorf("failed to set DNS for non-VPN interface: %w", err)
 			}
 		}
 	}
 
 	// save last changed DNS address
-	_lastDNS = addr
+	_lastDNS = dnsCfg
 
-	return nil
+	return retErr
 }
 
-func implDeleteManual(localInterfaceIP net.IP) (err error) {
-	defer catchPanic(&err)
+func implDeleteManual(localInterfaceIP net.IP) (retErr error) {
+	defer catchPanic(&retErr)
 
-	// non-VPN interfaces to update (if DNS located in local network)
-	notVpnIfcMACToUpdate, err := getMACAddrByIPinNetwork(_lastDNS, localInterfaceIP)
+	// non-VPN interfaces to update (if DNS server is in local network)
+	notVpnInterfacesToUpdate, err := getInterfacesIPsWhichContainsIP(_lastDNS.Ip(), localInterfaceIP)
 
-	if localInterfaceIP == nil && len(notVpnIfcMACToUpdate) <= 0 {
+	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
 		return nil
 	}
 
@@ -224,31 +256,48 @@ func implDeleteManual(localInterfaceIP net.IP) (err error) {
 		}
 	}()
 
+	isIpv6 := false
+	if !_lastDNS.IsEmpty() {
+		isIpv6, _ = _lastDNS.IsIPv6()
+	}
+
 	if localInterfaceIP != nil {
 		// RESET DNS for VPN interface
-		if err := fSetDNSByLocalIP(localInterfaceIP, net.IPv4zero, OperationSet); err != nil {
-			return fmt.Errorf("failed to reset DNS for local interface: %w", err)
+
+		// INFO: support of IPv6 DNS disabled in current implementation
+		// (try to erase the DNS for both protocols (Ipv4 and IPv6))
+		// if e := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, !isIpv6, OperationSet); err != nil {
+		//	log.Warning(fmt.Errorf("failed to reset DNS (IPv6=%v) for local interface: %w", !isIpv6, e))
+		// }
+
+		if e := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, isIpv6, OperationSet); err != nil {
+			retErr = fmt.Errorf("failed to reset DNS (IPv6=%v) for local interface: %w", isIpv6, e)
 		}
 	}
 
-	if len(notVpnIfcMACToUpdate) > 0 {
+	if len(notVpnInterfacesToUpdate) > 0 {
 		// REMOVE DNS from non-VPN interface (if necessary, when DNS is in local network)
-		for _, mac := range notVpnIfcMACToUpdate {
-			if err := fSetDNSByMAC(mac, _lastDNS, OperationDel); err != nil {
-				return fmt.Errorf("failed to reset DNS for interface by MAC: %w", err)
+		for _, ifcAddr := range notVpnInterfacesToUpdate {
+			if err := fSetDNSByLocalIP(ifcAddr.IP, _lastDNS, isIpv6, OperationDel); err != nil {
+				log.Error(fmt.Errorf("failed to remove previously applied DNS configuration for non-VPN interface (ipv6:%v): %w", isIpv6, err))
 			}
 		}
 	}
 
-	_lastDNS = nil
+	_lastDNS = DnsSettings{}
 
-	return nil
+	return retErr
 }
 
-// getMACAddrByIPinNetwork - get hardware addresses (MAC) of the network interfaces to which belongs an IP address (MAC of interface which is in same network as 'addr')
-// 		addr - IP address from local network (which can be accessed by interface different to VPN interface)
+func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
+	return []DnsSettings{}, nil
+}
+
+// getInterfacesIPsWhichContainsIP - get IP addresses of local network interfaces to which belongs an IP address
+// (interface which is in same network as 'addr')
+// 		addr - IP address from local network (which can be accessed by interface)
 //		localAddrToSkip - local IP of interface which can be excluded from output (e.g. VPN interface)
-func getMACAddrByIPinNetwork(addr net.IP, localAddrToSkip net.IP) (ret []net.HardwareAddr, err error) {
+func getInterfacesIPsWhichContainsIP(addr net.IP, localAddrToSkip net.IP) (ret []net.IPNet, err error) {
 	if addr == nil {
 		return ret, nil
 	}
@@ -266,18 +315,7 @@ func getMACAddrByIPinNetwork(addr net.IP, localAddrToSkip net.IP) (ret []net.Har
 		}
 
 		if network.Contains(addr) { // 'addr' is in 'network'
-			// trying to get MAC address of the network which must be updated
-			infs, err := netinfo.InterfaceByIPAddr(network.IP)
-			if err != nil {
-				log.Error("Failed to get interface for address ", network.IP, ":", err)
-				continue
-			}
-
-			if infs == nil || infs.HardwareAddr == nil {
-				continue
-			}
-
-			ret = append(ret, infs.HardwareAddr)
+			ret = append(ret, network)
 		}
 	}
 

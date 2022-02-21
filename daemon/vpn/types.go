@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 )
 
 // Type - VPN type
@@ -183,7 +185,7 @@ type Process interface {
 	Resume() error
 	IsPaused() bool
 
-	SetManualDNS(addr net.IP) error
+	SetManualDNS(dnsCfg dns.DnsSettings) error
 	ResetManualDNS() error
 
 	// DestinationIP -  Get destination IP (VPN host server or proxy server IP address)

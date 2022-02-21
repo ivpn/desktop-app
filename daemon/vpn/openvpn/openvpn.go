@@ -36,6 +36,7 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 	"github.com/ivpn/desktop-app/daemon/vpn"
@@ -233,7 +234,13 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 						stateInf.ServerIP = o.connectParams.hostIP
 					}
 
-					o.implOnConnected() // process "on connected" event (if necessary)
+					// Process "on connected" event (if necessary)
+					// E.g. set custom DNS configuration on Windows
+					retErr = o.implOnConnected()
+					if retErr != nil {
+						o.doDisconnect()
+						break
+					}
 				} else {
 					o.clientIP = nil
 				}
@@ -385,7 +392,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		return fmt.Errorf("failed to start OpenVPN process: %w", err)
 	}
 
-	return nil
+	return retErr
 }
 
 // Disconnect stops the connection
@@ -513,8 +520,8 @@ func (o *OpenVPN) IsPaused() bool {
 }
 
 // SetManualDNS changes DNS to manual IP
-func (o *OpenVPN) SetManualDNS(addr net.IP) error {
-	return o.implOnSetManualDNS(addr)
+func (o *OpenVPN) SetManualDNS(dnsCfg dns.DnsSettings) error {
+	return o.implOnSetManualDNS(dnsCfg)
 }
 
 // ResetManualDNS restores DNS

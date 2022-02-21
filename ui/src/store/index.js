@@ -66,6 +66,13 @@ export default new Vuex.Store({
       SplitTunnelError: "",
     },
 
+    dnsAbilities: {
+      CanUseDnsOverTls: false,
+      CanUseDnsOverHttps: false,
+    },
+
+    dnsPredefinedConfigurations: null, //[]  array elements: { DnsHost: "", Encryption: DnsEncryption.None, DohTemplate: "", }
+
     // true when we are requesting geo-lookup info on current moment
     isRequestingLocation: false,
     // Current location (be careful, in 'connected' state this object will contain info about 'VPN location')
@@ -183,6 +190,10 @@ export default new Vuex.Store({
       isStrNullOrEmpty(state.disabledFunctions.ObfsproxyError),
     isSplitTunnelEnabled: (state) =>
       isStrNullOrEmpty(state.disabledFunctions.SplitTunnelError),
+
+    getDnsAbilities: (state) => {
+      return state.dnsAbilities;
+    },
   },
 
   // can be called from main process
@@ -208,6 +219,16 @@ export default new Vuex.Store({
     disabledFunctions(state, disabledFuncs) {
       state.disabledFunctions = disabledFuncs;
     },
+    dnsAbilities(state, dnsAbilities) {
+      if (!dnsAbilities)
+        dnsAbilities = { CanUseDnsOverTls: false, CanUseDnsOverHttps: false };
+
+      state.dnsAbilities = dnsAbilities;
+    },
+    dnsPredefinedConfigurations(state, dnsPredefinedConfigurations) {
+      state.dnsPredefinedConfigurations = dnsPredefinedConfigurations;
+    },
+
     configParams(state, value) {
       state.configParams = value;
     },

@@ -1,6 +1,9 @@
-// +build windows
+//go:build nowifi
+// +build nowifi
 
 package wifiNotifier
+
+import "github.com/ivpn/desktop-app/daemon/logger"
 
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
 func GetAvailableSSIDs() []string {
@@ -19,5 +22,6 @@ func GetCurrentNetworkIsInsecure() bool {
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
 func SetWifiNotifier(cb func(string)) error {
+	logger.Debug("WiFi functionality disabled in this build")
 	return nil
 }

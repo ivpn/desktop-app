@@ -158,7 +158,7 @@ func (m *Manager) AddProvider(prv Provider) (retErr error) {
 	}
 
 	defer func() {
-		if retErr != nil {
+		if prvHandle != syscall.Handle(0) {
 			FWPMPROVIDER0Delete(prvHandle)
 		}
 	}()
@@ -253,7 +253,7 @@ func (m *Manager) AddSubLayer(sbl SubLayer) (retErr error) {
 	}
 
 	defer func() {
-		if retErr != nil {
+		if handler != syscall.Handle(0) {
 			FWPMSUBLAYER0Delete(handler)
 		}
 	}()
@@ -300,7 +300,7 @@ func (m *Manager) AddFilter(filter Filter) (filerID uint64, retErr error) {
 	}
 
 	defer func() {
-		if retErr != nil {
+		if handler != syscall.Handle(0) {
 			FWPMFILTERDelete(handler)
 		}
 	}()
@@ -309,7 +309,7 @@ func (m *Manager) AddFilter(filter Filter) (filerID uint64, retErr error) {
 		return 0, fmt.Errorf("failed to set provider key: %w", err)
 	}
 
-	if err = FWPMSUBLAYER0SetDisplayData(handler, filter.DisplayDataName, filter.DisplayDataDescription); err != nil {
+	if err = FWPMFILTERSetDisplayData(handler, filter.DisplayDataName, filter.DisplayDataDescription); err != nil {
 		return 0, fmt.Errorf("failed to set display data: %w", err)
 	}
 

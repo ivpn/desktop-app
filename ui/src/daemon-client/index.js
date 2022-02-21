@@ -39,6 +39,7 @@ import {
   VpnStateEnum,
   PauseStateEnum,
   DaemonConnectionType,
+  DnsEncryption,
 } from "@/store/types";
 import store from "@/store";
 
@@ -85,6 +86,8 @@ const daemonRequests = Object.freeze({
   GetAppIcon: "GetAppIcon",
 
   SetAlternateDns: "SetAlternateDns",
+  GetDnsPredefinedConfigs: "GetDnsPredefinedConfigs",
+
   WireGuardGenerateNewKeys: "WireGuardGenerateNewKeys",
   SetPreference: "SetPreference",
   WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval",
@@ -107,6 +110,7 @@ const daemonResponses = Object.freeze({
   ServerListResp: "ServerListResp",
   PingServersResp: "PingServersResp",
   SetAlternateDNSResp: "SetAlternateDNSResp",
+  DnsPredefinedConfigsResp: "DnsPredefinedConfigsResp",
   KillSwitchStatusResp: "KillSwitchStatusResp",
   AccountStatusResp: "AccountStatusResp",
 
@@ -121,6 +125,15 @@ const daemonResponses = Object.freeze({
   ErrorResp: "ErrorResp",
   ServiceExitingResp: "ServiceExitingResp",
 });
+
+var messageBoxFunction = null;
+function RegisterMsgBoxFunc(mbFunc) {
+  messageBoxFunction = mbFunc;
+}
+async function messageBox(cfg) {
+  if (!cfg || !messageBoxFunction) return null;
+  return await messageBoxFunction(cfg);
+}
 
 // JavaScript does not support int64 (and do not know how to serialize it)
 // Here we are serializing BigInt manually (if necessary)
@@ -321,6 +334,26 @@ async function processResponse(response) {
         }
       }
 
+      {
+        // Save DNS abilities
+        store.commit("dnsAbilities", obj.Dns);
+        // If the dns abilities does not fit the current custom dns configuration - reset custom dns configuration
+        let curDnsEncryption = store.state.settings.dnsCustomCfg.Encryption;
+        if (
+          (curDnsEncryption === DnsEncryption.DnsOverTls &&
+            obj.Dns.CanUseDnsOverTls !== true) ||
+          (curDnsEncryption === DnsEncryption.DnsOverHttps &&
+            obj.Dns.CanUseDnsOverHttps !== true)
+        ) {
+          store.commit("settings/dnsIsCustom", false);
+          store.commit("settings/dnsCustomCfg", {
+            DnsHost: "",
+            Encryption: DnsEncryption.None,
+            DohTemplate: "",
+          });
+        }
+      }
+
       break;
 
     case daemonResponses.ConfigParamsResp:
@@ -374,11 +407,31 @@ async function processResponse(response) {
       // update ping time info for selected servers
       store.dispatch("settings/notifySelectedServersPropsUpdated");
       break;
+
     case daemonResponses.SetAlternateDNSResp:
-      if (obj.IsSuccess == null || obj.IsSuccess !== true) break;
+      if (obj.IsSuccess == null) break;
+      if (obj.IsSuccess !== true) {
+        if (obj.ErrorMessage) {
+          await messageBox({
+            type: "error",
+            buttons: ["OK"],
+            message: `Failed to change DNS`,
+            detail: obj.ErrorMessage,
+          });
+        }
+        break;
+      }
       if (obj.ChangedDNS == null) break;
       store.dispatch(`vpnState/dns`, obj.ChangedDNS);
       break;
+
+    case daemonResponses.DnsPredefinedConfigsResp:
+      // NOTE: currently this code is not in use
+      // Please, refer to 'RequestDnsPredefinedConfigs()' for details
+      if (obj.DnsConfigs)
+        store.commit(`dnsPredefinedConfigurations`, obj.DnsConfigs);
+      break;
+
     case daemonResponses.KillSwitchStatusResp:
       store.commit(`vpnState/firewallState`, obj);
 
@@ -980,7 +1033,12 @@ async function Connect(entryServer, exitServer) {
 
   store.commit("vpnState/connectionState", VpnStateEnum.CONNECTING);
 
-  let currentDNS = "";
+  let manualDNS = {
+    DnsHost: "",
+    Encryption: DnsEncryption.None,
+    DohTemplate: "",
+  };
+
   try {
     const isRandomExitSvr = store.getters["settings/isRandomExitServer"];
 
@@ -1082,9 +1140,15 @@ async function Connect(entryServer, exitServer) {
       };
     }
 
-    if (settings.dnsIsCustom) currentDNS = settings.dnsCustom;
+    if (settings.dnsIsCustom) {
+      manualDNS = settings.dnsCustomCfg;
+    }
     if (settings.isAntitracker) {
-      currentDNS = store.getters["vpnState/antitrackerIp"];
+      manualDNS = {
+        DnsHost: store.getters["vpnState/antitrackerIp"],
+        Encryption: DnsEncryption.None,
+        DohTemplate: "",
+      };
     }
   } catch (e) {
     store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED);
@@ -1101,7 +1165,7 @@ async function Connect(entryServer, exitServer) {
     Command: daemonRequests.Connect,
     VpnType: settings.vpnType,
     [vpnParamsPropName]: vpnParamsObj,
-    CurrentDNS: currentDNS,
+    ManualDNS: manualDNS,
     FirewallOn: store.state.settings.firewallActivateOnConnect === true,
     // Can use IPv6 connection inside tunnel
     // IPv6 has higher priority, if it supported by a server - we will use IPv6.
@@ -1476,16 +1540,27 @@ async function GetAppIcon(binaryPath) {
 }
 
 async function SetDNS(antitrackerIsEnabled) {
-  let DNS = "";
-  if (store.state.settings.dnsIsCustom) DNS = store.state.settings.dnsCustom;
+  let Dns = {
+    DnsHost: "",
+    Encryption: DnsEncryption.None,
+    DohTemplate: "",
+  };
+  if (store.state.settings.dnsIsCustom) {
+    Dns = store.state.settings.dnsCustomCfg;
+  }
 
   if (antitrackerIsEnabled != null) {
     // save antitracker configuration
     store.commit("settings/isAntitracker", antitrackerIsEnabled);
   }
 
-  if (store.state.settings.isAntitracker)
-    DNS = store.getters["vpnState/antitrackerIp"];
+  if (store.state.settings.isAntitracker) {
+    Dns = {
+      DnsHost: store.getters["vpnState/antitrackerIp"],
+      Encryption: DnsEncryption.None,
+      DohTemplate: "",
+    };
+  }
 
   if (store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED) {
     // no sense to send DNS-change request in disconnected state
@@ -1495,8 +1570,18 @@ async function SetDNS(antitrackerIsEnabled) {
   // send change-request
   await sendRecv({
     Command: daemonRequests.SetAlternateDns,
-    DNS,
+    Dns,
   });
+}
+
+import { GetSystemDohConfigurations } from "@/helpers/main_dns";
+async function RequestDnsPredefinedConfigs() {
+  //await sendRecv({
+  //  Command: daemonRequests.GetDnsPredefinedConfigs,
+  //});
+  let retCfgs = await GetSystemDohConfigurations();
+  if (retCfgs) store.commit(`dnsPredefinedConfigurations`, retCfgs);
+  else store.commit(`dnsPredefinedConfigurations`, []);
 }
 
 async function SetLogging() {
@@ -1543,6 +1628,7 @@ async function GetWiFiAvailableNetworks() {
 }
 
 export default {
+  RegisterMsgBoxFunc,
   ConnectToDaemon,
 
   GetDiagnosticLogs,
@@ -1575,6 +1661,8 @@ export default {
   GetAppIcon,
 
   SetDNS,
+  RequestDnsPredefinedConfigs,
+
   SetLogging,
   SetObfsproxy,
   WgRegenerateKeys,

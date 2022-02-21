@@ -28,26 +28,41 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/ivpn/desktop-app/cli/cliplatform"
 	"github.com/ivpn/desktop-app/cli/commands/config"
 	"github.com/ivpn/desktop-app/cli/flags"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 type CmdDns struct {
 	flags.CmdInfo
-	reset bool
-	dns   string
+	reset       bool
+	dns         string
+	dohTemplate string
+	dotTemplate string
 }
 
 func (c *CmdDns) Init() {
 	c.Initialize("dns", "Default 'custom DNS' management for VPN connection\nDNS_IP - optional parameter used to set custom dns value (ignored when AntiTracker enabled)")
 	c.DefaultStringVar(&c.dns, "DNS_IP")
 	c.BoolVar(&c.reset, "off", false, "Reset DNS server to a default")
+
+	if cliplatform.IsDnsOverHttpsSupported() {
+		c.StringVar(&c.dohTemplate, "doh", "", "URI", "DNS-over-HTTPS URI template\nExample: ivpn dns -doh https://cloudflare-dns.com/dns-query 1.1.1.1")
+	}
+	if cliplatform.IsDnsOverTlsSupported() {
+		c.StringVar(&c.dotTemplate, "dot", "", "URI", "DNS-over-TLS URI template")
+	}
 }
 
 func (c *CmdDns) Run() error {
 	if c.reset && len(c.dns) > 0 {
+		return flags.BadParameter{}
+	}
+
+	if len(c.dohTemplate) > 0 && len(c.dotTemplate) > 0 {
 		return flags.BadParameter{}
 	}
 
@@ -59,9 +74,17 @@ func (c *CmdDns) Run() error {
 	var servers *apitypes.ServersInfoResponse
 	// do we have to change custom DNS configuration ?
 	if c.reset || len(c.dns) > 0 {
-		cfg.CustomDNS = ""
+		cfg.CustomDnsCfg = dns.DnsSettings{}
 		if len(c.dns) > 0 {
-			cfg.CustomDNS = c.dns
+			cfg.CustomDnsCfg.DnsHost = c.dns
+		}
+		if len(c.dohTemplate) > 0 {
+			cfg.CustomDnsCfg.Encryption = dns.EncryptionDnsOverHttps
+			cfg.CustomDnsCfg.DohTemplate = c.dohTemplate
+		}
+		if len(c.dotTemplate) > 0 {
+			cfg.CustomDnsCfg.Encryption = dns.EncryptionDnsOverTls
+			cfg.CustomDnsCfg.DohTemplate = c.dotTemplate
 		}
 
 		err = config.SaveConfig(cfg)
@@ -77,11 +100,11 @@ func (c *CmdDns) Run() error {
 		if state == vpn.CONNECTED {
 			svrs, _ := _proto.GetServers()
 			servers = &svrs
-			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectedInfo.ManualDNS, servers)
+			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectedInfo.ManualDNS.DnsHost, servers)
 			if c.reset && (isAntitracker || isAtHardcore) {
 				fmt.Println("Nothing to disable")
 			} else {
-				if err := _proto.SetManualDNS(cfg.CustomDNS); err != nil {
+				if err := _proto.SetManualDNS(cfg.CustomDnsCfg); err != nil {
 					return err
 				}
 				fmt.Println("Custom DNS successfully changed for current VPN connection")
@@ -105,7 +128,7 @@ func (c *CmdDns) Run() error {
 		w = printDNSState(w, connected.ManualDNS, servers)
 	}
 
-	w = printDNSConfigInfo(w, cfg.CustomDNS)
+	w = printDNSConfigInfo(w, cfg.CustomDnsCfg)
 	w.Flush()
 
 	return nil
@@ -138,7 +161,6 @@ func (c *CmdAntitracker) Run() error {
 	}
 
 	var servers apitypes.ServersInfoResponse
-	var dns string
 
 	servers, err = _proto.GetServers()
 	if err != nil {
@@ -168,17 +190,19 @@ func (c *CmdAntitracker) Run() error {
 		}
 
 		if state == vpn.CONNECTED {
-			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectInfo.ManualDNS, &servers)
+			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectInfo.ManualDNS.DnsHost, &servers)
 			if c.off && !(isAntitracker || isAtHardcore) {
 				fmt.Println("AntiTracker already disabled")
 			} else {
+				var dnsStr string
 				if cfg.Antitracker || cfg.AntitrackerHardcore {
-					dns, err = GetAntitrackerIP(connectInfo.VpnType, cfg.AntitrackerHardcore, len(connectInfo.ExitServerID) > 0, &servers)
+					dnsStr, err = GetAntitrackerIP(connectInfo.VpnType, cfg.AntitrackerHardcore, len(connectInfo.ExitServerID) > 0, &servers)
 					if err != nil {
 						return err
 					}
 				}
-				if err := _proto.SetManualDNS(dns); err != nil {
+				dnsCfg := dns.DnsSettings{DnsHost: dnsStr}
+				if err := _proto.SetManualDNS(dnsCfg); err != nil {
 					return err
 				}
 				fmt.Println("AntiTracker successfully updated for current VPN connection")
@@ -207,15 +231,15 @@ func (c *CmdAntitracker) Run() error {
 
 //----------------------------------------------------------------------------------------
 
-func printDNSConfigInfo(w *tabwriter.Writer, customDNS string) *tabwriter.Writer {
+func printDNSConfigInfo(w *tabwriter.Writer, customDNS dns.DnsSettings) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
 
-	if len(customDNS) > 0 {
-		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tCustom DNS %v", customDNS))
+	if !customDNS.IsEmpty() {
+		fmt.Fprintf(w, "Default config\t:\tCustom DNS %v\n", customDNS.InfoString())
 	} else {
-		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tCustom DNS not defined"))
+		fmt.Fprintf(w, "Default config\t:\tCustom DNS not defined\n")
 	}
 
 	return w
@@ -227,11 +251,11 @@ func printAntitrackerConfigInfo(w *tabwriter.Writer, antitracker, antitrackerHar
 	}
 
 	if antitrackerHardcore {
-		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tAntiTracker Enabled (Hardcore)"))
+		fmt.Fprintf(w, "Default config\t:\tAntiTracker Enabled (Hardcore)\n")
 	} else if antitracker {
-		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tAntiTracker Enabled"))
+		fmt.Fprintf(w, "Default config\t:\tAntiTracker Enabled\n")
 	} else {
-		fmt.Fprintln(w, fmt.Sprintf("Default config\t:\tAntiTracker Disabled"))
+		fmt.Fprintf(w, "Default config\t:\tAntiTracker Disabled\n")
 	}
 
 	return w

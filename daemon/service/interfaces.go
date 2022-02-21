@@ -61,7 +61,6 @@ type IWgKeysManager interface {
 type IServiceEventsReceiver interface {
 	OnServiceSessionChanged()
 	OnAccountStatus(sessionToken string, account preferences.AccountStatus)
-	OnDNSChanged(dns net.IP)
 	OnKillSwitchStateChanged()
 	OnWiFiChanged(ssid string, isInsecureNetwork bool)
 	OnPingStatus(retMap map[string]int)

@@ -32,6 +32,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -176,8 +177,8 @@ func (wg *WireGuard) Resume() error {
 }
 
 // SetManualDNS changes DNS to manual IP
-func (wg *WireGuard) SetManualDNS(addr net.IP) error {
-	return wg.setManualDNS(addr)
+func (wg *WireGuard) SetManualDNS(dnsCfg dns.DnsSettings) error {
+	return wg.setManualDNS(dnsCfg)
 }
 
 // ResetManualDNS restores DNS
