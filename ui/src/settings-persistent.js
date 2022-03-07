@@ -26,6 +26,9 @@ import path from "path";
 import { app } from "electron";
 
 import store from "@/store";
+
+import { DnsEncryption } from "@/store/types";
+
 import { ImportAndDeleteOldSettingsIfExists } from "@/settings-import-old";
 
 var saveSettingsTimeout = null;
@@ -43,6 +46,18 @@ export function InitPersistentSettings() {
       const data = fs.readFileSync(filename);
       const settings = JSON.parse(data);
 
+      // UPGRADING FROM OLD SETTINGS
+      // v3.5.2 -> v3.6.1
+      if (settings.dnsCustom !== undefined) {
+        settings.dnsCustomCfg = {
+          DnsHost: settings.dnsCustom,
+          Encryption: DnsEncryption.None,
+          DohTemplate: "",
+        };
+        delete settings.dnsCustom;
+      }
+
+      // apply settings data
       const mergedState = merge(store.state.settings, settings, {
         arrayMerge: combineMerge,
       });
