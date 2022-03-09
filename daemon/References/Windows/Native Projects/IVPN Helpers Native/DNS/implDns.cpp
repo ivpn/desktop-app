@@ -12,6 +12,7 @@
 #include <iphlpapi.h>
 #include <WS2tcpip.h>
 #include <map>
+#include <VersionHelpers.h>
 
 #pragma comment(lib, "Ws2_32.lib")
 #define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
@@ -505,6 +506,12 @@ DWORD IsDnsOverHttpsAccessible()
     if (isDnsOverHttpsAccessibleTested)
         return isDnsOverHttpsAccessible;
     isDnsOverHttpsAccessibleTested = true;
+
+    if  (!IsWindows10OrGreater()) 
+    {
+        isDnsOverHttpsAccessible = false;
+        return isDnsOverHttpsAccessible;
+    }
 
     // Test if DoH functionality supported by current version of the OS:
     // just trying to load DNS settings using type DNS_INTERFACE_SETTINGS_VERSION3.
