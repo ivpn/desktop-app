@@ -71,19 +71,26 @@
             {{ dnsEncryptionNameLabel }} URI template:
           </div>
 
-          <input
-            style="width: 100%"
-            class="settingsTextInput"
-            v-bind:class="{ badData: isTemplateURIError === true }"
-            placeholder="https://..."
-            v-model="dnsDohTemplate"
-          />
+          <div style="width: 100%">
+            <input
+              style="width: 100%; padding-right: 24px"
+              class="settingsTextInput"
+              v-bind:class="{ badData: isTemplateURIError === true }"
+              placeholder="https://..."
+              v-model="dnsDohTemplate"
+            />
+          </div>
           <!-- Predefined DoH/DoT configs -->
-          <div v-if="isHasPredefinedDohConfigs">
+          <div v-if="isHasPredefinedDohConfigs" style="margin-left: 5px">
             <div>
               <img
-                style="position: fixed; width: 18px; margin-left: 4px"
-                src="@/assets/clipboard.svg"
+                style="
+                  position: fixed;
+                  width: 12px;
+                  margin-left: 5px;
+                  margin-top: 10px;
+                "
+                src="@/assets/arrow-bottom.svg"
               />
               <!-- Popup -->
               <select
@@ -153,13 +160,21 @@ export default {
   methods: {
     async applyChanges() {
       // when component closing ->  update changed DNS (if necessary)
-      if (
-        this.isDnsValueChanged &&
-        (!this.dnsIsCustom || (!this.isTemplateURIError && !this.isIPError))
-      )
-        await sender.SetDNS();
-
+      if (this.isDnsValueChanged !== true) return;
       this.isDnsValueChanged = false;
+
+      if (this.dnsIsCustom && (this.isTemplateURIError || this.isIPError)) {
+        this.dnsIsCustom = false;
+
+        sender.showMessageBoxSync({
+          type: "warning",
+          buttons: ["OK"],
+          message: "Error in DNS configuration.",
+          detail: `Custom DNS will not be applied.`,
+        });
+      }
+
+      await sender.SetDNS();
     },
 
     onPredefinedDohConfigSelected() {
