@@ -140,10 +140,17 @@ function checkIsDnsIPError(dnsIpString) {
 }
 
 export default {
+  props: { registerBeforeCloseHandler: Function },
   created() {
     // We have to call applyChanges() even when Settings window was closed by user
     // (the 'beforeDestroy()' is not called in this case)
     window.addEventListener("beforeunload", this.applyChanges);
+
+    if (this.registerBeforeCloseHandler != null) {
+      // Register handler which will be called before closing current view
+      // Handler MUST be 'async' function and MUST return 'true' to allow to switch current view
+      this.registerBeforeCloseHandler(this.applyChanges);
+    }
   },
 
   async beforeDestroy() {
@@ -161,23 +168,29 @@ export default {
     this.requestPredefinedDohConfigs();
   },
   methods: {
-    async applyChanges() {
+    async applyChanges(e) {
       // when component closing ->  update changed DNS (if necessary)
-      if (this.isDnsValueChanged !== true) return;
-      this.isDnsValueChanged = false;
 
       if (this.dnsIsCustom && (this.isTemplateURIError || this.isIPError)) {
-        this.dnsIsCustom = false;
-
         sender.showMessageBoxSync({
           type: "warning",
           buttons: ["OK"],
           message: "Error in DNS configuration.",
           detail: `Custom DNS will not be applied.`,
         });
+
+        if (e && typeof e.preventDefault === "function") {
+          // it is 'beforeunload' handler. Prevent closing window.
+          e.preventDefault();
+          e.returnValue = "";
+        }
+        return false;
       }
 
+      if (this.isDnsValueChanged !== true) return true;
+      this.isDnsValueChanged = false;
       await sender.SetDNS();
+      return true;
     },
 
     onPredefinedDohConfigSelected() {

@@ -154,7 +154,9 @@
           <antitrackerView />
         </div>
         <div class="flexColumn" v-else-if="view === 'dns'">
-          <dnsView />
+          <dnsView
+            :registerBeforeCloseHandler="doRegisterBeforeViewCloseHandler"
+          />
         </div>
         <div class="flexColumn" v-else>
           <!-- no view defined -->
@@ -190,12 +192,16 @@ export default {
     imgArrowLeft,
   },
   mounted() {
+    this.onBeforeViewCloseHandler = null;
     if (this.$route.params.view != null) this.view = this.$route.params.view;
     this.$store.dispatch("uiState/currentSettingsViewName", this.view);
   },
   data: function () {
     return {
       view: "general",
+      // Handler which will be called before closing current view (null - in case if no handler registered for current view).
+      // Handler MUST be 'async' function and MUST return 'true' to allow to switch current view
+      onBeforeViewCloseHandler: Function,
     };
   },
   computed: {
@@ -221,15 +227,35 @@ export default {
     },
   },
   methods: {
-    goBack: function () {
+    goBack: async function () {
       if (this.$store.state.settings.minimizedUI) {
         sender.closeCurrentWindow();
-      } else this.$router.push("/");
+      } else {
+        // Call async 'BeforeViewCloseHandler' for current view (if exists). Block view change if handler return != true
+        if (this.onBeforeViewCloseHandler != null) {
+          if ((await this.onBeforeViewCloseHandler()) != true) return;
+        }
+
+        this.$router.push("/");
+      }
+
+      this.onBeforeViewCloseHandler = null; // forget 'onBeforeViewCloseHandler' for current view
       this.$store.dispatch("uiState/currentSettingsViewName", null);
     },
-    onView: function (viewName) {
+    onView: async function (viewName) {
+      // Call async 'BeforeViewCloseHandler' for current view (if exists). Block view change if handler return != true
+      if (this.onBeforeViewCloseHandler != null) {
+        if ((await this.onBeforeViewCloseHandler()) != true) return;
+      }
+
+      this.onBeforeViewCloseHandler = null; // forget 'onBeforeViewCloseHandler' for current view
       this.view = viewName;
       this.$store.dispatch("uiState/currentSettingsViewName", this.view);
+    },
+    doRegisterBeforeViewCloseHandler: function (handler) {
+      // Register handler which will be called before closing current view
+      // Handler MUST be 'async' function and MUST return 'true' to allow to switch current view
+      this.onBeforeViewCloseHandler = handler;
     },
   },
 };
