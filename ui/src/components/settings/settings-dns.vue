@@ -81,7 +81,10 @@
             />
           </div>
           <!-- Predefined DoH/DoT configs -->
-          <div v-if="isHasPredefinedDohConfigs" style="margin-left: 5px">
+          <div
+            v-bind:class="{ HiddenDiv: isHasPredefinedDohConfigs !== true }"
+            style="margin-left: 5px"
+          >
             <div>
               <img
                 style="
@@ -413,5 +416,14 @@ div.disabled {
 div.settingsRadioBtnEx {
   @extend .settingsRadioBtn;
   padding-right: 20px;
+}
+
+div.HiddenDiv {
+  opacity: 0;
+}
+div.HiddenDiv > * {
+  opacity: 0;
+  pointer-events: none;
+  cursor: default;
 }
 </style>
