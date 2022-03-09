@@ -153,13 +153,21 @@ export default {
   methods: {
     async applyChanges() {
       // when component closing ->  update changed DNS (if necessary)
-      if (
-        this.isDnsValueChanged &&
-        (!this.dnsIsCustom || (!this.isTemplateURIError && !this.isIPError))
-      )
-        await sender.SetDNS();
-
+      if (this.isDnsValueChanged !== true) return;
       this.isDnsValueChanged = false;
+
+      if (this.dnsIsCustom && (this.isTemplateURIError || this.isIPError)) {
+        this.dnsIsCustom = false;
+
+        sender.showMessageBoxSync({
+          type: "warning",
+          buttons: ["OK"],
+          message: "Error in DNS configuration.",
+          detail: `Custom DNS will not be applied.`,
+        });
+      }
+
+      await sender.SetDNS();
     },
 
     onPredefinedDohConfigSelected() {
