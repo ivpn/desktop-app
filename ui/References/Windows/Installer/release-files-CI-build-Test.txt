@@ -1,0 +1,22 @@
+icon.ico
+IVPN Service.exe
+cli\ivpn.exe
+etc\ca.crt
+etc\servers.json
+etc\ta.key
+devcon\x86_64\devcon.exe
+OpenVPN\x86_64\liblzo2-2.dll
+OpenVPN\x86_64\libpkcs11-helper-1.dll
+OpenVPN\x86_64\openssl.exe
+OpenVPN\x86_64\openvpn.exe
+OpenVPN\x86_64\libssl-1_1-x64.dll
+OpenVPN\x86_64\libcrypto-1_1-x64.dll
+OpenVPN\x86_64\tap\license.txt
+OpenVPN\x86_64\tap\OemVista.inf
+OpenVPN\x86_64\tap\tapivpn.cat
+OpenVPN\x86_64\tap\tapivpn.sys
+OpenVPN\x86_64\tap_oldsign\license.txt
+OpenVPN\x86_64\tap_oldsign\OemVista.inf
+OpenVPN\x86_64\tap_oldsign\tapivpn.cat
+OpenVPN\x86_64\tap_oldsign\tapivpn.sys
+SplitTunnelDriver\x86_64\ivpn-split-tunnel.sys
