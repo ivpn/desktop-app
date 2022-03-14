@@ -79,6 +79,13 @@ goto :success
 
 :build_native_libs
 	echo [*] Building Native projects x64
+	
+	if "%GITHUB_ACTIONS%" == "true" (
+	  echo "! GITHUB_ACTIONS detected ! It is just a build test."
+	  echo "! Skipped compilation of Native projects !"
+		goto :eof
+	)
+	
 	msbuild "%SCRIPTDIR%..\Native Projects\ivpn-windows-native.sln" /verbosity:quiet /t:Build /property:Configuration=Release /property:Platform=x64 || exit /b 1
 	goto :eof
 
