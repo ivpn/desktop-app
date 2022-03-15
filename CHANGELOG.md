@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.6.4 - 2022-03-15
+
+[NEW] Configure custom DNS over HTTPS (Windows 11)  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.6.4.exe)  
+SHA256: 022de7299f6578822f2225d39b070fe8551c06e4a164980716be867f967a969b  
+
 ## Version 3.5.2 - 2022-01-31
 
 [FIX] (Windows) Split Tunneling issues  
