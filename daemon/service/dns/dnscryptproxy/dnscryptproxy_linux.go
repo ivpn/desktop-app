@@ -116,16 +116,19 @@ func (p *DnsCryptProxy) start() (command *startedCmd, err error) {
 		}
 	}()
 
+	var lastOutError error = nil
 	isInitialized := false
 	// output example:
 	// 	[NOTICE] [ivpnmanualconfig] OK
-	onReadyStr := fmt.Sprintf("[NOTICE] [%s] OK", configSvrName)
 	outputParseFunc := func(text string, isError bool) {
 		log.Info("[OUT] ", text)
 		// check if dnscrypt-proxy ready to use
-		if strings.Contains(text, onReadyStr) {
+		if strings.Contains(text, "[NOTICE] Now listening to") {
 			isInitialized = true
 			return
+		}
+		if strings.Contains(text, " [FATAL] ") {
+			lastOutError = fmt.Errorf(text)
 		}
 	}
 
@@ -152,7 +155,21 @@ func (p *DnsCryptProxy) start() (command *startedCmd, err error) {
 
 	started := time.Now()
 	// waiting for first channel output (ensure process is started)
-	for !isInitialized && shell.IsRunning(cmd) {
+	for !isInitialized {
+		if !shell.IsRunning(cmd) {
+			var exitCode int = 0
+			procStoppedError = cmd.Wait()
+			if procStoppedError != nil {
+				exitCode, _ = shell.GetCmdExitCode(procStoppedError)
+			}
+
+			if lastOutError != nil {
+				return nil, fmt.Errorf("%w (retcode=%d)", lastOutError, exitCode)
+			} else {
+				return nil, fmt.Errorf("dnscrypt-proxy error (retcode=%d)", exitCode)
+			}
+		}
+
 		time.Sleep(time.Millisecond * 10)
 
 		// timeout limit to start dnscrypt-proxy process = 10 seconds
