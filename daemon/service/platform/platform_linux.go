@@ -27,10 +27,13 @@ import (
 )
 
 var (
-	firewallScript string
-	splitTunScript string
-	logDir         string = "/opt/ivpn/log"
-	tmpDir         string = "/opt/ivpn/mutable"
+	firewallScript              string
+	splitTunScript              string
+	dnscryptproxyBinPath        string
+	dnscryptproxyConfigTemplate string
+	dnscryptproxyConfig         string
+	logDir                      string = "/opt/ivpn/log"
+	tmpDir                      string = "/opt/ivpn/mutable"
 )
 
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
@@ -60,6 +63,12 @@ func doOsInit() (warnings []string, errors []error) {
 	if err := checkFileAccessRightsExecutable("splitTunScript", splitTunScript); err != nil {
 		errors = append(errors, err)
 	}
+	if err := checkFileAccessRightsExecutable("dnscryptproxyBinPath", dnscryptproxyBinPath); err != nil {
+		errors = append(errors, err)
+	}
+	if err := checkFileAccessRightsStaticConfig("dnscryptproxyConfigTemplate", dnscryptproxyConfigTemplate); err != nil {
+		errors = append(errors, err)
+	}
 
 	return warnings, errors
 }
@@ -74,4 +83,8 @@ func FirewallScript() string {
 // SplitTunScript returns path to script which control split-tunneling functionality
 func SplitTunScript() string {
 	return splitTunScript
+}
+
+func DnsCryptProxyInfo() (binPath, configPathTemplate, configPathMutable string) {
+	return dnscryptproxyBinPath, dnscryptproxyConfigTemplate, dnscryptproxyConfig
 }

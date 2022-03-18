@@ -20,6 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build linux && debug
 // +build linux,debug
 
 package platform
@@ -67,6 +68,10 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 
 	wgBinaryPath = path.Join(installDir, "_deps/wireguard-tools_inst/wg-quick")
 	wgToolBinaryPath = path.Join(installDir, "_deps/wireguard-tools_inst/wg")
+
+	dnscryptproxyBinPath = path.Join(installDir, "_deps/dnscryptproxy_inst/dnscrypt-proxy")
+	dnscryptproxyConfigTemplate = path.Join(installDir, "etc/dnscrypt-proxy-template.toml")
+	dnscryptproxyConfig = path.Join(tmpDir, "dnscrypt-proxy.toml")
 
 	settingsFile = path.Join(tmpDir, "settings.json")
 	openvpnConfigFile = path.Join(tmpDir, "openvpn.cfg")

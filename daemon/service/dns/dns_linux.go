@@ -25,11 +25,14 @@ package dns
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/ivpn/desktop-app/daemon/helpers"
+	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 var (
@@ -39,6 +42,8 @@ var (
 
 	isPaused  bool = false
 	manualDNS DnsSettings
+
+	dnscryptProxyProcess *dnscryptproxy.DnsCryptProxy
 
 	done chan struct{}
 )
@@ -65,7 +70,7 @@ func implInitialize() error {
 }
 
 func implPause() error {
-	if isBackupExists(resolvBackupFile) == false {
+	if !isBackupExists(resolvBackupFile) {
 		// The backup for the OS-defined configuration not exists.
 		// It seems, we are not connected. Nothing to pause.
 		return nil
@@ -99,16 +104,17 @@ func implResume(defaultDNS DnsSettings) error {
 }
 
 func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
-	return false, false, nil
+	return true, true, nil
 }
 
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for Linux implementation
-func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
-	if dnsCfg.Encryption != EncryptionNone {
-		return fmt.Errorf("DNS encryption is not supported on this platform")
-	}
-
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+	defer func() {
+		if retErr != nil {
+			stopDnscryptProxyProcess()
+		}
+	}()
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
 		// it will be applied on RESUME
@@ -118,8 +124,61 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 
 	stopDNSChangeMonitoring()
 
-	if manualDNS.IsEmpty() {
+	stopDnscryptProxyProcess()
+
+	if dnsCfg.IsEmpty() {
 		return implDeleteManual(nil)
+	}
+
+	if dnsCfg.Encryption != EncryptionNone {
+
+		// Configure + start dnscrypt-proxy
+
+		// Generate DNS server stamp
+		var stamp dnscryptproxy.ServerStamp
+		switch dnsCfg.Encryption {
+		case EncryptionDnsOverHttps:
+			stamp.Proto = dnscryptproxy.StampProtoTypeDoH
+		case EncryptionDnsOverTls:
+			stamp.Proto = dnscryptproxy.StampProtoTypeTLS
+		default:
+			return fmt.Errorf("unsupported DNS encryption type")
+		}
+
+		//stamp.Props |= dnscryptproxy.ServerInformalPropertyDNSSEC
+		//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoLog
+		//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoFilter
+
+		stamp.ServerAddrStr = dnsCfg.DnsHost
+
+		u, err := url.Parse(dnsCfg.DohTemplate)
+		if err != nil {
+			return err
+		}
+
+		if u.Scheme != "https" {
+			return fmt.Errorf("bad template URL scheme: " + u.Scheme)
+		}
+		stamp.ProviderName = u.Host
+		stamp.Path = u.Path
+
+		binPath, configPathTemplate, configPathMutable := platform.DnsCryptProxyInfo()
+		// generate dnscrypt-proxy configuration
+		if err = dnscryptproxy.SaveConfigFile(stamp.String(), configPathTemplate, configPathMutable); err != nil {
+			return err
+		}
+
+		dnscryptProxyProcess = dnscryptproxy.CreateDnsCryptProxy(binPath, configPathMutable)
+
+		if err = dnscryptProxyProcess.Start(); err != nil {
+			dnscryptProxyProcess.Stop()
+			dnscryptProxyProcess = nil
+
+			return fmt.Errorf("failed to start dnscrypt-proxy: %w", err)
+		}
+
+		// the local DNS must be configured to the dnscrypt-proxy (localhost)
+		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
 	}
 
 	createBackupIfNotExists := func() (created bool, er error) {
@@ -184,7 +243,6 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 			var evt fsnotify.Event
 			select {
 			case evt = <-w.Events:
-				break
 			case <-done:
 				// monitoring stopped
 				return
@@ -223,6 +281,9 @@ func implDeleteManual(localInterfaceIP net.IP) error {
 		manualDNS = DnsSettings{}
 		return nil
 	}
+
+	stopDnscryptProxyProcess()
+
 	// stop file change monitoring
 	stopDNSChangeMonitoring()
 	isDeleteBackup := true // delete backup file
@@ -243,12 +304,19 @@ func stopDNSChangeMonitoring() {
 	}
 }
 
+func stopDnscryptProxyProcess() {
+	if dnscryptProxyProcess != nil {
+		dnscryptProxyProcess.Stop()
+		dnscryptProxyProcess = nil
+	}
+}
+
 func isBackupExists(backupFName string) bool {
 	_, err := os.Stat(backupFName)
 	return err == nil
 }
 
-func createBackup(backupFName string, isOwerwriteIfExists bool) (created bool, er error) {
+func createBackup(backupFName string, isOverwriteIfExists bool) (created bool, er error) {
 	if _, err := os.Stat(resolvFile); err != nil {
 		// source file not exists
 		return false, fmt.Errorf("failed to backup DNS configuration (file availability check failed): %w", err)
@@ -256,7 +324,7 @@ func createBackup(backupFName string, isOwerwriteIfExists bool) (created bool, e
 
 	if _, err := os.Stat(backupFName); err == nil {
 		// backup file already exists
-		if isOwerwriteIfExists == false {
+		if !isOverwriteIfExists {
 			return false, nil
 		}
 	}
