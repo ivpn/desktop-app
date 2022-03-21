@@ -104,13 +104,21 @@ func implResume(defaultDNS DnsSettings) error {
 }
 
 func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
-	return true, true, nil
+	return true, false, nil
 }
 
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for Linux implementation
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	defer func() {
+		if r := recover(); r != nil {
+			log.Error("PANIC (recovered): ", r)
+			retErr = fmt.Errorf("%v", r)
+			if err, ok := r.(error); ok {
+				log.ErrorTrace(err)
+			}
+		}
+
 		if retErr != nil {
 			stopDnscryptProxyProcess()
 		}
@@ -139,8 +147,6 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 		switch dnsCfg.Encryption {
 		case EncryptionDnsOverHttps:
 			stamp.Proto = dnscryptproxy.StampProtoTypeDoH
-		case EncryptionDnsOverTls:
-			stamp.Proto = dnscryptproxy.StampProtoTypeTLS
 		default:
 			return fmt.Errorf("unsupported DNS encryption type")
 		}

@@ -37,5 +37,5 @@ func IsDnsOverHttpsSupported() bool {
 	return runtime.GOOS == "windows" || runtime.GOOS == "linux"
 }
 func IsDnsOverTlsSupported() bool {
-	return runtime.GOOS == "linux"
+	return false
 }
