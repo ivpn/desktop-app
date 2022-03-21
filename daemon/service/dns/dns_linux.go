@@ -227,8 +227,8 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 
 		log.Info("DNS-change monitoring started")
 		defer func() {
-			w.Close()
 			log.Info("DNS-change monitoring stopped")
+			w.Close()
 		}()
 
 		for {
