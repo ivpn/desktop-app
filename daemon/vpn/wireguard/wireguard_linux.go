@@ -120,12 +120,16 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 				}
 			}()
 			// update DNS configuration
-			dnsIP := dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String(), Encryption: dns.EncryptionNone}
+
 			if !wg.internals.manualDNS.IsEmpty() {
-				dnsIP = wg.internals.manualDNS
-			}
-			if err := dns.SetManual(dnsIP, nil); err != nil {
-				return fmt.Errorf("failed to set DNS: %w", err)
+				if err := dns.SetManual(wg.internals.manualDNS, nil); err != nil {
+					return fmt.Errorf("failed to set manual DNS: %w", err)
+				}
+			} else {
+				dnsIP := dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String(), Encryption: dns.EncryptionNone}
+				if err := dns.SetDefault(dnsIP, nil); err != nil {
+					return fmt.Errorf("failed to set DNS: %w", err)
+				}
 			}
 
 			// notify connected
