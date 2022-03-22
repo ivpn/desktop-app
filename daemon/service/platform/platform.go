@@ -62,6 +62,10 @@ var (
 	wgBinaryPath     string
 	wgToolBinaryPath string
 	wgConfigFilePath string
+
+	dnscryptproxyBinPath        string
+	dnscryptproxyConfigTemplate string
+	dnscryptproxyConfig         string
 )
 
 func init() {
@@ -141,6 +145,13 @@ func Init() (warnings []string, errors []error) {
 	}
 	if err := checkFileAccessRightsExecutable("wgToolBinaryPath", wgToolBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
+	}
+
+	if err := checkFileAccessRightsExecutable("dnscryptproxyBinPath", dnscryptproxyBinPath); err != nil {
+		errors = append(errors, err)
+	}
+	if err := checkFileAccessRightsStaticConfig("dnscryptproxyConfigTemplate", dnscryptproxyConfigTemplate); err != nil {
+		errors = append(errors, err)
 	}
 
 	if len(routeCommand) > 0 {
@@ -329,4 +340,8 @@ func WgToolBinaryPath() string {
 // WGConfigFilePath path to WireGuard configuration file
 func WGConfigFilePath() string {
 	return wgConfigFilePath
+}
+
+func DnsCryptProxyInfo() (binPath, configPathTemplate, configPathMutable string) {
+	return dnscryptproxyBinPath, dnscryptproxyConfigTemplate, dnscryptproxyConfig
 }

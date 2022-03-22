@@ -34,7 +34,7 @@ func IsSplitTunRunsApp() bool {
 	return runtime.GOOS == "linux"
 }
 func IsDnsOverHttpsSupported() bool {
-	return runtime.GOOS == "windows" || runtime.GOOS == "linux"
+	return true
 }
 func IsDnsOverTlsSupported() bool {
 	return false

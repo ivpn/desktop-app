@@ -58,6 +58,10 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	wgBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"
 	wgToolBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wg"
 
+	dnscryptproxyBinPath = "/Applications/IVPN.app/Contents/MacOS/dnscrypt-proxy/dnscrypt-proxy"
+	dnscryptproxyConfigTemplate = "/Applications/IVPN.app/Contents/Resources/etc/dnscrypt-proxy-template.toml"
+	dnscryptproxyConfig = path.Join(settingsDir, "dnscrypt-proxy.toml")
+
 	return nil, nil
 }
 

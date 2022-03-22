@@ -110,19 +110,7 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for Linux implementation
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("PANIC (recovered): ", r)
-			retErr = fmt.Errorf("%v", r)
-			if err, ok := r.(error); ok {
-				log.ErrorTrace(err)
-			}
-		}
 
-		if retErr != nil {
-			stopDnscryptProxyProcess()
-		}
-	}()
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
 		// it will be applied on RESUME
@@ -132,57 +120,16 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 
 	stopDNSChangeMonitoring()
 
-	stopDnscryptProxyProcess()
-
 	if dnsCfg.IsEmpty() {
 		return implDeleteManual(nil)
 	}
 
+	dnscryptProxyProcessStop()
+	// start encrypted DNS configuration (if required)
 	if dnsCfg.Encryption != EncryptionNone {
-
-		// Configure + start dnscrypt-proxy
-
-		// Generate DNS server stamp
-		var stamp dnscryptproxy.ServerStamp
-		switch dnsCfg.Encryption {
-		case EncryptionDnsOverHttps:
-			stamp.Proto = dnscryptproxy.StampProtoTypeDoH
-		default:
-			return fmt.Errorf("unsupported DNS encryption type")
-		}
-
-		//stamp.Props |= dnscryptproxy.ServerInformalPropertyDNSSEC
-		//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoLog
-		//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoFilter
-
-		stamp.ServerAddrStr = dnsCfg.DnsHost
-
-		u, err := url.Parse(dnsCfg.DohTemplate)
-		if err != nil {
+		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
 			return err
 		}
-
-		if u.Scheme != "https" {
-			return fmt.Errorf("bad template URL scheme: " + u.Scheme)
-		}
-		stamp.ProviderName = u.Host
-		stamp.Path = u.Path
-
-		binPath, configPathTemplate, configPathMutable := platform.DnsCryptProxyInfo()
-		// generate dnscrypt-proxy configuration
-		if err = dnscryptproxy.SaveConfigFile(stamp.String(), configPathTemplate, configPathMutable); err != nil {
-			return err
-		}
-
-		dnscryptProxyProcess = dnscryptproxy.CreateDnsCryptProxy(binPath, configPathMutable)
-
-		if err = dnscryptProxyProcess.Start(); err != nil {
-			dnscryptProxyProcess.Stop()
-			dnscryptProxyProcess = nil
-
-			return fmt.Errorf("failed to start dnscrypt-proxy: %w", err)
-		}
-
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
 		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
 	}
@@ -281,14 +228,14 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 // DeleteManual - reset manual DNS configuration to default
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
+	stopDnscryptProxyProcess()
+
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
 		// it will be applied on RESUME
 		manualDNS = DnsSettings{}
 		return nil
 	}
-
-	stopDnscryptProxyProcess()
 
 	// stop file change monitoring
 	stopDNSChangeMonitoring()
