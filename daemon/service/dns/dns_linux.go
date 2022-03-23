@@ -112,7 +112,7 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	defer func() {
 		if retErr != nil {
-			dnscryptProxyProcessStop()
+			dnscryptproxy.Stop()
 		}
 	}()
 
@@ -129,7 +129,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 		return implDeleteManual(nil)
 	}
 
-	dnscryptProxyProcessStop()
+	dnscryptproxy.Stop()
 	// start encrypted DNS configuration (if required)
 	if dnsCfg.Encryption != EncryptionNone {
 		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {

@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
@@ -62,11 +63,11 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	defer func() {
 		if retErr != nil {
-			dnscryptProxyProcessStop()
+			dnscryptproxy.Stop()
 		}
 	}()
 
-	dnscryptProxyProcessStop()
+	dnscryptproxy.Stop()
 	// start encrypted DNS configuration (if required)
 	if dnsCfg.Encryption != EncryptionNone {
 		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
@@ -87,7 +88,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 // DeleteManual - reset manual DNS configuration to default (DHCP)
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
-	dnscryptProxyProcessStop()
+	dnscryptproxy.Stop()
 
 	err := shell.Exec(log, platform.DNSScript(), "-delete_alternate_dns")
 	if err != nil {
