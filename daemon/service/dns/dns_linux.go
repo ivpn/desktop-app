@@ -25,14 +25,12 @@ package dns
 import (
 	"fmt"
 	"net"
-	"net/url"
 	"os"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
-	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 var (
@@ -42,8 +40,6 @@ var (
 
 	isPaused  bool = false
 	manualDNS DnsSettings
-
-	dnscryptProxyProcess *dnscryptproxy.DnsCryptProxy
 
 	done chan struct{}
 )
@@ -233,7 +229,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 // DeleteManual - reset manual DNS configuration to default
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
-	stopDnscryptProxyProcess()
+	dnscryptproxy.Stop()
 
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
@@ -259,13 +255,6 @@ func stopDNSChangeMonitoring() {
 		break
 	default:
 		break
-	}
-}
-
-func stopDnscryptProxyProcess() {
-	if dnscryptProxyProcess != nil {
-		dnscryptProxyProcess.Stop()
-		dnscryptProxyProcess = nil
 	}
 }
 
