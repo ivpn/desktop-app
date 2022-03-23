@@ -163,7 +163,7 @@ keepalive = 30
 ## This file is different from other log files, and will not be
 ## automatically rotated by the application.
 
-# log_file = 'dnscrypt-proxy.log'
+log_file = 'dnscrypt-proxy.log'
 
 
 ## When using a log file, only keep logs from the most recent launch.

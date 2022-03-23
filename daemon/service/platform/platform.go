@@ -66,6 +66,7 @@ var (
 	dnscryptproxyBinPath        string
 	dnscryptproxyConfigTemplate string
 	dnscryptproxyConfig         string
+	dnscryptproxyLog            string
 )
 
 func init() {
@@ -342,6 +343,6 @@ func WGConfigFilePath() string {
 	return wgConfigFilePath
 }
 
-func DnsCryptProxyInfo() (binPath, configPathTemplate, configPathMutable string) {
-	return dnscryptproxyBinPath, dnscryptproxyConfigTemplate, dnscryptproxyConfig
+func DnsCryptProxyInfo() (binPath, configPathTemplate, configPathMutable, logPath string) {
+	return dnscryptproxyBinPath, dnscryptproxyConfigTemplate, dnscryptproxyConfig, dnscryptproxyLog
 }

@@ -110,6 +110,11 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for Linux implementation
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+	defer func() {
+		if retErr != nil {
+			dnscryptProxyProcessStop()
+		}
+	}()
 
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config

@@ -59,7 +59,12 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for macOS implementation
-func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+	defer func() {
+		if retErr != nil {
+			dnscryptProxyProcessStop()
+		}
+	}()
 
 	dnscryptProxyProcessStop()
 	// start encrypted DNS configuration (if required)

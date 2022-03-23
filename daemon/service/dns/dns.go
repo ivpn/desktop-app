@@ -34,9 +34,8 @@ import (
 )
 
 var (
-	log                  *logger.Logger
-	lastManualDNS        DnsSettings
-	dnscryptProxyProcess *dnscryptproxy.DnsCryptProxy
+	log           *logger.Logger
+	lastManualDNS DnsSettings
 )
 
 func init() {
@@ -194,13 +193,6 @@ func GetPredefinedDnsConfigurations() ([]DnsSettings, error) {
 	return settings, wrapErrorIfFailed(err)
 }
 
-func dnscryptProxyProcessStop() {
-	if dnscryptProxyProcess != nil {
-		dnscryptProxyProcess.Stop()
-		dnscryptProxyProcess = nil
-	}
-}
-
 func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -212,7 +204,7 @@ func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 		}
 
 		if retErr != nil {
-			dnscryptProxyProcessStop()
+			dnscryptproxy.Stop()
 			retErr = fmt.Errorf("failed to start dnscrypt-proxy: %w", retErr)
 		}
 	}()
@@ -221,7 +213,7 @@ func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 		return fmt.Errorf("unsupported DNS encryption type")
 	}
 
-	binPath, configPathTemplate, configPathMutable := platform.DnsCryptProxyInfo()
+	binPath, configPathTemplate, configPathMutable, logfile := platform.DnsCryptProxyInfo()
 	if len(binPath) == 0 || len(configPathTemplate) == 0 || len(configPathMutable) == 0 {
 		return fmt.Errorf("configuration not defined")
 	}
@@ -251,12 +243,10 @@ func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 		return err
 	}
 
-	dnscryptProxyProcess = dnscryptproxy.CreateDnsCryptProxy(binPath, configPathMutable)
+	dnscryptproxy.Init(binPath, configPathMutable, logfile)
 
-	if err = dnscryptProxyProcess.Start(); err != nil {
-		dnscryptProxyProcess.Stop()
-		dnscryptProxyProcess = nil
-
+	if err = dnscryptproxy.Start(); err != nil {
+		dnscryptproxy.Stop()
 		return err
 	}
 

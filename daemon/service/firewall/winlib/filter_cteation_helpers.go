@@ -33,7 +33,8 @@ import (
 // filter Weights
 const (
 	// IMPORTANT! Use only for Local IP/IPv6 of VPN connection
-	weightAllowLocalIP = 10
+	weightAllowLocalIP            = 10
+	weightAllowRemoteLocalhostDNS = 10 // allow DNS requests to 127.0.0.1:53
 
 	// IMPORTANT! Blocking DNS must have highest priority
 	// (only VPN connection have higher priority: weightAllowLocalIP;weightAllowLocalIPV6) //5
@@ -142,6 +143,32 @@ func NewFilterAllowRemoteIP(
 	}
 
 	f.AddCondition(&ConditionIPRemoteAddressV4{Match: FwpMatchEqual, IP: ip, Mask: mask})
+	return f
+}
+
+// AllowRemoteLocalhostDNS allow DNS requests to 127.0.0.1:53
+func AllowRemoteLocalhostDNS(
+	keyProvider syscall.GUID,
+	keyLayer syscall.GUID,
+	keySublayer syscall.GUID,
+	dispName string,
+	dispDescription string,
+	isPersistent bool) Filter {
+
+	ip := net.ParseIP("127.0.0.1")
+	mask := net.ParseIP("255.255.255.255")
+
+	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
+	f.Weight = weightAllowRemoteLocalhostDNS
+	f.Action = FwpActionPermit
+
+	f.Flags = FwpmFilterFlagClearActionRight
+	if isPersistent {
+		f.Flags = f.Flags | FwpmFilterFlagPersistent
+	}
+
+	f.AddCondition(&ConditionIPRemoteAddressV4{Match: FwpMatchEqual, IP: ip, Mask: mask})
+	f.AddCondition(&ConditionIPRemotePort{Match: FwpMatchEqual, Port: 53})
 	return f
 }
 

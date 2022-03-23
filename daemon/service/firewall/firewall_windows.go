@@ -345,6 +345,11 @@ func doEnable() (retErr error) {
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
 		}
+		// allow DNS requests to 127.0.0.1:53
+		_, err = manager.AddFilter(winlib.AllowRemoteLocalhostDNS(providerKey, layer, sublayerKey, sublayerDName, "", isPersistant))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'block dns': %w", err)
+		}
 
 		// allow DHCP port
 		_, err = manager.AddFilter(winlib.NewFilterAllowLocalPort(providerKey, layer, sublayerKey, sublayerDName, "", 68, isPersistant))
@@ -376,6 +381,12 @@ func doEnable() (retErr error) {
 		_, err = manager.AddFilter(winlib.NewFilterAllowApplication(providerKey, layer, sublayerKey, sublayerDName, "", platform.ObfsproxyStartScript(), isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow application - obfsproxy': %w", err)
+		}
+		// allow dnscrypt-proxy
+		dnscryptProxyBin, _, _, _ := platform.DnsCryptProxyInfo()
+		_, err = manager.AddFilter(winlib.NewFilterAllowApplication(providerKey, layer, sublayerKey, sublayerDName, "", dnscryptProxyBin, isPersistant))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'allow application - dnscrypt-proxy': %w", err)
 		}
 
 		_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIP(providerKey, layer, sublayerKey, filterDName, "", net.ParseIP("127.0.0.1"), net.IPv4(255, 255, 255, 255), isPersistant))

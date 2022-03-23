@@ -437,7 +437,7 @@ Section "${PRODUCT_NAME}" SecIVPN
   ;   (additionally, it allows to install of the driver in silent mode (required for Winget package manager))
   ; - OpenVPN\x86_64\tap_oldsign: The driver signed by an old certificate. Works for old Windows versions.
   ${If} ${AtLeastWin10}
-    ; keep using "$INSTDIR\OpenVPN\x86_64\tap"    
+    ; keep using "$INSTDIR\OpenVPN\x86_64\tap"
   ${Else}
     ; use driver from "$INSTDIR\OpenVPN\x86_64\tap_oldsign"
      DetailPrint "info: The Windows version older than Windows 10"
@@ -628,6 +628,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\cli"
   RMDir /r "$INSTDIR\ui"
   RMDir /r "$INSTDIR\SplitTunnelDriver"
+  RMDir /r "$INSTDIR\dnscrypt-proxy"
 
   Delete "$INSTDIR\*.*"
 
