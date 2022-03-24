@@ -59,23 +59,27 @@ func (p *port) String() string {
 
 var (
 	portsWireGuard = [...]port{
-		port{port: 2049},
-		port{port: 2050},
-		port{port: 53},
-		port{port: 1194},
-		port{port: 30587},
-		port{port: 41893},
-		port{port: 48574},
-		port{port: 58237}}
+		{port: 2049},
+		{port: 2050},
+		{port: 53},
+		{port: 1194},
+		{port: 30587},
+		{port: 41893},
+		{port: 48574},
+		{port: 58237},
+		{port: 80},
+		{port: 443}}
 
 	portsOpenVpn = [...]port{
-		port{port: 2049},
-		port{port: 2050},
-		port{port: 53},
-		port{port: 1194},
-		port{port: 443, tcp: true},
-		port{port: 1443, tcp: true},
-		port{port: 80, tcp: true}}
+		{port: 2049},
+		{port: 2050},
+		{port: 53},
+		{port: 1194},
+		{port: 80},
+		{port: 443},
+		{port: 443, tcp: true},
+		{port: 1443, tcp: true},
+		{port: 80, tcp: true}}
 )
 
 type CmdDisconnect struct {

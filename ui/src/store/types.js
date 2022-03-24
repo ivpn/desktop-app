@@ -64,6 +64,8 @@ export const Ports = Object.freeze({
     { port: 2050, type: PortTypeEnum.UDP },
     { port: 53, type: PortTypeEnum.UDP },
     { port: 1194, type: PortTypeEnum.UDP },
+    { port: 80, type: PortTypeEnum.UDP },
+    { port: 443, type: PortTypeEnum.UDP },
     { port: 443, type: PortTypeEnum.TCP },
     { port: 1443, type: PortTypeEnum.TCP },
     { port: 80, type: PortTypeEnum.TCP },
@@ -77,6 +79,8 @@ export const Ports = Object.freeze({
     { port: 41893, type: PortTypeEnum.UDP },
     { port: 48574, type: PortTypeEnum.UDP },
     { port: 58237, type: PortTypeEnum.UDP },
+    { port: 80, type: PortTypeEnum.UDP },
+    { port: 443, type: PortTypeEnum.UDP },
   ],
 });
 
