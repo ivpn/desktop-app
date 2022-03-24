@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [ master, beta ]
+    branches: [ master, beta, development ]
   push:
-    branches: [ master, beta ]
+    branches: [ master, beta, development ]
 jobs:
   win:
     runs-on: windows-latest
