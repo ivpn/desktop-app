@@ -25,13 +25,18 @@ package dns
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
-var log *logger.Logger
-var lastManualDNS DnsSettings
+var (
+	log           *logger.Logger
+	lastManualDNS DnsSettings
+)
 
 func init() {
 	log = logger.NewLogger("dns")
@@ -186,4 +191,64 @@ func GetLastManualDNS() DnsSettings {
 func GetPredefinedDnsConfigurations() ([]DnsSettings, error) {
 	settings, err := implGetPredefinedDnsConfigurations()
 	return settings, wrapErrorIfFailed(err)
+}
+
+func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("PANIC (recovered): ", r)
+			retErr = fmt.Errorf("%v", r)
+			if err, ok := r.(error); ok {
+				log.ErrorTrace(err)
+			}
+		}
+
+		if retErr != nil {
+			dnscryptproxy.Stop()
+			retErr = fmt.Errorf("failed to start dnscrypt-proxy: %w", retErr)
+		}
+	}()
+
+	if dnsCfg.Encryption != EncryptionDnsOverHttps {
+		return fmt.Errorf("unsupported DNS encryption type")
+	}
+
+	binPath, configPathTemplate, configPathMutable, logfile := platform.DnsCryptProxyInfo()
+	if len(binPath) == 0 || len(configPathTemplate) == 0 || len(configPathMutable) == 0 {
+		return fmt.Errorf("configuration not defined")
+	}
+
+	// Configure + start dnscrypt-proxy
+
+	stamp := dnscryptproxy.ServerStamp{Proto: dnscryptproxy.StampProtoTypeDoH}
+	//stamp.Props |= dnscryptproxy.ServerInformalPropertyDNSSEC
+	//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoLog
+	//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoFilter
+
+	stamp.ServerAddrStr = dnsCfg.DnsHost
+
+	u, err := url.Parse(dnsCfg.DohTemplate)
+	if err != nil {
+		return err
+	}
+
+	if u.Scheme != "https" {
+		return fmt.Errorf("bad template URL scheme: " + u.Scheme)
+	}
+	stamp.ProviderName = u.Host
+	stamp.Path = u.Path
+
+	// generate dnscrypt-proxy configuration
+	if err = dnscryptproxy.SaveConfigFile(stamp.String(), configPathTemplate, configPathMutable); err != nil {
+		return err
+	}
+
+	dnscryptproxy.Init(binPath, configPathMutable, logfile)
+
+	if err = dnscryptproxy.Start(); err != nil {
+		dnscryptproxy.Stop()
+		return err
+	}
+
+	return nil
 }

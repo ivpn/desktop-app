@@ -72,6 +72,18 @@ else
   echo "wireguard-tools already compiled. Skipping build."
 fi
 
+# check if we need to compile dnscrypt-proxy
+if [[ ! -f "../_deps/dnscryptproxy_inst/dnscrypt-proxy" ]] 
+then
+  echo "======================================================"
+  echo "========== Compiling dnscrypt-proxy =================="
+  echo "======================================================"
+  cd $SCRIPT_DIR
+  ./build-dnscrypt-proxy.sh
+else
+  echo "dnscrypt-proxy already compiled. Skipping build."
+fi
+
 # updating servers.json
 cd $SCRIPT_DIR
 ./update-servers.sh

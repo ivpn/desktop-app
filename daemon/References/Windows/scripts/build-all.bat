@@ -38,11 +38,12 @@ IF %ERRORLEVEL% NEQ 0 (
 
 if "%GITHUB_ACTIONS%" == "true" (
 	  echo "! GITHUB_ACTIONS detected ! It is just a build test."
-	  echo "! Skipped compilation of Native projects and third-party dependencies: WireGuard, obfs4proxy !"
+	  echo "! Skipped compilation of Native projects and third-party dependencies: WireGuard, obfs4proxy, dnscrypt_proxy !"
 ) else (
 	call :build_native_libs || goto :error
 	call :build_obfs4proxy || goto :error
 	call :build_wireguard || goto :error
+	call :build_dnscrypt_proxy || goto :error
 )
 
 call :update_servers_info || goto :error
@@ -110,6 +111,28 @@ goto :success
 		echo Signing 'obfs4proxy.exe' binary [certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%]
 		echo.
 		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe" || goto :eof
+		echo.
+		echo Signing SUCCES
+		echo.
+	)
+
+	goto :eof
+
+:build_dnscrypt_proxy
+	if exist "%SCRIPTDIR%..\dnscrypt-proxy\dnscrypt-proxy.exe" (
+		echo [ ] dnscrypt-proxy binaries already available. Compilation skipped.
+		goto :eof
+	)
+
+	echo ### dnscrypt-proxy binary not found ###
+	echo ### Buildind dnscrypt-proxy         ###
+	call "%SCRIPTDIR%\build-dnscrypt-proxy.bat" || goto error
+
+	if NOT "%CERT_SHA1%" == "" (
+		echo.
+		echo Signing 'dnscrypt-proxy.exe' binary [certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%]
+		echo.
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\dnscrypt-proxy\dnscrypt-proxy.exe" || goto :eof
 		echo.
 		echo Signing SUCCES
 		echo.

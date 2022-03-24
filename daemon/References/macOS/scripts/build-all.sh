@@ -72,9 +72,17 @@ function BuildObfs4proxy
   ./build-obfs4proxy.sh
 }
 
+function BuildDnscryptProxy
+{
+  echo "############################################"
+  echo "### dnscrypt-proxy"
+  echo "############################################"
+  ./build-dnscrypt-proxy.sh
+}
+
 if [ ! -z "$GITHUB_ACTIONS" ]; then
   echo "! GITHUB_ACTIONS detected ! It is just a build test."
-  echo "! Skipped compilation of third-party dependencies: OpenVPN, WireGuard, obfs4proxy !"
+  echo "! Skipped compilation of third-party dependencies: OpenVPN, WireGuard, obfs4proxy, dnscrypt-proxy !"
 else
   if [[ "$@" == *"-norebuild"* ]]
   then
@@ -104,12 +112,22 @@ else
       else
         echo "obfs4proxy already compiled. Skipping build."
       fi
+      
+      # check if we need to compile dnscrypt-proxy
+      if [[ ! -f "../_deps/dnscryptproxy_inst/dnscrypt-proxy" ]]
+      then
+        echo "dnscrypt-proxy not compiled"
+        BuildDnscryptProxy
+      else
+        echo "dnscrypt-proxy already compiled. Skipping build."
+      fi
 
   else
-    # recompile openvpn, WireGuard, obfs4proxy
+    # recompile openvpn, WireGuard, obfs4proxy, dnscrypt-proxy
     BuildOpenVPN
     BuildWireGuard
     BuildObfs4proxy
+    BuildDnscryptProxy
   fi
 fi
 # updating servers.json

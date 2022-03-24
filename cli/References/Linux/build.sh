@@ -109,18 +109,21 @@ fpm -v $VERSION -n ivpn-service -s pleaserun -t dir --deb-no-default-config-file
 OBFSPXY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/obfs4proxy_inst/obfs4proxy
 WG_QUICK_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg-quick
 WG_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg
+DNSCRYPT_PROXY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/dnscryptproxy_inst/dnscrypt-proxy
 
-if [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ] || [ "$(find ${WG_QUICK_BIN} -perm 755)" != "${WG_QUICK_BIN}" ] || [ "$(find ${WG_BIN} -perm 755)" != "${WG_BIN}" ]
+if [ "$(find ${DNSCRYPT_PROXY_BIN} -perm 755)" != "${DNSCRYPT_PROXY_BIN}" ] || [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ] || [ "$(find ${WG_QUICK_BIN} -perm 755)" != "${WG_QUICK_BIN}" ] || [ "$(find ${WG_BIN} -perm 755)" != "${WG_BIN}" ]
 then
   echo ----------------------------------------------------------
   echo "Going to change access mode to 755 for binaries:"
   echo "  - ${OBFSPXY_BIN}"
   echo "  - ${WG_QUICK_BIN}"
   echo "  - ${WG_BIN}"
+  echo "  - ${DNSCRYPT_PROXY_BIN}"
   echo "(you may be asked for credentials for 'sudo')"
   sudo chmod 755 ${OBFSPXY_BIN}
   sudo chmod 755 ${WG_QUICK_BIN}
   sudo chmod 755 ${WG_BIN}
+  sudo chmod 755 ${DNSCRYPT_PROXY_BIN}
   echo ----------------------------------------------------------
 fi
 
@@ -186,6 +189,7 @@ CreatePackage()
     $OBFSPXY_BIN=/opt/ivpn/obfsproxy/obfs4proxy \
     $WG_QUICK_BIN=/opt/ivpn/wireguard-tools/wg-quick \
     $WG_BIN=/opt/ivpn/wireguard-tools/wg \
+    ${DNSCRYPT_PROXY_BIN}=/opt/ivpn/dnscrypt-proxy/dnscrypt-proxy \
     $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
 }
 
