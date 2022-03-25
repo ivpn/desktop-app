@@ -1337,7 +1337,7 @@ async function SplitTunnelAddApp(execCmd, funcShowMessageBox) {
     [daemonResponses.SplitTunnelAddAppCmdResp, daemonResponses.EmptyResp]
   );
 
-  if (ret != null && ret.Command == daemonResponses.EmptyResp) {
+  if (ret != null && ret.Command != daemonResponses.ErrorResp) {
     // save info about added app into "apps favorite list"
     store.dispatch("settings/saveAddedAppCounter", execCmd);
   }
