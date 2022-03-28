@@ -158,6 +158,9 @@ func readImgToBase64(imagePath string) (string, error) {
 		base64Encoding += "data:image/png;base64,"
 	default:
 		if strings.ToLower(path.Ext(imagePath)) == ".svg" {
+			// remove zero byte from the end (if exists)
+			bytes = []byte(strings.TrimSuffix(string(bytes), string([]byte{0})))
+
 			base64Encoding += "data:image/svg+xml;base64,"
 		} else {
 			log.Debug("Unsupported format: " + mimeType + " => " + imagePath)
