@@ -174,6 +174,13 @@ func (s *Service) init() error {
 		log.Error("Failed to initialize firewall with AllowLAN preference value: ", err)
 	}
 
+	if s._preferences.FwUserExceptions != "" {
+		log.Info("Applying firewal exceptions (user configuration)")
+		if err := firewall.SetUserExceptions(s._preferences.FwUserExceptions, true); err != nil {
+			log.Error("Failed to apply firewall exceptions: ", err)
+		}
+	}
+
 	if s._preferences.IsFwPersistant {
 		log.Info("Enabling firewal (persistant configuration)")
 		if err := firewall.SetPersistant(true); err != nil {
@@ -1081,10 +1088,10 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 }
 
 // KillSwitchState returns killswitch state
-func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, err error) {
+func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, fwUserExceptions string, err error) {
 	prefs := s._preferences
 	enabled, err := firewall.GetEnabled()
-	return enabled, prefs.IsFwPersistant, prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast, prefs.IsFwAllowApiServers, err
+	return enabled, prefs.IsFwPersistant, prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast, prefs.IsFwAllowApiServers, prefs.FwUserExceptions, err
 }
 
 // SetKillSwitchIsPersistent change kill-switch value
@@ -1139,6 +1146,21 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 	s._evtReceiver.OnKillSwitchStateChanged()
 	s.updateAPIAddrInFWExceptions()
 	return nil
+}
+
+// SetKillSwitchUserExceptions set ip/mask to be excluded from FW block
+// Parameters:
+//	- exceptions - comma separated list of IP addresses in format: x.x.x.x[/xx]
+func (s *Service) SetKillSwitchUserExceptions(exceptions string) error {
+	prefs := s._preferences
+	prefs.FwUserExceptions = exceptions
+	s.setPreferences(prefs)
+
+	err := firewall.SetUserExceptions(exceptions, true)
+	if err == nil {
+		s._evtReceiver.OnKillSwitchStateChanged()
+	}
+	return err
 }
 
 //////////////////////////////////////////////////////////
@@ -1324,7 +1346,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 
 	// Temporary allow API server access (If Firewall is enabled)
 	// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
-	fwIsEnabled, _, _, _, fwIsAllowApiServers, _ := s.KillSwitchState()
+	fwIsEnabled, _, _, _, fwIsAllowApiServers, _, _ := s.KillSwitchState()
 	if fwIsEnabled && !fwIsAllowApiServers {
 		s.SetKillSwitchAllowAPIServers(true)
 	}
@@ -1427,7 +1449,7 @@ func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLo
 
 		// Temporary allow API server access (If Firewall is enabled)
 		// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
-		fwIsEnabled, _, _, _, fwIsAllowApiServers, _ := s.KillSwitchState()
+		fwIsEnabled, _, _, _, fwIsAllowApiServers, _, _ := s.KillSwitchState()
 		if fwIsEnabled && !fwIsAllowApiServers {
 			s.SetKillSwitchAllowAPIServers(true)
 		}

@@ -87,6 +87,13 @@ type KillSwitchSetAllowLAN struct {
 	Synchronously bool
 }
 
+// KillSwitchSetUserExceptions set ip masks to exclude from firewall blocking rules
+type KillSwitchSetUserExceptions struct {
+	CommandBase
+	// Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
+	UserExceptions string
+}
+
 type KillSwitchSetAllowApiServers struct {
 	CommandBase
 	IsAllowApiServers bool

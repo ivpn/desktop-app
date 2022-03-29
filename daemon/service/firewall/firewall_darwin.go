@@ -250,7 +250,31 @@ func implSetManualDNS(addr net.IP) error {
 	return nil
 }
 
+// implOnUserExceptionsUpdated() called when 'userExceptions' value were updated. Necessary to update firewall rules.
+func implOnUserExceptionsUpdated() error {
+	var expMasks []string
+	for _, mask := range userExceptions {
+		expMasks = append(expMasks, mask.String())
+	}
+
+	return applySetUserExceptions(expMasks)
+}
+
 //---------------------------------------------------------------------
+
+func applySetUserExceptions(hostsIPs []string) error { //
+	ipList := strings.Join(hostsIPs, " ")
+
+	if len(ipList) > 0 {
+		if len(ipList) > 250 {
+			log.Info("-set_user_exceptions <...multiple addresses...>")
+		} else {
+			log.Info("-set_user_exceptions ", ipList)
+		}
+		return shell.Exec(nil, platform.FirewallScript(), "-set_user_exceptions", ipList)
+	}
+	return nil
+}
 
 func applyAddHostsToExceptions(hostsIPs []string) error { //
 	ipList := strings.Join(hostsIPs, " ")
@@ -295,6 +319,14 @@ func reApplyExceptions() error {
 	err := applyAddHostsToExceptions(allowedIPs)
 	if err != nil {
 		log.Error(err)
+	}
+
+	err2 := implOnUserExceptionsUpdated()
+	if err2 != nil {
+		log.Error(err2)
+		if err == nil {
+			err = err2
+		}
 	}
 	return err
 }

@@ -57,6 +57,7 @@ type Preferences struct {
 	IsFwAllowLAN             bool
 	IsFwAllowLANMulticast    bool
 	IsFwAllowApiServers      bool
+	FwUserExceptions         string // Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
 	IsStopOnClientDisconnect bool
 	IsObfsproxy              bool
 

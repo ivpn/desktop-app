@@ -79,3 +79,31 @@
     color: #398FE6;
   }
 
+  button.selectableButtonOff {
+    border: none;
+    background-color: inherit;
+    outline-width: 0;
+    cursor: pointer;
+  
+    height: 38px;
+  
+    font-style: normal;
+    font-size: 11px;
+    line-height: 13px;
+  
+    border-bottom: 2px solid #d9e0e5;
+  }
+
+  input.badData {
+    border-color: red;
+  }
+  
+  button.selectableButtonOn {
+    @extend .selectableButtonOff;
+    border-bottom: 2px solid #449cf8;
+  }
+  
+  button.selectableButtonSeparator {
+    @extend .selectableButtonOff;
+    cursor: auto;
+  }

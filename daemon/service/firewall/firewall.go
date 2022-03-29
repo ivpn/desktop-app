@@ -25,7 +25,9 @@ package firewall
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 )
@@ -45,6 +47,9 @@ var (
 	connectedIsTCP               bool
 	mutex                        sync.Mutex
 	isClientPaused               bool
+
+	// List of IP masks that are allowed for any communication
+	userExceptions []net.IPNet
 )
 
 // Initialize is doing initialization stuff
@@ -223,4 +228,48 @@ func SetManualDNS(addr net.IP) error {
 		log.Error(err)
 	}
 	return err
+}
+
+// SetUserExceptions set ip/mask to be excluded from FW block
+// Parameters:
+//	- exceptions - comma separated list of IP addresses in format: x.x.x.x[/xx]
+func SetUserExceptions(exceptions string, ignoreParseErrors bool) error {
+	userExceptions = []net.IPNet{}
+
+	splitFunc := func(c rune) bool {
+		return !unicode.IsLetter(c) && !unicode.IsNumber(c) && c != rune('/') && c != rune('.') && c != rune(':')
+	}
+	exceptionsArr := strings.FieldsFunc(exceptions, splitFunc)
+	for _, exp := range exceptionsArr {
+		exp = strings.TrimSpace(exp)
+
+		var err error
+		var n *net.IPNet
+
+		if strings.Contains(exp, "/") {
+			_, n, err = net.ParseCIDR(exp)
+		} else {
+			addr := net.ParseIP(exp)
+			if addr == nil {
+				err = fmt.Errorf("%s not a IP address", exp)
+			} else {
+				if addr.To4() == nil {
+					// IPv6 single address
+					_, n, err = net.ParseCIDR(addr.String() + "/128")
+				} else {
+					// IPv4 single address
+					_, n, err = net.ParseCIDR(addr.String() + "/32")
+				}
+			}
+		}
+		if err != nil {
+			if !ignoreParseErrors {
+				return fmt.Errorf("unable to parse firewall exceptions ('%s'): %w", exceptions, err)
+			}
+			continue
+		}
+		userExceptions = append(userExceptions, *n)
+	}
+
+	return implOnUserExceptionsUpdated()
 }

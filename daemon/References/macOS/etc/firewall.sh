@@ -8,11 +8,13 @@
 #   sudo pfctl -a "ivpn_firewall/tunnel" -s rules
 # Show table
 #   sudo pfctl -a "ivpn_firewall" -t ivpn_servers -T show
+#   sudo pfctl -a "ivpn_firewall" -t ivpn_exceptions -T show
 
 PATH=/sbin:/usr/sbin:$PATH
 
 ANCHOR_NAME="ivpn_firewall"
 EXCEPTIONS_TABLE="ivpn_servers"
+USER_EXCEPTIONS_TABLE="ivpn_exceptions"
 
 # Checks whether anchor is present in the system
 # 0 - if anchor is present
@@ -81,9 +83,13 @@ function enable_firewall {
       block drop in on ! lo0 all
 
       table <${EXCEPTIONS_TABLE}> persist
+      table <${USER_EXCEPTIONS_TABLE}> persist
 
       pass out from any to <${EXCEPTIONS_TABLE}>
       pass in from <${EXCEPTIONS_TABLE}> to any
+
+      pass out from any to <${USER_EXCEPTIONS_TABLE}>
+      pass in from <${USER_EXCEPTIONS_TABLE}> to any
 
       pass out inet proto udp from 0.0.0.0 to 255.255.255.255 port = 67
       pass in proto udp from any to any port = 68
@@ -113,6 +119,7 @@ function disable_firewall {
 
     # remove all entries in exceptions table
     pfctl -a ${ANCHOR_NAME} -t ${EXCEPTIONS_TABLE} -T flush
+    pfctl -a ${ANCHOR_NAME} -t ${USER_EXCEPTIONS_TABLE} -T flush
 
     # remove all rules in tun anchor
     pfctl -a ${ANCHOR_NAME}/tunnel -Fr
@@ -181,6 +188,11 @@ function main {
 
       shift
       pfctl -a "${ANCHOR_NAME}" -t "${EXCEPTIONS_TABLE}" -T delete $@
+    
+    elif [[ $1 = "-set_user_exceptions" ]]; then    
+
+      shift
+      pfctl -a "${ANCHOR_NAME}" -t "${USER_EXCEPTIONS_TABLE}" -T replace $@
 
     elif [[ $1 = "-connected" ]]; then       
         

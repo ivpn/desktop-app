@@ -48,6 +48,37 @@ export function isValidURL(str, isIgnoreProtocol) {
   return !!pattern.test(str);
 }
 
+const RegExpIpv4Addr = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
+const RegExpIpv6Addr =
+  /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/;
+
+export function isValidIPv4(ipStr) {
+  return RegExpIpv4Addr.test(ipStr);
+}
+export function isValidIPv6(ipStr) {
+  return RegExpIpv6Addr.test(ipStr);
+}
+export function isValidIpOrMask(ipStr) {
+  if (!ipStr) return false;
+
+  const parts = ipStr.split("/");
+  if (parts.length > 2 || parts.length == 0) return false;
+
+  let ip = ipStr;
+  if (parts.length == 2) ip = parts[0];
+  const isIpv4 = RegExpIpv4Addr.test(ip);
+  const isIpv6 = RegExpIpv6Addr.test(ip);
+
+  if (!isIpv4 && !isIpv6) return false;
+  if (parts.length == 2) {
+    const parsed = parseInt(parts[1], 10);
+    if (isNaN(parsed)) return false;
+    if (isIpv4 && (parsed > 32 || parsed <= 0)) return false;
+    if (isIpv6 && (parsed > 128 || parsed <= 0)) return false;
+  }
+  return true;
+}
+
 export function dateDefaultFormat(date) {
   return dateYyyyMonDd(date);
 }

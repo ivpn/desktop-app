@@ -367,31 +367,6 @@ div.param {
   margin-top: 3px;
 }
 
-button.selectableButtonOff {
-  border: none;
-  background-color: inherit;
-  outline-width: 0;
-  cursor: pointer;
-
-  height: 38px;
-
-  font-style: normal;
-  font-size: 11px;
-  line-height: 13px;
-
-  border-bottom: 2px solid #d9e0e5;
-}
-
-button.selectableButtonOn {
-  @extend .selectableButtonOff;
-  border-bottom: 2px solid #449cf8;
-}
-
-button.selectableButtonSeparator {
-  @extend .selectableButtonOff;
-  cursor: auto;
-}
-
 select.trustedConfigBase {
   min-width: 90px;
   border-width: 0px;
