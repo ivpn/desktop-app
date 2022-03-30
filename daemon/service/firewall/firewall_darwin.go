@@ -265,15 +265,13 @@ func implOnUserExceptionsUpdated() error {
 func applySetUserExceptions(hostsIPs []string) error { //
 	ipList := strings.Join(hostsIPs, " ")
 
-	if len(ipList) > 0 {
-		if len(ipList) > 250 {
-			log.Info("-set_user_exceptions <...multiple addresses...>")
-		} else {
-			log.Info("-set_user_exceptions ", ipList)
-		}
-		return shell.Exec(nil, platform.FirewallScript(), "-set_user_exceptions", ipList)
+	if len(ipList) > 250 {
+		log.Info("-set_user_exceptions <...multiple addresses...>")
+	} else {
+		log.Info("-set_user_exceptions ", ipList)
 	}
-	return nil
+
+	return shell.Exec(nil, platform.FirewallScript(), "-set_user_exceptions", ipList)
 }
 
 func applyAddHostsToExceptions(hostsIPs []string) error { //

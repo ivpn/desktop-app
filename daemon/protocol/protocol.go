@@ -550,7 +550,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		err := p._service.SetKillSwitchUserExceptions(req.UserExceptions, !req.FailOnParsingError)
+		err := p._service.SetKillSwitchUserExceptions(strings.TrimSpace(req.UserExceptions), !req.FailOnParsingError)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
