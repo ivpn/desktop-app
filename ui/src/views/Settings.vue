@@ -142,7 +142,9 @@
           <generalView />
         </div>
         <div class="flexColumn" v-else-if="view === 'firewall'">
-          <firewallView />
+          <firewallView
+            :registerBeforeCloseHandler="doRegisterBeforeViewCloseHandler"
+          />
         </div>
         <div class="flexColumn" v-else-if="view === 'splittunnel'">
           <splittunnelView />

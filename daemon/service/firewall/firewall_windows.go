@@ -221,6 +221,11 @@ func implSetManualDNS(addr net.IP) error {
 	return reEnable()
 }
 
+// implOnUserExceptionsUpdated() called when 'userExceptions' value were updated. Necessary to update firewall rules.
+func implOnUserExceptionsUpdated() error {
+	return fmt.Errorf("user exceptions not implemented")
+}
+
 func reEnable() (retErr error) {
 	// start / commit transaction
 	if err := manager.TransactionStart(); err != nil {

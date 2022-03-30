@@ -79,29 +79,77 @@
       >
     </div>
 
-    <!-- LAN settings -->
-    <div class="settingsBoldFont">LAN settings:</div>
-    <div class="param">
-      <input type="checkbox" id="firewallAllowLan" v-model="firewallAllowLan" />
-      <label class="defColor" for="firewallAllowLan"
-        >Allow LAN traffic when IVPN Firewall is enabled</label
+    <!-- TAB-view Extra config header -->
+
+    <div class="flexRow" style="margin-top: 15px">
+      <button
+        v-on:click="onExtraCfgViewLan"
+        class="selectableButtonOff"
+        v-bind:class="{ selectableButtonOn: extraCfgViewIsLan }"
       >
+        LAN settings
+      </button>
+      <button
+        v-on:click="onExtraCfgViewExceptions"
+        class="selectableButtonOff"
+        v-bind:class="{ selectableButtonOn: extraCfgViewIsExceptions }"
+      >
+        Exceptions
+      </button>
+      <button
+        style="cursor: auto; flex-grow: 1"
+        class="selectableButtonSeparator"
+      ></button>
     </div>
-    <div class="param">
-      <input
-        type="checkbox"
-        id="firewallAllowMulticast"
-        :disabled="firewallAllowLan === false"
-        v-model="firewallAllowMulticast"
-      />
-      <label class="defColor" for="firewallAllowMulticast"
-        >Allow Multicast when LAN traffic is allowed</label
-      >
+
+    <!-- TAB: LAN settings -->
+    <div style="margin-top: 12px">
+      <div v-if="extraCfgViewIsLan">
+        <div class="param">
+          <input
+            type="checkbox"
+            id="firewallAllowLan"
+            v-model="firewallAllowLan"
+          />
+          <label class="defColor" for="firewallAllowLan"
+            >Allow LAN traffic when IVPN Firewall is enabled</label
+          >
+        </div>
+        <div class="param">
+          <input
+            type="checkbox"
+            id="firewallAllowMulticast"
+            :disabled="firewallAllowLan === false"
+            v-model="firewallAllowMulticast"
+          />
+          <label class="defColor" for="firewallAllowMulticast"
+            >Allow Multicast when LAN traffic is allowed</label
+          >
+        </div>
+      </div>
+      <!-- TAB: Exceptions -->
+      <div v-if="extraCfgViewIsExceptions">
+        <div>
+          <input
+            class="settingsTextInput"
+            style="width: calc(100% - 5px)"
+            v-bind:class="{ badData: isExceptionsStringError === true }"
+            placeholder="1.2.3.0/24, 8.8.8.8"
+            v-model="firewallExceptions"
+          />
+          <div class="fwDescription" style="margin-left: 0px; margin-top: 4px">
+            Comma-separated list of IP masks to allow traffic when IVPN Firewall
+            is enabled
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import { isValidIpOrMask } from "@/helpers/helpers";
+
 const sender = window.ipcSender;
 
 function processError(e) {
@@ -114,14 +162,62 @@ function processError(e) {
 }
 
 export default {
+  props: { registerBeforeCloseHandler: Function },
+  created() {
+    // We have to call applyChanges() even when Settings window was closed by user
+    // (the 'beforeDestroy()' is not called in this case)
+    window.addEventListener("beforeunload", this.applyUserExceptions);
+
+    if (this.registerBeforeCloseHandler != null) {
+      // Register handler which will be called before closing current view
+      // Handler MUST be 'async' function and MUST return 'true' to allow to switch current view
+      this.registerBeforeCloseHandler(this.applyUserExceptions);
+    }
+  },
+  async beforeDestroy() {
+    window.removeEventListener("beforeunload", this.applyUserExceptions);
+    await this.applyUserExceptions();
+  },
+
   data: function () {
-    return {};
+    return {
+      extraCfgViewName: "", // possible values: "" or "lan" (LAN settings), "exceptions" (firewall exceptions)
+      isExceptionsValueChanged: false,
+    };
   },
   mounted() {
     this.updatePersistentFwUiState();
   },
 
   methods: {
+    async applyUserExceptions(e) {
+      // when component closing ->  update changed user exceptions (if necessary)
+
+      if (this.isExceptionsStringError) {
+        // activate 'exceptions' view
+        this.extraCfgViewName = "exceptions";
+
+        sender.showMessageBoxSync({
+          type: "warning",
+          buttons: ["OK"],
+          message: "Error in firewall exceptions configuration",
+          detail: `User exceptions will not be applied.`,
+        });
+
+        if (e && typeof e.preventDefault === "function") {
+          // it is 'beforeunload' handler. Prevent closing window.
+          e.preventDefault();
+          e.returnValue = "";
+        }
+        return false;
+      }
+
+      if (this.isExceptionsValueChanged !== true) return true;
+      this.isExceptionsValueChanged = false;
+      await sender.KillSwitchSetUserExceptions(this.firewallExceptions);
+      return true;
+    },
+
     updatePersistentFwUiState() {
       if (this.$store.state.vpnState.firewallState.IsPersistent) {
         this.$refs.radioFWPersistent.checked = true;
@@ -138,6 +234,17 @@ export default {
         processError(e);
       }
       this.updatePersistentFwUiState();
+    },
+
+    async onExtraCfgViewLan() {
+      let isOK = true;
+      if (this.extraCfgViewIsExceptions) {
+        isOK = await this.applyUserExceptions();
+      }
+      if (isOK) this.extraCfgViewName = "lan";
+    },
+    onExtraCfgViewExceptions() {
+      this.extraCfgViewName = "exceptions";
     },
   },
   watch: {
@@ -174,6 +281,33 @@ export default {
       },
     },
 
+    isExceptionsStringError() {
+      if (!this.firewallExceptions) return false;
+
+      let masks = this.firewallExceptions.split(/[\s,;]+/);
+      for (const m of masks) {
+        if (!m) continue;
+        if (!isValidIpOrMask(m)) return true;
+      }
+      return false;
+    },
+
+    firewallExceptions: {
+      get() {
+        return this.$store.state.settings.firewallCfg.userExceptions;
+      },
+      async set(value) {
+        this.isExceptionsValueChanged = true;
+        let newFirewallCfg = Object.assign(
+          {},
+          this.$store.state.settings.firewallCfg
+        );
+        newFirewallCfg.userExceptions = value;
+
+        this.$store.dispatch("settings/firewallCfg", newFirewallCfg);
+      },
+    },
+
     firewallActivateOnConnect: {
       get() {
         return this.$store.state.settings.firewallActivateOnConnect;
@@ -189,6 +323,13 @@ export default {
       set(value) {
         this.$store.dispatch("settings/firewallDeactivateOnDisconnect", value);
       },
+    },
+
+    extraCfgViewIsLan() {
+      return this.extraCfgViewName === "" || this.extraCfgViewName === "lan";
+    },
+    extraCfgViewIsExceptions() {
+      return this.extraCfgViewName === "exceptions";
     },
   },
 };

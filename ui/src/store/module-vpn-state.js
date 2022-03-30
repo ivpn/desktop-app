@@ -65,6 +65,7 @@ export default {
       IsAllowLAN: null,
       IsAllowMulticast: null,
       IsAllowApiServers: null,
+      UserExceptions: "",
     },
 
     // The split-tunnelling configuration
@@ -392,6 +393,11 @@ export default {
       // save current state to settings
       updateDnsSettings(context);
     },
+    firewallState(context, val) {
+      context.commit("firewallState", val);
+      // save current state to settings
+      updateFirewallSettings(context);
+    },
   },
 };
 
@@ -417,6 +423,13 @@ function updateDnsSettings(context) {
 
     context.dispatch("settings/dnsIsCustom", isCustomDns, { root: true });
   }
+}
+
+function updateFirewallSettings(context) {
+  // save current state to settings
+  let firewallState = context.state.firewallState;
+  var firewallCfg = { userExceptions: firewallState.UserExceptions };
+  context.dispatch("settings/firewallCfg", firewallCfg, { root: true });
 }
 
 function getActiveServers(state, rootState) {

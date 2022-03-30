@@ -285,6 +285,11 @@ func implSetManualDNS(addr net.IP) error {
 	return nil
 }
 
+// implOnUserExceptionsUpdated() called when 'userExceptions' value were updated. Necessary to update firewall rules.
+func implOnUserExceptionsUpdated() error {
+	return fmt.Errorf("user exceptions not implemented")
+}
+
 //---------------------------------------------------------------------
 
 func applyAddHostsToExceptions(hostsIPs []string, isPersistant bool, onlyForICMP bool) error {

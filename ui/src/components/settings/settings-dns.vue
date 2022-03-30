@@ -127,16 +127,12 @@
 
 <script>
 import { DnsEncryption } from "@/store/types";
+import { isValidIPv4 } from "@/helpers/helpers";
 
 const sender = window.ipcSender;
 
 function checkIsDnsIPError(dnsIpString) {
-  // IPv4 or IPv6
-  //var expression = /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/;
-
-  // IPv4
-  var expression = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
-  return !expression.test(dnsIpString.trim());
+  return !isValidIPv4(dnsIpString);
 }
 
 export default {
@@ -175,7 +171,7 @@ export default {
         sender.showMessageBoxSync({
           type: "warning",
           buttons: ["OK"],
-          message: "Error in DNS configuration.",
+          message: "Error in DNS configuration",
           detail: `Custom DNS will not be applied.`,
         });
 
@@ -268,7 +264,7 @@ export default {
           {},
           this.$store.state.settings.dnsCustomCfg
         );
-        newDnsCfg.DnsHost = value.trim();
+        newDnsCfg.DnsHost = value;
 
         if (
           this.$store.state.settings.dnsCustomCfg.Encryption ===
@@ -324,7 +320,7 @@ export default {
           {},
           this.$store.state.settings.dnsCustomCfg
         );
-        newDnsCfg.DohTemplate = value.trim();
+        newDnsCfg.DohTemplate = value;
         this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
       },
     },
@@ -373,10 +369,7 @@ export default {
       return !this.dnsDohTemplate.toLowerCase().startsWith("https://");
     },
     isIPError: function () {
-      if (!this.dnsHost) {
-        if (this.dnsIsCustom) return true;
-        return false;
-      }
+      if (!this.dnsHost) return false;
       return checkIsDnsIPError(this.dnsHost);
     },
   },
@@ -414,10 +407,6 @@ div.paramName {
 label {
   margin-left: 1px;
   font-weight: 500;
-}
-
-input.badData {
-  border-color: red;
 }
 
 input:disabled {

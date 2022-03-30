@@ -260,6 +260,22 @@ func (c *Client) FirewallAllowLan(allow bool) error {
 	return nil
 }
 
+// FirewallAllowLan set configuration 'firewall exceptions' (comma separated list of IP addresses/masks in format: x.x.x.x[/xx])
+func (c *Client) FirewallSetUserExceptions(exceptions string) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	// changing killswitch configuration
+	req := types.KillSwitchSetUserExceptions{UserExceptions: exceptions, FailOnParsingError: true}
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // FirewallAllowApiServers set configuration 'Allow access to IVPN servers when Firewall is enabled'
 func (c *Client) FirewallAllowApiServers(allow bool) error {
 	if err := c.ensureConnected(); err != nil {

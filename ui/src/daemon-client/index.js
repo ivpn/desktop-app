@@ -76,6 +76,7 @@ const daemonRequests = Object.freeze({
   KillSwitchSetAllowLANMulticast: "KillSwitchSetAllowLANMulticast",
   KillSwitchSetAllowLAN: "KillSwitchSetAllowLAN",
   KillSwitchSetIsPersistent: "KillSwitchSetIsPersistent",
+  KillSwitchSetUserExceptions: "KillSwitchSetUserExceptions",
 
   SplitTunnelGetStatus: "SplitTunnelGetStatus",
   SplitTunnelSetConfig: "SplitTunnelSetConfig",
@@ -433,7 +434,7 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.KillSwitchStatusResp:
-      store.commit(`vpnState/firewallState`, obj);
+      store.dispatch(`vpnState/firewallState`, obj);
 
       if (
         store.state.location == null &&
@@ -1308,6 +1309,13 @@ async function KillSwitchSetIsPersistent(IsPersistent) {
   });
 }
 
+async function KillSwitchSetUserExceptions(userExceptions) {
+  await sendRecv({
+    Command: daemonRequests.KillSwitchSetUserExceptions,
+    UserExceptions: userExceptions,
+  });
+}
+
 async function SplitTunnelGetStatus() {
   let ret = await sendRecv(
     {
@@ -1652,6 +1660,7 @@ export default {
   KillSwitchSetAllowLANMulticast,
   KillSwitchSetAllowLAN,
   KillSwitchSetIsPersistent,
+  KillSwitchSetUserExceptions,
 
   SplitTunnelGetStatus,
   SplitTunnelSetConfig,

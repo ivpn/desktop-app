@@ -89,6 +89,11 @@ const getDefaultState = () => {
       DohTemplate: "",
     },
 
+    // firewall
+    firewallCfg: {
+      userExceptions: "",
+    },
+
     // wifi
     wifi: {
       trustedNetworksControl: true,
@@ -265,6 +270,9 @@ export default {
     },
     dnsCustomCfg(state, val) {
       state.dnsCustomCfg = val;
+    },
+    firewallCfg(state, val) {
+      state.firewallCfg = val;
     },
 
     // WIFI
@@ -455,6 +463,9 @@ export default {
     },
     dnsCustomCfg(context, val) {
       context.commit("dnsCustomCfg", val);
+    },
+    firewallCfg(context, val) {
+      context.commit("firewallCfg", val);
     },
 
     // WIFI

@@ -134,6 +134,13 @@ ipcMain.handle(
   }
 );
 
+ipcMain.handle(
+  "renderer-request-KillSwitchSetUserExceptions",
+  async (event, userExceptions) => {
+    return await client.KillSwitchSetUserExceptions(userExceptions);
+  }
+);
+
 ipcMain.handle("renderer-request-SplitTunnelGetStatus", async () => {
   return await client.SplitTunnelGetStatus();
 });

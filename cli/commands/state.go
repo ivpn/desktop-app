@@ -80,7 +80,7 @@ func showState() error {
 	if !stStatus.IsFunctionalityNotAvailable {
 		printSplitTunState(w, true, false, stStatus.IsEnabled, stStatus.SplitTunnelApps, stStatus.RunningApps)
 	}
-	printFirewallState(w, fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast, fwstate.IsAllowApiServers)
+	printFirewallState(w, fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast, fwstate.IsAllowApiServers, fwstate.UserExceptions)
 	w.Flush()
 
 	// TIPS

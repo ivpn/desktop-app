@@ -74,12 +74,13 @@ type Service interface {
 
 	APIRequest(apiAlias string, ipTypeRequired types.RequiredIPProtocol) (responseData []byte, err error)
 
-	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, err error)
+	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, fwUserExceptions string, err error)
 	SetKillSwitchState(bool) error
 	SetKillSwitchIsPersistent(isPersistant bool) error
 	SetKillSwitchAllowLANMulticast(isAllowLanMulticast bool) error
 	SetKillSwitchAllowLAN(isAllowLan bool) error
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
+	SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error
 
 	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
@@ -398,8 +399,15 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			sendState(req.Idx, true)
 
 			// send Firewall state
-			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, err := p._service.KillSwitchState(); err == nil {
-				p.sendResponse(conn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast, IsAllowApiServers: isAllowApiServers}, reqCmd.Idx)
+			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err == nil {
+				p.sendResponse(conn,
+					&types.KillSwitchStatusResp{
+						IsEnabled:         isEnabled,
+						IsPersistent:      isPersistant,
+						IsAllowLAN:        isAllowLAN,
+						IsAllowMulticast:  isAllowLanMulticast,
+						IsAllowApiServers: isAllowApiServers,
+						UserExceptions:    fwUserExceptions}, reqCmd.Idx)
 			}
 		}
 
@@ -480,10 +488,17 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			Networks: nets})
 
 	case "KillSwitchGetStatus":
-		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, err := p._service.KillSwitchState(); err != nil {
+		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
-			p.sendResponse(conn, &types.KillSwitchStatusResp{IsEnabled: isEnabled, IsPersistent: isPersistant, IsAllowLAN: isAllowLAN, IsAllowMulticast: isAllowLanMulticast, IsAllowApiServers: isAllowApiServers}, reqCmd.Idx)
+			p.sendResponse(conn,
+				&types.KillSwitchStatusResp{
+					IsEnabled:         isEnabled,
+					IsPersistent:      isPersistant,
+					IsAllowLAN:        isAllowLAN,
+					IsAllowMulticast:  isAllowLanMulticast,
+					IsAllowApiServers: isAllowApiServers,
+					UserExceptions:    fwUserExceptions}, reqCmd.Idx)
 		}
 
 	case "KillSwitchSetEnabled":
@@ -524,6 +539,21 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		p._service.SetKillSwitchAllowLAN(req.AllowLAN)
 		if req.Synchronously {
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
+		}
+		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
+
+	case "KillSwitchSetUserExceptions":
+		var req types.KillSwitchSetUserExceptions
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+
+		err := p._service.SetKillSwitchUserExceptions(req.UserExceptions, !req.FailOnParsingError)
+		if err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+		} else {
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
@@ -807,9 +837,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				p._service.SetKillSwitchIsPersistent(oldPrefs.IsFwPersistant)
 			}
 
-			// set AllowLan according to default values
+			// set AllowLan and exceptions according to default values
 			p._service.SetKillSwitchAllowLAN(prefs.IsFwAllowLAN)
 			p._service.SetKillSwitchAllowLANMulticast(prefs.IsFwAllowLANMulticast)
+			p._service.SetKillSwitchUserExceptions(prefs.FwUserExceptions, true)
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
