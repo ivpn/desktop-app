@@ -117,7 +117,7 @@ func implSetPersistant(persistant bool) (retErr error) {
 		return fmt.Errorf("failed to get provider info: %w", err)
 	}
 
-	if pinfo.IsInstalled == true {
+	if pinfo.IsInstalled {
 		if pinfo.IsPersistent == isPersistant {
 			log.Info(fmt.Sprintf("Already enabled (persistent=%t).", isPersistant))
 			return nil
@@ -194,7 +194,7 @@ func implAllowLAN(allowLan bool, allowLanMulticast bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
 	}
-	if enabled == false {
+	if !enabled {
 		return nil
 	}
 
@@ -214,7 +214,7 @@ func implSetManualDNS(addr net.IP) error {
 	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
 	}
-	if enabled == false {
+	if !enabled {
 		return nil
 	}
 
@@ -223,7 +223,15 @@ func implSetManualDNS(addr net.IP) error {
 
 // implOnUserExceptionsUpdated() called when 'userExceptions' value were updated. Necessary to update firewall rules.
 func implOnUserExceptionsUpdated() error {
-	return fmt.Errorf("user exceptions not implemented")
+	enabled, err := implGetEnabled()
+	if err != nil {
+		return fmt.Errorf("failed to get info if firewall is on: %w", err)
+	}
+	if !enabled {
+		return nil
+	}
+
+	return reEnable()
 }
 
 func reEnable() (retErr error) {
@@ -258,15 +266,15 @@ func doEnable() (retErr error) {
 	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
 	}
-	if enabled == true {
+	if enabled {
 		return nil
 	}
 
-	addressesV6, err := netinfo.GetAllLocalV6Addresses()
+	localAddressesV6, err := netinfo.GetAllLocalV6Addresses()
 	if err != nil {
 		return fmt.Errorf("failed to get all local IPv6 addresses: %w", err)
 	}
-	addressesV4, err := netinfo.GetAllLocalV4Addresses()
+	localAddressesV4, err := netinfo.GetAllLocalV4Addresses()
 	if err != nil {
 		return fmt.Errorf("failed to get all local IPv4 addresses: %w", err)
 	}
@@ -326,13 +334,24 @@ func doEnable() (retErr error) {
 			return fmt.Errorf("failed to add filter 'allow remote IP' for ipv6llocal: %w", err)
 		}
 
-		for _, ip := range addressesV6 {
-			if isAllowLAN {
+		// LAN
+		if isAllowLAN {
+			for _, ip := range localAddressesV6 {
 				prefixLen, _ := ip.Mask.Size()
 				_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ip.IP, byte(prefixLen), isPersistant))
 				if err != nil {
 					return fmt.Errorf("failed to add filter 'allow lan IPv6': %w", err)
 				}
+			}
+		}
+
+		// user exceptions
+		userExpsNets := getUserExceptions(false, true)
+		for _, n := range userExpsNets {
+			prefixLen, _ := n.Mask.Size()
+			_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", n.IP, byte(prefixLen), isPersistant))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'user exception': %w", err)
 			}
 		}
 	}
@@ -388,8 +407,9 @@ func doEnable() (retErr error) {
 			return fmt.Errorf("failed to add filter 'allow remote IP': %w", err)
 		}
 
-		for _, ip := range addressesV4 {
-			if isAllowLAN {
+		// LAN
+		if isAllowLAN {
+			for _, ip := range localAddressesV4 {
 				_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIP(providerKey, layer, sublayerKey, filterDName, "", ip.IP, net.IP(ip.Mask), isPersistant))
 				if err != nil {
 					return fmt.Errorf("failed to add filter 'allow LAN': %w", err)
@@ -397,11 +417,21 @@ func doEnable() (retErr error) {
 			}
 		}
 
+		// Multicast
 		if isAllowLANMulticast {
 			_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIP(providerKey, layer, sublayerKey, filterDName, "",
 				net.IPv4(224, 0, 0, 0), net.IPv4(240, 0, 0, 0), isPersistant))
 			if err != nil {
 				return fmt.Errorf("failed to add filter 'allow lan-multicast': %w", err)
+			}
+		}
+
+		// user exceptions
+		userExpsNets := getUserExceptions(true, false)
+		for _, n := range userExpsNets {
+			_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIP(providerKey, layer, sublayerKey, filterDName, "", n.IP, net.IP(n.Mask), isPersistant))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow LAN': %w", err)
 			}
 		}
 	}
@@ -469,7 +499,7 @@ func doAddClientIPFilters(clientLocalIP net.IP, clientLocalIPv6 net.IP) (retErr 
 	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
 	}
-	if enabled == false {
+	if !enabled {
 		return nil
 	}
 
@@ -509,7 +539,7 @@ func doRemoveClientIPFilters() (retErr error) {
 	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
 	}
-	if enabled == false {
+	if !enabled {
 		return nil
 	}
 
@@ -521,4 +551,19 @@ func doRemoveClientIPFilters() (retErr error) {
 	}
 
 	return nil
+}
+
+func getUserExceptions(ipv4, ipv6 bool) []net.IPNet {
+	ret := []net.IPNet{}
+	for _, e := range userExceptions {
+		isIPv6 := e.IP.To4() == nil
+		isIPv4 := !isIPv6
+
+		if !(isIPv4 && ipv4) && !(isIPv6 && ipv6) {
+			continue
+		}
+
+		ret = append(ret, e)
+	}
+	return ret
 }
