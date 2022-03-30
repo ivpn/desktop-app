@@ -174,11 +174,9 @@ func (s *Service) init() error {
 		log.Error("Failed to initialize firewall with AllowLAN preference value: ", err)
 	}
 
-	if s._preferences.FwUserExceptions != "" {
-		log.Info("Applying firewal exceptions (user configuration)")
-		if err := firewall.SetUserExceptions(s._preferences.FwUserExceptions, true); err != nil {
-			log.Error("Failed to apply firewall exceptions: ", err)
-		}
+	//log.Info("Applying firewal exceptions (user configuration)")
+	if err := firewall.SetUserExceptions(s._preferences.FwUserExceptions, true); err != nil {
+		log.Error("Failed to apply firewall exceptions: ", err)
 	}
 
 	if s._preferences.IsFwPersistant {
