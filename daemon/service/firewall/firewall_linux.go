@@ -119,7 +119,7 @@ func ensurePersistant(secondsToWait int) {
 	log.Info("[ensurePersistant] started")
 	for i := 0; i <= secondsToWait/delaySec; i++ {
 		time.Sleep(time.Second * delaySec)
-		if isPersistant != true {
+		if !isPersistant {
 			break
 		}
 		enabled, err := implGetEnabled()
@@ -127,7 +127,7 @@ func ensurePersistant(secondsToWait int) {
 			log.Error("[ensurePersistant] ", err)
 			continue
 		}
-		if isPersistant == true && enabled != true {
+		if isPersistant && !enabled {
 			log.Warning("[ensurePersistant] Persistant FW rules not available. Retry to apply...")
 			implSetEnabled(true)
 		}
@@ -225,7 +225,7 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 }
 
 func delayedAllowLAN(allowLanMulticast bool) {
-	if delayedAllowLanStarted || delayedAllowLanAllowed == false {
+	if delayedAllowLanStarted || !delayedAllowLanAllowed {
 		return
 	}
 	log.Info("Delayed 'Allow LAN': Will try to apply this rule few seconds later...")
@@ -236,7 +236,7 @@ func delayedAllowLAN(allowLanMulticast bool) {
 		time.Sleep(time.Second)
 		ipList, err := getLanIPs()
 		if err != nil {
-			log.Warning(fmt.Errorf("Delayed 'Allow LAN': failed to get local IPs: %w", err))
+			log.Warning(fmt.Sprintf("Delayed 'Allow LAN': failed to get local IPs: %s", err))
 			return
 		}
 		if len(ipList) > 0 {
@@ -245,7 +245,7 @@ func delayedAllowLAN(allowLanMulticast bool) {
 				log.Info("Delayed 'Allow LAN': apply ...")
 				err := implAllowLAN(true, allowLanMulticast)
 				if err != nil {
-					log.Warning(fmt.Errorf("Delayed 'Allow LAN' error: %w", err))
+					log.Warning(fmt.Sprintf("Delayed 'Allow LAN' error: %s", err))
 				}
 			}
 			return
@@ -287,14 +287,43 @@ func implSetManualDNS(addr net.IP) error {
 
 // implOnUserExceptionsUpdated() called when 'userExceptions' value were updated. Necessary to update firewall rules.
 func implOnUserExceptionsUpdated() error {
-	return fmt.Errorf("user exceptions not implemented")
+
+	applyFunc := func(isIpv4 bool) error {
+		userExceptions := getUserExceptions(isIpv4, !isIpv4)
+
+		var expMasks []string
+		for _, mask := range userExceptions {
+			expMasks = append(expMasks, mask.String())
+		}
+
+		scriptCommand := "-set_user_exceptions_static"
+		if !isIpv4 {
+			scriptCommand = "-set_user_exceptions_static_ipv6"
+		}
+
+		ipList := strings.Join(expMasks, ",")
+
+		if len(ipList) > 250 {
+			log.Info(scriptCommand, " <...multiple addresses...>")
+		} else {
+			log.Info(scriptCommand, " ", ipList)
+		}
+
+		return shell.Exec(nil, platform.FirewallScript(), scriptCommand, ipList)
+	}
+
+	err := applyFunc(false)
+	errIpv6 := applyFunc(true)
+	if err == nil && errIpv6 != nil {
+		return errIpv6
+	}
+	return err
 }
 
 //---------------------------------------------------------------------
 
 func applyAddHostsToExceptions(hostsIPs []string, isPersistant bool, onlyForICMP bool) error {
-	var ipList string
-	ipList = strings.Join(hostsIPs, ",")
+	ipList := strings.Join(hostsIPs, ",")
 
 	if len(ipList) > 0 {
 		scriptCommand := "-add_exceptions"
@@ -381,6 +410,11 @@ func reApplyExceptions() error {
 		log.Error(err)
 	}
 
+	err = implOnUserExceptionsUpdated()
+	if err != nil {
+		log.Error(err)
+	}
+
 	return err
 }
 
@@ -397,7 +431,7 @@ func addHostsToExceptions(IPs []string, isPersistant bool, onlyForICMP bool) err
 	if !onlyForICMP {
 		for _, ip := range IPs {
 			// do not add new IP if it already in exceptions
-			if _, exists := allowedHosts[ip]; exists == false {
+			if _, exists := allowedHosts[ip]; !exists {
 				allowedHosts[ip] = isPersistant // add to map
 				newIPs = append(newIPs, ip)
 			}
@@ -409,7 +443,7 @@ func addHostsToExceptions(IPs []string, isPersistant bool, onlyForICMP bool) err
 
 		for _, ip := range IPs {
 			// do not add new IP if it already in exceptions
-			if _, exists := allowedForICMP[ip]; exists == false {
+			if _, exists := allowedForICMP[ip]; !exists {
 				allowedForICMP[ip] = struct{}{} // add to map
 				newIPs = append(newIPs, ip)
 			}
@@ -499,4 +533,19 @@ func getLanIPs() ([]string, error) {
 	}
 
 	return retIps, nil
+}
+
+func getUserExceptions(ipv4, ipv6 bool) []net.IPNet {
+	ret := []net.IPNet{}
+	for _, e := range userExceptions {
+		isIPv6 := e.IP.To4() == nil
+		isIPv4 := !isIPv6
+
+		if !(isIPv4 && ipv4) && !(isIPv6 && ipv6) {
+			continue
+		}
+
+		ret = append(ret, e)
+	}
+	return ret
 }
