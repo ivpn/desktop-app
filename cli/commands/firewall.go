@@ -39,9 +39,12 @@ type CmdFirewall struct {
 	ivpnSvrAccessBlock bool
 	persistentOn       bool
 	persistentOff      bool
+	exceptions         string
 	//allowLanMulticast bool
 	//blockLanMulticast bool
 }
+
+const StringValueNoData = "<!NO DATA!>"
 
 func (c *CmdFirewall) Init() {
 	c.Initialize("firewall", "Firewall management")
@@ -54,6 +57,7 @@ func (c *CmdFirewall) Init() {
 	c.BoolVar(&c.ivpnSvrAccessBlock, "ivpn_access_block", false, "Block access to IVPN servers when Firewall is enabled")
 	c.BoolVar(&c.persistentOff, "persistent_off", false, "Persistent firewall (Always-on firewall): disable")
 	c.BoolVar(&c.persistentOn, "persistent_on", false, "Persistent firewall (Always-on firewall): enable. When the option is enabled the IVPN Firewall is started during system boot")
+	c.StringVar(&c.exceptions, "exceptions", StringValueNoData, "EXCEPTIONS", "Set configuration: comma-separated list of IP masks to allow traffic when IVPN Firewall is enabled\nExamples:\n\tivpn exceptions '1.2.3.0/24, 8.8.8.8'\n\tivpn exceptions ''")
 
 	//c.BoolVar(&c.allowLanMulticast, "lan_multicast_allow", false, "Same as 'lan_allow' + allow multicast communication ")
 	//c.BoolVar(&c.blockLanMulticast, "lan_multicast_block", false, "Same as 'lan_block' + block multicast communication")
@@ -109,6 +113,12 @@ func (c *CmdFirewall) Run() error {
 	//	}
 	//}
 
+	if c.exceptions != StringValueNoData {
+		if err := _proto.FirewallSetUserExceptions(c.exceptions); err != nil {
+			return err
+		}
+	}
+
 	if c.persistentOn {
 		if err := _proto.FirewallPersistentSet(true); err != nil {
 			return err
@@ -141,7 +151,7 @@ func (c *CmdFirewall) Run() error {
 		return err
 	}
 
-	w := printFirewallState(nil, state.IsEnabled, state.IsPersistent, state.IsAllowLAN, state.IsAllowMulticast, state.IsAllowApiServers)
+	w := printFirewallState(nil, state.IsEnabled, state.IsPersistent, state.IsAllowLAN, state.IsAllowMulticast, state.IsAllowApiServers, state.UserExceptions)
 	w.Flush()
 
 	// TIPS

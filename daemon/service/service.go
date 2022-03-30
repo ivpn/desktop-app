@@ -1151,12 +1151,12 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 // SetKillSwitchUserExceptions set ip/mask to be excluded from FW block
 // Parameters:
 //	- exceptions - comma separated list of IP addresses in format: x.x.x.x[/xx]
-func (s *Service) SetKillSwitchUserExceptions(exceptions string) error {
+func (s *Service) SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error {
 	prefs := s._preferences
 	prefs.FwUserExceptions = exceptions
 	s.setPreferences(prefs)
 
-	err := firewall.SetUserExceptions(exceptions, true)
+	err := firewall.SetUserExceptions(exceptions, ignoreParsingErrors)
 	if err == nil {
 		s._evtReceiver.OnKillSwitchStateChanged()
 	}

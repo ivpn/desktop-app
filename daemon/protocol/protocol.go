@@ -80,7 +80,7 @@ type Service interface {
 	SetKillSwitchAllowLANMulticast(isAllowLanMulticast bool) error
 	SetKillSwitchAllowLAN(isAllowLan bool) error
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
-	SetKillSwitchUserExceptions(exceptions string) error
+	SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error
 
 	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
@@ -550,7 +550,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		err := p._service.SetKillSwitchUserExceptions(req.UserExceptions)
+		err := p._service.SetKillSwitchUserExceptions(req.UserExceptions, !req.FailOnParsingError)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
@@ -840,7 +840,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			// set AllowLan and exceptions according to default values
 			p._service.SetKillSwitchAllowLAN(prefs.IsFwAllowLAN)
 			p._service.SetKillSwitchAllowLANMulticast(prefs.IsFwAllowLANMulticast)
-			p._service.SetKillSwitchUserExceptions(prefs.FwUserExceptions)
+			p._service.SetKillSwitchUserExceptions(prefs.FwUserExceptions, true)
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)

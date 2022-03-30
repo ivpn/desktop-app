@@ -91,7 +91,8 @@ type KillSwitchSetAllowLAN struct {
 type KillSwitchSetUserExceptions struct {
 	CommandBase
 	// Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
-	UserExceptions string
+	UserExceptions     string
+	FailOnParsingError bool
 }
 
 type KillSwitchSetAllowApiServers struct {
