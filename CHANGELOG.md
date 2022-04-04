@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.7.0 - 2022-04-04
+
+[NEW] (macOS/Linux) Configure custom DNS over HTTPS  
+[NEW] (Windows) Configure custom DNS over HTTPS (Windows 8/10)  
+[NEW] (Windows/Linux) Last used apps for Split Tunneling now show on the top of the list  
+[NEW] Added new connection ports (UDP 80, UDP 443)  
+[FIX] Potential vulnerability fixes  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.7.0.exe)  
+SHA256: 41dcf6f286e9d4c29e7d857af270b794e07e5dbce5767e57f6e7f27d64ce56e2   
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.7.0.dmg)  
+SHA256: 8870487f9ca1e24f2c93ab1b926380f1ec7fe5abb7252a31411f90f234db20ff  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.7.0-arm64.dmg)  
+SHA256: ee691f502f6614c3824b58a52ecdcd79039d27b7df08cdc94258a8dd8c290b57  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.7.0_amd64.deb)  
+SHA256: 7603e2c2edd2355068f34afceaf7d3ef6f0bfff2310b341faa8bd16933f077f6  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.7.0-1.x86_64.rpm)  
+SHA256: bf99eaac31708978d98412fdbeeb5be544f91737f2423804b40851d98be59676 
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.7.0_amd64.deb)  
+SHA256: 012f7ff53c0c42e94f53963cdbe1e5354222fedc1611c380b3e8f06fab2302a9  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.7.0-1.x86_64.rpm)  
+SHA256: 94351142da24e75ed97fca4721a5d871b638a9f648cd89394089d5bb0af2827a 
+
 ## Version 3.6.4 - 2022-03-15
 
 [NEW] Configure custom DNS over HTTPS (Windows 11)  
