@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 [NEW] (Windows) Configure custom DNS over HTTPS (Windows 8/10)  
 [NEW] (Windows/Linux) Last used apps for Split Tunneling now show on the top of the list  
 [NEW] Added new connection ports (UDP 80, UDP 443)  
-[FIX] Potential vulnerability fixes  
+[FIX] Vulnerability fixes  
 
 [Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.7.0.exe)  
 SHA256: 41dcf6f286e9d4c29e7d857af270b794e07e5dbce5767e57f6e7f27d64ce56e2   
