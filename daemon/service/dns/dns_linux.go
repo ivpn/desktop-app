@@ -30,6 +30,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/ivpn/desktop-app/daemon/helpers"
+	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 )
 
 var (
@@ -65,7 +66,7 @@ func implInitialize() error {
 }
 
 func implPause() error {
-	if isBackupExists(resolvBackupFile) == false {
+	if !isBackupExists(resolvBackupFile) {
 		// The backup for the OS-defined configuration not exists.
 		// It seems, we are not connected. Nothing to pause.
 		return nil
@@ -99,15 +100,17 @@ func implResume(defaultDNS DnsSettings) error {
 }
 
 func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
-	return false, false, nil
+	return true, false, nil
 }
 
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for Linux implementation
-func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
-	if dnsCfg.Encryption != EncryptionNone {
-		return fmt.Errorf("DNS encryption is not supported on this platform")
-	}
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+	defer func() {
+		if retErr != nil {
+			dnscryptproxy.Stop()
+		}
+	}()
 
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
@@ -118,8 +121,18 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 
 	stopDNSChangeMonitoring()
 
-	if manualDNS.IsEmpty() {
+	if dnsCfg.IsEmpty() {
 		return implDeleteManual(nil)
+	}
+
+	dnscryptproxy.Stop()
+	// start encrypted DNS configuration (if required)
+	if dnsCfg.Encryption != EncryptionNone {
+		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
+			return err
+		}
+		// the local DNS must be configured to the dnscrypt-proxy (localhost)
+		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
 	}
 
 	createBackupIfNotExists := func() (created bool, er error) {
@@ -168,8 +181,8 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 
 		log.Info("DNS-change monitoring started")
 		defer func() {
-			w.Close()
 			log.Info("DNS-change monitoring stopped")
+			w.Close()
 		}()
 
 		for {
@@ -184,7 +197,6 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 			var evt fsnotify.Event
 			select {
 			case evt = <-w.Events:
-				break
 			case <-done:
 				// monitoring stopped
 				return
@@ -217,12 +229,15 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 // DeleteManual - reset manual DNS configuration to default
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
+	dnscryptproxy.Stop()
+
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
 		// it will be applied on RESUME
 		manualDNS = DnsSettings{}
 		return nil
 	}
+
 	// stop file change monitoring
 	stopDNSChangeMonitoring()
 	isDeleteBackup := true // delete backup file
@@ -248,7 +263,7 @@ func isBackupExists(backupFName string) bool {
 	return err == nil
 }
 
-func createBackup(backupFName string, isOwerwriteIfExists bool) (created bool, er error) {
+func createBackup(backupFName string, isOverwriteIfExists bool) (created bool, er error) {
 	if _, err := os.Stat(resolvFile); err != nil {
 		// source file not exists
 		return false, fmt.Errorf("failed to backup DNS configuration (file availability check failed): %w", err)
@@ -256,7 +271,7 @@ func createBackup(backupFName string, isOwerwriteIfExists bool) (created bool, e
 
 	if _, err := os.Stat(backupFName); err == nil {
 		// backup file already exists
-		if isOwerwriteIfExists == false {
+		if !isOverwriteIfExists {
 			return false, nil
 		}
 	}

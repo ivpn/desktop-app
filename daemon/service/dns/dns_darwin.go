@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
@@ -54,14 +55,26 @@ func implResume(defaultDNS DnsSettings) error {
 }
 
 func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
-	return false, false, nil
+	return true, false, nil
 }
 
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for macOS implementation
-func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+	defer func() {
+		if retErr != nil {
+			dnscryptproxy.Stop()
+		}
+	}()
+
+	dnscryptproxy.Stop()
+	// start encrypted DNS configuration (if required)
 	if dnsCfg.Encryption != EncryptionNone {
-		return fmt.Errorf("DNS encryption is not supported on this platform")
+		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
+			return err
+		}
+		// the local DNS must be configured to the dnscrypt-proxy (localhost)
+		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
 	}
 
 	err := shell.Exec(log, platform.DNSScript(), "-set_alternate_dns", dnsCfg.Ip().String())
@@ -75,6 +88,8 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 // DeleteManual - reset manual DNS configuration to default (DHCP)
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
+	dnscryptproxy.Stop()
+
 	err := shell.Exec(log, platform.DNSScript(), "-delete_alternate_dns")
 	if err != nil {
 		return fmt.Errorf("reset manual DNS: Failed to change DNS: %w", err)

@@ -101,6 +101,11 @@ func doOsInit() (warnings []string, errors []error) {
 	wgBinaryPath = path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")
 	wgToolBinaryPath = path.Join(_installDir, "WireGuard", _wgArchDir, "wg.exe")
 
+	dnscryptproxyBinPath = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.exe")
+	dnscryptproxyConfigTemplate = path.Join(settingsDir, "dnscrypt-proxy-template.toml")
+	dnscryptproxyConfig = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.toml")
+	dnscryptproxyLog = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.log")
+
 	if _, err := os.Stat(wfpDllPath); err != nil {
 		errors = append(errors, fmt.Errorf("file not exists: '%s'", wfpDllPath))
 	}

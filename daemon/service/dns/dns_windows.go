@@ -33,6 +33,7 @@ import (
 	"unsafe"
 
 	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
@@ -111,7 +112,7 @@ func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dnsCfg DnsSettings, ipv6 bool, 
 	return checkDefaultAPIResp(retval, err)
 }
 
-func fIsCanUseDnsOverHttps() bool {
+func fIsCanUseNativeDnsOverHttps() bool {
 	retval, _, err := _fIsCanUseDnsOverHttps.Call()
 	if retval == 0 || err != syscall.Errno(0) {
 		return false
@@ -167,11 +168,19 @@ func implResume(defaultDNS DnsSettings) error {
 
 func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
 	defer catchPanic(&err)
-	return fIsCanUseDnsOverHttps(), false, err
+
+	return true, false, err
 }
 
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	defer catchPanic(&retErr)
+	defer func() {
+		if retErr != nil {
+			dnscryptproxy.Stop()
+		}
+	}()
+
+	dnscryptproxy.Stop()
 
 	if isIPv6, _ := dnsCfg.IsIPv6(); isIPv6 {
 		return fmt.Errorf("IPv6 DNS is not supported")
@@ -185,17 +194,25 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 		}
 	}
 
-	isIpv6 := false
 	if dnsCfg.IsEmpty() {
 		return fmt.Errorf("unable to change DNS (configuration is not defined)")
 	}
-	isIpv6, _ = dnsCfg.IsIPv6()
+	isIpv6, _ := dnsCfg.IsIPv6()
 
 	// non-VPN interfaces to update (if DNS located in local network)
 	notVpnInterfacesToUpdate, err := getInterfacesIPsWhichContainsIP(dnsCfg.Ip(), localInterfaceIP)
 
 	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
 		return nil
+	}
+
+	// start encrypted DNS configuration (if required)
+	if dnsCfg.Encryption != EncryptionNone && !fIsCanUseNativeDnsOverHttps() {
+		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
+			return err
+		}
+		// the local DNS must be configured to the dnscrypt-proxy (localhost)
+		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
 	}
 
 	start := time.Now()
@@ -239,8 +256,15 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 func implDeleteManual(localInterfaceIP net.IP) (retErr error) {
 	defer catchPanic(&retErr)
 
+	dnscryptproxy.Stop()
+
 	// non-VPN interfaces to update (if DNS server is in local network)
-	notVpnInterfacesToUpdate, err := getInterfacesIPsWhichContainsIP(_lastDNS.Ip(), localInterfaceIP)
+	var notVpnInterfacesToUpdate []net.IPNet
+	var err error
+
+	if !_lastDNS.Ip().Equal(net.ParseIP("127.0.0.1")) {
+		notVpnInterfacesToUpdate, err = getInterfacesIPsWhichContainsIP(_lastDNS.Ip(), localInterfaceIP)
+	}
 
 	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
 		return nil

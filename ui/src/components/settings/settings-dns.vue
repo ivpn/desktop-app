@@ -136,7 +136,7 @@ function checkIsDnsIPError(dnsIpString) {
 
   // IPv4
   var expression = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
-  return !expression.test(dnsIpString);
+  return !expression.test(dnsIpString.trim());
 }
 
 export default {
@@ -268,7 +268,7 @@ export default {
           {},
           this.$store.state.settings.dnsCustomCfg
         );
-        newDnsCfg.DnsHost = value;
+        newDnsCfg.DnsHost = value.trim();
 
         if (
           this.$store.state.settings.dnsCustomCfg.Encryption ===
@@ -324,7 +324,7 @@ export default {
           {},
           this.$store.state.settings.dnsCustomCfg
         );
-        newDnsCfg.DohTemplate = value;
+        newDnsCfg.DohTemplate = value.trim();
         this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
       },
     },
@@ -373,7 +373,10 @@ export default {
       return !this.dnsDohTemplate.toLowerCase().startsWith("https://");
     },
     isIPError: function () {
-      if (!this.dnsHost) return false;
+      if (!this.dnsHost) {
+        if (this.dnsIsCustom) return true;
+        return false;
+      }
       return checkIsDnsIPError(this.dnsHost);
     },
   },

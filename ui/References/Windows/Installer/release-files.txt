@@ -22,6 +22,8 @@ OpenVPN\x86_64\tap_oldsign\OemVista.inf
 OpenVPN\x86_64\tap_oldsign\tapivpn.cat
 OpenVPN\x86_64\tap_oldsign\tapivpn.sys
 OpenVPN\obfsproxy\obfs4proxy.exe
+dnscrypt-proxy\dnscrypt-proxy.exe
+etc\dnscrypt-proxy-template.toml
 WireGuard\x86_64\wg.exe
 WireGuard\x86_64\wireguard.exe
 SplitTunnelDriver\x86_64\ivpn-split-tunnel.sys

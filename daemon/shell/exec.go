@@ -235,8 +235,9 @@ func StartConsoleReaders(cmd *exec.Cmd, outProcessFunc func(text string, isError
 	if err != nil {
 		return err
 	}
-	outPipeScanner := bufio.NewScanner(outPipe)
+
 	go func() {
+		outPipeScanner := bufio.NewScanner(outPipe)
 		for outPipeScanner.Scan() {
 			outProcessFunc(outPipeScanner.Text(), false)
 		}
@@ -246,10 +247,11 @@ func StartConsoleReaders(cmd *exec.Cmd, outProcessFunc func(text string, isError
 	if err != nil {
 		return err
 	}
-	errPipeScanner := bufio.NewScanner(errPipe)
+
 	go func() {
+		errPipeScanner := bufio.NewScanner(errPipe)
 		for errPipeScanner.Scan() {
-			outProcessFunc(outPipeScanner.Text(), true)
+			outProcessFunc(errPipeScanner.Text(), true)
 		}
 	}()
 

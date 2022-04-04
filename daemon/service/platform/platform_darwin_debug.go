@@ -76,6 +76,10 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	wgBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wireguard-go")
 	wgToolBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wg")
 
+	dnscryptproxyBinPath = path.Join(installDir, "References/macOS/_deps/dnscryptproxy_inst/dnscrypt-proxy")
+	dnscryptproxyConfigTemplate = path.Join(installDir, "References/macOS/etc/dnscrypt-proxy-template.toml")
+	dnscryptproxyConfig = path.Join(settingsDir, "dnscrypt-proxy.toml")
+
 	return nil, nil
 }
 

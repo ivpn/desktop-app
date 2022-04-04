@@ -236,6 +236,10 @@ mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/WireGuard"
 cp "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/wg_inst/wg" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/WireGuard/wg" || CheckLastResult
 cp "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/wg_inst/wireguard-go" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/WireGuard/wireguard-go" || CheckLastResult
 
+echo "[+] Preparing DMG image: Copying 'dnscrypt-proxy' binary..."
+mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/dnscrypt-proxy"
+cp "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/dnscryptproxy_inst/dnscrypt-proxy" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/dnscrypt-proxy/dnscrypt-proxy" || CheckLastResult
+
 echo "[+] Preparing DMG image: Copying daemon..."
 cp -R "${_PATH_ABS_REPO_DAEMON}/IVPN Agent" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS" || CheckLastResult
 
@@ -268,9 +272,6 @@ CheckLastResult
 #echo "Copying Uninstaller ..."
 #cp -a "${UNINSTALL_FILE}" ./_image/
 #CheckLastResult "Error copying ${UNINSTALL_FILE}"
-
-echo "[+] Preparing DMG image: Removing unnecessary debug files..."
-find "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources/obfsproxy" -iname "*.pyc" -type f -delete || CheckLastResult
 
 #echo "[+] Preparing DMG image: Signing..."
 #../sign-file.sh "./_image/IVPN.app" || CheckLastResult

@@ -255,10 +255,6 @@ func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
 	// required DNS state (temporary save required DNS value here because it is not possible set DNS when VPN is not connected)
 	wg.internals.manualDNSRequired = dnsCfg
 
-	if dnsCfg.Equal(wg.internals.manualDNS) {
-		return nil
-	}
-
 	if running, err := wg.isServiceRunning(); err != nil || !running {
 		return err // it is not possible set DNS when VPN is not connected
 	}

@@ -1,3 +1,5 @@
 .DS_Store
 daemon/References/Windows/OpenVPN/obfsproxy/obfs4proxy.exe
 /daemon/References/Linux/_deps/*
+daemon/References/Windows/dnscrypt-proxy/
+daemon/References/Windows/etc/dnscrypt-proxy/
