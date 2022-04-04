@@ -73,7 +73,6 @@ func (p *dnsCryptProxy) implStop() error {
 
 func (p *dnsCryptProxy) start() (command *startedCmd, err error) {
 	cmd := exec.Command(p.binaryPath, "-child", "-config", p.configFilePath)
-	log.Debug(cmd)
 
 	defer func() {
 		if err != nil {
