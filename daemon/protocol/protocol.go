@@ -135,7 +135,8 @@ func CreateProtocol() (*Protocol, error) {
 
 // Protocol - TCP interface to communicate with IVPN application
 type Protocol struct {
-	_secret uint64
+	_secret             uint64
+	_paranoidModeSecret string
 
 	// connections listener
 	_connListener *net.TCPListener
@@ -188,6 +189,10 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 		// Disconnect VPN (if connected)
 		p._service.Disconnect()
 	}()
+
+	if err := p.paranoidModeInitFromFile(); err != nil {
+		log.Error(fmt.Errorf("failed to initialize Paranoid Mode: %f", err))
+	}
 
 	addr := "127.0.0.1:0"
 	// Initializing listener
@@ -296,7 +301,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 		if !isAuthenticated {
 			messageData := []byte(message)
 
-			cmd, err := types.GetCommandBase(messageData)
+			cmd, err := types.GetRequestBase(messageData)
 			if err != nil {
 				log.Error(fmt.Sprintf("%sFailed to parse initialization request:", p.connLogID(conn)), err)
 				return
@@ -352,13 +357,18 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	messageData := []byte(message)
 
-	reqCmd, err := types.GetCommandBase(messageData)
+	reqCmd, err := types.GetRequestBase(messageData)
 	if err != nil {
 		log.Error(fmt.Sprintf("%sFailed to parse request:", p.connLogID(conn)), err)
 		return
 	}
 
 	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command)
+
+	if p.paranoidModeIsEnabled() && !p.paranoidModeCheckSecret(reqCmd.ProtocolSecret) {
+		p.sendErrorResponse(conn, reqCmd, fmt.Errorf("'Paranoid Mode' active: password is wrong"))
+		return
+	}
 
 	sendState := func(reqIdx int, isOnlyIfConnected bool) {
 		vpnState := p._lastVPNState
@@ -384,7 +394,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		log.Info(fmt.Sprintf("%sConnected client version: '%s' [set KeepDaemonAlone = %t]", p.connLogID(conn), req.Version, req.KeepDaemonAlone))
 
 		// send back Hello message with account session info
-		p.sendResponse(conn, p.createHelloResponse(), req.Idx)
+		helloResponse := p.createHelloResponse()
+		if req.GetParanoidModeFilePath {
+			helloResponse.ParanoidModeFilePath = platform.ParanoidModeSecretFile()
+		}
+		p.sendResponse(conn, helloResponse, req.Idx)
 
 		if req.GetServersList {
 			serv, _ := p._service.ServersList()
@@ -417,6 +431,19 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if req.GetWiFiCurrentState {
 			// sending WIFI info
 			p.OnWiFiChanged(p._service.GetWiFiCurrentState())
+		}
+
+	case "ParanoidModeSetPasswordReq":
+		var req types.ParanoidModeSetPasswordReq
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		if err := p.paranoidModeSetSecret(req.OldSecret, req.NewSecret); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+		} else {
+			// send 'success' response to the requestor
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 
 	case "GetVPNState":
@@ -558,11 +585,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// send the response to the requestor
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
-
-	// TODO: can be fully replaced by 'KillSwitchGetStatus'
-	case "KillSwitchGetIsPestistent":
-		isPersistant := p._service.Preferences().IsFwPersistant
-		p.sendResponse(conn, &types.KillSwitchGetIsPestistentResp{IsPersistent: isPersistant}, reqCmd.Idx)
 
 	// TODO: must return response
 	// TODO: avoid using raw key as a string

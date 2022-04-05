@@ -78,6 +78,11 @@ type HelloResp struct {
 	// SettingsSessionUUID is unique for Preferences object
 	// It allow to detect situations when settings was erased (created new Preferences object)
 	SettingsSessionUUID string
+
+	// Path to a file with the secret for paranoid mode (if requested)
+	// This file must be able for reading ONLY for privilaged users
+	ParanoidModeFilePath  string
+	ParanoidModeIsEnabled bool
 }
 
 // ConfigParamsResp return s configuration parameters

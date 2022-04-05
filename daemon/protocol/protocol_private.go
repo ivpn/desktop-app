@@ -27,8 +27,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -36,6 +38,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
@@ -118,7 +121,7 @@ func (p *Protocol) sendError(conn net.Conn, errorText string, cmdIdx int) {
 	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: errorText}, cmdIdx)
 }
 
-func (p *Protocol) sendErrorResponse(conn net.Conn, request types.CommandBase, err error) {
+func (p *Protocol) sendErrorResponse(conn net.Conn, request types.RequestBase, err error) {
 	log.Error(fmt.Sprintf("%sError processing request '%s': %s", p.connLogID(conn), request.Command, err))
 	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: err.Error()}, request.Idx)
 }
@@ -194,11 +197,13 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 		dnsOverTls = false
 		log.Error(err)
 	}
+
 	// send back Hello message with account session info
 	helloResp := types.HelloResp{
-		Version:             version.Version(),
-		Session:             types.CreateSessionResp(prefs.Session),
-		SettingsSessionUUID: prefs.SettingsSessionUUID,
+		ParanoidModeIsEnabled: p.paranoidModeIsEnabled(),
+		Version:               version.Version(),
+		Session:               types.CreateSessionResp(prefs.Session),
+		SettingsSessionUUID:   prefs.SettingsSessionUUID,
 		DisabledFunctions: types.DisabledFunctionality{
 			WireGuardError:   wgErr,
 			OpenVPNError:     ovpnErr,
@@ -228,6 +233,114 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		IsCanPause:      state.IsCanPause}
 
 	return ret
+}
+
+// --------------------- paranoid mode ------------------------
+func (p *Protocol) paranoidModeInitFromFile() error {
+	p._paranoidModeSecret = ""
+
+	file := platform.ParanoidModeSecretFile()
+	if len(file) <= 0 {
+		return nil // paranoid mode not implemented for this platform
+	}
+
+	f, err := os.Open(platform.ParanoidModeSecretFile())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // paranoid mode disabled
+		}
+		return fmt.Errorf("paranoid mode file open error : %w", err)
+	}
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // paranoid mode disabled
+		}
+		return fmt.Errorf("paranoid mode file existing check error : %w", err)
+	}
+
+	// check file access rights
+	mode := stat.Mode()
+	expectedMode := os.FileMode(0600) // read only for privilaged user
+	if mode != expectedMode {
+		return fmt.Errorf(fmt.Sprintf("paranoid mode file has wrong access permissions (%o but expected %o)", mode, expectedMode))
+	}
+
+	// read file
+	if stat.Size() > 1024*10 {
+		return fmt.Errorf("paranoid mode file too big")
+	}
+	buff := make([]byte, stat.Size())
+	_, err = f.Read(buff)
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("failed to read paranoid mode file: %w", err)
+	}
+
+	// check first line
+	lines := strings.Split(string(buff), "\n")
+	if len(lines) != 1 {
+		return fmt.Errorf("wrong data in paranoid mode file (expected one line)")
+	}
+	secret := strings.TrimSpace(lines[0])
+	if len(secret) <= 0 {
+		return fmt.Errorf("wrong data in paranoid mode file (secret is empty)")
+	}
+
+	p._paranoidModeSecret = secret
+
+	return nil
+}
+
+func (p *Protocol) paranoidModeIsEnabled() bool {
+	return len(p._paranoidModeSecret) > 0
+}
+
+func (p *Protocol) paranoidModeSetSecret(oldSecret, newSecret string) error {
+	file := platform.ParanoidModeSecretFile()
+	if len(file) <= 0 {
+		return nil // paranoid mode not implemented for this platform
+	}
+
+	if p.paranoidModeIsEnabled() && oldSecret != p._paranoidModeSecret {
+		return fmt.Errorf("the old password for Paranoid Mode does not match")
+	}
+
+	newSecret = strings.TrimSpace(newSecret)
+
+	if len(newSecret) > 0 {
+		lines := strings.Split(newSecret, "\n")
+		if len(lines) != 1 {
+			return fmt.Errorf("new password for Paranoid Mode should contain only one line")
+		}
+		newSecret = strings.TrimSpace(lines[0])
+	}
+
+	if len(newSecret) == 0 {
+		// disable paranoid mode
+		if err := os.Remove(file); err != nil {
+			return fmt.Errorf("failed to remove Paranoid Mode file: %w", err)
+		}
+		p._paranoidModeSecret = ""
+		return nil
+	}
+
+	bytesToWrite := []byte(newSecret)
+	if len(bytesToWrite) > 1024*10 {
+		return fmt.Errorf("password too long")
+	}
+
+	if err := os.WriteFile(file, bytesToWrite, 0600); err != nil {
+		return fmt.Errorf("failed to write to Paranoid Mode file: %w", err)
+	}
+
+	p._paranoidModeSecret = newSecret
+	return nil
+}
+
+func (p *Protocol) paranoidModeCheckSecret(secret string) bool {
+	return p._paranoidModeSecret == secret
 }
 
 // -------------- processing connection request ---------------

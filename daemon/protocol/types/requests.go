@@ -30,7 +30,7 @@ import (
 
 // Hello is an initial request
 type Hello struct {
-	CommandBase
+	RequestBase
 	// connected client version
 	Version string
 	Secret  uint64
@@ -53,23 +53,27 @@ type Hello struct {
 	//	KeepDaemonAlone == false (default) - VPN disconnects when client disconnects from a daemon
 	//	KeepDaemonAlone == true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
 	KeepDaemonAlone bool
+
+	// Request path to a file with the secret for paranoid mode
+	// This file must be able for reading ONLY for privilaged users
+	GetParanoidModeFilePath bool
 }
 
 // GetServers request servers list
 type GetServers struct {
-	CommandBase
+	RequestBase
 }
 
 // PingServers request to ping servers
 type PingServers struct {
-	CommandBase
+	RequestBase
 	RetryCount int
 	TimeOutMs  int
 }
 
 // KillSwitchSetAllowLANMulticast enable\disable LAN multicast acces for kill-switch
 type KillSwitchSetAllowLANMulticast struct {
-	CommandBase
+	RequestBase
 	AllowLANMulticast bool
 
 	// When true - deamon returns empty response as confirmation
@@ -79,7 +83,7 @@ type KillSwitchSetAllowLANMulticast struct {
 
 // KillSwitchSetAllowLAN enable\disable LAN acces for kill-switch
 type KillSwitchSetAllowLAN struct {
-	CommandBase
+	RequestBase
 	AllowLAN bool
 
 	// When true - deamon returns empty response as confirmation
@@ -88,48 +92,48 @@ type KillSwitchSetAllowLAN struct {
 }
 
 type KillSwitchSetAllowApiServers struct {
-	CommandBase
+	RequestBase
 	IsAllowApiServers bool
 }
 
 // KillSwitchSetEnabled request to enable\disable kill-switch
 type KillSwitchSetEnabled struct {
-	CommandBase
+	RequestBase
 	IsEnabled bool
 }
 
 // KillSwitchGetStatus get full killswitch status
 type KillSwitchGetStatus struct {
-	CommandBase
+	RequestBase
 }
 
 // KillSwitchSetIsPersistent request to mark kill-switch persistant
 type KillSwitchSetIsPersistent struct {
-	CommandBase
+	RequestBase
 	IsPersistent bool
 }
 
 // SetPreference sets daemon configuration parameter
 type SetPreference struct {
-	CommandBase
+	RequestBase
 	Key   string
 	Value string
 }
 
 // SetAlternateDns request to set custom DNS
 type SetAlternateDns struct {
-	CommandBase
+	RequestBase
 	Dns dns.DnsSettings
 }
 
 // GetDnsPredefinedConfigs request to get list of predefined DoH/DoT configurations (if exists)
 type GetDnsPredefinedConfigs struct {
-	CommandBase
+	RequestBase
 }
 
 // Connect request to establish new VPN connection
 type Connect struct {
-	CommandBase
+	RequestBase
 	// Can use IPv6 connection inside tunnel
 	// The hosts which support IPv6 have higher priority,
 	// but if there are no IPv6 hosts - we will use the IPv4 host.
@@ -186,12 +190,12 @@ type Connect struct {
 
 // Disconnect disconnect active VPN connection
 type Disconnect struct {
-	CommandBase
+	RequestBase
 }
 
 // GetVPNState request daemon to provive current VPN connection state
 type GetVPNState struct {
-	CommandBase
+	RequestBase
 }
 
 // SessionNew - create new session
@@ -200,7 +204,7 @@ type GetVPNState struct {
 // Initial call to /sessin/new should always be performed with force set to false, to display special form, when sessions limit is reached.
 // IVPN client apps have to set force to true only when customer clicks Log all other clients button.
 type SessionNew struct {
-	CommandBase
+	RequestBase
 	AccountID  string
 	ForceLogin bool
 
@@ -211,7 +215,7 @@ type SessionNew struct {
 
 // SessionDelete logout from current device
 type SessionDelete struct {
-	CommandBase
+	RequestBase
 	NeedToResetSettings   bool
 	NeedToDisableFirewall bool
 	// If IsCanDeleteSessionLocally==true: the account will be logged out
@@ -221,29 +225,29 @@ type SessionDelete struct {
 
 // AccountStatus get account status
 type AccountStatus struct {
-	CommandBase
+	RequestBase
 }
 
 // WireGuardGenerateNewKeys - generate WG keys
 type WireGuardGenerateNewKeys struct {
-	CommandBase
+	RequestBase
 	OnlyUpdateIfNecessary bool
 }
 
 // WireGuardSetKeysRotationInterval -  change WG keys rotation interval
 type WireGuardSetKeysRotationInterval struct {
-	CommandBase
+	RequestBase
 	Interval int64
 }
 
 // WiFiAvailableNetworks - get list of available WIFI networks
 type WiFiAvailableNetworks struct {
-	CommandBase
+	RequestBase
 }
 
 // WiFiCurrentNetwork - request info about connected WIFI
 type WiFiCurrentNetwork struct {
-	CommandBase
+	RequestBase
 }
 
 // IPProtocol - VPN type
@@ -257,7 +261,15 @@ const (
 
 // APIRequest do custom request to API
 type APIRequest struct {
-	CommandBase
+	RequestBase
 	APIPath            string
 	IPProtocolRequired RequiredIPProtocol
+}
+
+// paranoid mode
+
+type ParanoidModeSetPasswordReq struct {
+	RequestBase
+	OldSecret string
+	NewSecret string
 }
