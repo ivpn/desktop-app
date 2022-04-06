@@ -95,8 +95,6 @@ func doCheckIsAdmin() bool {
 		return false
 	}
 
-	// This appears to cast a null pointer so I'm not sure why this
-	// works, but this guy says it does and it Works for Me™:
 	// https://github.com/golang/go/issues/28804#issuecomment-438838144
 	token := windows.Token(0)
 

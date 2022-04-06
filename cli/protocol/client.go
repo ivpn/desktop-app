@@ -114,8 +114,15 @@ func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
 		return helloResponse, err
 	}
 
-	helloReq := types.Hello{Secret: c._secret, KeepDaemonAlone: true, GetStatus: true, Version: "1.0"}
+	return c.SendHelloEx(false)
+}
 
+func (c *Client) SendHelloEx(doRequestPmFile bool) (helloResponse types.HelloResp, err error) {
+	if err := c.ensureConnected(); err != nil {
+		return helloResponse, err
+	}
+
+	helloReq := types.Hello{Secret: c._secret, KeepDaemonAlone: true, GetStatus: true, Version: "1.0", GetParanoidModeFilePath: doRequestPmFile}
 	if err := c.sendRecvTimeOut(&helloReq, &c._helloResponse, time.Second*7); err != nil {
 		if _, ok := errors.Unwrap(err).(ResponseTimeout); ok {
 			return helloResponse, fmt.Errorf("Failed to send 'Hello' request: %w", err)

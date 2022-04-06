@@ -24,10 +24,12 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"text/tabwriter"
 
 	"github.com/ivpn/desktop-app/cli/flags"
+	"github.com/ivpn/desktop-app/cli/helpers"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -52,18 +54,43 @@ func (c *CmdParanoidMode) Run() error {
 
 	if c.disable {
 		if _proto.GetHelloResponse().ParanoidModeIsEnabled {
-			fmt.Println("Disabling Paranoid Mode")
-			fmt.Print("\tEnter old password for Paranoid Mode : ")
-			data, err := terminal.ReadPassword(0)
-			if err != nil {
-				return fmt.Errorf("failed to read password: %w", err)
-			}
-			oldSecret := strings.TrimSpace(string(data))
-			_proto.InitSetParanoidModeSecret(oldSecret)
-			fmt.Println("")
+			if helpers.CheckIsAdmin() {
+				// We are running in privilaged environment
+				// Trying to remove ParanoidMode file manually
+				// (we are in privilaged mode - so old PM password is not required)
 
-			if err := _proto.SetParanoidModePassword(""); err != nil {
-				return err
+				// 1 - get path of PM file
+				resp, err := _proto.SendHelloEx(true)
+				if err != nil {
+					return err
+				}
+				if len(resp.ParanoidModeFilePath) <= 0 {
+					return fmt.Errorf("failed to disable Paranoid Mode in privilaged user environment (file path not defined)")
+				}
+
+				// 2 - remove file
+				if err := os.Remove(resp.ParanoidModeFilePath); err != nil {
+					return err
+				}
+
+				// request new PM state (to print actual state for user)
+				if _, err := _proto.SendHello(); err != nil {
+					return err
+				}
+			} else {
+				fmt.Println("Disabling Paranoid Mode")
+				fmt.Print("\tEnter old password for Paranoid Mode : ")
+				data, err := terminal.ReadPassword(0)
+				if err != nil {
+					return fmt.Errorf("failed to read password: %w", err)
+				}
+				oldSecret := strings.TrimSpace(string(data))
+				_proto.InitSetParanoidModeSecret(oldSecret)
+				fmt.Println("")
+
+				if err := _proto.SetParanoidModePassword(""); err != nil {
+					return err
+				}
 			}
 		}
 	}
