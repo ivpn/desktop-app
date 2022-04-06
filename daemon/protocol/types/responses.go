@@ -36,10 +36,22 @@ func init() {
 	log = logger.NewLogger("prttyp")
 }
 
+type ErrorType int
+
+const (
+	ErrorUnknown                   ErrorType = iota
+	ErrorParanoidModePasswordError ErrorType = iota
+)
+
 // ErrorResp response of error
 type ErrorResp struct {
 	CommandBase
 	ErrorMessage string
+	ErrorType    ErrorType
+}
+
+func (e ErrorResp) Error() string {
+	return e.ErrorMessage
 }
 
 // EmptyResp empty response on request

@@ -24,7 +24,9 @@ package protocol
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
@@ -48,42 +50,59 @@ func (c *Client) sendRecv(request interface{}, response interface{}) error {
 }
 
 func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, timeout time.Duration) error {
-	var receiver *receiverChannel
 
-	// thread-safe receiver registration
-	func() {
-		c._receiversLocker.Lock()
-		defer c._receiversLocker.Unlock()
+	doJob := func() error {
+		var receiver *receiverChannel
 
-		c._requestIdx++
-		if c._requestIdx == 0 {
+		// thread-safe receiver registration
+		func() {
+			c._receiversLocker.Lock()
+			defer c._receiversLocker.Unlock()
+
 			c._requestIdx++
+			if c._requestIdx == 0 {
+				c._requestIdx++
+			}
+
+			receiver = createReceiver(c._requestIdx, false, response)
+
+			c._receivers[receiver] = struct{}{}
+		}()
+
+		// do not forget to remove receiver
+		defer func() {
+			c._receiversLocker.Lock()
+			defer c._receiversLocker.Unlock()
+
+			delete(c._receivers, receiver)
+		}()
+
+		// send request
+		if err := c.send(request, receiver._waitingIdx); err != nil {
+			return err
 		}
 
-		receiver = createReceiver(c._requestIdx, response)
+		// waiting for response
+		if err := receiver.Wait(timeout); err != nil {
+			return err
+		}
 
-		c._receivers[receiver] = struct{}{}
-	}()
-
-	// do not forget to remove receiver
-	defer func() {
-		c._receiversLocker.Lock()
-		defer c._receiversLocker.Unlock()
-
-		delete(c._receivers, receiver)
-	}()
-
-	// send request
-	if err := c.send(request, receiver._waitingIdx); err != nil {
-		return err
+		return nil
 	}
 
-	// waiting for response
-	if err := receiver.Wait(timeout); err != nil {
-		return err
+	err := doJob()
+	if errResp, ok := err.(types.ErrorResp); ok && errResp.ErrorType == types.ErrorParanoidModePasswordError {
+		// Paranoid mode password error
+		if len(c._paranoidModeSecret) <= 0 && c._paranoidModeSecretRequestFunc != nil {
+			// request user for Password
+			c._paranoidModeSecret = c._paranoidModeSecretRequestFunc()
+			if len(c._paranoidModeSecret) > 0 {
+				err = doJob()
+			}
+		}
 	}
 
-	return nil
+	return err
 }
 
 func (c *Client) sendRecvAny(request interface{}, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
@@ -92,55 +111,98 @@ func (c *Client) sendRecvAny(request interface{}, waitingObjects ...interface{})
 }
 
 func (c *Client) sendRecvAnyEx(request interface{}, isIgnoreResponseIndex bool, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
-	var receiver *receiverChannel
 
-	var reqIdx int
-	// thread-safe receiver registration
-	func() {
-		c._receiversLocker.Lock()
-		defer c._receiversLocker.Unlock()
+	doJob := func() (data []byte, cmdBase types.CommandBase, err error) {
+		var receiver *receiverChannel
 
-		c._requestIdx++
-		reqIdx = c._requestIdx
+		var reqIdx int
+		// thread-safe receiver registration
+		func() {
+			c._receiversLocker.Lock()
+			defer c._receiversLocker.Unlock()
 
-		if isIgnoreResponseIndex {
-			receiver = createReceiver(0, waitingObjects...)
-		} else {
-			receiver = createReceiver(c._requestIdx, waitingObjects...)
+			c._requestIdx++
+			reqIdx = c._requestIdx
+
+			receiver = createReceiver(c._requestIdx, isIgnoreResponseIndex, waitingObjects...)
+
+			c._receivers[receiver] = struct{}{}
+		}()
+
+		// do not forget to remove receiver
+		defer func() {
+			c._receiversLocker.Lock()
+			defer c._receiversLocker.Unlock()
+
+			delete(c._receivers, receiver)
+		}()
+
+		// send request
+		if err := c.send(request, reqIdx); err != nil {
+			return nil, types.CommandBase{}, err
 		}
 
-		c._receivers[receiver] = struct{}{}
-	}()
+		// waiting for response
+		if err := receiver.Wait(c._defaultTimeout); err != nil {
+			return nil, types.CommandBase{}, err
+		}
 
-	// do not forget to remove receiver
-	defer func() {
-		c._receiversLocker.Lock()
-		defer c._receiversLocker.Unlock()
-
-		delete(c._receivers, receiver)
-	}()
-
-	// send request
-	if err := c.send(request, reqIdx); err != nil {
-		return nil, types.CommandBase{}, err
+		data, cmdBase = receiver.GetReceivedRawData()
+		return data, cmdBase, nil
 	}
 
-	// waiting for response
-	if err := receiver.Wait(c._defaultTimeout); err != nil {
-		return nil, types.CommandBase{}, err
+	data, cmdBase, err = doJob()
+	if errResp, ok := err.(types.ErrorResp); ok && errResp.ErrorType == types.ErrorParanoidModePasswordError {
+		// Paranoid mode password error
+		if len(c._paranoidModeSecret) <= 0 && c._paranoidModeSecretRequestFunc != nil {
+			// request user for Password
+			c._paranoidModeSecret = c._paranoidModeSecretRequestFunc()
+			if len(c._paranoidModeSecret) > 0 {
+				data, cmdBase, err = doJob()
+			}
+		}
 	}
 
-	data, cmdBase = receiver.GetReceivedRawData()
-	return data, cmdBase, nil
+	return data, cmdBase, err
 }
 
 func (c *Client) send(cmd interface{}, requestIdx int) error {
 	cmdName := types.GetTypeName(cmd)
 
 	logger.Info("--> ", cmdName)
+
+	if err := c.initRequestFields(cmd); err != nil {
+		return err
+	}
+
 	if err := types.Send(c._conn, cmd, requestIdx); err != nil {
 		return fmt.Errorf("failed to send command '%s': %w", cmdName, err)
 	}
+	return nil
+}
+
+func (c *Client) initRequestFields(obj interface{}) error {
+	if len(c._paranoidModeSecret) <= 0 {
+		return nil
+	}
+
+	valueIface := reflect.ValueOf(obj)
+
+	// Check if the passed interface is a pointer
+	if valueIface.Type().Kind() != reflect.Ptr {
+		return fmt.Errorf("interface is not a pointer to a request")
+	}
+
+	// Get the field by name "ProtocolSecret"
+	protocolSecretField := valueIface.Elem().FieldByName("ProtocolSecret")
+	if !protocolSecretField.IsValid() {
+		return fmt.Errorf("interface `%s` does not have the field `ProtocolSecret`", valueIface.Type())
+	}
+	if protocolSecretField.Type().Kind() != reflect.String {
+		return fmt.Errorf("'ProtocolSecret' field of an interface `%s` is not 'string'", valueIface.Type())
+	}
+	protocolSecretField.Set(reflect.ValueOf(c._paranoidModeSecret))
+
 	return nil
 }
 
@@ -180,8 +242,16 @@ func (c *Client) receiverRoutine() {
 			c._receiversLocker.Lock()
 			defer c._receiversLocker.Unlock()
 
+			if cmd.Command == types.GetTypeName(types.HelloResp{}) {
+				// update last HelloResponse object
+				var hr types.HelloResp
+				if err := json.Unmarshal(messageData, &hr); err == nil {
+					c._helloResponse = hr
+				}
+			}
+
 			for receiver := range c._receivers {
-				if receiver.IsExpectedResponse(cmd.Idx, cmd.Command) {
+				if receiver.IsExpectedResponse(cmd) {
 					isProcessed = true
 					receiver.PushResponse(messageData)
 					break

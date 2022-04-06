@@ -53,6 +53,9 @@ type Client struct {
 	_receiversLocker sync.Mutex
 
 	_helloResponse types.HelloResp
+
+	_paranoidModeSecret            string
+	_paranoidModeSecretRequestFunc func() string
 }
 
 // ResponseTimeout error
@@ -95,6 +98,14 @@ func (c *Client) Connect() (err error) {
 	}
 
 	return nil
+}
+
+func (c *Client) InitSetParanoidModeSecret(secret string) {
+	c._paranoidModeSecret = secret
+}
+
+func (c *Client) SetParanoidModeSecretRequestFunc(f func() string) {
+	c._paranoidModeSecretRequestFunc = f
 }
 
 // SendHello - send initial message and get current status
@@ -589,5 +600,19 @@ func (c *Client) SetManualDNS(dnsCfg dns.DnsSettings) error {
 		}
 	}
 
+	return nil
+}
+
+// SetParanoidModePassword - set password for ParanoidMode (empty string -> disable ParanoidMode)
+func (c *Client) SetParanoidModePassword(secret string) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.ParanoidModeSetPasswordReq{NewSecret: secret}
+	var resp types.HelloResp
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return err
+	}
 	return nil
 }

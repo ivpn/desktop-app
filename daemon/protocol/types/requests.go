@@ -270,6 +270,5 @@ type APIRequest struct {
 
 type ParanoidModeSetPasswordReq struct {
 	RequestBase
-	OldSecret string
 	NewSecret string
 }

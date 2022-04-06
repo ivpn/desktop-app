@@ -72,9 +72,23 @@ func Send(conn net.Conn, cmd interface{}, idx int) (retErr error) {
 	return nil
 }
 
-// GetCommandBase deserializing to CommandBase object
+// GetRequestBase deserializing to RequestBase object
 func GetRequestBase(messageData []byte) (RequestBase, error) {
 	var obj RequestBase
+	if err := json.Unmarshal(messageData, &obj); err != nil {
+		return obj, fmt.Errorf("failed to parse request data: %w", err)
+	}
+
+	if len(obj.Command) == 0 {
+		return obj, fmt.Errorf("request name is not defined")
+	}
+
+	return obj, nil
+}
+
+// GetCommandBase deserializing to CommandBase object
+func GetCommandBase(messageData []byte) (CommandBase, error) {
+	var obj CommandBase
 	if err := json.Unmarshal(messageData, &obj); err != nil {
 		return obj, fmt.Errorf("failed to parse command data: %w", err)
 	}

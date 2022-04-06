@@ -38,6 +38,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/protocol"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/version"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // ICommand interface for command line command
@@ -108,6 +109,7 @@ func main() {
 	addCommand(&commands.CmdLogin{})
 	addCommand(&commands.CmdLogout{})
 	addCommand(&commands.CmdAccount{})
+	addCommand(&commands.CmdParanoidMode{})
 
 	if len(os.Args) >= 2 {
 		arg1 := strings.TrimLeft(strings.ToLower(os.Args[1]), "-")
@@ -146,6 +148,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	proto.SetParanoidModeSecretRequestFunc(RequestParanoidModePassword)
+
 	commands.Initialize(proto)
 
 	if len(os.Args) < 2 {
@@ -172,6 +176,17 @@ func main() {
 		printUsageAll(true)
 		os.Exit(1)
 	}
+}
+
+func RequestParanoidModePassword() string {
+	fmt.Print("Paranoid Mode is active. Enter password: ")
+	data, err := terminal.ReadPassword(0)
+	fmt.Println("")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: failed to read password: %s\n", err)
+		os.Exit(2)
+	}
+	return strings.TrimSpace(string(data))
 }
 
 func runCommand(c ICommand, args []string) {

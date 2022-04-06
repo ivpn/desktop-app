@@ -135,8 +135,7 @@ func CreateProtocol() (*Protocol, error) {
 
 // Protocol - TCP interface to communicate with IVPN application
 type Protocol struct {
-	_secret             uint64
-	_paranoidModeSecret string
+	_secret uint64
 
 	// connections listener
 	_connListener *net.TCPListener
@@ -189,10 +188,6 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 		// Disconnect VPN (if connected)
 		p._service.Disconnect()
 	}()
-
-	if err := p.paranoidModeInitFromFile(); err != nil {
-		log.Error(fmt.Errorf("failed to initialize Paranoid Mode: %f", err))
-	}
 
 	addr := "127.0.0.1:0"
 	// Initializing listener
@@ -365,8 +360,29 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command)
 
-	if p.paranoidModeIsEnabled() && !p.paranoidModeCheckSecret(reqCmd.ProtocolSecret) {
-		p.sendErrorResponse(conn, reqCmd, fmt.Errorf("'Paranoid Mode' active: password is wrong"))
+	isDoSkipParanoidMode := func(commandName string) bool {
+
+		switch commandName {
+		case "Hello",
+			"GetVPNState",
+			"GetServers",
+			"PingServers",
+			"WiFiAvailableNetworks",
+			"KillSwitchGetStatus",
+			"SplitTunnelGetStatus",
+			"GetDnsPredefinedConfigs",
+			"AccountStatus":
+			return true
+		}
+		return false
+	}
+
+	if !isDoSkipParanoidMode(reqCmd.Command) && !p.paranoidModeCheckSecret(reqCmd.ProtocolSecret) {
+		p.sendResponse(conn,
+			&types.ErrorResp{
+				ErrorType:    types.ErrorParanoidModePasswordError,
+				ErrorMessage: "'Paranoid Mode' active: password is wrong"},
+			reqCmd.Idx)
 		return
 	}
 
@@ -439,11 +455,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
-		if err := p.paranoidModeSetSecret(req.OldSecret, req.NewSecret); err != nil {
+		if err := p.paranoidModeSetSecret(req.ProtocolSecret, req.NewSecret); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
 			// send 'success' response to the requestor
-			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
+			p.sendResponse(conn, p.createHelloResponse(), req.Idx)
 		}
 
 	case "GetVPNState":

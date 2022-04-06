@@ -236,65 +236,67 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 }
 
 // --------------------- paranoid mode ------------------------
-func (p *Protocol) paranoidModeInitFromFile() error {
-	p._paranoidModeSecret = ""
-
+func (p *Protocol) paranoidModeSecret() (retSecret string, retErr error) {
 	file := platform.ParanoidModeSecretFile()
 	if len(file) <= 0 {
-		return nil // paranoid mode not implemented for this platform
+		return "", nil // paranoid mode not implemented for this platform
 	}
+
+	//defer func() {
+	//	if retErr != nil {
+	//		// If we are unable read secret from file - remove that file
+	//		// (disable Paranoid Mode)
+	//		os.Remove(file)
+	//	}
+	//}()
 
 	f, err := os.Open(platform.ParanoidModeSecretFile())
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil // paranoid mode disabled
+			return "", nil // paranoid mode disabled
 		}
-		return fmt.Errorf("paranoid mode file open error : %w", err)
+		return "", fmt.Errorf("paranoid mode file open error : %w", err)
 	}
 	defer f.Close()
 
 	stat, err := f.Stat()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // paranoid mode disabled
-		}
-		return fmt.Errorf("paranoid mode file existing check error : %w", err)
+		return "", fmt.Errorf("paranoid mode file status check error : %w", err)
 	}
 
 	// check file access rights
 	mode := stat.Mode()
 	expectedMode := os.FileMode(0600) // read only for privilaged user
 	if mode != expectedMode {
-		return fmt.Errorf(fmt.Sprintf("paranoid mode file has wrong access permissions (%o but expected %o)", mode, expectedMode))
+		return "", fmt.Errorf(fmt.Sprintf("paranoid mode file has wrong access permissions (%o but expected %o)", mode, expectedMode))
 	}
 
 	// read file
 	if stat.Size() > 1024*10 {
-		return fmt.Errorf("paranoid mode file too big")
+		return "", fmt.Errorf("paranoid mode file too big")
 	}
 	buff := make([]byte, stat.Size())
 	_, err = f.Read(buff)
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("failed to read paranoid mode file: %w", err)
+		return "", fmt.Errorf("failed to read paranoid mode file: %w", err)
 	}
 
 	// check first line
 	lines := strings.Split(string(buff), "\n")
 	if len(lines) != 1 {
-		return fmt.Errorf("wrong data in paranoid mode file (expected one line)")
+		return "", fmt.Errorf("wrong data in paranoid mode file (expected one line)")
 	}
 	secret := strings.TrimSpace(lines[0])
 	if len(secret) <= 0 {
-		return fmt.Errorf("wrong data in paranoid mode file (secret is empty)")
+		return "", fmt.Errorf("wrong data in paranoid mode file (secret is empty)")
 	}
 
-	p._paranoidModeSecret = secret
-
-	return nil
+	return secret, nil
 }
 
 func (p *Protocol) paranoidModeIsEnabled() bool {
-	return len(p._paranoidModeSecret) > 0
+	secret, err := p.paranoidModeSecret()
+	return err == nil && len(secret) > 0
 }
 
 func (p *Protocol) paranoidModeSetSecret(oldSecret, newSecret string) error {
@@ -303,26 +305,24 @@ func (p *Protocol) paranoidModeSetSecret(oldSecret, newSecret string) error {
 		return nil // paranoid mode not implemented for this platform
 	}
 
-	if p.paranoidModeIsEnabled() && oldSecret != p._paranoidModeSecret {
+	secret, err := p.paranoidModeSecret()
+	isPmEnabled := err == nil && len(secret) > 0
+	if isPmEnabled && oldSecret != secret {
 		return fmt.Errorf("the old password for Paranoid Mode does not match")
 	}
 
 	newSecret = strings.TrimSpace(newSecret)
-
-	if len(newSecret) > 0 {
-		lines := strings.Split(newSecret, "\n")
-		if len(lines) != 1 {
-			return fmt.Errorf("new password for Paranoid Mode should contain only one line")
-		}
-		newSecret = strings.TrimSpace(lines[0])
+	if len(strings.Split(newSecret, "\n")) != 1 {
+		return fmt.Errorf("new password for Paranoid Mode should contain only one line")
 	}
 
 	if len(newSecret) == 0 {
-		// disable paranoid mode
-		if err := os.Remove(file); err != nil {
-			return fmt.Errorf("failed to remove Paranoid Mode file: %w", err)
+		if isPmEnabled {
+			// disable paranoid mode
+			if err := os.Remove(file); err != nil {
+				return fmt.Errorf("failed to disable Paranoid Mode: %w", err)
+			}
 		}
-		p._paranoidModeSecret = ""
 		return nil
 	}
 
@@ -332,15 +332,31 @@ func (p *Protocol) paranoidModeSetSecret(oldSecret, newSecret string) error {
 	}
 
 	if err := os.WriteFile(file, bytesToWrite, 0600); err != nil {
-		return fmt.Errorf("failed to write to Paranoid Mode file: %w", err)
+		os.Remove(file)
+		return fmt.Errorf("failed to enable Paranoid Mode file (FileWrite error): %w", err)
 	}
 
-	p._paranoidModeSecret = newSecret
+	// ensure data were saved correctly
+	secretConfirm, err := p.paranoidModeSecret()
+	if err != nil {
+		os.Remove(file)
+		return fmt.Errorf("failed to enable Paranoid Mode: %w", err)
+	}
+	if secretConfirm != newSecret {
+		os.Remove(file)
+		return fmt.Errorf("failed to enable Paranoid Mode: internal error during confirmation")
+	}
+
 	return nil
 }
 
-func (p *Protocol) paranoidModeCheckSecret(secret string) bool {
-	return p._paranoidModeSecret == secret
+func (p *Protocol) paranoidModeCheckSecret(secretToCheck string) bool {
+	secret, err := p.paranoidModeSecret()
+	isPModeEnabled := err == nil && len(secret) > 0
+	if !isPModeEnabled {
+		return true
+	}
+	return secret == secretToCheck
 }
 
 // -------------- processing connection request ---------------
