@@ -618,7 +618,8 @@ func (c *Client) SetParanoidModePassword(secret string) error {
 
 	req := types.ParanoidModeSetPasswordReq{NewSecret: secret}
 	var resp types.HelloResp
-	if err := c.sendRecv(&req, &resp); err != nil {
+	// Waiting for HelloResp (ignoring command index) or for ErrorResp (not ignoring command index)
+	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
 		return err
 	}
 	return nil

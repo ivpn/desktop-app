@@ -55,6 +55,8 @@ let requestNo = 0;
 // Array response waiters
 const waiters = [];
 
+let ParanoidModeSecret = "";
+
 const daemonRequests = Object.freeze({
   Hello: "Hello",
   APIRequest: "APIRequest",
@@ -94,6 +96,8 @@ const daemonRequests = Object.freeze({
 
   WiFiAvailableNetworks: "WiFiAvailableNetworks",
   WiFiCurrentNetwork: "WiFiCurrentNetwork",
+
+  ParanoidModeSetPasswordReq: "ParanoidModeSetPasswordReq",
 });
 
 const daemonResponses = Object.freeze({
@@ -177,6 +181,10 @@ function toJson(data) {
 function send(request, reqNo) {
   if (socket == null)
     return new Error("Unable to send request (socket is closed)");
+
+  if (!request.ProtocolSecret) {
+    request.ProtocolSecret = ParanoidModeSecret;
+  }
 
   if (typeof request.Command === "undefined") {
     return new Error(
@@ -358,6 +366,9 @@ async function processResponse(response) {
           });
         }
       }
+
+      // save ParanoidMode status
+      store.commit("paranoidModeStatus", obj.ParanoidMode);
 
       break;
 
@@ -1638,6 +1649,20 @@ async function GetWiFiAvailableNetworks() {
   });
 }
 
+async function SetParanoidModePassword(newPassword, oldPassword) {
+  if (!newPassword && !oldPassword) {
+    // to disable PM the 'newPassword' must be empty. But we need 'oldPassword' instead
+    throw "Actual password not defined";
+  }
+  await sendRecv({
+    Command: daemonRequests.ParanoidModeSetPasswordReq,
+    NewSecret: newPassword,
+    ProtocolSecret: oldPassword,
+  });
+
+  ParanoidModeSecret = newPassword;
+}
+
 export default {
   RegisterMsgBoxFunc,
   ConnectToDaemon,
@@ -1680,4 +1705,6 @@ export default {
   WgSetKeysRotationInterval,
 
   GetWiFiAvailableNetworks,
+
+  SetParanoidModePassword,
 };

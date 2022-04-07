@@ -10,7 +10,7 @@
     </div>
 
     <div v-bind:class="{ disabled: dnsIsCustom === false }">
-      <div class="flexRow paramProps">
+      <div class="flexRow settingsParamProps">
         <div class="defColor paramName">IP address:</div>
 
         <input
@@ -22,7 +22,7 @@
       </div>
 
       <div v-if="CanUseDnsOverHttps || CanUseDnsOverTls">
-        <div class="paramProps">
+        <div class="settingsParamProps">
           <div class="flexRow paramBlock">
             <div class="defColor paramName">DNS encryption:</div>
             <div class="settingsRadioBtnEx">
@@ -64,7 +64,7 @@
         </div>
 
         <div
-          class="flexRow paramProps"
+          class="flexRow settingsParamProps"
           v-bind:class="{ disabled: dnsIsEncrypted === false }"
         >
           <div class="defColor paramName">
@@ -117,7 +117,7 @@
       </div>
     </div>
 
-    <div class="paramProps">
+    <div class="settingsParamProps">
       <div class="fwDescription">
         AntiTracker will override the custom DNS when enabled.
       </div>
@@ -390,11 +390,6 @@ export default {
   @extend .settingsDefaultTextColor;
 }
 
-div.paramProps {
-  margin-top: 9px;
-  margin-bottom: 17px;
-  margin-left: 22px;
-}
 div.fwDescription {
   @extend .settingsGrayLongDescriptionFont;
   margin-top: 8px;

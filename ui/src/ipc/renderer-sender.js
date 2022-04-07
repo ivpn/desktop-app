@@ -355,4 +355,13 @@ export default {
   getAppIcon: (binaryPath) => {
     return invoke("renderer-request-getAppIcon", binaryPath);
   },
+
+  // PARANOID MODE
+  setParanoidModePassword: async (newPassword, oldPassword) => {
+    return await invoke(
+      "renderer-request-setParanoidModePassword",
+      newPassword,
+      oldPassword
+    );
+  },
 };

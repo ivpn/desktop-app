@@ -471,7 +471,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
 			// send 'success' response to the requestor
-			p.sendResponse(conn, p.createHelloResponse(), req.Idx)
+			p.notifyClients(p.createHelloResponse())
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 
 	case "GetVPNState":

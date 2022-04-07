@@ -376,3 +376,12 @@ ipcMain.on("renderer-request-app-getversion", (event) => {
 ipcMain.handle("renderer-request-getAppIcon", (event, binaryPath) => {
   return client.GetAppIcon(binaryPath);
 });
+
+// PARANOID MODE
+
+ipcMain.handle(
+  "renderer-request-setParanoidModePassword",
+  async (event, newPassword, oldPassword) => {
+    return await client.SetParanoidModePassword(newPassword, oldPassword);
+  }
+);
