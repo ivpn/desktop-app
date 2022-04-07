@@ -137,7 +137,7 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd interface{}, idx int) (retErr
 
 	// Just for logging
 	if reqType := types.GetTypeName(cmd); len(reqType) > 0 {
-		log.Info(fmt.Sprintf("[-->] %s", p.connLogID(conn)), reqType)
+		log.Info(fmt.Sprintf("[-->] %s", p.connLogID(conn)), reqType, fmt.Sprintf(" [%d]", idx))
 	} else {
 		return fmt.Errorf("%sprotocol error: BAD DATA SENT", p.connLogID(conn))
 	}
@@ -200,10 +200,10 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 
 	// send back Hello message with account session info
 	helloResp := types.HelloResp{
-		ParanoidModeIsEnabled: p.paranoidModeIsEnabled(),
-		Version:               version.Version(),
-		Session:               types.CreateSessionResp(prefs.Session),
-		SettingsSessionUUID:   prefs.SettingsSessionUUID,
+		ParanoidMode:        types.ParanoidModeStatus{IsEnabled: p.paranoidModeIsEnabled()},
+		Version:             version.Version(),
+		Session:             types.CreateSessionResp(prefs.Session),
+		SettingsSessionUUID: prefs.SettingsSessionUUID,
 		DisabledFunctions: types.DisabledFunctionality{
 			WireGuardError:   wgErr,
 			OpenVPNError:     ovpnErr,

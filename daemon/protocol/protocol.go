@@ -358,7 +358,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		return
 	}
 
-	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command)
+	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command, fmt.Sprintf(" [%d]", reqCmd.Idx))
 
 	isDoSkipParanoidMode := func(commandName string) bool {
 
@@ -367,6 +367,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			"GetVPNState",
 			"GetServers",
 			"PingServers",
+			"APIRequest",
 			"WiFiAvailableNetworks",
 			"KillSwitchGetStatus",
 			"SplitTunnelGetStatus",
@@ -375,15 +376,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			return true
 		}
 		return false
-	}
-
-	if !isDoSkipParanoidMode(reqCmd.Command) && !p.paranoidModeCheckSecret(reqCmd.ProtocolSecret) {
-		p.sendResponse(conn,
-			&types.ErrorResp{
-				ErrorType:    types.ErrorParanoidModePasswordError,
-				ErrorMessage: "'Paranoid Mode' active: password is wrong"},
-			reqCmd.Idx)
-		return
 	}
 
 	sendState := func(reqIdx int, isOnlyIfConnected bool) {
@@ -399,6 +391,26 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 	}
 
+	if !isDoSkipParanoidMode(reqCmd.Command) && !p.paranoidModeCheckSecret(reqCmd.ProtocolSecret) {
+		// ParanoidMode: wrong password
+		errorResp := types.ErrorResp{
+			ErrorType:    types.ErrorParanoidModePasswordError,
+			ErrorMessage: "'Paranoid Mode' active: password is wrong"}
+
+		p.sendResponse(conn,
+			&errorResp,
+			reqCmd.Idx)
+
+		log.Info(fmt.Sprintf("      %sRequest error '%s': %s", p.connLogID(conn), reqCmd.Command, errorResp))
+
+		// send current connection state
+		if reqCmd.Command == "Connect" || reqCmd.Command == "Disconnect" {
+			sendState(reqCmd.Idx, false)
+		}
+
+		return
+	}
+
 	switch reqCmd.Command {
 	case "Hello":
 		var req types.Hello
@@ -412,7 +424,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// send back Hello message with account session info
 		helloResponse := p.createHelloResponse()
 		if req.GetParanoidModeFilePath {
-			helloResponse.ParanoidModeFilePath = platform.ParanoidModeSecretFile()
+			helloResponse.ParanoidMode.FilePath = platform.ParanoidModeSecretFile()
 		}
 		p.sendResponse(conn, helloResponse, req.Idx)
 
@@ -519,8 +531,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			nets = append(nets, types.WiFiNetworkInfo{SSID: ssid})
 		}
 
-		p.notifyClients(&types.WiFiAvailableNetworksResp{
-			Networks: nets})
+		p.notifyClients(&types.WiFiAvailableNetworksResp{Networks: nets})
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	case "KillSwitchGetStatus":
 		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, err := p._service.KillSwitchState(); err != nil {
@@ -553,9 +565,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p._service.SetKillSwitchAllowLANMulticast(req.AllowLANMulticast)
-		if req.Synchronously {
-			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-		}
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 
 	case "KillSwitchSetAllowLAN":
@@ -566,9 +576,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p._service.SetKillSwitchAllowLAN(req.AllowLAN)
-		if req.Synchronously {
-			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-		}
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 
 	case "KillSwitchSetIsPersistent":
@@ -613,6 +621,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if err := p._service.SetPreference(req.Key, req.Value); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
+		} else {
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 
 	case "SplitTunnelGetStatus":
@@ -1046,6 +1056,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			}
 		}()
 
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 		// SYNCHRONOUSLY start VPN connection process (wait until it finished)
 		if connectionError = p.processConnectRequest(messageData, stateChan); connectionError != nil {
 			log.ErrorTrace(connectionError)

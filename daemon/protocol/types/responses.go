@@ -79,6 +79,13 @@ type DnsAbilities struct {
 	CanUseDnsOverHttps bool
 }
 
+type ParanoidModeStatus struct {
+	// Path to a file with the secret for paranoid mode (if requested)
+	// This file must be able for reading ONLY for privilaged users
+	FilePath  string
+	IsEnabled bool
+}
+
 // HelloResp response on initial request
 type HelloResp struct {
 	CommandBase
@@ -91,10 +98,7 @@ type HelloResp struct {
 	// It allow to detect situations when settings was erased (created new Preferences object)
 	SettingsSessionUUID string
 
-	// Path to a file with the secret for paranoid mode (if requested)
-	// This file must be able for reading ONLY for privilaged users
-	ParanoidModeFilePath  string
-	ParanoidModeIsEnabled bool
+	ParanoidMode ParanoidModeStatus
 }
 
 // ConfigParamsResp return s configuration parameters

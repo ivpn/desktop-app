@@ -269,7 +269,7 @@ func (c *Client) FirewallAllowLan(allow bool) error {
 	}
 
 	// changing killswitch configuration
-	req := types.KillSwitchSetAllowLAN{AllowLAN: allow, Synchronously: true}
+	req := types.KillSwitchSetAllowLAN{AllowLAN: allow}
 	var resp types.EmptyResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
@@ -301,7 +301,7 @@ func (c *Client) FirewallAllowLanMulticast(allow bool) error {
 	}
 
 	// changing killswitch configuration
-	req := types.KillSwitchSetAllowLANMulticast{AllowLANMulticast: allow, Synchronously: true}
+	req := types.KillSwitchSetAllowLANMulticast{AllowLANMulticast: allow}
 	var resp types.EmptyResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err

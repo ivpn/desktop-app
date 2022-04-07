@@ -53,7 +53,7 @@ func (c *CmdParanoidMode) Run() error {
 	}
 
 	if c.disable {
-		if _proto.GetHelloResponse().ParanoidModeIsEnabled {
+		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
 			if helpers.CheckIsAdmin() {
 				// We are running in privilaged environment
 				// Trying to remove ParanoidMode file manually
@@ -64,12 +64,12 @@ func (c *CmdParanoidMode) Run() error {
 				if err != nil {
 					return err
 				}
-				if len(resp.ParanoidModeFilePath) <= 0 {
+				if len(resp.ParanoidMode.FilePath) <= 0 {
 					return fmt.Errorf("failed to disable Paranoid Mode in privilaged user environment (file path not defined)")
 				}
 
 				// 2 - remove file
-				if err := os.Remove(resp.ParanoidModeFilePath); err != nil {
+				if err := os.Remove(resp.ParanoidMode.FilePath); err != nil {
 					return err
 				}
 
@@ -98,7 +98,7 @@ func (c *CmdParanoidMode) Run() error {
 	if c.enable {
 		fmt.Println("Enabling Paranoid Mode")
 
-		if _proto.GetHelloResponse().ParanoidModeIsEnabled {
+		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
 			fmt.Print("\tEnter old password for Paranoid Mode : ")
 			data, err := terminal.ReadPassword(0)
 			if err != nil {

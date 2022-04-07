@@ -126,6 +126,11 @@ const daemonResponses = Object.freeze({
   ServiceExitingResp: "ServiceExitingResp",
 });
 
+const ErrorRespTypes = Object.freeze({
+  ErrorUnknown: 0,
+  ErrorParanoidModePasswordError: 1,
+});
+
 var messageBoxFunction = null;
 function RegisterMsgBoxFunc(mbFunc) {
   messageBoxFunction = mbFunc;
@@ -462,9 +467,15 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.ErrorResp:
-      console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-      console.log("!!!!!!!!!!!!!!!!!!!!!! ERROR RESP !!!!!!!!!!!!!!!!!!!!");
-      console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+      if (obj.ErrorMessage) console.log("ERROR response:", obj.ErrorMessage);
+
+      if (obj.ErrorType == ErrorRespTypes.ErrorParanoidModePasswordError) {
+        //
+      } else {
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!! ERROR RESP !!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+      }
       break;
 
     default:
@@ -542,6 +553,26 @@ function onDataReceived(received) {
 
 var _onDaemonExitingCallback = null;
 
+function makeHelloRequest() {
+  let appVersion = "";
+  try {
+    appVersion = `${require("electron").app.getVersion()}:Electron UI`;
+  } catch (e) {
+    console.error(e);
+  }
+  let helloReq = {
+    Command: daemonRequests.Hello,
+    Version: appVersion,
+    GetServersList: true,
+    GetStatus: true,
+    GetConfigParams: true,
+    KeepDaemonAlone: true,
+    GetSplitTunnelStatus: true,
+    GetWiFiCurrentState: true,
+  };
+  return helloReq;
+}
+
 async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
   _onDaemonExitingCallback = onDaemonExitingCallback;
 
@@ -588,24 +619,8 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
         // SEND HELLO
         // eslint-disable-next-line no-undef
         const secretBInt = BigInt(`0x${portInfo.secret}`);
-
-        let appVersion = "";
-        try {
-          appVersion = `${require("electron").app.getVersion()}:Electron UI`;
-        } catch (e) {
-          console.error(e);
-        }
-        const helloReq = {
-          Command: daemonRequests.Hello,
-          Version: appVersion,
-          Secret: secretBInt,
-          GetServersList: true,
-          GetStatus: true,
-          GetConfigParams: true,
-          KeepDaemonAlone: true,
-          GetSplitTunnelStatus: true,
-          GetWiFiCurrentState: true,
-        };
+        let helloReq = makeHelloRequest();
+        helloReq.Secret = secretBInt;
 
         try {
           const disconnectDaemonFunc = function (err) {
@@ -1161,7 +1176,7 @@ async function Connect(entryServer, exitServer) {
     return;
   }
 
-  send({
+  await sendRecv({
     Command: daemonRequests.Connect,
     VpnType: settings.vpnType,
     [vpnParamsPropName]: vpnParamsObj,
@@ -1283,19 +1298,15 @@ async function KillSwitchSetAllowApiServers(IsAllowApiServers) {
 }
 
 async function KillSwitchSetAllowLANMulticast(AllowLANMulticast) {
-  const Synchronously = true;
   await sendRecv({
     Command: daemonRequests.KillSwitchSetAllowLANMulticast,
     AllowLANMulticast,
-    Synchronously,
   });
 }
 async function KillSwitchSetAllowLAN(AllowLAN) {
-  const Synchronously = true;
   await sendRecv({
     Command: daemonRequests.KillSwitchSetAllowLAN,
     AllowLAN,
-    Synchronously,
   });
 }
 async function KillSwitchSetIsPersistent(IsPersistent) {
@@ -1589,7 +1600,7 @@ async function SetLogging() {
   const Key = "enable_logging";
   let Value = `${enable}`;
 
-  await send({
+  await sendRecv({
     Command: daemonRequests.SetPreference,
     Key,
     Value,
@@ -1601,7 +1612,7 @@ async function SetObfsproxy() {
   const Key = "enable_obfsproxy";
   let Value = `${enable}`;
 
-  await send({
+  await sendRecv({
     Command: daemonRequests.SetPreference,
     Key,
     Value,
@@ -1622,7 +1633,7 @@ async function WgSetKeysRotationInterval(intervalSec) {
 }
 
 async function GetWiFiAvailableNetworks() {
-  await send({
+  await sendRecv({
     Command: daemonRequests.WiFiAvailableNetworks,
   });
 }
