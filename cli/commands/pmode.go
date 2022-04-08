@@ -79,7 +79,7 @@ func (c *CmdParanoidMode) Run() error {
 				}
 			} else {
 				fmt.Println("Disabling Paranoid Mode")
-				fmt.Print("\tEnter old password for Paranoid Mode : ")
+				fmt.Print("\tEnter actual password for Paranoid Mode : ")
 				data, err := terminal.ReadPassword(0)
 				if err != nil {
 					return fmt.Errorf("failed to read password: %w", err)
@@ -99,7 +99,7 @@ func (c *CmdParanoidMode) Run() error {
 		fmt.Println("Enabling Paranoid Mode")
 
 		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
-			fmt.Print("\tEnter old password for Paranoid Mode : ")
+			fmt.Print("\tEnter actual password for Paranoid Mode : ")
 			data, err := terminal.ReadPassword(0)
 			if err != nil {
 				return fmt.Errorf("failed to read password: %w", err)

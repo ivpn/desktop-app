@@ -1671,6 +1671,7 @@ async function SetParanoidModePassword(newPassword, oldPassword) {
   }
 
   ParanoidModeSecret = oldPassword;
+  if (!ParanoidModeSecret) ParanoidModeSecret = newPassword;
 
   await sendRecv({
     Command: daemonRequests.ParanoidModeSetPasswordReq,
