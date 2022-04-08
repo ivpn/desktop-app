@@ -21,7 +21,7 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-const { Menu, Tray, app, nativeImage } = require("electron");
+const { Menu, Tray, app, nativeImage, dialog } = require("electron");
 import store from "@/store";
 import { PauseStateEnum } from "@/store/types";
 
@@ -484,35 +484,59 @@ function serverName(entryServer, exitServer) {
   return ret;
 }
 
-function menuItemConnect(entrySvr, exitSvr) {
+async function menuItemConnect(entrySvr, exitSvr) {
   try {
-    daemonClient.Connect(entrySvr, exitSvr);
+    await daemonClient.Connect(entrySvr, exitSvr);
   } catch (e) {
     console.error(e);
+    dialog.showMessageBox({
+      type: "error",
+      buttons: ["OK"],
+      message: `Failed to connect`,
+      detail: e,
+    });
   }
 }
 
-function menuItemDisconnect() {
+async function menuItemDisconnect() {
   try {
-    daemonClient.Disconnect();
+    await daemonClient.Disconnect();
   } catch (e) {
     console.error(e);
+    dialog.showMessageBox({
+      type: "error",
+      buttons: ["OK"],
+      message: `Failed to disconnect`,
+      detail: e,
+    });
   }
 }
 
-function menuItemPause(PauseConnection) {
+async function menuItemPause(PauseConnection) {
   try {
-    daemonClient.PauseConnection(PauseConnection);
+    await daemonClient.PauseConnection(PauseConnection);
   } catch (e) {
     console.error(e);
+    dialog.showMessageBox({
+      type: "error",
+      buttons: ["OK"],
+      message: `Failed to pause`,
+      detail: e,
+    });
   }
 }
 
-function menuItemResume() {
+async function menuItemResume() {
   try {
-    daemonClient.ResumeConnection();
+    await daemonClient.ResumeConnection();
   } catch (e) {
     console.error(e);
+    dialog.showMessageBox({
+      type: "error",
+      buttons: ["OK"],
+      message: `Failed to resume`,
+      detail: e,
+    });
   }
 }
 

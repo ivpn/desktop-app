@@ -24,6 +24,8 @@ export default {
   namespaced: true,
 
   state: {
+    isParanoidModePasswordView: false,
+
     // favorite servers view selected
     serversFavoriteView: false,
     pauseConnectionTill: null, // Date()
@@ -46,6 +48,9 @@ export default {
   },
 
   mutations: {
+    isParanoidModePasswordView(state, value) {
+      state.isParanoidModePasswordView = value;
+    },
     serversFavoriteView(state, value) {
       state.serversFavoriteView = value;
     },
@@ -65,6 +70,9 @@ export default {
 
   // can be called from renderer
   actions: {
+    isParanoidModePasswordView(context, value) {
+      context.commit("isParanoidModePasswordView", value);
+    },
     serversFavoriteView(context, value) {
       context.commit("serversFavoriteView", value);
     },

@@ -28,6 +28,10 @@ import (
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
+type EmptyReq struct {
+	RequestBase
+}
+
 // Hello is an initial request
 type Hello struct {
 	RequestBase

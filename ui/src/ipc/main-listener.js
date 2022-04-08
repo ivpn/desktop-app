@@ -385,3 +385,10 @@ ipcMain.handle(
     return await client.SetParanoidModePassword(newPassword, oldPassword);
   }
 );
+
+ipcMain.handle(
+  "renderer-request-setLocalParanoidModePassword",
+  async (event, password) => {
+    return await client.SetLocalParanoidModePassword(password);
+  }
+);

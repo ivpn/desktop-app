@@ -299,6 +299,19 @@ func (p *Protocol) paranoidModeIsEnabled() bool {
 	return err == nil && len(secret) > 0
 }
 
+func (p *Protocol) paranoidModeForceDisable() error {
+	file := platform.ParanoidModeSecretFile()
+	if len(file) <= 0 {
+		return nil // paranoid mode not implemented for this platform
+	}
+
+	// disable paranoid mode
+	if err := os.Remove(file); err != nil {
+		return fmt.Errorf("failed to disable Paranoid Mode: %w", err)
+	}
+	return nil
+}
+
 func (p *Protocol) paranoidModeSetSecret(oldSecret, newSecret string) error {
 	file := platform.ParanoidModeSecretFile()
 	if len(file) <= 0 {
@@ -326,11 +339,17 @@ func (p *Protocol) paranoidModeSetSecret(oldSecret, newSecret string) error {
 		return nil
 	}
 
+	preferences := p._service.Preferences()
+	if !preferences.Session.IsLoggedIn() {
+		return fmt.Errorf("can't set up Paranoid mode: please login to your account first")
+	}
+
 	bytesToWrite := []byte(newSecret)
 	if len(bytesToWrite) > 1024*10 {
 		return fmt.Errorf("password too long")
 	}
 
+	// save data
 	if err := os.WriteFile(file, bytesToWrite, 0600); err != nil {
 		os.Remove(file)
 		return fmt.Errorf("failed to enable Paranoid Mode file (FileWrite error): %w", err)
@@ -350,13 +369,34 @@ func (p *Protocol) paranoidModeSetSecret(oldSecret, newSecret string) error {
 	return nil
 }
 
-func (p *Protocol) paranoidModeCheckSecret(secretToCheck string) bool {
+func (p *Protocol) paranoidModeCheckSecret(secretToCheck string) (retVal bool, err error) {
+	// some protection from brute force attack
+	defer func() {
+		if retVal {
+			p._paranoidModeLastFailedAttempts = nil
+		} else {
+			p._paranoidModeLastFailedAttempts = append(p._paranoidModeLastFailedAttempts, time.Now())
+		}
+	}()
+	const maxAttemptsCnt = 4
+	const maxDuration = time.Minute
+	cntAttempts := len(p._paranoidModeLastFailedAttempts)
+	if cntAttempts >= maxAttemptsCnt {
+		if cntAttempts > maxAttemptsCnt {
+			p._paranoidModeLastFailedAttempts = p._paranoidModeLastFailedAttempts[cntAttempts-maxAttemptsCnt : cntAttempts]
+		}
+		if p._paranoidModeLastFailedAttempts[0].Add(maxDuration).After(time.Now()) {
+			return false, fmt.Errorf("too many failed password attempts, please, wait 1 minute")
+		}
+	}
+
+	// compare secrets
 	secret, err := p.paranoidModeSecret()
 	isPModeEnabled := err == nil && len(secret) > 0
 	if !isPModeEnabled {
-		return true
+		return true, nil
 	}
-	return secret == secretToCheck
+	return secret == secretToCheck, nil
 }
 
 // -------------- processing connection request ---------------

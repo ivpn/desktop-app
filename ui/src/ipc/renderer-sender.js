@@ -364,4 +364,10 @@ export default {
       oldPassword
     );
   },
+  setLocalParanoidModePassword: async (password) => {
+    return await invoke(
+      "renderer-request-setLocalParanoidModePassword",
+      password
+    );
+  },
 };

@@ -154,6 +154,8 @@ type Protocol struct {
 
 	// keep info about last VPN state
 	_lastVPNState vpn.StateInfo
+
+	_paranoidModeLastFailedAttempts []time.Time
 }
 
 // Stop - stop communication
@@ -391,27 +393,38 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 	}
 
-	if !isDoSkipParanoidMode(reqCmd.Command) && !p.paranoidModeCheckSecret(reqCmd.ProtocolSecret) {
-		// ParanoidMode: wrong password
-		errorResp := types.ErrorResp{
-			ErrorType:    types.ErrorParanoidModePasswordError,
-			ErrorMessage: "'Paranoid Mode' active: password is wrong"}
+	if !isDoSkipParanoidMode(reqCmd.Command) {
+		isOK, err := p.paranoidModeCheckSecret(reqCmd.ProtocolSecret)
+		if !isOK {
+			// ParanoidMode: wrong password
+			errorResp := types.ErrorResp{
+				ErrorType:    types.ErrorParanoidModePasswordError,
+				ErrorMessage: "'Paranoid Mode' active: password is wrong"}
 
-		p.sendResponse(conn,
-			&errorResp,
-			reqCmd.Idx)
+			if err != nil && len(errorResp.Error()) > 0 {
+				errorResp.ErrorMessage = "'Paranoid Mode' active: " + err.Error()
+			}
 
-		log.Info(fmt.Sprintf("      %sRequest error '%s': %s", p.connLogID(conn), reqCmd.Command, errorResp))
+			p.sendResponse(conn,
+				&errorResp,
+				reqCmd.Idx)
 
-		// send current connection state
-		if reqCmd.Command == "Connect" || reqCmd.Command == "Disconnect" {
-			sendState(reqCmd.Idx, false)
+			log.Info(fmt.Sprintf("      [%d] %sRequest error '%s': %s", reqCmd.Idx, p.connLogID(conn), reqCmd.Command, errorResp))
+
+			// send current connection state
+			if reqCmd.Command == "Connect" || reqCmd.Command == "Disconnect" {
+				sendState(reqCmd.Idx, false)
+			}
+
+			return
 		}
-
-		return
 	}
 
 	switch reqCmd.Command {
+	case "EmptyReq":
+		// test request (e.g. checking PM password)
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+
 	case "Hello":
 		var req types.Hello
 
@@ -843,6 +856,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+
+		// disable paranoid mode
+		p.paranoidModeForceDisable()
 
 		if req.NeedToResetSettings {
 			oldPrefs := p._service.Preferences()

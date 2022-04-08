@@ -58,6 +58,8 @@ const waiters = [];
 let ParanoidModeSecret = "";
 
 const daemonRequests = Object.freeze({
+  EmptyReq: "EmptyReq",
+
   Hello: "Hello",
   APIRequest: "APIRequest",
 
@@ -179,16 +181,18 @@ function toJson(data) {
 
 // send request to connected daemon
 function send(request, reqNo) {
-  if (socket == null)
-    return new Error("Unable to send request (socket is closed)");
+  if (socket == null) throw Error("Unable to send request (socket is closed)");
 
   if (!request.ProtocolSecret) {
     request.ProtocolSecret = ParanoidModeSecret;
   }
 
+  if (!request.Command) {
+    throw Error('Unable to send request ("Command" parameter not defined)');
+  }
   if (typeof request.Command === "undefined") {
-    return new Error(
-      'Unable to send request ("Command" parameter not defined)'
+    throw Error(
+      'Unable to send request. Unknown command: "' + request.Command + '"'
     );
   }
 
@@ -258,7 +262,12 @@ function sendRecv(request, waitRespCommandsList, timeoutMs) {
   let promise = addWaiter(waiter, timeoutMs);
 
   // send data
-  send(request, requestNo);
+  try {
+    send(request, requestNo);
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
 
   return promise;
 }
@@ -368,8 +377,18 @@ async function processResponse(response) {
       }
 
       // save ParanoidMode status
-      store.commit("paranoidModeStatus", obj.ParanoidMode);
+      {
+        let isPmPassError = obj.ParanoidMode.IsEnabled && !ParanoidModeSecret;
+        store.commit("paranoidModeStatus", obj.ParanoidMode);
+        store.commit("uiState/isParanoidModePasswordView", isPmPassError);
 
+        // send logging + obfsproxy configuration
+        // TODO: do not send logging and obfsproxy settings, but ask for this values from the daemon
+        if (!isPmPassError) {
+          SetLogging();
+          SetObfsproxy();
+        }
+      }
       break;
 
     case daemonResponses.ConfigParamsResp:
@@ -481,7 +500,7 @@ async function processResponse(response) {
       if (obj.ErrorMessage) console.log("ERROR response:", obj.ErrorMessage);
 
       if (obj.ErrorType == ErrorRespTypes.ErrorParanoidModePasswordError) {
-        //
+        store.commit("uiState/isParanoidModePasswordView", true);
       } else {
         console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         console.log("!!!!!!!!!!!!!!!!!!!!!! ERROR RESP !!!!!!!!!!!!!!!!!!!!");
@@ -677,10 +696,6 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
 
           // Saving 'connected' state to a daemon
           setConnState(DaemonConnectionType.Connected);
-
-          // send logging + obfsproxy configuration
-          SetLogging();
-          SetObfsproxy();
 
           setTimeout(async () => {
             // Till this time we already must receive 'connected' info (if we are connected)
@@ -1654,6 +1669,9 @@ async function SetParanoidModePassword(newPassword, oldPassword) {
     // to disable PM the 'newPassword' must be empty. But we need 'oldPassword' instead
     throw "Actual password not defined";
   }
+
+  ParanoidModeSecret = oldPassword;
+
   await sendRecv({
     Command: daemonRequests.ParanoidModeSetPasswordReq,
     NewSecret: newPassword,
@@ -1661,6 +1679,18 @@ async function SetParanoidModePassword(newPassword, oldPassword) {
   });
 
   ParanoidModeSecret = newPassword;
+}
+
+async function SetLocalParanoidModePassword(password) {
+  if (!password) throw "Password is empty";
+
+  await sendRecv({
+    Command: daemonRequests.EmptyReq,
+    ProtocolSecret: password,
+  });
+
+  ParanoidModeSecret = password;
+  store.commit("uiState/isParanoidModePasswordView", false);
 }
 
 export default {
@@ -1707,4 +1737,5 @@ export default {
   GetWiFiAvailableNetworks,
 
   SetParanoidModePassword,
+  SetLocalParanoidModePassword,
 };

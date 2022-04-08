@@ -58,6 +58,7 @@ import Init from "@/components/Init.vue";
 import Login from "@/components/Login.vue";
 import Control from "@/components/Control.vue";
 import Map from "@/components/Map.vue";
+import ParanoidModePassword from "@/components/ParanoidModePassword.vue";
 
 export default {
   components: {
@@ -65,6 +66,7 @@ export default {
     Login,
     Control,
     Map,
+    ParanoidModePassword,
   },
   data: function () {
     return {
@@ -87,6 +89,8 @@ export default {
       )
         return Init;
       if (!this.isLoggedIn) return Login;
+      if (this.$store.state.uiState.isParanoidModePasswordView === true)
+        return ParanoidModePassword;
       return Control;
     },
     isMapBlured: function () {

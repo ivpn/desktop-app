@@ -140,7 +140,7 @@ export default {
         sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
-          message: `Failed to enable Paranoid Mode: `,
+          message: `Failed to enable Paranoid Mode`,
           detail: e,
         });
       }
