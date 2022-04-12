@@ -6,6 +6,7 @@
     <div class="flexRow">
       <div class="settingsDefaultTextColor paramName">Secret:</div>
       <input
+        ref="passwordField"
         type="password"
         style="flex-grow: 1"
         class="settingsTextInput"
@@ -52,6 +53,9 @@
 const sender = window.ipcSender;
 
 export default {
+  mounted() {
+    if (this.$refs.passwordField) this.$refs.passwordField.focus();
+  },
   data: function () {
     return {
       newPass: "",

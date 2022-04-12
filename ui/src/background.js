@@ -802,7 +802,7 @@ async function showModalDialog(
     resizable: false,
     fullscreenable: false,
     maximizable: false,
-    minimizable: false,
+    minimizable: false, // on Linux: this parameter still have value 'true' after window created (Electron bug?)
 
     parent: ownerWndObj,
 
@@ -819,6 +819,9 @@ async function showModalDialog(
   }
 
   let modalDialog = createBrowserWindow(windowConfig);
+  // on Linux: 'minimizable' parameter still has value 'true' after window created (Electron bug?)
+  // Therefore, we are  using additional parameter (minimizableFix) to keep needed value
+  modalDialog.minimizableFix = false;
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     modalDialog.loadURL(

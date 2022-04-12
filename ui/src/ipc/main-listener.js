@@ -328,6 +328,11 @@ ipcMain.on("renderer-request-properties-current-window", (event) => {
       maximizable: wnd.maximizable,
       minimizable: wnd.minimizable,
     };
+
+  // on Linux: 'minimizable' parameter always has value 'true' after window created (Electron bug?)
+  // Therefore, we are  using additional parameter (minimizableFix) to keep needed value
+  if (wnd.minimizableFix !== undefined) retVal.minimizable = wnd.minimizableFix;
+
   event.returnValue = retVal;
 });
 
