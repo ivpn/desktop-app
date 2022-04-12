@@ -179,7 +179,7 @@ func main() {
 }
 
 func RequestParanoidModePassword() string {
-	fmt.Print("Paranoid Mode is active. Enter password: ")
+	fmt.Print("EAP is active. Enter shared secret: ")
 	data, err := terminal.ReadPassword(0)
 	fmt.Println("")
 	if err != nil {

@@ -84,6 +84,7 @@ func doLogin(accountID string, force bool) error {
 	if len(accountID) == 0 {
 		fmt.Print("Enter your Account ID: ")
 		data, err := terminal.ReadPassword(0)
+		fmt.Println("")
 		if err != nil {
 			return fmt.Errorf("failed to read accountID: %w", err)
 		}

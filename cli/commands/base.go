@@ -252,7 +252,7 @@ func printParamoidModeState(w *tabwriter.Writer, helloResp types.HelloResp) *tab
 	if helloResp.ParanoidMode.IsEnabled {
 		pModeStatusText = "Enabled"
 	}
-	fmt.Fprintf(w, "Paranoid Mode\t:\t%s\n", pModeStatusText)
+	fmt.Fprintf(w, "EAP\t:\t%s\n", pModeStatusText)
 
 	return w
 }

@@ -47,6 +47,7 @@ const (
 type ErrorResp struct {
 	CommandBase
 	ErrorMessage string
+	ErrorTitle   string
 	ErrorType    ErrorType
 }
 

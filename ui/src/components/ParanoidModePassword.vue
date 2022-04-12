@@ -2,16 +2,16 @@
   <div class="flexColumn">
     <div class="flexColumn" style="padding: 15px">
       <div class="main" style="padding-top: 15px">
-        <div class="large_text">Paranoid Mode is active</div>
+        <div class="large_text">Enhanced App Protection</div>
 
         <div class="small_text">
-          Please enter password to start using IVPN application:
+          Please enter shared secret for Enhanced App Protection mode:
         </div>
         <input
           type="password"
           class="styled"
           style="width: calc(100% - 30px); text-align: center"
-          placeholder="Paranoid Mode password"
+          placeholder=""
           v-model="pmPassword"
           ref="passwordField"
           v-on:keyup.enter="setPassword()"
@@ -20,7 +20,8 @@
       </div>
 
       <div class="small_text">
-        Tip: You can disable Paranoid Mode in application settings.
+        Please note: You can disable Enhanced App Protection mode in the
+        advanced settings.
       </div>
       <button
         class="noBordersTextBtn settingsLinkText"
@@ -76,7 +77,7 @@ export default {
         sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
-          message: `Paranoid Mode password error`,
+          message: `Enhanced App Protection`,
           detail: e,
         });
       }
@@ -109,8 +110,6 @@ export default {
   font-weight: 600;
   font-size: 18px;
   line-height: 120%;
-
-  color: #2a394b;
 }
 
 .small_text {

@@ -110,19 +110,22 @@ func (c *Client) SetParanoidModeSecretRequestFunc(f func() string) {
 
 // SendHello - send initial message and get current status
 func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
-	if err := c.ensureConnected(); err != nil {
-		return helloResponse, err
-	}
-
-	return c.SendHelloEx(false)
+	return c.SendHelloEx(false, false)
 }
 
-func (c *Client) SendHelloEx(doRequestPmFile bool) (helloResponse types.HelloResp, err error) {
+func (c *Client) SendHelloEx(doRequestPmFile bool, isSendResponseToAllClients bool) (helloResponse types.HelloResp, err error) {
 	if err := c.ensureConnected(); err != nil {
 		return helloResponse, err
 	}
 
-	helloReq := types.Hello{Secret: c._secret, KeepDaemonAlone: true, GetStatus: true, Version: "1.0", GetParanoidModeFilePath: doRequestPmFile}
+	helloReq := types.Hello{
+		Secret:                   c._secret,
+		KeepDaemonAlone:          true,
+		GetStatus:                true,
+		Version:                  "1.0",
+		GetParanoidModeFilePath:  doRequestPmFile,
+		SendResponseToAllClients: isSendResponseToAllClients}
+
 	if err := c.sendRecvTimeOut(&helloReq, &c._helloResponse, time.Second*7); err != nil {
 		if _, ok := errors.Unwrap(err).(ResponseTimeout); ok {
 			return helloResponse, fmt.Errorf("Failed to send 'Hello' request: %w", err)

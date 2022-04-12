@@ -399,10 +399,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			// ParanoidMode: wrong password
 			errorResp := types.ErrorResp{
 				ErrorType:    types.ErrorParanoidModePasswordError,
-				ErrorMessage: "'Paranoid Mode' active: password is wrong"}
+				ErrorTitle:   "Enhanced App Protection",
+				ErrorMessage: "You have entered an invalid shared secret. Please try again."}
 
 			if err != nil && len(errorResp.Error()) > 0 {
-				errorResp.ErrorMessage = "'Paranoid Mode' active: " + err.Error()
+				errorResp.ErrorMessage = err.Error()
 			}
 
 			p.sendResponse(conn,
@@ -418,6 +419,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 			return
 		}
+
 	}
 
 	switch reqCmd.Command {
@@ -440,6 +442,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			helloResponse.ParanoidMode.FilePath = platform.ParanoidModeSecretFile()
 		}
 		p.sendResponse(conn, helloResponse, req.Idx)
+		if req.SendResponseToAllClients {
+			p.notifyClients(helloResponse)
+		}
 
 		if req.GetServersList {
 			serv, _ := p._service.ServersList()
@@ -480,6 +485,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+
 		if err := p.paranoidModeSetSecret(req.ProtocolSecret, req.NewSecret); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
@@ -857,10 +863,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		// disable paranoid mode
-		p.paranoidModeForceDisable()
-
 		if req.NeedToResetSettings {
+			// disable paranoid mode
+			p.paranoidModeForceDisable()
+
 			oldPrefs := p._service.Preferences()
 
 			// Reset settings only after SessionDelete() to correctly logout on the backed

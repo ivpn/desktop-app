@@ -37,6 +37,7 @@ var (
 func doInitConstants() {
 	fwInitialValueAllowApiServers = false
 	servicePortFile = path.Join(tmpDir, "port.txt")
+	paranoidModeSecretFile = path.Join(tmpDir, "eap")
 
 	logFile = path.Join(logDir, "IVPN_Agent.log")
 	openvpnLogFile = path.Join(logDir, "openvpn.log")

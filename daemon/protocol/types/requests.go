@@ -39,6 +39,9 @@ type Hello struct {
 	Version string
 	Secret  uint64
 
+	// when 'true' - send HelloResp to all connected clients
+	SendResponseToAllClients bool
+
 	// GetServersList == true - client requests to send back info about all servers
 	GetServersList bool
 

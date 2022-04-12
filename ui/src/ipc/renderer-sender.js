@@ -316,6 +316,19 @@ export default {
     return invoke("renderer-request-showOpenDialog", options);
   },
 
+  showModalDialog: async (
+    dialogTypeName /*ModalDialogType*/,
+    ownerWnd /*OwnerWindowType*/,
+    windowConfig /*(nullable) BrowserWindow options*/
+  ) => {
+    return await invoke(
+      "renderer-request-showModalDialog",
+      dialogTypeName,
+      ownerWnd,
+      windowConfig
+    );
+  },
+
   // WINDOW
   closeCurrentWindow: () => {
     return invoke("renderer-request-close-current-window");

@@ -88,9 +88,10 @@ export default {
         daemonConnection === DaemonConnectionType.Connecting
       )
         return Init;
-      if (!this.isLoggedIn) return Login;
       if (this.$store.state.uiState.isParanoidModePasswordView === true)
         return ParanoidModePassword;
+      if (!this.isLoggedIn) return Login;
+
       return Control;
     },
     isMapBlured: function () {
