@@ -390,6 +390,15 @@ func (p *Protocol) paranoidModeCheckSecret(secretToCheck string) (retVal bool, e
 			p._paranoidModeLastFailedAttempts = append(p._paranoidModeLastFailedAttempts, time.Now())
 		}
 	}()
+
+	// read secret
+	secret, err := p.paranoidModeSecret()
+	isPModeEnabled := err == nil && len(secret) > 0
+	if !isPModeEnabled {
+		return true, nil
+	}
+
+	// some protection from brute force attack
 	const maxAttemptsCnt = 4
 	const maxDuration = time.Minute
 	cntAttempts := len(p._paranoidModeLastFailedAttempts)
@@ -403,11 +412,6 @@ func (p *Protocol) paranoidModeCheckSecret(secretToCheck string) (retVal bool, e
 	}
 
 	// compare secrets
-	secret, err := p.paranoidModeSecret()
-	isPModeEnabled := err == nil && len(secret) > 0
-	if !isPModeEnabled {
-		return true, nil
-	}
 	return secret == secretToCheck, nil
 }
 
