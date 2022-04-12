@@ -39,6 +39,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
@@ -261,11 +262,12 @@ func (p *Protocol) paranoidModeSecret() (retSecret string, retErr error) {
 	}
 
 	// check file access rights
-	mode := stat.Mode()
-	expectedMode := os.FileMode(0600) // read only for privilaged user
-	if mode != expectedMode {
-		return "", fmt.Errorf(fmt.Sprintf("the Enhanced App Protection file has wrong access permissions (%o but expected %o)", mode, expectedMode))
-	}
+	//mode := stat.Mode()
+	//expectedMode := os.FileMode(0600) // read only for privilaged user
+	//if mode != expectedMode {
+	//	p.paranoidModeForceDisable()
+	//	return "", fmt.Errorf(fmt.Sprintf("the Enhanced App Protection file has wrong access permissions (%o but expected %o)", mode, expectedMode))
+	//}
 
 	// read file
 	if stat.Size() > 1024*5 {
@@ -365,6 +367,11 @@ func (p *Protocol) paranoidModeSetSecret(oldSecret, newSecret string) error {
 	if err := os.WriteFile(file, bytesToWrite, 0600); err != nil {
 		p.paranoidModeForceDisable()
 		return fmt.Errorf("failed to enable EAP (FileWrite error): %w", err)
+	}
+	// only for Windows: Golang is not able to change file permissins in Windows style
+	if err := filerights.WindowsChmod(file, 0600); err != nil { // read\write only for privileged user
+		p.paranoidModeForceDisable()
+		return fmt.Errorf("failed to change EAP file permissions: %w", err)
 	}
 
 	// ensure data were saved correctly

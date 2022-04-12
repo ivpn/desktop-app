@@ -810,6 +810,8 @@ async function showModalDialog(
     title: windowTitle,
 
     modal: true,
+
+    frame: IsWindowHasFrame(),
   };
 
   if (windowCfgExtra) {

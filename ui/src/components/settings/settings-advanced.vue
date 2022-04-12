@@ -40,6 +40,7 @@
 
 <script>
 import { IpcModalDialogType, IpcOwnerWindowType } from "@/ipc/types.js";
+import { Platform, PlatformEnum } from "@/platform/platform";
 
 const sender = window.ipcSender;
 
@@ -57,12 +58,13 @@ export default {
         height: 170,
       };
       let dlgType = IpcModalDialogType.EnableEAP;
+      if (Platform() === PlatformEnum.Windows) cfg.height = 142;
+
       if (this.IsPmEnabled) {
         dlgType = IpcModalDialogType.DisableEAP;
-        cfg = {
-          width: 400,
-          height: 150,
-        };
+
+        cfg.height = 150;
+        if (Platform() === PlatformEnum.Windows) cfg.height = 122;
       }
       await sender.showModalDialog(
         dlgType,
