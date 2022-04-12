@@ -58,13 +58,13 @@ export default {
         height: 170,
       };
       let dlgType = IpcModalDialogType.EnableEAP;
-      if (Platform() === PlatformEnum.Windows) cfg.height = 142;
+      if (Platform() !== PlatformEnum.macOS) cfg.height = 142;
 
       if (this.IsPmEnabled) {
         dlgType = IpcModalDialogType.DisableEAP;
 
         cfg.height = 150;
-        if (Platform() === PlatformEnum.Windows) cfg.height = 122;
+        if (Platform() !== PlatformEnum.macOS) cfg.height = 122;
       }
       await sender.showModalDialog(
         dlgType,
