@@ -38,6 +38,7 @@ import (
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
+	"github.com/ivpn/desktop-app/daemon/protocol/eap"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -130,7 +131,7 @@ type Service interface {
 
 // CreateProtocol - Create new protocol object
 func CreateProtocol() (*Protocol, error) {
-	return &Protocol{_connections: make(map[net.Conn]struct{})}, nil
+	return &Protocol{_connections: make(map[net.Conn]struct{}), _eap: eap.Init(platform.ParanoidModeSecretFile())}, nil
 }
 
 // Protocol - TCP interface to communicate with IVPN application
@@ -155,7 +156,7 @@ type Protocol struct {
 	// keep info about last VPN state
 	_lastVPNState vpn.StateInfo
 
-	_paranoidModeLastFailedAttempts []time.Time
+	_eap *eap.Eap
 }
 
 // Stop - stop communication
@@ -394,7 +395,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	}
 
 	if !isDoSkipParanoidMode(reqCmd.Command) {
-		isOK, err := p.paranoidModeCheckSecret(reqCmd.ProtocolSecret)
+		isOK, err := p._eap.CheckSecret(reqCmd.ProtocolSecret)
 		if !isOK {
 			// ParanoidMode: wrong password
 			errorResp := types.ErrorResp{
@@ -438,7 +439,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// send back Hello message with account session info
 		helloResponse := p.createHelloResponse()
-		if req.GetParanoidModeFilePath {
+		if req.GetParanoidModeFilePath && p._eap.IsEnabled() {
 			helloResponse.ParanoidMode.FilePath = platform.ParanoidModeSecretFile()
 		}
 		p.sendResponse(conn, helloResponse, req.Idx)
@@ -486,7 +487,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		if err := p.paranoidModeSetSecret(req.ProtocolSecret, req.NewSecret); err != nil {
+		if err := p._eap.SetSecret(req.ProtocolSecret, req.NewSecret); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
 			// send 'success' response to the requestor
@@ -865,7 +866,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if req.NeedToResetSettings {
 			// disable paranoid mode
-			p.paranoidModeForceDisable()
+			p._eap.ForceDisable()
 
 			oldPrefs := p._service.Preferences()
 

@@ -24,12 +24,12 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"text/tabwriter"
 
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/cli/helpers"
+	"github.com/ivpn/desktop-app/daemon/protocol/eap"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -55,31 +55,28 @@ func (c *CmdParanoidMode) Run() error {
 	if c.disable {
 		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
 			fmt.Println("Disabling Enhanced App Protection")
+
 			if helpers.CheckIsAdmin() {
 				// We are running in privilaged environment
 				// Trying to remove ParanoidMode file manually
 				// (we are in privilaged mode - so old PM password is not required)
 
 				// 1 - get path of PM file
-				doRequestPmFile := true
-				isSendResponseToAllClients := false
-				resp, err := _proto.SendHelloEx(doRequestPmFile, isSendResponseToAllClients)
-				if err != nil {
-					return err
-				}
-				if len(resp.ParanoidMode.FilePath) <= 0 {
+				fpath := _proto.GetHelloResponse().ParanoidMode.FilePath
+				if len(fpath) <= 0 {
 					return fmt.Errorf("failed to disable Enhanced App Protection in privilaged user environment (file path not defined)")
 				}
 
 				// 2 - remove file
-				if err := os.Remove(resp.ParanoidMode.FilePath); err != nil {
+				eap := eap.Init(fpath)
+				if err := eap.ForceDisable(); err != nil {
 					return err
 				}
 
 				// 3 - request new PM state (to print actual state for user)
 				// and notify all connected clients about EAP change
-				doRequestPmFile = false
-				isSendResponseToAllClients = true
+				doRequestPmFile := true
+				isSendResponseToAllClients := true
 				if _, err := _proto.SendHelloEx(doRequestPmFile, isSendResponseToAllClients); err != nil {
 					return err
 				}
@@ -105,14 +102,33 @@ func (c *CmdParanoidMode) Run() error {
 		fmt.Println("Enabling Enhanced App Protection")
 
 		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
-			fmt.Print("\tEnter current shared secret: ")
-			data, err := terminal.ReadPassword(0)
-			if err != nil {
-				return fmt.Errorf("failed to read shared secret: %w", err)
+			oldSecret := ""
+
+			if helpers.CheckIsAdmin() {
+				// We are running in privilaged environment
+				// Trying to read secret directly from file
+				// (we are in privilaged mode - so old PM password is not required)
+
+				// get path of PM file
+				fpath := _proto.GetHelloResponse().ParanoidMode.FilePath
+				if len(fpath) > 0 {
+					// read secret
+					eap := eap.Init(fpath)
+					oldSecret, _ = eap.Secret()
+				}
 			}
-			oldSecret := strings.TrimSpace(string(data))
-			_proto.InitSetParanoidModeSecret(oldSecret)
-			fmt.Println("")
+
+			if len(oldSecret) <= 0 {
+				fmt.Print("\tEnter current shared secret: ")
+				data, err := terminal.ReadPassword(0)
+				if err != nil {
+					return fmt.Errorf("failed to read shared secret: %w", err)
+				}
+
+				oldSecret = strings.TrimSpace(string(data))
+				_proto.InitSetParanoidModeSecret(oldSecret)
+				fmt.Println("")
+			}
 		}
 
 		fmt.Print("\tEnter new shared secret: ")

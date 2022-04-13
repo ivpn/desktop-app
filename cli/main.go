@@ -35,7 +35,9 @@ import (
 	"github.com/ivpn/desktop-app/cli/cliplatform"
 	"github.com/ivpn/desktop-app/cli/commands"
 	"github.com/ivpn/desktop-app/cli/flags"
+	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/cli/protocol"
+	"github.com/ivpn/desktop-app/daemon/protocol/eap"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"golang.org/x/crypto/ssh/terminal"
@@ -178,7 +180,20 @@ func main() {
 	}
 }
 
-func RequestParanoidModePassword() string {
+func RequestParanoidModePassword(c *protocol.Client) string {
+	// for privilaged users: try to read secret directly from file
+	if helpers.CheckIsAdmin() {
+		sFile := c.GetHelloResponse().ParanoidMode.FilePath
+		if len(sFile) > 0 {
+			eap := eap.Init(sFile)
+			secret, _ := eap.Secret()
+			if len(secret) > 0 {
+				return secret
+			}
+		}
+	}
+
+	// request secret from user
 	fmt.Print("EAP is active. Enter shared secret: ")
 	data, err := terminal.ReadPassword(0)
 	fmt.Println("")

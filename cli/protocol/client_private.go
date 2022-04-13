@@ -95,7 +95,7 @@ func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, time
 		// Paranoid mode password error
 		if len(c._paranoidModeSecret) <= 0 && c._paranoidModeSecretRequestFunc != nil {
 			// request user for Password
-			c._paranoidModeSecret = c._paranoidModeSecretRequestFunc()
+			c._paranoidModeSecret = c._paranoidModeSecretRequestFunc(c)
 			if len(c._paranoidModeSecret) > 0 {
 				err = doJob()
 			}
@@ -156,7 +156,7 @@ func (c *Client) sendRecvAnyEx(request interface{}, isIgnoreResponseIndex bool, 
 		// Paranoid mode password error
 		if len(c._paranoidModeSecret) <= 0 && c._paranoidModeSecretRequestFunc != nil {
 			// request user for Password
-			c._paranoidModeSecret = c._paranoidModeSecretRequestFunc()
+			c._paranoidModeSecret = c._paranoidModeSecretRequestFunc(c)
 			if len(c._paranoidModeSecret) > 0 {
 				data, cmdBase, err = doJob()
 			}

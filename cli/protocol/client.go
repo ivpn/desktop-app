@@ -33,6 +33,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ivpn/desktop-app/cli/helpers"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -55,7 +56,7 @@ type Client struct {
 	_helloResponse types.HelloResp
 
 	_paranoidModeSecret            string
-	_paranoidModeSecretRequestFunc func() string
+	_paranoidModeSecretRequestFunc func(*Client) string
 }
 
 // ResponseTimeout error
@@ -104,13 +105,20 @@ func (c *Client) InitSetParanoidModeSecret(secret string) {
 	c._paranoidModeSecret = secret
 }
 
-func (c *Client) SetParanoidModeSecretRequestFunc(f func() string) {
+func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) string) {
 	c._paranoidModeSecretRequestFunc = f
 }
 
 // SendHello - send initial message and get current status
 func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
-	return c.SendHelloEx(false, false)
+
+	doRequestPmFile := false
+	if helpers.CheckIsAdmin() {
+		// If we running in privilaged environment - request also info about EAP mode secret file
+		doRequestPmFile = true
+	}
+
+	return c.SendHelloEx(doRequestPmFile, false)
 }
 
 func (c *Client) SendHelloEx(doRequestPmFile bool, isSendResponseToAllClients bool) (helloResponse types.HelloResp, err error) {
