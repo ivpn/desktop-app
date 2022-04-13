@@ -64,7 +64,7 @@
         </div>
 
         <div
-          class="flexRow paramProps"
+          class="flexRowAlignTop paramProps"
           v-bind:class="{ disabled: dnsIsEncrypted === false }"
         >
           <div class="defColor paramName">
@@ -73,13 +73,19 @@
 
           <div style="width: 100%">
             <input
-              style="width: 100%; padding-right: 24px"
+              style="width: 100%; padding-right: 24px; margin-top: 0px"
               class="settingsTextInput"
               v-bind:class="{ badData: isTemplateURIError === true }"
               placeholder="https://..."
               v-model="dnsDohTemplate"
             />
+            <div v-if="isShowDnsproxyDescription" class="fwDescription">
+              DNS over HTTPS (DoH) is implemented using dnscrypt-proxy from the
+              DNSCrypt project. Your DNS settings will be configured to send
+              requests to dnscrypt-proxy listening on localhost (127.0.0.1).
+            </div>
           </div>
+
           <!-- Predefined DoH/DoT configs -->
           <div
             v-bind:class="{ HiddenDiv: isHasPredefinedDohConfigs !== true }"
@@ -127,6 +133,7 @@
 
 <script>
 import { DnsEncryption } from "@/store/types";
+import { Platform, PlatformEnum } from "@/platform/platform";
 
 const sender = window.ipcSender;
 
@@ -221,6 +228,9 @@ export default {
   },
 
   computed: {
+    isShowDnsproxyDescription() {
+      return Platform() !== PlatformEnum.Windows;
+    },
     CanUseDnsOverTls: {
       get() {
         return this.$store.state.dnsAbilities.CanUseDnsOverTls === true;
