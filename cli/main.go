@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/ivpn/desktop-app/cli/cliplatform"
@@ -40,7 +41,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/eap"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/version"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 // ICommand interface for command line command
@@ -196,7 +197,7 @@ func RequestParanoidModePassword(c *protocol.Client) (string, error) {
 	// request secret from user
 	fmt.Print("EAP is active. Enter shared secret: ")
 
-	data, err := terminal.ReadPassword(0)
+	data, err := term.ReadPassword(int(syscall.Stdin))
 	fmt.Println("")
 	if err != nil {
 		return "", fmt.Errorf("failed to read EAP shared secret: %s\n", err)

@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 	"time"
 
@@ -34,7 +35,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/vpn"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 type CmdLogout struct {
@@ -83,7 +84,7 @@ func doLogin(accountID string, force bool) error {
 	// login
 	if len(accountID) == 0 {
 		fmt.Print("Enter your Account ID: ")
-		data, err := terminal.ReadPassword(0)
+		data, err := term.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		if err != nil {
 			return fmt.Errorf("failed to read accountID: %w", err)

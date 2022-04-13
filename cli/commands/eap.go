@@ -25,12 +25,13 @@ package commands
 import (
 	"fmt"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/eap"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 type CmdParanoidMode struct {
@@ -83,7 +84,7 @@ func (c *CmdParanoidMode) Run() error {
 			} else {
 
 				fmt.Print("\tEnter current shared secret: ")
-				data, err := terminal.ReadPassword(0)
+				data, err := term.ReadPassword(int(syscall.Stdin))
 				if err != nil {
 					return fmt.Errorf("failed to read shared secret: %w", err)
 				}
@@ -120,7 +121,7 @@ func (c *CmdParanoidMode) Run() error {
 
 			if len(oldSecret) <= 0 {
 				fmt.Print("\tEnter current shared secret: ")
-				data, err := terminal.ReadPassword(0)
+				data, err := term.ReadPassword(int(syscall.Stdin))
 				if err != nil {
 					return fmt.Errorf("failed to read shared secret: %w", err)
 				}
@@ -132,7 +133,7 @@ func (c *CmdParanoidMode) Run() error {
 		}
 
 		fmt.Print("\tEnter new shared secret: ")
-		data, err := terminal.ReadPassword(0)
+		data, err := term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			return fmt.Errorf("failed to read shared secret: %w", err)
 		}
@@ -140,7 +141,7 @@ func (c *CmdParanoidMode) Run() error {
 		fmt.Println("")
 
 		fmt.Print("\tPlease re-enter new shared secret: ")
-		data, err = terminal.ReadPassword(0)
+		data, err = term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			return fmt.Errorf("failed to read shared secret: %w", err)
 		}

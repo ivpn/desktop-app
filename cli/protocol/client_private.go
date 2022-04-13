@@ -90,17 +90,20 @@ func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, time
 		return nil
 	}
 
-	if len(c._helloResponse.Command) > 0 && c._helloResponse.ParanoidMode.IsEnabled {
+	err := doJob()
+	if errResp, ok := err.(types.ErrorResp); ok && errResp.ErrorType == types.ErrorParanoidModePasswordError {
+		// Paranoid mode password error
 		if len(c._paranoidModeSecret) <= 0 && c._paranoidModeSecretRequestFunc != nil {
 			// request user for Password
-			var err error
-			if c._paranoidModeSecret, err = c._paranoidModeSecretRequestFunc(c); err != nil {
+			c._paranoidModeSecret, err = c._paranoidModeSecretRequestFunc(c)
+			if err != nil {
 				return err
 			}
+			err = doJob()
 		}
 	}
 
-	return doJob()
+	return err
 }
 
 func (c *Client) sendRecvAny(request interface{}, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
@@ -149,16 +152,20 @@ func (c *Client) sendRecvAnyEx(request interface{}, isIgnoreResponseIndex bool, 
 		return data, cmdBase, nil
 	}
 
-	if len(c._helloResponse.Command) > 0 && c._helloResponse.ParanoidMode.IsEnabled {
+	data, cmdBase, err = doJob()
+	if errResp, ok := err.(types.ErrorResp); ok && errResp.ErrorType == types.ErrorParanoidModePasswordError {
+		// Paranoid mode password error
 		if len(c._paranoidModeSecret) <= 0 && c._paranoidModeSecretRequestFunc != nil {
 			// request user for Password
-			var err error
-			if c._paranoidModeSecret, err = c._paranoidModeSecretRequestFunc(c); err != nil {
+			c._paranoidModeSecret, err = c._paranoidModeSecretRequestFunc(c)
+			if err != nil {
 				return []byte{}, types.CommandBase{}, err
 			}
+			data, cmdBase, err = doJob()
 		}
 	}
-	return doJob()
+
+	return data, cmdBase, err
 }
 
 func (c *Client) send(cmd interface{}, requestIdx int) error {

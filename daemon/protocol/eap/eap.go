@@ -255,7 +255,7 @@ func (e *Eap) doCheckSecret(secretToCheck string) (retVal bool, err error) {
 	}
 
 	// some protection from brute force attack
-	const maxFailAttemptsCnt = 5
+	const maxFailAttemptsCnt = 6
 	const maxFailDuration = time.Minute
 
 	cntAttempts := len(e.lastFailedAttempts)
@@ -270,7 +270,7 @@ func (e *Eap) doCheckSecret(secretToCheck string) (retVal bool, err error) {
 		}
 	}
 
-	if cntAttempts > 2 {
+	if cntAttempts > 4 {
 		// There is possibility of unexpected manipulation with system time.
 		// We mitigate it a little: perform 1 second delay if there are more than 2 failed requests
 		// (independently from system time)
