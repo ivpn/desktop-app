@@ -255,7 +255,7 @@ func (e *Eap) doCheckSecret(secretToCheck string) (retVal bool, err error) {
 	}
 
 	// some protection from brute force attack
-	const maxFailAttemptsCnt = 6
+	const maxFailAttemptsCnt = 5
 	const maxFailDuration = time.Minute
 
 	cntAttempts := len(e.lastFailedAttempts)

@@ -56,7 +56,7 @@ type Client struct {
 	_helloResponse types.HelloResp
 
 	_paranoidModeSecret            string
-	_paranoidModeSecretRequestFunc func(*Client) string
+	_paranoidModeSecretRequestFunc func(*Client) (string, error)
 }
 
 // ResponseTimeout error
@@ -105,7 +105,7 @@ func (c *Client) InitSetParanoidModeSecret(secret string) {
 	c._paranoidModeSecret = secret
 }
 
-func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) string) {
+func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) (string, error)) {
 	c._paranoidModeSecretRequestFunc = f
 }
 

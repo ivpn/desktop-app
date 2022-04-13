@@ -180,7 +180,7 @@ func main() {
 	}
 }
 
-func RequestParanoidModePassword(c *protocol.Client) string {
+func RequestParanoidModePassword(c *protocol.Client) (string, error) {
 	// for privilaged users: try to read secret directly from file
 	if helpers.CheckIsAdmin() {
 		sFile := c.GetHelloResponse().ParanoidMode.FilePath
@@ -188,20 +188,25 @@ func RequestParanoidModePassword(c *protocol.Client) string {
 			eap := eap.Init(sFile)
 			secret, _ := eap.Secret()
 			if len(secret) > 0 {
-				return secret
+				return secret, nil
 			}
 		}
 	}
 
 	// request secret from user
 	fmt.Print("EAP is active. Enter shared secret: ")
+
 	data, err := terminal.ReadPassword(0)
 	fmt.Println("")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: failed to read password: %s\n", err)
-		os.Exit(2)
+		return "", fmt.Errorf("failed to read EAP shared secret: %s\n", err)
 	}
-	return strings.TrimSpace(string(data))
+	secret := strings.TrimSpace(string(data))
+	if len(secret) <= 0 {
+		return "", fmt.Errorf("EAP shared secret not defined")
+	}
+
+	return secret, nil
 }
 
 func runCommand(c ICommand, args []string) {
