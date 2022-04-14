@@ -197,6 +197,10 @@ func getAllLocalAddresses(ifaces []net.Interface, isIPv6 bool) ([]net.IPNet, err
 			continue
 		}
 
+		//if (ifs.Flags & net.FlagLoopback) > 0 {
+		//	continue
+		//}
+
 		addrs, _ := ifs.Addrs()
 		if addrs == nil {
 			continue
