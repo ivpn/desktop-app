@@ -51,6 +51,7 @@ func doInitConstants() {
 	openvpnLogFile = path.Join(installDir, "log/openvpn.log")
 
 	openvpnUserParamsFile = path.Join(installDir, "mutable/ovpn_extra_params.txt")
+	paranoidModeSecretFile = path.Join(installDir, "etc/eap") // file located in 'etc' will not be removed during app upgrade
 }
 
 func doOsInit() (warnings []string, errors []error) {

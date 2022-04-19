@@ -40,6 +40,12 @@ type CommandBase struct {
 	Idx int
 }
 
+// RequestBase contains fields which are common for requests to a daemon
+type RequestBase struct {
+	CommandBase
+	ProtocolSecret string
+}
+
 // Send sends a command to a connection : init+serialize+send
 func Send(conn net.Conn, cmd interface{}, idx int) (retErr error) {
 	defer func() {
@@ -64,6 +70,20 @@ func Send(conn net.Conn, cmd interface{}, idx int) (retErr error) {
 	}
 
 	return nil
+}
+
+// GetRequestBase deserializing to RequestBase object
+func GetRequestBase(messageData []byte) (RequestBase, error) {
+	var obj RequestBase
+	if err := json.Unmarshal(messageData, &obj); err != nil {
+		return obj, fmt.Errorf("failed to parse request data: %w", err)
+	}
+
+	if len(obj.Command) == 0 {
+		return obj, fmt.Errorf("request name is not defined")
+	}
+
+	return obj, nil
 }
 
 // GetCommandBase deserializing to CommandBase object

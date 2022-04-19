@@ -31,7 +31,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
-func createReceiver(waitingIdx int, waitingObjectsList ...interface{}) *receiverChannel {
+func createReceiver(waitingIdx int, isIgnoreWaitingIndex bool, waitingObjectsList ...interface{}) *receiverChannel {
 	waitingObjects := make(map[string]interface{})
 
 	for _, wo := range waitingObjectsList {
@@ -43,43 +43,52 @@ func createReceiver(waitingIdx int, waitingObjectsList ...interface{}) *receiver
 	}
 
 	receiver := &receiverChannel{
-		_waitingIdx:     waitingIdx,
-		_waitingObjects: waitingObjects,
-		_channel:        make(chan []byte, 1)}
+		_isIgnoreWaitingIndex: isIgnoreWaitingIndex,
+		_waitingIdx:           waitingIdx,
+		_waitingObjects:       waitingObjects,
+		_channel:              make(chan []byte, 1)}
 
 	return receiver
 }
 
 type receiverChannel struct {
-	_waitingIdx      int
-	_waitingObjects  map[string]interface{}
-	_channel         chan []byte
-	_receivedData    []byte
-	_receivedCmdBase types.CommandBase
+	_isIgnoreWaitingIndex bool
+	_waitingIdx           int
+	_waitingObjects       map[string]interface{}
+	_channel              chan []byte
+	_receivedData         []byte
+	_receivedCmdBase      types.CommandBase
 }
 
 func (r *receiverChannel) GetReceivedRawData() (data []byte, cmdBaseObj types.CommandBase) {
 	return r._receivedData, r._receivedCmdBase
 }
 
-func (r *receiverChannel) IsExpectedResponse(respIdx int, command string) bool {
+func (r *receiverChannel) IsExpectedResponse(cmd types.CommandBase) bool {
 	// response is acceptable when:
 	// - received expected responseIndex
+	// - received error (types.ErrorResp) with correspond responseIndex (even if we are not waiting for response index)
 	// - we are not waiting for response index but received one of responses from _waitingObjects
 	// - when we do not care about responseIndex and response objects
 
-	if r._waitingIdx == 0 && len(r._waitingObjects) == 0 {
-		return true
+	if r._isIgnoreWaitingIndex && len(r._waitingObjects) == 0 {
+		return true // - when we do not care about responseIndex and response objects
+	}
+	if r._isIgnoreWaitingIndex {
+		if cmd.Command == types.GetTypeName(types.ErrorResp{}) {
+			// - received error (types.ErrorResp) with correspond responseIndex (even if we are not waiting for response index)
+			return true
+		}
 	}
 
-	if r._waitingIdx != 0 {
-		if r._waitingIdx == respIdx {
-			return true
+	if !r._isIgnoreWaitingIndex {
+		if r._waitingIdx == cmd.Idx {
+			return true // - received expected responseIndex
 		}
 	} else {
 		if len(r._waitingObjects) > 0 {
-			if _, ok := r._waitingObjects[command]; ok {
-				return true
+			if _, ok := r._waitingObjects[cmd.Command]; ok {
+				return true // - we are not waiting for response index but received one of responses from _waitingObjects
 			}
 		}
 	}
@@ -117,7 +126,7 @@ func (r *receiverChannel) Wait(timeout time.Duration) (err error) {
 					if err := deserialize(r._receivedData, &errObj); err != nil {
 						return fmt.Errorf("response deserialization failed: %w", err)
 					}
-					return fmt.Errorf(errObj.ErrorMessage)
+					return errObj
 				}
 				return fmt.Errorf("received unexpected data (type:%s)", r._receivedCmdBase.Command)
 			}

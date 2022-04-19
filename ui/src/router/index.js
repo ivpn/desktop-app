@@ -27,6 +27,11 @@ import AccountLimit from "../views/AccountLimit.vue";
 import Settings from "../views/Settings.vue";
 import Update from "../views/dialogs/Update.vue";
 
+import DlgEapEnable from "../views/dialogs/eapEnable.vue";
+import DlgEapDisable from "../views/dialogs/eapDisable.vue";
+
+import { IpcModalDialogType } from "@/ipc/types.js";
+
 Vue.use(VueRouter);
 
 const mainRoutes = [
@@ -61,7 +66,16 @@ const forbiddenToChangeRouteFrom = [
     name: "Update",
     component: Update,
   },
+  {
+    path: `/${IpcModalDialogType.EnableEAP}`,
+    component: DlgEapEnable,
+  },
+  {
+    path: `/${IpcModalDialogType.DisableEAP}`,
+    component: DlgEapDisable,
+  },
 ];
+
 const routes = mainRoutes.concat(forbiddenToChangeRouteFrom);
 
 const router = new VueRouter({

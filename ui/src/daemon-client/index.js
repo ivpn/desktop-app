@@ -55,7 +55,11 @@ let requestNo = 0;
 // Array response waiters
 const waiters = [];
 
+let ParanoidModeSecret = "";
+
 const daemonRequests = Object.freeze({
+  EmptyReq: "EmptyReq",
+
   Hello: "Hello",
   APIRequest: "APIRequest",
 
@@ -95,6 +99,8 @@ const daemonRequests = Object.freeze({
 
   WiFiAvailableNetworks: "WiFiAvailableNetworks",
   WiFiCurrentNetwork: "WiFiCurrentNetwork",
+
+  ParanoidModeSetPasswordReq: "ParanoidModeSetPasswordReq",
 });
 
 const daemonResponses = Object.freeze({
@@ -125,6 +131,11 @@ const daemonResponses = Object.freeze({
 
   ErrorResp: "ErrorResp",
   ServiceExitingResp: "ServiceExitingResp",
+});
+
+const ErrorRespTypes = Object.freeze({
+  ErrorUnknown: 0,
+  ErrorParanoidModePasswordError: 1,
 });
 
 var messageBoxFunction = null;
@@ -171,12 +182,18 @@ function toJson(data) {
 
 // send request to connected daemon
 function send(request, reqNo) {
-  if (socket == null)
-    return new Error("Unable to send request (socket is closed)");
+  if (socket == null) throw Error("Unable to send request (socket is closed)");
 
+  if (!request.ProtocolSecret) {
+    request.ProtocolSecret = ParanoidModeSecret;
+  }
+
+  if (!request.Command) {
+    throw Error('Unable to send request ("Command" parameter not defined)');
+  }
   if (typeof request.Command === "undefined") {
-    return new Error(
-      'Unable to send request ("Command" parameter not defined)'
+    throw Error(
+      'Unable to send request. Unknown command: "' + request.Command + '"'
     );
   }
 
@@ -246,7 +263,12 @@ function sendRecv(request, waitRespCommandsList, timeoutMs) {
   let promise = addWaiter(waiter, timeoutMs);
 
   // send data
-  send(request, requestNo);
+  try {
+    send(request, requestNo);
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
 
   return promise;
 }
@@ -355,6 +377,19 @@ async function processResponse(response) {
         }
       }
 
+      // save ParanoidMode status
+      {
+        let isPmPassError = obj.ParanoidMode.IsEnabled && !ParanoidModeSecret;
+        store.commit("paranoidModeStatus", obj.ParanoidMode);
+        store.commit("uiState/isParanoidModePasswordView", isPmPassError);
+
+        // send logging + obfsproxy configuration
+        // TODO: do not send logging and obfsproxy settings, but ask for this values from the daemon
+        if (!isPmPassError) {
+          SetLogging();
+          SetObfsproxy();
+        }
+      }
       break;
 
     case daemonResponses.ConfigParamsResp:
@@ -463,9 +498,15 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.ErrorResp:
-      console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-      console.log("!!!!!!!!!!!!!!!!!!!!!! ERROR RESP !!!!!!!!!!!!!!!!!!!!");
-      console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+      if (obj.ErrorMessage) console.log("ERROR response:", obj.ErrorMessage);
+
+      if (obj.ErrorType == ErrorRespTypes.ErrorParanoidModePasswordError) {
+        store.commit("uiState/isParanoidModePasswordView", true);
+      } else {
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!! ERROR RESP !!!!!!!!!!!!!!!!!!!!");
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+      }
       break;
 
     default:
@@ -543,6 +584,26 @@ function onDataReceived(received) {
 
 var _onDaemonExitingCallback = null;
 
+function makeHelloRequest() {
+  let appVersion = "";
+  try {
+    appVersion = `${require("electron").app.getVersion()}:Electron UI`;
+  } catch (e) {
+    console.error(e);
+  }
+  let helloReq = {
+    Command: daemonRequests.Hello,
+    Version: appVersion,
+    GetServersList: true,
+    GetStatus: true,
+    GetConfigParams: true,
+    KeepDaemonAlone: true,
+    GetSplitTunnelStatus: true,
+    GetWiFiCurrentState: true,
+  };
+  return helloReq;
+}
+
 async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
   _onDaemonExitingCallback = onDaemonExitingCallback;
 
@@ -589,24 +650,8 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
         // SEND HELLO
         // eslint-disable-next-line no-undef
         const secretBInt = BigInt(`0x${portInfo.secret}`);
-
-        let appVersion = "";
-        try {
-          appVersion = `${require("electron").app.getVersion()}:Electron UI`;
-        } catch (e) {
-          console.error(e);
-        }
-        const helloReq = {
-          Command: daemonRequests.Hello,
-          Version: appVersion,
-          Secret: secretBInt,
-          GetServersList: true,
-          GetStatus: true,
-          GetConfigParams: true,
-          KeepDaemonAlone: true,
-          GetSplitTunnelStatus: true,
-          GetWiFiCurrentState: true,
-        };
+        let helloReq = makeHelloRequest();
+        helloReq.Secret = secretBInt;
 
         try {
           const disconnectDaemonFunc = function (err) {
@@ -652,10 +697,6 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
 
           // Saving 'connected' state to a daemon
           setConnState(DaemonConnectionType.Connected);
-
-          // send logging + obfsproxy configuration
-          SetLogging();
-          SetObfsproxy();
 
           setTimeout(async () => {
             // Till this time we already must receive 'connected' info (if we are connected)
@@ -1162,7 +1203,7 @@ async function Connect(entryServer, exitServer) {
     return;
   }
 
-  send({
+  await sendRecv({
     Command: daemonRequests.Connect,
     VpnType: settings.vpnType,
     [vpnParamsPropName]: vpnParamsObj,
@@ -1284,19 +1325,15 @@ async function KillSwitchSetAllowApiServers(IsAllowApiServers) {
 }
 
 async function KillSwitchSetAllowLANMulticast(AllowLANMulticast) {
-  const Synchronously = true;
   await sendRecv({
     Command: daemonRequests.KillSwitchSetAllowLANMulticast,
     AllowLANMulticast,
-    Synchronously,
   });
 }
 async function KillSwitchSetAllowLAN(AllowLAN) {
-  const Synchronously = true;
   await sendRecv({
     Command: daemonRequests.KillSwitchSetAllowLAN,
     AllowLAN,
-    Synchronously,
   });
 }
 async function KillSwitchSetIsPersistent(IsPersistent) {
@@ -1597,7 +1634,7 @@ async function SetLogging() {
   const Key = "enable_logging";
   let Value = `${enable}`;
 
-  await send({
+  await sendRecv({
     Command: daemonRequests.SetPreference,
     Key,
     Value,
@@ -1609,7 +1646,7 @@ async function SetObfsproxy() {
   const Key = "enable_obfsproxy";
   let Value = `${enable}`;
 
-  await send({
+  await sendRecv({
     Command: daemonRequests.SetPreference,
     Key,
     Value,
@@ -1630,9 +1667,39 @@ async function WgSetKeysRotationInterval(intervalSec) {
 }
 
 async function GetWiFiAvailableNetworks() {
-  await send({
+  await sendRecv({
     Command: daemonRequests.WiFiAvailableNetworks,
   });
+}
+
+async function SetParanoidModePassword(newPassword, oldPassword) {
+  if (!newPassword && !oldPassword) {
+    // to disable PM the 'newPassword' must be empty. But we need 'oldPassword' instead
+    throw "Actual password not defined";
+  }
+
+  ParanoidModeSecret = oldPassword;
+  if (!ParanoidModeSecret) ParanoidModeSecret = newPassword;
+
+  await sendRecv({
+    Command: daemonRequests.ParanoidModeSetPasswordReq,
+    NewSecret: newPassword,
+    ProtocolSecret: oldPassword,
+  });
+
+  ParanoidModeSecret = newPassword;
+}
+
+async function SetLocalParanoidModePassword(password) {
+  if (!password) throw "Password is empty";
+
+  await sendRecv({
+    Command: daemonRequests.EmptyReq,
+    ProtocolSecret: password,
+  });
+
+  ParanoidModeSecret = password;
+  store.commit("uiState/isParanoidModePasswordView", false);
 }
 
 export default {
@@ -1678,4 +1745,7 @@ export default {
   WgSetKeysRotationInterval,
 
   GetWiFiAvailableNetworks,
+
+  SetParanoidModePassword,
+  SetLocalParanoidModePassword,
 };

@@ -35,6 +35,11 @@ import (
 )
 
 var (
+	// paranoidModeSecretFile path to a file which contains 'secret' (password) for 'Paranoid mode'
+	// If 'paranoid mode' enabled - this 'secret' must be used in each request to a daemon.
+	// This file should be accessible to read only for 'privilaged' user
+	paranoidModeSecretFile string
+
 	// The INITIAL value (AFTER APPLICATION UPGRADE) for AllowApiServers parameter is platform dependend
 	// Due to historical reasons it has value 'true' for Windows but 'false' for macOS and Linux
 	fwInitialValueAllowApiServers bool
@@ -94,6 +99,9 @@ func Init() (warnings []string, errors []error) {
 
 	// creating required folders
 	if err := makeDir("servicePortFile", filepath.Dir(servicePortFile)); err != nil {
+		errors = append(errors, err)
+	}
+	if err := makeDir("paranoidModeSecretFile", filepath.Dir(paranoidModeSecretFile)); err != nil {
 		errors = append(errors, err)
 	}
 	if err := makeDir("logFile", filepath.Dir(logFile)); err != nil {
@@ -250,6 +258,13 @@ func SettingsFile() string {
 // ServicePortFile path to service port file
 func ServicePortFile() string {
 	return servicePortFile
+}
+
+// ParanoidModeSecretFile path to a file which contains 'secret' (password) for 'Paranoid mode'
+// If 'paranoid mode' enabled - this 'secret' must be used in each request to a daemon.
+// This file should be accessible to read only for 'privilaged' user
+func ParanoidModeSecretFile() string {
+	return paranoidModeSecretFile
 }
 
 // ServersFile path to servers.json

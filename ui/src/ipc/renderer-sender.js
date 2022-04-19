@@ -322,6 +322,19 @@ export default {
     return invoke("renderer-request-showOpenDialog", options);
   },
 
+  showModalDialog: async (
+    dialogTypeName /*ModalDialogType*/,
+    ownerWnd /*OwnerWindowType*/,
+    windowConfig /*(nullable) BrowserWindow options*/
+  ) => {
+    return await invoke(
+      "renderer-request-showModalDialog",
+      dialogTypeName,
+      ownerWnd,
+      windowConfig
+    );
+  },
+
   // WINDOW
   closeCurrentWindow: () => {
     return invoke("renderer-request-close-current-window");
@@ -360,5 +373,20 @@ export default {
   // HELPERS
   getAppIcon: (binaryPath) => {
     return invoke("renderer-request-getAppIcon", binaryPath);
+  },
+
+  // PARANOID MODE
+  setParanoidModePassword: async (newPassword, oldPassword) => {
+    return await invoke(
+      "renderer-request-setParanoidModePassword",
+      newPassword,
+      oldPassword
+    );
+  },
+  setLocalParanoidModePassword: async (password) => {
+    return await invoke(
+      "renderer-request-setLocalParanoidModePassword",
+      password
+    );
   },
 };

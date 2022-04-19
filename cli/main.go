@@ -30,14 +30,18 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/ivpn/desktop-app/cli/cliplatform"
 	"github.com/ivpn/desktop-app/cli/commands"
 	"github.com/ivpn/desktop-app/cli/flags"
+	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/cli/protocol"
+	"github.com/ivpn/desktop-app/daemon/protocol/eap"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/version"
+	"golang.org/x/term"
 )
 
 // ICommand interface for command line command
@@ -108,6 +112,7 @@ func main() {
 	addCommand(&commands.CmdLogin{})
 	addCommand(&commands.CmdLogout{})
 	addCommand(&commands.CmdAccount{})
+	addCommand(&commands.CmdParanoidMode{})
 
 	if len(os.Args) >= 2 {
 		arg1 := strings.TrimLeft(strings.ToLower(os.Args[1]), "-")
@@ -146,6 +151,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	proto.SetParanoidModeSecretRequestFunc(RequestParanoidModePassword)
+
 	commands.Initialize(proto)
 
 	if len(os.Args) < 2 {
@@ -172,6 +179,35 @@ func main() {
 		printUsageAll(true)
 		os.Exit(1)
 	}
+}
+
+func RequestParanoidModePassword(c *protocol.Client) (string, error) {
+	// for privilaged users: try to read secret directly from file
+	if helpers.CheckIsAdmin() {
+		sFile := c.GetHelloResponse().ParanoidMode.FilePath
+		if len(sFile) > 0 {
+			eap := eap.Init(sFile)
+			secret, _ := eap.Secret()
+			if len(secret) > 0 {
+				return secret, nil
+			}
+		}
+	}
+
+	// request secret from user
+	fmt.Print("EAP is active. Enter shared secret: ")
+
+	data, err := term.ReadPassword(int(syscall.Stdin))
+	fmt.Println("")
+	if err != nil {
+		return "", fmt.Errorf("failed to read EAP shared secret: %s\n", err)
+	}
+	secret := strings.TrimSpace(string(data))
+	if len(secret) <= 0 {
+		return "", fmt.Errorf("EAP shared secret not defined")
+	}
+
+	return secret, nil
 }
 
 func runCommand(c ICommand, args []string) {

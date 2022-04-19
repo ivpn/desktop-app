@@ -335,6 +335,11 @@ ipcMain.on("renderer-request-properties-current-window", (event) => {
       maximizable: wnd.maximizable,
       minimizable: wnd.minimizable,
     };
+
+  // on Linux: 'minimizable' parameter always has value 'true' after window created (Electron bug?)
+  // Therefore, we are  using additional parameter (minimizableFix) to keep needed value
+  if (wnd.minimizableFix !== undefined) retVal.minimizable = wnd.minimizableFix;
+
   event.returnValue = retVal;
 });
 
@@ -383,3 +388,19 @@ ipcMain.on("renderer-request-app-getversion", (event) => {
 ipcMain.handle("renderer-request-getAppIcon", (event, binaryPath) => {
   return client.GetAppIcon(binaryPath);
 });
+
+// PARANOID MODE
+
+ipcMain.handle(
+  "renderer-request-setParanoidModePassword",
+  async (event, newPassword, oldPassword) => {
+    return await client.SetParanoidModePassword(newPassword, oldPassword);
+  }
+);
+
+ipcMain.handle(
+  "renderer-request-setLocalParanoidModePassword",
+  async (event, password) => {
+    return await client.SetLocalParanoidModePassword(password);
+  }
+);

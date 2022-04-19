@@ -97,6 +97,18 @@
               >
                 DNS
               </button>
+
+              <button
+                v-if="isLoggedIn"
+                class="noBordersBtn tabTitleBtn"
+                v-on:click="onView('advanced')"
+                v-bind:class="{
+                  activeBtn: view === 'advanced',
+                }"
+              >
+                Advanced
+              </button>
+
               <!--
           <button
             class="noBordersBtn tabTitleBtn"
@@ -160,6 +172,9 @@
             :registerBeforeCloseHandler="doRegisterBeforeViewCloseHandler"
           />
         </div>
+        <div class="flexColumn" v-else-if="view === 'advanced'">
+          <advancedView />
+        </div>
         <div class="flexColumn" v-else>
           <!-- no view defined -->
         </div>
@@ -179,6 +194,8 @@ import splittunnelView from "@/components/settings/settings-splittunnel.vue";
 import networksView from "@/components/settings/settings-networks.vue";
 import antitrackerView from "@/components/settings/settings-antitracker.vue";
 import dnsView from "@/components/settings/settings-dns.vue";
+import advancedView from "@/components/settings/settings-advanced.vue";
+
 import imgArrowLeft from "@/components/images/arrow-left.vue";
 
 export default {
@@ -191,6 +208,7 @@ export default {
     networksView,
     antitrackerView,
     dnsView,
+    advancedView,
     imgArrowLeft,
   },
   mounted() {

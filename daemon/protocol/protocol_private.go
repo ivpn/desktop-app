@@ -118,7 +118,7 @@ func (p *Protocol) sendError(conn net.Conn, errorText string, cmdIdx int) {
 	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: errorText}, cmdIdx)
 }
 
-func (p *Protocol) sendErrorResponse(conn net.Conn, request types.CommandBase, err error) {
+func (p *Protocol) sendErrorResponse(conn net.Conn, request types.RequestBase, err error) {
 	log.Error(fmt.Sprintf("%sError processing request '%s': %s", p.connLogID(conn), request.Command, err))
 	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: err.Error()}, request.Idx)
 }
@@ -134,7 +134,7 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd interface{}, idx int) (retErr
 
 	// Just for logging
 	if reqType := types.GetTypeName(cmd); len(reqType) > 0 {
-		log.Info(fmt.Sprintf("[-->] %s", p.connLogID(conn)), reqType)
+		log.Info(fmt.Sprintf("[-->] %s", p.connLogID(conn)), reqType, fmt.Sprintf(" [%d]", idx))
 	} else {
 		return fmt.Errorf("%sprotocol error: BAD DATA SENT", p.connLogID(conn))
 	}
@@ -194,8 +194,10 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 		dnsOverTls = false
 		log.Error(err)
 	}
+
 	// send back Hello message with account session info
 	helloResp := types.HelloResp{
+		ParanoidMode:        types.ParanoidModeStatus{IsEnabled: p._eap.IsEnabled()},
 		Version:             version.Version(),
 		Session:             types.CreateSessionResp(prefs.Session),
 		SettingsSessionUUID: prefs.SettingsSessionUUID,

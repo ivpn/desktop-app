@@ -35,6 +35,18 @@
     letter-spacing: -0.0850909px;
   }
 
+  .settingsDescription {
+    @extend .settingsGrayLongDescriptionFont;
+    margin-top: 8px;
+    max-width: 425px;
+  }
+
+  .settingsParamProps {
+    margin-top: 9px;
+    margin-bottom: 10px;
+    margin-left: 22px;
+  }
+
   .settingsBoldFont {
     font-weight: 500;
     font-size: 13px;

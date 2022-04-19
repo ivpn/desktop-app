@@ -36,10 +36,23 @@ func init() {
 	log = logger.NewLogger("prttyp")
 }
 
+type ErrorType int
+
+const (
+	ErrorUnknown                   ErrorType = iota
+	ErrorParanoidModePasswordError ErrorType = iota
+)
+
 // ErrorResp response of error
 type ErrorResp struct {
 	CommandBase
 	ErrorMessage string
+	ErrorTitle   string
+	ErrorType    ErrorType
+}
+
+func (e ErrorResp) Error() string {
+	return e.ErrorMessage
 }
 
 // EmptyResp empty response on request
@@ -67,6 +80,13 @@ type DnsAbilities struct {
 	CanUseDnsOverHttps bool
 }
 
+type ParanoidModeStatus struct {
+	// Path to a file with the secret for paranoid mode (if requested)
+	// This file must be able for reading ONLY for privilaged users
+	FilePath  string
+	IsEnabled bool
+}
+
 // HelloResp response on initial request
 type HelloResp struct {
 	CommandBase
@@ -78,6 +98,8 @@ type HelloResp struct {
 	// SettingsSessionUUID is unique for Preferences object
 	// It allow to detect situations when settings was erased (created new Preferences object)
 	SettingsSessionUUID string
+
+	ParanoidMode ParanoidModeStatus
 }
 
 // ConfigParamsResp return s configuration parameters

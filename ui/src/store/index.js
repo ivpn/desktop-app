@@ -71,6 +71,11 @@ export default new Vuex.Store({
       CanUseDnsOverHttps: false,
     },
 
+    paranoidModeStatus: {
+      FilePath: "",
+      IsEnabled: false,
+    },
+
     dnsPredefinedConfigurations: null, //[]  array elements: { DnsHost: "", Encryption: DnsEncryption.None, DohTemplate: "", }
 
     // true when we are requesting geo-lookup info on current moment
@@ -225,6 +230,11 @@ export default new Vuex.Store({
 
       state.dnsAbilities = dnsAbilities;
     },
+    paranoidModeStatus(state, paranoidModeStatus) {
+      if (!paranoidModeStatus) return;
+      state.paranoidModeStatus = paranoidModeStatus;
+    },
+
     dnsPredefinedConfigurations(state, dnsPredefinedConfigurations) {
       state.dnsPredefinedConfigurations = dnsPredefinedConfigurations;
     },

@@ -135,6 +135,9 @@ func (c *CmdFirewall) Run() error {
 	} else if c.off {
 
 		state, err := _proto.FirewallStatus()
+		if err != nil {
+			return err
+		}
 		if err == nil && state.IsPersistent {
 			PrintTips([]TipType{TipFirewallDisablePersistent})
 			return fmt.Errorf("Not possible to disable Firewall in 'Always-on' state")

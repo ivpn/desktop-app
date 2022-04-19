@@ -245,3 +245,17 @@ func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isFullPrint bool
 
 	return w
 }
+
+func printParamoidModeState(w *tabwriter.Writer, helloResp types.HelloResp) *tabwriter.Writer {
+	if w == nil {
+		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+	}
+
+	pModeStatusText := "Disabled"
+	if helloResp.ParanoidMode.IsEnabled {
+		pModeStatusText = "Enabled"
+	}
+	fmt.Fprintf(w, "EAP\t:\t%s\n", pModeStatusText)
+
+	return w
+}

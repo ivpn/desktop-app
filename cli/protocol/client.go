@@ -33,6 +33,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ivpn/desktop-app/cli/helpers"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -53,6 +54,9 @@ type Client struct {
 	_receiversLocker sync.Mutex
 
 	_helloResponse types.HelloResp
+
+	_paranoidModeSecret            string
+	_paranoidModeSecretRequestFunc func(*Client) (string, error)
 }
 
 // ResponseTimeout error
@@ -97,13 +101,38 @@ func (c *Client) Connect() (err error) {
 	return nil
 }
 
+func (c *Client) InitSetParanoidModeSecret(secret string) {
+	c._paranoidModeSecret = secret
+}
+
+func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) (string, error)) {
+	c._paranoidModeSecretRequestFunc = f
+}
+
 // SendHello - send initial message and get current status
 func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
+
+	doRequestPmFile := false
+	if helpers.CheckIsAdmin() {
+		// If we running in privilaged environment - request also info about EAP mode secret file
+		doRequestPmFile = true
+	}
+
+	return c.SendHelloEx(doRequestPmFile, false)
+}
+
+func (c *Client) SendHelloEx(doRequestPmFile bool, isSendResponseToAllClients bool) (helloResponse types.HelloResp, err error) {
 	if err := c.ensureConnected(); err != nil {
 		return helloResponse, err
 	}
 
-	helloReq := types.Hello{Secret: c._secret, KeepDaemonAlone: true, GetStatus: true, Version: "1.0"}
+	helloReq := types.Hello{
+		Secret:                   c._secret,
+		KeepDaemonAlone:          true,
+		GetStatus:                true,
+		Version:                  "1.0",
+		GetParanoidModeFilePath:  doRequestPmFile,
+		SendResponseToAllClients: isSendResponseToAllClients}
 
 	if err := c.sendRecvTimeOut(&helloReq, &c._helloResponse, time.Second*7); err != nil {
 		if _, ok := errors.Unwrap(err).(ResponseTimeout); ok {
@@ -251,7 +280,7 @@ func (c *Client) FirewallAllowLan(allow bool) error {
 	}
 
 	// changing killswitch configuration
-	req := types.KillSwitchSetAllowLAN{AllowLAN: allow, Synchronously: true}
+	req := types.KillSwitchSetAllowLAN{AllowLAN: allow}
 	var resp types.EmptyResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
@@ -299,7 +328,7 @@ func (c *Client) FirewallAllowLanMulticast(allow bool) error {
 	}
 
 	// changing killswitch configuration
-	req := types.KillSwitchSetAllowLANMulticast{AllowLANMulticast: allow, Synchronously: true}
+	req := types.KillSwitchSetAllowLANMulticast{AllowLANMulticast: allow}
 	var resp types.EmptyResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
@@ -605,5 +634,20 @@ func (c *Client) SetManualDNS(dnsCfg dns.DnsSettings) error {
 		}
 	}
 
+	return nil
+}
+
+// SetParanoidModePassword - set password for ParanoidMode (empty string -> disable ParanoidMode)
+func (c *Client) SetParanoidModePassword(secret string) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.ParanoidModeSetPasswordReq{NewSecret: secret}
+	var resp types.HelloResp
+	// Waiting for HelloResp (ignoring command index) or for ErrorResp (not ignoring command index)
+	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+		return err
+	}
 	return nil
 }

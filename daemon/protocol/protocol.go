@@ -38,6 +38,7 @@ import (
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
+	"github.com/ivpn/desktop-app/daemon/protocol/eap"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -131,7 +132,7 @@ type Service interface {
 
 // CreateProtocol - Create new protocol object
 func CreateProtocol() (*Protocol, error) {
-	return &Protocol{_connections: make(map[net.Conn]struct{})}, nil
+	return &Protocol{_connections: make(map[net.Conn]struct{}), _eap: eap.Init(platform.ParanoidModeSecretFile())}, nil
 }
 
 // Protocol - TCP interface to communicate with IVPN application
@@ -155,6 +156,8 @@ type Protocol struct {
 
 	// keep info about last VPN state
 	_lastVPNState vpn.StateInfo
+
+	_eap *eap.Eap
 }
 
 // Stop - stop communication
@@ -297,7 +300,7 @@ func (p *Protocol) processClient(conn net.Conn) {
 		if !isAuthenticated {
 			messageData := []byte(message)
 
-			cmd, err := types.GetCommandBase(messageData)
+			cmd, err := types.GetRequestBase(messageData)
 			if err != nil {
 				log.Error(fmt.Sprintf("%sFailed to parse initialization request:", p.connLogID(conn)), err)
 				return
@@ -353,13 +356,31 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	messageData := []byte(message)
 
-	reqCmd, err := types.GetCommandBase(messageData)
+	reqCmd, err := types.GetRequestBase(messageData)
 	if err != nil {
 		log.Error(fmt.Sprintf("%sFailed to parse request:", p.connLogID(conn)), err)
 		return
 	}
 
-	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command)
+	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command, fmt.Sprintf(" [%d]", reqCmd.Idx))
+
+	isDoSkipParanoidMode := func(commandName string) bool {
+
+		switch commandName {
+		case "Hello",
+			"GetVPNState",
+			"GetServers",
+			"PingServers",
+			"APIRequest",
+			"WiFiAvailableNetworks",
+			"KillSwitchGetStatus",
+			"SplitTunnelGetStatus",
+			"GetDnsPredefinedConfigs",
+			"AccountStatus":
+			return true
+		}
+		return false
+	}
 
 	sendState := func(reqIdx int, isOnlyIfConnected bool) {
 		vpnState := p._lastVPNState
@@ -374,7 +395,40 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 	}
 
+	if !isDoSkipParanoidMode(reqCmd.Command) {
+		isOK, err := p._eap.CheckSecret(reqCmd.ProtocolSecret)
+		if !isOK {
+			// ParanoidMode: wrong password
+			errorResp := types.ErrorResp{
+				ErrorType:    types.ErrorParanoidModePasswordError,
+				ErrorTitle:   "Enhanced App Protection",
+				ErrorMessage: "You have entered an invalid shared secret. Please try again."}
+
+			if err != nil && len(errorResp.Error()) > 0 {
+				errorResp.ErrorMessage = err.Error()
+			}
+
+			p.sendResponse(conn,
+				&errorResp,
+				reqCmd.Idx)
+
+			log.Info(fmt.Sprintf("      [%d] %sRequest error '%s': %s", reqCmd.Idx, p.connLogID(conn), reqCmd.Command, errorResp))
+
+			// send current connection state
+			if reqCmd.Command == "Connect" || reqCmd.Command == "Disconnect" {
+				sendState(reqCmd.Idx, false)
+			}
+
+			return
+		}
+
+	}
+
 	switch reqCmd.Command {
+	case "EmptyReq":
+		// test request (e.g. checking PM password)
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+
 	case "Hello":
 		var req types.Hello
 
@@ -385,7 +439,14 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		log.Info(fmt.Sprintf("%sConnected client version: '%s' [set KeepDaemonAlone = %t]", p.connLogID(conn), req.Version, req.KeepDaemonAlone))
 
 		// send back Hello message with account session info
-		p.sendResponse(conn, p.createHelloResponse(), req.Idx)
+		helloResponse := p.createHelloResponse()
+		if req.GetParanoidModeFilePath && p._eap.IsEnabled() {
+			helloResponse.ParanoidMode.FilePath = platform.ParanoidModeSecretFile()
+		}
+		p.sendResponse(conn, helloResponse, req.Idx)
+		if req.SendResponseToAllClients {
+			p.notifyClients(helloResponse)
+		}
 
 		if req.GetServersList {
 			serv, _ := p._service.ServersList()
@@ -425,6 +486,21 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if req.GetWiFiCurrentState {
 			// sending WIFI info
 			p.OnWiFiChanged(p._service.GetWiFiCurrentState())
+		}
+
+	case "ParanoidModeSetPasswordReq":
+		var req types.ParanoidModeSetPasswordReq
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+
+		if err := p._eap.SetSecret(req.ProtocolSecret, req.NewSecret); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+		} else {
+			// send 'success' response to the requestor
+			p.notifyClients(p.createHelloResponse())
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 
 	case "GetVPNState":
@@ -484,8 +560,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			nets = append(nets, types.WiFiNetworkInfo{SSID: ssid})
 		}
 
-		p.notifyClients(&types.WiFiAvailableNetworksResp{
-			Networks: nets})
+		p.notifyClients(&types.WiFiAvailableNetworksResp{Networks: nets})
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	case "KillSwitchGetStatus":
 		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err != nil {
@@ -525,9 +601,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p._service.SetKillSwitchAllowLANMulticast(req.AllowLANMulticast)
-		if req.Synchronously {
-			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-		}
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 
 	case "KillSwitchSetAllowLAN":
@@ -538,9 +612,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p._service.SetKillSwitchAllowLAN(req.AllowLAN)
-		if req.Synchronously {
-			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-		}
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 
 	case "KillSwitchSetUserExceptions":
@@ -589,11 +661,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 
-	// TODO: can be fully replaced by 'KillSwitchGetStatus'
-	case "KillSwitchGetIsPestistent":
-		isPersistant := p._service.Preferences().IsFwPersistant
-		p.sendResponse(conn, &types.KillSwitchGetIsPestistentResp{IsPersistent: isPersistant}, reqCmd.Idx)
-
 	// TODO: must return response
 	// TODO: avoid using raw key as a string
 	case "SetPreference":
@@ -605,6 +672,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if err := p._service.SetPreference(req.Key, req.Value); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
+		} else {
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 
 	case "SplitTunnelGetStatus":
@@ -826,6 +895,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		if req.NeedToResetSettings {
+			// disable paranoid mode
+			p._eap.ForceDisable()
+
 			oldPrefs := p._service.Preferences()
 
 			// Reset settings only after SessionDelete() to correctly logout on the backed
@@ -1039,6 +1111,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			}
 		}()
 
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 		// SYNCHRONOUSLY start VPN connection process (wait until it finished)
 		if connectionError = p.processConnectRequest(messageData, stateChan); connectionError != nil {
 			log.ErrorTrace(connectionError)

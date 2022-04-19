@@ -60,6 +60,12 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
          --flag-border-color-rgb: 41,41,41; //#292929;
     }
 }
+.defaultMainDiv{
+    font-size: 13px;
+    line-height: 16px;
+    letter-spacing: -0.58px;
+    margin: 14px;
+}
 
 .left_panel_element {
     margin-left: 20px;

@@ -48,6 +48,7 @@ import "./ipc/main-listener";
 import store from "@/store";
 import { AutoLaunchSet } from "@/auto-launch";
 import { DaemonConnectionType, ColorTheme } from "@/store/types";
+import { IpcModalDialogType, IpcOwnerWindowType } from "@/ipc/types.js";
 import daemonClient from "./daemon-client";
 import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
@@ -113,6 +114,16 @@ ipcMain.handle("renderer-request-update-wnd-close", async () => {
   if (!updateWindow) return;
   updateWindow.destroy();
 });
+ipcMain.handle(
+  "renderer-request-showModalDialog",
+  async (event, dialogTypeName, ownerWnd, windowCfgExtra) => {
+    return await showModalDialog(
+      dialogTypeName /*ModalDialogType*/,
+      ownerWnd /*OwnerWindowType*/,
+      windowCfgExtra /*(nullable) BrowserWindow options*/
+    );
+  }
+);
 
 ipcMain.handle(
   "renderer-request-update-wnd-resize",
@@ -756,6 +767,79 @@ function createUpdateWindow() {
 function closeUpdateWindow() {
   if (updateWindow == null) return;
   updateWindow.destroy(); // close();
+}
+
+// Modal Dialogs
+async function showModalDialog(
+  dialogTypeName /*ModalDialogType*/,
+  ownerWnd /*OwnerWindowType*/,
+  windowCfgExtra /*(nullable) BrowserWindow options*/
+) {
+  let windowTitle = "";
+  switch (dialogTypeName) {
+    case IpcModalDialogType.EnableEAP:
+      windowTitle = "Enhanced App Protection";
+      break;
+    case IpcModalDialogType.DisableEAP:
+      windowTitle = "Enhanced App Protection";
+      break;
+    default:
+      throw "Internal error: unsupported dialog name: '" + dialogTypeName + "'";
+  }
+
+  let ownerWndObj = win;
+  if (ownerWnd == IpcOwnerWindowType.SettingsWindow) {
+    if (settingsWindow) ownerWndObj = settingsWindow;
+  }
+
+  if (!ownerWndObj) throw "Unable to show modal dialog: No parent window found";
+
+  // lastModalDialog
+  let windowConfig = {
+    backgroundColor: getBackgroundColor(),
+    show: false,
+
+    resizable: false,
+    fullscreenable: false,
+    maximizable: false,
+    minimizable: false, // on Linux: this parameter still have value 'true' after window created (Electron bug?)
+
+    parent: ownerWndObj,
+
+    center: true,
+    title: windowTitle,
+
+    modal: true,
+
+    frame: IsWindowHasFrame(),
+  };
+
+  if (windowCfgExtra) {
+    windowConfig = Object.assign(windowConfig, windowCfgExtra);
+  }
+
+  let modalDialog = createBrowserWindow(windowConfig);
+  // on Linux: 'minimizable' parameter still has value 'true' after window created (Electron bug?)
+  // Therefore, we are  using additional parameter (minimizableFix) to keep needed value
+  modalDialog.minimizableFix = false;
+
+  if (process.env.WEBPACK_DEV_SERVER_URL) {
+    modalDialog.loadURL(
+      process.env.WEBPACK_DEV_SERVER_URL + `/#/${dialogTypeName}`
+    );
+  } else {
+    createProtocol("app");
+    modalDialog.loadURL("app://./index.html" + `/#/${dialogTypeName}`);
+  }
+
+  modalDialog.once("ready-to-show", () => {
+    modalDialog.show();
+  });
+  modalDialog.on("closed", () => {
+    modalDialog = null;
+  });
+
+  return true;
 }
 
 // INITIALIZE CONNECTION TO A DAEMON

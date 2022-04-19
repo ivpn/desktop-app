@@ -29,7 +29,7 @@ import (
 
 // GetInstalledApps (request) requests information about installed applications on the system
 type GetInstalledApps struct {
-	CommandBase
+	RequestBase
 	// (optional) Platform-depended: extra parameters (in JSON)
 	// For Windows:
 	//			WindowsEnvAppdata 	string
@@ -52,7 +52,7 @@ type InstalledAppsResp struct {
 // GetAppIcon (request) requests shell icon for binary file (application)
 // Note: ensure if SplitTunnelStatus.IsCanGetAppIconForBinary is active
 type GetAppIcon struct {
-	CommandBase
+	RequestBase
 	AppBinaryPath string
 }
 
@@ -65,14 +65,14 @@ type AppIconResp struct {
 
 // SplitTunnelSet (request) sets the split-tunnelling configuration
 type SplitTunnelSetConfig struct {
-	CommandBase
+	RequestBase
 	IsEnabled bool // is ST enabled
 	Reset     bool // disable ST and erase all ST config
 }
 
 // GetSplitTunnelStatus (request) requests the Split-Tunnelling configuration
 type SplitTunnelGetStatus struct {
-	CommandBase
+	RequestBase
 }
 
 // SplitTunnelStatus (response) returns the split-tunnelling configuration
@@ -107,7 +107,7 @@ type SplitTunnelStatus struct {
 //  SplitTunnelAddedPidInfo	->
 // 							<-	types.EmptyResp (success)
 type SplitTunnelAddApp struct {
-	CommandBase
+	RequestBase
 	// Windows: full path to the app binary
 	// Linux: command to be executed in ST environment (e.g. binary + arguments)
 	Exec string
@@ -130,7 +130,7 @@ type SplitTunnelAddAppCmdResp struct {
 // SplitTunnelAddedPidInfo (request) informs the daemon about started process in ST environment
 // (not in use for Windows platform)
 type SplitTunnelAddedPidInfo struct {
-	CommandBase
+	RequestBase
 	Pid int
 	// Command will be executed in ST environment (e.g. binary + arguments)
 	// (identical to SplitTunnelAddApp.Exec and SplitTunnelAddAppCmdResp.Exec)
@@ -140,7 +140,7 @@ type SplitTunnelAddedPidInfo struct {
 }
 
 type SplitTunnelRemoveApp struct {
-	CommandBase
+	RequestBase
 	// (applicable for Linux) PID of the running process in ST environment
 	Pid int
 	// (applicable for Windows) full path to the app binary to be excluded from ST
