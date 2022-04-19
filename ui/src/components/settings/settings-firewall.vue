@@ -134,12 +134,12 @@
             class="settingsTextInput"
             style="width: calc(100% - 5px)"
             v-bind:class="{ badData: isExceptionsStringError === true }"
-            placeholder="1.2.3.0/24, 8.8.8.8"
+            placeholder="1.2.3.0/24, 11.22.33.44"
             v-model="firewallExceptions"
           />
           <div class="fwDescription" style="margin-left: 0px; margin-top: 4px">
-            Comma-separated list of IP masks to allow traffic when IVPN Firewall
-            is enabled
+            Enter a comma-separated list of IP addresses or subnets (using CIDR
+            notation) that will be allowed through the firewall when enabled.
           </div>
         </div>
       </div>

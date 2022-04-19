@@ -57,8 +57,7 @@ func (c *CmdFirewall) Init() {
 	c.BoolVar(&c.ivpnSvrAccessBlock, "ivpn_access_block", false, "Block access to IVPN servers when Firewall is enabled")
 	c.BoolVar(&c.persistentOff, "persistent_off", false, "Persistent firewall (Always-on firewall): disable")
 	c.BoolVar(&c.persistentOn, "persistent_on", false, "Persistent firewall (Always-on firewall): enable. When the option is enabled the IVPN Firewall is started during system boot")
-	c.StringVar(&c.exceptions, "exceptions", StringValueNoData, "EXCEPTIONS", "Set configuration: comma-separated list of IP masks to allow traffic when IVPN Firewall is enabled\nExamples:\n\tivpn firewall -exceptions '1.2.3.0/24, 8.8.8.8'\n\tivpn firewall -exceptions ''")
-
+	c.StringVar(&c.exceptions, "exceptions", StringValueNoData, "EXCEPTIONS", "Set configuration: comma-separated list of IP addresses or subnets (using CIDR notation)\nthat will be allowed through the firewall when enabled\nExamples:\n\tivpn firewall -exceptions '1.2.3.0/24, 11.22.33.44'\n\tivpn firewall -exceptions ''")
 	//c.BoolVar(&c.allowLanMulticast, "lan_multicast_allow", false, "Same as 'lan_allow' + allow multicast communication ")
 	//c.BoolVar(&c.blockLanMulticast, "lan_multicast_block", false, "Same as 'lan_block' + block multicast communication")
 }
