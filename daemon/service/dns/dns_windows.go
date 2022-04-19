@@ -72,6 +72,10 @@ func implInitialize() error {
 
 func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dnsCfg DnsSettings, ipv6 bool, op Operation) error {
 
+	if interfaceLocalAddr.Equal(net.ParseIP(dnsCfg.DnsHost)) {
+		return nil // skip setting DNS ip to the interface with exact IP (otherwise, '_fSetDNSByLocalIP()' will crash)
+	}
+
 	isDoH := uint32(0)
 	switch dnsCfg.Encryption {
 	case EncryptionDnsOverTls:
@@ -199,12 +203,8 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	}
 	isIpv6, _ := dnsCfg.IsIPv6()
 
-	// non-VPN interfaces to update (if DNS located in local network)
-	notVpnInterfacesToUpdate, err := getInterfacesIPsWhichContainsIP(dnsCfg.Ip(), localInterfaceIP)
-
-	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
-		return nil
-	}
+	var notVpnInterfacesToUpdate []net.IPNet
+	var err error
 
 	// start encrypted DNS configuration (if required)
 	if dnsCfg.Encryption != EncryptionNone && !fIsCanUseNativeDnsOverHttps() {
@@ -213,6 +213,13 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 		}
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
 		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
+	} else {
+		// non-VPN interfaces to update (if DNS located in local network)
+		notVpnInterfacesToUpdate, _ = getInterfacesIPsWhichContainsIP(dnsCfg.Ip(), localInterfaceIP)
+	}
+
+	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
+		return nil
 	}
 
 	start := time.Now()
@@ -327,6 +334,7 @@ func getInterfacesIPsWhichContainsIP(addr net.IP, localAddrToSkip net.IP) (ret [
 	}
 
 	// get interfaces which must be modified by new DNS value
+	// TODO: get IPv6 interfaces too
 	networks, err := netinfo.GetAllLocalV4Addresses()
 	if err != nil {
 		return nil, fmt.Errorf("error receiving local V4 addresses : %w", err)
