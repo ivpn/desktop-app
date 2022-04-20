@@ -1097,7 +1097,13 @@ async function Connect(entryServer, exitServer) {
         EntryVpnServer: {
           Hosts: settings.serverEntry.hosts,
         },
-        MultihopExitSrvID: multihopExitSrvID,
+
+        MultihopExitServer: settings.isMultiHop
+          ? {
+              ExitSrvID: multihopExitSrvID,
+              Hosts: settings.serverExit.hosts,
+            }
+          : null,
 
         Port: {
           Port: port.port,

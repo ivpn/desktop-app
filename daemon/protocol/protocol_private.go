@@ -270,29 +270,58 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 			}
 		}
 
-		// only one-line parameter is allowed
-		multihopExitSrvID := strings.Split(r.OpenVpnParameters.MultihopExitSrvID, "\n")[0]
 		// nothing from supported proxy types should be in this parameter
 		proxyType := r.OpenVpnParameters.ProxyType
 		if len(proxyType) > 0 && proxyType != "http" && proxyType != "socks" {
 			proxyType = ""
 		}
+
+		// Multi-Hop
+		// only one-line parameter is allowed
+		multihopExitSrvID := strings.Split(r.OpenVpnParameters.MultihopExitServer.ExitSrvID, "\n")[0]
+		var exitHostValue *apitypes.OpenVPNServerHostInfo
+		multihopExitHosts := r.OpenVpnParameters.MultihopExitServer.Hosts
+		if len(multihopExitHosts) > 0 {
+			exitHostValue = &multihopExitHosts[0]
+			if len(multihopExitHosts) > 1 {
+				if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(multihopExitHosts)))); err == nil {
+					exitHostValue = &multihopExitHosts[rnd.Int64()]
+				}
+			}
+		}
+
 		// only one-line parameter is allowed
 		proxyUsername := strings.Split(r.OpenVpnParameters.ProxyUsername, "\n")[0]
 		proxyPassword := strings.Split(r.OpenVpnParameters.ProxyPassword, "\n")[0]
 
 		// CONNECTION
 		// OpenVPN connection parameters
-		connectionParams := openvpn.CreateConnectionParams(
-			multihopExitSrvID,
-			r.OpenVpnParameters.Port.Protocol > 0, // is TCP
-			r.OpenVpnParameters.Port.Port,
-			host,
-			proxyType,
-			net.ParseIP(r.OpenVpnParameters.ProxyAddress),
-			r.OpenVpnParameters.ProxyPort,
-			proxyUsername,
-			proxyPassword)
+		var connectionParams openvpn.ConnectionParams
+		if exitHostValue != nil && len(multihopExitSrvID) > 0 {
+			// Multi-Hop
+			connectionParams = openvpn.CreateConnectionParams(
+				multihopExitSrvID,
+				r.OpenVpnParameters.Port.Protocol > 0, // is TCP
+				exitHostValue.MultihopPort,
+				host,
+				proxyType,
+				net.ParseIP(r.OpenVpnParameters.ProxyAddress),
+				r.OpenVpnParameters.ProxyPort,
+				proxyUsername,
+				proxyPassword)
+		} else {
+			// Single-Hop
+			connectionParams = openvpn.CreateConnectionParams(
+				"",
+				r.OpenVpnParameters.Port.Protocol > 0, // is TCP
+				r.OpenVpnParameters.Port.Port,
+				host,
+				proxyType,
+				net.ParseIP(r.OpenVpnParameters.ProxyAddress),
+				r.OpenVpnParameters.ProxyPort,
+				proxyUsername,
+				proxyPassword)
+		}
 
 		return p._service.ConnectOpenVPN(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
 

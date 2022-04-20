@@ -55,12 +55,6 @@ type ConnectionParams struct {
 func (c *ConnectionParams) SetCredentials(username, password string) {
 	c.password = password
 	c.username = username
-
-	// MultiHop configuration is based just by adding "@exit_server_id" to the end of username
-	// And forwarding this info on server
-	if len(c.multihopExitSrvID) > 0 {
-		c.username = fmt.Sprintf("%s@%s", username, c.multihopExitSrvID)
-	}
 }
 
 // CreateConnectionParams creates OpenVPN connection parameters object

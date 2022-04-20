@@ -367,7 +367,17 @@ export default {
     isMultiHop(context, val) {
       if (context.rootGetters["account/isMultihopAllowed"] === false)
         context.commit("isMultiHop", false);
-      else context.commit("isMultiHop", val);
+      else {
+        const oldVal = this.state.settings.isMultiHop;
+        context.commit("isMultiHop", val);
+
+        if (val === true && oldVal !== val) {
+          // do not change port if MH value was not changed (otherwise, new connection request will be sent)
+          if (this.state.settings.vpnType == VpnTypeEnum.WireGuard)
+            context.commit("setPort", Ports.WireGuardMultiHop[0]);
+          else context.commit("setPort", Ports.OpenVPNMultiHop[0]);
+        }
+      }
     },
     serverEntry(context, srv) {
       context.commit("serverEntry", srv);

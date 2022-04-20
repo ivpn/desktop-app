@@ -66,7 +66,7 @@
           <option
             v-for="item in prefferedPorts"
             :value="item.port"
-            :key="item.text"
+            :key="item.key"
           >
             {{ item.text }}
           </option>
@@ -203,13 +203,16 @@
     <div v-if="!isOpenVPN">
       <div class="settingsBoldFont">Wireguard configuration:</div>
 
-      <div class="flexRow paramBlock">
+      <div
+        v-bind:class="{ disabled: prefferedPorts.length <= 1 }"
+        class="flexRow paramBlock"
+      >
         <div class="defColor paramName">Preferred port:</div>
         <select v-model="port" style="background: var(--background-color)">
           <option
             v-for="item in prefferedPorts"
             :value="item.port"
-            :key="item.text"
+            :key="item.key"
           >
             {{ item.text }}
           </option>
@@ -503,11 +506,21 @@ export default {
       return ret;
     },
     prefferedPorts: function () {
-      let data = this.isOpenVPN ? Ports.OpenVPN : Ports.WireGuard;
       let ret = [];
+      let data = this.isOpenVPN ? Ports.OpenVPN : Ports.WireGuard;
+
+      const isMH = this.$store.state.settings.isMultiHop;
+      if (isMH === true) {
+        data = this.isOpenVPN ? Ports.OpenVPNMultiHop : Ports.WireGuardMultiHop;
+      }
+
       data.forEach((p) =>
         ret.push({
-          text: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
+          text:
+            isMH === true
+              ? `${enumValueName(PortTypeEnum, p.type)}`
+              : `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
+          key: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
           port: p,
         })
       );

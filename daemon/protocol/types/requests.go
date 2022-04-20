@@ -147,6 +147,7 @@ type Connect struct {
 	FirewallOnDuringConnection bool
 
 	WireGuardParameters struct {
+		// Port in use only for Single-Hop connections
 		Port struct {
 			Port int
 		}
@@ -169,17 +170,24 @@ type Connect struct {
 			Hosts []types.OpenVPNServerHostInfo
 		}
 
-		// MultihopExitSrvID example: "gateway":"zz.wg.ivpn.net" => "zz"
-		MultihopExitSrvID string
-		ProxyType         string
-		ProxyAddress      string
-		ProxyPort         int
-		ProxyUsername     string
-		ProxyPassword     string
+		//MultihopExitSrvID string
+		MultihopExitServer struct {
+			// ExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
+			// Example: "gateway":"zz.wg.ivpn.net" => "zz"
+			ExitSrvID string
+			Hosts     []types.OpenVPNServerHostInfo
+		}
+
+		ProxyType     string
+		ProxyAddress  string
+		ProxyPort     int
+		ProxyUsername string
+		ProxyPassword string
 
 		Port struct {
-			Port     int
 			Protocol int
+			// Port number in use only for Single-Hop connections
+			Port int
 		}
 	}
 }
