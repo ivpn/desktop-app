@@ -30,7 +30,7 @@ import (
 
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/cli/helpers"
-	"github.com/ivpn/desktop-app/daemon/protocol/eap"
+	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
 	"golang.org/x/term"
 )
 
@@ -42,10 +42,10 @@ type CmdParanoidMode struct {
 }
 
 func (c *CmdParanoidMode) Init() {
-	c.Initialize("eap", "Enhanced App Protection\nEAP implements an additional authentication factor between the IVPN app (UI)\nand the daemon that manages the VPN tunnel. This prevents a malicious app\nfrom being able to manipulate the VPN tunnel without the users permission.\nWhen EAP is active the shared secret will be required to execute a command.")
-	c.BoolVar(&c.status, "status", false, "(default) Show current EAP status")
-	c.BoolVar(&c.disable, "off", false, "Disable EAP")
-	c.BoolVar(&c.enable, "on", false, "Enable EAP and configure shared secret")
+	c.Initialize("eaa", "Enhanced App Authentication\nEAA implements an additional authentication factor between the IVPN app (UI)\nand the daemon that manages the VPN tunnel. This prevents a malicious app\nfrom being able to manipulate the VPN tunnel without the users permission.\nWhen EAA is active the EAA password will be required to execute a command.")
+	c.BoolVar(&c.status, "status", false, "(default) Show current EAA status")
+	c.BoolVar(&c.disable, "off", false, "Disable EAA")
+	c.BoolVar(&c.enable, "on", false, "Enable EAA and configure password")
 }
 
 func (c *CmdParanoidMode) Run() error {
@@ -55,7 +55,7 @@ func (c *CmdParanoidMode) Run() error {
 
 	if c.disable {
 		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
-			fmt.Println("Disabling Enhanced App Protection")
+			fmt.Println("Disabling Enhanced App Authentication")
 
 			if helpers.CheckIsAdmin() {
 				// We are running in privilaged environment
@@ -65,17 +65,17 @@ func (c *CmdParanoidMode) Run() error {
 				// 1 - get path of PM file
 				fpath := _proto.GetHelloResponse().ParanoidMode.FilePath
 				if len(fpath) <= 0 {
-					return fmt.Errorf("failed to disable Enhanced App Protection in privilaged user environment (file path not defined)")
+					return fmt.Errorf("failed to disable Enhanced App Authentication in privilaged user environment (file path not defined)")
 				}
 
 				// 2 - remove file
-				eap := eap.Init(fpath)
-				if err := eap.ForceDisable(); err != nil {
+				eaa := eaa.Init(fpath)
+				if err := eaa.ForceDisable(); err != nil {
 					return err
 				}
 
 				// 3 - request new PM state (to print actual state for user)
-				// and notify all connected clients about EAP change
+				// and notify all connected clients about EAA change
 				doRequestPmFile := true
 				isSendResponseToAllClients := true
 				if _, err := _proto.SendHelloEx(doRequestPmFile, isSendResponseToAllClients); err != nil {
@@ -83,10 +83,10 @@ func (c *CmdParanoidMode) Run() error {
 				}
 			} else {
 
-				fmt.Print("\tEnter current shared secret: ")
+				fmt.Print("\tEnter current EAA password: ")
 				data, err := term.ReadPassword(int(syscall.Stdin))
 				if err != nil {
-					return fmt.Errorf("failed to read shared secret: %w", err)
+					return fmt.Errorf("failed to read password: %w", err)
 				}
 				oldSecret := strings.TrimSpace(string(data))
 				_proto.InitSetParanoidModeSecret(oldSecret)
@@ -100,7 +100,7 @@ func (c *CmdParanoidMode) Run() error {
 	}
 
 	if c.enable {
-		fmt.Println("Enabling Enhanced App Protection")
+		fmt.Println("Enabling Enhanced App Authentication")
 
 		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
 			oldSecret := ""
@@ -114,16 +114,16 @@ func (c *CmdParanoidMode) Run() error {
 				fpath := _proto.GetHelloResponse().ParanoidMode.FilePath
 				if len(fpath) > 0 {
 					// read secret
-					eap := eap.Init(fpath)
-					oldSecret, _ = eap.Secret()
+					eaa := eaa.Init(fpath)
+					oldSecret, _ = eaa.Secret()
 				}
 			}
 
 			if len(oldSecret) <= 0 {
-				fmt.Print("\tEnter current shared secret: ")
+				fmt.Print("\tEnter current password: ")
 				data, err := term.ReadPassword(int(syscall.Stdin))
 				if err != nil {
-					return fmt.Errorf("failed to read shared secret: %w", err)
+					return fmt.Errorf("failed to read password: %w", err)
 				}
 
 				oldSecret = strings.TrimSpace(string(data))
@@ -132,24 +132,28 @@ func (c *CmdParanoidMode) Run() error {
 			}
 		}
 
-		fmt.Print("\tEnter new shared secret: ")
+		fmt.Print("\tEnter new password: ")
 		data, err := term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
-			return fmt.Errorf("failed to read shared secret: %w", err)
+			return fmt.Errorf("failed to read password: %w", err)
 		}
 		newSecret1 := strings.TrimSpace(string(data))
 		fmt.Println("")
 
-		fmt.Print("\tPlease re-enter new shared secret: ")
+		fmt.Print("\tConfirm password: ")
 		data, err = term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
-			return fmt.Errorf("failed to read shared secret: %w", err)
+			return fmt.Errorf("failed to read password: %w", err)
 		}
 		newSecret2 := strings.TrimSpace(string(data))
 		fmt.Println("")
 
 		if newSecret1 != newSecret2 {
-			return fmt.Errorf("secrets do not match")
+			return fmt.Errorf("password do not match")
+		}
+
+		if len(newSecret1) == 0 {
+			return fmt.Errorf("password not defined")
 		}
 
 		if err := _proto.SetParanoidModePassword(newSecret1); err != nil {

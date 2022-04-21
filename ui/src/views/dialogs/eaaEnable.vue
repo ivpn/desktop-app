@@ -1,10 +1,10 @@
 <template>
   <div class="defaultMainDiv">
     <div class="settingsBoldFont" style="margin-top: 0px; margin-bottom: 12px">
-      Please define shared secret to enable EAP
+      Please enter a password to enable EAA:
     </div>
     <div class="flexRow">
-      <div class="settingsDefaultTextColor paramName">Secret:</div>
+      <div class="settingsDefaultTextColor paramName">Password:</div>
       <input
         ref="passwordField"
         type="password"
@@ -16,7 +16,7 @@
       />
     </div>
     <div class="flexRow">
-      <div class="settingsDefaultTextColor paramName">Re-enter secret:</div>
+      <div class="settingsDefaultTextColor paramName">Confirm password:</div>
       <input
         type="password"
         style="flex-grow: 1"
@@ -85,8 +85,8 @@ export default {
         await sender.showMessageBoxSync({
           type: "warning",
           buttons: ["OK"],
-          message: "Password not defined",
-          detail: `Please, define password`,
+          message: "Enhanced App Authentication",
+          detail: `Please, entered password`,
         });
         return;
       }
@@ -94,8 +94,8 @@ export default {
         await sender.showMessageBoxSync({
           type: "warning",
           buttons: ["OK"],
-          message: "Passwords does not match",
-          detail: `Please, define password`,
+          message: "",
+          detail: `The passwords entered do not match. Please try again.`,
         });
         return;
       }
@@ -104,8 +104,8 @@ export default {
         await sender.showMessageBoxSync({
           type: "warning",
           buttons: ["OK"],
-          message: "Bad password",
-          detail: `Please, avoid using space symbols`,
+          message: "Enhanced App Authentication",
+          detail: `Bad password. Please, avoid using space symbols`,
         });
         return;
       }
@@ -118,7 +118,7 @@ export default {
         sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
-          message: `Failed to enable Paranoid Mode`,
+          message: `Failed to enable EAA`,
           detail: e,
         });
       }
@@ -131,7 +131,7 @@ export default {
 @import "@/components/scss/constants";
 
 div.paramName {
-  min-width: 100px;
-  max-width: 100px;
+  min-width: 120px;
+  max-width: 120px;
 }
 </style>

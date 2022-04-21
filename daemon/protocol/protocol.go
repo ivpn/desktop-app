@@ -38,7 +38,7 @@ import (
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
-	"github.com/ivpn/desktop-app/daemon/protocol/eap"
+	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -132,7 +132,7 @@ type Service interface {
 
 // CreateProtocol - Create new protocol object
 func CreateProtocol() (*Protocol, error) {
-	return &Protocol{_connections: make(map[net.Conn]struct{}), _eap: eap.Init(platform.ParanoidModeSecretFile())}, nil
+	return &Protocol{_connections: make(map[net.Conn]struct{}), _eaa: eaa.Init(platform.ParanoidModeSecretFile())}, nil
 }
 
 // Protocol - TCP interface to communicate with IVPN application
@@ -157,7 +157,7 @@ type Protocol struct {
 	// keep info about last VPN state
 	_lastVPNState vpn.StateInfo
 
-	_eap *eap.Eap
+	_eaa *eaa.Eaa
 }
 
 // Stop - stop communication
@@ -396,13 +396,13 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	}
 
 	if !isDoSkipParanoidMode(reqCmd.Command) {
-		isOK, err := p._eap.CheckSecret(reqCmd.ProtocolSecret)
+		isOK, err := p._eaa.CheckSecret(reqCmd.ProtocolSecret)
 		if !isOK {
 			// ParanoidMode: wrong password
 			errorResp := types.ErrorResp{
 				ErrorType:    types.ErrorParanoidModePasswordError,
-				ErrorTitle:   "Enhanced App Protection",
-				ErrorMessage: "You have entered an invalid shared secret. Please try again."}
+				ErrorTitle:   "Enhanced App Authentication",
+				ErrorMessage: "The password is incorrect. Please try again."}
 
 			if err != nil && len(errorResp.Error()) > 0 {
 				errorResp.ErrorMessage = err.Error()
@@ -440,7 +440,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// send back Hello message with account session info
 		helloResponse := p.createHelloResponse()
-		if req.GetParanoidModeFilePath && p._eap.IsEnabled() {
+		if req.GetParanoidModeFilePath && p._eaa.IsEnabled() {
 			helloResponse.ParanoidMode.FilePath = platform.ParanoidModeSecretFile()
 		}
 		p.sendResponse(conn, helloResponse, req.Idx)
@@ -495,7 +495,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		if err := p._eap.SetSecret(req.ProtocolSecret, req.NewSecret); err != nil {
+		if err := p._eaa.SetSecret(req.ProtocolSecret, req.NewSecret); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
 			// send 'success' response to the requestor
@@ -896,7 +896,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if req.NeedToResetSettings {
 			// disable paranoid mode
-			p._eap.ForceDisable()
+			p._eaa.ForceDisable()
 
 			oldPrefs := p._service.Preferences()
 

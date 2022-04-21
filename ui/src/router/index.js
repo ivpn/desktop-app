@@ -27,8 +27,8 @@ import AccountLimit from "../views/AccountLimit.vue";
 import Settings from "../views/Settings.vue";
 import Update from "../views/dialogs/Update.vue";
 
-import DlgEapEnable from "../views/dialogs/eapEnable.vue";
-import DlgEapDisable from "../views/dialogs/eapDisable.vue";
+import DlgEaaEnable from "../views/dialogs/eaaEnable.vue";
+import DlgEaaDisable from "../views/dialogs/eaaDisable.vue";
 
 import { IpcModalDialogType } from "@/ipc/types.js";
 
@@ -67,12 +67,12 @@ const forbiddenToChangeRouteFrom = [
     component: Update,
   },
   {
-    path: `/${IpcModalDialogType.EnableEAP}`,
-    component: DlgEapEnable,
+    path: `/${IpcModalDialogType.EnableEAA}`,
+    component: DlgEaaEnable,
   },
   {
-    path: `/${IpcModalDialogType.DisableEAP}`,
-    component: DlgEapDisable,
+    path: `/${IpcModalDialogType.DisableEAA}`,
+    component: DlgEaaDisable,
   },
 ];
 

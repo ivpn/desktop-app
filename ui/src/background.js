@@ -777,11 +777,11 @@ async function showModalDialog(
 ) {
   let windowTitle = "";
   switch (dialogTypeName) {
-    case IpcModalDialogType.EnableEAP:
-      windowTitle = "Enhanced App Protection";
+    case IpcModalDialogType.EnableEAA:
+      windowTitle = "Enhanced App Authentication";
       break;
-    case IpcModalDialogType.DisableEAP:
-      windowTitle = "Enhanced App Protection";
+    case IpcModalDialogType.DisableEAA:
+      windowTitle = "Enhanced App Authentication";
       break;
     default:
       throw "Internal error: unsupported dialog name: '" + dialogTypeName + "'";

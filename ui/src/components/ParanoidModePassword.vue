@@ -2,10 +2,15 @@
   <div class="flexColumn">
     <div class="flexColumn" style="padding: 15px">
       <div class="main" style="padding-top: 15px">
-        <div class="large_text">Enhanced App Protection</div>
+        <div
+          style="text-align: center; margin-left: 0px; margin-right: 0px"
+          class="large_text"
+        >
+          Enhanced App Authentication
+        </div>
 
-        <div class="small_text">
-          Please enter shared secret for Enhanced App Protection mode:
+        <div class="small_text flexRow" style="">
+          Please enter EAA password:
         </div>
         <input
           type="password"
@@ -20,15 +25,16 @@
       </div>
 
       <div class="small_text">
-        Please note: You can disable Enhanced App Protection mode in the
+        Please note: You can disable Enhanced App Authentication mode in the
         advanced settings.
       </div>
+      <!--
       <button
         class="noBordersTextBtn settingsLinkText"
         v-on:click="visitWebsite"
       >
         www.ivpn.net
-      </button>
+      </button>-->
     </div>
   </div>
 </template>
@@ -55,8 +61,8 @@ export default {
           await sender.showMessageBoxSync({
             type: "error",
             buttons: ["OK"],
-            message: `Password is not defined`,
-            detail: "Please, enter Paranoid Mode password",
+            message: `Enhanced App Authentication`,
+            detail: "The password is incorrect. Please try again.",
           });
           return;
         }
@@ -65,8 +71,8 @@ export default {
           await sender.showMessageBoxSync({
             type: "warning",
             buttons: ["OK"],
-            message: "Bad password",
-            detail: `Please, avoid using space symbols`,
+            message: `Enhanced App Authentication`,
+            detail: "The password is incorrect. Please try again.",
           });
           return;
         }
@@ -77,7 +83,7 @@ export default {
         sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
-          message: `Enhanced App Protection`,
+          message: `Enhanced App Authentication`,
           detail: e,
         });
       }
