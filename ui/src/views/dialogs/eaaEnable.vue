@@ -86,7 +86,7 @@ export default {
           type: "warning",
           buttons: ["OK"],
           message: "Enhanced App Authentication",
-          detail: `Please, entered password`,
+          detail: `Please, enter password`,
         });
         return;
       }
@@ -94,7 +94,7 @@ export default {
         await sender.showMessageBoxSync({
           type: "warning",
           buttons: ["OK"],
-          message: "",
+          message: "Enhanced App Authentication",
           detail: `The passwords entered do not match. Please try again.`,
         });
         return;
