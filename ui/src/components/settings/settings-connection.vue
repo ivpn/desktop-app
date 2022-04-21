@@ -73,7 +73,13 @@
         </select>
       </div>
 
-      <div v-bind:class="{ disabled: connectionUseObfsproxy }">
+      <!-- Proxy can be used when: obfsproxy is disabled OR when Multi-Hop enabled (obfsproxy is not applicable for Multi-Hop)-->
+      <div
+        v-bind:class="{
+          disabled:
+            connectionUseObfsproxy && !this.$store.state.settings.isMultiHop,
+        }"
+      >
         <div class="flexRow paramBlock">
           <div class="defColor paramName">Network proxy:</div>
           <div class="settingsRadioBtnProxy">
@@ -145,18 +151,28 @@
       </div>
 
       <div class="settingsBoldFont">Additional settings:</div>
-      <div class="param">
-        <input
-          type="checkbox"
-          id="connectionUseObfsproxy"
-          v-model="connectionUseObfsproxy"
-        />
-        <label class="defColor" for="connectionUseObfsproxy"
-          >Use obfsproxy</label
-        >
+      <div v-bind:class="{ disabled: this.$store.state.settings.isMultiHop }">
+        <div class="param">
+          <input
+            type="checkbox"
+            id="connectionUseObfsproxy"
+            v-model="connectionUseObfsproxy"
+          />
+          <label class="defColor" for="connectionUseObfsproxy"
+            >Use obfsproxy</label
+          >
+        </div>
+        <div class="flexRow description">
+          Only enable if you have trouble connecting
+          <div
+            class="description"
+            style="margin-left: 3px"
+            v-if="this.$store.state.settings.isMultiHop"
+          >
+            (not applicable for Multi-Hop connections)
+          </div>
+        </div>
       </div>
-      <div class="description">Only enable if you have trouble connecting</div>
-
       <div class="param" v-if="userDefinedOvpnFile">
         <input
           type="checkbox"
@@ -181,6 +197,7 @@
           >
             Open configuration file location ...
           </button>
+          <!--
           <div style="max-width: 500px; margin: 0px; padding: 0px">
             <div
               class="settingsGrayLongDescriptionFont selectable"
@@ -195,6 +212,7 @@
               {{ userDefinedOvpnFile }}
             </div>
           </div>
+          -->
         </div>
       </div>
     </div>
@@ -544,6 +562,11 @@ div.param {
   margin-top: 3px;
 }
 
+div.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
 input:disabled {
   opacity: 0.5;
 }
@@ -553,7 +576,12 @@ input:disabled + label {
 
 div.paramBlock {
   @extend .flexRow;
-  margin-top: 10px;
+  margin-top: 6px;
+}
+
+div.paramBlockText {
+  margin-top: 6px;
+  margin-right: 21px;
 }
 
 div.paramBlockDetailedConfig {
@@ -593,11 +621,6 @@ div.settingsRadioBtnProxy {
   padding-right: 20px;
 }
 
-div.paramBlockText {
-  margin-top: 16px;
-  margin-right: 21px;
-}
-
 select {
   background: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
   border: 0.5px solid rgba(0, 0, 0, 0.2);
@@ -605,17 +628,12 @@ select {
   width: 186px;
 }
 
-div.description {
+.description {
   @extend .settingsGrayLongDescriptionFont;
   margin-left: 22px;
 }
 
 input.proxyParam {
   width: 100px;
-}
-
-div.disabled {
-  pointer-events: none;
-  opacity: 0.5;
 }
 </style>
