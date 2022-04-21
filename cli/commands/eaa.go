@@ -149,7 +149,7 @@ func (c *CmdParanoidMode) Run() error {
 		fmt.Println("")
 
 		if newSecret1 != newSecret2 {
-			return fmt.Errorf("password do not match")
+			return fmt.Errorf("passwords do not match")
 		}
 
 		if len(newSecret1) == 0 {
