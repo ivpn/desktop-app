@@ -1,33 +1,33 @@
 <template>
   <div>
     <div class="settingsTitle">ADVANCED SETTINGS</div>
-    <div class="settingsBoldFont">Enhanced App Protection</div>
+    <div class="settingsBoldFont">Enhanced App Authentication</div>
     <div class="settingsParamProps settingsDescription">
-      Enhanced App Protection (EAP) implements an additional authentication
+      Enhanced App Authentication (EAA) implements an additional authentication
       factor between the IVPN app (UI) and the daemon that manages the VPN
       tunnel. This prevents a malicious app from being able to manipulate the
       VPN tunnel without the users permission. You will be required to manually
-      enter the shared secret when starting the app..
+      enter the EAA password when starting the app.
     </div>
 
-    <div class="flexRow settingsParamProps">
+    <div class="flexRowAlignTop settingsParamProps">
       <div class="settingsDefaultTextColor paramName">Status:</div>
       <div style="font-weight: 500">
-        <div v-if="IsPmEnabled" class="flexRow">
+        <div v-if="IsPmEnabled">
           <div style="color: #64ad07; min-width: 80px">Enabled</div>
           <button
             class="settingsButton paramBlock"
-            style="height: 24px"
+            style="height: 24px; margin-top: 6px"
             v-on:click="onChangeState()"
           >
             Disable
           </button>
         </div>
-        <div v-else class="flexRow">
+        <div v-else>
           <div style="min-width: 80px">Disabled</div>
           <button
             class="settingsButton paramBlock"
-            style="height: 24px"
+            style="height: 24px; margin-top: 6px"
             v-on:click="onChangeState()"
           >
             Enable
@@ -57,11 +57,11 @@ export default {
         width: 400,
         height: 170,
       };
-      let dlgType = IpcModalDialogType.EnableEAP;
+      let dlgType = IpcModalDialogType.EnableEAA;
       if (Platform() !== PlatformEnum.macOS) cfg.height = 142;
 
       if (this.IsPmEnabled) {
-        dlgType = IpcModalDialogType.DisableEAP;
+        dlgType = IpcModalDialogType.DisableEAA;
 
         cfg.height = 150;
         if (Platform() !== PlatformEnum.macOS) cfg.height = 122;

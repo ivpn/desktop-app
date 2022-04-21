@@ -38,7 +38,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/cli/protocol"
-	"github.com/ivpn/desktop-app/daemon/protocol/eap"
+	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"golang.org/x/term"
@@ -186,8 +186,8 @@ func RequestParanoidModePassword(c *protocol.Client) (string, error) {
 	if helpers.CheckIsAdmin() {
 		sFile := c.GetHelloResponse().ParanoidMode.FilePath
 		if len(sFile) > 0 {
-			eap := eap.Init(sFile)
-			secret, _ := eap.Secret()
+			eaa := eaa.Init(sFile)
+			secret, _ := eaa.Secret()
 			if len(secret) > 0 {
 				return secret, nil
 			}
@@ -195,16 +195,16 @@ func RequestParanoidModePassword(c *protocol.Client) (string, error) {
 	}
 
 	// request secret from user
-	fmt.Print("EAP is active. Enter shared secret: ")
+	fmt.Print("EAA is active. Enter EAA password: ")
 
 	data, err := term.ReadPassword(int(syscall.Stdin))
 	fmt.Println("")
 	if err != nil {
-		return "", fmt.Errorf("failed to read EAP shared secret: %s\n", err)
+		return "", fmt.Errorf("failed to read EAA password: %s\n", err)
 	}
 	secret := strings.TrimSpace(string(data))
 	if len(secret) <= 0 {
-		return "", fmt.Errorf("EAP shared secret not defined")
+		return "", fmt.Errorf("EAA password not defined")
 	}
 
 	return secret, nil

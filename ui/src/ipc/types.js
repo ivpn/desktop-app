@@ -1,6 +1,6 @@
 export const IpcModalDialogType = Object.freeze({
-  EnableEAP: "eapEnable",
-  DisableEAP: "eapDisable",
+  EnableEAA: "eaaEnable",
+  DisableEAA: "eaaDisable",
 });
 
 export const IpcOwnerWindowType = Object.freeze({

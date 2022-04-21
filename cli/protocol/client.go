@@ -114,7 +114,7 @@ func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
 
 	doRequestPmFile := false
 	if helpers.CheckIsAdmin() {
-		// If we running in privilaged environment - request also info about EAP mode secret file
+		// If we running in privilaged environment - request also info about EAA mode secret file
 		doRequestPmFile = true
 	}
 

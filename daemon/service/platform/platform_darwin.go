@@ -36,7 +36,7 @@ func doInitConstants() {
 	fwInitialValueAllowApiServers = false
 	servicePortFile = "/Library/Application Support/IVPN/port.txt"
 	openvpnUserParamsFile = "/Library/Application Support/IVPN/OpenVPN/ovpn_extra_params.txt"
-	paranoidModeSecretFile = "/Library/Application Support/IVPN/OpenVPN/eap"
+	paranoidModeSecretFile = "/Library/Application Support/IVPN/OpenVPN/eaa"
 
 	logDir := "/Library/Logs/"
 	logFile = path.Join(logDir, "IVPN Agent.log")

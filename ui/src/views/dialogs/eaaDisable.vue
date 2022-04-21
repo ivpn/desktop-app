@@ -1,7 +1,7 @@
 <template>
   <div class="defaultMainDiv">
     <div class="settingsBoldFont" style="margin-top: 0px; margin-bottom: 12px">
-      Please enter the shared secret to disable EAP:
+      Please enter password to disable EAA:
     </div>
     <div class="flexRow">
       <input
@@ -87,7 +87,7 @@ export default {
         sender.showMessageBoxSync({
           type: "error",
           buttons: ["OK"],
-          message: `Failed to disable Paranoid Mode`,
+          message: `Failed to disable EAA`,
           detail: e,
         });
       }

@@ -197,7 +197,7 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 
 	// send back Hello message with account session info
 	helloResp := types.HelloResp{
-		ParanoidMode:        types.ParanoidModeStatus{IsEnabled: p._eap.IsEnabled()},
+		ParanoidMode:        types.ParanoidModeStatus{IsEnabled: p._eaa.IsEnabled()},
 		Version:             version.Version(),
 		Session:             types.CreateSessionResp(prefs.Session),
 		SettingsSessionUUID: prefs.SettingsSessionUUID,
