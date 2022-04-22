@@ -770,11 +770,19 @@ function closeUpdateWindow() {
 }
 
 // Modal Dialogs
+var modalDialog = null;
 async function showModalDialog(
   dialogTypeName /*ModalDialogType*/,
   ownerWnd /*OwnerWindowType*/,
   windowCfgExtra /*(nullable) BrowserWindow options*/
 ) {
+  if (modalDialog != null) {
+    console.warn(
+      "Blocked to load new modal dialog (another dialog still not closed)"
+    );
+    return;
+  }
+
   let windowTitle = "";
   switch (dialogTypeName) {
     case IpcModalDialogType.EnableEAA:
@@ -818,7 +826,7 @@ async function showModalDialog(
     windowConfig = Object.assign(windowConfig, windowCfgExtra);
   }
 
-  let modalDialog = createBrowserWindow(windowConfig);
+  modalDialog = createBrowserWindow(windowConfig);
   // on Linux: 'minimizable' parameter still has value 'true' after window created (Electron bug?)
   // Therefore, we are  using additional parameter (minimizableFix) to keep needed value
   modalDialog.minimizableFix = false;
@@ -835,7 +843,18 @@ async function showModalDialog(
   modalDialog.once("ready-to-show", () => {
     modalDialog.show();
   });
+
+  // Prevent parent window from flickering (Electron issue on Windows)
+  // https://github.com/electron/electron/issues/10616#issuecomment-447613986
+  modalDialog.on("focus", () => {
+    ownerWndObj.setAlwaysOnTop(true);
+  });
+  modalDialog.on("blur", () => {
+    ownerWndObj.setAlwaysOnTop(false);
+  });
   modalDialog.on("closed", () => {
+    ownerWndObj.setAlwaysOnTop(false);
+    //forget about active dialog
     modalDialog = null;
   });
 

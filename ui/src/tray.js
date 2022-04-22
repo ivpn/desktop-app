@@ -149,6 +149,7 @@ export function InitTray(
   store.subscribe((mutation) => {
     try {
       switch (mutation.type) {
+        case "uiState/isParanoidModePasswordView":
         case "vpnState/connectionState":
         case "vpnState/connectionInfo":
         case "vpnState/disconnected":
@@ -277,6 +278,7 @@ function updateTrayMenu() {
   const favorites = Menu.buildFromTemplate(favoriteSvrsTemplate);
 
   // MAIN MENU
+
   var connectToName = "";
   if (
     (!store.state.settings.isMultiHop &&
@@ -304,7 +306,8 @@ function updateTrayMenu() {
   mainMenu.push({ label: "Show IVPN", click: menuHandlerShow });
   mainMenu.push({ type: "separator" });
 
-  if (isLoggedIn) {
+  const isPMPasswordView = store.state.uiState.isParanoidModePasswordView;
+  if (isLoggedIn && isPMPasswordView !== true) {
     if (store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED) {
       mainMenu.push({
         label: `Connect to ${connectToName}`,
