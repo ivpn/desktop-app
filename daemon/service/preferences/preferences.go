@@ -59,6 +59,7 @@ type Preferences struct {
 	IsFwAllowApiServers      bool
 	IsStopOnClientDisconnect bool
 	IsObfsproxy              bool
+	IsAutoconnectOnLaunch    bool // when 'true' - UI app (not the daemon!) will perform automation connection on app launch
 
 	// split-tunnelling
 	IsSplitTunnel   bool

@@ -401,8 +401,8 @@ export default {
       },
     },
     userDefinedOvpnFile: function () {
-      if (!this.$store.state.configParams) return null;
-      return this.$store.state.configParams.UserDefinedOvpnFile;
+      if (!this.$store.state.settings.daemonSettings) return null;
+      return this.$store.state.settings.daemonSettings.UserDefinedOvpnFile;
     },
     wgKeyRegenerationInterval: {
       get() {

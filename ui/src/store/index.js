@@ -55,10 +55,6 @@ export default new Vuex.Store({
     daemonIsOldVersionError: false,
     daemonIsInstalling: false,
 
-    configParams: {
-      UserDefinedOvpnFile: "",
-    },
-
     disabledFunctions: {
       WireGuardError: "",
       OpenVPNError: "",
@@ -237,10 +233,6 @@ export default new Vuex.Store({
 
     dnsPredefinedConfigurations(state, dnsPredefinedConfigurations) {
       state.dnsPredefinedConfigurations = dnsPredefinedConfigurations;
-    },
-
-    configParams(state, value) {
-      state.configParams = value;
     },
 
     // LOCATION

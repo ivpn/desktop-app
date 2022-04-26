@@ -87,6 +87,25 @@ type ParanoidModeStatus struct {
 	IsEnabled bool
 }
 
+type SettingsResp struct {
+	CommandBase
+
+	IsAutoconnectOnLaunch bool
+
+	// TODO: implement the rest of daemon settings
+	// IsLogging             bool
+	// IsFwPersistant        bool
+	// IsFwAllowLAN          bool
+	// IsFwAllowLANMulticast bool
+	// IsFwAllowApiServers   bool
+	// FwUserExceptions      string
+	// IsObfsproxy           bool
+	// IsSplitTunnel         bool
+	// SplitTunnelApps       []string
+
+	UserDefinedOvpnFile string
+}
+
 // HelloResp response on initial request
 type HelloResp struct {
 	CommandBase
@@ -100,13 +119,8 @@ type HelloResp struct {
 	SettingsSessionUUID string
 
 	ParanoidMode ParanoidModeStatus
-}
 
-// ConfigParamsResp return s configuration parameters
-type ConfigParamsResp struct {
-	CommandBase
-
-	UserDefinedOvpnFile string
+	DaemonSettings SettingsResp
 }
 
 // SessionResp information about session

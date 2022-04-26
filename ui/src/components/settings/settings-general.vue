@@ -75,11 +75,19 @@
     </div> -->
 
     <div class="settingsBoldFont">Autoconnect:</div>
-    <div class="param">
+    <div
+      class="param"
+      :title="
+        this.$store.state.paranoidModeStatus.IsEnabled === true
+          ? `'Autoconnect on application launch' cannot be enabled whilst 'Enhanced App Authentication' is enabled`
+          : ''
+      "
+    >
       <input
         type="checkbox"
         id="connectOnLaunch"
-        v-model="autoConnectOnLaunch"
+        v-model="isAutoconnectOnLaunch"
+        :disabled="this.$store.state.paranoidModeStatus.IsEnabled === true"
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
@@ -202,12 +210,12 @@ export default {
         })();
       },
     },
-    autoConnectOnLaunch: {
+    isAutoconnectOnLaunch: {
       get() {
-        return this.$store.state.settings.autoConnectOnLaunch;
+        return this.$store.state.settings.daemonSettings.IsAutoconnectOnLaunch;
       },
       set(value) {
-        this.$store.dispatch("settings/autoConnectOnLaunch", value);
+        sender.SetAutoconnectOnLaunch(value);
       },
     },
     connectVPNOnInsecureNetwork: {

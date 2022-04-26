@@ -48,9 +48,6 @@ type Hello struct {
 	// GetStatus == true - client requests current status (Vpn connection, Firewal... etc.)
 	GetStatus bool
 
-	// GetConfigParams == true - client requests config parameters (user-defined OpevVPN file location ... etc.)
-	GetConfigParams bool
-
 	// GetSplitTunnelStatus == true - client requests configuration of SplitTunnelling
 	GetSplitTunnelStatus bool
 

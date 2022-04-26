@@ -54,10 +54,15 @@ const getDefaultState = () => {
     serversFastestExcludeList: [],
 
     // general
-    autoConnectOnLaunch: false,
     quitWithoutConfirmation: false,
     disconnectOnQuit: true,
     logging: false, // this parameter saves on the daemon's side
+
+    // this object must be received out from daemon
+    daemonSettings: {
+      IsAutoconnectOnLaunch: false,
+      UserDefinedOvpnFile: "",
+    },
 
     // connection
     connectionUseObfsproxy: false, // this parameter saves on the daemon's side
@@ -206,9 +211,6 @@ export default {
     },
 
     // general
-    autoConnectOnLaunch(state, val) {
-      state.autoConnectOnLaunch = val;
-    },
     disconnectOnQuit(state, val) {
       state.disconnectOnQuit = val;
     },
@@ -217,6 +219,9 @@ export default {
     },
     logging(state, val) {
       state.logging = val;
+    },
+    daemonSettings(state, val) {
+      state.daemonSettings = val;
     },
 
     // connection
@@ -396,9 +401,6 @@ export default {
     },
 
     // general
-    autoConnectOnLaunch(context, val) {
-      context.commit("autoConnectOnLaunch", val);
-    },
     disconnectOnQuit(context, val) {
       context.commit("disconnectOnQuit", val);
     },

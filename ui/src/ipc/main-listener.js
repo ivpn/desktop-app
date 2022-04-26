@@ -163,6 +163,12 @@ ipcMain.handle("renderer-request-GetInstalledApps", async () => {
   return await client.GetInstalledApps();
 });
 
+ipcMain.handle(
+  "renderer-request-SetAutoconnectOnLaunch",
+  async (event, isEnabled) => {
+    return await client.SetAutoconnectOnLaunch(isEnabled);
+  }
+);
 ipcMain.handle("renderer-request-set-logging", async () => {
   return await client.SetLogging();
 });

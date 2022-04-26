@@ -107,7 +107,7 @@ const daemonResponses = Object.freeze({
   HelloResp: "HelloResp",
   APIResponse: "APIResponse",
 
-  ConfigParamsResp: "ConfigParamsResp",
+  SettingsResp: "SettingsResp",
   DiagnosticsGeneratedResp: "DiagnosticsGeneratedResp",
 
   VpnStateResp: "VpnStateResp",
@@ -356,6 +356,10 @@ async function processResponse(response) {
         }
       }
 
+      if (obj.DaemonSettings) {
+        store.commit("settings/daemonSettings", obj.DaemonSettings);
+      }
+
       {
         // Save DNS abilities
         store.commit("dnsAbilities", obj.Dns);
@@ -383,16 +387,20 @@ async function processResponse(response) {
         store.commit("uiState/isParanoidModePasswordView", isPmPassError);
 
         // send logging + obfsproxy configuration
+        // (apply UI settings to daemon only when HelloResp directed directly to us obj.Idx>0 )
         // TODO: do not send logging and obfsproxy settings, but ask for this values from the daemon
         if (!isPmPassError) {
-          SetLogging();
-          SetObfsproxy();
+          if (obj.Idx != undefined && obj.Idx !== 0) {
+            SetLogging();
+            SetObfsproxy();
+          }
         }
       }
+
       break;
 
-    case daemonResponses.ConfigParamsResp:
-      store.commit("configParams", obj);
+    case daemonResponses.SettingsResp:
+      store.commit("settings/daemonSettings", obj);
       break;
 
     case daemonResponses.AccountStatusResp:
@@ -583,24 +591,71 @@ function onDataReceived(received) {
 
 var _onDaemonExitingCallback = null;
 
-function makeHelloRequest() {
+function makeHelloRequest(isSimpleConnect) {
   let appVersion = "";
   try {
     appVersion = `${require("electron").app.getVersion()}:Electron UI`;
   } catch (e) {
     console.error(e);
   }
-  let helloReq = {
-    Command: daemonRequests.Hello,
-    Version: appVersion,
-    GetServersList: true,
-    GetStatus: true,
-    GetConfigParams: true,
-    KeepDaemonAlone: true,
-    GetSplitTunnelStatus: true,
-    GetWiFiCurrentState: true,
-  };
+
+  let helloReq = null;
+  if (isSimpleConnect === true) {
+    helloReq = {
+      Command: daemonRequests.Hello,
+      Version: appVersion,
+      KeepDaemonAlone: true,
+    };
+  } else {
+    helloReq = {
+      Command: daemonRequests.Hello,
+      Version: appVersion,
+      GetServersList: true,
+      GetStatus: true,
+      GetConfigParams: true,
+      KeepDaemonAlone: true,
+      GetSplitTunnelStatus: true,
+      GetWiFiCurrentState: true,
+    };
+  }
+
   return helloReq;
+}
+
+// Check is required operations to convert and synchronize the old-style settings with the daemon
+function isNeedToConvertAndSyncOldSettings() {
+  let settings = store.state.settings;
+  // settings upgrade: 3.7.0 -> 3.8.1 ('autoConnectOnLaunch' n ow keeps on daemon's side)
+  const oldIsAutoconnectOnLaunch = settings["autoConnectOnLaunch"];
+  if (oldIsAutoconnectOnLaunch !== undefined) {
+    return true;
+  }
+  return false;
+}
+
+// Perform required operations to convert and synchronize the old-style settings with the daemon
+async function convertAndSyncOldSettings() {
+  let settings = store.state.settings;
+
+  // settings upgrade: 3.7.0 -> 3.8.1 ('autoConnectOnLaunch' n ow keeps on daemon's side)
+  const oldIsAutoconnectOnLaunch = settings["autoConnectOnLaunch"];
+  if (oldIsAutoconnectOnLaunch !== undefined) {
+    try {
+      await sendRecv({
+        Command: daemonRequests.SetPreference,
+        Key: "autoconnect_on_launch",
+        Value: `${oldIsAutoconnectOnLaunch}`,
+      });
+
+      // forget old-style value
+      delete settings["autoConnectOnLaunch"];
+      store.commit("settings/replaceState", settings);
+    } catch (e) {
+      log.error(
+        "Failed to convert old style settings (autoconnect_on_launch): " + e
+      );
+    }
+  }
 }
 
 async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
@@ -646,10 +701,12 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
 
     socket
       .on("connect", async () => {
+        let isNeedConvertSettings = isNeedToConvertAndSyncOldSettings();
+
         // SEND HELLO
         // eslint-disable-next-line no-undef
         const secretBInt = BigInt(`0x${portInfo.secret}`);
-        let helloReq = makeHelloRequest();
+        let helloReq = makeHelloRequest(isNeedConvertSettings);
         helloReq.Secret = secretBInt;
 
         try {
@@ -666,14 +723,15 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
             reject(err); // REJECT
           };
 
-          let promiseWaiterServers = addWaiter(
-            {
-              waitForCommandsList: [daemonResponses.ServerListResp],
-            },
-            11000
-          );
+          let svrListWaiter = {
+            waitForCommandsList: [daemonResponses.ServerListResp],
+          };
+          let promiseWaiterServers = null;
 
           setConnState(DaemonConnectionType.Connecting);
+
+          if (isNeedConvertSettings !== true)
+            promiseWaiterServers = addWaiter(svrListWaiter, 11000);
           await sendRecv(helloReq, null, 10000);
 
           // the 'store.state.daemonVersion' and 'store.state.daemonIsOldVersionError' must be already initialized
@@ -684,6 +742,14 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
             err.unsupportedDaemonVersion = true;
             disconnectDaemonFunc(err); // REJECT
             return;
+          }
+
+          if (isNeedConvertSettings === true) {
+            await convertAndSyncOldSettings();
+            helloReq = makeHelloRequest();
+
+            promiseWaiterServers = addWaiter(svrListWaiter, 11000);
+            await sendRecv(helloReq, null, 10000);
           }
 
           // waiting for all required responses
@@ -702,11 +768,11 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
             // If we are in disconnected state and 'settings.autoConnectOnLaunch' enabled => start connection
             if (
               IsCanAutoConnectForCurrentSSID() == true &&
-              store.state.settings.autoConnectOnLaunch &&
+              store.state.settings.daemonSettings.IsAutoconnectOnLaunch &&
               store.getters["vpnState/isDisconnected"]
             ) {
               log.log(
-                "Connecting on app start according to configuration (autoConnectOnLaunch)"
+                "Connecting on app start according to configuration (AutoconnectOnLaunch)"
               );
               Connect();
             }
@@ -1621,6 +1687,14 @@ async function RequestDnsPredefinedConfigs() {
   else store.commit(`dnsPredefinedConfigurations`, []);
 }
 
+async function SetAutoconnectOnLaunch(enable) {
+  await sendRecv({
+    Command: daemonRequests.SetPreference,
+    Key: "autoconnect_on_launch",
+    Value: `${enable}`,
+  });
+}
+
 async function SetLogging() {
   const enable = store.state.settings.logging;
   const Key = "enable_logging";
@@ -1730,6 +1804,7 @@ export default {
   SetDNS,
   RequestDnsPredefinedConfigs,
 
+  SetAutoconnectOnLaunch,
   SetLogging,
   SetObfsproxy,
   WgRegenerateKeys,
