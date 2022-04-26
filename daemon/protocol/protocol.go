@@ -93,7 +93,7 @@ type Service interface {
 	GetBinaryIcon(binaryPath string) (string, error)
 
 	Preferences() preferences.Preferences
-	SetPreference(key string, val string) error
+	SetPreference(key types.ServicePreference, val string) (isChanged bool, err error)
 	ResetPreferences() error
 
 	SetManualDNS(dns dns.DnsSettings) error
@@ -472,12 +472,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			}
 		}
 
-		if req.GetConfigParams {
-			p.sendResponse(conn,
-				&types.ConfigParamsResp{UserDefinedOvpnFile: platform.OpenvpnUserParamsFile()},
-				reqCmd.Idx)
-		}
-
 		if req.GetSplitTunnelStatus {
 			// sending split-tunnelling configuration
 			p.OnSplitTunnelStatusChanged()
@@ -493,6 +487,16 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
+		}
+
+		if len(strings.TrimSpace(req.NewSecret)) > 0 {
+			// going to enable EAA
+			prefs := p._service.Preferences()
+			if prefs.IsAutoconnectOnLaunch {
+				// do not allow to enable EAA if "autoconnect on launch" is enabled
+				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("the Enhanced Application Authentication cannot be enabled whilst 'Autoconnect on application launch' is enabled"))
+				break
+			}
 		}
 
 		if err := p._eaa.SetSecret(req.ProtocolSecret, req.NewSecret); err != nil {
@@ -670,9 +674,21 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		if err := p._service.SetPreference(req.Key, req.Value); err != nil {
+		if types.Prefs_IsAutoconnectOnLaunch.Equals(req.Key) {
+			if p._eaa.IsEnabled() {
+				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("the 'Autoconnect on application launch' cannot be enabled whilst Enhanced Application Authentication is enabled"))
+			}
+		}
+
+		if isChanged, err := p._service.SetPreference(types.ServicePreference(req.Key), req.Value); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
+			//  notify all connected clients about changed preferences
+			if isChanged {
+				p.notifyClients(p.createSettingsResponse())
+			}
+
+			// notify 'success'
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
 

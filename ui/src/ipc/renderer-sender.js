@@ -192,6 +192,9 @@ export default {
     return await invoke("renderer-request-GetInstalledApps");
   },
 
+  SetAutoconnectOnLaunch: async (isEnabled) => {
+    return await invoke("renderer-request-SetAutoconnectOnLaunch", isEnabled);
+  },
   SetLogging: async () => {
     return await invoke("renderer-request-set-logging");
   },

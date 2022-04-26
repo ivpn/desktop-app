@@ -46,6 +46,19 @@ type RequestBase struct {
 	ProtocolSecret string
 }
 
+type ServicePreference string
+
+const (
+	Prefs_IsEnableLogging                ServicePreference = "enable_logging"
+	Prefs_IsStopServerOnClientDisconnect ServicePreference = "is_stop_server_on_client_disconnect"
+	Prefs_IsEnableObfsproxy              ServicePreference = "enable_obfsproxy"
+	Prefs_IsAutoconnectOnLaunch          ServicePreference = "autoconnect_on_launch"
+)
+
+func (sp ServicePreference) Equals(key string) bool {
+	return key == string(sp)
+}
+
 // Send sends a command to a connection : init+serialize+send
 func Send(conn net.Conn, cmd interface{}, idx int) (retErr error) {
 	defer func() {

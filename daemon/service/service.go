@@ -1166,25 +1166,32 @@ func (s *Service) SetKillSwitchUserExceptions(exceptions string, ignoreParsingEr
 //////////////////////////////////////////////////////////
 
 // SetPreference set preference value
-func (s *Service) SetPreference(key string, val string) error {
+func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string) (isChanged bool, err error) {
 	prefs := s._preferences
+	isChanged = false
 
 	switch key {
-	case "enable_logging":
+	case protocolTypes.Prefs_IsEnableLogging:
 		if val, err := strconv.ParseBool(val); err == nil {
+			isChanged = val != prefs.IsLogging
 			prefs.IsLogging = val
 			logger.Enable(val)
 		}
-	case "is_stop_server_on_client_disconnect":
+	case protocolTypes.Prefs_IsStopServerOnClientDisconnect:
 		if val, err := strconv.ParseBool(val); err == nil {
+			isChanged = val != prefs.IsStopOnClientDisconnect
 			prefs.IsStopOnClientDisconnect = val
 		}
-	case "enable_obfsproxy":
+	case protocolTypes.Prefs_IsEnableObfsproxy:
 		if val, err := strconv.ParseBool(val); err == nil {
+			isChanged = val != prefs.IsObfsproxy
 			prefs.IsObfsproxy = val
 		}
-	case "firewall_is_persistent":
-		log.Debug("Skipping 'firewall_is_persistent' value. IVPNKillSwitchSetIsPersistentRequest should be used")
+	case protocolTypes.Prefs_IsAutoconnectOnLaunch:
+		if val, err := strconv.ParseBool(val); err == nil {
+			isChanged = val != prefs.IsAutoconnectOnLaunch
+			prefs.IsAutoconnectOnLaunch = val
+		}
 	default:
 		log.Warning(fmt.Sprintf("Preference key '%s' not supported", key))
 	}
@@ -1192,7 +1199,7 @@ func (s *Service) SetPreference(key string, val string) error {
 	s.setPreferences(prefs)
 	log.Info(fmt.Sprintf("preferences %s='%s'", key, val))
 
-	return nil
+	return isChanged, nil
 }
 
 // Preferences returns preferences

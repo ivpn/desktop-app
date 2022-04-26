@@ -57,6 +57,21 @@ export default {
         width: 400,
         height: 170,
       };
+
+      if (
+        !this.IsPmEnabled &&
+        this.$store.state.settings.daemonSettings.IsAutoconnectOnLaunch === true
+      ) {
+        sender.showMessageBoxSync({
+          type: "info",
+          buttons: ["OK"],
+          message: `Enhanced App Authentication`,
+          detail:
+            "EAA cannot be enabled whilst 'Autoconnect on application launch' is enabled.",
+        });
+        return;
+      }
+
       let dlgType = IpcModalDialogType.EnableEAA;
       if (Platform() !== PlatformEnum.macOS) cfg.height = 142;
 

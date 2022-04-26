@@ -36,6 +36,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
@@ -164,6 +165,15 @@ func (p *Protocol) vpnConnectReqCounterDecrease() {
 	p._connectRequests--
 }
 
+func (p *Protocol) createSettingsResponse() *types.SettingsResp {
+	prefs := p._service.Preferences()
+	return &types.SettingsResp{
+		IsAutoconnectOnLaunch: prefs.IsAutoconnectOnLaunch,
+		UserDefinedOvpnFile:   platform.OpenvpnUserParamsFile(),
+		// TODO: implement the rest of daemon settings
+	}
+}
+
 func (p *Protocol) createHelloResponse() *types.HelloResp {
 	prefs := p._service.Preferences()
 
@@ -210,6 +220,7 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 			CanUseDnsOverTls:   dnsOverTls,
 			CanUseDnsOverHttps: dnsOverHttps,
 		},
+		DaemonSettings: *p.createSettingsResponse(),
 	}
 	return &helloResp
 }
