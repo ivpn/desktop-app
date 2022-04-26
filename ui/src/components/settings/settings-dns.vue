@@ -167,6 +167,7 @@ export default {
 
   data: function () {
     return {
+      isEditingFinished: false,
       isDnsValueChanged: false,
       thePredefinedDohConfigSelected: null,
     };
@@ -176,6 +177,7 @@ export default {
   },
   methods: {
     async applyChanges(e) {
+      this.isEditingFinished = true;
       // when component closing ->  update changed DNS (if necessary)
 
       if (this.dnsIsCustom && (this.isTemplateURIError || this.isIPError)) {
@@ -374,6 +376,8 @@ export default {
     },
 
     isTemplateURIError: function () {
+      if (this.isEditingFinished !== true) return false;
+      if (!this.dnsIsCustom) return false;
       if (this.dnsIsEncrypted !== true) return false;
       try {
         new URL(this.dnsDohTemplate);
@@ -383,6 +387,7 @@ export default {
       return !this.dnsDohTemplate.toLowerCase().startsWith("https://");
     },
     isIPError: function () {
+      if (this.isEditingFinished !== true) return false;
       if (!this.dnsHost) {
         if (this.dnsIsCustom) return true;
         return false;
