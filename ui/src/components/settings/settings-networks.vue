@@ -6,6 +6,7 @@
       <input
         type="checkbox"
         id="trustedNetworksControl"
+        @click="trustedNetworksControlOnClick"
         v-model="trustedNetworksControl"
       />
       <label class="defColor" for="trustedNetworksControl"
@@ -232,6 +233,27 @@ export default {
       wifi.defaultTrustStatusTrusted = null;
       this.$store.dispatch("settings/wifi", wifi);
     },
+    async trustedNetworksControlOnClick(evt) {
+      if (
+        (this.trustedNetworksControl === false) & // going to enable
+        (this.$store.state.paranoidModeStatus.IsEnabled === true) // EAA enabled
+      ) {
+        let ret = await sender.showMessageBoxSync(
+          {
+            type: "warning",
+            message: `Enhanced App Authentication`,
+            detail:
+              "Warning: On application start Trusted WiFi will be disabled until the EAA password is entered",
+            buttons: ["Enable", "Cancel"],
+          },
+          true
+        );
+        if (ret == 1) {
+          // cancel
+          evt.returnValue = false;
+        }
+      }
+    },
   },
   computed: {
     availableWiFiNetworks: function () {
@@ -291,7 +313,8 @@ export default {
       get() {
         return this.$store.state.settings.wifi?.trustedNetworksControl;
       },
-      set(value) {
+      async set(value) {
+        // INFO: see also method "trustedNetworksControlOnClick()"
         let wifi = Object.assign({}, this.$store.state.settings.wifi);
         wifi.trustedNetworksControl = value;
         this.$store.dispatch("settings/wifi", wifi);

@@ -58,18 +58,34 @@ export default {
         height: 170,
       };
 
-      if (
-        !this.IsPmEnabled &&
-        this.$store.state.settings.daemonSettings.IsAutoconnectOnLaunch === true
-      ) {
-        sender.showMessageBoxSync({
-          type: "info",
-          buttons: ["OK"],
-          message: `Enhanced App Authentication`,
-          detail:
-            "EAA cannot be enabled whilst 'Autoconnect on application launch' is enabled.",
-        });
-        return;
+      if (!this.IsPmEnabled) {
+        if (
+          true ===
+          this.$store.state.settings.daemonSettings.IsAutoconnectOnLaunch
+        ) {
+          sender.showMessageBoxSync({
+            type: "info",
+            buttons: ["OK"],
+            message: `Enhanced App Authentication`,
+            detail:
+              "EAA cannot be enabled whilst 'Autoconnect on application launch' is enabled.",
+          });
+          return;
+        }
+
+        if (true === this.$store.state.settings.wifi.trustedNetworksControl) {
+          let ret = await sender.showMessageBoxSync(
+            {
+              type: "warning",
+              message: `Enhanced App Authentication`,
+              detail:
+                "Warning: On application start Trusted WiFi will be disabled until the EAA password is entered",
+              buttons: ["Enable", "Cancel"],
+            },
+            true
+          );
+          if (ret == 1) return; // cancel
+        }
       }
 
       let dlgType = IpcModalDialogType.EnableEAA;
