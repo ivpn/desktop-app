@@ -29,6 +29,7 @@ export function InitTrustedNetworks() {
   store.subscribe((mutation) => {
     try {
       if (
+        mutation.type === "uiState/isParanoidModePasswordView" ||
         mutation.type === "vpnState/currentWiFiInfo" ||
         mutation.type === "settings/wifi"
       ) {
@@ -47,6 +48,10 @@ export function InitTrustedNetworks() {
 export function IsCanAutoConnectForCurrentSSID() {
   const isLoggedIn = store.getters["account/isLoggedIn"];
   if (!isLoggedIn) {
+    return false;
+  }
+
+  if (store.state.uiState.isParanoidModePasswordView === true) {
     return false;
   }
 
@@ -75,6 +80,10 @@ async function processWifiChange() {
 
   const isLoggedIn = store.getters["account/isLoggedIn"];
   if (!isLoggedIn) {
+    return false;
+  }
+
+  if (store.state.uiState.isParanoidModePasswordView === true) {
     return false;
   }
 
