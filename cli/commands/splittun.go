@@ -39,6 +39,7 @@ type Exclude struct {
 	flags.CmdInfo
 	execute              string // this parameter is not in use. We need it just for help info. (using executeSpecParseArgs after special parsing)
 	executeSpecParseArgs []string
+	eaaPassword          string // (if Enhanced App Authentication is enabled) EAA password (using executeSpecParseArgs after special parsing)
 }
 
 func (c *Exclude) Init() {
@@ -47,13 +48,15 @@ func (c *Exclude) Init() {
 
 	c.Initialize("exclude", "Run command in Split Tunnel environment\n(exclude it's traffic from the VPN tunnel)\nIt is short version of 'ivpn splittun -appadd <command>'\nExamples:\n    ivpn exclude firefox\n    ivpn exclude ping 1.1.1.1\n    ivpn exclude /usr/bin/google-chrome")
 	c.DefaultStringVar(&c.execute, "COMMAND")
+	c.StringVar(&c.eaaPassword, "eaa", "", "PASSWORD", "(optional) Enhanced App Authentication password\nPlease, refer to 'eaa' command for details ('ivpn eaa -h')\nExample:\n    ivpn exclude -eaa 'my_password' firefox")
+
 }
 func (c *Exclude) Run() error {
 	if len(c.executeSpecParseArgs) <= 0 {
 		c.Usage(false)
 		return fmt.Errorf("no parameters defined")
 	}
-	return doAddApp(c.executeSpecParseArgs)
+	return doAddApp(c.executeSpecParseArgs, c.eaaPassword)
 }
 func (c *Exclude) specialParse(arguments []string) bool {
 	if len(arguments) <= 0 {
@@ -63,12 +66,24 @@ func (c *Exclude) specialParse(arguments []string) bool {
 	if strings.ToLower(arguments[0]) == "-h" {
 		return false
 	}
+
+	if strings.ToLower(arguments[0]) == "-eaa" {
+		if len(arguments) < 3 {
+			return false
+		}
+		c.eaaPassword = arguments[1]
+		if (strings.HasPrefix(c.eaaPassword, "'") && strings.HasSuffix(c.eaaPassword, "'")) ||
+			(strings.HasPrefix(c.eaaPassword, "\"") && strings.HasSuffix(c.eaaPassword, "\"")) {
+			c.eaaPassword = c.eaaPassword[1 : len(c.eaaPassword)-1]
+		}
+		arguments = arguments[2:]
+	}
 	c.executeSpecParseArgs = arguments
 	return true
 }
 
 // ================================================================
-func doAddApp(args []string) error {
+func doAddApp(args []string, eaaPass string) error {
 	if len(args) <= 0 {
 		return fmt.Errorf("no arguments defined")
 	}
@@ -89,6 +104,9 @@ func doAddApp(args []string) error {
 		return err
 	}
 
+	if len(eaaPass) > 0 {
+		_proto.InitSetParanoidModeSecret(eaaPass)
+	}
 	isRequiredToExecuteCommand, err := _proto.SplitTunnelAddApp(strings.Join(args[:], " "))
 	if err != nil {
 		return err
@@ -212,7 +230,7 @@ func (c *SplitTun) Run() error {
 
 	if len(c.appaddArgs) > 0 || len(c.appremove) > 0 {
 		if len(c.appaddArgs) > 0 {
-			if err = doAddApp(c.appaddArgs); err != nil {
+			if err = doAddApp(c.appaddArgs, ""); err != nil {
 				return err
 			}
 		} else if len(c.appremove) > 0 {
