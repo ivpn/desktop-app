@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.8.3 - 2022-04-28
+
+[NEW] Enhanced App Authentication  
+[NEW] Custom Firewall exceptions  
+[FIX] (Windows) Firewall was blocking connections on port 53  
+[FIX] (Windows) Service crash when using specific custom DNS configuration  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.8.3.exe)  
+SHA256: 904ef018d20faa5a74ff766f953e5094e4d871375a3726f0b5a828a50aa24cdb   
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.8.3.dmg)  
+SHA256: 746452722fc65e539e56b30336efaec9daa3285f6afb8cf0e9a960ba6fd17b84  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.8.3-arm64.dmg)  
+SHA256: 82c7f82ded4420e2f83bb1471444981d537233ba830aa9804a9a4f2a6e383fdc  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.8.3_amd64.deb)  
+SHA256: bfa8cd0ede5fa4bbb50eb12438050b91d3c800d294ae9c9f8d1baf38fc107c36  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.8.3-1.x86_64.rpm)  
+SHA256: 25e82df25540c8974b65539ec44f4eeb802e54f51eb9795af792b32df0bac0bf  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.8.3_amd64.deb)  
+SHA256: eec534cc784dcd9a76d987722c8220557f4b34a7243b9961f0eea9d913581fb9  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.8.3-1.x86_64.rpm)  
+SHA256: 0c1c2275b41f86594a4c5af060e050c6c3978a30046b47014663f6c032892769  
+
 ## Version 3.7.0 - 2022-04-04
 
 [NEW] (macOS/Linux) Configure custom DNS over HTTPS  
