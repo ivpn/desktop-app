@@ -1498,7 +1498,11 @@ async function SplitTunnelAddApp(execCmd, funcShowMessageBox) {
       //-------------------
       // For a security reasons, we are not using SplitTunnelAddAppCmdResp.CmdToExecute command
       // Instead, use hardcoded binary path to execute '/usr/bin/ivpn'
-      let shellCommandToRun = "/usr/bin/ivpn exclude " + execCmd;
+      let eaaArgs = "";
+      if (ParanoidModeSecret) {
+        eaaArgs = `-eaa '${ParanoidModeSecret}' `;
+      }
+      let shellCommandToRun = `/usr/bin/ivpn exclude  ${eaaArgs}${execCmd}`;
 
       var exec = require("child_process").exec;
       let child = exec(shellCommandToRun, {
