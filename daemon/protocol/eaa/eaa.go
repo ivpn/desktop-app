@@ -30,8 +30,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Eaa struct {
@@ -40,17 +40,8 @@ type Eaa struct {
 	lastFailedAttempts []time.Time
 }
 
-//  key for encryption secret string (just to make it a little bit harder to read the file for humans).
-const secretEncryptionKey = "Fx>PT/*fllA3yr3}Jn+k(?h<~4%lJm$Y"
-
 func Init(secretFile string) *Eaa {
 	return &Eaa{secretFile: secretFile}
-}
-
-func (e *Eaa) Secret() (retSecret string, retErr error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-	return e.doSecret()
 }
 
 func (e *Eaa) IsEnabled() bool {
@@ -79,25 +70,25 @@ func (e *Eaa) CheckSecret(secretToCheck string) (retVal bool, err error) {
 
 // --------- private functions ---------
 
-func (e *Eaa) doSecret() (retSecret string, retErr error) {
+func (e *Eaa) doGetSecretHash() (retSecretHash []byte, retErr error) {
 	file := e.secretFile
 	if len(file) <= 0 {
-		return "", nil // paranoid mode not implemented for this platform
+		return nil, nil // paranoid mode not implemented for this platform
 	}
 
 	f, err := os.Open(file)
 	if err != nil {
 		if os.IsNotExist(err) {
 			e.lastFailedAttempts = nil
-			return "", nil // paranoid mode disabled
+			return nil, nil // paranoid mode disabled
 		}
-		return "", fmt.Errorf("the EAA file open error : %w", err)
+		return nil, fmt.Errorf("the EAA file open error : %w", err)
 	}
 	defer f.Close()
 
 	stat, err := f.Stat()
 	if err != nil {
-		return "", fmt.Errorf("the EAA file status check error : %w", err)
+		return nil, fmt.Errorf("the EAA file status check error : %w", err)
 	}
 
 	// check file access rights
@@ -110,36 +101,20 @@ func (e *Eaa) doSecret() (retSecret string, retErr error) {
 
 	// read file
 	if stat.Size() > 1024*5 {
-		return "", fmt.Errorf("the EAA file too big")
+		return nil, fmt.Errorf("the EAA file too big")
 	}
 	buff := make([]byte, stat.Size())
 	_, err = f.Read(buff)
 	if err != nil && err != io.EOF {
-		return "", fmt.Errorf("failed to read EAA file: %w", err)
+		return nil, fmt.Errorf("failed to read EAA file: %w", err)
 	}
 
-	// decode
-	data, err := helpers.DecryptString([]byte(secretEncryptionKey), string(buff))
-	if err != nil {
-		return "", fmt.Errorf("failed to decode EAA password: %w", err)
-	}
-
-	// check first line
-	lines := strings.Split(data, "\n")
-	if len(lines) != 1 {
-		return "", fmt.Errorf("wrong data in EAA file (expected one line)")
-	}
-	secret := strings.TrimSpace(lines[0])
-	if len(secret) <= 0 {
-		return "", fmt.Errorf("wrong data in EAA file (secret is empty)")
-	}
-
-	return secret, nil
+	return buff, nil
 }
 
 func (e *Eaa) doIsEnabled() bool {
-	secret, err := e.doSecret()
-	return err == nil && len(secret) > 0
+	secretHash, err := e.doGetSecretHash()
+	return err == nil && len(secretHash) > 0
 }
 
 func (e *Eaa) doForceDisable() error {
@@ -188,10 +163,6 @@ func (e *Eaa) doSetSecret(oldSecret, newSecret string) error {
 		return fmt.Errorf("please avoid using space symbols in EAA password")
 	}
 
-	if len(strings.Split(newSecret, "\n")) != 1 {
-		return fmt.Errorf("new password for EAA should contain only one line")
-	}
-
 	if len(newSecret) == 0 {
 		if isPmEnabled {
 			// disable paranoid mode
@@ -202,14 +173,10 @@ func (e *Eaa) doSetSecret(oldSecret, newSecret string) error {
 		return nil
 	}
 
-	encrypted, err := helpers.EncryptString([]byte(secretEncryptionKey), newSecret)
+	// Hashing the password with the default cost of 10
+	bytesToWrite, err := bcrypt.GenerateFromPassword([]byte(newSecret), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf("failed to encode EAA password: %w", err)
-	}
-
-	bytesToWrite := []byte(encrypted)
-	if len(bytesToWrite) > 1024*10 {
-		return fmt.Errorf("password too long")
+		return fmt.Errorf("failed to hash EAA password: %w", err)
 	}
 
 	// save data
@@ -224,12 +191,12 @@ func (e *Eaa) doSetSecret(oldSecret, newSecret string) error {
 	}
 
 	// ensure data were saved correctly
-	secretConfirm, err := e.doSecret()
+	isOK, err := e.doCheckSecret(newSecret)
 	if err != nil {
 		e.doForceDisable()
 		return fmt.Errorf("failed to enable EAA: %w", err)
 	}
-	if secretConfirm != newSecret {
+	if !isOK {
 		e.doForceDisable()
 		return fmt.Errorf("failed to enable EAA: internal error during confirmation")
 	}
@@ -247,9 +214,9 @@ func (e *Eaa) doCheckSecret(secretToCheck string) (retVal bool, err error) {
 		}
 	}()
 
-	// read secret
-	secret, err := e.doSecret()
-	isPModeEnabled := err == nil && len(secret) > 0
+	// read secretHash
+	secretHash, err := e.doGetSecretHash()
+	isPModeEnabled := err == nil && len(secretHash) > 0
 	if !isPModeEnabled {
 		return true, nil
 	}
@@ -278,5 +245,6 @@ func (e *Eaa) doCheckSecret(secretToCheck string) (retVal bool, err error) {
 	}
 
 	// compare secrets
-	return secret == secretToCheck, nil
+	errCheck := bcrypt.CompareHashAndPassword(secretHash, []byte(secretToCheck))
+	return errCheck == nil, nil
 }
