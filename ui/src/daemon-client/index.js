@@ -387,6 +387,8 @@ async function processResponse(response) {
         store.commit("paranoidModeStatus", obj.ParanoidMode);
         store.commit("uiState/isParanoidModePasswordView", isPmPassError);
 
+        if (obj.ParanoidMode.IsEnabled === false) ParanoidModeSecret = "";
+
         // send logging + obfsproxy configuration
         // (apply UI settings to daemon only when HelloResp directed directly to us obj.Idx>0 )
         // TODO: do not send logging and obfsproxy settings, but ask for this values from the daemon
