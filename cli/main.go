@@ -36,9 +36,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/cliplatform"
 	"github.com/ivpn/desktop-app/cli/commands"
 	"github.com/ivpn/desktop-app/cli/flags"
-	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/cli/protocol"
-	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"golang.org/x/term"
@@ -182,18 +180,6 @@ func main() {
 }
 
 func RequestParanoidModePassword(c *protocol.Client) (string, error) {
-	// for privilaged users: try to read secret directly from file
-	if helpers.CheckIsAdmin() {
-		sFile := c.GetHelloResponse().ParanoidMode.FilePath
-		if len(sFile) > 0 {
-			eaa := eaa.Init(sFile)
-			secret, _ := eaa.Secret()
-			if len(secret) > 0 {
-				return secret, nil
-			}
-		}
-	}
-
 	// request secret from user
 	fmt.Print("EAA is active. Enter EAA password: ")
 

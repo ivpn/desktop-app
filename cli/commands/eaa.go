@@ -103,33 +103,16 @@ func (c *CmdParanoidMode) Run() error {
 		fmt.Println("Enabling Enhanced App Authentication")
 
 		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
-			oldSecret := ""
-
-			if helpers.CheckIsAdmin() {
-				// We are running in privilaged environment
-				// Trying to read secret directly from file
-				// (we are in privilaged mode - so old PM password is not required)
-
-				// get path of PM file
-				fpath := _proto.GetHelloResponse().ParanoidMode.FilePath
-				if len(fpath) > 0 {
-					// read secret
-					eaa := eaa.Init(fpath)
-					oldSecret, _ = eaa.Secret()
-				}
+			fmt.Print("\tEnter current password: ")
+			data, err := term.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				return fmt.Errorf("failed to read password: %w", err)
 			}
 
-			if len(oldSecret) <= 0 {
-				fmt.Print("\tEnter current password: ")
-				data, err := term.ReadPassword(int(syscall.Stdin))
-				if err != nil {
-					return fmt.Errorf("failed to read password: %w", err)
-				}
+			oldSecret := strings.TrimSpace(string(data))
+			_proto.InitSetParanoidModeSecret(oldSecret)
+			fmt.Println("")
 
-				oldSecret = strings.TrimSpace(string(data))
-				_proto.InitSetParanoidModeSecret(oldSecret)
-				fmt.Println("")
-			}
 		}
 
 		fmt.Print("\tEnter new password: ")
