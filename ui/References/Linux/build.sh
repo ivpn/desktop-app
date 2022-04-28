@@ -49,9 +49,11 @@ CheckLastResult()
   fi
 }
 
+ARCH="$( uname -m )"
 SCRIPT_DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 OUT_DIR="$SCRIPT_DIR/_out_bin"
 APP_UNPACKED_DIR="$SCRIPT_DIR/../../dist_electron/linux-unpacked"
+APP_UNPACKED_DIR_ARCH="$SCRIPT_DIR/../../dist_electron/linux-${ARCH}-unpacked"
 APP_BIN_DIR="$SCRIPT_DIR/../../dist_electron/bin"
 IVPN_DESKTOP_UI2_SOURCES="$SCRIPT_DIR/../../"
 
@@ -76,6 +78,8 @@ then
   echo ""
   exit 1
 fi
+
+echo "Architecture: $ARCH"
 echo "======================================================"
 echo "============ Building UI binary ======================"
 echo "======================================================"
@@ -84,6 +88,11 @@ if [ -d $APP_UNPACKED_DIR ]; then
   echo "[+] Removing: $APP_UNPACKED_DIR"
   rm -fr "$APP_UNPACKED_DIR"
 fi
+if [ -d $APP_UNPACKED_DIR_ARCH ]; then
+  echo "[+] Removing: $APP_UNPACKED_DIR_ARCH"
+  rm -fr "$APP_UNPACKED_DIR_ARCH"
+fi
+
 if [ -d $APP_BIN_DIR ]; then
   echo "[+] Removing: $APP_BIN_DIR"
   rm -fr "$APP_BIN_DIR"
@@ -104,6 +113,11 @@ echo "*** Building Electron app ... ***"
 $SCRIPT_DIR/compile-ui.sh
 CheckLastResult
 
+if [ -d $APP_UNPACKED_DIR_ARCH ]; then
+    # for non-standard architecture we must use the architecture-dependend path
+    echo "Info: Non 'default' architecture!" 
+    APP_UNPACKED_DIR=$APP_UNPACKED_DIR_ARCH
+fi
 if [ -d $APP_UNPACKED_DIR ]; then
     echo "[ ] Exist: $APP_UNPACKED_DIR"
 else
