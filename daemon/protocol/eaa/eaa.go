@@ -34,10 +34,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
+	"github.com/ivpn/desktop-app/daemon/helpers"
 	"golang.org/x/crypto/pbkdf2"
 )
 
+// Enhanced App Authentication
 type Eaa struct {
 	mutex              sync.Mutex
 	secretFile         string
@@ -190,14 +191,9 @@ func (e *Eaa) doSetSecret(oldSecret, newSecret string) error {
 	}
 
 	// save data
-	if err := os.WriteFile(file, bytesToWrite, 0600); err != nil {
+	if err := helpers.WriteFile(file, bytesToWrite, 0600); err != nil {
 		e.doForceDisable()
 		return fmt.Errorf("failed to enable EAA (FileWrite error): %w", err)
-	}
-	// only for Windows: Golang is not able to change file permissins in Windows style
-	if err := filerights.WindowsChmod(file, 0600); err != nil { // read\write only for privileged user
-		e.doForceDisable()
-		return fmt.Errorf("failed to change EAA file permissions: %w", err)
 	}
 
 	// ensure data were saved correctly

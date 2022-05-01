@@ -55,6 +55,7 @@ type Client struct {
 
 	_helloResponse types.HelloResp
 
+	_paranoidModeSecretSuAccess    []byte
 	_paranoidModeSecret            string
 	_paranoidModeSecretRequestFunc func(*Client) (string, error)
 }
@@ -111,17 +112,10 @@ func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) (string, error
 
 // SendHello - send initial message and get current status
 func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
-
-	doRequestPmFile := false
-	if helpers.CheckIsAdmin() {
-		// If we running in privilaged environment - request also info about EAA mode secret file
-		doRequestPmFile = true
-	}
-
-	return c.SendHelloEx(doRequestPmFile, false)
+	return c.SendHelloEx(false)
 }
 
-func (c *Client) SendHelloEx(doRequestPmFile bool, isSendResponseToAllClients bool) (helloResponse types.HelloResp, err error) {
+func (c *Client) SendHelloEx(isSendResponseToAllClients bool) (helloResponse types.HelloResp, err error) {
 	if err := c.ensureConnected(); err != nil {
 		return helloResponse, err
 	}
@@ -131,8 +125,9 @@ func (c *Client) SendHelloEx(doRequestPmFile bool, isSendResponseToAllClients bo
 		KeepDaemonAlone:          true,
 		GetStatus:                true,
 		Version:                  "1.0",
-		GetParanoidModeFilePath:  doRequestPmFile,
-		SendResponseToAllClients: isSendResponseToAllClients}
+		SendResponseToAllClients: isSendResponseToAllClients,
+		IsSuClient:               helpers.CheckIsAdmin(),
+	}
 
 	if err := c.sendRecvTimeOut(&helloReq, &c._helloResponse, time.Second*7); err != nil {
 		if _, ok := errors.Unwrap(err).(ResponseTimeout); ok {

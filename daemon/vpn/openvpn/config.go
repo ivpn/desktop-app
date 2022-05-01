@@ -30,10 +30,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
-	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 )
 
 // ConnectionParams represents OpenVPN connection parameters
@@ -105,14 +105,9 @@ func (c *ConnectionParams) WriteConfigFile(
 
 	configText := strings.Join(cfg, "\n")
 
-	err = ioutil.WriteFile(filePathToSave, []byte(configText), 0600) // read\write only for privileged user
+	err = helpers.WriteFile(filePathToSave, []byte(configText), 0600) // read\write only for privileged user
 	if err != nil {
 		return fmt.Errorf("failed to save OpenVPN configuration into a file: %w", err)
-	}
-
-	// only for Windows: Golang is not able to change file permissins in Windows style
-	if err := filerights.WindowsChmod(filePathToSave, 0600); err != nil { // read\write only for privileged user
-		return fmt.Errorf("failed to change OpenVPN configuration file permissions: %w", err)
 	}
 
 	log.Info("Configuring OpenVPN...\n",

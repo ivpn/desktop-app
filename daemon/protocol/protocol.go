@@ -24,6 +24,7 @@ package protocol
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -131,7 +132,19 @@ type Service interface {
 
 // CreateProtocol - Create new protocol object
 func CreateProtocol() (*Protocol, error) {
-	return &Protocol{_connections: make(map[net.Conn]struct{}), _eaa: eaa.Init(platform.ParanoidModeSecretFile())}, nil
+	return &Protocol{_connections: make(map[net.Conn]*clientConnectionInfo), _eaa: eaa.Init(platform.ParanoidModeSecretFile())}, nil
+}
+
+type clientConnectionInfo struct {
+	// Enhanced App Authentication for a clients running in privilaged environment
+	EaaSu *eaa.EaaSu
+}
+
+func (i *clientConnectionInfo) Destroy() error {
+	if i.EaaSu != nil {
+		return i.EaaSu.UnInitialize()
+	}
+	return nil
 }
 
 // Protocol - TCP interface to communicate with IVPN application
@@ -142,7 +155,7 @@ type Protocol struct {
 	_connListener *net.TCPListener
 
 	_connectionsMutex sync.RWMutex
-	_connections      map[net.Conn]struct{}
+	_connections      map[net.Conn]*clientConnectionInfo
 
 	_service Service
 
@@ -378,6 +391,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			"AccountStatus":
 			return true
 		}
+
 		return false
 	}
 
@@ -395,32 +409,53 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	}
 
 	if !isDoSkipParanoidMode(reqCmd.Command) {
-		isOK, err := p._eaa.CheckSecret(reqCmd.ProtocolSecret)
-		if !isOK {
-			// ParanoidMode: wrong password
-			errorResp := types.ErrorResp{
-				ErrorType:    types.ErrorParanoidModePasswordError,
-				ErrorTitle:   "Enhanced App Authentication",
-				ErrorMessage: "The password is incorrect. Please try again."}
-
-			if err != nil && len(errorResp.Error()) > 0 {
-				errorResp.ErrorMessage = err.Error()
+		if len(reqCmd.ProtocolSecretSu) > 0 && p._eaa.IsEnabled() {
+			// client has privilaged mode access: using specific authentication mechanism
+			cInfo, ok := p._connections[conn]
+			if !ok || cInfo == nil || cInfo.EaaSu == nil || !cInfo.EaaSu.IsInitialized() {
+				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("EAA: superuser authentication not initialized for this connection"))
+				return
 			}
 
-			p.sendResponse(conn,
-				&errorResp,
-				reqCmd.Idx)
-
-			log.Info(fmt.Sprintf("      [%d] %sRequest error '%s': %s", reqCmd.Idx, p.connLogID(conn), reqCmd.Command, errorResp))
-
-			// send current connection state
-			if reqCmd.Command == "Connect" || reqCmd.Command == "Disconnect" {
-				sendState(reqCmd.Idx, false)
+			bytes, err := base64.StdEncoding.DecodeString(reqCmd.ProtocolSecretSu)
+			if err != nil {
+				cInfo.EaaSu.UnInitialize()
+				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("EAA: superuser authentication failed: "+err.Error()))
+				return
 			}
 
-			return
+			if err := cInfo.EaaSu.CheckSecret(bytes); err != nil {
+				cInfo.EaaSu.UnInitialize()
+				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("EAA: superuser authentication failed: %w", err))
+				return
+			}
+		} else {
+			isOK, err := p._eaa.CheckSecret(reqCmd.ProtocolSecret)
+			if !isOK {
+				// ParanoidMode: wrong password
+				errorResp := types.ErrorResp{
+					ErrorType:    types.ErrorParanoidModePasswordError,
+					ErrorTitle:   "Enhanced App Authentication",
+					ErrorMessage: "The password is incorrect. Please try again."}
+
+				if err != nil && len(errorResp.Error()) > 0 {
+					errorResp.ErrorMessage = err.Error()
+				}
+
+				p.sendResponse(conn,
+					&errorResp,
+					reqCmd.Idx)
+
+				log.Info(fmt.Sprintf("      [%d] %sRequest error '%s': %s", reqCmd.Idx, p.connLogID(conn), reqCmd.Command, errorResp))
+
+				// send current connection state
+				if reqCmd.Command == "Connect" || reqCmd.Command == "Disconnect" {
+					sendState(reqCmd.Idx, false)
+				}
+
+				return
+			}
 		}
-
 	}
 
 	switch reqCmd.Command {
@@ -437,14 +472,30 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		log.Info(fmt.Sprintf("%sConnected client version: '%s' [set KeepDaemonAlone = %t]", p.connLogID(conn), req.Version, req.KeepDaemonAlone))
 
+		eaaSuAccessFile := ""
+		if req.IsSuClient {
+			if cInfo, ok := p._connections[conn]; ok {
+				if cInfo.EaaSu == nil {
+					connName := getConnectionName(conn)
+					eaaSuObj, err := eaa.InitializeSuAccess(platform.ParanoidModeFolderForSuSecrets(), connName)
+					if err != nil {
+						log.Error("failed to initialize EA SU: %w", err)
+					} else {
+						cInfo.EaaSu = eaaSuObj
+						eaaSuAccessFile = cInfo.EaaSu.File()
+						log.Info("EAA SU access initialized for connection: ", connName)
+					}
+				}
+			}
+		}
+
 		// send back Hello message with account session info
 		helloResponse := p.createHelloResponse()
-		if req.GetParanoidModeFilePath && p._eaa.IsEnabled() {
-			helloResponse.ParanoidMode.FilePath = platform.ParanoidModeSecretFile()
-		}
+		helloResponse.ParanoidMode.SuAccessFile = eaaSuAccessFile // ParanoidMode.SuAccessFile can be defined ONLY FOR CURRENT CONNECTION
 		p.sendResponse(conn, helloResponse, req.Idx)
 		if req.SendResponseToAllClients {
-			p.notifyClients(helloResponse)
+			helloResponseAll := p.createHelloResponse() // do not set ParanoidMode.SuAccessFile if we are sending to all clients
+			p.notifyClients(helloResponseAll)
 		}
 
 		if req.GetServersList {

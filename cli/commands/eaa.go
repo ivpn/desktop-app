@@ -31,6 +31,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"golang.org/x/term"
 )
 
@@ -63,7 +64,7 @@ func (c *CmdParanoidMode) Run() error {
 				// (we are in privilaged mode - so old PM password is not required)
 
 				// 1 - get path of PM file
-				fpath := _proto.GetHelloResponse().ParanoidMode.FilePath
+				fpath := platform.ParanoidModeSecretFile()
 				if len(fpath) <= 0 {
 					return fmt.Errorf("failed to disable Enhanced App Authentication in privilaged user environment (file path not defined)")
 				}
@@ -76,9 +77,8 @@ func (c *CmdParanoidMode) Run() error {
 
 				// 3 - request new PM state (to print actual state for user)
 				// and notify all connected clients about EAA change
-				doRequestPmFile := true
 				isSendResponseToAllClients := true
-				if _, err := _proto.SendHelloEx(doRequestPmFile, isSendResponseToAllClients); err != nil {
+				if _, err := _proto.SendHelloEx(isSendResponseToAllClients); err != nil {
 					return err
 				}
 			} else {

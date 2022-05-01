@@ -44,11 +44,16 @@ import (
 )
 
 // connID returns connection info (required to distinguish communication between several connections in log)
+
+func getConnectionName(c net.Conn) string {
+	return strings.TrimSpace(strings.Replace(c.RemoteAddr().String(), "127.0.0.1:", "", 1))
+}
+
 func (p *Protocol) connLogID(c net.Conn) string {
 	if c == nil {
 		return ""
 	}
-	//return ""
+
 	// not necessary to print additional data into a log when only one connection available
 	numConnections := 0
 	func() {
@@ -60,8 +65,7 @@ func (p *Protocol) connLogID(c net.Conn) string {
 		return ""
 	}
 
-	ret := strings.Replace(c.RemoteAddr().String(), "127.0.0.1:", "", 1)
-	return fmt.Sprintf("%s ", ret)
+	return fmt.Sprintf("%s ", getConnectionName(c))
 }
 
 // -------------- send message to all active connections ---------------
@@ -77,12 +81,19 @@ func (p *Protocol) notifyClients(cmd interface{}) {
 func (p *Protocol) clientConnected(c net.Conn) {
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
-	p._connections[c] = struct{}{}
+	p._connections[c] = &clientConnectionInfo{}
 }
 
 func (p *Protocol) clientDisconnected(c net.Conn) {
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
+
+	if cInfo, ok := p._connections[c]; ok {
+		if err := cInfo.Destroy(); err != nil {
+			log.Error(err)
+		}
+	}
+
 	delete(p._connections, c)
 	c.Close()
 }
@@ -100,6 +111,13 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 		p._connectionsMutex.RLock()
 		defer p._connectionsMutex.RUnlock()
 		for conn := range p._connections {
+
+			if cInfo, ok := p._connections[conn]; ok && cInfo.EaaSu != nil {
+				if err := cInfo.Destroy(); err != nil {
+					log.Error(err)
+				}
+			}
+
 			// notifying client "service is going to stop" (client application (UI) will close)
 			p.sendResponse(conn, &types.ServiceExitingResp{}, 0)
 			// closing current connection with a client
@@ -110,7 +128,7 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 	// erasing clients connections
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
-	p._connections = make(map[net.Conn]struct{})
+	p._connections = make(map[net.Conn]*clientConnectionInfo)
 }
 
 // -------------- sending responses ---------------

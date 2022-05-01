@@ -32,8 +32,10 @@
             //"args": ["connect","-o", "-dns", "1.1.1.1", "-antitracker_hard", "-f", "sk.gw.ivpn.net"],
             //"args": ["state"],
             //"args": ["connect", "-s", "rs.gw.ivpn.net"],
-            "args": ["dns", "-dot", "https://cloudflare-dns.com/dns-query", "1.1.1.1"],
+            //"args": ["dns", "-dot", "https://cloudflare-dns.com/dns-query", "1.1.1.1"],
             //"args": ["dns"],
+            //"args": ["firewall", "-off"],
+            "args": ["eaa", "-on"],
             "buildFlags": "-tags debug"
         }
     ]

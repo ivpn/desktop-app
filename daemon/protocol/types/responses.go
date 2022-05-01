@@ -81,10 +81,12 @@ type DnsAbilities struct {
 }
 
 type ParanoidModeStatus struct {
-	// Path to a file with the secret for paranoid mode (if requested)
-	// This file must be able for reading ONLY for privilaged users
-	FilePath  string
 	IsEnabled bool
+	// Ability to skip EAA for clients running in privileged environment.
+	// File readable only for privileged users.
+	// Content of this file can be used to skip EAA verification (see RequestBase.ProtocolSecretSu).
+	// Each client connection use own SuAccessFile.
+	SuAccessFile string
 }
 
 type SettingsResp struct {

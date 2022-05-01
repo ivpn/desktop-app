@@ -24,11 +24,14 @@ package protocol
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 	"time"
 
+	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
@@ -184,7 +187,7 @@ func (c *Client) send(cmd interface{}, requestIdx int) error {
 }
 
 func (c *Client) initRequestFields(obj interface{}) error {
-	if len(c._paranoidModeSecret) <= 0 {
+	if len(c._paranoidModeSecret) <= 0 && len(c._paranoidModeSecretSuAccess) <= 0 {
 		return nil
 	}
 
@@ -195,15 +198,30 @@ func (c *Client) initRequestFields(obj interface{}) error {
 		return fmt.Errorf("interface is not a pointer to a request")
 	}
 
-	// Get the field by name "ProtocolSecret"
-	protocolSecretField := valueIface.Elem().FieldByName("ProtocolSecret")
-	if !protocolSecretField.IsValid() {
-		return fmt.Errorf("interface `%s` does not have the field `ProtocolSecret`", valueIface.Type())
+	if len(c._paranoidModeSecret) > 0 {
+		// Get the field by name "ProtocolSecret"
+		protocolSecretField := valueIface.Elem().FieldByName("ProtocolSecret")
+		if !protocolSecretField.IsValid() {
+			return fmt.Errorf("interface `%s` does not have the field `ProtocolSecret`", valueIface.Type())
+		}
+		if protocolSecretField.Type().Kind() != reflect.String {
+			return fmt.Errorf("'ProtocolSecret' field of an interface `%s` is not 'string'", valueIface.Type())
+		}
+		protocolSecretField.Set(reflect.ValueOf(c._paranoidModeSecret))
 	}
-	if protocolSecretField.Type().Kind() != reflect.String {
-		return fmt.Errorf("'ProtocolSecret' field of an interface `%s` is not 'string'", valueIface.Type())
+
+	if len(c._paranoidModeSecretSuAccess) > 0 {
+		// Get the field by name "ProtocolSecretSu"
+		protocolSecretField := valueIface.Elem().FieldByName("ProtocolSecretSu")
+		if !protocolSecretField.IsValid() {
+			return fmt.Errorf("interface `%s` does not have the field `ProtocolSecretSu`", valueIface.Type())
+		}
+		if protocolSecretField.Type().Kind() != reflect.String {
+			return fmt.Errorf("'ProtocolSecretSu' field of an interface `%s` is not 'string'", valueIface.Type())
+		}
+
+		protocolSecretField.Set(reflect.ValueOf(base64.StdEncoding.EncodeToString(c._paranoidModeSecretSuAccess)))
 	}
-	protocolSecretField.Set(reflect.ValueOf(c._paranoidModeSecret))
 
 	return nil
 }
@@ -249,6 +267,14 @@ func (c *Client) receiverRoutine() {
 				var hr types.HelloResp
 				if err := json.Unmarshal(messageData, &hr); err == nil {
 					c._helloResponse = hr
+
+					// If we are running in privilaged environment AND if daemon informed us about secret file - read it
+					// It gives us possibility to bypass EAA (if enabled)
+					if len(c._helloResponse.ParanoidMode.SuAccessFile) > 0 && helpers.CheckIsAdmin() {
+						if secret, err := os.ReadFile(c._helloResponse.ParanoidMode.SuAccessFile); err == nil {
+							c._paranoidModeSecretSuAccess = secret
+						}
+					}
 				}
 			}
 
