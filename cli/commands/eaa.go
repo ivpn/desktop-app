@@ -99,21 +99,8 @@ func (c *CmdParanoidMode) Run() error {
 		}
 	}
 
-	if c.enable {
+	if c.enable && !_proto.GetHelloResponse().ParanoidMode.IsEnabled {
 		fmt.Println("Enabling Enhanced App Authentication")
-
-		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
-			fmt.Print("\tEnter current password: ")
-			data, err := term.ReadPassword(int(syscall.Stdin))
-			if err != nil {
-				return fmt.Errorf("failed to read password: %w", err)
-			}
-
-			oldSecret := strings.TrimSpace(string(data))
-			_proto.InitSetParanoidModeSecret(oldSecret)
-			fmt.Println("")
-
-		}
 
 		fmt.Print("\tEnter new password: ")
 		data, err := term.ReadPassword(int(syscall.Stdin))
@@ -148,6 +135,10 @@ func (c *CmdParanoidMode) Run() error {
 	var w *tabwriter.Writer
 	w = printParamoidModeState(w, _proto.GetHelloResponse())
 	w.Flush()
+
+	if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
+		PrintTips([]TipType{TipEaaDisable})
+	}
 
 	return nil
 }

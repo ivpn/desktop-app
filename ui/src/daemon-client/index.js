@@ -1502,7 +1502,7 @@ async function SplitTunnelAddApp(execCmd, funcShowMessageBox) {
       // Instead, use hardcoded binary path to execute '/usr/bin/ivpn'
       let eaaArgs = "";
       if (ParanoidModeSecret) {
-        eaaArgs = `-eaa '${ParanoidModeSecret}' `;
+        eaaArgs = `-eaa_hash '${ParanoidModeSecret}' `;
       }
       let shellCommandToRun = `/usr/bin/ivpn exclude  ${eaaArgs}${execCmd}`;
 
@@ -1744,11 +1744,21 @@ async function GetWiFiAvailableNetworks() {
   });
 }
 
+function paranoidModePasswordHash(password) {
+  if (!password) return "";
+  var pbkdf2 = require("pbkdf2");
+  let hash = pbkdf2.pbkdf2Sync(password, "", 4096, 64, "sha256");
+  return hash.toString("base64");
+}
+
 async function SetParanoidModePassword(newPassword, oldPassword) {
   if (!newPassword && !oldPassword) {
     // to disable PM the 'newPassword' must be empty. But we need 'oldPassword' instead
     throw "Actual password not defined";
   }
+
+  newPassword = paranoidModePasswordHash(newPassword);
+  oldPassword = paranoidModePasswordHash(oldPassword);
 
   ParanoidModeSecret = oldPassword;
   if (!ParanoidModeSecret) ParanoidModeSecret = newPassword;
@@ -1764,6 +1774,8 @@ async function SetParanoidModePassword(newPassword, oldPassword) {
 
 async function SetLocalParanoidModePassword(password) {
   if (!password) throw "Password is empty";
+
+  password = paranoidModePasswordHash(password);
 
   await sendRecv({
     Command: daemonRequests.EmptyReq,

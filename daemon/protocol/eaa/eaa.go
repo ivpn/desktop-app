@@ -24,9 +24,6 @@ package eaa
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
@@ -35,7 +32,6 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/helpers"
-	"golang.org/x/crypto/pbkdf2"
 )
 
 // Enhanced App Authentication
@@ -44,12 +40,6 @@ type Eaa struct {
 	secretFile         string
 	lastFailedAttempts []time.Time
 }
-
-const (
-	hashSaltLen    = 32
-	hashOutLen     = 64
-	hashIterations = 4096
-)
 
 func Init(secretFile string) *Eaa {
 	return &Eaa{secretFile: secretFile}
@@ -184,14 +174,8 @@ func (e *Eaa) doSetSecret(oldSecret, newSecret string) error {
 		return nil
 	}
 
-	// Hashing the password
-	bytesToWrite, err := generateHash(newSecret)
-	if err != nil {
-		return fmt.Errorf("failed to hash EAA password: %w", err)
-	}
-
 	// save data
-	if err := helpers.WriteFile(file, bytesToWrite, 0600); err != nil {
+	if err := helpers.WriteFile(file, []byte(newSecret), 0600); err != nil {
 		e.doForceDisable()
 		return fmt.Errorf("failed to enable EAA (FileWrite error): %w", err)
 	}
@@ -250,39 +234,7 @@ func (e *Eaa) doCheckSecret(secretToCheck string) (retVal bool, err error) {
 		time.Sleep(time.Second)
 	}
 
-	// compare secrets
-	errCheck := compareHashAndPassword(secretHash, secretToCheck)
-	return errCheck == nil, nil
-}
-
-func generateHash(password string) ([]byte, error) {
-	// generate random salt
-	salt := make([]byte, hashSaltLen)
-	if err := binary.Read(rand.Reader, binary.BigEndian, salt); err != nil {
-		return nil, fmt.Errorf("failed to generete salt: %w", err)
-	}
-
-	// calculate hash
-	hash := pbkdf2.Key([]byte(password), salt, hashIterations, hashOutLen, sha256.New)
-
-	// salt+hash pair
-	return append(salt, hash...), nil
-}
-
-func compareHashAndPassword(hashPair []byte, password string) error {
-	if len(hashPair) != (hashSaltLen + hashOutLen) {
-		return fmt.Errorf("wrong hash length")
-	}
-	// getting salt and hash from hash-pair
-	salt := hashPair[:hashSaltLen]
-	hash := hashPair[hashSaltLen:]
-
-	// calculate password hash
-	passHash := pbkdf2.Key([]byte(password), salt, hashIterations, hashOutLen, sha256.New)
-
-	if !bytes.Equal(hash, passHash) {
-		return fmt.Errorf("wrong password")
-	}
-
-	return nil
+	// Compare secrets
+	// (password hashing is done on client side. So we just comparing data.)
+	return bytes.Equal(secretHash, []byte(secretToCheck)), nil
 }

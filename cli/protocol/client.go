@@ -24,6 +24,8 @@ package protocol
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -39,6 +41,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/vpn"
+	"golang.org/x/crypto/pbkdf2"
 )
 
 // Client for IVPN daemon
@@ -102,8 +105,19 @@ func (c *Client) Connect() (err error) {
 	return nil
 }
 
+func paranoidModeSecretHash(secret string) string {
+	if len(secret) <= 0 {
+		return ""
+	}
+	hash := pbkdf2.Key([]byte(secret), []byte(""), 4096, 64, sha256.New)
+	return base64.StdEncoding.EncodeToString(hash)
+}
+
 func (c *Client) InitSetParanoidModeSecret(secret string) {
-	c._paranoidModeSecret = secret
+	c._paranoidModeSecret = paranoidModeSecretHash(secret)
+}
+func (c *Client) InitSetParanoidModeSecretHash(secretHash string) {
+	c._paranoidModeSecret = secretHash
 }
 
 func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) (string, error)) {
@@ -622,7 +636,7 @@ func (c *Client) SetParanoidModePassword(secret string) error {
 		return err
 	}
 
-	req := types.ParanoidModeSetPasswordReq{NewSecret: secret}
+	req := types.ParanoidModeSetPasswordReq{NewSecret: paranoidModeSecretHash(secret)}
 	var resp types.HelloResp
 	// Waiting for HelloResp (ignoring command index) or for ErrorResp (not ignoring command index)
 	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
