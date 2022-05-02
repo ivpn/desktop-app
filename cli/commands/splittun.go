@@ -40,6 +40,7 @@ type Exclude struct {
 	execute              string // this parameter is not in use. We need it just for help info. (using executeSpecParseArgs after special parsing)
 	executeSpecParseArgs []string
 	eaaPassword          string // (if Enhanced App Authentication is enabled) EAA password (using executeSpecParseArgs after special parsing)
+	eaaPasswordHash      string // (if Enhanced App Authentication is enabled) EAA password hash (using executeSpecParseArgs after special parsing)
 }
 
 func (c *Exclude) Init() {
@@ -56,7 +57,11 @@ func (c *Exclude) Run() error {
 		c.Usage(false)
 		return fmt.Errorf("no parameters defined")
 	}
-	return doAddApp(c.executeSpecParseArgs, c.eaaPassword)
+
+	if len(c.eaaPasswordHash) > 0 {
+		return doAddApp(c.executeSpecParseArgs, c.eaaPasswordHash, true)
+	}
+	return doAddApp(c.executeSpecParseArgs, c.eaaPassword, false)
 }
 func (c *Exclude) specialParse(arguments []string) bool {
 	if len(arguments) <= 0 {
@@ -67,7 +72,10 @@ func (c *Exclude) specialParse(arguments []string) bool {
 		return false
 	}
 
-	if strings.ToLower(arguments[0]) == "-eaa" {
+	if strings.ToLower(arguments[0]) == "-eaa_hash" {
+		c.eaaPasswordHash = arguments[1] // base64 hash of EAA password
+		arguments = arguments[2:]
+	} else if strings.ToLower(arguments[0]) == "-eaa" {
 		if len(arguments) < 3 {
 			return false
 		}
@@ -83,7 +91,7 @@ func (c *Exclude) specialParse(arguments []string) bool {
 }
 
 // ================================================================
-func doAddApp(args []string, eaaPass string) error {
+func doAddApp(args []string, eaaPass string, isHashedPass bool) error {
 	if len(args) <= 0 {
 		return fmt.Errorf("no arguments defined")
 	}
@@ -105,7 +113,11 @@ func doAddApp(args []string, eaaPass string) error {
 	}
 
 	if len(eaaPass) > 0 {
-		_proto.InitSetParanoidModeSecret(eaaPass)
+		if isHashedPass {
+			_proto.InitSetParanoidModeSecretHash(eaaPass)
+		} else {
+			_proto.InitSetParanoidModeSecret(eaaPass)
+		}
 	}
 	isRequiredToExecuteCommand, err := _proto.SplitTunnelAddApp(strings.Join(args[:], " "))
 	if err != nil {
@@ -230,7 +242,7 @@ func (c *SplitTun) Run() error {
 
 	if len(c.appaddArgs) > 0 || len(c.appremove) > 0 {
 		if len(c.appaddArgs) > 0 {
-			if err = doAddApp(c.appaddArgs, ""); err != nil {
+			if err = doAddApp(c.appaddArgs, "", false); err != nil {
 				return err
 			}
 		} else if len(c.appremove) > 0 {

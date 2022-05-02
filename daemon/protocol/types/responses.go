@@ -81,9 +81,6 @@ type DnsAbilities struct {
 }
 
 type ParanoidModeStatus struct {
-	// Path to a file with the secret for paranoid mode (if requested)
-	// This file must be able for reading ONLY for privilaged users
-	FilePath  string
 	IsEnabled bool
 }
 

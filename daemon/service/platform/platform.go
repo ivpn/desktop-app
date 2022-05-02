@@ -24,6 +24,7 @@ package platform
 
 import (
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -98,25 +99,25 @@ func Init() (warnings []string, errors []error) {
 	}
 
 	// creating required folders
-	if err := makeDir("servicePortFile", filepath.Dir(servicePortFile)); err != nil {
+	if err := makeDir("servicePortFile", filepath.Dir(servicePortFile), os.ModePerm); err != nil {
 		errors = append(errors, err)
 	}
-	if err := makeDir("paranoidModeSecretFile", filepath.Dir(paranoidModeSecretFile)); err != nil {
+	if err := makeDir("paranoidModeSecretFile", filepath.Dir(paranoidModeSecretFile), os.ModePerm); err != nil {
 		errors = append(errors, err)
 	}
-	if err := makeDir("logFile", filepath.Dir(logFile)); err != nil {
+	if err := makeDir("logFile", filepath.Dir(logFile), os.ModePerm); err != nil {
 		errors = append(errors, err)
 	}
-	if err := makeDir("openvpnLogFile", filepath.Dir(openvpnLogFile)); err != nil {
+	if err := makeDir("openvpnLogFile", filepath.Dir(openvpnLogFile), os.ModePerm); err != nil {
 		errors = append(errors, err)
 	}
-	if err := makeDir("settingsFile", filepath.Dir(settingsFile)); err != nil {
+	if err := makeDir("settingsFile", filepath.Dir(settingsFile), os.ModePerm); err != nil {
 		errors = append(errors, err)
 	}
-	if err := makeDir("openvpnConfigFile", filepath.Dir(openvpnConfigFile)); err != nil {
+	if err := makeDir("openvpnConfigFile", filepath.Dir(openvpnConfigFile), os.ModePerm); err != nil {
 		errors = append(errors, err)
 	}
-	if err := makeDir("wgConfigFilePath", filepath.Dir(wgConfigFilePath)); err != nil {
+	if err := makeDir("wgConfigFilePath", filepath.Dir(wgConfigFilePath), os.ModePerm); err != nil {
 		errors = append(errors, err)
 	}
 
@@ -211,7 +212,7 @@ func createOpenVpnUserParamsFileExample() error {
 		os.Remove(openvpnUserParamsFile)
 	}
 
-	if err := makeDir("openvpnUserParamsFile", filepath.Dir(openvpnUserParamsFile)); err != nil {
+	if err := makeDir("openvpnUserParamsFile", filepath.Dir(openvpnUserParamsFile), os.ModePerm); err != nil {
 		return err
 	}
 
@@ -228,12 +229,12 @@ func createOpenVpnUserParamsFileExample() error {
 	return ioutil.WriteFile(openvpnUserParamsFile, []byte(builder.String()), filerights.DefaultFilePermissionsForConfig())
 }
 
-func makeDir(description string, dirpath string) error {
+func makeDir(description string, dirpath string, mode fs.FileMode) error {
 	if len(dirpath) == 0 {
 		return fmt.Errorf("parameter not initialized: %s", description)
 	}
 
-	if err := os.MkdirAll(dirpath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(dirpath, mode); err != nil {
 		return fmt.Errorf("unable to create directory error: %s (%s:%s)", err.Error(), description, dirpath)
 	}
 	return nil

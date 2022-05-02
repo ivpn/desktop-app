@@ -24,6 +24,8 @@ package protocol
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -33,12 +35,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app/cli/helpers"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/vpn"
+	"golang.org/x/crypto/pbkdf2"
 )
 
 // Client for IVPN daemon
@@ -101,8 +103,19 @@ func (c *Client) Connect() (err error) {
 	return nil
 }
 
+func paranoidModeSecretHash(secret string) string {
+	if len(secret) <= 0 {
+		return ""
+	}
+	hash := pbkdf2.Key([]byte(secret), []byte(""), 4096, 64, sha256.New)
+	return base64.StdEncoding.EncodeToString(hash)
+}
+
 func (c *Client) InitSetParanoidModeSecret(secret string) {
-	c._paranoidModeSecret = secret
+	c._paranoidModeSecret = paranoidModeSecretHash(secret)
+}
+func (c *Client) InitSetParanoidModeSecretHash(secretHash string) {
+	c._paranoidModeSecret = secretHash
 }
 
 func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) (string, error)) {
@@ -111,17 +124,10 @@ func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) (string, error
 
 // SendHello - send initial message and get current status
 func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
-
-	doRequestPmFile := false
-	if helpers.CheckIsAdmin() {
-		// If we running in privilaged environment - request also info about EAA mode secret file
-		doRequestPmFile = true
-	}
-
-	return c.SendHelloEx(doRequestPmFile, false)
+	return c.SendHelloEx(false)
 }
 
-func (c *Client) SendHelloEx(doRequestPmFile bool, isSendResponseToAllClients bool) (helloResponse types.HelloResp, err error) {
+func (c *Client) SendHelloEx(isSendResponseToAllClients bool) (helloResponse types.HelloResp, err error) {
 	if err := c.ensureConnected(); err != nil {
 		return helloResponse, err
 	}
@@ -131,8 +137,8 @@ func (c *Client) SendHelloEx(doRequestPmFile bool, isSendResponseToAllClients bo
 		KeepDaemonAlone:          true,
 		GetStatus:                true,
 		Version:                  "1.0",
-		GetParanoidModeFilePath:  doRequestPmFile,
-		SendResponseToAllClients: isSendResponseToAllClients}
+		SendResponseToAllClients: isSendResponseToAllClients,
+	}
 
 	if err := c.sendRecvTimeOut(&helloReq, &c._helloResponse, time.Second*7); err != nil {
 		if _, ok := errors.Unwrap(err).(ResponseTimeout); ok {
@@ -643,7 +649,7 @@ func (c *Client) SetParanoidModePassword(secret string) error {
 		return err
 	}
 
-	req := types.ParanoidModeSetPasswordReq{NewSecret: secret}
+	req := types.ParanoidModeSetPasswordReq{NewSecret: paranoidModeSecretHash(secret)}
 	var resp types.HelloResp
 	// Waiting for HelloResp (ignoring command index) or for ErrorResp (not ignoring command index)
 	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {

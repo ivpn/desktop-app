@@ -31,9 +31,9 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
-	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 )
 
 var log *logger.Logger
@@ -107,13 +107,8 @@ func (p *Preferences) SavePreferences() error {
 	}
 
 	settingsFile := platform.SettingsFile()
-	if err := ioutil.WriteFile(settingsFile, data, 0600); err != nil { // read\write only for privileged user
+	if err := helpers.WriteFile(settingsFile, data, 0600); err != nil { // read\write only for privileged user
 		return err
-	}
-
-	// only for Windows: Golang is not able to change file permissins in Windows style
-	if err := filerights.WindowsChmod(settingsFile, 0600); err != nil { // read\write only for privileged user
-		return fmt.Errorf("failed to change settings-file permissions: %w", err)
 	}
 
 	return nil

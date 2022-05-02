@@ -26,11 +26,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 	"time"
 
+	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 func (c *Client) ensureConnected() error {
@@ -95,10 +98,12 @@ func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, time
 		// Paranoid mode password error
 		if len(c._paranoidModeSecret) <= 0 && c._paranoidModeSecretRequestFunc != nil {
 			// request user for Password
-			c._paranoidModeSecret, err = c._paranoidModeSecretRequestFunc(c)
-			if err != nil {
-				return err
+			secret, err2 := c._paranoidModeSecretRequestFunc(c)
+			if err2 != nil {
+				return err2
 			}
+			c.InitSetParanoidModeSecret(secret)
+
 			err = doJob()
 		}
 	}
@@ -157,10 +162,12 @@ func (c *Client) sendRecvAnyEx(request interface{}, isIgnoreResponseIndex bool, 
 		// Paranoid mode password error
 		if len(c._paranoidModeSecret) <= 0 && c._paranoidModeSecretRequestFunc != nil {
 			// request user for Password
-			c._paranoidModeSecret, err = c._paranoidModeSecretRequestFunc(c)
+			secret, err := c._paranoidModeSecretRequestFunc(c)
 			if err != nil {
 				return []byte{}, types.CommandBase{}, err
 			}
+			c.InitSetParanoidModeSecret(secret)
+
 			data, cmdBase, err = doJob()
 		}
 	}
@@ -249,6 +256,14 @@ func (c *Client) receiverRoutine() {
 				var hr types.HelloResp
 				if err := json.Unmarshal(messageData, &hr); err == nil {
 					c._helloResponse = hr
+
+					// If we are running in privilaged environment AND if daemon informed us about secret file - read it
+					// It gives us possibility to bypass EAA (if enabled)
+					if c._helloResponse.ParanoidMode.IsEnabled && helpers.CheckIsAdmin() {
+						if secret, err := os.ReadFile(platform.ParanoidModeSecretFile()); err == nil {
+							c._paranoidModeSecret = string(secret)
+						}
+					}
 				}
 			}
 

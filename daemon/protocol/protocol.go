@@ -379,6 +379,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			"AccountStatus":
 			return true
 		}
+
 		return false
 	}
 
@@ -421,7 +422,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 			return
 		}
-
 	}
 
 	switch reqCmd.Command {
@@ -440,9 +440,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// send back Hello message with account session info
 		helloResponse := p.createHelloResponse()
-		if req.GetParanoidModeFilePath && p._eaa.IsEnabled() {
-			helloResponse.ParanoidMode.FilePath = platform.ParanoidModeSecretFile()
-		}
 		p.sendResponse(conn, helloResponse, req.Idx)
 		if req.SendResponseToAllClients {
 			p.notifyClients(helloResponse)

@@ -57,10 +57,6 @@ type Hello struct {
 	//	KeepDaemonAlone == false (default) - VPN disconnects when client disconnects from a daemon
 	//	KeepDaemonAlone == true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
 	KeepDaemonAlone bool
-
-	// Request path to a file with the secret for paranoid mode
-	// This file must be able for reading ONLY for privilaged users
-	GetParanoidModeFilePath bool
 }
 
 // GetServers request servers list

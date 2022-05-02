@@ -26,7 +26,55 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
+
+	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 )
+
+func FileChmod(file string, fileMode os.FileMode) error {
+	// set correct file rights
+	if runtime.GOOS == "windows" {
+		// only for Windows: Golang is not able to change file permissins in Windows style
+		if err := filerights.WindowsChmod(file, fileMode); err != nil { // read\write only for privileged user
+			os.Remove(file)
+			return err
+		}
+	} else {
+		if err := os.Chmod(file, fileMode); err != nil {
+			os.Remove(file)
+			return err
+		}
+	}
+	return nil
+}
+
+// WriteFile writes data to the named file, creating it if necessary.
+// It ensures correct file permissions and only then is writing data.
+// If File exists - it will be truncated before writing.
+func WriteFile(file string, data []byte, fileMode os.FileMode) error {
+	f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fileMode)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// Ensure file has correct permissions
+	if err := FileChmod(file, fileMode); err != nil {
+		return err
+	}
+
+	_, err = f.Write(data)
+	return err
+}
+
+// FileExists checks if a file exists and is not a directory
+func FileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
 
 // CopyFile creates a copy of file
 func CopyFile(src, dst string) (err error) {

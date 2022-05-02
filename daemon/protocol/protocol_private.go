@@ -44,11 +44,16 @@ import (
 )
 
 // connID returns connection info (required to distinguish communication between several connections in log)
+
+func getConnectionName(c net.Conn) string {
+	return strings.TrimSpace(strings.Replace(c.RemoteAddr().String(), "127.0.0.1:", "", 1))
+}
+
 func (p *Protocol) connLogID(c net.Conn) string {
 	if c == nil {
 		return ""
 	}
-	//return ""
+
 	// not necessary to print additional data into a log when only one connection available
 	numConnections := 0
 	func() {
@@ -60,8 +65,7 @@ func (p *Protocol) connLogID(c net.Conn) string {
 		return ""
 	}
 
-	ret := strings.Replace(c.RemoteAddr().String(), "127.0.0.1:", "", 1)
-	return fmt.Sprintf("%s ", ret)
+	return fmt.Sprintf("%s ", getConnectionName(c))
 }
 
 // -------------- send message to all active connections ---------------
@@ -83,6 +87,7 @@ func (p *Protocol) clientConnected(c net.Conn) {
 func (p *Protocol) clientDisconnected(c net.Conn) {
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
+
 	delete(p._connections, c)
 	c.Close()
 }

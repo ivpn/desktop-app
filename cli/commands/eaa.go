@@ -31,6 +31,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/flags"
 	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"golang.org/x/term"
 )
 
@@ -63,7 +64,7 @@ func (c *CmdParanoidMode) Run() error {
 				// (we are in privilaged mode - so old PM password is not required)
 
 				// 1 - get path of PM file
-				fpath := _proto.GetHelloResponse().ParanoidMode.FilePath
+				fpath := platform.ParanoidModeSecretFile()
 				if len(fpath) <= 0 {
 					return fmt.Errorf("failed to disable Enhanced App Authentication in privilaged user environment (file path not defined)")
 				}
@@ -76,9 +77,8 @@ func (c *CmdParanoidMode) Run() error {
 
 				// 3 - request new PM state (to print actual state for user)
 				// and notify all connected clients about EAA change
-				doRequestPmFile := true
 				isSendResponseToAllClients := true
-				if _, err := _proto.SendHelloEx(doRequestPmFile, isSendResponseToAllClients); err != nil {
+				if _, err := _proto.SendHelloEx(isSendResponseToAllClients); err != nil {
 					return err
 				}
 			} else {
@@ -99,21 +99,8 @@ func (c *CmdParanoidMode) Run() error {
 		}
 	}
 
-	if c.enable {
+	if c.enable && !_proto.GetHelloResponse().ParanoidMode.IsEnabled {
 		fmt.Println("Enabling Enhanced App Authentication")
-
-		if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
-			fmt.Print("\tEnter current password: ")
-			data, err := term.ReadPassword(int(syscall.Stdin))
-			if err != nil {
-				return fmt.Errorf("failed to read password: %w", err)
-			}
-
-			oldSecret := strings.TrimSpace(string(data))
-			_proto.InitSetParanoidModeSecret(oldSecret)
-			fmt.Println("")
-
-		}
 
 		fmt.Print("\tEnter new password: ")
 		data, err := term.ReadPassword(int(syscall.Stdin))
@@ -148,6 +135,10 @@ func (c *CmdParanoidMode) Run() error {
 	var w *tabwriter.Writer
 	w = printParamoidModeState(w, _proto.GetHelloResponse())
 	w.Flush()
+
+	if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
+		PrintTips([]TipType{TipEaaDisable})
+	}
 
 	return nil
 }

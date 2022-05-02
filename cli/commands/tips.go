@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"text/tabwriter"
 )
 
@@ -46,6 +47,7 @@ const (
 	TipFirewallDisablePersistent TipType = iota
 	TipLastConnection            TipType = iota
 	TipSplittunEnable            TipType = iota
+	TipEaaDisable                TipType = iota
 )
 
 func PrintTips(tips []TipType) {
@@ -110,6 +112,13 @@ func PrintTip(w *tabwriter.Writer, tip TipType) {
 		break
 	case TipSplittunEnable:
 		str = newTip("splittun -on", "Enable Split Tunnel functionality")
+		break
+	case TipEaaDisable:
+		description := "Disable Enhanced App Authentication (use 'sudo ...' if you forgot your current EAA password)"
+		if runtime.GOOS == "windows" {
+			description = "Disable Enhanced App Authentication (start command with 'Run as Administrator' if you forgot your current EAA password)"
+		}
+		str = newTip("eaa -off", description)
 		break
 	}
 
