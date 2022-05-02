@@ -43,8 +43,7 @@ type CommandBase struct {
 // RequestBase contains fields which are common for requests to a daemon
 type RequestBase struct {
 	CommandBase
-	ProtocolSecret   string
-	ProtocolSecretSu string // base64
+	ProtocolSecret string
 }
 
 type ServicePreference string

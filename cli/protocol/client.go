@@ -35,7 +35,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app/cli/helpers"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -58,7 +57,6 @@ type Client struct {
 
 	_helloResponse types.HelloResp
 
-	_paranoidModeSecretSuAccess    []byte
 	_paranoidModeSecret            string
 	_paranoidModeSecretRequestFunc func(*Client) (string, error)
 }
@@ -140,7 +138,6 @@ func (c *Client) SendHelloEx(isSendResponseToAllClients bool) (helloResponse typ
 		GetStatus:                true,
 		Version:                  "1.0",
 		SendResponseToAllClients: isSendResponseToAllClients,
-		IsSuClient:               helpers.CheckIsAdmin(),
 	}
 
 	if err := c.sendRecvTimeOut(&helloReq, &c._helloResponse, time.Second*7); err != nil {

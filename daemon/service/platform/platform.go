@@ -40,9 +40,6 @@ var (
 	// If 'paranoid mode' enabled - this 'secret' must be used in each request to a daemon.
 	// This file should be accessible to read only for 'privilaged' user
 	paranoidModeSecretFile string
-	// folder path for secret files used to skip EAA for clients running in superuser environment
-	// paranoidModeSecretFile+"_su"
-	paranoidModeFolderForSuSecrets string
 
 	// The INITIAL value (AFTER APPLICATION UPGRADE) for AllowApiServers parameter is platform dependend
 	// Due to historical reasons it has value 'true' for Windows but 'false' for macOS and Linux
@@ -122,14 +119,6 @@ func Init() (warnings []string, errors []error) {
 	}
 	if err := makeDir("wgConfigFilePath", filepath.Dir(wgConfigFilePath), os.ModePerm); err != nil {
 		errors = append(errors, err)
-	}
-
-	// Init 'paranoidModeFolderForSuSecrets' folder (erase everything it contains + create if not exists)
-	if len(paranoidModeSecretFile) > 0 {
-		paranoidModeFolderForSuSecrets = paranoidModeSecretFile + "_su"
-		if err := os.RemoveAll(paranoidModeFolderForSuSecrets); err != nil {
-			warnings = append(warnings, err.Error())
-		}
 	}
 
 	// checking file permissions
@@ -277,10 +266,6 @@ func ServicePortFile() string {
 // This file should be accessible to read only for 'privilaged' user
 func ParanoidModeSecretFile() string {
 	return paranoidModeSecretFile
-}
-
-func ParanoidModeFolderForSuSecrets() string {
-	return paranoidModeFolderForSuSecrets
 }
 
 // ServersFile path to servers.json

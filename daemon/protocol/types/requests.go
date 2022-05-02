@@ -57,10 +57,6 @@ type Hello struct {
 	//	KeepDaemonAlone == false (default) - VPN disconnects when client disconnects from a daemon
 	//	KeepDaemonAlone == true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
 	KeepDaemonAlone bool
-
-	// true - means client notifying that it is running in privileged environment
-	// Daemon have to initialize mechanism which allows skip EAA for clients running as superuser
-	IsSuClient bool
 }
 
 // GetServers request servers list

@@ -82,11 +82,6 @@ type DnsAbilities struct {
 
 type ParanoidModeStatus struct {
 	IsEnabled bool
-	// Ability to skip EAA for clients running in privileged environment.
-	// File readable only for privileged users.
-	// Content of this file can be used to skip EAA verification (see RequestBase.ProtocolSecretSu).
-	// Each client connection use own SuAccessFile.
-	SuAccessFile string
 }
 
 type SettingsResp struct {
