@@ -36,6 +36,8 @@ LOCKWAITTIME=2
 # main chains for IVPN firewall
 IN_IVPN=IVPN-IN
 OUT_IVPN=IVPN-OUT
+# chain for DNS rules
+OUT_IVPN_DNS=IVPN-OUT-DNS
 # IVPN chains for VPN dependend rules (applicable when VPN enabled)
 IN_IVPN_IF=IVPN-IN-VPN
 OUT_IVPN_IF=IVPN-OUT-VPN
@@ -96,6 +98,7 @@ function enable_firewall {
       # IPv6: define chains
       create_chain ${IPv6BIN} ${IN_IVPN}
       create_chain ${IPv6BIN} ${OUT_IVPN}
+      create_chain ${IPv6BIN} ${OUT_IVPN_DNS}
       create_chain ${IPv6BIN} ${IN_IVPN_IF}
       create_chain ${IPv6BIN} ${OUT_IVPN_IF}
       create_chain ${IPv6BIN} ${IN_IVPN_STAT_USER_EXP}
@@ -120,6 +123,12 @@ function enable_firewall {
       # IPv6: assign our chains to global (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
       ${IPv6BIN} -w ${LOCKWAITTIME} -A OUTPUT -j ${OUT_IVPN}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A INPUT -j ${IN_IVPN}
+
+      # block DNS for IPv6
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_DNS}
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
+
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_USER_EXP}
@@ -138,6 +147,8 @@ function enable_firewall {
     # define chains
     create_chain ${IPv4BIN} ${IN_IVPN}
     create_chain ${IPv4BIN} ${OUT_IVPN}
+
+    create_chain ${IPv4BIN} ${OUT_IVPN_DNS}
 
     create_chain ${IPv4BIN} ${IN_IVPN_IF}
     create_chain ${IPv4BIN} ${OUT_IVPN_IF}
@@ -168,8 +179,15 @@ function enable_firewall {
     # (global -> IVPN_CHAIN -> IN_IVPN_STAT_EXP)
     ${IPv4BIN} -w ${LOCKWAITTIME} -A OUTPUT -j ${OUT_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A INPUT -j ${IN_IVPN}
+
+    # block DNS by default
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_DNS}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
+
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF}
+
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_USER_EXP}
@@ -200,6 +218,7 @@ function disable_firewall {
     # '-D' Delete matching rule from chain
     ${IPv4BIN} -w ${LOCKWAITTIME} -D OUTPUT -j ${OUT_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D INPUT -j ${IN_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_IF}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
@@ -209,6 +228,7 @@ function disable_firewall {
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_ICMP_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_ICMP_EXP}
     # '-F' Delete all rules in  chain or all chains
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN}
@@ -220,6 +240,7 @@ function disable_firewall {
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_ICMP_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_ICMP_EXP}
     # '-X' Delete a user-defined chain
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_IF}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN}
@@ -234,6 +255,7 @@ function disable_firewall {
     ### IPv6 ###
     ${IPv6BIN} -w ${LOCKWAITTIME} -D OUTPUT -j ${OUT_IVPN}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D INPUT -j ${IN_IVPN}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_DNS}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_IF}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
@@ -241,6 +263,7 @@ function disable_firewall {
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_USER_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_STAT_USER_EXP}
 
+    ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_DNS}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN}
@@ -250,6 +273,7 @@ function disable_firewall {
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_STAT_USER_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_STAT_USER_EXP}
 
+    ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_DNS}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_IF}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN}
@@ -423,6 +447,22 @@ function main {
 
         [ -z "$@" ] && return
         add_exceptions ${IPv6BIN} ${IN_IVPN_STAT_USER_EXP} ${OUT_IVPN_STAT_USER_EXP} $@
+      fi
+    
+    # DNS rules
+    elif [[ $1 = "-set_dns" ]]; then
+
+      shift
+      clean_chain ${IPv4BIN} ${OUT_IVPN_DNS}
+
+      if [[ -z "$@" ]] ; then
+        # block DNS
+        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
+        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
+      else
+        # block everything except defined address
+        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p udp --dport 53 -j DROP
+        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p tcp --dport 53 -j DROP
       fi
 
     # icmp exceptions

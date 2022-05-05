@@ -239,7 +239,7 @@ func (wg *WireGuard) resetManualDNS() error {
 		// changing DNS to default value for current WireGuard connection
 		return dns.SetManual(dns.DnsSettings{DnsHost: wg.DefaultDNS().String(), Encryption: dns.EncryptionNone}, nil)
 	}
-	return dns.DeleteManual(wg.DefaultDNS(), nil)
+	return dns.DeleteManual(nil, nil)
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
