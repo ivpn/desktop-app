@@ -27,7 +27,6 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
-	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 type platformSpecificProperties struct {
@@ -91,8 +90,8 @@ func (o *OpenVPN) implOnResetManualDNS() error {
 	defaultDns := o.DefaultDNS()
 	if o.IsPaused() == false {
 		// restore default DNS pushed by OpenVPN server
-		if !defaultDns.IsEmpty() {
-			return dns.SetManual(defaultDns, nil)
+		if defaultDns != nil {
+			return dns.SetManual(dns.DnsSettings{DnsHost: defaultDns.String()}, nil)
 		}
 	}
 

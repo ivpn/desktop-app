@@ -159,7 +159,7 @@ func (s *Service) init() error {
 	dnsNotifyFwFunc := func(dnsCfg dns.DnsSettings) error {
 		if dnsCfg.Encryption == dns.EncryptionNone {
 			// for DoH/DoT - no sense to allow DNS port (53)
-			return firewall.OnChangeDNS(s._manualDNS.Ip(), false)
+			return firewall.OnChangeDNS(net.ParseIP(dnsCfg.DnsHost), false)
 		}
 		return firewall.OnChangeDNS(nil, false)
 	}
