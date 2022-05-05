@@ -125,6 +125,9 @@ func NewWireGuardObject(wgBinaryPath string, wgToolBinaryPath string, wgConfigFi
 func (wg *WireGuard) DestinationIP() net.IP {
 	return wg.connectParams.hostIP
 }
+func (wg *WireGuard) DefaultDNS() net.IP {
+	return wg.connectParams.hostLocalIP
+}
 
 // Type just returns VPN type
 func (wg *WireGuard) Type() vpn.Type { return vpn.WireGuard }

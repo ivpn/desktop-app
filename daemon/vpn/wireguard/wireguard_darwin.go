@@ -283,7 +283,7 @@ func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
 }
 
 func (wg *WireGuard) resetManualDNS() error {
-	return dns.DeleteManual(nil)
+	return dns.DeleteManual(wg.DefaultDNS(), nil)
 }
 
 func (wg *WireGuard) initialize(utunName string) error {
@@ -463,8 +463,9 @@ func (wg *WireGuard) onRoutingChanged() error {
 }
 
 func (wg *WireGuard) setDNS() error {
-	log.Info("Updating DNS server to " + wg.connectParams.hostLocalIP.String() + "...")
-	err := shell.Exec(log, platform.DNSScript(), "-up_set_dns", wg.connectParams.hostLocalIP.String())
+	defaultDNS := wg.DefaultDNS()
+	log.Info("Updating DNS server to " + defaultDNS.String() + "...")
+	err := shell.Exec(log, platform.DNSScript(), "-up_set_dns", defaultDNS.String())
 	if err != nil {
 		return fmt.Errorf("failed to change DNS: %w", err)
 	}
@@ -485,7 +486,7 @@ func (wg *WireGuard) initIPv6DNSResolver(utunName string) error {
 
 func (wg *WireGuard) removeDNS() error {
 	log.Info("Restoring DNS server.")
-	err := shell.Exec(log, platform.DNSScript(), "-down", wg.connectParams.hostLocalIP.String())
+	err := shell.Exec(log, platform.DNSScript(), "-down", wg.DefaultDNS().String())
 	if err != nil {
 		return fmt.Errorf("failed to restore DNS: %w", err)
 	}

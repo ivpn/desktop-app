@@ -519,6 +519,15 @@ func (o *OpenVPN) IsPaused() bool {
 	return o.isPaused
 }
 
+// DefaultDNS returns default DNS pushed by OpenVPN server
+func (o *OpenVPN) DefaultDNS() net.IP {
+	mi := o.managementInterface
+	if mi != nil && mi.isConnected && o.state != vpn.DISCONNECTED && o.state != vpn.EXITING {
+		return mi.pushReplyDNS
+	}
+	return nil
+}
+
 // SetManualDNS changes DNS to manual IP
 func (o *OpenVPN) SetManualDNS(dnsCfg dns.DnsSettings) error {
 	return o.implOnSetManualDNS(dnsCfg)

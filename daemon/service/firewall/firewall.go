@@ -47,6 +47,7 @@ var (
 	connectedIsTCP               bool
 	mutex                        sync.Mutex
 	isClientPaused               bool
+	dnsIP                        net.IP
 
 	// List of IP masks that are allowed for any communication
 	userExceptions []net.IPNet
@@ -217,15 +218,26 @@ func AllowLAN(allowLan bool, allowLanMulticast bool) error {
 	return err
 }
 
-// SetManualDNS - configure firewall to allow DNS which is out of VPN tunnel
-// Applicable to Windows implementation (to allow custom DNS from local network)
-func SetManualDNS(addr net.IP) error {
+// OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
+func OnChangeDNS(addr net.IP, skipIfDefined bool) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	err := implSetManualDNS(addr)
+	if skipIfDefined && dnsIP != nil {
+		return nil
+	}
+
+	if addr.Equal(dnsIP) {
+		// DNS rule already applied. Do nothing.
+		return nil
+	}
+
+	err := implOnChangeDNS(addr)
 	if err != nil {
 		log.Error(err)
+	} else {
+		// remember DNS IP
+		dnsIP = addr
 	}
 	return err
 }

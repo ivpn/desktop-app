@@ -185,6 +185,7 @@ type Process interface {
 	Resume() error
 	IsPaused() bool
 
+	DefaultDNS() net.IP
 	SetManualDNS(dnsCfg dns.DnsSettings) error
 	ResetManualDNS() error
 

@@ -42,7 +42,7 @@ func (o *OpenVPN) implOnConnected() error {
 	}
 
 	// There could be manual-dns value saved from last connection in adapter properties. We must ensure that it erased.
-	return dns.DeleteManual(o.clientIP)
+	return dns.DeleteManual(o.DefaultDNS(), o.clientIP)
 }
 
 func (o *OpenVPN) implOnDisconnected() error {
@@ -74,7 +74,7 @@ func (o *OpenVPN) implOnSetManualDNS(dnsCfg dns.DnsSettings) error {
 func (o *OpenVPN) implOnResetManualDNS() error {
 	if !o.psProps.manualDNS.IsEmpty() {
 		o.psProps.manualDNS = dns.DnsSettings{}
-		return dns.DeleteManual(o.clientIP)
+		return dns.DeleteManual(o.DefaultDNS(), o.clientIP)
 	}
 	return nil
 }

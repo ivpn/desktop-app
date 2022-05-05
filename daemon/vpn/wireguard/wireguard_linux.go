@@ -115,7 +115,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 			// do not forget to restore DNS
 			defer func() {
 				// restore DNS configuration
-				if err := dns.DeleteManual(nil); err != nil {
+				if err := dns.DeleteManual(wg.DefaultDNS(), nil); err != nil {
 					log.Warning(fmt.Sprintf("failed to restore DNS configuration: %s", err))
 				}
 			}()
@@ -126,7 +126,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 					return fmt.Errorf("failed to set manual DNS: %w", err)
 				}
 			} else {
-				dnsIP := dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String(), Encryption: dns.EncryptionNone}
+				dnsIP := dns.DnsSettings{DnsHost: wg.DefaultDNS().String(), Encryption: dns.EncryptionNone}
 				if err := dns.SetDefault(dnsIP, nil); err != nil {
 					return fmt.Errorf("failed to set DNS: %w", err)
 				}
@@ -237,9 +237,9 @@ func (wg *WireGuard) resetManualDNS() error {
 
 	if wg.internals.isRunning {
 		// changing DNS to default value for current WireGuard connection
-		return dns.SetManual(dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String(), Encryption: dns.EncryptionNone}, nil)
+		return dns.SetManual(dns.DnsSettings{DnsHost: wg.DefaultDNS().String(), Encryption: dns.EncryptionNone}, nil)
 	}
-	return dns.DeleteManual(nil)
+	return dns.DeleteManual(wg.DefaultDNS(), nil)
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {

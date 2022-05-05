@@ -150,14 +150,24 @@ func (s *Service) init() error {
 		s._preferences.SavePreferences()
 	}
 
-	if err := dns.Initialize(); err != nil {
-		log.Error(fmt.Sprintf("failed to initialize DNS : %s", err))
-	}
-
+	// initialize firewall functionality
 	if err := firewall.Initialize(); err != nil {
 		return fmt.Errorf("service initialization error : %w", err)
 	}
 
+	// initialize dns functionality
+	dnsNotifyFwFunc := func(dnsCfg dns.DnsSettings) error {
+		if dnsCfg.Encryption == dns.EncryptionNone {
+			// for DoH/DoT - no sense to allow DNS port (53)
+			return firewall.OnChangeDNS(s._manualDNS.Ip(), false)
+		}
+		return firewall.OnChangeDNS(nil, false)
+	}
+	if err := dns.Initialize(dnsNotifyFwFunc); err != nil {
+		log.Error(fmt.Sprintf("failed to initialize DNS : %s", err))
+	}
+
+	// initialize split-tunnel functionality
 	if err := splittun.Initialize(); err != nil {
 		log.Warning(fmt.Errorf("Split-Tunnelling initialization error : %w", err))
 	} else {
@@ -169,7 +179,7 @@ func (s *Service) init() error {
 	// Init logger (if not initialized before)
 	//logger.Enable(s._preferences.IsLogging)
 
-	// Init firewall
+	// firewall initial values
 	if err := firewall.AllowLAN(s._preferences.IsFwAllowLAN, s._preferences.IsFwAllowLANMulticast); err != nil {
 		log.Error("Failed to initialize firewall with AllowLAN preference value: ", err)
 	}
@@ -643,6 +653,9 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 		// Ensure that routing-change detector is stopped (we do not need it when VPN disconnected)
 		s._netChangeDetector.Stop()
 
+		// ensure firewall removed rules for DNS
+		firewall.OnChangeDNS(nil, false)
+
 		// notify firewall that client is disconnected
 		err := firewall.ClientDisconnected()
 		if err != nil {
@@ -747,6 +760,12 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 						state.ServerIP, state.ServerPort,
 						state.IsTCP)
 
+					// Ensure firewall is configured to allow DNS communication
+					// At this moment, firewall must be already configured for custom DNS
+					// but if it still has no rule - apply DNS rules for default DNS
+					const skipIfDnsDefined = true
+					firewall.OnChangeDNS(vpnProc.DefaultDNS(), skipIfDnsDefined)
+
 					// save ClientIP/ClientIPv6 into vpn-session-info
 					sInfo := s.GetVpnSessionInfo()
 					sInfo.VpnLocalIPv4 = state.ClientIP
@@ -808,6 +827,8 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 	}
 
 	log.Info("Initializing firewall")
+	// ensure firewall has no rules for DNS
+	firewall.OnChangeDNS(nil, false)
 	// firewallOn - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored)
 	// firewallDuringConnection - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
 	if firewallOn {
@@ -984,15 +1005,6 @@ func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings) error {
 
 	s._manualDNS = dnsCfg
 
-	if dnsCfg.Encryption == dns.EncryptionNone {
-		// for DoH/DoT - no sense to allow DNS port (53)
-		if err := firewall.SetManualDNS(s._manualDNS.Ip()); err != nil {
-			return fmt.Errorf("failed to set manual DNS: %w", err)
-		}
-	} else {
-		firewall.SetManualDNS(nil)
-	}
-
 	return vpn.SetManualDNS(s._manualDNS)
 }
 
@@ -1001,11 +1013,6 @@ func (s *Service) ResetManualDNS() error {
 	vpn := s._vpn
 	if vpn == nil {
 		return nil
-	}
-
-	s._manualDNS = dns.DnsSettings{}
-	if err := firewall.SetManualDNS(nil); err != nil {
-		return fmt.Errorf("failed to reset manual DNS: %w", err)
 	}
 
 	return vpn.ResetManualDNS()

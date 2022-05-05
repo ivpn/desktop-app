@@ -56,5 +56,5 @@ func (o *OpenVPN) implOnSetManualDNS(dnsCfg dns.DnsSettings) error {
 }
 
 func (o *OpenVPN) implOnResetManualDNS() error {
-	return dns.DeleteManual(nil)
+	return dns.DeleteManual(o.DefaultDNS(), nil)
 }

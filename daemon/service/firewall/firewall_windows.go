@@ -201,9 +201,8 @@ func implAllowLAN(allowLan bool, allowLanMulticast bool) error {
 	return reEnable()
 }
 
-// SetManualDNS - configure firewall to allow DNS which is out of VPN tunnel
-// Applicable to Windows implementation (to allow custom DNS from local network)
-func implSetManualDNS(addr net.IP) error {
+// OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
+func implOnChangeDNS(addr net.IP) error {
 	if addr.Equal(customDNS) {
 		return nil
 	}

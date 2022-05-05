@@ -33,9 +33,12 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
+type FuncDnsChangeFirewallNotify func(dns DnsSettings) error
+
 var (
-	log           *logger.Logger
-	lastManualDNS DnsSettings
+	log                         *logger.Logger
+	lastManualDNS               DnsSettings
+	funcDnsChangeFirewallNotify FuncDnsChangeFirewallNotify
 )
 
 func init() {
@@ -131,7 +134,11 @@ func (d DnsSettings) InfoString() string {
 
 // Initialize is doing initialization stuff
 // Must be called on application start
-func Initialize() error {
+func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify) error {
+	funcDnsChangeFirewallNotify = fwNotifyDnsChangeFunc
+	if funcDnsChangeFirewallNotify == nil {
+		logger.Debug("WARNING! Firewall notification function not defined!")
+	}
 	return wrapErrorIfFailed(implInitialize())
 }
 
@@ -158,7 +165,15 @@ func SetDefault(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 	if ret == nil {
 		lastManualDNS = DnsSettings{}
 	}
+
 	return wrapErrorIfFailed(ret)
+}
+
+func notifyFirewall(dnsCfg DnsSettings) error {
+	if funcDnsChangeFirewallNotify == nil {
+		return nil
+	}
+	return funcDnsChangeFirewallNotify(dnsCfg)
 }
 
 // SetManual - set manual DNS.
@@ -168,18 +183,27 @@ func SetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 	ret := implSetManual(dnsCfg, localInterfaceIP)
 	if ret == nil {
 		lastManualDNS = dnsCfg
+	} else {
+		return wrapErrorIfFailed(ret)
 	}
-	return wrapErrorIfFailed(ret)
+
+	// notify firewall about DNS configuration
+	return wrapErrorIfFailed(notifyFirewall(dnsCfg))
 }
 
 // DeleteManual - reset manual DNS configuration to default (DHCP)
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
-func DeleteManual(localInterfaceIP net.IP) error {
+func DeleteManual(defaultDns net.IP, localInterfaceIP net.IP) error {
+	// reset custom DNS
 	ret := implDeleteManual(localInterfaceIP)
 	if ret == nil {
 		lastManualDNS = DnsSettings{}
+	} else {
+		return wrapErrorIfFailed(ret)
 	}
-	return wrapErrorIfFailed(ret)
+
+	// notify firewall about default DNS
+	return wrapErrorIfFailed(notifyFirewall(DnsSettings{DnsHost: defaultDns.String()}))
 }
 
 // GetLastManualDNS - returns information about current manual DNS

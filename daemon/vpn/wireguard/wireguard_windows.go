@@ -92,7 +92,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	defer func() {
 		wg.internals.pauseRequireChan = nil
 		// do not forget to remove manual DNS configuration (if necessary)
-		if err := dns.DeleteManual(nil); err != nil {
+		if err := dns.DeleteManual(wg.DefaultDNS(), nil); err != nil {
 			log.Error(err)
 		}
 		log.Info("Connection stopped")
@@ -279,7 +279,7 @@ func (wg *WireGuard) resetManualDNS() error {
 		return err // it is not possible set DNS when VPN is not connected
 	}
 
-	err := dns.SetDefault(dns.DnsSettings{DnsHost: wg.connectParams.hostLocalIP.String()}, wg.connectParams.clientLocalIP)
+	err := dns.SetDefault(dns.DnsSettings{DnsHost: wg.DefaultDNS().String()}, wg.connectParams.clientLocalIP)
 	if err == nil {
 		wg.internals.manualDNS = dns.DnsSettings{}
 	}
@@ -301,11 +301,11 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 		if manualDNS.Encryption == dns.EncryptionNone {
 			interfaceCfg = append(interfaceCfg, "DNS = "+manualDNS.Ip().String())
 		} else {
-			interfaceCfg = append(interfaceCfg, "DNS = "+wg.connectParams.hostLocalIP.String())
+			interfaceCfg = append(interfaceCfg, "DNS = "+wg.DefaultDNS().String())
 			log.Info("(info) The DoH/DoT custom DNS configuration will be applied after connection established")
 		}
 	} else {
-		interfaceCfg = append(interfaceCfg, "DNS = "+wg.connectParams.hostLocalIP.String())
+		interfaceCfg = append(interfaceCfg, "DNS = "+wg.DefaultDNS().String())
 	}
 
 	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
