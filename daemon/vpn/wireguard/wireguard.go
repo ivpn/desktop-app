@@ -102,6 +102,7 @@ type WireGuard struct {
 	configFilePath string
 	connectParams  ConnectionParams
 	localPort      int
+	isDisconnected bool
 
 	// Must be implemented (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	internals internalVariables
@@ -126,6 +127,10 @@ func (wg *WireGuard) DestinationIP() net.IP {
 	return wg.connectParams.hostIP
 }
 func (wg *WireGuard) DefaultDNS() net.IP {
+	if wg.isDisconnected {
+		return nil
+	}
+
 	return wg.connectParams.hostLocalIP
 }
 
@@ -144,9 +149,10 @@ func (wg *WireGuard) Init() error {
 func (wg *WireGuard) Connect(stateChan chan<- vpn.StateInfo) error {
 
 	disconnectDescription := ""
-
+	wg.isDisconnected = false
 	stateChan <- vpn.NewStateInfo(vpn.CONNECTING, "")
 	defer func() {
+		wg.isDisconnected = true
 		stateChan <- vpn.NewStateInfo(vpn.DISCONNECTED, disconnectDescription)
 	}()
 

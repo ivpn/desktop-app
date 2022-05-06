@@ -115,7 +115,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 			// do not forget to restore DNS
 			defer func() {
 				// restore DNS configuration
-				if err := dns.DeleteManual(wg.DefaultDNS(), nil); err != nil {
+				if err := dns.DeleteManual(nil, nil); err != nil {
 					log.Warning(fmt.Sprintf("failed to restore DNS configuration: %s", err))
 				}
 			}()

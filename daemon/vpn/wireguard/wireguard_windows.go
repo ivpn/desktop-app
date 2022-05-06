@@ -92,7 +92,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	defer func() {
 		wg.internals.pauseRequireChan = nil
 		// do not forget to remove manual DNS configuration (if necessary)
-		if err := dns.DeleteManual(wg.DefaultDNS(), nil); err != nil {
+		if err := dns.DeleteManual(nil, nil); err != nil {
 			log.Error(err)
 		}
 		log.Info("Connection stopped")

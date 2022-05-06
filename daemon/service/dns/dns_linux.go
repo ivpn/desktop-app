@@ -86,7 +86,6 @@ func implPause() error {
 
 func implResume(defaultDNS DnsSettings) error {
 	isPaused = false
-
 	if !manualDNS.IsEmpty() {
 		// set manual DNS (if defined)
 		return implSetManual(manualDNS, nil)
@@ -231,10 +230,11 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 func implDeleteManual(localInterfaceIP net.IP) error {
 	dnscryptproxy.Stop()
 
+	manualDNS = DnsSettings{}
+
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
 		// it will be applied on RESUME
-		manualDNS = DnsSettings{}
 		return nil
 	}
 
