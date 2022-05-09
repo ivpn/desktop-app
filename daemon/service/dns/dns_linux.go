@@ -88,11 +88,13 @@ func implResume(defaultDNS DnsSettings) error {
 	isPaused = false
 	if !manualDNS.IsEmpty() {
 		// set manual DNS (if defined)
-		return implSetManual(manualDNS, nil)
+		_, err := implSetManual(manualDNS, nil)
+		return err
 	}
 
 	if !defaultDNS.IsEmpty() {
-		return implSetManual(defaultDNS, nil)
+		_, err := implSetManual(defaultDNS, nil)
+		return err
 	}
 
 	return nil
@@ -104,7 +106,7 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for Linux implementation
-func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
 	defer func() {
 		if retErr != nil {
 			dnscryptproxy.Stop()

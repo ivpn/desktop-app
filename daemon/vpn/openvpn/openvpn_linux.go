@@ -91,7 +91,7 @@ func (o *OpenVPN) implOnResetManualDNS() error {
 	if o.IsPaused() == false {
 		// restore default DNS pushed by OpenVPN server
 		if defaultDns != nil {
-			return dns.SetManual(dns.DnsSettingsCreate(defaultDns))
+			return dns.SetManual(dns.DnsSettingsCreate(defaultDns), nil)
 		}
 	}
 
