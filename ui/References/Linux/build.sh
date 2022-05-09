@@ -49,7 +49,7 @@ CheckLastResult()
   fi
 }
 
-ARCH="$( uname -m )"
+ARCH="$( node -e 'console.log(process.arch)' )"
 SCRIPT_DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 OUT_DIR="$SCRIPT_DIR/_out_bin"
 APP_UNPACKED_DIR="$SCRIPT_DIR/../../dist_electron/linux-unpacked"
