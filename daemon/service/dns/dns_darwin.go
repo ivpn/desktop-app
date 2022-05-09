@@ -60,7 +60,7 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for macOS implementation
-func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
 	defer func() {
 		if retErr != nil {
 			dnscryptproxy.Stop()
@@ -71,7 +71,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	// start encrypted DNS configuration (if required)
 	if dnsCfg.Encryption != EncryptionNone {
 		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
-			return err
+			return DnsSettings{}, err
 		}
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
 		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
@@ -79,10 +79,10 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 
 	err := shell.Exec(log, platform.DNSScript(), "-set_alternate_dns", dnsCfg.Ip().String())
 	if err != nil {
-		return fmt.Errorf("set manual DNS: Failed to change DNS: %w", err)
+		return DnsSettings{}, fmt.Errorf("set manual DNS: Failed to change DNS: %w", err)
 	}
 
-	return nil
+	return dnsCfg, nil
 }
 
 // DeleteManual - reset manual DNS configuration to default (DHCP)

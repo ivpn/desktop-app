@@ -115,20 +115,20 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 		// in case of PAUSED state -> just save manualDNS config
 		// it will be applied on RESUME
 		manualDNS = dnsCfg
-		return nil
+		return DnsSettings{}, nil
 	}
 
 	stopDNSChangeMonitoring()
 
 	if dnsCfg.IsEmpty() {
-		return implDeleteManual(nil)
+		return DnsSettings{}, implDeleteManual(nil)
 	}
 
 	dnscryptproxy.Stop()
 	// start encrypted DNS configuration (if required)
 	if dnsCfg.Encryption != EncryptionNone {
 		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
-			return err
+			return DnsSettings{}, err
 		}
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
 		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
@@ -160,12 +160,12 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 
 	_, err := createBackupIfNotExists()
 	if err != nil {
-		return err
+		return DnsSettings{}, err
 	}
 
 	// Save new configuration
 	if err := saveNewConfig(); err != nil {
-		return err
+		return DnsSettings{}, err
 	}
 
 	manualDNS = dnsCfg
@@ -222,7 +222,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 		}
 	}()
 
-	return nil
+	return manualDNS, nil
 }
 
 // DeleteManual - reset manual DNS configuration to default

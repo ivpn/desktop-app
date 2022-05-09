@@ -33,7 +33,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
-type FuncDnsChangeFirewallNotify func(dns DnsSettings) error
+type FuncDnsChangeFirewallNotify func(dns *DnsSettings) error
 
 var (
 	log                         *logger.Logger
@@ -79,6 +79,14 @@ type DnsSettings struct {
 	DnsHost     string // DNS host IP address
 	Encryption  DnsEncryption
 	DohTemplate string // DoH/DoT template URI (for Encryption = DnsOverHttps or Encryption = DnsOverTls)
+}
+
+// create  DnsSettings object with no encryption
+func DnsSettingsCreate(ip net.IP) DnsSettings {
+	if ip == nil {
+		return DnsSettings{}
+	}
+	return DnsSettings{DnsHost: ip.String()}
 }
 
 func (d DnsSettings) Equal(x DnsSettings) bool {
@@ -173,22 +181,22 @@ func notifyFirewall(dnsCfg DnsSettings) error {
 	if funcDnsChangeFirewallNotify == nil {
 		return nil
 	}
-	return funcDnsChangeFirewallNotify(dnsCfg)
+	return funcDnsChangeFirewallNotify(&dnsCfg)
 }
 
 // SetManual - set manual DNS.
 // 'dnsCfg' parameter - DNS configuration
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func SetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
-	ret := implSetManual(dnsCfg, localInterfaceIP)
-	if ret == nil {
+	dnsForFirewallRules, err := implSetManual(dnsCfg, localInterfaceIP)
+	if err == nil {
 		lastManualDNS = dnsCfg
 	} else {
-		return wrapErrorIfFailed(ret)
+		return wrapErrorIfFailed(err)
 	}
 
 	// notify firewall about DNS configuration
-	return wrapErrorIfFailed(notifyFirewall(dnsCfg))
+	return wrapErrorIfFailed(notifyFirewall(dnsForFirewallRules))
 }
 
 // DeleteManual - reset manual DNS configuration to default (DHCP)
@@ -203,7 +211,7 @@ func DeleteManual(defaultDns net.IP, localInterfaceIP net.IP) error {
 	}
 
 	// notify firewall about default DNS
-	return wrapErrorIfFailed(notifyFirewall(DnsSettings{DnsHost: defaultDns.String()}))
+	return wrapErrorIfFailed(notifyFirewall(DnsSettingsCreate(defaultDns)))
 }
 
 // GetLastManualDNS - returns information about current manual DNS

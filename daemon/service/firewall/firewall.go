@@ -30,6 +30,7 @@ import (
 	"unicode"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 )
 
 var log *logger.Logger
@@ -47,7 +48,7 @@ var (
 	connectedIsTCP               bool
 	mutex                        sync.Mutex
 	isClientPaused               bool
-	dnsIP                        net.IP
+	dnsConfig                    *dns.DnsSettings
 
 	// List of IP masks that are allowed for any communication
 	userExceptions []net.IPNet
@@ -218,18 +219,45 @@ func AllowLAN(allowLan bool, allowLanMulticast bool) error {
 	return err
 }
 
-// OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
-func OnChangeDNS(addr net.IP, skipIfDefined bool) error {
+func GetDnsInfo() (dns.DnsSettings, bool) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if skipIfDefined && dnsIP != nil {
+	if dnsConfig == nil {
+		return dns.DnsSettings{}, false
+	}
+	return *dnsConfig, true
+}
+
+func getDnsIP() net.IP {
+	cfg := dnsConfig
+
+	var dnsIP net.IP
+	if cfg != nil && cfg.Encryption == dns.EncryptionNone {
+		dnsIP = cfg.Ip()
+	}
+	return dnsIP
+}
+
+// OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
+func OnChangeDNS(newDnsCfg *dns.DnsSettings) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if newDnsCfg != nil && newDnsCfg.IsEmpty() {
+		newDnsCfg = nil
+	}
+
+	if (dnsConfig == nil && newDnsCfg == nil) ||
+		(dnsConfig != nil && newDnsCfg != nil && dnsConfig.Equal(*newDnsCfg)) {
+		// DNS rule already applied. Do nothing.
 		return nil
 	}
 
-	if addr.Equal(dnsIP) {
-		// DNS rule already applied. Do nothing.
-		return nil
+	var addr net.IP = nil
+	if newDnsCfg != nil && newDnsCfg.Encryption == dns.EncryptionNone {
+		// for DoH/DoT - no sense to allow DNS port (53)
+		addr = net.ParseIP(newDnsCfg.DnsHost)
 	}
 
 	err := implOnChangeDNS(addr)
@@ -237,7 +265,7 @@ func OnChangeDNS(addr net.IP, skipIfDefined bool) error {
 		log.Error(err)
 	} else {
 		// remember DNS IP
-		dnsIP = addr
+		dnsConfig = newDnsCfg
 	}
 	return err
 }

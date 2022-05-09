@@ -156,14 +156,7 @@ func (s *Service) init() error {
 	}
 
 	// initialize dns functionality
-	dnsNotifyFwFunc := func(dnsCfg dns.DnsSettings) error {
-		if dnsCfg.Encryption == dns.EncryptionNone {
-			// for DoH/DoT - no sense to allow DNS port (53)
-			return firewall.OnChangeDNS(net.ParseIP(dnsCfg.DnsHost), false)
-		}
-		return firewall.OnChangeDNS(nil, false)
-	}
-	if err := dns.Initialize(dnsNotifyFwFunc); err != nil {
+	if err := dns.Initialize(firewall.OnChangeDNS); err != nil {
 		log.Error(fmt.Sprintf("failed to initialize DNS : %s", err))
 	}
 
@@ -654,7 +647,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 		s._netChangeDetector.Stop()
 
 		// ensure firewall removed rules for DNS
-		firewall.OnChangeDNS(nil, false)
+		firewall.OnChangeDNS(nil)
 
 		// notify firewall that client is disconnected
 		err := firewall.ClientDisconnected()
@@ -763,8 +756,10 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 					// Ensure firewall is configured to allow DNS communication
 					// At this moment, firewall must be already configured for custom DNS
 					// but if it still has no rule - apply DNS rules for default DNS
-					const skipIfDnsDefined = true
-					firewall.OnChangeDNS(vpnProc.DefaultDNS(), skipIfDnsDefined)
+					if _, isInitialized := firewall.GetDnsInfo(); !isInitialized {
+						d := dns.DnsSettingsCreate(vpnProc.DefaultDNS())
+						firewall.OnChangeDNS(&d)
+					}
 
 					// save ClientIP/ClientIPv6 into vpn-session-info
 					sInfo := s.GetVpnSessionInfo()
@@ -828,7 +823,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 
 	log.Info("Initializing firewall")
 	// ensure firewall has no rules for DNS
-	firewall.OnChangeDNS(nil, false)
+	firewall.OnChangeDNS(nil)
 	// firewallOn - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored)
 	// firewallDuringConnection - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
 	if firewallOn {

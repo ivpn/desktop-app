@@ -245,8 +245,12 @@ func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent 
 
 // OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
 func implOnChangeDNS(addr net.IP) error {
-	// not in use for macOS
-	return nil
+	var dnsVal string
+	if addr != nil {
+		dnsVal = addr.String()
+	}
+	log.Info("-set_dns ", dnsVal)
+	return shell.Exec(nil, platform.FirewallScript(), "-set_dns", dnsVal)
 }
 
 // implOnUserExceptionsUpdated() called when 'userExceptions' value were updated. Necessary to update firewall rules.
@@ -316,6 +320,14 @@ func reApplyExceptions() error {
 	err := applyAddHostsToExceptions(allowedIPs)
 	if err != nil {
 		log.Error(err)
+	}
+
+	err1 := implOnChangeDNS(getDnsIP())
+	if err1 != nil {
+		log.Error(err1)
+		if err == nil {
+			err = err1
+		}
 	}
 
 	err2 := implOnUserExceptionsUpdated()

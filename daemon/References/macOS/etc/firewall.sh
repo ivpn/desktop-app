@@ -6,6 +6,7 @@
 # Show all rules for "ivpn_firewall" anchor
 #   sudo pfctl -a "ivpn_firewall" -s rules
 #   sudo pfctl -a "ivpn_firewall/tunnel" -s rules
+#   sudo pfctl -a "ivpn_firewall/dns" -s rules
 # Show table
 #   sudo pfctl -a "ivpn_firewall" -t ivpn_servers -T show
 #   sudo pfctl -a "ivpn_firewall" -t ivpn_exceptions -T show
@@ -85,17 +86,17 @@ function enable_firewall {
       table <${EXCEPTIONS_TABLE}> persist
       table <${USER_EXCEPTIONS_TABLE}> persist
 
-      pass out from any to <${EXCEPTIONS_TABLE}>
-      pass in from <${EXCEPTIONS_TABLE}> to any
+      pass out quick from any to <${EXCEPTIONS_TABLE}>
+      pass in quick from <${EXCEPTIONS_TABLE}> to any
 
-      pass out from any to <${USER_EXCEPTIONS_TABLE}>
-      pass in from <${USER_EXCEPTIONS_TABLE}> to any
+      pass out quick from any to <${USER_EXCEPTIONS_TABLE}>
+      pass in quick from <${USER_EXCEPTIONS_TABLE}> to any
 
       pass out inet proto udp from 0.0.0.0 to 255.255.255.255 port = 67
       pass in proto udp from any to any port = 68
 
       anchor tunnel all
-
+      anchor dns all
 _EOF
 
     local TOKEN=`pfctl -E 2>&1 | grep -i token | sed -e 's/.*oken.*://' | tr -d ' \n'`
@@ -123,6 +124,8 @@ function disable_firewall {
 
     # remove all rules in tun anchor
     pfctl -a ${ANCHOR_NAME}/tunnel -Fr
+    # remove all rules in dns anchor
+    pfctl -a ${ANCHOR_NAME}/dns -Fr
 
     # remove all the rules in anchor
     pfctl -a ${ANCHOR_NAME} -Fr 
@@ -147,13 +150,33 @@ function client_connected {
     pfctl -a ${ANCHOR_NAME}/tunnel -f - <<_EOF
         pass out on ${IFACE} from any to any
         pass in on ${IFACE} from any to any 
-        pass out proto ${PROTOCOL} from any to ${DST_ADDR} port = ${DST_PORT}
+        pass out quick proto ${PROTOCOL} from any to ${DST_ADDR} port = ${DST_PORT}
 _EOF
         # pass out proto ${PROTOCOL} from port = ${SRC_PORT} to ${DST_ADDR}
 }
 
 function client_disconnected {
     pfctl -a ${ANCHOR_NAME}/tunnel -Fr
+}
+
+function set_dns {
+  DNS=$1
+  # remove all rules in dns anchor
+  pfctl -a ${ANCHOR_NAME}/dns -Fr
+
+  if [[ -z "${DNS}" ]] ; then
+      # DNS not defined. Block all connections to port 53
+      pfctl -a ${ANCHOR_NAME}/dns -f - <<_EOF
+        block drop out proto udp from any to port = 53
+        block drop out proto tcp from any to port = 53
+_EOF
+      return 0
+  fi
+
+  pfctl -a ${ANCHOR_NAME}/dns -f - <<_EOF
+        block drop out proto udp from any to ! ${DNS} port = 53
+        block drop out proto tcp from any to ! ${DNS} port = 53
+_EOF
 }
 
 function main {
@@ -209,6 +232,11 @@ function main {
     elif [[ $1 = "-disconnected" ]]; then
         shift
         client_disconnected
+    elif [[ $1 = "-set_dns" ]]; then    
+
+        get_firewall_enabled || return 0
+
+        set_dns $2
     else
         echo "Unknown command"
         return 2

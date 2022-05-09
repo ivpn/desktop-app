@@ -126,7 +126,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 					return fmt.Errorf("failed to set manual DNS: %w", err)
 				}
 			} else {
-				dnsIP := dns.DnsSettings{DnsHost: wg.DefaultDNS().String(), Encryption: dns.EncryptionNone}
+				dnsIP := dns.DnsSettingsCreate(wg.DefaultDNS())
 				if err := dns.SetDefault(dnsIP, nil); err != nil {
 					return fmt.Errorf("failed to set DNS: %w", err)
 				}
@@ -237,7 +237,7 @@ func (wg *WireGuard) resetManualDNS() error {
 
 	if wg.internals.isRunning {
 		// changing DNS to default value for current WireGuard connection
-		return dns.SetManual(dns.DnsSettings{DnsHost: wg.DefaultDNS().String(), Encryption: dns.EncryptionNone}, nil)
+		return dns.SetManual(dns.DnsSettingsCreate(wg.DefaultDNS()))
 	}
 	return dns.DeleteManual(nil, nil)
 }

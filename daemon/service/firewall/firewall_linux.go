@@ -281,8 +281,8 @@ func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent 
 // OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
 func implOnChangeDNS(addr net.IP) error {
 	addrStr := ""
-	if (addr != nil ) {
-		if (addr.To4() == nil) {
+	if addr != nil {
+		if addr.To4() == nil {
 			return fmt.Errorf("DNS is not IPv4 address")
 		}
 		addrStr = addr.String()
@@ -404,7 +404,7 @@ func reApplyExceptions() error {
 	const onlyIcmpFALSE = false
 
 	// define DNS rules
-	err := implOnChangeDNS(dnsIP)
+	err := implOnChangeDNS(getDnsIP())
 	if err != nil {
 		log.Error(err)
 	}

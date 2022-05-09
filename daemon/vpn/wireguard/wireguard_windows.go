@@ -279,7 +279,7 @@ func (wg *WireGuard) resetManualDNS() error {
 		return err // it is not possible set DNS when VPN is not connected
 	}
 
-	err := dns.SetDefault(dns.DnsSettings{DnsHost: wg.DefaultDNS().String()}, wg.connectParams.clientLocalIP)
+	err := dns.SetDefault(dns.DnsSettingsCreate(wg.DefaultDNS()), wg.connectParams.clientLocalIP)
 	if err == nil {
 		wg.internals.manualDNS = dns.DnsSettings{}
 	}

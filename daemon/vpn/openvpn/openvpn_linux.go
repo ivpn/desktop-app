@@ -78,7 +78,7 @@ func (o *OpenVPN) implOnPause() error {
 }
 
 func (o *OpenVPN) implOnResume() error {
-	defDns := dns.DnsSettings{DnsHost: o.DefaultDNS().String()}
+	defDns := dns.DnsSettingsCreate(o.DefaultDNS())
 	return dns.Resume(defDns)
 }
 
@@ -91,7 +91,7 @@ func (o *OpenVPN) implOnResetManualDNS() error {
 	if o.IsPaused() == false {
 		// restore default DNS pushed by OpenVPN server
 		if defaultDns != nil {
-			return dns.SetManual(dns.DnsSettings{DnsHost: defaultDns.String()}, nil)
+			return dns.SetManual(dns.DnsSettingsCreate(defaultDns))
 		}
 	}
 

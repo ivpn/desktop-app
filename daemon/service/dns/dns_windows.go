@@ -176,7 +176,7 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 	return true, false, err
 }
 
-func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
+func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
 	defer catchPanic(&retErr)
 	defer func() {
 		if retErr != nil {
@@ -187,19 +187,19 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	dnscryptproxy.Stop()
 
 	if isIPv6, _ := dnsCfg.IsIPv6(); isIPv6 {
-		return fmt.Errorf("IPv6 DNS is not supported")
+		return DnsSettings{}, fmt.Errorf("IPv6 DNS is not supported")
 	}
 
 	if !_lastDNS.IsEmpty() {
 		// if there was defined DNS - remove it from non-VPN interfaces (if necessary)
 		// (skipping VPN interface, because its data will be overwritten)
 		if err := implDeleteManual(nil); err != nil {
-			return fmt.Errorf("failed to set DNS: %w", err)
+			return DnsSettings{}, fmt.Errorf("failed to set DNS: %w", err)
 		}
 	}
 
 	if dnsCfg.IsEmpty() {
-		return fmt.Errorf("unable to change DNS (configuration is not defined)")
+		return DnsSettings{}, fmt.Errorf("unable to change DNS (configuration is not defined)")
 	}
 	isIpv6, _ := dnsCfg.IsIPv6()
 
@@ -209,7 +209,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	// start encrypted DNS configuration (if required)
 	if dnsCfg.Encryption != EncryptionNone && !fIsCanUseNativeDnsOverHttps() {
 		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
-			return err
+			return DnsSettings{}, err
 		}
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
 		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
@@ -219,7 +219,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	}
 
 	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
-		return nil
+		return DnsSettings{}, nil
 	}
 
 	start := time.Now()
@@ -241,7 +241,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 
 		// SET DNS to VPN interface (for appropriate IPv4\IPv6 protocol)
 		if err := fSetDNSByLocalIP(localInterfaceIP, dnsCfg, isIpv6, OperationSet); err != nil {
-			return fmt.Errorf("failed to set DNS for local interface: %w", err)
+			return DnsSettings{}, fmt.Errorf("failed to set DNS for local interface: %w", err)
 		}
 	}
 
@@ -249,7 +249,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 		// ADD DNS to non-VPN interface (if necessary, when DNS is in local network)
 		for _, ifcAddr := range notVpnInterfacesToUpdate {
 			if err := fSetDNSByLocalIP(ifcAddr.IP, dnsCfg, isIpv6, OperationAdd); err != nil {
-				return fmt.Errorf("failed to set DNS for non-VPN interface: %w", err)
+				return DnsSettings{}, fmt.Errorf("failed to set DNS for non-VPN interface: %w", err)
 			}
 		}
 	}
@@ -257,7 +257,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (retErr error) {
 	// save last changed DNS address
 	_lastDNS = dnsCfg
 
-	return retErr
+	return _lastDNS, retErr
 }
 
 func implDeleteManual(localInterfaceIP net.IP) (retErr error) {
