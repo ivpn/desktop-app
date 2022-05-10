@@ -379,29 +379,32 @@ DWORD DoSetDNSByLocalIPEx(std::string interfaceLocalAddr, std::string dnsIP, boo
             // in case of 'Add' - first element in newServerProperties is reserved for current (new) DNS settings            
             newCServerProperties = (isDoH && operation == Operation::Add) ? 1 : 0;
             svrPropertiesCntToDestroy = newCServerProperties + currDnsCfg.cServerProperties;
-            newServerProperties = new DNS_SERVER_PROPERTY[svrPropertiesCntToDestroy]{ 0 };
-
-            for (ULONG i = 0; i < currDnsCfg.cServerProperties; i++)
+            if (svrPropertiesCntToDestroy > 0)
             {
-                if (newDohIndexes.find(currDnsCfg.ServerProperties[i].ServerIndex) == newDohIndexes.end())
-                    continue;
+                newServerProperties = new DNS_SERVER_PROPERTY[svrPropertiesCntToDestroy]{ 0 };
 
-                newServerProperties[newCServerProperties] = currDnsCfg.ServerProperties[i];
-                newServerProperties[newCServerProperties].ServerIndex = newDohIndexes[currDnsCfg.ServerProperties[i].ServerIndex];
-
-                if (currDnsCfg.ServerProperties[i].Property.DohSettings != NULL)
+                for (ULONG i = 0; i < currDnsCfg.cServerProperties; i++)
                 {
-                    size_t templateLen = wcslen(currDnsCfg.ServerProperties[i].Property.DohSettings->Template);
+                    if (newDohIndexes.find(currDnsCfg.ServerProperties[i].ServerIndex) == newDohIndexes.end())
+                        continue;
 
-                    newServerProperties[newCServerProperties].Property.DohSettings = new DNS_DOH_SERVER_SETTINGS{ 0 };
-                    newServerProperties[newCServerProperties].Property.DohSettings->Flags = currDnsCfg.ServerProperties[i].Property.DohSettings->Flags;
-                    newServerProperties[newCServerProperties].Property.DohSettings->Template = new WCHAR[templateLen + 1]{ 0 };
-                    wcscpy_s(
-                        newServerProperties[newCServerProperties].Property.DohSettings->Template,
-                        templateLen + 1,
-                        currDnsCfg.ServerProperties[i].Property.DohSettings->Template);
+                    newServerProperties[newCServerProperties] = currDnsCfg.ServerProperties[i];
+                    newServerProperties[newCServerProperties].ServerIndex = newDohIndexes[currDnsCfg.ServerProperties[i].ServerIndex];
+
+                    if (currDnsCfg.ServerProperties[i].Property.DohSettings != NULL)
+                    {
+                        size_t templateLen = wcslen(currDnsCfg.ServerProperties[i].Property.DohSettings->Template);
+
+                        newServerProperties[newCServerProperties].Property.DohSettings = new DNS_DOH_SERVER_SETTINGS{ 0 };
+                        newServerProperties[newCServerProperties].Property.DohSettings->Flags = currDnsCfg.ServerProperties[i].Property.DohSettings->Flags;
+                        newServerProperties[newCServerProperties].Property.DohSettings->Template = new WCHAR[templateLen + 1]{ 0 };
+                        wcscpy_s(
+                            newServerProperties[newCServerProperties].Property.DohSettings->Template,
+                            templateLen + 1,
+                            currDnsCfg.ServerProperties[i].Property.DohSettings->Template);
+                    }
+                    newCServerProperties++;
                 }
-                newCServerProperties++;
             }
         }
 

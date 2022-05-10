@@ -71,11 +71,6 @@ func implInitialize() error {
 }
 
 func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dnsCfg DnsSettings, ipv6 bool, op Operation) error {
-
-	if interfaceLocalAddr.Equal(net.ParseIP(dnsCfg.DnsHost)) {
-		return nil // skip setting DNS ip to the interface with exact IP (otherwise, '_fSetDNSByLocalIP()' will crash)
-	}
-
 	isDoH := uint32(0)
 	switch dnsCfg.Encryption {
 	case EncryptionDnsOverTls:
@@ -342,7 +337,7 @@ func getInterfacesIPsWhichContainsIP(addr net.IP, localAddrToSkip net.IP) (ret [
 
 	for _, network := range networks {
 
-		if network.IP.Equal(localAddrToSkip) {
+		if network.IP.Equal(localAddrToSkip) || network.IP.IsLoopback() {
 			continue
 		}
 
