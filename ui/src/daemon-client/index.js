@@ -1159,13 +1159,15 @@ async function Connect(entryServer, exitServer) {
       if (store.getters["settings/isFastestServer"]) {
         // looking for fastest server
         let fastest = store.getters["vpnState/fastestServer"];
-        if (fastest == null) {
+        if (fastest == null || fastest.ping == null) {
           // request servers ping
           console.log(
             "Connect to fastest server (fastest server not defined). Pinging servers..."
           );
           await PingServers();
           fastest = store.getters["vpnState/fastestServer"];
+          // if fastest.ping == null - it means no any ping info available (e.g. communication blocked by firewall or no internet connectivity)
+          // Anyway, we have to use the server calculated by 'vpnState/fastestServer' as fastest
         }
         if (fastest != null) store.dispatch("settings/serverEntry", fastest);
       } else if (store.getters["settings/isRandomServer"]) {
