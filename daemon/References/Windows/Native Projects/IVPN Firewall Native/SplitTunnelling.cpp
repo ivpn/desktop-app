@@ -15,7 +15,8 @@ extern "C" {
 			{
 				// It could be that service already started (which is not expected for us)
 				// Therefore, we stopping it. And do a clean start then.
-				if (GetLastError() == ERROR_SERVICE_EXISTS)
+				DWORD lastError = GetLastError();
+				if (lastError == ERROR_SERVICE_EXISTS || lastError == ERROR_SERVICE_MARKED_FOR_DELETE)
 				{
 					splittun::StopDriverAsService();
 					if (!splittun::StartDriverAsService(driverPath))
