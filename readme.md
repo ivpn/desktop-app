@@ -85,8 +85,9 @@ cd ivpn/desktop-app/ui/References/macOS
 ./build.sh -v <VERSION_X.X.X> -c <APPLE_DevID_CERTIFICATE>
 ```
 
-  Compiled binary can be found at: `desktop-app/ui/References/macOS/_compiled`
-
+  Compiled binary can be found at: `desktop-app/ui/References/macOS/_compiled`  
+  *([some info](https://github.com/ivpn/desktop-app/issues/161) about Apple Developer ID)*  
+  
 <a name="compilation_linux"></a>
 #### Linux
 
