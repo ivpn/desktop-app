@@ -126,7 +126,10 @@
           <!-- VERSION -->
           <div class="flexRow" style="flex-grow: 1">
             <div class="flexRow" style="margin: 20px; flex-grow: 1">
-              <div style="flex-grow: 1; text-align: center">
+              <div
+                style="flex-grow: 1; text-align: center; cursor: pointer"
+                v-on:click="onVersionClick()"
+              >
                 <div v-if="versionSingle" class="version">
                   <!-- single version -->
                   {{ versionSingle }}
@@ -134,7 +137,9 @@
 
                 <div v-else>
                   <!-- daemon and UI versions different-->
-                  <div class="version">{{ versionUI }}</div>
+                  <div class="version">
+                    {{ versionUI }}
+                  </div>
                   <div class="version">daemon {{ versionDaemon }}</div>
                 </div>
               </div>
@@ -236,17 +241,52 @@ export default {
       return null;
     },
     versionDaemon: function () {
-      let v = this.$store.state.daemonVersion;
-      if (!v) return "version unknown";
-      return `v${v}`;
+      try {
+        let v = this.$store.state.daemonVersion;
+        if (!v) return "version unknown";
+        return `v${v}`;
+      } catch (e) {
+        return "version unknown";
+      }
     },
     versionUI: function () {
-      let v = sender.appGetVersion();
-      if (!v) return "version unknown";
-      return `v${v}`;
+      try {
+        let v = sender.appGetVersion().Version;
+        if (!v) return "version unknown";
+        return `v${v}`;
+      } catch (e) {
+        return "version unknown";
+      }
     },
   },
   methods: {
+    onVersionClick: function () {
+      let infoStr = "";
+
+      infoStr += "Daemon: ";
+      if (!this.versionDaemon) infoStr += "version unknown";
+      else infoStr += this.versionDaemon;
+      if (this.$store.state.daemonProcessorArch)
+        infoStr += ` [${this.$store.state.daemonProcessorArch}]`;
+      infoStr += "\n";
+
+      const uiVer = sender.appGetVersion();
+      infoStr += "UI: ";
+      if (!uiVer || !uiVer.Version) infoStr += "version unknown";
+      else infoStr += uiVer.Version;
+      if (uiVer && uiVer.ProcessorArch) infoStr += ` [${uiVer.ProcessorArch}]`;
+      infoStr += "\n";
+
+      infoStr += "\n" + navigator.userAgent;
+
+      sender.showMessageBoxSync({
+        type: "info",
+        buttons: ["OK"],
+        message: "IVPN version info",
+        detail: infoStr,
+      });
+    },
+
     goBack: async function () {
       if (this.$store.state.settings.minimizedUI) {
         sender.closeCurrentWindow();

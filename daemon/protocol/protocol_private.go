@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"runtime"
 	"strings"
 	"time"
 
@@ -214,6 +215,7 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 	helloResp := types.HelloResp{
 		ParanoidMode:        types.ParanoidModeStatus{IsEnabled: p._eaa.IsEnabled()},
 		Version:             version.Version(),
+		ProcessorArch:       runtime.GOARCH,
 		Session:             types.CreateSessionResp(prefs.Session),
 		SettingsSessionUUID: prefs.SettingsSessionUUID,
 		DisabledFunctions: types.DisabledFunctionality{

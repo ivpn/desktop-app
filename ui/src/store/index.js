@@ -52,6 +52,7 @@ export default new Vuex.Store({
   state: {
     daemonConnectionState: null, // DaemonConnectionType from "./types";
     daemonVersion: "",
+    daemonProcessorArch: "",
     daemonIsOldVersionError: false,
     daemonIsInstalling: false,
 
@@ -210,6 +211,9 @@ export default new Vuex.Store({
     },
     daemonVersion(state, value) {
       state.daemonVersion = value;
+    },
+    daemonProcessorArch(state, value) {
+      state.daemonProcessorArch = value;
     },
     daemonIsInstalling(state, value) {
       state.daemonIsInstalling = value;

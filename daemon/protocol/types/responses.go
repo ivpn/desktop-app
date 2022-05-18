@@ -107,6 +107,7 @@ type SettingsResp struct {
 type HelloResp struct {
 	CommandBase
 	Version           string
+	ProcessorArch     string
 	Session           SessionResp
 	DisabledFunctions DisabledFunctionality
 	Dns               DnsAbilities

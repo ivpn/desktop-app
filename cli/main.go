@@ -28,6 +28,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -66,7 +67,7 @@ func addCommand(cmd ICommand) {
 
 func printHeader() {
 	fmt.Println("Command-line interface for IVPN client (www.ivpn.net)")
-	fmt.Println("version:" + version.GetFullVersion() + "\n")
+	fmt.Println("version:" + version.GetFullVersion() + " " + runtime.GOARCH + "\n")
 }
 
 func printUsageAll(short bool) {
