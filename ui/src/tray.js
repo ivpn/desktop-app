@@ -415,7 +415,7 @@ function GetStatusText() {
   let retStr = "";
 
   if (store.getters["vpnState/isConnected"]) {
-    retStr += `Connected: ${serverName(store.state.settings.serverEntry)}`;
+    retStr += `Connected: ${serverName()}`;
     if (store.state.vpnState.pauseState === PauseStateEnum.Paused) {
       retStr += ` (connection Paused)`;
     }
@@ -471,14 +471,20 @@ function serverName(entryServer, exitServer) {
     return `${svr.city}, ${svr.country_code}`;
   }
 
+  const isConnected = store.getters["vpnState/isConnected"];
+  const isFastestServer = store.state.settings.isFastestServer;
+  const isRandomServer = store.state.settings.isRandomServer;
+  const isMultiHop = store.state.settings.isMultiHop;
+  const isRandomExitServer = store.state.settings.isRandomExitServer;
+
   if (entryServer == null) {
-    if (store.state.settings.isFastestServer) entryServer = "Fastest Server";
-    else if (store.state.settings.isRandomServer) entryServer = "Random Server";
+    if (!isConnected && isFastestServer) entryServer = "Fastest Server";
+    else if (!isConnected && isRandomServer) entryServer = "Random Server";
     else entryServer = store.state.settings.serverEntry;
   }
 
-  if (exitServer == null && store.state.settings.isMultiHop) {
-    if (store.state.settings.isRandomExitServer) exitServer = "Random Server";
+  if (exitServer == null && isMultiHop) {
+    if (!isConnected && isRandomExitServer) exitServer = "Random Server";
     else exitServer = store.state.settings.serverExit;
   }
 
