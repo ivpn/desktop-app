@@ -313,13 +313,13 @@ func SetWifiNotifier(cb func(string)) error {
 
 	l, err := netlink.CreateListener()
 	if err != nil {
-		return fmt.Errorf("Netlink listener initialization error: %w", err)
+		return fmt.Errorf("netlink listener initialization error: %w", err)
 	}
 	go func() {
 		for {
 			msgs, err := l.ReadMsgs()
 			if err != nil {
-				fmt.Println("Could not read netlink messages: %s", err)
+				fmt.Printf("Could not read netlink messages: %s\n", err)
 			}
 			for _, m := range msgs {
 				if netlink.IsNewAddr(&m) || netlink.IsDelAddr(&m) {
