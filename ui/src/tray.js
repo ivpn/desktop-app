@@ -241,7 +241,8 @@ function updateTrayMenu() {
 
   // FAVORITE SERVERS MENU
   let favoriteSvrsTemplate = [];
-  const favSvrs = store.state.settings.serversFavoriteList;
+  // favorite servers for current protocol
+  const favSvrs = store.getters["settings/favoriteServers"];
   if (favSvrs == null || favSvrs.length == 0) {
     favoriteSvrsTemplate = [
       { label: "No servers in favorite list", enabled: false },
@@ -251,7 +252,8 @@ function updateTrayMenu() {
 
     const serversHashed = store.state.vpnState.serversHashed;
     favSvrs.forEach((gw) => {
-      const s = serversHashed[gw];
+      if (!gw || !gw.gateway) return;
+      const s = serversHashed[gw.gateway];
       if (s == null) return;
 
       var options = {};
