@@ -26,9 +26,12 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/linux/netlink"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
@@ -38,14 +41,16 @@ var (
 	// value: true - if exception rule is persistant (persistant, means will stay available even client is disconnected)
 	allowedHosts map[string]bool
 	// IP addresses of local interfaces (using for 'allow LAN' functionality)
-	allowedLanIPs       []string
-	allowedForICMP      map[string]struct{}
-	connectedVpnLocalIP string
-
-	delayedAllowLanAllowed bool = true
-	delayedAllowLanStarted bool = false
+	curAllowedLanIPs          []string
+	curStateAllowLAN          bool
+	curStateAllowLanMulticast bool
+	curStateEnabled           bool
+	allowedForICMP            map[string]struct{}
+	connectedVpnLocalIP       string
 
 	isPersistant bool = false
+
+	mutexInternal sync.Mutex
 )
 
 const (
@@ -56,7 +61,28 @@ func init() {
 	allowedHosts = make(map[string]bool)
 }
 
-func implInitialize() error { return nil }
+func implInitialize() error {
+	startLanChangeMonitor := func() error {
+		onNetChange := make(chan struct{}, 1)
+
+		if err := netlink.RegisterLanChangeListener(onNetChange); err != nil {
+			return err
+		}
+
+		go func() {
+			for {
+				<-onNetChange
+				if err := doAllowLAN(curStateAllowLAN, curStateAllowLanMulticast, true); err != nil {
+					log.Error(err)
+				}
+			}
+		}()
+
+		return nil
+	}
+
+	return startLanChangeMonitor()
+}
 
 func implGetEnabled() (bool, error) {
 	err := shell.Exec(nil, platform.FirewallScript(), "-status")
@@ -75,16 +101,21 @@ func implGetEnabled() (bool, error) {
 }
 
 func implSetEnabled(isEnabled bool) error {
+	curStateEnabled = isEnabled
+
 	if isEnabled {
 		err := shell.Exec(nil, platform.FirewallScript(), "-enable")
 		if err != nil {
 			return fmt.Errorf("failed to execute shell command: %w", err)
 		}
+
 		// To fulfill such flow (example): Connected -> FWDisable -> FWEnable
 		// Here we should restore all exceptions (all hosts which are allowed)
 		return reApplyExceptions()
 	}
 
+	// disable FW ...
+	curAllowedLanIPs = nil // forget allowed LAN IP addresses
 	isPersistant = false
 	allowedForICMP = nil
 	return shell.Exec(nil, platform.FirewallScript(), "-disable")
@@ -177,20 +208,64 @@ func implClientDisconnected() error {
 }
 
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
+	return doAllowLAN(isAllowLAN, isAllowLanMulticast, false)
+}
+
+func doAllowLAN(isAllowLAN, isAllowLanMulticast, isTriggeredByLanChangeMonitor bool) error {
+	mutexInternal.Lock()
+	defer mutexInternal.Unlock()
+
+	// save expected state of AllowLAN
+	curStateAllowLAN = isAllowLAN
+	curStateAllowLanMulticast = isAllowLanMulticast
+
 	const persistant = true
 	const notOnlyForICMP = false
 
-	if !isAllowLAN {
-		// LAN NOT ALLOWED
-		delayedAllowLanAllowed = false
-		if len(allowedLanIPs) <= 0 {
+	logLanChangeLogged := false
+	logLanChange := func() {
+		if isTriggeredByLanChangeMonitor && !logLanChangeLogged {
+			logLanChangeLogged = true
+			log.Info("LAN: network configuration change detected")
+		}
+	}
+
+	if isAllowLAN && !curStateEnabled {
+		// do nothing if firewall disabled
+		return nil
+	}
+
+	if isAllowLAN && curStateAllowLAN && isAllowLanMulticast == curStateAllowLanMulticast {
+		// Allow LAN is already enabled
+		// Check is there any changes in LAN configuration. If no changes - do nothing
+		localIPs, err := getLanIPs()
+		if err != nil {
+			return fmt.Errorf("failed to get local IPs: %w", err)
+		}
+		if isAllowLanMulticast && localIPs != nil {
+			// allow LAN + multicast
+			localIPs = append(localIPs, multicastIP)
+		}
+		if (len(localIPs) == 0 && len(curAllowedLanIPs) == 0) || helpers.SliceElementsMatch(localIPs, curAllowedLanIPs) {
+			// Check is there any changes in LAN configuration. If no changes - do nothing
 			return nil
 		}
-		// disallow everything (LAN + multicast)
-		toRemove := allowedLanIPs
-		allowedLanIPs = nil
-		return removeHostsFromExceptions(toRemove, persistant, false)
 	}
+
+	// disallow everything (LAN + multicast)
+	toRemove := curAllowedLanIPs
+	curAllowedLanIPs = nil
+	if len(toRemove) > 0 {
+		logLanChange()
+		if err := removeHostsFromExceptions(toRemove, persistant, notOnlyForICMP); err != nil {
+			return fmt.Errorf("failed to erase 'Allow LAN' rules")
+		}
+	}
+	if !isAllowLAN {
+		return nil
+	}
+
+	logLanChange()
 
 	// LAN ALLOWED
 	localIPs, err := getLanIPs()
@@ -198,63 +273,30 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 		return fmt.Errorf("failed to get local IPs: %w", err)
 	}
 
-	if len(localIPs) > 0 {
-		delayedAllowLanAllowed = false
-	} else {
+	if len(localIPs) == 0 && !isTriggeredByLanChangeMonitor {
 		// this can happen, for example, on system boot (when no network interfaces initialized)
 		log.Info("Local LAN addresses not detected: no data to apply the 'Allow LAN' rule")
-		go delayedAllowLAN(isAllowLanMulticast)
 		return nil
 	}
 
-	if len(allowedLanIPs) > 0 {
-		removeHostsFromExceptions(allowedLanIPs, persistant, false)
+	if len(curAllowedLanIPs) > 0 {
+		removeHostsFromExceptions(curAllowedLanIPs, persistant, notOnlyForICMP)
 	}
 
-	allowedLanIPs = localIPs
+	curAllowedLanIPs = localIPs
 	if isAllowLanMulticast {
 		// allow LAN + multicast
-		allowedLanIPs = append(allowedLanIPs, multicastIP)
-		return addHostsToExceptions(allowedLanIPs, persistant, notOnlyForICMP)
+		curAllowedLanIPs = append(curAllowedLanIPs, multicastIP)
+		return addHostsToExceptions(curAllowedLanIPs, persistant, notOnlyForICMP)
 	}
 
 	// disallow Multicast
-	removeHostsFromExceptions([]string{multicastIP}, persistant, false)
+	removeHostsFromExceptions([]string{multicastIP}, persistant, notOnlyForICMP)
 	// allow LAN
-	return addHostsToExceptions(allowedLanIPs, persistant, notOnlyForICMP)
+	return addHostsToExceptions(curAllowedLanIPs, persistant, notOnlyForICMP)
 }
 
-func delayedAllowLAN(allowLanMulticast bool) {
-	if delayedAllowLanStarted || !delayedAllowLanAllowed {
-		return
-	}
-	log.Info("Delayed 'Allow LAN': Will try to apply this rule few seconds later...")
-	delayedAllowLanStarted = true
-
-	defer func() { delayedAllowLanAllowed = false }()
-	for i := 0; i < 25 && delayedAllowLanAllowed; i++ {
-		time.Sleep(time.Second)
-		ipList, err := getLanIPs()
-		if err != nil {
-			log.Warning(fmt.Sprintf("Delayed 'Allow LAN': failed to get local IPs: %s", err))
-			return
-		}
-		if len(ipList) > 0 {
-			time.Sleep(time.Second) // just to ensure that everything initialized
-			if delayedAllowLanAllowed {
-				log.Info("Delayed 'Allow LAN': apply ...")
-				err := implAllowLAN(true, allowLanMulticast)
-				if err != nil {
-					log.Warning(fmt.Sprintf("Delayed 'Allow LAN' error: %s", err))
-				}
-			}
-			return
-		}
-	}
-	log.Info("Delayed 'Allow LAN': no LAN interfaces detected")
-}
-
-// implAddHostsToExceptions - allow comminication with this hosts
+// implAddHostsToExceptions - allow communication with this hosts
 // Note: if isPersistent == false -> all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
 // Arguments:
 //	* IPs			-	list of IP addresses to ba allowed
@@ -424,6 +466,11 @@ func reApplyExceptions() error {
 		log.Error(err)
 	}
 
+	err = implAllowLAN(curStateAllowLAN, curStateAllowLanMulticast)
+	if err != nil {
+		log.Error(err)
+	}
+
 	err = implOnUserExceptionsUpdated()
 	if err != nil {
 		log.Error(err)
@@ -435,7 +482,7 @@ func reApplyExceptions() error {
 //---------------------------------------------------------------------
 
 // allow communication with specified hosts
-// if isPersistant == false - exception will be removed when client disctonnects
+// if isPersistant == false - exception will be removed when client disconnects
 func addHostsToExceptions(IPs []string, isPersistant bool, onlyForICMP bool) error {
 	if len(IPs) == 0 {
 		return nil
