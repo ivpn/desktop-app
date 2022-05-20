@@ -355,6 +355,22 @@ export default {
     getPort: (state) => {
       return state.port[enumValueName(VpnTypeEnum, state.vpnType)];
     },
+    favoriteServers: (state, getters, rootState, rootGetters) => {
+      // Get favorite servers for current protocol
+
+      try {
+        // All favorite servers (for all protocols)
+        let favorites = state.serversFavoriteList;
+        // hosts for current protocol
+        let activeHosts = rootGetters["vpnState/activeServers"];
+        if (!activeHosts || !favorites) return null;
+
+        return activeHosts.filter((s) => favorites.includes(s.gateway));
+      } catch (e) {
+        console.error("Failed to get Favorite servers: ", e);
+        return null;
+      }
+    },
   },
 
   // can be called from renderer

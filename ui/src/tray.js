@@ -241,7 +241,8 @@ function updateTrayMenu() {
 
   // FAVORITE SERVERS MENU
   let favoriteSvrsTemplate = [];
-  const favSvrs = store.state.settings.serversFavoriteList;
+  // favorite servers for current protocol
+  const favSvrs = store.getters["settings/favoriteServers"];
   if (favSvrs == null || favSvrs.length == 0) {
     favoriteSvrsTemplate = [
       { label: "No servers in favorite list", enabled: false },
@@ -251,7 +252,8 @@ function updateTrayMenu() {
 
     const serversHashed = store.state.vpnState.serversHashed;
     favSvrs.forEach((gw) => {
-      const s = serversHashed[gw];
+      if (!gw || !gw.gateway) return;
+      const s = serversHashed[gw.gateway];
       if (s == null) return;
 
       var options = {};
@@ -415,7 +417,7 @@ function GetStatusText() {
   let retStr = "";
 
   if (store.getters["vpnState/isConnected"]) {
-    retStr += `Connected: ${serverName(store.state.settings.serverEntry)}`;
+    retStr += `Connected: ${serverName()}`;
     if (store.state.vpnState.pauseState === PauseStateEnum.Paused) {
       retStr += ` (connection Paused)`;
     }
@@ -471,14 +473,20 @@ function serverName(entryServer, exitServer) {
     return `${svr.city}, ${svr.country_code}`;
   }
 
+  const isConnected = store.getters["vpnState/isConnected"];
+  const isFastestServer = store.state.settings.isFastestServer;
+  const isRandomServer = store.state.settings.isRandomServer;
+  const isMultiHop = store.state.settings.isMultiHop;
+  const isRandomExitServer = store.state.settings.isRandomExitServer;
+
   if (entryServer == null) {
-    if (store.state.settings.isFastestServer) entryServer = "Fastest Server";
-    else if (store.state.settings.isRandomServer) entryServer = "Random Server";
+    if (!isConnected && isFastestServer) entryServer = "Fastest Server";
+    else if (!isConnected && isRandomServer) entryServer = "Random Server";
     else entryServer = store.state.settings.serverEntry;
   }
 
-  if (exitServer == null && store.state.settings.isMultiHop) {
-    if (store.state.settings.isRandomExitServer) exitServer = "Random Server";
+  if (exitServer == null && isMultiHop) {
+    if (!isConnected && isRandomExitServer) exitServer = "Random Server";
     else exitServer = store.state.settings.serverExit;
   }
 

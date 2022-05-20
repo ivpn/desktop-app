@@ -339,8 +339,8 @@ export default {
     },
 
     favoriteServers: function () {
-      let favorites = this.$store.state.settings.serversFavoriteList;
-      return this.servers.filter((s) => favorites.includes(s.gateway));
+      // Favorite servers for current protocol
+      return this.$store.getters["settings/favoriteServers"];
     },
 
     filteredServers: function () {

@@ -290,7 +290,7 @@ export default {
       return this.$store.state.daemonVersion;
     },
     versionUI: function () {
-      return sender.appGetVersion();
+      return sender.appGetVersion().Version;
     },
     // LATEST VERSIONS
     versionLatestGeneric: function () {

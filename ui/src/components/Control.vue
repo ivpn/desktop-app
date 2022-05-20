@@ -158,10 +158,6 @@ export default {
     isMultihopAllowed: function () {
       return this.$store.getters["account/isMultihopAllowed"];
     },
-    port: function () {
-      // needed for watcher
-      return this.$store.getters["settings/getPort"];
-    },
     isInProgress: function () {
       if (this.isConnectProgress) return this.isConnectProgress;
       return (
@@ -200,13 +196,6 @@ export default {
         message: `Failed to connect`,
         detail: failureInfo.ReasonDescription,
       });
-    },
-    port(newValue, oldValue) {
-      if (!connected(this)) return;
-      if (newValue == null || oldValue == null) return;
-      if (newValue.port === oldValue.port && newValue.type === oldValue.type)
-        return;
-      connect(this, true);
     },
     isMinimizedUI() {
       setTimeout(() => this.recalcScrollButtonVisiblity(), 1000);

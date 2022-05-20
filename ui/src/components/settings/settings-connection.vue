@@ -296,6 +296,26 @@ export default {
       openvpnManualConfig: false,
     };
   },
+  watch: {
+    async port(newValue, oldValue) {
+      if (this.$store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED)
+        return;
+      if (newValue == null || oldValue == null) return;
+      if (newValue.port === oldValue.port && newValue.type === oldValue.type)
+        return;
+
+      try {
+        await sender.Connect();
+      } catch (e) {
+        console.error(e);
+        sender.showMessageBoxSync({
+          type: "error",
+          buttons: ["OK"],
+          message: `Failed to connect: ` + e,
+        });
+      }
+    },
+  },
   methods: {
     isAbleToChangeVpnSettings: function () {
       if (

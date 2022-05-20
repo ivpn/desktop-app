@@ -387,7 +387,10 @@ ipcMain.on("renderer-request-platform", (event) => {
 
 // APP
 ipcMain.on("renderer-request-app-getversion", (event) => {
-  event.returnValue = app.getVersion();
+  event.returnValue = {
+    Version: app.getVersion(),
+    ProcessorArch: process.arch,
+  };
 });
 
 // HELPERS

@@ -156,7 +156,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 				log.Info("Pausing...")
 
 				if err := wg.uninstallService(); err != nil {
-					log.Error("failed to pause connection (disconnetion error):", err.Error())
+					log.Error("failed to pause connection (disconnection error):", err.Error())
 					return err
 				}
 
@@ -178,7 +178,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 					log.Info("Resuming...")
 
 					if err := wg.installService(stateChan); err != nil {
-						log.Error("failed to resume connection (new connetion error):", err.Error())
+						log.Error("failed to resume connection (new connection error):", err.Error())
 						return err
 					}
 

@@ -319,6 +319,7 @@ async function processResponse(response) {
   switch (obj.Command) {
     case daemonResponses.HelloResp:
       store.commit("daemonVersion", obj.Version);
+      store.commit("daemonProcessorArch", obj.ProcessorArch);
 
       if (obj.SettingsSessionUUID) {
         const ssID = obj.SettingsSessionUUID;

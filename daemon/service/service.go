@@ -1642,7 +1642,9 @@ func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, 
 		if vpnObj.Type() != vpn.WireGuard {
 			return
 		}
-		if !s.Connected() {
+		if !s.Connected() || (s.Connected() && s.IsPaused()) {
+			// IMPORTANT! : WireGuard 'pause/resume' state is based on complete VPN disconnection and connection back (on all platforms)
+			// If this will be changed (e.g. just changing routing) - it will be necessary to implement reconnection even in 'pause' state
 			return
 		}
 		log.Info("Reconnecting WireGuard connection with new credentials...")
