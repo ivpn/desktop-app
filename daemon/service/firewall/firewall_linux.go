@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/helpers"
@@ -48,6 +49,8 @@ var (
 	connectedVpnLocalIP       string
 
 	isPersistant bool = false
+
+	mutexInternal sync.Mutex
 )
 
 const (
@@ -60,28 +63,17 @@ func init() {
 
 func implInitialize() error {
 	startLanChangeMonitor := func() error {
-		l, err := netlink.CreateListener()
-		if err != nil {
-			return fmt.Errorf("(LAN change monitor) Netlink listener initialization error: %w", err)
+		onNetChange := make(chan struct{}, 1)
+
+		if err := netlink.RegisterLanChangeListener(onNetChange); err != nil {
+			return err
 		}
 
 		go func() {
-			log.Info("LAN change monitor started")
-			defer log.Info("LAN change monitor stopped")
-
 			for {
-				msgs, err := l.ReadMsgs()
-				if err != nil {
-					log.Debug(fmt.Sprintf("Could not read netlink messages: %s", err))
-					break
-				}
-				for _, m := range msgs {
-					if netlink.IsNewAddr(&m) || netlink.IsDelAddr(&m) {
-						//log.Debug("LAN: Network change detected")
-						if err := implAllowLAN(curStateAllowLAN, curStateAllowLanMulticast); err != nil {
-							log.Error(err)
-						}
-					}
+				<-onNetChange
+				if err := doAllowLAN(curStateAllowLAN, curStateAllowLanMulticast, true); err != nil {
+					log.Error(err)
 				}
 			}
 		}()
@@ -216,12 +208,27 @@ func implClientDisconnected() error {
 }
 
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
+	return doAllowLAN(isAllowLAN, isAllowLanMulticast, false)
+}
+
+func doAllowLAN(isAllowLAN, isAllowLanMulticast, isTriggeredByLanChangeMonitor bool) error {
+	mutexInternal.Lock()
+	defer mutexInternal.Unlock()
+
 	// save expected state of AllowLAN
 	curStateAllowLAN = isAllowLAN
 	curStateAllowLanMulticast = isAllowLanMulticast
 
-	const notPersistant = false
+	const persistant = true
 	const notOnlyForICMP = false
+
+	logLanChangeLogged := false
+	logLanChange := func() {
+		if isTriggeredByLanChangeMonitor && !logLanChangeLogged {
+			logLanChangeLogged = true
+			log.Info("LAN: network configuration change detected")
+		}
+	}
 
 	if isAllowLAN && !curStateEnabled {
 		// do nothing if firewall disabled
@@ -249,7 +256,8 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 	toRemove := curAllowedLanIPs
 	curAllowedLanIPs = nil
 	if len(toRemove) > 0 {
-		if err := removeHostsFromExceptions(toRemove, notPersistant, notOnlyForICMP); err != nil {
+		logLanChange()
+		if err := removeHostsFromExceptions(toRemove, persistant, notOnlyForICMP); err != nil {
 			return fmt.Errorf("failed to erase 'Allow LAN' rules")
 		}
 	}
@@ -257,36 +265,38 @@ func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 		return nil
 	}
 
+	logLanChange()
+
 	// LAN ALLOWED
 	localIPs, err := getLanIPs()
 	if err != nil {
 		return fmt.Errorf("failed to get local IPs: %w", err)
 	}
 
-	if len(localIPs) == 0 {
+	if len(localIPs) == 0 && !isTriggeredByLanChangeMonitor {
 		// this can happen, for example, on system boot (when no network interfaces initialized)
 		log.Info("Local LAN addresses not detected: no data to apply the 'Allow LAN' rule")
 		return nil
 	}
 
 	if len(curAllowedLanIPs) > 0 {
-		removeHostsFromExceptions(curAllowedLanIPs, notPersistant, notOnlyForICMP)
+		removeHostsFromExceptions(curAllowedLanIPs, persistant, notOnlyForICMP)
 	}
 
 	curAllowedLanIPs = localIPs
 	if isAllowLanMulticast {
 		// allow LAN + multicast
 		curAllowedLanIPs = append(curAllowedLanIPs, multicastIP)
-		return addHostsToExceptions(curAllowedLanIPs, notPersistant, notOnlyForICMP)
+		return addHostsToExceptions(curAllowedLanIPs, persistant, notOnlyForICMP)
 	}
 
 	// disallow Multicast
-	removeHostsFromExceptions([]string{multicastIP}, notPersistant, notOnlyForICMP)
+	removeHostsFromExceptions([]string{multicastIP}, persistant, notOnlyForICMP)
 	// allow LAN
-	return addHostsToExceptions(curAllowedLanIPs, notPersistant, notOnlyForICMP)
+	return addHostsToExceptions(curAllowedLanIPs, persistant, notOnlyForICMP)
 }
 
-// implAddHostsToExceptions - allow comminication with this hosts
+// implAddHostsToExceptions - allow communication with this hosts
 // Note: if isPersistent == false -> all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
 // Arguments:
 //	* IPs			-	list of IP addresses to ba allowed
@@ -458,7 +468,7 @@ func reApplyExceptions() error {
 //---------------------------------------------------------------------
 
 // allow communication with specified hosts
-// if isPersistant == false - exception will be removed when client disctonnects
+// if isPersistant == false - exception will be removed when client disconnects
 func addHostsToExceptions(IPs []string, isPersistant bool, onlyForICMP bool) error {
 	if len(IPs) == 0 {
 		return nil

@@ -311,22 +311,18 @@ func SetWifiNotifier(cb func(string)) error {
 		return fmt.Errorf("callback function not defined")
 	}
 
-	l, err := netlink.CreateListener()
-	if err != nil {
-		return fmt.Errorf("netlink listener initialization error: %w", err)
+	onNetChange := make(chan struct{}, 1)
+
+	if err := netlink.RegisterLanChangeListener(onNetChange); err != nil {
+		return err
 	}
+
 	go func() {
 		for {
-			msgs, err := l.ReadMsgs()
-			if err != nil {
-				fmt.Printf("Could not read netlink messages: %s\n", err)
-			}
-			for _, m := range msgs {
-				if netlink.IsNewAddr(&m) || netlink.IsDelAddr(&m) {
-					cb(GetCurrentSSID())
-				}
-			}
+			<-onNetChange
+			cb(GetCurrentSSID())
 		}
 	}()
+
 	return nil
 }
