@@ -130,10 +130,12 @@ function enable_firewall {
       # ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -p udp --dport 546 -j ACCEPT
 
       # IPv6: assign our chains to global (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
-      ${IPv6BIN} -w ${LOCKWAITTIME} -A OUTPUT -j ${OUT_IVPN}
-      ${IPv6BIN} -w ${LOCKWAITTIME} -A INPUT -j ${IN_IVPN}
 
-      # exceptions 
+      # Note! Using "-I" parameter to add IVPN rules on the top of iptables rules sequence
+      ${IPv6BIN} -w ${LOCKWAITTIME} -I OUTPUT -j ${OUT_IVPN}
+      ${IPv6BIN} -w ${LOCKWAITTIME} -I INPUT -j ${IN_IVPN}
+
+      # exceptions
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF0}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF0}
 
@@ -150,6 +152,13 @@ function enable_firewall {
       # IPv6: block everything by default
       ${IPv6BIN} -w ${LOCKWAITTIME} -P INPUT DROP
       ${IPv6BIN} -w ${LOCKWAITTIME} -P OUTPUT DROP
+
+      # Aggressive block!
+      # Note! If the packet does not match any IVPN rule - DROP it.
+      # It prevents traversing packet analysis to the rest rules (if defined) and avoids any leaks
+      # This will block all user-defined firewall rules!
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j DROP
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN}  -j DROP
 
     else
       echo "IPv6 disabled: skipping IPv6 rules"
@@ -193,8 +202,10 @@ function enable_firewall {
     # assign our chains to global
     # (global -> IVPN_CHAIN -> IVPN_VPN_CHAIN)
     # (global -> IVPN_CHAIN -> IN_IVPN_STAT_EXP)
-    ${IPv4BIN} -w ${LOCKWAITTIME} -A OUTPUT -j ${OUT_IVPN}
-    ${IPv4BIN} -w ${LOCKWAITTIME} -A INPUT -j ${IN_IVPN}
+
+    # Note! Using "-I" parameter to add IVPN rules on the top of iptables rules sequence
+    ${IPv4BIN} -w ${LOCKWAITTIME} -I OUTPUT -j ${OUT_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -I INPUT -j ${IN_IVPN}
 
     # exceptions (must be processed before OUT_IVPN_DNS!)
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF0}
@@ -218,6 +229,13 @@ function enable_firewall {
     # block everything by default
     ${IPv4BIN} -w ${LOCKWAITTIME} -P INPUT DROP
     ${IPv4BIN} -w ${LOCKWAITTIME} -P OUTPUT DROP
+
+    # Aggressive block!
+    # Note! If the packet does not match any IVPN rule - DROP it.
+    # It prevents traversing packet analysis to the rest rules (if defined) and avoids any leaks
+    # This will block all user-defined firewall rules!
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j DROP
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN}  -j DROP
 
     set +e
 
@@ -479,7 +497,7 @@ function main {
         [ -z "$@" ] && return
         add_exceptions ${IPv6BIN} ${IN_IVPN_STAT_USER_EXP} ${OUT_IVPN_STAT_USER_EXP} $@
       fi
-    
+
     # DNS rules
     elif [[ $1 = "-set_dns" ]]; then
 
