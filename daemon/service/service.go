@@ -614,19 +614,6 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 
 	log.Info("Connecting...")
 
-	// checking default outbound IPs
-	// It is necessary for Split-Tunnelling configuration
-	var sInfo VpnSessionInfo
-	sInfo.OutboundIPv4, err = netinfo.GetOutboundIP(false)
-	if err != nil {
-		log.Warning(fmt.Errorf("failed to detect outbound IPv4 address: %w", err))
-	}
-	sInfo.OutboundIPv6, err = netinfo.GetOutboundIP(true)
-	if err != nil {
-		log.Warning(fmt.Errorf("failed to detect outbound IPv6 address: %w", err))
-	}
-	s.SetVpnSessionInfo(sInfo)
-
 	// save vpn object
 	s._vpn = vpnProc
 
@@ -816,10 +803,25 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 		}
 	}()
 
+	// Initialize VPN: ensure everything is prepared for a new connection
+	// (e.g. correct OpenVPN version or a previously started WireGuard service is stopped)
 	log.Info("Initializing...")
 	if err := vpnProc.Init(); err != nil {
 		return fmt.Errorf("failed to initialize VPN object: %w", err)
 	}
+
+	// Split-Tunnelling: Checking default outbound IPs
+	// (note: it is important to call this code after 'vpnProc.Init()')
+	var sInfo VpnSessionInfo
+	sInfo.OutboundIPv4, err = netinfo.GetOutboundIP(false)
+	if err != nil {
+		log.Warning(fmt.Errorf("failed to detect outbound IPv4 address: %w", err))
+	}
+	sInfo.OutboundIPv6, err = netinfo.GetOutboundIP(true)
+	if err != nil {
+		log.Warning(fmt.Errorf("failed to detect outbound IPv6 address: %w", err))
+	}
+	s.SetVpnSessionInfo(sInfo)
 
 	log.Info("Initializing firewall")
 	// ensure firewall has no rules for DNS
