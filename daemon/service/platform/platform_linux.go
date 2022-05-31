@@ -23,6 +23,7 @@
 package platform
 
 import (
+	"os"
 	"path"
 )
 
@@ -33,8 +34,46 @@ var (
 	tmpDir         string = "/opt/ivpn/mutable"
 )
 
+// SnapEnvInfo contains values of SNAP environment variables
+// (applicable only if running in SNAP)
+// https://snapcraft.io/docs/environment-variables
+type SnapEnvInfo struct {
+	// Directory where the snap is mounted. This is where all the files in your snap are visible in the filesystem.
+	// All of the data in the snap is read-only and cannot be changed.
+	SNAP string
+	// Directory for system data that is common across revisions of a snap.
+	// This directory is owned and writable by root and is meant to be used by background applications (daemons, services).
+	// Unlike SNAP_DATA this directory is not backed up and restored across snap refresh and revert operations.
+	SNAP_COMMON string
+	// Directory for system data of a snap.
+	// This directory is owned and writable by root and is meant to be used by background applications (daemons, services).
+	// Unlike SNAP_COMMON this directory is backed up and restored across snap refresh and snap revert operations.
+	SNAP_DATA string
+}
+
+// GetSnapEnvs returns SNAP environment variables (or nil)
+func GetSnapEnvs() *SnapEnvInfo {
+	snap := os.Getenv("SNAP")
+	snapCommon := os.Getenv("SNAP_COMMON")
+	snapData := os.Getenv("SNAP_DATA")
+	if len(snap) == 0 || len(snapCommon) == 0 || len(snapData) == 0 {
+		return nil
+	}
+	return &SnapEnvInfo{
+		SNAP:        snap,
+		SNAP_COMMON: snapCommon,
+		SNAP_DATA:   snapData,
+	}
+}
+
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
+	// check if we are running in snap environment
+	if envs := GetSnapEnvs(); envs != nil {
+		logDir = path.Join(envs.SNAP_COMMON, "/opt/ivpn/log")
+		tmpDir = path.Join(envs.SNAP_COMMON, "/opt/ivpn/mutable")
+	}
+
 	fwInitialValueAllowApiServers = false
 	servicePortFile = path.Join(tmpDir, "port.txt")
 	paranoidModeSecretFile = path.Join(tmpDir, "eaa")
@@ -45,11 +84,11 @@ func doInitConstants() {
 	openvpnUserParamsFile = path.Join(tmpDir, "ovpn_extra_params.txt")
 }
 
-func doOsInit() (warnings []string, errors []error) {
+func doOsInit() (warnings []string, errors []error, logInfo []string) {
 	openVpnBinaryPath = path.Join("/usr/sbin", "openvpn")
 	routeCommand = "/sbin/ip route"
 
-	warnings, errors = doOsInitForBuild()
+	warnings, errors, logInfo = doOsInitForBuild()
 
 	if errors == nil {
 		errors = make([]error, 0)
@@ -62,7 +101,7 @@ func doOsInit() (warnings []string, errors []error) {
 		errors = append(errors, err)
 	}
 
-	return warnings, errors
+	return warnings, errors, logInfo
 }
 
 func doInitOperations() (w string, e error) { return "", nil }

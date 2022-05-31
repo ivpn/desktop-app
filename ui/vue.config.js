@@ -36,8 +36,11 @@ module.exports = {
         },
 
         linux: {
-          // do not build appImage. We do not need it
-          target: "dir",
+          target: ["dir", "snap"],
+        },
+
+        snap: {
+          confinement: "classic",
         },
 
         extraResources: [

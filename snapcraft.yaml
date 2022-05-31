@@ -1,0 +1,100 @@
+name: ivpn # you probably want to 'snapcraft register <name>'
+base: core20 # the base snap is the execution environment for this snap
+version: '3.8.11-daemon-local' # just for humans, typically '1.2+git' or '1.3.2'
+
+title: IVPN
+summary: IVPN Client  # 79 char long summary
+description: |
+  IVPN for Desktop is the official IVPN app for desktop platforms.
+  Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Multi-Hop, Trusted Networks, AntiTracker, Custom DNS, Dark mode, and more.
+
+
+license: GPL-3.0
+source-code: https://github.com/ivpn/desktop-app
+issues: ['support@ivpn.net', 'alexandr.stelnykovych@ivpn.net', 'https://www.ivpn.net/contactus/']
+contact: ['support@ivpn.net', 'alexandr.stelnykovych@ivpn.net', 'https://www.ivpn.net/contactus/']
+website: https://www.ivpn.net
+
+grade: devel # must be 'stable' to release into candidate/stable channels
+confinement: classic # use 'strict' once you have the right plugs and slots
+
+apps:
+  init-script:
+    command: opt/ivpn/init/snap-init.sh
+  init-oneshot-daemon:
+    command: opt/ivpn/init/snap-init.sh
+    daemon: oneshot
+  daemon:
+    command: bin/daemon
+  ivpn:
+    command: bin/cli
+
+parts:
+  daemon:
+    plugin: go
+    source: ./daemon
+    build-packages:
+      - libiw30
+      - libiw-dev
+
+  cli:
+    plugin: go
+    source: .
+    source-subdir: cli
+
+  obfs4proxy:
+    plugin: nil
+    build-snaps:
+    - go
+    build-packages:
+    - git
+    source: ./daemon/References/Linux
+    override-build: |
+      snapcraftctl build
+      ./scripts/build-obfs4proxy.sh
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy
+      cp _deps/obfs4proxy_inst/obfs4proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy/obfs4proxy
+
+  wireguard-tools:
+    plugin: nil
+    build-snaps:
+    - go
+    build-packages:
+    - git
+    source: ./daemon/References/Linux
+    override-build: |      
+      ./scripts/build-wireguard-tools.sh
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/wireguard-tools
+      cp _deps/wireguard-tools_inst/wg-quick $SNAPCRAFT_PART_INSTALL/opt/ivpn/wireguard-tools/wg-quick
+      cp _deps/wireguard-tools_inst/wg $SNAPCRAFT_PART_INSTALL/opt/ivpn/wireguard-tools/wg
+
+  dnscrypt-proxy:
+    plugin: nil
+    build-snaps:
+    - go
+    build-packages:
+    - git
+    source: ./daemon/References/Linux
+    override-build: |
+      ./scripts/build-dnscrypt-proxy.sh
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/dnscrypt-proxy 
+      cp _deps/dnscryptproxy_inst/dnscrypt-proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/dnscrypt-proxy/dnscrypt-proxy 
+
+  etc:
+    plugin: dump
+    source: ./daemon/References/Linux/etc
+    organize:
+      "*": opt/ivpn/etc/
+    override-build: |
+      snapcraftctl build
+      chmod 0400 *
+      chmod 0600 servers.json
+      chmod 0700 *.sh
+      chmod 0700 *.up
+      chmod 0700 *.down
+
+  init:
+    plugin: dump
+    source: ./daemon/References/Linux/snap
+    organize:
+      "*": opt/ivpn/init/

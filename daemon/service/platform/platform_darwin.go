@@ -43,7 +43,7 @@ func doInitConstants() {
 	openvpnLogFile = path.Join(logDir, "openvpn.log")
 }
 
-func doOsInit() (warnings []string, errors []error) {
+func doOsInit() (warnings []string, errors []error, logInfo []string) {
 	routeCommand = "/sbin/route"
 
 	warnings, errors = doOsInitForBuild()
@@ -59,7 +59,7 @@ func doOsInit() (warnings []string, errors []error) {
 		errors = append(errors, err)
 	}
 
-	return warnings, errors
+	return warnings, errors, logInfo
 }
 
 // FirewallScript returns path to firewal script

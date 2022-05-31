@@ -65,7 +65,7 @@ func Launch() {
 		doStopped()
 	}()
 
-	warnings, errors := platform.Init()
+	warnings, errors, logInfo := platform.Init()
 	logger.Init(platform.LogFile())
 
 	// Enable logging (if necessary)
@@ -81,7 +81,7 @@ func Launch() {
 	}
 	if isLoggingEnabledArgument {
 		logger.Enable(true)
-		logger.Info("Loggin enabled (forced by command line argument)")
+		logger.Info("Logging enabled (forced by command line argument)")
 	} else {
 		// initialize logging according to service preferences
 		var prefs preferences.Preferences
@@ -91,11 +91,12 @@ func Launch() {
 	}
 
 	logger.Info("version:" + version.GetFullVersion())
+	for _, platformInitLogItem := range logInfo {
+		logger.Info(fmt.Sprintf("INIT: %s", platformInitLogItem))
+	}
 
-	if len(warnings) > 0 {
-		for _, w := range warnings {
-			logger.Warning(w)
-		}
+	for _, w := range warnings {
+		logger.Warning(w)
 	}
 
 	if len(errors) > 0 {
@@ -124,7 +125,7 @@ func Launch() {
 
 	var secret uint64
 	if err := binary.Read(rand.Reader, binary.BigEndian, &secret); err != nil {
-		log.Panic(fmt.Errorf("failed to generete secret: %w", err))
+		log.Panic(fmt.Errorf("failed to generate secret: %w", err))
 	}
 
 	// obtain (over callback channel) a service listening port

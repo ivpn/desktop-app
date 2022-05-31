@@ -33,7 +33,7 @@ import (
 	"strings"
 )
 
-func doOsInitForBuild() (warnings []string, errors []error) {
+func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 	installDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to obtain folder of current binary: %s", err.Error()))
@@ -78,5 +78,5 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnProxyAuthFile = path.Join(tmpDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(tmpDir, "wgivpn.conf")
 
-	return nil, nil
+	return nil, nil, nil
 }

@@ -65,7 +65,7 @@ func CheckFileAccessRightsExecutable(file string) error {
 	// check file access rights
 	mode := stat.Mode()
 	if (mode & wrongExecutableFilePermissionsMask) > 0 {
-		return fmt.Errorf("file '%s' has wrong permissins (it can be modifyied not only by owner [%o])", file, mode)
+		return fmt.Errorf("file '%s' has wrong permissions (it can be modified not only by owner [%o])", file, mode)
 	}
 	return nil
 }
