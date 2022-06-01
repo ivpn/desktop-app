@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.8.20 - 2022-06-01
+
+[NEW] UI: Ability to see detailed info about the application version  
+[IMPROVED] UI: Displaying server info in system tray instead of ‘Random Server’ for Multi-Hop connections  
+[IMPROVED] (Linux) ‘Allow LAN’: Monitoring changes in local interfaces configuration   
+[IMPROVED] Minor UI improvements  
+[FIX] (Linux) Enhanced firewall rules to avoid potential IP leaks  
+[FIX] (Linux|macOS) Enhanced firewall rules to avoid potential DNS leaks  
+[FIX] ‘Fastest Server’ detection issue when auto-connect on application launch  
+[FIX] Keep paused after regeneration of the WireGuard keys   
+[FIX] UI: Tray menu now shows only favorite servers for the current protocol  
+[FIX] (Linux) DNS configuration issue after VPN resume  
+[FIX] (Windows) Service crash when using specific configuration for custom DNS   
+[FIX] (Windows) Split Tunnel configuration missing from Settings     
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.8.20.exe)  
+SHA256: ee3eaa5dfc4de5ef3644e40c9a0920aa461f5f1288fc8717e01840ac941d4d99  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.8.20.dmg)  
+SHA256: 3532012d627699e2c3027a4d1778547c6bcbe64c97bd69015be25fbb93b982cf  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.8.20-arm64.dmg)  
+SHA256: 2de8c7f384973982484c6656edd3b9fc01091d1c2c282ee979aceea3b6b88413  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.8.20_amd64.deb)  
+SHA256: 7b1037aa224b785c84b44531cc0d5454a328e21082f3011c6d4308de231a007a  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.8.20-1.x86_64.rpm)  
+SHA256: 831e7845361574ff5a7529fc47b54405002a209c66e6da7ea3d8bba2d902cc79  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.8.20_amd64.deb)  
+SHA256: 4949949d219bb746fc0d5b9d9eb3e7e6a0f26aa01d32d9cda687b5461d82119c  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.8.20-1.x86_64.rpm)  
+SHA256: e01180b5325ccb2c21eb714bae7b74203d1e3947c9b38c88d08a039fcf1fed64  
+
 ## Version 3.8.7 - 2022-05-04
 
 [NEW] Enhanced App Authentication  
