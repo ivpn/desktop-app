@@ -40,8 +40,8 @@ module.exports = {
         },
 
         snap: {
-          confinement: "devmode",
-          plugs: [
+          confinement: "strict",
+          plugs: [ "default",
               {
                 "port": {
                   "interface": "content",

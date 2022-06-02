@@ -22,25 +22,38 @@ confinement: strict # devmode #classic # use 'strict' once you have the right pl
 #   sudo snap connect ivpn:ivpn-dns-control
 #   sudo snap connect ivpn:network-control
 #   sudo snap connect ivpn:firewall-control
+# ivpn-ui:
+#   sudo snap connect ivpn-ui:port ivpn:port
+
+# List of services:
+#   snap services ivpn
+# Restart daemon:
+#   sudo snap restart ivpn.daemon
+# Start stop daemon:
+#   sudo snap stop ivpn.daemon
+#   sudo snap start ivpn.daemon
+# See logs realtime:
+#   sudo snap logs ivpn.daemon -f
+# See logs:
+#   sudo snap logs -n=all ivpn.daemon
 
 apps:
   daemon:
     command: bin/ivpn-service
     #daemon: simple
     #restart-condition: always
-    #stop-command: ivpn disconnect      
+    #stop-command: bin/ivpn disconnect      
     plugs:
-      - network-control   # establish a VPN connection
-      - firewall-control  # control firewall rules (iptables)
-      - network-bind      # ability to listen for incoming connections from clients (cli, ui)
-      #- mount-control
-      #- network-manager   
-      #- network-observe   
-      #- hardware-observe  
+      - network-control   # Ability to establish a VPN connection
+      - firewall-control  # Ability to control firewall rules (iptables)
+      - network-bind      # Ability to listen for incoming connections from clients (cli, ui)
+      #- system-backup     # Ability to have read access to the entry host system (mounted in '/var/lib/snapd/hostfs')
+      #                    # Required for Split-Tunneling feature: to provide clients information about installed applications 
   ivpn:
     command: bin/ivpn
     plugs:
-      - network           # ability to connect to a daemon (localhost)
+      - network           # Ability to connect to a daemon (localhost)
+      #- desktop-launch    # Ability to identify and launch desktop applications in (or from) other snaps (required for Split-Tunneling feature)
 
 plugs:
   ivpn-dns-control:
