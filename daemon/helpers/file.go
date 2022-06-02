@@ -85,6 +85,9 @@ func CopyFile(src, dst string) (err error) {
 	if sfi.IsDir() {
 		return fmt.Errorf("unable to copy ('%s' is directory)", src)
 	}
+	if !sfi.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
 
 	_, err = os.Stat(dst)
 	if err != nil {

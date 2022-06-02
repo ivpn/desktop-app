@@ -40,7 +40,16 @@ module.exports = {
         },
 
         snap: {
-          confinement: "classic",
+          confinement: "devmode",
+          plugs: [
+              {
+                "port": {
+                  "interface": "content",
+                  "content": "file",
+                  "target": "$SNAP_COMMON/opt/ivpn/mutable",
+                }
+              },
+            ],
         },
 
         extraResources: [

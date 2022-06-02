@@ -137,6 +137,12 @@ echo "[ ] Renaming: '$APP_UNPACKED_DIR' -> '$APP_BIN_DIR'"
 mv $APP_UNPACKED_DIR $APP_BIN_DIR
 CheckLastResult
 
+if [ ! -z "$SNAPCRAFT_BUILD_ENVIRONMENT" ]; then
+    echo "! SNAPCRAFT_BUILD_ENVIRONMENT detected !"
+    echo "! DEB/RPM packages build skipped !"
+    exit 0
+fi
+
 echo "======================================================"
 echo "============== Building packages ====================="
 echo "======================================================"

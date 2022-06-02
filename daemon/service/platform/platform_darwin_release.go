@@ -20,6 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build darwin && !debug
 // +build darwin,!debug
 
 package platform
@@ -32,6 +33,10 @@ import (
 	"path/filepath"
 
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
+)
+
+const (
+	serversFileBundled = "/Applications/IVPN.app/Contents/Resources/etc/servers.json"
 )
 
 func doOsInitForBuild() (warnings []string, errors []error) {
@@ -74,7 +79,7 @@ func doInitOperations() (w string, e error) {
 			// Probably, it is first start after clean install
 			// Copying it from a bundle
 			os.MkdirAll(filepath.Base(serversFile), os.ModePerm)
-			if _, err = copyFile("/Applications/IVPN.app/Contents/Resources/etc/servers.json", serversFile); err != nil {
+			if _, err = copyFile(serversFileBundled, serversFile); err != nil {
 				return err.Error(), nil
 			}
 			return "", nil

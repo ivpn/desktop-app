@@ -1,4 +1,7 @@
 import { Platform, PlatformEnum } from "@/platform/platform";
+import { app } from "electron";
+import path from "path";
+
 const os = require("os");
 
 async function winInstallFolder() {
@@ -21,6 +24,12 @@ export async function GetPortInfoFilePath() {
     case PlatformEnum.macOS:
       return "/Library/Application Support/IVPN/port.txt";
     case PlatformEnum.Linux:
+      if (process.env.SNAP && process.env.SNAP_COMMON && process.env.SNAP_DATA) {        
+        if (app.getAppPath().startsWith(process.env.SNAP)) {
+          console.log("SNAP environment detected!")
+          return path.join(process.env.SNAP_COMMON, "/opt/ivpn/mutable/port.txt");
+        }
+      }
       return "/opt/ivpn/mutable/port.txt";
     case PlatformEnum.Windows: {
       let dir = await winInstallFolder();

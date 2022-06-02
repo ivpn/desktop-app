@@ -23,8 +23,13 @@
 package platform
 
 import (
+	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
+
+	"github.com/ivpn/desktop-app/daemon/helpers"
 )
 
 var (
@@ -32,6 +37,9 @@ var (
 	splitTunScript string
 	logDir         string = "/opt/ivpn/log"
 	tmpDir         string = "/opt/ivpn/mutable"
+
+	// path to the readonly servers.json file bundled into the package
+	serversFileBundled string
 )
 
 // SnapEnvInfo contains values of SNAP environment variables
@@ -59,6 +67,13 @@ func GetSnapEnvs() *SnapEnvInfo {
 	if len(snap) == 0 || len(snapCommon) == 0 || len(snapData) == 0 {
 		return nil
 	}
+	if ex, err := os.Executable(); err == nil && len(ex) > 0 {
+		if !strings.HasPrefix(ex, snap) {
+			// if snap environment - the binary must be located in "$SNAP"
+			return nil
+		}
+	}
+
 	return &SnapEnvInfo{
 		SNAP:        snap,
 		SNAP_COMMON: snapCommon,
@@ -68,13 +83,18 @@ func GetSnapEnvs() *SnapEnvInfo {
 
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)
 func doInitConstants() {
+	openVpnBinaryPath = "/usr/sbin/openvpn"
+	routeCommand = "/sbin/ip route"
+
 	// check if we are running in snap environment
 	if envs := GetSnapEnvs(); envs != nil {
 		logDir = path.Join(envs.SNAP_COMMON, "/opt/ivpn/log")
 		tmpDir = path.Join(envs.SNAP_COMMON, "/opt/ivpn/mutable")
+		openVpnBinaryPath = path.Join(envs.SNAP, openVpnBinaryPath)
 	}
 
 	fwInitialValueAllowApiServers = false
+	serversFile = path.Join(tmpDir, "servers.json")
 	servicePortFile = path.Join(tmpDir, "port.txt")
 	paranoidModeSecretFile = path.Join(tmpDir, "eaa")
 
@@ -85,9 +105,6 @@ func doInitConstants() {
 }
 
 func doOsInit() (warnings []string, errors []error, logInfo []string) {
-	openVpnBinaryPath = path.Join("/usr/sbin", "openvpn")
-	routeCommand = "/sbin/ip route"
-
 	warnings, errors, logInfo = doOsInitForBuild()
 
 	if errors == nil {
@@ -104,7 +121,42 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 	return warnings, errors, logInfo
 }
 
-func doInitOperations() (w string, e error) { return "", nil }
+//func doInitOperations() (w string, e error) { return "", nil }
+func doInitOperations() (w string, e error) {
+	serversFile := ServersFile()
+	if _, err := os.Stat(serversFile); err != nil {
+		if os.IsNotExist(err) {
+			if len(serversFileBundled) == 0 {
+				return fmt.Sprintf("'%s' not exists and the 'serversFileBundled' path not defined", serversFile), nil
+			}
+
+			srcStat, err := os.Stat(serversFileBundled)
+			if err != nil {
+				return fmt.Sprintf("'%s' not exists and the serversFileBundled='%s' access error: %s", serversFile, serversFileBundled, err.Error()), nil
+			}
+
+			fmt.Printf("File '%s' does not exists. Copying from bundle (%s)...\n", serversFile, serversFileBundled)
+			// Servers file is not exists on required place
+			// Probably, it is first start after clean install
+			// Copying it from a bundle
+			os.MkdirAll(filepath.Base(serversFile), os.ModePerm)
+			if err = helpers.CopyFile(serversFileBundled, serversFile); err != nil {
+				return err.Error(), nil
+			}
+
+			// keep file mode same as source file
+			err = os.Chmod(serversFile, srcStat.Mode())
+			if err != nil {
+				return err.Error(), nil
+			}
+
+			return "", nil
+		}
+
+		return err.Error(), nil
+	}
+	return "", nil
+}
 
 // FirewallScript returns path to firewal script
 func FirewallScript() string {
