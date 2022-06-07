@@ -30,7 +30,7 @@ var autoLauncher = null;
 
 if (Platform() === PlatformEnum.Linux) {
   const fs = require("fs");
-  const binaryPath = "/opt/ivpn/ui/bin/ivpn-ui";
+  let binaryPath = process.execPath;
   if (fs.existsSync(binaryPath)) launcherOptions.path = binaryPath;
   else launcherOptions = null;
 }

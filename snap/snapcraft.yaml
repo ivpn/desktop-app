@@ -1,6 +1,6 @@
 name: ivpn # you probably want to 'snapcraft register <name>'
-base: core20 # the base snap is the execution environment for this snap
-version: '3.8.111' # this value will be used to stamp version for CLI and daemon
+base: core18 # the base snap is the execution environment for this snap
+version: '3.8.12' # this value will be used to stamp version for CLI and daemon
 
 title: IVPN
 summary: IVPN Client  # 79 char long summary
@@ -22,6 +22,7 @@ confinement: strict # devmode #classic # use 'strict' once you have the right pl
 #   sudo snap connect ivpn:ivpn-dns-control
 #   sudo snap connect ivpn:network-control
 #   sudo snap connect ivpn:firewall-control
+
 # ivpn-ui:
 #   sudo snap connect ivpn-ui:port ivpn:port
 
@@ -40,20 +41,22 @@ confinement: strict # devmode #classic # use 'strict' once you have the right pl
 apps:
   daemon:
     command: bin/ivpn-service
-    #daemon: simple
-    #restart-condition: always
-    #stop-command: bin/ivpn disconnect      
+    daemon: simple
+    restart-condition: always
+    stop-mode: sigterm    
     plugs:
       - network-control   # Ability to establish a VPN connection
       - firewall-control  # Ability to control firewall rules (iptables)
       - network-bind      # Ability to listen for incoming connections from clients (cli, ui)
-      #- system-backup     # Ability to have read access to the entry host system (mounted in '/var/lib/snapd/hostfs')
-      #                    # Required for Split-Tunneling feature: to provide clients information about installed applications 
+
   ivpn:
     command: bin/ivpn
     plugs:
       - network           # Ability to connect to a daemon (localhost)
-      #- desktop-launch    # Ability to identify and launch desktop applications in (or from) other snaps (required for Split-Tunneling feature)
+
+hooks:
+  remove:
+    plugs: [network, firewall-control]
 
 plugs:
   ivpn-dns-control:
@@ -64,7 +67,6 @@ plugs:
     read:
       - /etc/resolv.conf
       - /etc/resolv.conf.ivpnsave
-
 slots:
   port:
     interface: content
@@ -83,7 +85,7 @@ parts:
       - curl
     stage-packages:
       - openvpn                 
-      - mount             # ability to mount cgroup (for split-tunneling functionality)      
+      #- mount             # ability to mount cgroup (for split-tunneling functionality)      
     source: .
     source-subdir: daemon
     override-build: |

@@ -59,7 +59,7 @@ type SnapEnvInfo struct {
 	SNAP_DATA string
 }
 
-// GetSnapEnvs returns SNAP environment variables (or nil)
+// GetSnapEnvs returns SNAP environment variables (or nil if we are running not in snap)
 func GetSnapEnvs() *SnapEnvInfo {
 	snap := os.Getenv("SNAP")
 	snapCommon := os.Getenv("SNAP_COMMON")

@@ -158,11 +158,13 @@ type Protocol struct {
 	_lastVPNState vpn.StateInfo
 
 	_eaa *eaa.Eaa
+
+	_isRunning bool // 'false' when not running OR after Stop() command call
 }
 
 // Stop - stop communication
 func (p *Protocol) Stop() {
-	log.Info("Stopping")
+	log.Info("Stopping ...")
 
 	// Notifying clients "service is going to stop" (client application (UI) will close)
 	// Closing and erasing all clients connections
@@ -171,6 +173,8 @@ func (p *Protocol) Stop() {
 
 	listener := p._connListener
 	if listener != nil {
+		// keep info that stop command requested
+		p._isRunning = false
 		// do not accept new incoming connections
 		listener.Close()
 
@@ -186,7 +190,9 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 	p._service = service
 	p._secret = secret
 
+	p._isRunning = true
 	defer func() {
+		p._isRunning = false
 		log.Info("Protocol stopped")
 
 		// Disconnect VPN (if connected)
@@ -227,6 +233,9 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			if !p._isRunning {
+				return nil // it is expected to get error here (we are requested protocol to stop): "use of closed network connection"
+			}
 			log.Error("Server: failed to accept incoming connection:", err)
 			return fmt.Errorf("(server) failed to accept incoming connection: %w", err)
 		}

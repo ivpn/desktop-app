@@ -37,19 +37,23 @@ module.exports = {
 
         linux: {
           target: ["dir", "snap"],
+          category: "Network",
         },
 
         snap: {
           confinement: "strict",
-          plugs: [ "default",
-              {
-                "port": {
-                  "interface": "content",
-                  "content": "file",
-                  "target": "$SNAP_COMMON/opt/ivpn/mutable",
-                }
+          autoStart: true, // ability to autostart (when file exists: '$SNAP_USER_DATA/.config/autostart/ivpn-ui.desktop')
+          //stagePackages: ["default", "ivpn"],
+          plugs: [
+            "default",
+            {
+              port: {
+                interface: "content",
+                content: "file",
+                target: "$SNAP_COMMON/opt/ivpn/mutable",
               },
-            ],
+            },
+          ],
         },
 
         extraResources: [
