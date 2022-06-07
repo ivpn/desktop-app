@@ -1,6 +1,6 @@
 name: ivpn # you probably want to 'snapcraft register <name>'
 base: core18 # the base snap is the execution environment for this snap
-version: '3.8.12' # this value will be used to stamp version for CLI and daemon
+version: '3.8.21' # this value will be used to stamp version for CLI and daemon
 
 title: IVPN
 summary: IVPN Client  # 79 char long summary

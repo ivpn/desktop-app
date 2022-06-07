@@ -1,14 +1,11 @@
 {
   "name": "ivpn-ui",
-  "version": "3.8.12",
+  "version": "3.8.21",
   "productName": "IVPN",
   "description": "IVPN Client",
-  "author": "IVPN Limited <support@ivpn.net> (https://www.ivpn.net)",
+  "author": "IVPN Limited",
   "license": "GPL-3.0",
   "private": true,
-
-  "homepage": "https://github.com/ivpn/desktop-app",
-  "keywords": ["ivpn", "openvpn", "privacy", "security", "vpn", "vpn-client", "wireguard"],
   "scripts": {
     "init": "node pre_build.js",
     "serve": "vue-cli-service serve",
