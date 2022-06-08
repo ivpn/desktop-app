@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=IVPN
+Exec=ui
+Terminal=false
+Type=Application
+Icon=${SNAP}/meta/gui/ivpn.png
+StartupWMClass=IVPN
+Comment=IVPN Client
+Categories=Network;

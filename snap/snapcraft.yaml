@@ -1,5 +1,5 @@
 name: ivpn # you probably want to 'snapcraft register <name>'
-base: core18 # the base snap is the execution environment for this snap
+base: core20 # the base snap is the execution environment for this snap
 version: '3.8.21' # this value will be used to stamp version for CLI and daemon
 
 title: IVPN
@@ -18,18 +18,30 @@ website: https://www.ivpn.net
 grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: strict # devmode #classic # use 'strict' once you have the right plugs and slots
 
+# **********************************************
+# How to build:
+# 
+# Run command from project root (desktop-app):
+#   snapcraft --debug
+#   or 
+#   snapcraft --debug --use-lxd
+#
+# **********************************************
+# USAGE TIPS (after package(-s) installation):
+#
 # Manual connection of the required interfaces:
 #   sudo snap connect ivpn:ivpn-dns-control
 #   sudo snap connect ivpn:network-control
 #   sudo snap connect ivpn:firewall-control
-
-# ivpn-ui:
+# ivpn-ui (connect daemon port interface to the ivpn-ui snap package <if using separate packages for daemon and ui>): 
 #   sudo snap connect ivpn-ui:port ivpn:port
-
-# List of services:
-#   snap services ivpn
 # Restart daemon:
 #   sudo snap restart ivpn.daemon
+# **********************************************
+# Another useful commands:
+#
+# List of services:
+#   snap services ivpn
 # Start stop daemon:
 #   sudo snap stop ivpn.daemon
 #   sudo snap start ivpn.daemon
@@ -54,6 +66,27 @@ apps:
     plugs:
       - network           # Ability to connect to a daemon (localhost)
 
+  ui:
+    command: opt/ivpn/ui/bin/ivpn-ui --no-sandbox
+    extensions: [gnome-3-38] # https://snapcraft.io/docs/gnome-3-38-extension
+    plugs:
+      - desktop
+      - desktop-legacy
+      - home
+      - x11
+      - wayland
+      - unity7
+      - browser-support
+      - network
+      - gsettings
+      - opengl
+#      - port
+    autostart: ivpn-ui.desktop
+    environment:
+      GTK_USE_PORTAL: '1'
+      SNAP_DESKTOP_RUNTIME: $SNAP/gnome-platform
+      TMPDIR: $XDG_RUNTIME_DIR # needed to show system tray icon
+
 hooks:
   remove:
     plugs: [network, firewall-control]
@@ -67,6 +100,20 @@ plugs:
     read:
       - /etc/resolv.conf
       - /etc/resolv.conf.ivpnsave
+  # UI: plugs required by [gnome-3-38] extension (https://snapcraft.io/docs/gnome-3-38-extension):
+  gnome-3-38-2004:
+    default-provider: gnome-3-38-2004
+    interface: content
+    target: $SNAP/gnome-platform
+  gtk-3-themes:
+    default-provider: gtk-common-themes
+    interface: content
+    target: $SNAP/data-dir/themes
+  icon-themes:
+    default-provider: gtk-common-themes
+    interface: content
+    target: $SNAP/data-dir/icons
+
 slots:
   port:
     interface: content
@@ -158,3 +205,19 @@ parts:
       chmod 0700 *.sh
       chmod 0700 *.up
       chmod 0700 *.down
+
+  ui:
+    plugin: nil
+    source: ./ui
+    build-snaps:
+      - node/16/stable
+    build-packages:
+      - npm
+    stage-packages:
+      - libnspr4
+      - libnss3
+    override-build: |
+      rm -fr dist_electron
+      ./References/Linux/build.sh -v $SNAPCRAFT_PROJECT_VERSION
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui
+      cp -R dist_electron/bin $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui       

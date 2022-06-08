@@ -36,7 +36,8 @@ module.exports = {
         },
 
         linux: {
-          target: ["dir", "snap"],
+          //target: ["dir", "snap"], 
+          target: ["dir"],
           category: "Network",
         },
 
