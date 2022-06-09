@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=IVPN
-Exec=ui
+Exec=ivpn.ui
 Terminal=false
 Type=Application
 Icon=${SNAP}/meta/gui/ivpn.png

@@ -3,21 +3,31 @@ base: core20 # the base snap is the execution environment for this snap
 version: '3.8.21' # this value will be used to stamp version for CLI and daemon
 
 title: IVPN
-summary: IVPN Client  # 79 char long summary
+summary: IVPN - Secure VPN for Privacy  # 79 char long summary
 description: |
-  IVPN for Desktop is the official IVPN app for desktop platforms.
-  Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Multi-Hop, Trusted Networks, AntiTracker, Custom DNS, Dark mode, and more.
+  Secure, private VPN with fast WireGuard connections. 
+  Use our open-source privacy app to start a private connection to the third party audited IVPN service. Choose from OpenVPN and WireGuard protocols.
 
+  Features: 
+  * multiple protocols (OpenVPN, WireGuard)
+  * Kill-switch
+  * Multi-Hop
+  * Trusted Networks
+  * AntiTracker
+  * Custom DNS
+  * and more ...
 
 license: GPL-3.0
 source-code: https://github.com/ivpn/desktop-app
-issues: ['support@ivpn.net', 'alexandr.stelnykovych@ivpn.net', 'https://www.ivpn.net/contactus/']
-contact: ['support@ivpn.net', 'alexandr.stelnykovych@ivpn.net', 'https://www.ivpn.net/contactus/']
+issues: https://www.ivpn.net/contactus/
+#issues: [support@ivpn.net, alexandr.stelnykovych@ivpn.net, https://www.ivpn.net/contactus/]
+contact: [support@ivpn.net, alexandr.stelnykovych@ivpn.net, https://www.ivpn.net/contactus/]
 website: https://www.ivpn.net
 
-grade: devel # must be 'stable' to release into candidate/stable channels
+grade: stable # devel # must be 'stable' to release into candidate/stable channels
 confinement: strict # devmode #classic # use 'strict' once you have the right plugs and slots
 
+icon: snap/gui/ivpn.svg
 # **********************************************
 # How to build:
 # 
@@ -80,7 +90,6 @@ apps:
       - network
       - gsettings
       - opengl
-#      - port
     autostart: ivpn-ui.desktop
     environment:
       GTK_USE_PORTAL: '1'
@@ -114,12 +123,13 @@ plugs:
     interface: content
     target: $SNAP/data-dir/icons
 
-slots:
-  port:
-    interface: content
-    content: file
-    read: 
-      - $SNAP_COMMON/opt/ivpn/mutable
+# ToDo: uncomment this if it is required to expose mutable folder (contains port.txt) to a slot (to be able to connect slot out from external snap)
+#slots:
+#  port:
+#    interface: content
+#    content: file
+#    read: 
+#      - $SNAP_COMMON/opt/ivpn/mutable
 
 parts:
   daemon:
