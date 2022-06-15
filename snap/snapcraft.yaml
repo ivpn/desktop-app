@@ -1,6 +1,40 @@
+# **********************************************
+# Snap package of IVPN software (daemon+CLI+UI)
+# **********************************************
+# How to build snap package:
+# 1) Set 'version:' (bellow) to the same value as in 'ui/package.json'
+# 2) Run command from project root 'desktop-app':
+#     $ snapcraft 
+#   or
+#     $ snapcraft --debug --use-lxd
+# **********************************************
+# Installation:
+#     $ sudo snap install <filename>.snap --danderous 
+# After package installed:
+# 1) Manual connection of the required interfaces:
+#     $ sudo snap connect ivpn:ivpn-dns-control
+#     $ sudo snap connect ivpn:network-control
+#     $ sudo snap connect ivpn:firewall-control
+# 2) Restart daemon required:
+#     $ sudo snap restart ivpn.daemon
+# **********************************************
+# Another useful commands:
+#   List of services:
+#     $ snap services ivpn
+#   List of connections:
+#     $ snap connections ivpn
+#   Start stop daemon:
+#     $ sudo snap stop ivpn.daemon
+#     $ sudo snap start ivpn.daemon
+#   See logs realtime:
+#     $ sudo snap logs ivpn.daemon -f
+#   See logs:
+#     $ sudo snap logs -n=all ivpn.daemon
+# **********************************************
+
 name: ivpn # you probably want to 'snapcraft register <name>'
 base: core20 # the base snap is the execution environment for this snap
-version: '3.8.21' # this value will be used to stamp version for CLI and daemon
+version: '3.8.21' # TODO: Set 'version:' to the same value as in 'ui/package.json'. This value will be used to stamp version for CLI and daemon
 
 title: IVPN
 summary: IVPN - Secure VPN for Privacy  # 79 char long summary
@@ -20,7 +54,6 @@ description: |
 license: GPL-3.0
 source-code: https://github.com/ivpn/desktop-app
 issues: https://www.ivpn.net/contactus/
-#issues: [support@ivpn.net, alexandr.stelnykovych@ivpn.net, https://www.ivpn.net/contactus/]
 contact: [support@ivpn.net, alexandr.stelnykovych@ivpn.net, https://www.ivpn.net/contactus/]
 website: https://www.ivpn.net
 
@@ -28,37 +61,6 @@ grade: stable # devel # must be 'stable' to release into candidate/stable channe
 confinement: strict # devmode #classic # use 'strict' once you have the right plugs and slots
 
 icon: snap/gui/ivpn.svg
-# **********************************************
-# How to build:
-# 
-# Run command from project root (desktop-app):
-#   snapcraft --debug
-#   or 
-#   snapcraft --debug --use-lxd
-#
-# **********************************************
-# USAGE TIPS (after package(-s) installation):
-#
-# Manual connection of the required interfaces:
-#   sudo snap connect ivpn:ivpn-dns-control
-#   sudo snap connect ivpn:network-control
-#   sudo snap connect ivpn:firewall-control
-# ivpn-ui (connect daemon port interface to the ivpn-ui snap package <if using separate packages for daemon and ui>): 
-#   sudo snap connect ivpn-ui:port ivpn:port
-# Restart daemon:
-#   sudo snap restart ivpn.daemon
-# **********************************************
-# Another useful commands:
-#
-# List of services:
-#   snap services ivpn
-# Start stop daemon:
-#   sudo snap stop ivpn.daemon
-#   sudo snap start ivpn.daemon
-# See logs realtime:
-#   sudo snap logs ivpn.daemon -f
-# See logs:
-#   sudo snap logs -n=all ivpn.daemon
 
 apps:
   daemon:
@@ -123,7 +125,9 @@ plugs:
     interface: content
     target: $SNAP/data-dir/icons
 
-# ToDo: uncomment this if it is required to expose mutable folder (contains port.txt) to a slot (to be able to connect slot out from external snap)
+# ToDo: uncomment bellow lines if it is required to expose mutable folder (contains port.txt) to a slot (to be able to connect slot out from external snap)
+#       When using separate snapt for UI (ivpn-ui), it will be necessary to connect daemon port interface to the ivpn-ui snap package: 
+#       $ sudo snap connect ivpn-ui:port ivpn:port
 #slots:
 #  port:
 #    interface: content
