@@ -151,13 +151,13 @@ func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify) error {
 }
 
 // Pause pauses DNS (restore original DNS)
-func Pause() error {
-	return wrapErrorIfFailed(implPause())
+func Pause(localInterfaceIP net.IP) error {
+	return wrapErrorIfFailed(implPause(localInterfaceIP))
 }
 
 // Resume resuming DNS (set DNS back which was before Pause)
-func Resume(defaultDNS DnsSettings) error {
-	return wrapErrorIfFailed(implResume(defaultDNS))
+func Resume(defaultDNS DnsSettings, localInterfaceIP net.IP) error {
+	return wrapErrorIfFailed(implResume(defaultDNS, localInterfaceIP))
 }
 
 func EncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
@@ -167,7 +167,7 @@ func EncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
 
 // SetDefault set DNS configuration treated as default (non-manual) configuration
 // 'dnsCfg' parameter - DNS configuration
-// 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
+// 'localInterfaceIP' - local IP of VPN interface
 func SetDefault(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 	ret := SetManual(dnsCfg, localInterfaceIP)
 	if ret == nil {
@@ -186,7 +186,7 @@ func notifyFirewall(dnsCfg DnsSettings) error {
 
 // SetManual - set manual DNS.
 // 'dnsCfg' parameter - DNS configuration
-// 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
+// 'localInterfaceIP' - local IP of VPN interface
 func SetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 	dnsForFirewallRules, err := implSetManual(dnsCfg, localInterfaceIP)
 	if err == nil {
@@ -200,7 +200,7 @@ func SetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
 }
 
 // DeleteManual - reset manual DNS configuration to default (DHCP)
-// 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
+// 'localInterfaceIP' - local IP of VPN interface
 func DeleteManual(defaultDns net.IP, localInterfaceIP net.IP) error {
 	// reset custom DNS
 	ret := implDeleteManual(localInterfaceIP)

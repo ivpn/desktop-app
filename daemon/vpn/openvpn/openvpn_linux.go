@@ -74,26 +74,26 @@ func (o *OpenVPN) implOnDisconnected() error {
 }
 
 func (o *OpenVPN) implOnPause() error {
-	return dns.Pause()
+	return dns.Pause(o.clientIP)
 }
 
 func (o *OpenVPN) implOnResume() error {
 	defDns := dns.DnsSettingsCreate(o.DefaultDNS())
-	return dns.Resume(defDns)
+	return dns.Resume(defDns, o.clientIP)
 }
 
 func (o *OpenVPN) implOnSetManualDNS(dnsCfg dns.DnsSettings) error {
-	return dns.SetManual(dnsCfg, nil)
+	return dns.SetManual(dnsCfg, o.clientIP)
 }
 
 func (o *OpenVPN) implOnResetManualDNS() error {
 	defaultDns := o.DefaultDNS()
-	if o.IsPaused() == false {
+	if !o.IsPaused() {
 		// restore default DNS pushed by OpenVPN server
 		if defaultDns != nil {
-			return dns.SetManual(dns.DnsSettingsCreate(defaultDns), nil)
+			return dns.SetManual(dns.DnsSettingsCreate(defaultDns), o.clientIP)
 		}
 	}
 
-	return dns.DeleteManual(defaultDns, nil)
+	return dns.DeleteManual(defaultDns, o.clientIP)
 }

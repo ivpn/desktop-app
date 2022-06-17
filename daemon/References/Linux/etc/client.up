@@ -10,7 +10,7 @@ nns=0
 nl='
 '
 
-  
+dnsIPs=""
 
 if [ "$1" = "-set" ] ; then
   #direct call to set DNS
@@ -47,6 +47,7 @@ else
             nns=$((nns + 1))
             if [ $nns -le 3 ]; then
               dns="${dns}${dns:+$nl}nameserver ${fopt#dhcp-option DNS }"
+              dnsIPs="${dnsIPs}${fopt#dhcp-option DNS}"
             else
               printf "%s\n" "Too many nameservers - ignoring after third" >&2
             fi
@@ -64,6 +65,14 @@ else
   elif [ $ndoms -gt 1 ]; then
     ds="${nl}search"
   fi
+fi
+
+# when "-use-resolvconf" defined - do not change /etc/resolv.conf, but use resolveconf tool to set DNS for the interface
+if [ "$1" = "-use-resolvconf" ] ; then
+  resolvectl domain ${dev} '~.'
+  resolvectl default-route ${dev} true  
+  resolvectl dns ${dev} ${dnsIPs}
+  exit 0
 fi
 
 # This is the complete file - "$domains" has a leading space already

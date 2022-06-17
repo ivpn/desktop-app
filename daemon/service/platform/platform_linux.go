@@ -25,6 +25,7 @@ package platform
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -37,6 +38,9 @@ var (
 	splitTunScript string
 	logDir         string = "/opt/ivpn/log"
 	tmpDir         string = "/opt/ivpn/mutable"
+
+	// path to 'resolvectl' binary
+	resolvectlBinPath string
 
 	// path to the readonly servers.json file bundled into the package
 	serversFileBundled string
@@ -111,6 +115,31 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 		errors = make([]error, 0)
 	}
 
+	if logInfo == nil {
+		logInfo = make([]string, 0)
+	}
+
+	if warnings == nil {
+		warnings = make([]string, 0)
+	}
+
+	// get path to resolvectl
+	if p, err := exec.LookPath("resolvectl"); err == nil {
+		if p, err = filepath.Abs(p); err == nil {
+			if err := checkFileAccessRightsExecutable("resolvectlBinPath", p); err != nil {
+				warnings = append(warnings, err.Error())
+			} else {
+				resolvectlBinPath = p
+				openvpnUpScriptArg = "-use-resolvconf"
+			}
+		}
+	}
+	if len(resolvectlBinPath) > 0 {
+		logInfo = append(logInfo, "'resolvectl' detected: "+resolvectlBinPath)
+	} else {
+		logInfo = append(logInfo, "'resolvectl' not detected.")
+	}
+
 	if err := checkFileAccessRightsExecutable("firewallScript", firewallScript); err != nil {
 		errors = append(errors, err)
 	}
@@ -121,7 +150,6 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 	return warnings, errors, logInfo
 }
 
-//func doInitOperations() (w string, e error) { return "", nil }
 func doInitOperations() (w string, e error) {
 	serversFile := ServersFile()
 	if _, err := os.Stat(serversFile); err != nil {
@@ -166,4 +194,8 @@ func FirewallScript() string {
 // SplitTunScript returns path to script which control split-tunneling functionality
 func SplitTunScript() string {
 	return splitTunScript
+}
+
+func ResolvectlBinPath() string {
+	return resolvectlBinPath
 }

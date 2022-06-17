@@ -57,6 +57,7 @@ var (
 	openvpnConfigFile     string
 	openvpnUpScript       string
 	openvpnDownScript     string
+	openvpnUpScriptArg    string
 	openvpnProxyAuthFile  string
 	openvpnUserParamsFile string
 
@@ -316,6 +317,9 @@ func OpenvpnUpScript() string {
 // OpenvpnDownScript path to openvpn Down script file
 func OpenvpnDownScript() string {
 	return openvpnDownScript
+}
+func OpenvpnUpDownScriptArg() string {
+	return openvpnUpScriptArg
 }
 
 // OpenvpnProxyAuthFile path to openvpn proxy credentials file

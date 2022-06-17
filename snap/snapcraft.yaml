@@ -4,12 +4,12 @@
 # How to build snap package:
 # 1) Set 'version:' (bellow) to the same value as in 'ui/package.json'
 # 2) Run command from project root 'desktop-app':
-#     $ snapcraft 
+#     $ snapcraft
 #   or
 #     $ snapcraft --debug --use-lxd
 # **********************************************
 # Installation:
-#     $ sudo snap install <filename>.snap --danderous 
+#     $ sudo snap install <filename>.snap --danderous
 # After package installed:
 # 1) Manual connection of the required interfaces:
 #     $ sudo snap connect ivpn:ivpn-dns-control
@@ -39,10 +39,10 @@ version: '3.8.21' # TODO: Set 'version:' to the same value as in 'ui/package.jso
 title: IVPN
 summary: IVPN - Secure VPN for Privacy  # 79 char long summary
 description: |
-  Secure, private VPN with fast WireGuard connections. 
+  Secure, private VPN with fast WireGuard connections.
   Use our open-source privacy app to start a private connection to the third party audited IVPN service. Choose from OpenVPN and WireGuard protocols.
 
-  Features: 
+  Features:
   * multiple protocols (OpenVPN, WireGuard)
   * Kill-switch
   * Multi-Hop
@@ -67,7 +67,7 @@ apps:
     command: bin/ivpn-service
     daemon: simple
     restart-condition: always
-    stop-mode: sigterm    
+    stop-mode: sigterm
     plugs:
       - network-control   # Ability to establish a VPN connection
       - firewall-control  # Ability to control firewall rules (iptables)
@@ -76,7 +76,7 @@ apps:
   ivpn:
     command: bin/ivpn
     plugs:
-      - network           # Ability to connect to a daemon (localhost)
+      - network
 
   ui:
     command: opt/ivpn/ui/bin/ivpn-ui --no-sandbox
@@ -103,14 +103,6 @@ hooks:
     plugs: [network, firewall-control]
 
 plugs:
-  ivpn-dns-control:
-    interface: system-files
-    write:
-      - /etc/resolv.conf
-      - /etc/resolv.conf.ivpnsave
-    read:
-      - /etc/resolv.conf
-      - /etc/resolv.conf.ivpnsave
   # UI: plugs required by [gnome-3-38] extension (https://snapcraft.io/docs/gnome-3-38-extension):
   gnome-3-38-2004:
     default-provider: gnome-3-38-2004
@@ -126,27 +118,27 @@ plugs:
     target: $SNAP/data-dir/icons
 
 # ToDo: uncomment bellow lines if it is required to expose mutable folder (contains port.txt) to a slot (to be able to connect slot out from external snap)
-#       When using separate snapt for UI (ivpn-ui), it will be necessary to connect daemon port interface to the ivpn-ui snap package: 
+#       When using separate snapt for UI (ivpn-ui), it will be necessary to connect daemon port interface to the ivpn-ui snap package:
 #       $ sudo snap connect ivpn-ui:port ivpn:port
 #slots:
 #  port:
 #    interface: content
 #    content: file
-#    read: 
+#    read:
 #      - $SNAP_COMMON/opt/ivpn/mutable
 
 parts:
   daemon:
     plugin: nil
     build-snaps:
-      - go      
+      - go
     build-packages:
       - libiw30           # libiw for wifiNotifier functionality
       - libiw-dev         # libiw for wifiNotifier functionality
       - curl
     stage-packages:
-      - openvpn                 
-      #- mount             # ability to mount cgroup (for split-tunneling functionality)      
+      - openvpn
+      #- mount             # ability to mount cgroup (for split-tunneling functionality)
     source: .
     source-subdir: daemon
     override-build: |
@@ -157,7 +149,7 @@ parts:
   cli:
     plugin: nil
     build-snaps:
-      - go      
+      - go
     build-packages:
       - git
     source: .
@@ -174,8 +166,8 @@ parts:
     build-packages:
     - git
     source: ./daemon/References/Linux
-    override-build: |    
-      rm -fr ./_deps/wireguard-tools*  
+    override-build: |
+      rm -fr ./_deps/wireguard-tools*
       ./scripts/build-wireguard-tools.sh
       mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/wireguard-tools
       cp _deps/wireguard-tools_inst/wg-quick $SNAPCRAFT_PART_INSTALL/opt/ivpn/wireguard-tools/wg-quick
@@ -191,8 +183,8 @@ parts:
     override-build: |
       rm -fr ./_deps/dnscryptproxy*
       ./scripts/build-dnscrypt-proxy.sh
-      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/dnscrypt-proxy 
-      cp _deps/dnscryptproxy_inst/dnscrypt-proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/dnscrypt-proxy/dnscrypt-proxy 
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/dnscrypt-proxy
+      cp _deps/dnscryptproxy_inst/dnscrypt-proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/dnscrypt-proxy/dnscrypt-proxy
 
   obfs4proxy:
     plugin: nil
@@ -206,6 +198,13 @@ parts:
       ./scripts/build-obfs4proxy.sh
       mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy
       cp _deps/obfs4proxy_inst/obfs4proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy/obfs4proxy
+
+  resolvectl:
+    plugin: nil
+    source: ./snap/local
+    override-build: |
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/bin
+      cp resolvectl $SNAPCRAFT_PART_INSTALL/usr/bin
 
   etc:
     plugin: dump
@@ -234,4 +233,4 @@ parts:
       rm -fr dist_electron
       ./References/Linux/build.sh -v $SNAPCRAFT_PROJECT_VERSION
       mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui
-      cp -R dist_electron/bin $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui       
+      cp -R dist_electron/bin $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui

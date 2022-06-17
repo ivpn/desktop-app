@@ -52,7 +52,7 @@ func init() {
 func GetOpenVPNVersion(ovpnBinary string) []int {
 	cmd := exec.Command(ovpnBinary, "--version")
 	out, _ := cmd.CombinedOutput()
-	if out == nil || len(out) == 0 {
+	if len(out) == 0 {
 		return nil
 	}
 
@@ -281,7 +281,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 
 			// wait for obfsproxy stop
 			opxy.Wait()
-			if o.isDisconnectRequested == false {
+			if !o.isDisconnectRequested {
 				// If obfsproxy stopped unexpectedly - disconnect VPN
 				log.Error("Obfsproxy stopped unexpectedly. Disconnecting VPN...")
 				o.doDisconnect()
