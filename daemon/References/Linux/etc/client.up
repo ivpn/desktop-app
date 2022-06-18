@@ -69,9 +69,10 @@ fi
 
 # when "-use-resolvconf" defined - do not change /etc/resolv.conf, but use resolveconf tool to set DNS for the interface
 if [ "$1" = "-use-resolvconf" ] ; then
-  resolvectl domain ${dev} '~.'
-  resolvectl default-route ${dev} true  
-  resolvectl dns ${dev} ${dnsIPs}
+  resolvectlBin=$2
+  ${resolvectlBin} domain ${dev} '~.'
+  ${resolvectlBin} default-route ${dev} true
+  ${resolvectlBin} dns ${dev} ${dnsIPs}
   exit 0
 fi
 

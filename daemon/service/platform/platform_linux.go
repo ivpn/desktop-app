@@ -130,7 +130,7 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 				warnings = append(warnings, err.Error())
 			} else {
 				resolvectlBinPath = p
-				openvpnUpScriptArg = "-use-resolvconf"
+				openvpnUpScriptArg = "-use-resolvconf " + resolvectlBinPath
 			}
 		}
 	}

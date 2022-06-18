@@ -5,8 +5,9 @@ if [ -e /etc/resolv.conf.ivpnsave ] ; then
 fi
 
 if [ "$1" = "-use-resolvconf" ] ; then
-  resolvectl domain ${dev} ''
-  resolvectl default-route ${dev} false  
+  resolvectlBin=$2
+  ${resolvectlBin} domain ${dev} ''
+  ${resolvectlBin} default-route ${dev} false  
   exit 0
 fi
 
