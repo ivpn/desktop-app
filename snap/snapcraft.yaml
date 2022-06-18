@@ -50,7 +50,7 @@ description: |
   * Custom DNS
   * and more ...
 
-  IMPORTANT! Manual commands required after firs tinstall:
+  IMPORTANT! Manual commands required after first install:
     $ sudo snap connect ivpn:network-control
     $ sudo snap connect ivpn:firewall-control
     $ sudo snap restart ivpn.daemon
