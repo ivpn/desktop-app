@@ -123,11 +123,6 @@ func NewOpenVpnObject(
 		return nil, fmt.Errorf("OpenVPN user credentials not defined")
 	}
 
-	if isObfsProxy && len(connectionParams.multihopExitSrvID) > 0 {
-		log.Warning("obfsproxy not applicable for Multi-Hop connections")
-		isObfsProxy = false
-	}
-
 	return &OpenVPN{
 			state:           vpn.DISCONNECTED,
 			binaryPath:      binaryPath,

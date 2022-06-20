@@ -84,7 +84,7 @@ export const Ports = Object.freeze({
     { port: 443, type: PortTypeEnum.UDP },
   ],
 
-  // port number not in use as connection parameter for multi-hop (but keep iy for UI consistence)
+  // port number not in use as connection parameter for multi-hop (but keep it for UI consistence)
   OpenVPNMultiHop: [
     { port: 2049, type: PortTypeEnum.UDP },
     { port: 443, type: PortTypeEnum.TCP },

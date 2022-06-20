@@ -139,8 +139,8 @@ func (c *CmdConnect) Init() {
 
 	c.BoolVar(&c.any, "any", false, "When LOCATION points to more than one server, use first found server to connect")
 
-	c.BoolVar(&c.obfsproxy, "o", false, "Use obfsproxy (OpenVPN Single-Hop only)")
-	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "Use obfsproxy (OpenVPN Single-Hop only)")
+	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy")
+	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy")
 
 	c.StringVar(&c.multihopExitSvr, "exit_svr", "", "LOCATION", "Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
 
@@ -415,9 +415,6 @@ func (c *CmdConnect) Run() (retError error) {
 		if c.obfsproxy && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
 			return fmt.Errorf(helloResp.DisabledFunctions.ObfsproxyError)
 		}
-		if c.obfsproxy && len(c.multihopExitSvr) > 0 {
-			return fmt.Errorf("obfsproxy not applicable for Multi-Hop connections")
-		}
 
 		vpntype = vpn.OpenVPN
 
@@ -475,6 +472,14 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 		if len(c.multihopExitSvr) > 0 && exitSvrOvpn == nil {
 			return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
+		}
+
+		if c.obfsproxy {
+			if len(c.port) > 0 {
+				// if user manually defined port for obfsproxy connection - inform that it is ignored
+				fmt.Printf("Note: port definition is ignored for the connections when the obfsproxy enabled\n")
+			}
+			destPort.tcp = true
 		}
 
 		if len(c.multihopExitSvr) == 0 {

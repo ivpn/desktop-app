@@ -60,7 +60,10 @@
     <div v-if="isOpenVPN">
       <div class="settingsBoldFont">OpenVPN configuration:</div>
 
-      <div class="flexRow paramBlock">
+      <div
+        class="flexRow paramBlock"
+        v-bind:class="{ disabled: prefferedPorts.length <= 1 }"
+      >
         <div class="defColor paramName">Preferred port:</div>
         <select v-model="port" style="background: var(--background-color)">
           <option
@@ -73,13 +76,7 @@
         </select>
       </div>
 
-      <!-- Proxy can be used when: obfsproxy is disabled OR when Multi-Hop enabled (obfsproxy is not applicable for Multi-Hop)-->
-      <div
-        v-bind:class="{
-          disabled:
-            connectionUseObfsproxy && !this.$store.state.settings.isMultiHop,
-        }"
-      >
+      <div v-bind:class="{ disabled: connectionUseObfsproxy }">
         <div class="flexRow paramBlock">
           <div class="defColor paramName">Network proxy:</div>
           <div class="settingsRadioBtnProxy">
@@ -151,28 +148,18 @@
       </div>
 
       <div class="settingsBoldFont">Additional settings:</div>
-      <div v-bind:class="{ disabled: this.$store.state.settings.isMultiHop }">
-        <div class="param">
-          <input
-            type="checkbox"
-            id="connectionUseObfsproxy"
-            v-model="connectionUseObfsproxy"
-          />
-          <label class="defColor" for="connectionUseObfsproxy"
-            >Use obfsproxy</label
-          >
-        </div>
-        <div class="flexRow description">
-          Only enable if you have trouble connecting
-          <div
-            class="description"
-            style="margin-left: 3px"
-            v-if="this.$store.state.settings.isMultiHop"
-          >
-            (not applicable for Multi-Hop connections)
-          </div>
-        </div>
+      <div class="param">
+        <input
+          type="checkbox"
+          id="connectionUseObfsproxy"
+          v-model="connectionUseObfsproxy"
+        />
+        <label class="defColor" for="connectionUseObfsproxy"
+          >Use obfsproxy</label
+        >
       </div>
+      <div class="description">Only enable if you have trouble connecting</div>
+
       <div class="param" v-if="userDefinedOvpnFile">
         <input
           type="checkbox"
@@ -197,7 +184,6 @@
           >
             Open configuration file location ...
           </button>
-          <!--
           <div style="max-width: 500px; margin: 0px; padding: 0px">
             <div
               class="settingsGrayLongDescriptionFont selectable"
@@ -212,7 +198,6 @@
               {{ userDefinedOvpnFile }}
             </div>
           </div>
-          -->
         </div>
       </div>
     </div>
@@ -532,10 +517,21 @@ export default {
         data = this.isOpenVPN ? Ports.OpenVPNMultiHop : Ports.WireGuardMultiHop;
       }
 
+      // Only TCP connections applicable for OpenVPN obfsproxy
+      let isObfsproxy = false;
+      if (
+        this.isOpenVPN === true &&
+        this.$store.state.settings.connectionUseObfsproxy === true
+      ) {
+        isObfsproxy = true;
+        data = data.filter((p) => p.type === PortTypeEnum.TCP);
+        data = [data[0]];
+      }
+
       data.forEach((p) =>
         ret.push({
           text:
-            isMH === true
+            isMH === true || isObfsproxy === true
               ? `${enumValueName(PortTypeEnum, p.type)}`
               : `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
           key: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,

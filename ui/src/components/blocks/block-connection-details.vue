@@ -123,7 +123,10 @@ export default {
       let port = this.$store.getters["settings/getPort"];
       let protocol = this.$store.getters["settings/vpnType"];
       const isMH = this.$store.state.settings.isMultiHop;
-      if (isMH === true) {
+      const isObfsProxy =
+        this.$store.state.settings.vpnType === VpnTypeEnum.OpenVPN &&
+        this.$store.state.settings.connectionUseObfsproxy;
+      if (isMH === true || isObfsProxy) {
         // do not show port number for multi-hop connections
         return `${enumValueName(VpnTypeEnum, protocol)}/${enumValueName(
           PortTypeEnum,

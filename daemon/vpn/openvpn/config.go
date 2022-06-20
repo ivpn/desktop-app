@@ -128,12 +128,19 @@ func (c *ConnectionParams) generateConfiguration(
 
 	if obfsproxyPort > 0 {
 		c.tcp = true
-		c.hostPort = platform.ObfsproxyHostPort()
+		if len(c.multihopExitSrvID) > 0 {
+			// Multi-Hop with obfsproxy:	just uses the multihop port +1.
+			c.hostPort += 1
+		} else {
+			// Single-Hop
+			c.hostPort = platform.ObfsproxyHostPort()
+		}
 		c.proxyType = "socks"
 		c.proxyAddress = net.IPv4(127, 0, 0, 1) // "127.0.0.1"
 		c.proxyPort = obfsproxyPort
 		c.proxyUsername = ""
 		c.proxyPassword = ""
+
 	}
 
 	cfg = make([]string, 0, 32)
