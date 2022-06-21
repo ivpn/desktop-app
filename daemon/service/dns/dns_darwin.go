@@ -36,7 +36,7 @@ func implInitialize() error {
 	return nil
 }
 
-func implPause() error {
+func implPause(localInterfaceIP net.IP) error {
 	err := shell.Exec(log, platform.DNSScript(), "-pause")
 	if err != nil {
 		return fmt.Errorf("DNS pause: Failed to change DNS: %w", err)
@@ -45,7 +45,7 @@ func implPause() error {
 }
 
 // defaultDNS - not in use for darwin platfrom
-func implResume(defaultDNS DnsSettings) error {
+func implResume(defaultDNS DnsSettings, localInterfaceIP net.IP) error {
 	err := shell.Exec(log, platform.DNSScript(), "-resume")
 	if err != nil {
 		return fmt.Errorf("DNS resume: Failed to change DNS: %w", err)
