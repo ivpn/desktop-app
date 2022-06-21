@@ -10,11 +10,15 @@
 # **********************************************
 # Installation:
 #     $ sudo snap install <filename>.snap --danderous
+#
 # After package installed:
-# 1) Manual connection of the required interfaces:
+#   (this is not required, since the SnapStore enabled auto-connection 
+#   of required interfaces for IVPN package;
+#   the steps can be useful only when snap package was built manually)
+#   1) Manual connection of the required interfaces:
 #     $ sudo snap connect ivpn:network-control
 #     $ sudo snap connect ivpn:firewall-control
-# 2) Restart daemon required:
+#   2) Restart daemon:
 #     $ sudo snap restart ivpn.daemon
 # **********************************************
 # Another useful commands:
@@ -30,10 +34,18 @@
 #   See logs:
 #     $ sudo snap logs -n=all ivpn.daemon
 # **********************************************
+# To release/deploy package to SnapStore (only for IVPN developers!):
+#   $ snapcraft upload --release=<risk_level> <snap_file> 
+#     * where <risk_level> could be: edge/beta/candidate/stable
+#     * https://snapcraft.io/docs/releasing-your-app
+#   Example: 
+#     $ snapcraft upload --release=beta ivpn_${VERSION}_amd64.snap 
+# **********************************************
 
 name: ivpn # you probably want to 'snapcraft register <name>'
 base: core20 # the base snap is the execution environment for this snap
-version: '3.8.23' # TODO: Set 'version:' to the same value as in 'ui/package.json'. This value will be used to stamp version for CLI and daemon
+# TODO: Set 'version:' to the same value as in 'ui/package.json'. This value will be used to stamp version for CLI and daemon
+version: "3.8.25" 
 
 title: IVPN
 summary: IVPN - Secure VPN for Privacy  # 79 char long summary
@@ -50,15 +62,10 @@ description: |
   * Custom DNS
   * and more ...
 
-  IMPORTANT! Manual commands required after first install:
-    $ sudo snap connect ivpn:network-control
-    $ sudo snap connect ivpn:firewall-control
-    $ sudo snap restart ivpn.daemon
-
 license: GPL-3.0
 source-code: https://github.com/ivpn/desktop-app
 issues: https://www.ivpn.net/contactus/
-contact: [support@ivpn.net, alexandr.stelnykovych@ivpn.net, https://www.ivpn.net/contactus/]
+contact: support@ivpn.net
 website: https://www.ivpn.net
 
 grade: stable # devel # must be 'stable' to release into candidate/stable channels
@@ -142,6 +149,7 @@ parts:
       - libiw30           # libiw for wifiNotifier functionality
       - libiw-dev         # libiw for wifiNotifier functionality
       - curl
+      - systemd           # getting 'resolvectl' binary from there
     stage-packages:
       - openvpn
       #- mount             # ability to mount cgroup (for split-tunneling functionality)
@@ -151,6 +159,9 @@ parts:
       daemon/References/Linux/scripts/build-daemon.sh -v $SNAPCRAFT_PROJECT_VERSION
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
       cp daemon/References/Linux/scripts/_out_bin/ivpn-service $SNAPCRAFT_PART_INSTALL/bin
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/bin
+      rctlpath=$( which resolvectl )
+      cp $rctlpath $SNAPCRAFT_PART_INSTALL/usr/bin
 
   cli:
     plugin: nil
@@ -204,13 +215,6 @@ parts:
       ./scripts/build-obfs4proxy.sh
       mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy
       cp _deps/obfs4proxy_inst/obfs4proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy/obfs4proxy
-
-  resolvectl:
-    plugin: nil
-    source: ./snap/local
-    override-build: |
-      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/bin
-      cp resolvectl $SNAPCRAFT_PART_INSTALL/usr/bin
 
   etc:
     plugin: dump
