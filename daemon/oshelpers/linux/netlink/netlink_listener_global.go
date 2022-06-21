@@ -77,7 +77,8 @@ func RegisterLanChangeListener(onChange chan<- struct{}) error {
 				}
 
 				isChanged := false
-				for _, m := range msgs {
+				for i := range msgs {
+					m := msgs[i]
 					if IsNewAddr(&m) || IsDelAddr(&m) {
 						isChanged = true
 						break
