@@ -189,32 +189,60 @@
         v-bind:key="server.gateway"
       >
         <button
-          class="serverSelectBtn flexRow"
+          class="serverSelectBtn"
           v-on:click="onServerSelected(server)"
           v-bind:class="{ disabledButton: isInaccessibleServer(server) }"
         >
-          <serverNameControl
-            class="serverName"
-            :server="server"
-            :isCountryFirst="sortTypeStr === 'Country'"
-          />
+          <div class="flexRow">
+            <serverNameControl
+              class="serverName"
+              :server="server"
+              :isCountryFirst="sortTypeStr === 'Country'"
+              :onExpandClick="onServerExpandClick"
+              :isExpanded="isServerHostsExpanded(server)"
+            />
 
+            <div
+              class="flexColumn"
+              v-if="isFastestServerConfig !== true"
+              style="margin-top: 11px; margin-top: -22px"
+            >
+              <div class="flexRow">
+                <serverPingInfoControl
+                  class="pingInfo"
+                  :server="server"
+                  :isShowPingTime="true"
+                />
+
+                <img
+                  :src="favoriteImage(server)"
+                  v-on:click="favoriteClicked($event, server)"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!--HOSTS (expanded list)-->
           <div
-            class="flexColumn"
-            v-if="isFastestServerConfig === false"
-            style="margin-top: 11px"
+            v-if="
+              isServerHostsExpanded(server) === true &&
+              isFastestServerConfig !== true
+            "
           >
-            <div class="flexRow">
-              <serverPingInfoControl
-                class="pingInfo"
-                :server="server"
-                :isShowPingTime="true"
-              />
-
-              <img
-                :src="favoriteImage(server)"
-                v-on:click="favoriteClicked($event, server)"
-              />
+            <div
+              class="flexRow"
+              v-for="host of server.hosts"
+              v-bind:key="host.hostname"
+            >
+              <button
+                class="serverHostSelectBtn"
+                v-on:click.stop
+                v-on:click="onServerHostSelected(server, host)"
+              >
+                <div style="display: flex; margin-top: 2px; margin-bottom: 6px">
+                  <div style="margin-left: 40px">{{ host.hostname }}</div>
+                </div>
+              </button>
             </div>
           </div>
         </button>
@@ -296,6 +324,7 @@ export default {
       isFastestServerConfig: false,
       isSortMenu: false,
       isShowScrollButton: false,
+      expandedGateways: [], // list of server.gateway strings (list of gateways which is expanded to show server hosts)
     };
   },
   created: function () {
@@ -460,21 +489,41 @@ export default {
       }
       if (this.onBack != null) this.onBack();
     },
-    onServerSelected: function (server) {
+
+    isServerHostsExpanded: function (server) {
+      if (this.isFastestServerConfig === true || server.hosts.length < 2)
+        return undefined; //hide expand button
+      return this.expandedGateways.includes(server.gateway);
+    },
+    onServerExpandClick: function (server) {
+      var index = this.expandedGateways.indexOf(server.gateway);
+      if (index === -1) this.expandedGateways.push(server.gateway);
+      else this.expandedGateways.splice(index, 1);
+    },
+
+    checkAndNotifyInaccessibleServer: function (server) {
       if (this.isInaccessibleServer(server)) {
         sender.showMessageBoxSync({
           type: "info",
           buttons: ["OK"],
           message: "Entry and exit servers cannot be in the same country",
           detail:
-            "When using multihop you must select entry and exit servers in different countries. Please select a different entry or exit server.",
+            "When using Multi-Hop you must select entry and exit servers in different countries. Please select a different entry or exit server.",
         });
-        return;
+        return false;
       }
-
+    },
+    onServerSelected: function (server) {
+      if (this.checkAndNotifyInaccessibleServer(server) == false) return;
       this.onServerChanged(server, this.isExitServer != null);
       this.onBack();
     },
+    onServerHostSelected: function (server, host) {
+      if (this.checkAndNotifyInaccessibleServer(server) == false) return;
+      this.onServerChanged(server, this.isExitServer != null, host.hostname);
+      this.onBack();
+    },
+
     onSortMenuClickedOutside: function () {
       this.isSortMenu = false;
     },
@@ -651,10 +700,32 @@ input#filter {
   outline-width: 0;
   cursor: pointer;
 
-  height: 48px;
+  min-height: 48px;
   width: 100%;
 
   padding: 0px;
+
+  padding-bottom: 3px;
+  padding-top: 3px;
+}
+
+.serverHostSelectBtn {
+  border: none;
+  background-color: inherit;
+  outline-width: 0;
+  cursor: pointer;
+
+  width: 100%;
+
+  padding: 0px;
+  opacity: 0.7;
+  font-size: 11px;
+  line-height: 13px;
+  color: var(--text-color-details);
+}
+
+.serverHostSelectBtn:hover {
+  opacity: 1;
 }
 
 .serverName {

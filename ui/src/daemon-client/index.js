@@ -1197,6 +1197,14 @@ async function Connect(entryServer, exitServer) {
       }
     }
 
+    const getHosts = function (server, customHostId) {
+      if (!customHostId) return server.hosts;
+      for (const h of server.hosts) {
+        if (h.hostname.startsWith(customHostId + ".")) return [h];
+      }
+      return server.hosts;
+    };
+
     let port = store.getters["settings/getPort"];
 
     let multihopExitSrvID = settings.isMultiHop
@@ -1208,7 +1216,7 @@ async function Connect(entryServer, exitServer) {
 
       vpnParamsObj = {
         EntryVpnServer: {
-          Hosts: settings.serverEntry.hosts,
+          Hosts: getHosts(settings.serverEntry, settings.serverEntryHostId),
         },
         MultihopExitSrvID: multihopExitSrvID,
 
@@ -1237,13 +1245,13 @@ async function Connect(entryServer, exitServer) {
       vpnParamsPropName = "WireGuardParameters";
       vpnParamsObj = {
         EntryVpnServer: {
-          Hosts: settings.serverEntry.hosts,
+          Hosts: getHosts(settings.serverEntry, settings.serverEntryHostId),
         },
 
         MultihopExitServer: settings.isMultiHop
           ? {
               ExitSrvID: multihopExitSrvID,
-              Hosts: settings.serverExit.hosts,
+              Hosts: getHosts(settings.serverExit, settings.serverExitHostId),
             }
           : null,
 

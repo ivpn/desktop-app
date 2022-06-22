@@ -21,6 +21,7 @@
               style="max-width: 245px"
               :isLargeText="true"
               :server="this.server"
+              :serverHostName="this.serverHostName"
               :isFastestServer="isFastestServer"
               :isRandomServer="isRandomServer"
               :isShowPingPicture="!(isFastestServer || isRandomServer)"
@@ -58,6 +59,11 @@ export default {
       return this.isExitServer
         ? this.$store.state.settings.serverExit
         : this.$store.state.settings.serverEntry;
+    },
+    serverHostName: function () {
+      return this.isExitServer
+        ? this.$store.state.settings.serverExitHostId
+        : this.$store.state.settings.serverEntryHostId;
     },
     isConnected: function () {
       return (
