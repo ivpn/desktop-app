@@ -13,29 +13,32 @@
     </div>
 
     <div
-      class="textBloack text"
+      class="textBlock text"
       v-if="isShowSingleLine"
       v-bind:class="{ text_large: isLargeText, firstLine: !isSingleLine }"
     >
       {{ singleLine }}
     </div>
-    <div class="textBloack text" v-else>
-      <div class="text firstLine">
-        {{ multilineFirstLine }}
-
-        <button
-          v-if="onExpandClick != null && isExpanded !== undefined"
-          class="noBordersBtn expandButton"
-          v-on:click.stop
-          v-on:click="onExpandClick(server)"
-        >
-          <img
-            v-if="isExpanded"
-            style="transform: rotate(180deg)"
-            src="@/assets/arrow-bottom.svg"
-          />
-          <img v-else src="@/assets/arrow-bottom.svg" />
-        </button>
+    <div class="textBlock" v-else>
+      <div class="firstLine flexRow" style="max-width: 156px">
+        <div class="text flexRowRestSpace">
+          {{ multilineFirstLine }}
+        </div>
+        <div>
+          <button
+            class="noBordersBtn expandButton"
+            v-if="onExpandClick != null && isExpanded !== undefined"
+            v-on:click.stop
+            v-on:click="onExpandClick(server)"
+          >
+            <img
+              v-if="isExpanded"
+              style="transform: rotate(180deg)"
+              src="@/assets/arrow-bottom.svg"
+            />
+            <img v-else src="@/assets/arrow-bottom.svg" />
+          </button>
+        </div>
       </div>
       <div class="text secondLine">
         <div v-if="isShowIPVersionBage && isIPv6" class="bage">IPv6</div>
@@ -191,7 +194,7 @@ img.flag {
   text-overflow: ellipsis;
 }
 
-div.textBloack {
+div.textBlock {
   font-size: 14px;
   line-height: 20.8px;
   margin-left: 16px;
