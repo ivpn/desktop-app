@@ -219,7 +219,7 @@ export default {
         await sender.PauseConnection(seconds);
       }
     },
-    onShowServersPressed(isExitServers) {
+    async onShowServersPressed(isExitServers) {
       this.uiView = isExitServers
         ? viewTypeEnum.serversExit
         : viewTypeEnum.serversEntry;
@@ -233,7 +233,11 @@ export default {
           1000 >
           30
       ) {
-        sender.PingServers();
+        try {
+          await sender.PingServers();
+        } catch (e) {
+          console.error(e);
+        }
         this.lastServersPingRequestTime = new Date();
       }
     },

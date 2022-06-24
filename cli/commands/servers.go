@@ -86,7 +86,13 @@ func (c *CmdServers) Run() error {
 	slist := serversList(servers)
 
 	if c.ping {
-		if err := serversPing(slist, true); err != nil {
+		var vpnType *vpn.Type = nil
+		if len(c.proto) > 0 {
+			if p, err := getVpnTypeByFlag(c.proto); err == nil {
+				vpnType = &p
+			}
+		}
+		if err := serversPing(slist, true, c.hosts, vpnType); err != nil {
 			return err
 		}
 	}
@@ -95,10 +101,8 @@ func (c *CmdServers) Run() error {
 
 	pingHeader := ""
 	hostsHeader := ""
-	pingEmptyVal := ""
 	if c.ping {
 		pingHeader = "PING\t"
-		pingEmptyVal = "\t"
 	}
 	if c.hosts {
 		hostsHeader = "HOSTS\t"
@@ -140,7 +144,14 @@ func (c *CmdServers) Run() error {
 
 		if c.hosts && len(s.hosts) > 1 {
 			for _, h := range s.hosts[1:] {
-				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s%s", "", "", "", "", "", "", pingEmptyVal, h.hostname+"\t")
+				if c.ping {
+					pingStr = " ?  \t"
+					if h.pingMs > 0 {
+						pingStr = fmt.Sprintf("%dms\t", h.pingMs)
+					}
+				}
+
+				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s%s", "", "", "", "", "", "", pingStr, h.hostname+"\t")
 				fmt.Fprintln(w, str)
 			}
 		}
@@ -287,9 +298,9 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 	return ret, isStrictHost
 }
 
-func serversPing(servers []serverDesc, needSort bool) error {
+func serversPing(servers []serverDesc, needSort bool, pingAllHostsOnFirstPhase bool, vpnTypePrioritized *vpn.Type) error {
 	fmt.Println("Pinging servers ...")
-	pingRes, err := _proto.PingServers()
+	pingRes, err := _proto.PingServers(pingAllHostsOnFirstPhase, vpnTypePrioritized)
 	if err != nil {
 		return err
 	}
@@ -299,12 +310,21 @@ func serversPing(servers []serverDesc, needSort bool) error {
 
 	for _, pr := range pingRes {
 		for i, s := range servers {
-			for _, h := range s.hosts {
+			serverPing := 0
+			// set ping result for each host
+			for j, h := range s.hosts {
 				if h.host == pr.Host {
-					s.pingMs = pr.Ping
-					servers[i] = s
-					break
+					h.pingMs = pr.Ping
+					s.hosts[j] = h
+					if serverPing <= 0 || serverPing > pr.Ping {
+						serverPing = pr.Ping
+					}
 				}
+			}
+			// set min ping result for server
+			if serverPing > 0 {
+				s.pingMs = serverPing
+				servers[i] = s
 			}
 		}
 	}
@@ -329,6 +349,7 @@ func serversPing(servers []serverDesc, needSort bool) error {
 type hostDesc struct {
 	hostname string
 	host     string // ip
+	pingMs   int
 }
 
 type serverDesc struct {

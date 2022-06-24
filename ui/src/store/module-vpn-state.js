@@ -132,7 +132,9 @@ export default {
                 local_ip: "",
                 host: "",
                 multihop_port: 0
-              }
+              },
+              ping: ??? // property added after receiving ping info from daemon
+              pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon
             }
           ]
         }
@@ -152,7 +154,9 @@ export default {
             {
               hostname: "",
               host: "",
-              multihop_port: 0
+              multihop_port: 0,
+              ping: ??? // property added after receiving ping info from daemon
+              pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon
             }
           ]
         }
@@ -491,11 +495,26 @@ function updateServersPings(state, pings) {
   let funcGetPing = function (s) {
     for (let i = 0; i < s.hosts.length; i++) {
       let pingValFoHost = hashedPings[s.hosts[i].host];
+
       if (pingValFoHost != null) {
-        s.ping = pingValFoHost;
-        s.pingQuality = getPingQuality(s.ping);
-        break;
+        // update ping info for specific host
+        s.hosts[i].ping = pingValFoHost;
+        s.hosts[i].pingQuality = getPingQuality(s.ping);
       }
+    }
+
+    // update ping info for location (min ping value from location hosts)
+    let bestPingForLocation = null;
+    for (let i = 0; i < s.hosts.length; i++) {
+      if (
+        !bestPingForLocation ||
+        (s.hosts[i].ping && bestPingForLocation > s.hosts[i].ping)
+      )
+        bestPingForLocation = s.hosts[i].ping;
+    }
+    if (bestPingForLocation) {
+      s.ping = bestPingForLocation;
+      s.pingQuality = getPingQuality(bestPingForLocation);
     }
   };
 
@@ -545,6 +564,10 @@ function updateServers(state, newServers) {
       svr.pingQuality = null;
       svr.isIPv6 = isServerSupportIPv6(svr);
       retObj[svr.gateway] = svr; // hash
+      for (let hi = 0; hi < svr.hosts.length; hi++) {
+        svr.hosts[hi].ping = null; // initialize 'ping' field to support VUE reactivity for it
+        svr.hosts[hi].pingQuality = null;
+      }
     }
     return retObj;
   }

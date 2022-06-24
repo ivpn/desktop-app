@@ -71,7 +71,7 @@ type Service interface {
 	GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr error)
 
 	ServersList() (*apitypes.ServersInfoResponse, error)
-	PingServers(retryCount int, timeoutMs int) (map[string]int, error)
+	PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAllHostsOnFirstPhase bool, skipSecondPhase bool) (map[string]int, error)
 
 	APIRequest(apiAlias string, ipTypeRequired types.RequiredIPProtocol) (responseData []byte, err error)
 
@@ -527,7 +527,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		retMap, err := p._service.PingServers(req.RetryCount, req.TimeOutMs)
+		vpnType := vpn.Type(-1)
+		if req.VpnTypePrioritization {
+			vpnType = req.VpnTypePrioritized
+		}
+		retMap, err := p._service.PingServers(req.TimeOutMs, vpnType, req.PingAllHostsOnFirstPhase, req.SkipSecondPhase)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break

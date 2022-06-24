@@ -44,7 +44,6 @@ import {
 import store from "@/store";
 
 const PingServersTimeoutMs = 4000;
-const PingServersRetriesCnt = 4;
 
 const DefaultResponseTimeoutMs = 3 * 60 * 1000;
 
@@ -1101,8 +1100,9 @@ async function PingServers(RetryCount, TimeOutMs) {
     pingServersPromise = sendRecv(
       {
         Command: daemonRequests.PingServers,
-        RetryCount: RetryCount ? RetryCount : PingServersRetriesCnt,
         TimeOutMs: TimeOutMs ? TimeOutMs : PingServersTimeoutMs,
+        VpnTypePrioritization: true,
+        VpnTypePrioritized: store.state.settings.vpnType,
       },
       [daemonResponses.PingServersResp]
     );

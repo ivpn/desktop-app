@@ -181,6 +181,7 @@
           >
             Open configuration file location ...
           </button>
+          <!--
           <div style="max-width: 500px; margin: 0px; padding: 0px">
             <div
               class="settingsGrayLongDescriptionFont selectable"
@@ -193,8 +194,9 @@
               "
             >
               {{ userDefinedOvpnFile }}
-            </div>
+            </div>            
           </div>
+          -->
         </div>
       </div>
     </div>

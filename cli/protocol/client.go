@@ -605,13 +605,27 @@ func (c *Client) WGKeysRotationInterval(uinxTimeInterval int64) error {
 	return nil
 }
 
-// PingServers changes WG keys rotation interval
-func (c *Client) PingServers() (pingResults []types.PingResultType, err error) {
+// PingServers
+func (c *Client) PingServers(pingAllHostsOnFirstPhase bool, vpnTypePrioritized *vpn.Type) (pingResults []types.PingResultType, err error) {
 	if err := c.ensureConnected(); err != nil {
 		return pingResults, err
 	}
 
-	req := types.PingServers{RetryCount: 4, TimeOutMs: 6000}
+	vpnTypePrioritization := false
+	var vpnType vpn.Type
+	if vpnTypePrioritized != nil {
+		vpnType = *vpnTypePrioritized
+		vpnTypePrioritization = true
+	}
+	// hosts for this VPN type will be pinged first (only if VpnTypePrioritization == true)
+
+	req := types.PingServers{
+		TimeOutMs:                6000,
+		PingAllHostsOnFirstPhase: pingAllHostsOnFirstPhase,
+		SkipSecondPhase:          true,
+		VpnTypePrioritized:       vpnType,
+		VpnTypePrioritization:    vpnTypePrioritization,
+	}
 	var resp types.PingServersResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return pingResults, err

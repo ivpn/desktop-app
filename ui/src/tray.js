@@ -160,6 +160,8 @@ export function InitTray(
         }
         case "settings/serverEntry":
         case "settings/serverExit":
+        case "settings/serverEntryHostId":
+        case "settings/serverExitHostId":
         case "settings/isMultiHop":
         case "settings/isFastestServer":
         case "settings/isRandomServer":
@@ -260,16 +262,16 @@ function updateTrayMenu() {
 
       if (store.state.settings.isMultiHop) {
         options = {
-          label: serverName(null, s),
+          label: serverName(null, s, null, /*hostID*/ null),
           click: () => {
-            menuItemConnect(null, s);
+            menuItemConnect(null, s, null, /*hostID*/ null); // TODO: implement menuItemConnect when host specified
           },
         };
       } else {
         options = {
-          label: serverName(s),
+          label: serverName(s, null, /*hostID*/ null, null),
           click: () => {
-            menuItemConnect(s);
+            menuItemConnect(s, null, /*hostID*/ null, null); // TODO: implement menuItemConnect when host specified
           },
         };
       }
@@ -280,15 +282,7 @@ function updateTrayMenu() {
   const favorites = Menu.buildFromTemplate(favoriteSvrsTemplate);
 
   // MAIN MENU
-
-  var connectToName = "";
-  if (
-    (!store.state.settings.isMultiHop &&
-      store.state.settings.isFastestServer) ||
-    store.state.settings.isRandomServer
-  )
-    connectToName = serverName();
-  else connectToName = serverName(store.state.settings.serverEntry);
+  var connectToName = serverName();
 
   const isLoggedIn = store.getters["account/isLoggedIn"];
 
@@ -466,11 +460,21 @@ function GetStatusText() {
   return retStr;
 }
 
-function serverName(entryServer, exitServer) {
-  function text(svr) {
+function serverName(
+  entryServer,
+  exitServer,
+  entryServerHostId,
+  exitServerHostId
+) {
+  function text(svr, svrHostId) {
     if (svr == null) return "";
     if (typeof svr === "string") return svr;
-    return `${svr.city}, ${svr.country_code}`;
+
+    let ret = `${svr.city}, ${svr.country_code}`;
+    if (svrHostId) {
+      ret += " (" + svrHostId + ")";
+    }
+    return ret;
   }
 
   const isConnected = store.getters["vpnState/isConnected"];
@@ -480,21 +484,35 @@ function serverName(entryServer, exitServer) {
   const isRandomExitServer = store.state.settings.isRandomExitServer;
 
   if (entryServer == null) {
-    if (!isConnected && isFastestServer) entryServer = "Fastest Server";
-    else if (!isConnected && isRandomServer) entryServer = "Random Server";
-    else entryServer = store.state.settings.serverEntry;
+    if (!isConnected && isFastestServer) {
+      entryServer = "Fastest Server";
+      entryServerHostId = "";
+    } else if (!isConnected && isRandomServer) {
+      entryServer = "Random Server";
+      entryServerHostId = "";
+    } else {
+      entryServer = store.state.settings.serverEntry;
+      entryServerHostId = store.state.settings.serverEntryHostId;
+    }
   }
 
   if (exitServer == null && isMultiHop) {
-    if (!isConnected && isRandomExitServer) exitServer = "Random Server";
-    else exitServer = store.state.settings.serverExit;
+    if (!isConnected && isRandomExitServer) {
+      exitServer = "Random Server";
+      exitServerHostId = "";
+    } else {
+      exitServer = store.state.settings.serverExit;
+      exitServerHostId = store.state.settings.serverExitHostId;
+    }
   }
 
-  var ret = text(entryServer);
-  if (exitServer != null) ret = `${ret} -> ${text(exitServer)}`;
+  var ret = text(entryServer, entryServerHostId);
+  if (exitServer != null)
+    ret = `${ret} -> ${text(exitServer, exitServerHostId)}`;
   return ret;
 }
 
+// TODO: implement menuItemConnect when host specified
 async function menuItemConnect(entrySvr, exitSvr) {
   try {
     await daemonClient.Connect(entrySvr, exitSvr);

@@ -205,7 +205,7 @@
             <div
               class="flexColumn"
               v-if="isFastestServerConfig !== true"
-              style="margin-top: 11px; margin-top: -22px"
+              style="margin-top: -22px"
             >
               <div class="flexRow">
                 <serverPingInfoControl
@@ -240,7 +240,32 @@
                 v-on:click="onServerHostSelected(server, host)"
               >
                 <div style="display: flex; margin-top: 2px; margin-bottom: 6px">
-                  <div style="margin-left: 40px">{{ host.hostname }}</div>
+                  <div
+                    style="
+                      text-align: left;
+                      margin-left: 40px;
+                      min-width: 154px;
+                    "
+                  >
+                    {{ host.hostname }}
+                  </div>
+
+                  <!-- host ping info-->
+                  <div>
+                    <div class="flexRow">
+                      <serverPingInfoControl
+                        class="pingInfo"
+                        :server="host"
+                        :isShowPingTime="true"
+                      />
+
+                      <!--
+                      <img
+                        :src="favoriteImage(server, host)"
+                        v-on:click="favoriteClicked($event, server, host)"
+                      />-->
+                    </div>
+                  </div>
                 </div>
               </button>
             </div>
@@ -491,7 +516,11 @@ export default {
     },
 
     isServerHostsExpanded: function (server) {
-      if (this.isFastestServerConfig === true || server.hosts.length < 2)
+      if (
+        this.$store.state.settings.showHosts !== true ||
+        this.isFastestServerConfig === true ||
+        this.$store.state.uiState.serversFavoriteView === true
+      )
         return undefined; //hide expand button
       return this.expandedGateways.includes(server.gateway);
     },
@@ -719,7 +748,7 @@ input#filter {
 
   padding: 0px;
   opacity: 0.7;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 13px;
   color: var(--text-color-details);
 }

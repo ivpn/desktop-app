@@ -293,7 +293,13 @@ func (c *CmdConnect) Run() (retError error) {
 
 		// Fastest server
 		if c.fastest && len(svrs) > 1 {
-			if err := serversPing(svrs, true); err != nil && c.any == false {
+			var vpnType *vpn.Type = nil
+			if len(c.filter_proto) > 0 {
+				if p, err := getVpnTypeByFlag(c.filter_proto); err == nil {
+					vpnType = &p
+				}
+			}
+			if err := serversPing(svrs, true, false, vpnType); err != nil && c.any == false {
 				if c.any {
 					fmt.Printf("Error: Failed to ping servers to determine fastest: %s\n", err)
 				} else {

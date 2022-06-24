@@ -134,6 +134,7 @@ const getDefaultState = () => {
     colorTheme: ColorTheme.system,
     connectSelectedMapLocation: false,
     windowRestorePosition: null, // {x=xxx, y=xxx}
+    showHosts: false, //Enable selection of individual servers in server selection list
 
     // updates
     skipAppUpdate: {
@@ -349,6 +350,14 @@ export default {
     },
     windowRestorePosition(state, val) {
       state.windowRestorePosition = val;
+    },
+    showHosts(state, val) {
+      state.showHosts = val;
+      // if disabled - erase info about currently selected hosts
+      if (val !== true) {
+        state.serverEntryHostId = null;
+        state.serverExitHostId = null;
+      }
     },
 
     // updates
@@ -583,6 +592,9 @@ export default {
     },
     colorTheme(context, val) {
       context.commit("colorTheme", val);
+    },
+    showHosts(context, val) {
+      context.commit("showHosts", val);
     },
 
     // UPDATES

@@ -47,6 +47,13 @@
       >
     </div>
 
+    <div class="param">
+      <input type="checkbox" id="showHosts" v-model="showHosts" />
+      <label class="defColor" for="showHosts"
+        >Enable selection of individual servers in server selection list</label
+      >
+    </div>
+
     <div class="settingsBoldFont">View:</div>
     <div class="flexRow paramBlock">
       <div class="defColor paramName">Color theme:</div>
@@ -245,6 +252,14 @@ export default {
       },
       set(value) {
         this.$store.dispatch("settings/connectSelectedMapLocation", value);
+      },
+    },
+    showHosts: {
+      get() {
+        return this.$store.state.settings.showHosts;
+      },
+      set(value) {
+        this.$store.dispatch("settings/showHosts", value);
       },
     },
     showAppInSystemDock: {
