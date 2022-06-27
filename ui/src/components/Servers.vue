@@ -160,7 +160,7 @@
       @scroll="recalcScrollButtonVisiblity()"
       class="commonMargins flexColumn scrollableColumnContainer"
     >
-      <!-- FASTEST & RANDOMM SERVER -->
+      <!-- FASTEST & RANDOM SERVER -->
       <div v-if="isFavoritesView == false && isFastestServerConfig === false">
         <div class="flexRow" v-if="!isMultihop">
           <button
@@ -259,11 +259,10 @@
                         :isShowPingTime="true"
                       />
 
-                      <!--
                       <img
                         :src="favoriteImage(server, host)"
                         v-on:click="favoriteClicked($event, server, host)"
-                      />-->
+                      />
                     </div>
                   </div>
                 </div>
@@ -396,6 +395,15 @@ export default {
       // Favorite servers for current protocol
       return this.$store.getters["settings/favoriteServers"];
     },
+    favoriteHosts: function () {
+      // Favorite hosts for current protocol
+
+      if (this.$store.state.settings.showHosts !== true) return [];
+
+      // Returns array of information objects about favorite hosts:
+      // host object extended by all properties from parent server object +favHostParentServerObj +favHost
+      return this.$store.getters["settings/favoriteHosts"];
+    },
 
     filteredServers: function () {
       let store = this.$store;
@@ -449,18 +457,24 @@ export default {
       }
 
       let servers = this.servers;
-      if (this.isFavoritesView) servers = this.favoriteServers;
+      if (this.isFavoritesView) {
+        servers = this.favoriteServers;
+        servers = servers.concat(this.favoriteHosts);
+      }
 
       if (this.filter == null || this.filter.length == 0)
         return servers.slice().sort(compare);
 
       let filter = this.filter.toLowerCase();
-      let filtered = servers.filter(
-        (s) =>
+      let filtered = servers.filter((s) => {
+        // check if the filtered object id 'favorite host'
+        return (
+          (s.favHost && s.favHost.hostname.toLowerCase().includes(filter)) || // only for favorite hosts (host object extended by all properties from parent server object +favHostParentServerObj +favHost)
           (s.city && s.city.toLowerCase().includes(filter)) ||
           (s.country && s.country.toLowerCase().includes(filter)) ||
           (s.country_code && s.country_code.toLowerCase().includes(filter))
-      );
+        );
+      });
 
       return filtered.slice().sort(compare);
     },
@@ -543,6 +557,12 @@ export default {
       }
     },
     onServerSelected: function (server) {
+      if (server.favHost) {
+        return this.onServerHostSelected(
+          server.favHostParentServerObj,
+          server.favHost
+        );
+      }
       if (this.checkAndNotifyInaccessibleServer(server) == false) return;
       this.onServerChanged(server, this.isExitServer != null);
       this.onBack();
@@ -579,12 +599,24 @@ export default {
         server.gateway
       );
     },
-    favoriteImage: function (server) {
-      if (
-        this.$store.state.settings.serversFavoriteList.includes(server.gateway)
-      )
-        return Image_star_active;
-      return Image_star_inactive;
+    favoriteImage: function (server, host) {
+      const settings = this.$store.state.settings;
+      if (server.favHost) {
+        // favorite host: only for favorite hosts (host object extended by all properties from parent server object)
+        if (settings.hostsFavoriteList.includes(server.favHost.hostname))
+          return Image_star_active;
+        return Image_star_inactive;
+      } else if (host) {
+        // host
+        if (settings.hostsFavoriteList.includes(host.hostname))
+          return Image_star_active;
+        return Image_star_inactive;
+      } else {
+        //server
+        if (settings.serversFavoriteList.includes(server.gateway))
+          return Image_star_active;
+        return Image_star_inactive;
+      }
     },
     favoriteImageActive: function () {
       return Image_star_active;
@@ -615,25 +647,50 @@ export default {
       if (server.country_code === ccSkip) return true;
       return false;
     },
-    favoriteClicked: function (evt, server) {
+    favoriteClicked: function (evt, server, host) {
       evt.stopPropagation();
 
-      let favorites = this.$store.state.settings.serversFavoriteList.slice();
+      if (server.favHost) {
+        return this.favoriteClicked(
+          evt,
+          server.favHostParentServerObj,
+          server.favHost
+        );
+      }
       let serversHashed = this.$store.state.vpnState.serversHashed;
       let gateway = server.gateway;
 
-      if (favorites.includes(gateway)) {
-        // remove
-        console.log(`Removing favorite ${gateway}`);
-        favorites = favorites.filter((gw) => gw != gateway);
-      } else {
-        // add
-        console.log(`Adding favorite ${gateway}`);
-        if (serversHashed[gateway] == null) return;
-        favorites.push(gateway);
-      }
+      if (!host) {
+        // favorite SERVER
+        let favorites = this.$store.state.settings.serversFavoriteList.slice();
+        if (favorites.includes(gateway)) {
+          console.log(`Removing favorite location ${gateway}`);
+          favorites = favorites.filter((gw) => gw != gateway);
+        } else {
+          console.log(`Adding favorite location ${gateway}`);
+          if (!serversHashed[gateway]) return;
+          favorites.push(gateway);
+        }
 
-      this.$store.dispatch("settings/serversFavoriteList", favorites);
+        this.$store.dispatch("settings/serversFavoriteList", favorites);
+      } else if (host.hostname) {
+        // favorite HOST
+        let favoriteHosts =
+          this.$store.state.settings.hostsFavoriteList.slice();
+        let hostname = host.hostname;
+
+        if (favoriteHosts.includes(hostname)) {
+          // remove host
+          console.log(`Removing favorite host ${hostname}`);
+          favoriteHosts = favoriteHosts.filter((hn) => hn != hostname);
+        } else {
+          // add host
+          if (!serversHashed[gateway]) return;
+          console.log(`Adding favorite host ${hostname}`);
+          favoriteHosts.push(hostname);
+        }
+        this.$store.dispatch("settings/hostsFavoriteList", favoriteHosts);
+      }
     },
     configFastestSvrClicked(server, event) {
       if (server == null || server.gateway == null) return;

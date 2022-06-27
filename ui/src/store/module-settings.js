@@ -50,8 +50,11 @@ const getDefaultState = () => {
     isRandomServer: false,
     isRandomExitServer: false,
 
-    // Favorite gateway's list (strings)
+    // Favorite gateway's list (strings [gateway])
     serversFavoriteList: [],
+    // Favorite hosts list (strings [hostname])
+    hostsFavoriteList: [],
+
     // List of servers to exclude from fastest servers list (gateway, strings)
     serversFastestExcludeList: [],
 
@@ -232,6 +235,9 @@ export default {
     serversFavoriteList(state, val) {
       state.serversFavoriteList = val;
     },
+    hostsFavoriteList(state, val) {
+      state.hostsFavoriteList = val;
+    },
     serversFastestExcludeList(state, val) {
       state.serversFastestExcludeList = val;
     },
@@ -386,17 +392,60 @@ export default {
     },
     favoriteServers: (state, getters, rootState, rootGetters) => {
       // Get favorite servers for current protocol
-
       try {
         // All favorite servers (for all protocols)
         let favorites = state.serversFavoriteList;
-        // hosts for current protocol
-        let activeHosts = rootGetters["vpnState/activeServers"];
-        if (!activeHosts || !favorites) return null;
+        // servers for current protocol
+        let activeServers = rootGetters["vpnState/activeServers"];
+        if (!activeServers || !favorites) return null;
 
-        return activeHosts.filter((s) => favorites.includes(s.gateway));
+        return activeServers.filter((s) => favorites.includes(s.gateway));
       } catch (e) {
         console.error("Failed to get Favorite servers: ", e);
+        return null;
+      }
+    },
+    // Returns array of information objects about favorite hosts:
+    // host object extended by all properties from parent server object +favHostParentServerObj +favHost
+    favoriteHosts: (state, getters, rootState, rootGetters) => {
+      // Get favorite servers for current protocol
+      try {
+        // All favorite hostnames (for all protocols)
+        let fHostnames = state.hostsFavoriteList.slice();
+        // Servers for current protocol
+        let activeServers = rootGetters["vpnState/activeServers"];
+        if (!activeServers || !fHostnames) return null;
+
+        // All hostnames for current protocol
+        let activeServersHostsHashed = {};
+        for (const s of activeServers) {
+          for (const h of s.hosts) {
+            activeServersHostsHashed[h.hostname] = s;
+          }
+        }
+
+        // Looking for host objects for current protocol
+        let ret = []; // array: [{host{}, server{}, isFavoriteHost: true}]
+        for (const h of fHostnames) {
+          if (!activeServersHostsHashed[h]) continue;
+
+          const svr = activeServersHostsHashed[h];
+          for (const host of svr.hosts) {
+            if (host.hostname == h) {
+              let favHostExInfo = Object.assign({}, svr); // copy all info about location... etc.
+              favHostExInfo = Object.assign(favHostExInfo, host); // overwrite host-related properties (like ping info)
+              favHostExInfo.gateway = svr.gateway + ":" + host.hostname; // to avoid duplicate keys in UI lists
+              favHostExInfo.favHostParentServerObj = svr; // original parent server object
+              favHostExInfo.favHost = host; // original host object
+
+              ret.push(favHostExInfo);
+            }
+          }
+        }
+        console.log("settings favoriteHosts: ", ret);
+        return ret;
+      } catch (e) {
+        console.error("Failed to get Favorite hosts: ", e);
         return null;
       }
     },
@@ -454,6 +503,9 @@ export default {
     // Favorite gateway's list (strings)
     serversFavoriteList(context, val) {
       context.commit("serversFavoriteList", val);
+    },
+    hostsFavoriteList(context, val) {
+      context.commit("hostsFavoriteList", val);
     },
     serversFastestExcludeList(context, val) {
       context.commit("serversFastestExcludeList", val);
@@ -726,6 +778,24 @@ function updateSelectedServers(context) {
     context.commit("serverEntryHostId", null);
   if (exitHost && !isServerContainsHost(state.serverExit, exitHost))
     context.commit("serverExitHostId", null);
+
+  // Remove servers/hosts from favorite list (if they are not exists anymore)
+  let favServers = state.serversFavoriteList;
+  for (const gw of state.serversFavoriteList) {
+    if (!serversHashed[gw]) {
+      favServers = favServers.filter((fGw) => gw != fGw);
+    }
+  }
+  context.commit("serversFavoriteList", favServers);
+
+  const hostsHashed = context.rootState.vpnState.hostsHashed;
+  let favHosts = state.hostsFavoriteList;
+  for (const h of state.hostsFavoriteList) {
+    if (!hostsHashed[h]) {
+      favHosts = favHosts.filter((fh) => h != fh);
+    }
+  }
+  context.commit("hostsFavoriteList", favHosts);
 }
 
 function isServerContainsHost(server, hostID) {

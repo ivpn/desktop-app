@@ -100,6 +100,8 @@ export default {
 
     // Servers hash object: serversHashed[gateway] = server
     serversHashed: {},
+    // Hosts hash object: hostsHashed[hostname] = server
+    hostsHashed: {},
     servers: { wireguard: [], openvpn: [], config: {} },
 
     // true when servers pinging in progress
@@ -574,6 +576,21 @@ function updateServers(state, newServers) {
 
   let hash = initNewServersAndCreateHash(null, newServers.wireguard);
   state.serversHashed = initNewServersAndCreateHash(hash, newServers.openvpn);
+
+  try {
+    // hashing hostnames (hostsHashed)
+    let hHosts = {};
+    for (const gw in state.serversHashed) {
+      const s = state.serversHashed[gw];
+      for (const h of s.hosts) {
+        hHosts[h.hostname] = s;
+      }
+    }
+    state.hostsHashed = hHosts;
+  } catch (e) {
+    console.error(e);
+    state.hostsHashed = {};
+  }
 
   // copy ping value from old objects
   function copySvrsDataFromOld(oldServers, newServersHashed) {

@@ -20,7 +20,7 @@
       {{ singleLine }}
     </div>
     <div class="textBlock" v-else>
-      <div class="firstLine flexRow" style="max-width: 156px">
+      <div class="firstLine flexRow" style="max-width: 154px">
         <div class="text flexRowRestSpace">
           {{ multilineFirstLine }}
         </div>
@@ -117,6 +117,7 @@ export default {
     },
     multilineSecondLine: function () {
       if (!this.server) return "";
+      if (this.server.favHost) return this.server.favHost.hostname; // only for favorite hosts (host object extended by all properties from parent server object +favHostParentServerObj +favHost)
       if (this.isCountryFirst) return this.server.city;
       return this.server.country;
     },
