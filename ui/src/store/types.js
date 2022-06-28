@@ -70,6 +70,7 @@ export const Ports = Object.freeze({
     { port: 1443, type: PortTypeEnum.TCP },
     { port: 80, type: PortTypeEnum.TCP },
   ],
+
   WireGuard: [
     { port: 2049, type: PortTypeEnum.UDP },
     { port: 2050, type: PortTypeEnum.UDP },
@@ -82,6 +83,13 @@ export const Ports = Object.freeze({
     { port: 80, type: PortTypeEnum.UDP },
     { port: 443, type: PortTypeEnum.UDP },
   ],
+
+  // port number not in use as connection parameter for multi-hop (but keep it for UI consistence)
+  OpenVPNMultiHop: [
+    { port: 2049, type: PortTypeEnum.UDP },
+    { port: 443, type: PortTypeEnum.TCP },
+  ],
+  WireGuardMultiHop: [{ port: 2049, type: PortTypeEnum.UDP }],
 });
 
 export const ServersSortTypeEnum = Object.freeze({

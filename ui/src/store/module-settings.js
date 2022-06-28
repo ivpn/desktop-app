@@ -25,6 +25,7 @@ import {
   ServersSortTypeEnum,
   ColorTheme,
   DnsEncryption,
+  PortTypeEnum,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -473,7 +474,25 @@ export default {
     isMultiHop(context, val) {
       if (context.rootGetters["account/isMultihopAllowed"] === false)
         context.commit("isMultiHop", false);
-      else context.commit("isMultiHop", val);
+      else {
+        const oldVal = this.state.settings.isMultiHop;
+        context.commit("isMultiHop", val);
+
+        if (val === true && oldVal !== val) {
+          // do not change port if MH value was not changed (otherwise, new connection request will be sent)
+          if (this.state.settings.vpnType == VpnTypeEnum.WireGuard)
+            context.commit("setPort", Ports.WireGuardMultiHop[0]);
+          else {
+            let applicablePorts = Ports.OpenVPNMultiHop;
+            if (this.state.settings.connectionUseObfsproxy === true) {
+              applicablePorts = Ports.OpenVPNMultiHop.filter(
+                (p) => p.type === PortTypeEnum.TCP
+              );
+            }
+            context.commit("setPort", applicablePorts[0]);
+          }
+        }
+      }
     },
     serverEntry(context, srv) {
       context.commit("serverEntry", srv);
@@ -523,6 +542,15 @@ export default {
 
     // connection
     connectionUseObfsproxy(context, val) {
+      if (val === true) {
+        // only TCP connections applicable for obfsproxy
+        let ports = this.state.settings.isMultiHop
+          ? Ports.OpenVPN
+          : Ports.OpenVPNMultiHop;
+        ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+        context.commit("setPort", ports[0]);
+      }
+
       context.commit("connectionUseObfsproxy", val);
     },
     setPort(context, portVal) {

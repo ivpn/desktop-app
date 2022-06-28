@@ -60,13 +60,16 @@
     <div v-if="isOpenVPN">
       <div class="settingsBoldFont">OpenVPN configuration:</div>
 
-      <div class="flexRow paramBlock">
+      <div
+        class="flexRow paramBlock"
+        v-bind:class="{ disabled: prefferedPorts.length <= 1 }"
+      >
         <div class="defColor paramName">Preferred port:</div>
         <select v-model="port" style="background: var(--background-color)">
           <option
             v-for="item in prefferedPorts"
             :value="item.port"
-            :key="item.text"
+            :key="item.key"
           >
             {{ item.text }}
           </option>
@@ -205,13 +208,16 @@
     <div v-if="!isOpenVPN">
       <div class="settingsBoldFont">Wireguard configuration:</div>
 
-      <div class="flexRow paramBlock">
+      <div
+        v-bind:class="{ disabled: prefferedPorts.length <= 1 }"
+        class="flexRow paramBlock"
+      >
         <div class="defColor paramName">Preferred port:</div>
         <select v-model="port" style="background: var(--background-color)">
           <option
             v-for="item in prefferedPorts"
             :value="item.port"
-            :key="item.text"
+            :key="item.key"
           >
             {{ item.text }}
           </option>
@@ -525,11 +531,32 @@ export default {
       return ret;
     },
     prefferedPorts: function () {
-      let data = this.isOpenVPN ? Ports.OpenVPN : Ports.WireGuard;
       let ret = [];
+      let data = this.isOpenVPN ? Ports.OpenVPN : Ports.WireGuard;
+
+      const isMH = this.$store.state.settings.isMultiHop;
+      if (isMH === true) {
+        data = this.isOpenVPN ? Ports.OpenVPNMultiHop : Ports.WireGuardMultiHop;
+      }
+
+      // Only TCP connections applicable for OpenVPN obfsproxy
+      let isObfsproxy = false;
+      if (
+        this.isOpenVPN === true &&
+        this.$store.state.settings.connectionUseObfsproxy === true
+      ) {
+        isObfsproxy = true;
+        data = data.filter((p) => p.type === PortTypeEnum.TCP);
+        data = [data[0]];
+      }
+
       data.forEach((p) =>
         ret.push({
-          text: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
+          text:
+            isMH === true || isObfsproxy === true
+              ? `${enumValueName(PortTypeEnum, p.type)}`
+              : `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
+          key: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
           port: p,
         })
       );
@@ -553,6 +580,11 @@ div.param {
   margin-top: 3px;
 }
 
+div.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
 input:disabled {
   opacity: 0.5;
 }
@@ -562,7 +594,12 @@ input:disabled + label {
 
 div.paramBlock {
   @extend .flexRow;
-  margin-top: 10px;
+  margin-top: 6px;
+}
+
+div.paramBlockText {
+  margin-top: 6px;
+  margin-right: 21px;
 }
 
 div.paramBlockDetailedConfig {
@@ -602,11 +639,6 @@ div.settingsRadioBtnProxy {
   padding-right: 20px;
 }
 
-div.paramBlockText {
-  margin-top: 16px;
-  margin-right: 21px;
-}
-
 select {
   background: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
   border: 0.5px solid rgba(0, 0, 0, 0.2);
@@ -614,17 +646,12 @@ select {
   width: 186px;
 }
 
-div.description {
+.description {
   @extend .settingsGrayLongDescriptionFont;
   margin-left: 22px;
 }
 
 input.proxyParam {
   width: 100px;
-}
-
-div.disabled {
-  pointer-events: none;
-  opacity: 0.5;
 }
 </style>
