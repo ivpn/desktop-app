@@ -1230,7 +1230,7 @@ async function Connect(entryServer, exitServer) {
         MultihopExitServer: settings.isMultiHop
           ? {
               ExitSrvID: multihopExitSrvID,
-              Hosts: settings.serverExit.hosts,
+              Hosts: getHosts(settings.serverExit, settings.serverExitHostId),
             }
           : null,
 

@@ -137,7 +137,7 @@ func (c *CmdServers) Run() error {
 	isWgDisabled := len(helloResp.DisabledFunctions.WireGuardError) > 0
 	isOpenVPNDisabled := len(helloResp.DisabledFunctions.OpenVPNError) > 0
 
-	svrs, _ := serversFilter(isWgDisabled, isOpenVPNDisabled,
+	svrs := serversFilter(isWgDisabled, isOpenVPNDisabled,
 		slist, c.filter, c.proto, c.location, c.city, c.countryCode, c.country, c.filterInvert)
 	for _, s := range svrs {
 		str := ""
@@ -261,7 +261,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 	return ret
 }
 
-func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc, mask string, proto string, useGw, useCity, useCCode, useCountry, invertFilter bool) (svrs []serverDesc, isStrictHost bool) {
+func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc, mask string, proto string, useGw, useCity, useCCode, useCountry, invertFilter bool) (svrs []serverDesc) {
 	if isWgDisabled || isOvpnDisabled {
 		oldSvrs := servers
 		servers = make([]serverDesc, 0, len(oldSvrs))
@@ -277,7 +277,7 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 	}
 
 	if len(mask) == 0 && len(proto) == 0 {
-		return servers, false
+		return servers
 	}
 	mask = strings.ToLower(mask)
 	checkAll := !(useGw || useCity || useCCode || useCountry)
@@ -314,8 +314,6 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 		for _, h := range s.hosts {
 			if h.hostname == mask {
 				isOK = true
-				isStrictHost = true
-				s.hosts = []hostDesc{h}
 				break
 			}
 		}
@@ -327,7 +325,7 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 			ret = append(ret, s)
 		}
 	}
-	return ret, isStrictHost
+	return ret
 }
 
 func serversPing(servers []serverDesc, needSort bool, pingAllHostsOnFirstPhase bool, vpnTypePrioritized *vpn.Type) error {

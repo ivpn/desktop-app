@@ -197,6 +197,9 @@ func (c *CmdConnect) Run() (retError error) {
 		return err
 	}
 
+	customHostEntryServer := c.gateway
+	customHostExitServer := c.multihopExitSvr
+
 	// check is logged-in
 	helloResp := _proto.GetHelloResponse()
 	if len(helloResp.Command) > 0 && (len(helloResp.Session.Session) == 0) {
@@ -266,12 +269,12 @@ func (c *CmdConnect) Run() (retError error) {
 			fmt.Println("WARNING: filtering flags are ignored for Multi-Hop connection [exit_svr]")
 		}
 
-		entrySvrs, _ := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, false, false, false, false, false)
+		entrySvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, false, false, false, false, false)
 		if len(entrySvrs) == 0 || len(entrySvrs) > 1 {
 			return flags.BadParameter{Message: "specify correct entry server ID for multi-hop connection"}
 		}
 
-		exitSvrs, _ := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multihopExitSvr, c.filter_proto, false, false, false, false, false)
+		exitSvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multihopExitSvr, c.filter_proto, false, false, false, false, false)
 		if len(exitSvrs) == 0 || len(exitSvrs) > 1 {
 			return flags.BadParameter{Message: "specify correct exit server ID for multi-hop connection"}
 		}
@@ -286,7 +289,7 @@ func (c *CmdConnect) Run() (retError error) {
 		c.multihopExitSvr = exitSvr.gateway
 	} else {
 		//SINGLE-HOP
-		svrs, _ = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
+		svrs = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
 
 		srvID := ""
 
@@ -370,6 +373,15 @@ func (c *CmdConnect) Run() (retError error) {
 	vpntype := vpn.WireGuard
 	// WireGuard
 	{
+		funcApplyCustomHost := func(hosts []apitypes.WireGuardServerHostInfo, hostname string) []apitypes.WireGuardServerHostInfo {
+			for _, h := range hosts {
+				if h.Hostname == hostname {
+					return []apitypes.WireGuardServerHostInfo{h}
+				}
+			}
+			return hosts
+		}
+
 		var entrySvrWg *apitypes.WireGuardServerInfo = nil
 		var exitSvrWg *apitypes.WireGuardServerInfo = nil
 		// exit server
@@ -388,7 +400,7 @@ func (c *CmdConnect) Run() (retError error) {
 
 				serverFound = true
 				req.VpnType = vpn.WireGuard
-				req.WireGuardParameters.EntryVpnServer.Hosts = s.Hosts
+				req.WireGuardParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
 				req.IPv6 = c.isIPv6Tunnel
 
 				if len(c.multihopExitSvr) == 0 {
@@ -405,7 +417,7 @@ func (c *CmdConnect) Run() (retError error) {
 					}
 
 					req.WireGuardParameters.MultihopExitServer.ExitSrvID = strings.Split(exitSvrWg.Gateway, ".")[0]
-					req.WireGuardParameters.MultihopExitServer.Hosts = exitSvrWg.Hosts
+					req.WireGuardParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrWg.Hosts, customHostExitServer)
 
 					fmt.Printf("[WireGuard] Connecting Multi-Hop...\n")
 					fmt.Printf("\tentry server: %s, %s (%s) %s\n", entrySvrWg.City, entrySvrWg.CountryCode, entrySvrWg.Country, entrySvrWg.Gateway)
@@ -423,6 +435,15 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 
 		vpntype = vpn.OpenVPN
+
+		funcApplyCustomHost := func(hosts []apitypes.OpenVPNServerHostInfo, hostname string) []apitypes.OpenVPNServerHostInfo {
+			for _, h := range hosts {
+				if h.Hostname == hostname {
+					return []apitypes.OpenVPNServerHostInfo{h}
+				}
+			}
+			return hosts
+		}
 
 		var entrySvrOvpn *apitypes.OpenvpnServerInfo = nil
 		var exitSvrOvpn *apitypes.OpenvpnServerInfo = nil
@@ -442,6 +463,7 @@ func (c *CmdConnect) Run() (retError error) {
 		for i, s := range servers.OpenvpnServers {
 			if s.Gateway == c.gateway {
 				entrySvrOvpn = &servers.OpenvpnServers[i]
+
 				// TODO: obfsproxy configuration for this connection must be sent in 'Connect' request (avoid using daemon preferences)
 				if err = _proto.SetPreferences("enable_obfsproxy", fmt.Sprint(c.obfsproxy)); err != nil {
 					return err
@@ -449,7 +471,7 @@ func (c *CmdConnect) Run() (retError error) {
 
 				serverFound = true
 				req.VpnType = vpn.OpenVPN
-				req.OpenVpnParameters.EntryVpnServer.Hosts = s.Hosts
+				req.OpenVpnParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
 
 				isMultihop := exitSvrOvpn != nil && len(c.multihopExitSvr) > 0
 
@@ -462,7 +484,7 @@ func (c *CmdConnect) Run() (retError error) {
 				if isMultihop {
 					// get Multi-Hop ID
 					req.OpenVpnParameters.MultihopExitServer.ExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
-					req.OpenVpnParameters.MultihopExitServer.Hosts = exitSvrOvpn.Hosts
+					req.OpenVpnParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrOvpn.Hosts, customHostExitServer)
 					destPort.port = 0 // do not use port number (port-based multihop)
 				}
 
