@@ -241,6 +241,7 @@
               >
                 <div style="display: flex; margin-top: 2px; margin-bottom: 6px">
                   <div
+                    title="Host name"
                     style="
                       text-align: left;
                       margin-left: 40px;
@@ -250,14 +251,20 @@
                     {{ host.hostname }}
                   </div>
 
-                  <!-- host ping info-->
+                  <!-- host load + favorite-->
                   <div>
                     <div class="flexRow">
-                      <serverPingInfoControl
-                        class="pingInfo"
-                        :server="host"
-                        :isShowPingTime="true"
-                      />
+                      <div class="pingInfo" style="text-align: right">
+                        <div
+                          title="Server load"
+                          style="
+                            margin-right: 10px;
+                            color: var(--text-color-details);
+                          "
+                        >
+                          {{ Math.round(host.load) }}%
+                        </div>
+                      </div>
 
                       <img
                         :src="favoriteImage(server, host)"
@@ -804,14 +811,13 @@ input#filter {
   width: 100%;
 
   padding: 0px;
-  opacity: 0.7;
   font-size: 14px;
   line-height: 13px;
   color: var(--text-color-details);
 }
 
 .serverHostSelectBtn:hover {
-  opacity: 1;
+  opacity: 0.7;
 }
 
 .serverName {

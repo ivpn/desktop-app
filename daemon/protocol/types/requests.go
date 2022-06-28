@@ -62,6 +62,8 @@ type Hello struct {
 // GetServers request servers list
 type GetServers struct {
 	RequestBase
+	// Force to update servers from the backend (locations, hosts and hosts load)
+	RequestServersUpdate bool
 }
 
 // PingServers request to ping servers

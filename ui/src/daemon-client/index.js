@@ -65,6 +65,7 @@ const daemonRequests = Object.freeze({
   GenerateDiagnostics: "GenerateDiagnostics",
 
   PingServers: "PingServers",
+  GetServers: "GetServers",
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
   AccountStatus: "AccountStatus",
@@ -1086,6 +1087,13 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
   }
 }
 
+async function ServersUpdateRequest() {
+  send({
+    Command: daemonRequests.GetServers,
+    RequestServersUpdate: true, //Force to update servers from the backend (locations, hosts and hosts load)
+  });
+}
+
 let pingServersPromise = null;
 async function PingServers(RetryCount, TimeOutMs) {
   const p = pingServersPromise;
@@ -1819,6 +1827,7 @@ export default {
 
   GeoLookup,
   PingServers,
+  ServersUpdateRequest,
   KillSwitchGetStatus,
   Connect,
   Disconnect,

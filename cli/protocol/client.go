@@ -496,6 +496,24 @@ func (c *Client) GetServers() (apitypes.ServersInfoResponse, error) {
 	return resp.VpnServers, nil
 }
 
+// GetServersForceUpdate gets servers list (skip cache; load data from backend)
+func (c *Client) GetServersForceUpdate() (apitypes.ServersInfoResponse, error) {
+	if err := c.ensureConnected(); err != nil {
+		return apitypes.ServersInfoResponse{}, err
+	}
+
+	req := types.GetServers{
+		RequestServersUpdate: true,
+	}
+	var resp types.ServerListResp
+
+	if err := c.sendRecv(&req, &resp); err != nil {
+		return resp.VpnServers, err
+	}
+
+	return resp.VpnServers, nil
+}
+
 // GetVPNState returns current VPN connection state
 func (c *Client) GetVPNState() (vpn.State, types.ConnectedResp, error) {
 	respConnected := types.ConnectedResp{}

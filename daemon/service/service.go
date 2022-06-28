@@ -307,9 +307,17 @@ func (s *Service) OnControlConnectionClosed() (isServiceMustBeClosed bool, err e
 	return isServiceMustBeClosed, err
 }
 
-// ServersList - get VPN servers info
+// ServersList returns servers info
+// (if there is a cached data available - will be returned data from cache)
 func (s *Service) ServersList() (*types.ServersInfoResponse, error) {
 	return s._serversUpdater.GetServers()
+}
+
+// ServersListForceUpdate returns servers list info.
+// The daemon will make request to update servers from the backend.
+// The cached data will be ignored in this case.
+func (s *Service) ServersListForceUpdate() (*types.ServersInfoResponse, error) {
+	return s._serversUpdater.GetServersForceUpdate()
 }
 
 // APIRequest do custom request to API

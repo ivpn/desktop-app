@@ -442,7 +442,6 @@ export default {
             }
           }
         }
-        console.log("settings favoriteHosts: ", ret);
         return ret;
       } catch (e) {
         console.error("Failed to get Favorite hosts: ", e);

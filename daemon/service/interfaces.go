@@ -33,7 +33,13 @@ import (
 
 // IServersUpdater - interface for updating server info mechanism
 type IServersUpdater interface {
+	// GetServers - get servers list.
+	// Use cached data (if exists), otherwise - download servers list.
 	GetServers() (*types.ServersInfoResponse, error)
+	// GetServersForceUpdate returns servers list info (locations, hosts and host load).
+	// The daemon will make request to update servers from the backend.
+	// The cached data will be ignored in this case.
+	GetServersForceUpdate() (*types.ServersInfoResponse, error)
 	// UpdateNotifierChannel returns channel which is notifying when servers was updated
 	UpdateNotifierChannel() chan struct{}
 }

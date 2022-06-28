@@ -70,7 +70,14 @@ type Service interface {
 	// (e.g. obfsproxy or WireGuard on Linux)
 	GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr error)
 
+	// ServersList returns servers info
+	// (if there is a cached data available - will be returned data from cache)
 	ServersList() (*apitypes.ServersInfoResponse, error)
+	// ServersListForceUpdate returns servers list info.
+	// The daemon will make request to update servers from the backend.
+	// The cached data will be ignored in this case.
+	ServersListForceUpdate() (*apitypes.ServersInfoResponse, error)
+
 	PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAllHostsOnFirstPhase bool, skipSecondPhase bool) (map[string]int, error)
 
 	APIRequest(apiAlias string, ipTypeRequired types.RequiredIPProtocol) (responseData []byte, err error)
@@ -509,16 +516,33 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		sendState(reqCmd.Idx, false)
 
 	case "GetServers":
-		serv, err := p._service.ServersList()
-		if err != nil {
+		var req types.GetServers
+		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
-		if serv == nil {
-			p.sendErrorResponse(conn, reqCmd, fmt.Errorf("failed to get servers info"))
+
+		sendResponseFunc := func(retServ *apitypes.ServersInfoResponse, retErr error) {
+			if retErr != nil {
+				p.sendErrorResponse(conn, reqCmd, retErr)
+				return
+			}
+			if retServ == nil {
+				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("failed to get servers info"))
+				return
+			}
+			p.sendResponse(conn, &types.ServerListResp{VpnServers: *retServ}, reqCmd.Idx)
+		}
+
+		if req.RequestServersUpdate {
+			// Force to update servers from the backend (RequestServersUpdate ==  true)
+			// Send response only after request to backend finished (cached data is ignored)
+			sendResponseFunc(p._service.ServersListForceUpdate())
 			break
 		}
-		p.sendResponse(conn, &types.ServerListResp{VpnServers: *serv}, reqCmd.Idx)
+
+		// return servers info (cashed data can be used, if exists)
+		sendResponseFunc(p._service.ServersList())
 
 	case "PingServers":
 		var req types.PingServers

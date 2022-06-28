@@ -50,6 +50,7 @@ type CmdServers struct {
 	filter       string
 	ping         bool
 	hosts        bool
+	load         bool
 	filterInvert bool
 }
 
@@ -74,13 +75,31 @@ func (c *CmdServers) Init() {
 	c.BoolVar(&c.ping, "ping", false, "Ping servers and view ping result")
 
 	c.BoolVar(&c.hosts, "hosts", false, "Show location hosts")
+	c.BoolVar(&c.load, "load", false, "Show load info for each host")
 
 	c.BoolVar(&c.filterInvert, "filter_invert", false, "Invert filtering result")
 }
 func (c *CmdServers) Run() error {
-	servers, err := _proto.GetServers()
-	if err != nil {
-		return err
+	var servers apitypes.ServersInfoResponse
+	var err error
+
+	isServersLoaded := false
+	if c.load {
+		fmt.Println("Updating servers load info...")
+		c.hosts = true                                // show also host info
+		servers, err = _proto.GetServersForceUpdate() // force update servers info (we need latest host load statuses)
+		if err != nil {
+			fmt.Println("Failed to update servers load info. Using cached data!")
+		} else {
+			isServersLoaded = true
+		}
+	}
+
+	if !isServersLoaded {
+		servers, err = _proto.GetServers()
+		if err != nil {
+			return err
+		}
 	}
 
 	slist := serversList(servers)
@@ -101,14 +120,18 @@ func (c *CmdServers) Run() error {
 
 	pingHeader := ""
 	hostsHeader := ""
+	hostsLoadHeader := ""
 	if c.ping {
 		pingHeader = "PING\t"
 	}
 	if c.hosts {
 		hostsHeader = "HOSTS\t"
+		if c.load {
+			hostsLoadHeader = "LOAD\t"
+		}
 	}
 
-	fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\t"+pingHeader+hostsHeader)
+	fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\t"+pingHeader+hostsHeader+hostsLoadHeader)
 
 	helloResp := _proto.GetHelloResponse()
 	isWgDisabled := len(helloResp.DisabledFunctions.WireGuardError) > 0
@@ -132,14 +155,19 @@ func (c *CmdServers) Run() error {
 		}
 
 		firstHostStr := ""
+		firstHostLoadStr := ""
 		if c.hosts {
 			firstHostStr = "\t"
 			if len(s.hosts) > 0 {
 				firstHostStr = s.hosts[0].hostname + "\t"
+				if c.load {
+
+					firstHostLoadStr = fmt.Sprintf("%d", int(s.hosts[0].load+0.5)) + "%\t"
+				}
 			}
 		}
 
-		str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s%s", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo, pingStr, firstHostStr)
+		str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s%s%s", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo, pingStr, firstHostStr, firstHostLoadStr)
 		fmt.Fprintln(w, str)
 
 		if c.hosts && len(s.hosts) > 1 {
@@ -151,7 +179,11 @@ func (c *CmdServers) Run() error {
 					}
 				}
 
-				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s%s", "", "", "", "", "", "", pingStr, h.hostname+"\t")
+				loadStr := ""
+				if c.load {
+					loadStr = fmt.Sprintf("%d", int(h.load+0.5)) + "%\t"
+				}
+				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s%s%s", "", "", "", "", "", "", pingStr, h.hostname+"\t", loadStr)
 				fmt.Fprintln(w, str)
 			}
 		}
@@ -210,7 +242,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 				if len(h.IPv6.LocalIP) > 0 {
 					isIPv6Tunnel = true
 				}
-				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname)})
+				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load})
 			}
 			ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts, isIPv6Tunnel: isIPv6Tunnel})
 		}
@@ -221,7 +253,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 			hosts := make([]hostDesc, 0, len(s.Hosts))
 
 			for _, h := range s.Hosts {
-				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname)})
+				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load})
 			}
 			ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 		}
@@ -350,6 +382,7 @@ type hostDesc struct {
 	hostname string
 	host     string // ip
 	pingMs   int
+	load     float32
 }
 
 type serverDesc struct {

@@ -117,7 +117,10 @@ export default {
     },
     multilineSecondLine: function () {
       if (!this.server) return "";
-      if (this.server.favHost) return this.server.favHost.hostname; // only for favorite hosts (host object extended by all properties from parent server object +favHostParentServerObj +favHost)
+      if (this.server.favHost)
+        return `${this.server.favHost.hostname} (${Math.round(
+          this.server.favHost.load
+        )}%)`; // only for favorite hosts (host object extended by all properties from parent server object +favHostParentServerObj +favHost)
       if (this.isCountryFirst) return this.server.city;
       return this.server.country;
     },

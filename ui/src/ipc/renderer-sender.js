@@ -123,6 +123,9 @@ export default {
   PingServers: () => {
     return invoke("renderer-request-ping-servers");
   },
+  UpdateServersRequest: () => {
+    return invoke("renderer-request-update-servers-request");
+  },
   Connect: async (entryServer, exitServer) => {
     // if entryServer or exitServer is null -> will be used current selected servers
     // otherwise -> current selected servers will be replaced by a new values before connect

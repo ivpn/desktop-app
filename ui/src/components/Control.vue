@@ -220,6 +220,9 @@ export default {
       }
     },
     async onShowServersPressed(isExitServers) {
+      // send request to update servers from backend
+      sender.UpdateServersRequest();
+
       this.uiView = isExitServers
         ? viewTypeEnum.serversExit
         : viewTypeEnum.serversEntry;
