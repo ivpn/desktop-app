@@ -89,7 +89,7 @@ func rctl_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFor
 	//resolvectl dns privacy0 8.8.8.8
 
 	if localInterfaceIP == nil {
-		log.Info("'Set DNS' call ignored due to no local address initialised")
+		log.Info("'Set DNS' call ignored due to no local address initialized")
 		return dnsCfg, nil
 	}
 	inf, err := netinfo.InterfaceByIPAddr(localInterfaceIP)

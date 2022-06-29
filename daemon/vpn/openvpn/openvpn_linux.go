@@ -27,11 +27,13 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 type platformSpecificProperties struct {
 	// no specific properties for Linux implementation
 	isCanUseParamsV24 bool
+	manualDNS         dns.DnsSettings
 }
 
 func (o *OpenVPN) implInit() error {
@@ -64,7 +66,12 @@ func (o *OpenVPN) implIsCanUseParamsV24() bool {
 }
 
 func (o *OpenVPN) implOnConnected() error {
-	// TODO: not implemented
+	// It is not possible to change network interface properties until it not enabled
+	// apply DNS value when VPN connected (interface enabled)
+	if !o.psProps.manualDNS.IsEmpty() {
+		return dns.SetManual(o.psProps.manualDNS, o.clientIP)
+	}
+
 	return nil
 }
 
@@ -83,11 +90,21 @@ func (o *OpenVPN) implOnResume() error {
 }
 
 func (o *OpenVPN) implOnSetManualDNS(dnsCfg dns.DnsSettings) error {
-	return dns.SetManual(dnsCfg, o.clientIP)
+	o.psProps.manualDNS = dnsCfg
+
+	if o.state != vpn.CONNECTED {
+		// Is not possible to change network interface properties until it not enabled
+		// apply DNS value when VPN connected (interface enabled)
+	} else {
+		return dns.SetManual(o.psProps.manualDNS, o.clientIP)
+	}
+
+	return nil
 }
 
 func (o *OpenVPN) implOnResetManualDNS() error {
 	defaultDns := o.DefaultDNS()
+	o.psProps.manualDNS = dns.DnsSettings{}
 	if !o.IsPaused() {
 		// restore default DNS pushed by OpenVPN server
 		if defaultDns != nil {
