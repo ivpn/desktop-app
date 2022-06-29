@@ -72,7 +72,7 @@ const (
 
 const (
 	// SessionCheckInterval - the interval for periodical check session status
-	SessionCheckInterval time.Duration = time.Hour * 6
+	SessionCheckInterval time.Duration = time.Hour * 1
 )
 
 // Service - IVPN service
