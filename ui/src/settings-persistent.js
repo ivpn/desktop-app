@@ -29,8 +29,6 @@ import store from "@/store";
 
 import { DnsEncryption } from "@/store/types";
 
-import { ImportAndDeleteOldSettingsIfExists } from "@/settings-import-old";
-
 var saveSettingsTimeout = null;
 var saveAccStateTimeout = null;
 
@@ -69,15 +67,6 @@ export function InitPersistentSettings() {
     console.log(
       "Settings file not exist (probably, the first application start)"
     );
-
-    // importing persistent settings from an old app version (upgrade)
-    console.log("Checking old configuration to import ...");
-    ImportAndDeleteOldSettingsIfExists((importedSettings) => {
-      const mergedState = merge(store.state.settings, importedSettings, {
-        arrayMerge: combineMerge,
-      });
-      store.commit("settings/replaceState", mergedState);
-    });
   }
 
   // ACCOUNT STATE

@@ -319,12 +319,6 @@ Section "${PRODUCT_NAME}" SecIVPN
   SetOutPath "$INSTDIR"
 
   ; <<< Uninstall previous section START
-  ; hack to not prompt for last 2.12.x releases
-  ; It is required for easy migration from 2.x to 3.x version (to do not perform logout)
-  ReadRegStr $R1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "DisplayVersion"
-  ${StrLoc} $R2 $R1 "2.12." ">"
-  StrCmp $R2 "0" done ; R2 must be 0 if upgrading from '2.12.X' version
-
   ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "UninstallString"
   StrCmp $R0 "" done
   DetailPrint "Removing previous installation..."
@@ -371,28 +365,6 @@ Section "${PRODUCT_NAME}" SecIVPN
   Push "$INSTDIR\IVPN Helpers Native x64.dll" ; file to check for writting
   Push 15000 ; 15 seconds
   Call WaitFileOpenForWritting
-
-  ; hack to not prompt for last 2.12.x releases
-  ; It is required for easy migration from 2.x to 3.x version (do not perform logout)
-  ReadRegStr $R1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\IVPN Client" "DisplayVersion"
-  ${StrLoc} $R2 $R1 "2.12." ">"
-  ${If} $R2 == 0 ; R2 must be 0 if upgrading from '2.12.X' version
-    ; Remove files from old installations
-    ; TODO: not required if upgarding from v3.x.x
-    ; (only necessay for v2.12.x because uninstaller for old versions does not support '-update' argument)
-    DetailPrint "Removing files from previous installation 2.12.x ..."
-    Delete "$DESKTOP\IVPN Client.lnk"
-    Delete "$INSTDIR\*.*"
-    RMDir /r "$INSTDIR\OpenVPN"
-    RMDir /r "$INSTDIR\WireGuard"
-
-    ; We should notify somehow to UI app that it can import application settings from previous installation
-    ; Here we saving info about previous version
-    ; So UI can find old settings by path: C:\Users\<USER>\AppData\Local\IVPN_Limited\IVPN_Client.exe_Url_2dhygxwi22dge5p2fgmqhjirdotrmd3i\<VERSION>\user.config
-    FileOpen $9 "$INSTDIR\old.ver" w ;Opens a Empty File and fills it
-    FileWrite $9 "$R1.0" ; save old app version (x.x.x.0)
-    FileClose $9 ;Closes the filled file
-  ${EndIf}
 
   ; <<<
   ; Checking if AutoStart item has correct value
