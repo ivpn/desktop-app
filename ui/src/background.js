@@ -423,9 +423,6 @@ if (gotTheLock) {
           // should be disconnected or reconnected with Standard plan features.
           // Before the active VPN connection is disconnected by the app,
           // a UI alert should be presented with the option to reconnect without pro features (e.g. SingleHop instead of MultiHop).
-
-          // isMultihopAllowed
-          console.log("ACCOUNT STATUS: ", store.state.account.accountStatus);
           if (store.getters["vpnState/isConnected"] === true) {
             if (
               store.state.settings.isMultiHop === true &&
