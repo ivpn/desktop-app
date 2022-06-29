@@ -417,6 +417,48 @@ if (gotTheLock) {
         case "settings/minimizedUI":
           if (!store.state.settings.minimizedUI) closeSettingsWindow();
           break;
+
+        case "account/accountStatus":
+          // When IVPN apps detect a plan downgrade (from Pro to Standard), an active VPN connection that uses Pro features (MultiHop or Port forwarding)
+          // should be disconnected or reconnected with Standard plan features.
+          // Before the active VPN connection is disconnected by the app,
+          // a UI alert should be presented with the option to reconnect without pro features (e.g. SingleHop instead of MultiHop).
+
+          // isMultihopAllowed
+          console.log("ACCOUNT STATUS: ", store.state.account.accountStatus);
+          if (store.getters["vpnState/isConnected"] === true) {
+            if (
+              store.state.settings.isMultiHop === true &&
+              store.getters["account/isMultihopAllowed"] !== true
+            ) {
+              let msgBoxConfig = {
+                type: "question",
+                message: "Subscription is changed to IVPN Standard",
+                detail:
+                  "Active VPN connection is using Pro plan features (MultiHop or Port forwarding) and will be disconnected.",
+                buttons: ["OK", "Reconnect with SingleHop VPN"],
+              };
+              setTimeout(async () => {
+                let action = null;
+                if (win == null)
+                  action = await dialog.showMessageBox(msgBoxConfig);
+                else action = await dialog.showMessageBox(win, msgBoxConfig);
+                console.log(action.response);
+                switch (action.response) {
+                  case 0: // OK
+                    daemonClient.Disconnect();
+                    break;
+
+                  case 1: // Reconnect with SingleHop VPN
+                    daemonClient.Disconnect();
+                    daemonClient.Connect();
+                    break;
+                }
+              }, 0);
+            }
+          }
+          break;
+
         default:
       }
     } catch (e) {
