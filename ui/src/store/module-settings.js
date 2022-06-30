@@ -21,14 +21,16 @@
 //
 import {
   VpnTypeEnum,
-  Ports,
+  PortTypeEnum,
+  NormalizedConfigPortObject,
   ServersSortTypeEnum,
   ColorTheme,
   DnsEncryption,
-  PortTypeEnum,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
+
+const defaultPort = { port: 2049, type: PortTypeEnum.UDP };
 
 const getDefaultState = () => {
   let defState = {
@@ -74,8 +76,8 @@ const getDefaultState = () => {
     connectionUseObfsproxy: false, // this parameter saves on the daemon's side
 
     port: {
-      OpenVPN: Ports.OpenVPN[0],
-      WireGuard: Ports.WireGuard[0],
+      OpenVPN: defaultPort,
+      WireGuard: defaultPort,
     },
 
     ovpnProxyType: "",
@@ -263,6 +265,9 @@ export default {
     },
     setPort(state, portVal) {
       state.port[enumValueName(VpnTypeEnum, state.vpnType)] = portVal;
+    },
+    port(state, val) {
+      state.port = val;
     },
 
     ovpnProxyType(state, val) {
@@ -478,19 +483,18 @@ export default {
         const oldVal = this.state.settings.isMultiHop;
         context.commit("isMultiHop", val);
 
+        // do not change port if MH value was not changed (otherwise, new connection request will be sent)
         if (val === true && oldVal !== val) {
-          // do not change port if MH value was not changed (otherwise, new connection request will be sent)
-          if (this.state.settings.vpnType == VpnTypeEnum.WireGuard)
-            context.commit("setPort", Ports.WireGuardMultiHop[0]);
-          else {
-            let applicablePorts = Ports.OpenVPNMultiHop;
-            if (this.state.settings.connectionUseObfsproxy === true) {
-              applicablePorts = Ports.OpenVPNMultiHop.filter(
-                (p) => p.type === PortTypeEnum.TCP
-              );
-            }
-            context.commit("setPort", applicablePorts[0]);
-          }
+          const applicablePorts =
+            context.rootGetters["vpnState/connectionPorts"];
+          if (applicablePorts && applicablePorts.length > 0)
+            context.commit(
+              "setPort",
+              getDefaultPortFromList(
+                applicablePorts,
+                context.getters["getPort"]
+              )
+            );
         }
       }
     },
@@ -542,16 +546,16 @@ export default {
 
     // connection
     connectionUseObfsproxy(context, val) {
+      context.commit("connectionUseObfsproxy", val);
       if (val === true) {
         // only TCP connections applicable for obfsproxy
-        let ports = this.state.settings.isMultiHop
-          ? Ports.OpenVPN
-          : Ports.OpenVPNMultiHop;
-        ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
-        context.commit("setPort", ports[0]);
+        const applicablePorts = context.rootGetters["vpnState/connectionPorts"];
+        if (applicablePorts && applicablePorts.length > 0)
+          context.commit(
+            "setPort",
+            getDefaultPortFromList(applicablePorts, context.getters["getPort"])
+          );
       }
-
-      context.commit("connectionUseObfsproxy", val);
     },
     setPort(context, portVal) {
       context.commit("setPort", portVal);
@@ -698,6 +702,7 @@ function updateSelectedServers(context) {
   // - update selected servers if VPN type changed (try to use vpnType-related servers from the same location [country\city])
   // - if multi-hop entry- and exit- servers are from same country -> use first default exit server from another country
   // - ensure if selected servers exists in a servers list and using latest data
+  // - ensure if selected ports exists in a servers configuration
   // TODO: ensure IPv6 configuration
   if (
     context == null ||
@@ -793,7 +798,9 @@ function updateSelectedServers(context) {
     }
   }
 
-  // update selected servers (in necessary)
+  //
+  // Update selected servers (in necessary)
+  //
   if (serverEntry !== state.serverEntry)
     context.commit("serverEntry", serverEntry);
   if (serverExit !== state.serverExit) context.commit("serverExit", serverExit);
@@ -806,23 +813,63 @@ function updateSelectedServers(context) {
   if (exitHost && !isServerContainsHost(state.serverExit, exitHost))
     context.commit("serverExitHostId", null);
 
+  //
   // Remove servers/hosts from favorite list (if they are not exists anymore)
+  //
+  let favServersChanged = false;
+  let favHostsChanged = false;
   let favServers = state.serversFavoriteList;
   for (const gw of state.serversFavoriteList) {
     if (!serversHashed[gw]) {
       favServers = favServers.filter((fGw) => gw != fGw);
+      favServersChanged = true;
     }
   }
-  context.commit("serversFavoriteList", favServers);
 
   const hostsHashed = context.rootState.vpnState.hostsHashed;
   let favHosts = state.hostsFavoriteList;
   for (const h of state.hostsFavoriteList) {
     if (!hostsHashed[h]) {
       favHosts = favHosts.filter((fh) => h != fh);
+      favHostsChanged = true;
     }
   }
-  context.commit("hostsFavoriteList", favHosts);
+
+  if (favServersChanged) context.commit("serversFavoriteList", favServers);
+  if (favHostsChanged) context.commit("hostsFavoriteList", favHosts);
+
+  //
+  // Ensure if selected ports exists in a servers configuration
+  //
+  let funcIsPortExists = function (ports, port) {
+    if (!ports || ports.length <= 0) return true; // do not perform any changes if there is no ports info in configuration
+    for (const configPort of ports) {
+      const p = NormalizedConfigPortObject(configPort);
+      if (p && p.type === port.type && p.port === port.port) return true;
+    }
+    return false;
+  };
+  let funcGetDefaultPort = function (ports, fallbackData) {
+    for (const configPort of ports) {
+      const p = NormalizedConfigPortObject(configPort);
+      if (p) return p;
+    }
+    return fallbackData;
+  };
+  const portsCfg = context.rootState.vpnState.servers.config.ports;
+  let cPort = Object.assign({}, state.port);
+  // openvpn
+  if (!funcIsPortExists(portsCfg.openvpn, cPort.OpenVPN)) {
+    cPort.OpenVPN = funcGetDefaultPort(portsCfg.openvpn, cPort.OpenVPN);
+    console.log(`Selected port does not exists anymore!`);
+    context.commit("port", cPort);
+  }
+  // wireguard
+  if (!funcIsPortExists(portsCfg.wireguard, cPort.WireGuard)) {
+    cPort.WireGuard = funcGetDefaultPort(portsCfg.wireguard, cPort.WireGuard);
+    console.log(`Selected port does not exists anymore!`);
+    context.commit("port", cPort);
+  }
 }
 
 function isServerContainsHost(server, hostID) {
@@ -832,4 +879,15 @@ function isServerContainsHost(server, hostID) {
     if (h.hostname.startsWith(hostID + ".")) return true;
   }
   return false;
+}
+
+function getDefaultPortFromList(ports, curPort) {
+  let isDefaultPortExists = false;
+  for (const f of ports) {
+    if (f.type == defaultPort.type && f.port == defaultPort.port)
+      isDefaultPortExists = true;
+    if (f.type == curPort.type && f.port == curPort.port) return curPort;
+  }
+  if (isDefaultPortExists) return defaultPort;
+  return ports[0];
 }

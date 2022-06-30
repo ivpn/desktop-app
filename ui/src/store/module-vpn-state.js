@@ -31,6 +31,8 @@ import {
   PingQuality,
   PauseStateEnum,
   DnsEncryption,
+  NormalizedConfigPortObject,
+  PortTypeEnum,
 } from "./types";
 
 export default {
@@ -171,6 +173,10 @@ export default {
           hardcore: { ip: "", "multihop-ip": "" }
         },
         api: { ips: [""], ipv6s:[""] }
+        ports: {
+         openvpn: [ {type: "UDP/TCP", port: "X"}, ...],
+         wireguard: [ {type: "UDP/TCP", port: "X"},  ...]
+        }
       }
     }*/
   },
@@ -352,6 +358,59 @@ export default {
 
       return retSvr;
     },
+    connectionPorts(state, getters, rootState) {
+      const vpnType = rootState.settings.vpnType;
+
+      let ports = state.servers.config.ports.wireguard;
+      if (vpnType === VpnTypeEnum.OpenVPN)
+        ports = state.servers.config.ports.openvpn;
+
+      if (!ports) return [];
+      ports = ports
+        .map((p) => NormalizedConfigPortObject(p))
+        .filter((p) => p != null);
+
+      // For Multi-Hop: port number is ignored. Only protocol has sense.
+      // So we just return one port definition for each protocol applicable for current VPN
+      if (
+        rootState.settings.isMultiHop ||
+        (vpnType === VpnTypeEnum.OpenVPN &&
+          rootState.settings.connectionUseObfsproxy)
+      ) {
+        // properties: tcp, udp (TCP applicable only for OpenVPN)
+        let portsByProtoHash = { udp: null, tcp: null };
+
+        // initialize hash by current port data
+        // (this avoids changing current port when it fully fits to our requirements)
+        const activePort =
+          vpnType === VpnTypeEnum.OpenVPN
+            ? rootState.settings.port.OpenVPN
+            : rootState.settings.port.WireGuard;
+        if (activePort.type === PortTypeEnum.TCP)
+          portsByProtoHash.tcp = activePort;
+        else portsByProtoHash.udp = activePort;
+
+        for (const p of ports) {
+          if (p.type === PortTypeEnum.TCP && portsByProtoHash.tcp === null)
+            portsByProtoHash.tcp = p;
+          if (p.type === PortTypeEnum.UDP && portsByProtoHash.udp === null)
+            portsByProtoHash.udp = p;
+          if (portsByProtoHash.tcp != null && portsByProtoHash.udp != null)
+            break;
+        }
+
+        ports = [];
+        // only UDP is applicable for WireGuard
+        // only TCP applicable for obfsproxy
+        if (vpnType !== VpnTypeEnum.OpenVPN) ports.push(portsByProtoHash.udp);
+        else {
+          if (!rootState.settings.connectionUseObfsproxy)
+            ports.push(portsByProtoHash.udp);
+          ports.push(portsByProtoHash.tcp);
+        }
+      }
+      return ports;
+    },
   },
 
   // can be called from renderer
@@ -389,7 +448,7 @@ export default {
     servers(context, value) {
       context.commit("servers", value);
       // notify 'settings' module about updated servers list
-      // (it is required to update selected servers, if necessary)
+      // (it is required to update selected servers, selected ports ... etc. (if necessary))
       context.dispatch("settings/updateSelectedServers", null, { root: true });
     },
     // Split-Tunnelling

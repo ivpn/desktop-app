@@ -289,7 +289,7 @@
 
 <script>
 import spinner from "@/components/controls/control-spinner.vue";
-import { VpnTypeEnum, VpnStateEnum, PortTypeEnum, Ports } from "@/store/types";
+import { VpnTypeEnum, VpnStateEnum, PortTypeEnum } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 const sender = window.ipcSender;
 import { dateDefaultFormat } from "@/helpers/helpers";
@@ -532,28 +532,17 @@ export default {
     },
     prefferedPorts: function () {
       let ret = [];
-      let data = this.isOpenVPN ? Ports.OpenVPN : Ports.WireGuard;
+      let data = this.$store.getters["vpnState/connectionPorts"];
 
       const isMH = this.$store.state.settings.isMultiHop;
-      if (isMH === true) {
-        data = this.isOpenVPN ? Ports.OpenVPNMultiHop : Ports.WireGuardMultiHop;
-      }
-
-      // Only TCP connections applicable for OpenVPN obfsproxy
-      let isObfsproxy = false;
-      if (
+      let isObfsproxy =
         this.isOpenVPN === true &&
-        this.$store.state.settings.connectionUseObfsproxy === true
-      ) {
-        isObfsproxy = true;
-        data = data.filter((p) => p.type === PortTypeEnum.TCP);
-        data = [data[0]];
-      }
+        this.$store.state.settings.connectionUseObfsproxy === true;
 
       data.forEach((p) =>
         ret.push({
           text:
-            isMH === true || isObfsproxy === true
+            isMH === true || isObfsproxy === true // port number ignored for multi-hop and obfsproxy
               ? `${enumValueName(PortTypeEnum, p.type)}`
               : `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
           key: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,

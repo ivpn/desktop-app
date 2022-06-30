@@ -60,30 +60,9 @@ func (p *port) String() string {
 	return fmt.Sprintf("%s", protoName)
 }
 
-var (
-	portsWireGuard = [...]port{
-		{port: 2049},
-		{port: 2050},
-		{port: 53},
-		{port: 1194},
-		{port: 30587},
-		{port: 41893},
-		{port: 48574},
-		{port: 58237},
-		{port: 80},
-		{port: 443}}
-
-	portsOpenVpn = [...]port{
-		{port: 2049},
-		{port: 2050},
-		{port: 53},
-		{port: 1194},
-		{port: 80},
-		{port: 443},
-		{port: 443, tcp: true},
-		{port: 1443, tcp: true},
-		{port: 80, tcp: true}}
-)
+func defaultPort() *port {
+	return &port{port: 2049}
+}
 
 type CmdDisconnect struct {
 	flags.CmdInfo
@@ -109,6 +88,7 @@ type CmdConnect struct {
 	last            bool
 	gateway         string
 	port            string
+	portsShow       bool
 	any             bool
 	obfsproxy       bool
 	firewallOff     bool
@@ -133,24 +113,23 @@ func (c *CmdConnect) Init() {
 	c.Initialize("connect", "Establish new VPN connection\nLOCATION can be a mask for filtering servers or full hostname (see 'servers' command)")
 	c.DefaultStringVar(&c.gateway, "LOCATION")
 
-	c.StringVar(&c.port, "port", "", "PROTOCOL[:PORT]", fmt.Sprintf("Port to connect to (default: %s - OpenVPN, %s - WireGuard)\nOpenVPN: %s\nWireGuard: %s\nNote: port number ignored for Multi-Hop connections; port type only applicable (UDP/TCP)",
-		portsOpenVpn[0].String(), portsWireGuard[0].String(),
-		allPortsString(portsOpenVpn[:]), allPortsString(portsWireGuard[:])))
+	c.StringVar(&c.port, "port", "", "PROTOCOL:PORT", fmt.Sprintf("Port to connect to (default: '%s')\n  Note: port number ignored for Multi-Hop connections; port type only applicable (UDP/TCP)\n  Tip: use `ivpn connect -show_ports` command to show all supported ports", defaultPort()))
+	c.BoolVar(&c.portsShow, "show_ports", false, "Ports which are applicable for '-port' argument. Show all supported connection ports")
 
 	c.BoolVar(&c.any, "any", false, "When LOCATION points to more than one server, use first found server to connect")
 
-	c.BoolVar(&c.obfsproxy, "o", false, "OpenVPN only: Use obfsproxy")
-	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "OpenVPN only: Use obfsproxy")
+	c.BoolVar(&c.obfsproxy, "o", false, "Use obfsproxy (OpenVPN only)")
+	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "Use obfsproxy (OpenVPN only)")
 
-	c.StringVar(&c.multihopExitSvr, "exit_svr", "", "LOCATION", "Exit-server for Multi-Hop connection\n(use full serverID as a parameter, servers filtering not applicable for it)")
+	c.StringVar(&c.multihopExitSvr, "exit_svr", "", "LOCATION", "Exit-server for Multi-Hop connection\n  (use full serverID as a parameter, servers filtering not applicable for it)")
 
-	c.BoolVar(&c.firewallOff, "fw_off", false, "Do not enable firewall for this connection\n(has effect only if Firewall not enabled before)")
+	c.BoolVar(&c.firewallOff, "fw_off", false, "Do not enable firewall for this connection\n  (has effect only if Firewall not enabled before)")
 
-	c.StringVar(&c.dns, "dns", "", "DNS_IP", "Use custom DNS for this connection\n(if 'antitracker' is enabled - this parameter will be ignored)")
+	c.StringVar(&c.dns, "dns", "", "DNS_IP", "Use custom DNS for this connection\n  (if 'antitracker' is enabled - this parameter will be ignored)")
 
 	c.BoolVar(&c.antitracker, "antitracker", false, "Enable AntiTracker for this connection")
 	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'Hard Core' AntiTracker for this connection")
-	c.BoolVar(&c.isIPv6Tunnel, "ipv6tunnel", false, "Enable IPv6 in VPN tunnel (WireGuard connections only)\n(IPv6 addresses are preferred when a host has a dual stack IPv6/IPv4; IPv4-only hosts are unaffected)")
+	c.BoolVar(&c.isIPv6Tunnel, "ipv6tunnel", false, "Enable IPv6 in VPN tunnel (WireGuard connections only)\n  (IPv6 addresses are preferred when a host has a dual stack IPv6/IPv4; IPv4-only hosts are unaffected)")
 
 	// filters
 	c.StringVar(&c.filter_proto, "p", "", "PROTOCOL", "Protocol type OpenVPN|ovpn|WireGuard|wg")
@@ -176,16 +155,9 @@ func (c *CmdConnect) Init() {
 
 // Run executes command
 func (c *CmdConnect) Run() (retError error) {
-	if len(c.gateway) == 0 && c.fastest == false && c.last == false {
+	if len(c.gateway) == 0 && c.fastest == false && c.last == false && c.portsShow == false {
 		return flags.BadParameter{}
 	}
-
-	// show current state after on finished
-	defer func() {
-		if retError == nil {
-			showState()
-		}
-	}()
 
 	// connection request
 	req := types.Connect{}
@@ -212,6 +184,25 @@ func (c *CmdConnect) Run() (retError error) {
 
 		return srverrors.ErrorNotLoggedIn{}
 	}
+
+	allowedPortsWg := parseConfigPorts(servers.Config.Ports.WireGuard)
+	allowedPortsOvpn := parseConfigPorts(servers.Config.Ports.OpenVPN)
+	if c.portsShow {
+		printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+		return nil
+	}
+
+	if len(allowedPortsWg) <= 0 || len(allowedPortsOvpn) <= 0 {
+		fmt.Println("Internal ERROR: daemon does not provide allowed ports info !")
+		printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+	}
+
+	// show current state after on finished
+	defer func() {
+		if retError == nil {
+			showState()
+		}
+	}()
 
 	// requesting servers list
 	svrs := serversList(servers)
@@ -405,16 +396,20 @@ func (c *CmdConnect) Run() (retError error) {
 
 				if len(c.multihopExitSvr) == 0 {
 					// port
-					p, err := getPort(vpn.WireGuard, c.port, false)
+					p, err := getPort(c.port, allowedPortsWg)
 					if err != nil {
+						printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
 						return err
 					}
 					req.WireGuardParameters.Port.Port = p.port
+
 					fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s %s...\n", s.City, s.CountryCode, s.Country, s.Gateway, p.String())
 				} else {
 					if exitSvrWg == nil {
 						return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
 					}
+
+					// port definition is not required for WireGuard multi-hop (in use: UDP + port-based-multihop)
 
 					req.WireGuardParameters.MultihopExitServer.ExitSrvID = strings.Split(exitSvrWg.Gateway, ".")[0]
 					req.WireGuardParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrWg.Hosts, customHostExitServer)
@@ -474,14 +469,21 @@ func (c *CmdConnect) Run() (retError error) {
 				req.OpenVpnParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
 
 				isMultihop := exitSvrOvpn != nil && len(c.multihopExitSvr) > 0
+				if !isMultihop {
+					// port
+					destPort, err = getPort(c.port, allowedPortsOvpn)
+					if err != nil {
+						printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+						return err
+					}
+				} else {
+					// port
+					destPort, err = getPort(c.port, nil)
+					if err != nil {
+						printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+						return err
+					}
 
-				// port
-				destPort, err = getPort(vpn.OpenVPN, c.port, isMultihop)
-				if err != nil {
-					return err
-				}
-
-				if isMultihop {
 					// get Multi-Hop ID
 					req.OpenVpnParameters.MultihopExitServer.ExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
 					req.OpenVpnParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrOvpn.Hosts, customHostExitServer)
@@ -600,7 +602,7 @@ func (c *CmdConnect) Run() (retError error) {
 	return nil
 }
 
-func getPort(vpnType vpn.Type, portInfo string, isMultiHop bool) (port, error) {
+func getPort(portInfo string, allowedPorts []port) (port, error) {
 	var err error
 	var portPtr *int
 	var isTCPPtr *bool
@@ -611,15 +613,7 @@ func getPort(vpnType vpn.Type, portInfo string, isMultiHop bool) (port, error) {
 		}
 	}
 
-	var retPort port
-	if vpnType == vpn.WireGuard {
-		if isTCPPtr != nil && *isTCPPtr {
-			return port{}, flags.BadParameter{Message: "port"}
-		}
-		retPort = portsWireGuard[0] // default port
-	} else {
-		retPort = portsOpenVpn[0] // default port
-	}
+	retPort := *defaultPort() // default port
 
 	if portPtr != nil {
 		retPort.port = *portPtr
@@ -628,25 +622,19 @@ func getPort(vpnType vpn.Type, portInfo string, isMultiHop bool) (port, error) {
 		retPort.tcp = *isTCPPtr
 	}
 
-	if !isMultiHop && retPort.port == 0 {
-		return port{}, flags.BadParameter{Message: "port number not defined"}
-	}
-
-	// check is port allowed
-	if vpnType == vpn.WireGuard {
-		if isPortAllowed(portsWireGuard[:], retPort) == false {
-			fmt.Printf("WARNING: using non-standard port '%s' (allowed ports: %s)\n", retPort.String(), allPortsString(portsWireGuard[:]))
-		}
-	} else {
-		if !isMultiHop {
-			// for multi-hop connections we are ingnoring port number. Only port type have sense (TCP/UDP)
-			if isPortAllowed(portsOpenVpn[:], retPort) == false {
-				fmt.Printf("WARNING: using non-standard port '%s' (allowed ports: %s)\n", retPort.String(), allPortsString(portsOpenVpn[:]))
-			}
+	if len(allowedPorts) > 0 {
+		if isPortAllowed(allowedPorts[:], retPort) == false {
+			return port{}, fmt.Errorf(fmt.Sprintf("using non-standard port '%s'", retPort.String()))
 		}
 	}
 
 	return retPort, nil
+}
+
+func printAllowedPorts(allowedPortsWg, allowedOvpnPorts []port) {
+	fmt.Printf("Allowed ports:\n")
+	fmt.Printf("  WireGuard: %s\n", allPortsString(allowedPortsWg[:]))
+	fmt.Printf("  OpenVPN: %s\n", allPortsString(allowedOvpnPorts[:]))
 }
 
 func isPortAllowed(ports []port, thePort port) bool {
@@ -715,4 +703,20 @@ func parsePort(portInfo string) (pPort *int, pIsTCP *bool, err error) {
 	}
 
 	return &port, &isTCP, nil
+}
+
+func parseConfigPorts(configPorts []apitypes.PortInfo) []port {
+	ret := make([]port, 0, len(configPorts))
+	for _, cfgPort := range configPorts {
+		if cfgPort.Port == 0 || len(cfgPort.Type) <= 0 {
+			continue
+		}
+
+		pTypeStr := strings.TrimSpace(strings.ToLower(cfgPort.Type))
+		if pTypeStr != "tcp" && pTypeStr != "udp" {
+			continue
+		}
+		ret = append(ret, port{port: cfgPort.Port, tcp: pTypeStr == "tcp"})
+	}
+	return ret
 }
