@@ -44,11 +44,11 @@ func (o *OpenVPN) implOnDisconnected() error {
 }
 
 func (o *OpenVPN) implOnPause() error {
-	return dns.Pause()
+	return dns.Pause(o.clientIP)
 }
 
 func (o *OpenVPN) implOnResume() error {
-	return dns.Resume(dns.DnsSettings{})
+	return dns.Resume(dns.DnsSettings{}, o.clientIP)
 }
 
 func (o *OpenVPN) implOnSetManualDNS(dnsCfg dns.DnsSettings) error {

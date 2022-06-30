@@ -33,7 +33,7 @@ import (
 	"strings"
 )
 
-func doOsInitForBuild() (warnings []string, errors []error) {
+func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 	installDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to obtain folder of current binary: %s", err.Error()))
@@ -62,7 +62,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnTaKeyFile = path.Join(installDir, "etc/ta.key")
 	openvpnUpScript = path.Join(installDir, "etc/client.up")
 	openvpnDownScript = path.Join(installDir, "etc/client.down")
-	serversFile = path.Join(installDir, "etc/servers.json")
+	serversFileBundled = path.Join(installDir, "etc/servers.json")
 
 	obfsproxyStartScript = path.Join(installDir, "_deps/obfs4proxy_inst/obfs4proxy")
 
@@ -78,5 +78,5 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnProxyAuthFile = path.Join(tmpDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(tmpDir, "wgivpn.conf")
 
-	return nil, nil
+	return nil, nil, nil
 }

@@ -20,94 +20,88 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build linux
+// +build linux
+
 package dns
 
 import (
-	"fmt"
 	"net"
-	"os"
-	"time"
 
-	"github.com/fsnotify/fsnotify"
-	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
+)
+
+// For reference: DNS configuration in Linux
+// 	https://github.com/systemd/systemd/blob/main/docs/RESOLVED-VPNS.md
+// 	https://blogs.gnome.org/mcatanzaro/2020/12/17/understanding-systemd-resolved-split-dns-and-vpn-configuration/
+func isResolveCtlInUse() bool {
+	return len(platform.ResolvectlBinPath()) > 0
+}
+
+var (
+	f_implInitialize   func() error
+	f_implPause        func(localInterfaceIP net.IP) error
+	f_implResume       func(localInterfaceIP net.IP) error
+	f_implSetManual    func(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error)
+	f_implDeleteManual func(localInterfaceIP net.IP) error
 )
 
 var (
-	resolvFile             string      = "/etc/resolv.conf"
-	resolvBackupFile       string      = "/etc/resolv.conf.ivpnsave"
-	defaultFilePermissions os.FileMode = 0644
-
 	isPaused  bool = false
 	manualDNS DnsSettings
-
-	done chan struct{}
 )
-
-func init() {
-	done = make(chan struct{})
-}
 
 // implInitialize doing initialization stuff (called on application start)
 func implInitialize() error {
-	// check if backup DNS file exists
-	if _, err := os.Stat(resolvBackupFile); err != nil {
-		// nothing to restore
-		return nil
+	if isResolveCtlInUse() {
+		f_implInitialize = rctl_implInitialize
+		f_implPause = rctl_implPause
+		f_implResume = rctl_implResume
+		f_implSetManual = rctl_implSetManual
+		f_implDeleteManual = rctl_implDeleteManual
+	} else {
+		f_implInitialize = rconf_implInitialize
+		f_implPause = rconf_implPause
+		f_implResume = rconf_implResume
+		f_implSetManual = rconf_implSetManual
+		f_implDeleteManual = rconf_implDeleteManual
 	}
 
-	log.Info("Detected DNS configuration from the previous VPN connection. Restoring OS-default DNS values ...")
-	// restore it
-	if err := implDeleteManual(nil); err != nil {
-		return fmt.Errorf("failed to restore DNS to default: %w", err)
-	}
-
-	return nil
-}
-
-func implPause() error {
-	if !isBackupExists(resolvBackupFile) {
-		// The backup for the OS-defined configuration not exists.
-		// It seems, we are not connected. Nothing to pause.
-		return nil
-	}
-
-	// stop file change monitoring
-	stopDNSChangeMonitoring()
-
-	dnscryptproxy.Stop()
-
-	// restore original OS-default DNS configuration
-	// (the backup file will not be deleted)
-	isDeleteBackup := false // do not delete backup file
-	ret := restoreBackup(resolvBackupFile, isDeleteBackup)
-
-	isPaused = true
-	return ret
-}
-
-func implResume(defaultDNS DnsSettings) error {
-	isPaused = false
-	if !manualDNS.IsEmpty() {
-		// set manual DNS (if defined)
-		_, err := implSetManual(manualDNS, nil)
-		return err
-	}
-
-	if !defaultDNS.IsEmpty() {
-		_, err := implSetManual(defaultDNS, nil)
-		return err
-	}
-
-	return nil
+	return f_implInitialize()
 }
 
 func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
 	return true, false, nil
 }
+func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
+	return []DnsSettings{}, nil
+}
+
+func implPause(localInterfaceIP net.IP) error {
+	dnscryptproxy.Stop()
+	isPaused = true
+	return f_implPause(localInterfaceIP)
+}
+
+func implResume(defaultDNS DnsSettings, localInterfaceIP net.IP) error {
+	isPaused = false
+
+	if !manualDNS.IsEmpty() {
+		// set manual DNS (if defined)
+		_, err := f_implSetManual(manualDNS, localInterfaceIP)
+		return err
+	}
+
+	if !defaultDNS.IsEmpty() {
+		_, err := f_implSetManual(defaultDNS, localInterfaceIP)
+		return err
+	}
+
+	return f_implResume(localInterfaceIP)
+}
 
 // Set manual DNS.
-// 'localInterfaceIP' - not in use for Linux implementation
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
 	defer func() {
 		if retErr != nil {
@@ -118,21 +112,16 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 	// keep info about current manual DNS configuration (can be used for pause/resume)
 	manualDNS = dnsCfg
 
+	dnscryptproxy.Stop()
+
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
 		// it will be applied on RESUME
 		return DnsSettings{}, nil
 	}
 
-	stopDNSChangeMonitoring()
-
-	if dnsCfg.IsEmpty() {
-		return DnsSettings{}, implDeleteManual(nil)
-	}
-
-	dnscryptproxy.Stop()
 	// start encrypted DNS configuration (if required)
-	if dnsCfg.Encryption != EncryptionNone {
+	if !dnsCfg.IsEmpty() && dnsCfg.Encryption != EncryptionNone {
 		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
 			return DnsSettings{}, err
 		}
@@ -140,101 +129,14 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
 	}
 
-	createBackupIfNotExists := func() (created bool, er error) {
-		isOwerwriteIfExists := false
-		return createBackup(resolvBackupFile, isOwerwriteIfExists)
-	}
-
-	saveNewConfig := func() error {
-		createBackupIfNotExists()
-
-		// create new configuration
-		out, err := os.OpenFile(resolvFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, defaultFilePermissions)
-		if err != nil {
-			return fmt.Errorf("failed to update DNS configuration (%w)", err)
-		}
-
-		if _, err := out.WriteString(fmt.Sprintf("# resolv.conf autogenerated by '%s'\n\nnameserver %s\n", os.Args[0], dnsCfg.Ip().String())); err != nil {
-			return fmt.Errorf("failed to change DNS configuration: %w", err)
-		}
-
-		if err := out.Sync(); err != nil {
-			return fmt.Errorf("failed to change DNS configuration: %w", err)
-		}
-		return nil
-	}
-
-	_, err := createBackupIfNotExists()
-	if err != nil {
-		return DnsSettings{}, err
-	}
-
-	// Save new configuration
-	if err := saveNewConfig(); err != nil {
-		return DnsSettings{}, err
-	}
-
-	// enable file change monitoring
-	go func() {
-		w, err := fsnotify.NewWatcher()
-		if err != nil {
-			log.Error(fmt.Errorf("failed to start DNS-change monitoring (fsnotify error): %w", err))
-			return
-		}
-
-		log.Info("DNS-change monitoring started")
-		defer func() {
-			log.Info("DNS-change monitoring stopped")
-			w.Close()
-		}()
-
-		for {
-			// start watching file
-			err = w.Add(resolvFile)
-			if err != nil {
-				log.Error(fmt.Errorf("failed to start DNS-change monitoring (fsnotify error): %w", err))
-				return
-			}
-
-			// wait for changes
-			var evt fsnotify.Event
-			select {
-			case evt = <-w.Events:
-			case <-done:
-				// monitoring stopped
-				return
-			}
-
-			//stop watching file
-			if err := w.Remove(resolvFile); err != nil {
-				log.Error(fmt.Errorf("failed to remove warcher (fsnotify error): %w", err))
-			}
-
-			// wait 2 seconds for reaction (in case if we are stopping of when multiple consecutive file changes)
-			select {
-			case <-time.After(time.Second * 2):
-			case <-done:
-				// monitoring stopped
-				return
-			}
-
-			// restore DNS configuration
-			log.Info(fmt.Sprintf("DNS-change monitoring: DNS was changed outside [%s]. Restoring ...", evt.Op.String()))
-			if err := saveNewConfig(); err != nil {
-				log.Error(err)
-			}
-		}
-	}()
-
-	return dnsCfg, nil
+	return f_implSetManual(dnsCfg, localInterfaceIP)
 }
 
 // DeleteManual - reset manual DNS configuration to default
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
-	dnscryptproxy.Stop()
-
 	manualDNS = DnsSettings{}
+	dnscryptproxy.Stop()
 
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
@@ -242,73 +144,5 @@ func implDeleteManual(localInterfaceIP net.IP) error {
 		return nil
 	}
 
-	// stop file change monitoring
-	stopDNSChangeMonitoring()
-	isDeleteBackup := true // delete backup file
-	return restoreBackup(resolvBackupFile, isDeleteBackup)
-}
-
-func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
-	return []DnsSettings{}, nil
-}
-
-func stopDNSChangeMonitoring() {
-	// stop file change monitoring
-	select {
-	case done <- struct{}{}:
-		break
-	default:
-		break
-	}
-}
-
-func isBackupExists(backupFName string) bool {
-	_, err := os.Stat(backupFName)
-	return err == nil
-}
-
-func createBackup(backupFName string, isOverwriteIfExists bool) (created bool, er error) {
-	if _, err := os.Stat(resolvFile); err != nil {
-		// source file not exists
-		return false, fmt.Errorf("failed to backup DNS configuration (file availability check failed): %w", err)
-	}
-
-	if _, err := os.Stat(backupFName); err == nil {
-		// backup file already exists
-		if !isOverwriteIfExists {
-			return false, nil
-		}
-	}
-
-	if err := os.Rename(resolvFile, backupFName); err != nil {
-		return false, fmt.Errorf("failed to backup DNS configuration: %w", err)
-	}
-	return true, nil
-}
-
-func restoreBackup(backupFName string, isDeleteBackup bool) error {
-	if _, err := os.Stat(backupFName); err != nil {
-		// nothing to restore
-		return nil
-	}
-
-	// restore original configuration
-	if isDeleteBackup {
-		if err := os.Rename(backupFName, resolvFile); err != nil {
-			return fmt.Errorf("failed to restore DNS configuration: %w", err)
-		}
-	} else {
-		tmpFName := resolvFile + ".tmp"
-		if err := helpers.CopyFile(backupFName, tmpFName); err != nil {
-			return fmt.Errorf("failed to restore DNS configuration: %w", err)
-		}
-		if err := os.Chmod(tmpFName, defaultFilePermissions); err != nil {
-			return fmt.Errorf("failed to restore DNS configuration: %w", err)
-		}
-		if err := os.Rename(tmpFName, resolvFile); err != nil {
-			return fmt.Errorf("failed to restore DNS configuration: %w", err)
-		}
-	}
-
-	return nil
+	return f_implDeleteManual(localInterfaceIP)
 }

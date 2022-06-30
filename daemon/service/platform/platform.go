@@ -57,6 +57,7 @@ var (
 	openvpnConfigFile     string
 	openvpnUpScript       string
 	openvpnDownScript     string
+	openvpnUpScriptArg    string
 	openvpnProxyAuthFile  string
 	openvpnUserParamsFile string
 
@@ -85,12 +86,12 @@ func init() {
 
 // Init - initialize all preferences required for a daemon
 // Must be called on beginning of application start by a daemon(service)
-func Init() (warnings []string, errors []error) {
+func Init() (warnings []string, errors []error, logInfo []string) {
 
 	obfsproxyHostPort = 5145
 
 	// do variables initialization for current OS
-	warnings, errors = doOsInit()
+	warnings, errors, logInfo = doOsInit()
 	if errors == nil {
 		errors = make([]error, 0)
 	}
@@ -182,7 +183,7 @@ func Init() (warnings []string, errors []error) {
 
 	createOpenVpnUserParamsFileExample()
 
-	return warnings, errors
+	return warnings, errors, logInfo
 }
 
 func checkFileAccessRightsStaticConfig(paramName string, file string) error {
@@ -316,6 +317,9 @@ func OpenvpnUpScript() string {
 // OpenvpnDownScript path to openvpn Down script file
 func OpenvpnDownScript() string {
 	return openvpnDownScript
+}
+func OpenvpnUpDownScriptArg() string {
+	return openvpnUpScriptArg
 }
 
 // OpenvpnProxyAuthFile path to openvpn proxy credentials file

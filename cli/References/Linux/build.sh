@@ -3,7 +3,7 @@
 # Usage example:
 #   build-packages.sh -v 0.0.1
 
-# To be able to build packages the 'fpm' tool shall be installed
+# To be able to build DEB/RPM packages, the 'fpm' tool shall be installed
 # (https://fpm.readthedocs.io/en/latest/installing.html)
 
 # Useful commands (Ubuntu):

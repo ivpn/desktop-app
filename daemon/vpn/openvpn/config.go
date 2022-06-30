@@ -240,10 +240,10 @@ func (c *ConnectionParams) generateConfiguration(
 	cfg = append(cfg, "verb 4")
 
 	if upCmd := platform.OpenvpnUpScript(); upCmd != "" {
-		cfg = append(cfg, "up \""+upCmd+"\"")
+		cfg = append(cfg, "up \""+upCmd+" "+platform.OpenvpnUpDownScriptArg()+"\"")
 	}
 	if downCmd := platform.OpenvpnDownScript(); downCmd != "" {
-		cfg = append(cfg, "down \""+downCmd+"\"")
+		cfg = append(cfg, "down \""+downCmd+" "+platform.OpenvpnUpDownScriptArg()+"\"")
 	}
 
 	cfg = append(cfg, "script-security 2")

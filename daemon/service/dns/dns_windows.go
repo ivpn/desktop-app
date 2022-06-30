@@ -146,7 +146,7 @@ func catchPanic(err *error) {
 }
 
 // Pause - (on vpn paused) temporary restore OS default DNS parameters
-func implPause() error {
+func implPause(localInterfaceIP net.IP) error {
 	// Not in use for Windows implementation
 	// In paused state we are simply switching to the main network interface (to default routes)
 
@@ -156,7 +156,7 @@ func implPause() error {
 }
 
 // Resume - (on vpn resumed) set VPN-defined DNS parameters
-func implResume(defaultDNS DnsSettings) error {
+func implResume(defaultDNS DnsSettings, localInterfaceIP net.IP) error {
 	// Not in use for Windows implementation
 	// In paused state we are simply switching to the main network interface (to default routes)
 

@@ -27,9 +27,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/api"
@@ -37,6 +39,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/netchange"
 	"github.com/ivpn/desktop-app/daemon/protocol"
 	"github.com/ivpn/desktop-app/daemon/service"
+	"github.com/ivpn/desktop-app/daemon/service/firewall"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/service/wgkeys"
@@ -58,30 +61,32 @@ type IProtocol interface {
 
 // Launch -  initialize and start service
 func Launch() {
-	defer func() {
-		log.Info("IVPN daemon stopped.")
-
-		// OS-specific service finalizer
-		doStopped()
-	}()
-
-	warnings, errors := platform.Init()
+	warnings, errors, logInfo := platform.Init()
 	logger.Init(platform.LogFile())
 
-	// Enable logging (if necessary)
-	// Logging can be enabled from command lone (-logging)
-	// or from previously saved daemon preferences
+	// Logging enabled from command line argument ('-logging').
+	// Logging can be enabled from command line or from previously saved daemon preferences
 	isLoggingEnabledArgument := false
+	// Cleanup requested ('-cleanup'). Do not start server.
+	isCleanupArgument := false
+
+	// Checking command line arguments
 	for _, arg := range os.Args {
 		arg = strings.ToLower(arg)
 		if arg == "-logging" || arg == "--logging" {
 			isLoggingEnabledArgument = true
-			break
+		}
+		if arg == "-cleanup" || arg == "--cleanup" {
+			// Cleanup requested.
+			// IMPORTANT! This operation must be executed ONLY when no any daemon instances running!
+			isLoggingEnabledArgument = true
+			isCleanupArgument = true
 		}
 	}
+
 	if isLoggingEnabledArgument {
 		logger.Enable(true)
-		logger.Info("Loggin enabled (forced by command line argument)")
+		logger.Info("Logging enabled (forced by command line argument)")
 	} else {
 		// initialize logging according to service preferences
 		var prefs preferences.Preferences
@@ -90,14 +95,25 @@ func Launch() {
 		}
 	}
 
+	// Log full version
 	logger.Info("version:" + version.GetFullVersion())
 
-	if len(warnings) > 0 {
-		for _, w := range warnings {
-			logger.Warning(w)
-		}
+	if isCleanupArgument {
+		// Cleanup requested: just do logout, disable firewall and exit.
+		// This can happen on Linux Snap package uninstall (out from 'remove' hook)
+		os.Exit(doCleanup())
+		return
 	}
 
+	// Logging platform initialization info messages
+	for _, platformInitLogItem := range logInfo {
+		logger.Info(fmt.Sprintf("INIT: %s", platformInitLogItem))
+	}
+	// Logging platform initialization warnings
+	for _, w := range warnings {
+		logger.Warning(w)
+	}
+	// Logging platform initialization errors
 	if len(errors) > 0 {
 		for _, e := range errors {
 			logger.Error(e)
@@ -107,6 +123,12 @@ func Launch() {
 		os.Exit(1)
 		return
 	}
+
+	defer func() {
+		log.Info("IVPN daemon stopped.")
+		// OS-specific service finalizer
+		doStopped()
+	}()
 
 	tzName, tzOffsetSec := time.Now().Zone()
 	log.Info("Starting IVPN daemon", fmt.Sprintf(" [%s,%s]", runtime.GOOS, runtime.GOARCH), fmt.Sprintf(" [timezone: %s %d (%dh)]", tzName, tzOffsetSec, tzOffsetSec/(60*60)), " ...")
@@ -124,7 +146,7 @@ func Launch() {
 
 	var secret uint64
 	if err := binary.Read(rand.Reader, binary.BigEndian, &secret); err != nil {
-		log.Panic(fmt.Errorf("failed to generete secret: %w", err))
+		log.Panic(fmt.Errorf("failed to generate secret: %w", err))
 	}
 
 	// obtain (over callback channel) a service listening port
@@ -169,6 +191,62 @@ func Stop() {
 	}
 }
 
+// Logout can be requested by Linux Snap package 'remove' hook (using command line argument)
+// IMPORTANT! This operation must be executed ONLY when no any daemon instances running!
+func doCleanup() (osExitCode int) {
+	log = logger.NewLogger("clean!")
+
+	f := func() error {
+		if !doCheckIsAdmin() {
+			return fmt.Errorf("not privileged environment")
+		}
+		var prefs preferences.Preferences
+		if err := prefs.LoadPreferences(); err != nil {
+			return err
+		}
+
+		// Disable firewall (if enabled)
+		fwEnabled, fwErr := firewall.GetEnabled()
+		if fwErr != nil {
+			log.Error(fwErr)
+		} else if fwEnabled {
+			log.Info("Disabling firewall ...")
+			if fwErr = firewall.SetEnabled(false); fwErr != nil {
+				log.Error(fwErr)
+			} else {
+				log.Info("Firewall disabled")
+			}
+		}
+
+		// Logout
+		session := prefs.Session
+		if !session.IsLoggedIn() {
+			log.Info("Not logged in")
+			return nil
+		}
+
+		// API object
+		apiObj, err := api.CreateAPI()
+		if err != nil {
+			return fmt.Errorf("the API object initialization failed: %w", err)
+		}
+
+		log.Info("Logging out ...")
+		err = apiObj.SessionDelete(session.Session)
+		if err != nil {
+			return err
+		}
+		log.Info("Logging out: done")
+		return nil
+	}
+	if err := f(); err != nil {
+		log.Error(err)
+		return 2
+	}
+
+	return 0
+}
+
 // initialize and start service
 func launchService(secret uint64, startedOnPort chan<- int) {
 	// API object
@@ -203,6 +281,18 @@ func launchService(secret uint64, startedOnPort chan<- int) {
 	if err != nil {
 		log.Panic("Failed to initialize service:", err)
 	}
+
+	// handle interrupt signals
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+	go func() {
+		s := <-sigc
+		log.Warning(fmt.Sprintf("SIGNAL received: '%v'. STOPPING DAEMON...", s))
+		protocol.Stop()
+	}()
 
 	// start receiving requests from client (synchronous)
 	if err := protocol.Start(secret, startedOnPort, serv); err != nil {

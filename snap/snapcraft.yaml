@@ -1,0 +1,246 @@
+# **********************************************
+# Snap package of IVPN software (daemon+CLI+UI)
+# **********************************************
+# How to build snap package:
+# 1) Set 'version:' (bellow) to the same value as in 'ui/package.json'
+# 2) Run command from project root 'desktop-app':
+#     $ snapcraft
+#   or
+#     $ snapcraft --debug --use-lxd
+# **********************************************
+# Installation:
+#     $ sudo snap install <filename>.snap --danderous
+#
+# After package installed:
+#   (this is not required, since the SnapStore enabled auto-connection 
+#   of required interfaces for IVPN package;
+#   the steps can be useful only when snap package was built manually)
+#   1) Manual connection of the required interfaces:
+#     $ sudo snap connect ivpn:network-control
+#     $ sudo snap connect ivpn:firewall-control
+#   2) Restart daemon:
+#     $ sudo snap restart ivpn.daemon
+# **********************************************
+# Another useful commands:
+#   List of services:
+#     $ snap services ivpn
+#   List of connections:
+#     $ snap connections ivpn
+#   Start stop daemon:
+#     $ sudo snap stop ivpn.daemon
+#     $ sudo snap start ivpn.daemon
+#   See logs realtime:
+#     $ sudo snap logs ivpn.daemon -f
+#   See logs:
+#     $ sudo snap logs -n=all ivpn.daemon
+# **********************************************
+# To release/deploy package to SnapStore (only for IVPN developers!):
+#   $ snapcraft upload --release=<risk_level> <snap_file> 
+#     * where <risk_level> could be: edge/beta/candidate/stable
+#     * https://snapcraft.io/docs/releasing-your-app
+#   Example: 
+#     $ snapcraft upload --release=beta ivpn_${VERSION}_amd64.snap 
+# **********************************************
+
+name: ivpn # you probably want to 'snapcraft register <name>'
+base: core20 # the base snap is the execution environment for this snap
+# TODO: Set 'version:' to the same value as in 'ui/package.json'. This value will be used to stamp version for CLI and daemon
+version: "3.8.25" 
+
+title: IVPN
+summary: IVPN - Secure VPN for Privacy  # 79 char long summary
+description: |
+  Secure, private VPN with fast WireGuard connections.
+  Use our open-source privacy app to start a private connection to the third party audited IVPN service. Choose from OpenVPN and WireGuard protocols.
+
+  Features:
+  * multiple protocols (OpenVPN, WireGuard)
+  * Kill-switch
+  * Multi-Hop
+  * Trusted Networks
+  * AntiTracker
+  * Custom DNS
+  * and more ...
+
+license: GPL-3.0
+source-code: https://github.com/ivpn/desktop-app
+issues: https://www.ivpn.net/contactus/
+contact: support@ivpn.net
+website: https://www.ivpn.net
+
+grade: stable # devel # must be 'stable' to release into candidate/stable channels
+confinement: strict # devmode #classic # use 'strict' once you have the right plugs and slots
+
+compression: lzo # increased snap size but faster first start for UI
+
+icon: snap/gui/ivpn.svg
+
+apps:
+  daemon:
+    command: bin/ivpn-service
+    daemon: simple
+    restart-condition: always
+    stop-mode: sigterm
+    plugs:
+      - network-control   # Ability to establish a VPN connection
+      - firewall-control  # Ability to control firewall rules (iptables)
+      - network-bind      # Ability to listen for incoming connections from clients (cli, ui)
+
+  ivpn:
+    command: bin/ivpn
+    plugs:
+      - network
+
+  ui:
+    command: opt/ivpn/ui/bin/ivpn-ui --no-sandbox
+    extensions: [gnome-3-38] # https://snapcraft.io/docs/gnome-3-38-extension
+    plugs:
+      - desktop
+      - desktop-legacy
+      - home
+      - x11
+      - wayland
+      - unity7
+      - browser-support
+      - network
+      - gsettings
+      - opengl
+    autostart: ivpn-ui.desktop
+    environment:
+      GTK_USE_PORTAL: '1'
+      SNAP_DESKTOP_RUNTIME: $SNAP/gnome-platform
+      TMPDIR: $XDG_RUNTIME_DIR # needed to show system tray icon
+
+hooks:
+  remove:
+    plugs: [network, firewall-control]
+
+plugs:
+  # UI: plugs required by [gnome-3-38] extension (https://snapcraft.io/docs/gnome-3-38-extension):
+  gnome-3-38-2004:
+    default-provider: gnome-3-38-2004
+    interface: content
+    target: $SNAP/gnome-platform
+  gtk-3-themes:
+    default-provider: gtk-common-themes
+    interface: content
+    target: $SNAP/data-dir/themes
+  icon-themes:
+    default-provider: gtk-common-themes
+    interface: content
+    target: $SNAP/data-dir/icons
+
+# ToDo: uncomment bellow lines if it is required to expose mutable folder (contains port.txt) to a slot (to be able to connect slot out from external snap)
+#       When using separate snapt for UI (ivpn-ui), it will be necessary to connect daemon port interface to the ivpn-ui snap package:
+#       $ sudo snap connect ivpn-ui:port ivpn:port
+#slots:
+#  port:
+#    interface: content
+#    content: file
+#    read:
+#      - $SNAP_COMMON/opt/ivpn/mutable
+
+parts:
+  daemon:
+    plugin: nil
+    build-snaps:
+      - go
+    build-packages:
+      - libiw30           # libiw for wifiNotifier functionality
+      - libiw-dev         # libiw for wifiNotifier functionality
+      - curl
+      - systemd           # getting 'resolvectl' binary from there
+    stage-packages:
+      - openvpn
+      #- mount             # ability to mount cgroup (for split-tunneling functionality)
+    source: .
+    source-subdir: daemon
+    override-build: |
+      daemon/References/Linux/scripts/build-daemon.sh -v $SNAPCRAFT_PROJECT_VERSION
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cp daemon/References/Linux/scripts/_out_bin/ivpn-service $SNAPCRAFT_PART_INSTALL/bin
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/bin
+      rctlpath=$( which resolvectl )
+      cp $rctlpath $SNAPCRAFT_PART_INSTALL/usr/bin
+
+  cli:
+    plugin: nil
+    build-snaps:
+      - go
+    build-packages:
+      - git
+    source: .
+    source-subdir: cli
+    override-build: |
+      cli/References/Linux/compile-cli.sh -v $SNAPCRAFT_PROJECT_VERSION
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cp cli/References/Linux/_out_bin/ivpn $SNAPCRAFT_PART_INSTALL/bin
+
+  wireguard-tools:
+    plugin: nil
+    build-snaps:
+    - go
+    build-packages:
+    - git
+    source: ./daemon/References/Linux
+    override-build: |
+      rm -fr ./_deps/wireguard-tools*
+      ./scripts/build-wireguard-tools.sh
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/wireguard-tools
+      cp _deps/wireguard-tools_inst/wg-quick $SNAPCRAFT_PART_INSTALL/opt/ivpn/wireguard-tools/wg-quick
+      cp _deps/wireguard-tools_inst/wg $SNAPCRAFT_PART_INSTALL/opt/ivpn/wireguard-tools/wg
+
+  dnscrypt-proxy:
+    plugin: nil
+    build-snaps:
+    - go
+    build-packages:
+    - git
+    source: ./daemon/References/Linux
+    override-build: |
+      rm -fr ./_deps/dnscryptproxy*
+      ./scripts/build-dnscrypt-proxy.sh
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/dnscrypt-proxy
+      cp _deps/dnscryptproxy_inst/dnscrypt-proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/dnscrypt-proxy/dnscrypt-proxy
+
+  obfs4proxy:
+    plugin: nil
+    build-snaps:
+    - go
+    build-packages:
+    - git
+    source: ./daemon/References/Linux
+    override-build: |
+      rm -fr ./_deps/obfs4proxy*
+      ./scripts/build-obfs4proxy.sh
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy
+      cp _deps/obfs4proxy_inst/obfs4proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy/obfs4proxy
+
+  etc:
+    plugin: dump
+    source: ./daemon/References/Linux/etc
+    organize:
+      "*": opt/ivpn/etc/
+    override-build: |
+      snapcraftctl build
+      chmod 0400 *
+      chmod 0600 servers.json
+      chmod 0700 *.sh
+      chmod 0700 *.up
+      chmod 0700 *.down
+
+  ui:
+    plugin: nil
+    source: ./ui
+    build-snaps:
+      - node/16/stable
+    build-packages:
+      - npm
+    stage-packages:
+      - libnspr4
+      - libnss3
+    override-build: |
+      rm -fr dist_electron
+      ./References/Linux/build.sh -v $SNAPCRAFT_PROJECT_VERSION
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui
+      cp -R dist_electron/bin $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui

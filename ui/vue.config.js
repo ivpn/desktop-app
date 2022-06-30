@@ -36,8 +36,25 @@ module.exports = {
         },
 
         linux: {
-          // do not build appImage. We do not need it
-          target: "dir",
+          //target: ["dir", "snap"], 
+          target: ["dir"],
+          category: "Network",
+        },
+
+        snap: {
+          confinement: "strict",
+          autoStart: true, // ability to autostart (when file exists: '$SNAP_USER_DATA/.config/autostart/ivpn-ui.desktop')
+          //stagePackages: ["default", "ivpn"],
+          plugs: [
+            "default",
+            {
+              port: {
+                interface: "content",
+                content: "file",
+                target: "$SNAP_COMMON/opt/ivpn/mutable",
+              },
+            },
+          ],
         },
 
         extraResources: [

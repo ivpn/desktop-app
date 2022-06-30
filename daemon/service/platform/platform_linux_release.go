@@ -29,8 +29,18 @@ import (
 	"path"
 )
 
-func doOsInitForBuild() (warnings []string, errors []error) {
+func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 	installDir := "/opt/ivpn"
+
+	// check if we are running in snap environment
+	if envs := GetSnapEnvs(); envs != nil {
+		installDir = path.Join(envs.SNAP, "/opt/ivpn")
+
+		if logInfo == nil {
+			logInfo = make([]string, 0)
+		}
+		logInfo = append(logInfo, "Running in SNAP environment!")
+	}
 
 	firewallScript = path.Join(installDir, "etc/firewall.sh")
 	splitTunScript = path.Join(installDir, "etc/splittun.sh")
@@ -38,7 +48,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnTaKeyFile = path.Join(installDir, "etc/ta.key")
 	openvpnUpScript = path.Join(installDir, "etc/client.up")
 	openvpnDownScript = path.Join(installDir, "etc/client.down")
-	serversFile = path.Join(installDir, "etc/servers.json")
+	serversFileBundled = path.Join(installDir, "etc/servers.json")
 
 	obfsproxyStartScript = path.Join(installDir, "obfsproxy/obfs4proxy")
 
@@ -54,5 +64,5 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnProxyAuthFile = path.Join(tmpDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(tmpDir, "wgivpn.conf")
 
-	return nil, nil
+	return nil, nil, logInfo
 }

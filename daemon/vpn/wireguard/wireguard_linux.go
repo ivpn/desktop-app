@@ -93,7 +93,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	// loop connection initialisation (required for pause\resume functionality)
 	// on 'pause' - we stopping WG interface but not exiting this (connect) method
 	// (method 'connect' is synchronous, must NOT exit on pause)
-	for true {
+	for {
 		// generate configuration
 		err := wg.generateAndSaveConfigFile(wg.configFilePath)
 		if err != nil {
@@ -115,19 +115,19 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 			// do not forget to restore DNS
 			defer func() {
 				// restore DNS configuration
-				if err := dns.DeleteManual(nil, nil); err != nil {
+				if err := dns.DeleteManual(nil, wg.connectParams.clientLocalIP); err != nil {
 					log.Warning(fmt.Sprintf("failed to restore DNS configuration: %s", err))
 				}
 			}()
 			// update DNS configuration
 
 			if !wg.internals.manualDNS.IsEmpty() {
-				if err := dns.SetManual(wg.internals.manualDNS, nil); err != nil {
+				if err := dns.SetManual(wg.internals.manualDNS, wg.connectParams.clientLocalIP); err != nil {
 					return fmt.Errorf("failed to set manual DNS: %w", err)
 				}
 			} else {
 				dnsIP := dns.DnsSettingsCreate(wg.DefaultDNS())
-				if err := dns.SetDefault(dnsIP, nil); err != nil {
+				if err := dns.SetDefault(dnsIP, wg.connectParams.clientLocalIP); err != nil {
 					return fmt.Errorf("failed to set DNS: %w", err)
 				}
 			}
@@ -199,7 +199,7 @@ func (wg *WireGuard) isPaused() bool {
 }
 
 func (wg *WireGuard) pause() error {
-	if wg.internals.isRunning == false {
+	if !wg.internals.isRunning {
 		return nil
 	}
 	wg.internals.isPaused = true
@@ -207,7 +207,7 @@ func (wg *WireGuard) pause() error {
 }
 
 func (wg *WireGuard) resume() error {
-	if wg.internals.isPaused == false || wg.internals.isRunning == false {
+	if !wg.internals.isPaused || !wg.internals.isRunning {
 		return nil
 	}
 	wg.internals.isPaused = false
@@ -222,10 +222,10 @@ func (wg *WireGuard) setManualDNS(dnsCfg dns.DnsSettings) error {
 	// set DNS called outside
 	wg.internals.manualDNS = dnsCfg
 
-	if wg.isPaused() || wg.internals.isRunning == false {
+	if wg.isPaused() || !wg.internals.isRunning {
 		return nil
 	}
-	return dns.SetManual(dnsCfg, nil)
+	return dns.SetManual(dnsCfg, wg.connectParams.clientLocalIP)
 }
 
 func (wg *WireGuard) resetManualDNS() error {
@@ -237,9 +237,9 @@ func (wg *WireGuard) resetManualDNS() error {
 
 	if wg.internals.isRunning {
 		// changing DNS to default value for current WireGuard connection
-		return dns.SetManual(dns.DnsSettingsCreate(wg.DefaultDNS()), nil)
+		return dns.SetManual(dns.DnsSettingsCreate(wg.DefaultDNS()), wg.connectParams.clientLocalIP)
 	}
-	return dns.DeleteManual(nil, nil)
+	return dns.DeleteManual(nil, wg.connectParams.clientLocalIP)
 }
 
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {

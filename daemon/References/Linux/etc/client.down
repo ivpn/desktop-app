@@ -4,4 +4,11 @@ if [ -e /etc/resolv.conf.ivpnsave ] ; then
   mv /etc/resolv.conf.ivpnsave /etc/resolv.conf
 fi
 
+if [ "$1" = "-use-resolvconf" ] ; then
+  resolvectlBin=$2
+  ${resolvectlBin} domain ${dev} ''
+  ${resolvectlBin} default-route ${dev} false  
+  exit 0
+fi
+
 exit 0

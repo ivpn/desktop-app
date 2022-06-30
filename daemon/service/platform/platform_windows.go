@@ -54,7 +54,7 @@ func doInitConstants() {
 	paranoidModeSecretFile = path.Join(installDir, "etc/eaa") // file located in 'etc' will not be removed during app upgrade
 }
 
-func doOsInit() (warnings []string, errors []error) {
+func doOsInit() (warnings []string, errors []error, logInfo []string) {
 	SYSTEMROOT := os.Getenv("SYSTEMROOT")
 	if len(SYSTEMROOT) > 0 {
 		routeCommand = strings.ReplaceAll(path.Join(SYSTEMROOT, "System32", "ROUTE.EXE"), "/", "\\")
@@ -117,7 +117,7 @@ func doOsInit() (warnings []string, errors []error) {
 		warnings = append(warnings, fmt.Errorf("file not exists: '%s'", splitTunDriverPath).Error())
 	}
 
-	return warnings, errors
+	return warnings, errors, logInfo
 }
 
 func doInitOperations() (w string, e error) { return "", nil }

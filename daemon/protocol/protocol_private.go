@@ -105,6 +105,11 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 	func() {
 		p._connectionsMutex.RLock()
 		defer p._connectionsMutex.RUnlock()
+
+		if len(p._connections) > 0 {
+			log.Info("Notifying clients: 'daemon is stopping'...")
+		}
+
 		for conn := range p._connections {
 			// notifying client "service is going to stop" (client application (UI) will close)
 			p.sendResponse(conn, &types.ServiceExitingResp{}, 0)

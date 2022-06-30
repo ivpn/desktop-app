@@ -28,6 +28,4 @@ git checkout tags/${_VERSION}
 echo "******** Compiling 'dnscrypt-proxy'..."
 go build -o ${INSTALL_DIR}/dnscrypt-proxy -trimpath -ldflags "-s -w" ./dnscrypt-proxy
 
-echo "********************************"
 echo "******** BUILD COMPLETE ********"
-echo "********************************"

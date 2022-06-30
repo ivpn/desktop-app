@@ -52,6 +52,12 @@ const stPidsFile = "/sys/fs/cgroup/net_cls/ivpn-exclude/cgroup.procs"
 func implInitialize() error {
 	funcNotAvailableError = nil
 
+	snapEvs := platform.GetSnapEnvs()
+	if snapEvs != nil {
+		funcNotAvailableError = fmt.Errorf("Split-Tunnelling not applicable out from snap sandbox")
+		return funcNotAvailableError
+	}
+
 	stScriptPath = platform.SplitTunScript()
 	if len(stScriptPath) <= 0 {
 		funcNotAvailableError = fmt.Errorf("Split-Tunnelling script is not defined")
