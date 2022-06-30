@@ -50,6 +50,7 @@ type CmdServers struct {
 	filter       string
 	ping         bool
 	hosts        bool
+	load         bool
 	filterInvert bool
 }
 
@@ -74,19 +75,43 @@ func (c *CmdServers) Init() {
 	c.BoolVar(&c.ping, "ping", false, "Ping servers and view ping result")
 
 	c.BoolVar(&c.hosts, "hosts", false, "Show location hosts")
+	c.BoolVar(&c.load, "load", false, "Show load info for each host")
 
 	c.BoolVar(&c.filterInvert, "filter_invert", false, "Invert filtering result")
 }
 func (c *CmdServers) Run() error {
-	servers, err := _proto.GetServers()
-	if err != nil {
-		return err
+	var servers apitypes.ServersInfoResponse
+	var err error
+
+	isServersLoaded := false
+	if c.load {
+		fmt.Println("Updating servers load info...")
+		c.hosts = true                                // show also host info
+		servers, err = _proto.GetServersForceUpdate() // force update servers info (we need latest host load statuses)
+		if err != nil {
+			fmt.Println("Failed to update servers load info. Using cached data!")
+		} else {
+			isServersLoaded = true
+		}
+	}
+
+	if !isServersLoaded {
+		servers, err = _proto.GetServers()
+		if err != nil {
+			return err
+		}
 	}
 
 	slist := serversList(servers)
 
 	if c.ping {
-		if err := serversPing(slist, true); err != nil {
+		var vpnType *vpn.Type = nil
+		if len(c.proto) > 0 {
+			if p, err := getVpnTypeByFlag(c.proto); err == nil {
+				vpnType = &p
+			}
+		}
+		if err := serversPing(slist, true, c.hosts, vpnType); err != nil {
 			return err
 		}
 	}
@@ -95,22 +120,24 @@ func (c *CmdServers) Run() error {
 
 	pingHeader := ""
 	hostsHeader := ""
-	pingEmptyVal := ""
+	hostsLoadHeader := ""
 	if c.ping {
 		pingHeader = "PING\t"
-		pingEmptyVal = "\t"
 	}
 	if c.hosts {
 		hostsHeader = "HOSTS\t"
+		if c.load {
+			hostsLoadHeader = "LOAD\t"
+		}
 	}
 
-	fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\t"+pingHeader+hostsHeader)
+	fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\t"+pingHeader+hostsHeader+hostsLoadHeader)
 
 	helloResp := _proto.GetHelloResponse()
 	isWgDisabled := len(helloResp.DisabledFunctions.WireGuardError) > 0
 	isOpenVPNDisabled := len(helloResp.DisabledFunctions.OpenVPNError) > 0
 
-	svrs, _ := serversFilter(isWgDisabled, isOpenVPNDisabled,
+	svrs := serversFilter(isWgDisabled, isOpenVPNDisabled,
 		slist, c.filter, c.proto, c.location, c.city, c.countryCode, c.country, c.filterInvert)
 	for _, s := range svrs {
 		str := ""
@@ -128,19 +155,35 @@ func (c *CmdServers) Run() error {
 		}
 
 		firstHostStr := ""
+		firstHostLoadStr := ""
 		if c.hosts {
 			firstHostStr = "\t"
 			if len(s.hosts) > 0 {
 				firstHostStr = s.hosts[0].hostname + "\t"
+				if c.load {
+
+					firstHostLoadStr = fmt.Sprintf("%d", int(s.hosts[0].load+0.5)) + "%\t"
+				}
 			}
 		}
 
-		str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s%s", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo, pingStr, firstHostStr)
+		str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s%s%s", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo, pingStr, firstHostStr, firstHostLoadStr)
 		fmt.Fprintln(w, str)
 
 		if c.hosts && len(s.hosts) > 1 {
 			for _, h := range s.hosts[1:] {
-				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s%s", "", "", "", "", "", "", pingEmptyVal, h.hostname+"\t")
+				if c.ping {
+					pingStr = " ?  \t"
+					if h.pingMs > 0 {
+						pingStr = fmt.Sprintf("%dms\t", h.pingMs)
+					}
+				}
+
+				loadStr := ""
+				if c.load {
+					loadStr = fmt.Sprintf("%d", int(h.load+0.5)) + "%\t"
+				}
+				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s%s%s", "", "", "", "", "", "", pingStr, h.hostname+"\t", loadStr)
 				fmt.Fprintln(w, str)
 			}
 		}
@@ -199,7 +242,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 				if len(h.IPv6.LocalIP) > 0 {
 					isIPv6Tunnel = true
 				}
-				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname)})
+				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load})
 			}
 			ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts, isIPv6Tunnel: isIPv6Tunnel})
 		}
@@ -210,7 +253,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 			hosts := make([]hostDesc, 0, len(s.Hosts))
 
 			for _, h := range s.Hosts {
-				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname)})
+				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load})
 			}
 			ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
 		}
@@ -218,7 +261,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 	return ret
 }
 
-func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc, mask string, proto string, useGw, useCity, useCCode, useCountry, invertFilter bool) (svrs []serverDesc, isStrictHost bool) {
+func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc, mask string, proto string, useGw, useCity, useCCode, useCountry, invertFilter bool) (svrs []serverDesc) {
 	if isWgDisabled || isOvpnDisabled {
 		oldSvrs := servers
 		servers = make([]serverDesc, 0, len(oldSvrs))
@@ -234,7 +277,7 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 	}
 
 	if len(mask) == 0 && len(proto) == 0 {
-		return servers, false
+		return servers
 	}
 	mask = strings.ToLower(mask)
 	checkAll := !(useGw || useCity || useCCode || useCountry)
@@ -271,8 +314,6 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 		for _, h := range s.hosts {
 			if h.hostname == mask {
 				isOK = true
-				isStrictHost = true
-				s.hosts = []hostDesc{h}
 				break
 			}
 		}
@@ -284,12 +325,12 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 			ret = append(ret, s)
 		}
 	}
-	return ret, isStrictHost
+	return ret
 }
 
-func serversPing(servers []serverDesc, needSort bool) error {
+func serversPing(servers []serverDesc, needSort bool, pingAllHostsOnFirstPhase bool, vpnTypePrioritized *vpn.Type) error {
 	fmt.Println("Pinging servers ...")
-	pingRes, err := _proto.PingServers()
+	pingRes, err := _proto.PingServers(pingAllHostsOnFirstPhase, vpnTypePrioritized)
 	if err != nil {
 		return err
 	}
@@ -299,12 +340,21 @@ func serversPing(servers []serverDesc, needSort bool) error {
 
 	for _, pr := range pingRes {
 		for i, s := range servers {
-			for _, h := range s.hosts {
+			serverPing := 0
+			// set ping result for each host
+			for j, h := range s.hosts {
 				if h.host == pr.Host {
-					s.pingMs = pr.Ping
-					servers[i] = s
-					break
+					h.pingMs = pr.Ping
+					s.hosts[j] = h
+					if serverPing <= 0 || serverPing > pr.Ping {
+						serverPing = pr.Ping
+					}
 				}
+			}
+			// set min ping result for server
+			if serverPing > 0 {
+				s.pingMs = serverPing
+				servers[i] = s
 			}
 		}
 	}
@@ -329,6 +379,8 @@ func serversPing(servers []serverDesc, needSort bool) error {
 type hostDesc struct {
 	hostname string
 	host     string // ip
+	pingMs   int
+	load     float32
 }
 
 type serverDesc struct {

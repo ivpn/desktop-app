@@ -44,7 +44,6 @@ import {
 import store from "@/store";
 
 const PingServersTimeoutMs = 4000;
-const PingServersRetriesCnt = 4;
 
 const DefaultResponseTimeoutMs = 3 * 60 * 1000;
 
@@ -66,6 +65,7 @@ const daemonRequests = Object.freeze({
   GenerateDiagnostics: "GenerateDiagnostics",
 
   PingServers: "PingServers",
+  GetServers: "GetServers",
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
   AccountStatus: "AccountStatus",
@@ -1087,6 +1087,13 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
   }
 }
 
+async function ServersUpdateRequest() {
+  send({
+    Command: daemonRequests.GetServers,
+    RequestServersUpdate: true, //Force to update servers from the backend (locations, hosts and hosts load)
+  });
+}
+
 let pingServersPromise = null;
 async function PingServers(RetryCount, TimeOutMs) {
   const p = pingServersPromise;
@@ -1101,8 +1108,9 @@ async function PingServers(RetryCount, TimeOutMs) {
     pingServersPromise = sendRecv(
       {
         Command: daemonRequests.PingServers,
-        RetryCount: RetryCount ? RetryCount : PingServersRetriesCnt,
         TimeOutMs: TimeOutMs ? TimeOutMs : PingServersTimeoutMs,
+        VpnTypePrioritization: true,
+        VpnTypePrioritized: store.state.settings.vpnType,
       },
       [daemonResponses.PingServersResp]
     );
@@ -1197,6 +1205,14 @@ async function Connect(entryServer, exitServer) {
       }
     }
 
+    const getHosts = function (server, customHostId) {
+      if (!customHostId) return server.hosts;
+      for (const h of server.hosts) {
+        if (h.hostname.startsWith(customHostId + ".")) return [h];
+      }
+      return server.hosts;
+    };
+
     let port = store.getters["settings/getPort"];
 
     let multihopExitSrvID = settings.isMultiHop
@@ -1208,9 +1224,15 @@ async function Connect(entryServer, exitServer) {
 
       vpnParamsObj = {
         EntryVpnServer: {
-          Hosts: settings.serverEntry.hosts,
+          Hosts: getHosts(settings.serverEntry, settings.serverEntryHostId),
         },
-        MultihopExitSrvID: multihopExitSrvID,
+
+        MultihopExitServer: settings.isMultiHop
+          ? {
+              ExitSrvID: multihopExitSrvID,
+              Hosts: getHosts(settings.serverExit, settings.serverExitHostId),
+            }
+          : null,
 
         Port: {
           Port: port.port,
@@ -1237,13 +1259,13 @@ async function Connect(entryServer, exitServer) {
       vpnParamsPropName = "WireGuardParameters";
       vpnParamsObj = {
         EntryVpnServer: {
-          Hosts: settings.serverEntry.hosts,
+          Hosts: getHosts(settings.serverEntry, settings.serverEntryHostId),
         },
 
         MultihopExitServer: settings.isMultiHop
           ? {
               ExitSrvID: multihopExitSrvID,
-              Hosts: settings.serverExit.hosts,
+              Hosts: getHosts(settings.serverExit, settings.serverExitHostId),
             }
           : null,
 
@@ -1811,6 +1833,7 @@ export default {
 
   GeoLookup,
   PingServers,
+  ServersUpdateRequest,
   KillSwitchGetStatus,
   Connect,
   Disconnect,

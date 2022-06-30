@@ -73,11 +73,11 @@ func (s *serversUpdater) GetServers() (*types.ServersInfoResponse, error) {
 	if err != nil {
 		log.Warning(err)
 
-		if s.api.IsAlternateIPsInitialized(false) == false && s.api.IsAlternateIPsInitialized(true) == false {
+		if !s.api.IsAlternateIPsInitialized(false) && s.api.IsAlternateIPsInitialized(true) {
 			// Probably we can not use servers info because servers.json has wrong privileges (potential vulnerability)
 			// Trying to initialize only API IP addresses
 			// It is safe, because we are checking TLS server name for "api.ivpn.net" when accessing API (https)
-			if (apiIPsV4 != nil && len(apiIPsV4) > 0) || (apiIPsV6 != nil && len(apiIPsV6) > 0) {
+			if len(apiIPsV4) > 0 || len(apiIPsV6) > 0 {
 				s.api.SetAlternateIPs(apiIPsV4, apiIPsV6)
 			}
 		}
@@ -88,6 +88,13 @@ func (s *serversUpdater) GetServers() (*types.ServersInfoResponse, error) {
 		return servers, nil
 	}
 
+	return s.updateServers()
+}
+
+// GetServersForceUpdate returns servers list info (locations, hosts and host load).
+// The daemon will make request to update servers from the backend.
+// The cached data will be ignored in this case.
+func (s *serversUpdater) GetServersForceUpdate() (*types.ServersInfoResponse, error) {
 	return s.updateServers()
 }
 

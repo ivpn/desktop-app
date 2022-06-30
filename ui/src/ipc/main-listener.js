@@ -86,6 +86,10 @@ ipcMain.handle("renderer-request-ping-servers", async () => {
   return client.PingServers();
 });
 
+ipcMain.handle("renderer-request-update-servers-request", async () => {
+  return client.ServersUpdateRequest();
+});
+
 ipcMain.handle(
   "renderer-request-connect",
   async (event, entryServer, exitServer) => {

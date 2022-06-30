@@ -48,6 +48,9 @@ export default {
 }
 
 .pingtext {
+  width: 100%;
+  text-align: right;
+  padding-right: 10px;
   margin-left: 9px;
   color: var(--text-color-details);
 }

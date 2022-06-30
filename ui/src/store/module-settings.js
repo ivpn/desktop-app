@@ -25,6 +25,7 @@ import {
   ServersSortTypeEnum,
   ColorTheme,
   DnsEncryption,
+  PortTypeEnum,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -44,12 +45,17 @@ const getDefaultState = () => {
     isMultiHop: false,
     serverEntry: null,
     serverExit: null,
+    serverEntryHostId: null, // property is defined when selected specific host (contains only host ID: "us-tx1.gw.ivpn.net" => "us-tx1")
+    serverExitHostId: null, // property is defined when selected specific host (contains only host ID: "us-tx1.gw.ivpn.net" => "us-tx1")
     isFastestServer: true,
     isRandomServer: false,
     isRandomExitServer: false,
 
-    // Favorite gateway's list (strings)
+    // Favorite gateway's list (strings [gateway])
     serversFavoriteList: [],
+    // Favorite hosts list (strings [hostname])
+    hostsFavoriteList: [],
+
     // List of servers to exclude from fastest servers list (gateway, strings)
     serversFastestExcludeList: [],
 
@@ -132,6 +138,7 @@ const getDefaultState = () => {
     colorTheme: ColorTheme.system,
     connectSelectedMapLocation: false,
     windowRestorePosition: null, // {x=xxx, y=xxx}
+    showHosts: false, //Enable selection of individual servers in server selection list
 
     // updates
     skipAppUpdate: {
@@ -188,12 +195,30 @@ export default {
     serverEntry(state, srv) {
       if (srv == null || srv.gateway == null)
         throw new Error("Unable to change server. Wrong server object.");
+      if (!isServerContainsHost(state.serverEntry, state.serverEntryHostId))
+        state.serverEntryHostId = null;
       state.serverEntry = srv;
     },
     serverExit(state, srv) {
       if (srv == null || srv.gateway == null)
         throw new Error("Unable to change server. Wrong server object.");
+      if (!isServerContainsHost(state.serverExit, state.serverExitHostId))
+        state.serverExitHostId = null;
       state.serverExit = srv;
+    },
+    serverEntryHostId(state, hostId) {
+      if (hostId) {
+        hostId = hostId.split(".")[0]; // convert hostname to hostId (if necessary)
+        if (!isServerContainsHost(state.serverEntry, hostId)) hostId = null;
+      }
+      state.serverEntryHostId = hostId;
+    },
+    serverExitHostId(state, hostId) {
+      if (hostId) {
+        hostId = hostId.split(".")[0]; // convert hostname to hostId (if necessary)
+        if (!isServerContainsHost(state.serverExit, hostId)) hostId = null;
+      }
+      state.serverExitHostId = hostId;
     },
     isFastestServer(state, val) {
       state.isFastestServer = val;
@@ -210,6 +235,9 @@ export default {
     // Favorite gateway's list (strings)
     serversFavoriteList(state, val) {
       state.serversFavoriteList = val;
+    },
+    hostsFavoriteList(state, val) {
+      state.hostsFavoriteList = val;
     },
     serversFastestExcludeList(state, val) {
       state.serversFastestExcludeList = val;
@@ -330,6 +358,14 @@ export default {
     windowRestorePosition(state, val) {
       state.windowRestorePosition = val;
     },
+    showHosts(state, val) {
+      state.showHosts = val;
+      // if disabled - erase info about currently selected hosts
+      if (val !== true) {
+        state.serverEntryHostId = null;
+        state.serverExitHostId = null;
+      }
+    },
 
     // updates
     skipAppUpdate(state, val) {
@@ -357,17 +393,59 @@ export default {
     },
     favoriteServers: (state, getters, rootState, rootGetters) => {
       // Get favorite servers for current protocol
-
       try {
         // All favorite servers (for all protocols)
         let favorites = state.serversFavoriteList;
-        // hosts for current protocol
-        let activeHosts = rootGetters["vpnState/activeServers"];
-        if (!activeHosts || !favorites) return null;
+        // servers for current protocol
+        let activeServers = rootGetters["vpnState/activeServers"];
+        if (!activeServers || !favorites) return null;
 
-        return activeHosts.filter((s) => favorites.includes(s.gateway));
+        return activeServers.filter((s) => favorites.includes(s.gateway));
       } catch (e) {
         console.error("Failed to get Favorite servers: ", e);
+        return null;
+      }
+    },
+    // Returns array of information objects about favorite hosts:
+    // host object extended by all properties from parent server object +favHostParentServerObj +favHost
+    favoriteHosts: (state, getters, rootState, rootGetters) => {
+      // Get favorite servers for current protocol
+      try {
+        // All favorite hostnames (for all protocols)
+        let fHostnames = state.hostsFavoriteList.slice();
+        // Servers for current protocol
+        let activeServers = rootGetters["vpnState/activeServers"];
+        if (!activeServers || !fHostnames) return null;
+
+        // All hostnames for current protocol
+        let activeServersHostsHashed = {};
+        for (const s of activeServers) {
+          for (const h of s.hosts) {
+            activeServersHostsHashed[h.hostname] = s;
+          }
+        }
+
+        // Looking for host objects for current protocol
+        let ret = []; // array: [{host{}, server{}, isFavoriteHost: true}]
+        for (const h of fHostnames) {
+          if (!activeServersHostsHashed[h]) continue;
+
+          const svr = activeServersHostsHashed[h];
+          for (const host of svr.hosts) {
+            if (host.hostname == h) {
+              let favHostExInfo = Object.assign({}, svr); // copy all info about location... etc.
+              favHostExInfo = Object.assign(favHostExInfo, host); // overwrite host-related properties (like ping info)
+              favHostExInfo.gateway = svr.gateway + ":" + host.hostname; // to avoid duplicate keys in UI lists
+              favHostExInfo.favHostParentServerObj = svr; // original parent server object
+              favHostExInfo.favHost = host; // original host object
+
+              ret.push(favHostExInfo);
+            }
+          }
+        }
+        return ret;
+      } catch (e) {
+        console.error("Failed to get Favorite hosts: ", e);
         return null;
       }
     },
@@ -396,7 +474,25 @@ export default {
     isMultiHop(context, val) {
       if (context.rootGetters["account/isMultihopAllowed"] === false)
         context.commit("isMultiHop", false);
-      else context.commit("isMultiHop", val);
+      else {
+        const oldVal = this.state.settings.isMultiHop;
+        context.commit("isMultiHop", val);
+
+        if (val === true && oldVal !== val) {
+          // do not change port if MH value was not changed (otherwise, new connection request will be sent)
+          if (this.state.settings.vpnType == VpnTypeEnum.WireGuard)
+            context.commit("setPort", Ports.WireGuardMultiHop[0]);
+          else {
+            let applicablePorts = Ports.OpenVPNMultiHop;
+            if (this.state.settings.connectionUseObfsproxy === true) {
+              applicablePorts = Ports.OpenVPNMultiHop.filter(
+                (p) => p.type === PortTypeEnum.TCP
+              );
+            }
+            context.commit("setPort", applicablePorts[0]);
+          }
+        }
+      }
     },
     serverEntry(context, srv) {
       context.commit("serverEntry", srv);
@@ -405,6 +501,12 @@ export default {
     serverExit(context, srv) {
       context.commit("serverExit", srv);
       updateSelectedServers(context); // just to be sure entry-  and exit- servers are from different countries
+    },
+    serverEntryHostId(context, hostId) {
+      context.commit("serverEntryHostId", hostId);
+    },
+    serverExitHostId(context, hostId) {
+      context.commit("serverExitHostId", hostId);
     },
     isFastestServer(context, val) {
       context.commit("isFastestServer", val);
@@ -419,6 +521,9 @@ export default {
     // Favorite gateway's list (strings)
     serversFavoriteList(context, val) {
       context.commit("serversFavoriteList", val);
+    },
+    hostsFavoriteList(context, val) {
+      context.commit("hostsFavoriteList", val);
     },
     serversFastestExcludeList(context, val) {
       context.commit("serversFastestExcludeList", val);
@@ -437,6 +542,15 @@ export default {
 
     // connection
     connectionUseObfsproxy(context, val) {
+      if (val === true) {
+        // only TCP connections applicable for obfsproxy
+        let ports = this.state.settings.isMultiHop
+          ? Ports.OpenVPN
+          : Ports.OpenVPNMultiHop;
+        ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+        context.commit("setPort", ports[0]);
+      }
+
       context.commit("connectionUseObfsproxy", val);
     },
     setPort(context, portVal) {
@@ -558,6 +672,9 @@ export default {
     colorTheme(context, val) {
       context.commit("colorTheme", val);
     },
+    showHosts(context, val) {
+      context.commit("showHosts", val);
+    },
 
     // UPDATES
     skipAppUpdate(context, val) {
@@ -676,7 +793,43 @@ function updateSelectedServers(context) {
     }
   }
 
+  // update selected servers (in necessary)
   if (serverEntry !== state.serverEntry)
     context.commit("serverEntry", serverEntry);
   if (serverExit !== state.serverExit) context.commit("serverExit", serverExit);
+
+  // update selected hosts (if necessary)
+  let entryHost = state.serverEntryHostId;
+  let exitHost = state.serverExitHostId;
+  if (entryHost && !isServerContainsHost(state.serverEntry, entryHost))
+    context.commit("serverEntryHostId", null);
+  if (exitHost && !isServerContainsHost(state.serverExit, exitHost))
+    context.commit("serverExitHostId", null);
+
+  // Remove servers/hosts from favorite list (if they are not exists anymore)
+  let favServers = state.serversFavoriteList;
+  for (const gw of state.serversFavoriteList) {
+    if (!serversHashed[gw]) {
+      favServers = favServers.filter((fGw) => gw != fGw);
+    }
+  }
+  context.commit("serversFavoriteList", favServers);
+
+  const hostsHashed = context.rootState.vpnState.hostsHashed;
+  let favHosts = state.hostsFavoriteList;
+  for (const h of state.hostsFavoriteList) {
+    if (!hostsHashed[h]) {
+      favHosts = favHosts.filter((fh) => h != fh);
+    }
+  }
+  context.commit("hostsFavoriteList", favHosts);
+}
+
+function isServerContainsHost(server, hostID) {
+  // hostID: "us-tx1.gw.ivpn.net" => "us-tx1"
+  if (!hostID) return false;
+  for (const h of server.hosts) {
+    if (h.hostname.startsWith(hostID + ".")) return true;
+  }
+  return false;
 }

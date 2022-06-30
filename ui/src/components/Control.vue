@@ -219,7 +219,10 @@ export default {
         await sender.PauseConnection(seconds);
       }
     },
-    onShowServersPressed(isExitServers) {
+    async onShowServersPressed(isExitServers) {
+      // send request to update servers from backend
+      sender.UpdateServersRequest();
+
       this.uiView = isExitServers
         ? viewTypeEnum.serversExit
         : viewTypeEnum.serversEntry;
@@ -233,7 +236,11 @@ export default {
           1000 >
           30
       ) {
-        sender.PingServers();
+        try {
+          await sender.PingServers();
+        } catch (e) {
+          console.error(e);
+        }
         this.lastServersPingRequestTime = new Date();
       }
     },
@@ -249,28 +256,37 @@ export default {
 
       setTimeout(this.recalcScrollButtonVisiblity, 1000);
     },
-    onServerChanged(server, isExitServer) {
+    onServerChanged(server, isExitServer, serverHostName) {
       if (server == null || isExitServer == null) return;
+      let hostId = null;
+      if (serverHostName) {
+        // serverHostName - not null when user selected specific host of the server
+        hostId = serverHostName.split(".")[0];
+      }
 
       let needReconnect = false;
       if (!isExitServer) {
         if (
           !this.$store.state.settings.serverEntry ||
           this.$store.state.settings.serverEntry.gateway !== server.gateway ||
+          this.$store.state.settings.serverEntryHostId !== hostId ||
           this.$store.state.settings.isRandomServer !== false
         ) {
           this.$store.dispatch("settings/isRandomServer", false);
           this.$store.dispatch("settings/serverEntry", server);
+          this.$store.dispatch("settings/serverEntryHostId", hostId);
           needReconnect = true;
         }
       } else {
         if (
           !this.$store.state.settings.serverExit ||
           this.$store.state.settings.serverExit.gateway !== server.gateway ||
+          this.$store.state.settings.serverExitHostId !== hostId ||
           this.$store.state.settings.isRandomExitServer !== false
         ) {
           this.$store.dispatch("settings/isRandomExitServer", false);
           this.$store.dispatch("settings/serverExit", server);
+          this.$store.dispatch("settings/serverExitHostId", hostId);
           needReconnect = true;
         }
       }

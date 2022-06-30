@@ -100,6 +100,8 @@ export default {
 
     // Servers hash object: serversHashed[gateway] = server
     serversHashed: {},
+    // Hosts hash object: hostsHashed[hostname] = host
+    hostsHashed: {},
     servers: { wireguard: [], openvpn: [], config: {} },
 
     // true when servers pinging in progress
@@ -132,7 +134,10 @@ export default {
                 local_ip: "",
                 host: "",
                 multihop_port: 0
-              }
+              },
+              load: 0.0,
+              ping: ??? // property added after receiving ping info from daemon
+              pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon              
             }
           ]
         }
@@ -152,7 +157,10 @@ export default {
             {
               hostname: "",
               host: "",
-              multihop_port: 0
+              multihop_port: 0,
+              load: 0.0,
+              ping: ??? // property added after receiving ping info from daemon
+              pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon
             }
           ]
         }
@@ -491,11 +499,26 @@ function updateServersPings(state, pings) {
   let funcGetPing = function (s) {
     for (let i = 0; i < s.hosts.length; i++) {
       let pingValFoHost = hashedPings[s.hosts[i].host];
+
       if (pingValFoHost != null) {
-        s.ping = pingValFoHost;
-        s.pingQuality = getPingQuality(s.ping);
-        break;
+        // update ping info for specific host
+        s.hosts[i].ping = pingValFoHost;
+        s.hosts[i].pingQuality = getPingQuality(s.ping);
       }
+    }
+
+    // update ping info for location (min ping value from location hosts)
+    let bestPingForLocation = null;
+    for (let i = 0; i < s.hosts.length; i++) {
+      if (
+        !bestPingForLocation ||
+        (s.hosts[i].ping && bestPingForLocation > s.hosts[i].ping)
+      )
+        bestPingForLocation = s.hosts[i].ping;
+    }
+    if (bestPingForLocation) {
+      s.ping = bestPingForLocation;
+      s.pingQuality = getPingQuality(bestPingForLocation);
     }
   };
 
@@ -545,6 +568,10 @@ function updateServers(state, newServers) {
       svr.pingQuality = null;
       svr.isIPv6 = isServerSupportIPv6(svr);
       retObj[svr.gateway] = svr; // hash
+      for (let hi = 0; hi < svr.hosts.length; hi++) {
+        svr.hosts[hi].ping = null; // initialize 'ping' field to support VUE reactivity for it
+        svr.hosts[hi].pingQuality = null;
+      }
     }
     return retObj;
   }
@@ -552,20 +579,51 @@ function updateServers(state, newServers) {
   let hash = initNewServersAndCreateHash(null, newServers.wireguard);
   state.serversHashed = initNewServersAndCreateHash(hash, newServers.openvpn);
 
+  try {
+    // hashing hostnames (hostsHashed)
+    let hHosts = {};
+    for (const gw in state.serversHashed) {
+      const s = state.serversHashed[gw];
+      for (const h of s.hosts) {
+        hHosts[h.hostname] = h;
+      }
+    }
+    state.hostsHashed = hHosts;
+  } catch (e) {
+    console.error(e);
+    state.hostsHashed = {};
+  }
+
   // copy ping value from old objects
-  function copySvrsDataFromOld(oldServers, newServersHashed) {
+  function copySvrsDataFromOld(oldServers, newServersHashed, newHostsHashed) {
     for (let i = 0; i < oldServers.length; i++) {
       let oldSrv = oldServers[i];
       let newSrv = newServersHashed[oldSrv.gateway];
-      if (newSrv == null) {
-        continue;
-      }
+      if (!newSrv) continue;
+
       newSrv.ping = oldSrv.ping;
       newSrv.pingQuality = oldSrv.pingQuality;
+
+      // update gateway pings
+      for (const oldHost of oldSrv.hosts) {
+        let newHost = newHostsHashed[oldHost.hostname];
+        if (!newHost) continue;
+
+        newHost.ping = oldHost.ping;
+        newHost.pingQuality = oldHost.pingQuality;
+      }
     }
   }
-  copySvrsDataFromOld(state.servers.wireguard, state.serversHashed);
-  copySvrsDataFromOld(state.servers.openvpn, state.serversHashed);
+  copySvrsDataFromOld(
+    state.servers.wireguard,
+    state.serversHashed,
+    state.hostsHashed
+  );
+  copySvrsDataFromOld(
+    state.servers.openvpn,
+    state.serversHashed,
+    state.hostsHashed
+  );
 
   // sort new servers (by country/city)
   function compare(a, b) {

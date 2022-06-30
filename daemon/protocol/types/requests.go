@@ -62,13 +62,29 @@ type Hello struct {
 // GetServers request servers list
 type GetServers struct {
 	RequestBase
+	// Force to update servers from the backend (locations, hosts and hosts load)
+	RequestServersUpdate bool
 }
 
 // PingServers request to ping servers
+//
+// Pinging operation separated on few phases:
+// 1) Fast ping:  ping one host for each nearest location (locations only for specified VPN type when VpnTypePrioritization==true)
+//	  Operation ends after 'TimeOutMs'. Then daemon sends response PingServersResp with all data were collected.
+// 2) Full ping: Pinging all hosts for all locations. There is no time limit for this operation. It runs in background.
+//		2.1) Ping all hosts only for specified VPN type (when VpnTypePrioritization==true) or for all VPN types (when VpnTypePrioritization==false)
+//			2.1.1) Ping one host for all locations (for prioritized VPN protocol)
+//			2.1.2) Ping the rest hosts for all locations (for prioritized VPN protocol)
+//		2.2) (when VpnTypePrioritization==true) Ping all hosts for the rest protocols
+// If PingAllHostsOnFirstPhase==true - daemon will ping all hosts for nearest locations on the phase (1)
+// If SkipSecondPhase==true - phase (2) will be skipped
 type PingServers struct {
 	RequestBase
-	RetryCount int
-	TimeOutMs  int
+	TimeOutMs                int
+	VpnTypePrioritized       vpn.Type // hosts for this VPN type will be pinged first (only if VpnTypePrioritization == true)
+	VpnTypePrioritization    bool
+	PingAllHostsOnFirstPhase bool
+	SkipSecondPhase          bool
 }
 
 // KillSwitchSetAllowLANMulticast enable\disable LAN multicast acces for kill-switch
@@ -151,6 +167,7 @@ type Connect struct {
 	FirewallOnDuringConnection bool
 
 	WireGuardParameters struct {
+		// Port in use only for Single-Hop connections
 		Port struct {
 			Port int
 		}
@@ -173,17 +190,24 @@ type Connect struct {
 			Hosts []types.OpenVPNServerHostInfo
 		}
 
-		// MultihopExitSrvID example: "gateway":"zz.wg.ivpn.net" => "zz"
-		MultihopExitSrvID string
-		ProxyType         string
-		ProxyAddress      string
-		ProxyPort         int
-		ProxyUsername     string
-		ProxyPassword     string
+		//MultihopExitSrvID string
+		MultihopExitServer struct {
+			// ExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
+			// Example: "gateway":"zz.wg.ivpn.net" => "zz"
+			ExitSrvID string
+			Hosts     []types.OpenVPNServerHostInfo
+		}
+
+		ProxyType     string
+		ProxyAddress  string
+		ProxyPort     int
+		ProxyUsername string
+		ProxyPassword string
 
 		Port struct {
-			Port     int
 			Protocol int
+			// Port number in use only for Single-Hop connections
+			Port int
 		}
 	}
 }

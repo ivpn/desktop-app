@@ -29,7 +29,6 @@ import (
 	"net"
 	"os"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -52,6 +51,8 @@ import (
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
+
+	syncSemaphore "golang.org/x/sync/semaphore"
 )
 
 var log *logger.Logger
@@ -101,7 +102,7 @@ type Service struct {
 	// Note: Disconnect() function will wait until VPN fully disconnects
 	_done chan struct{}
 
-	_isServersPingInProgress bool
+	_serversPingProgressSemaphore *syncSemaphore.Weighted
 
 	// nil - when session checker stopped
 	// to stop -> write to channel (it is synchronous channel)
@@ -125,12 +126,14 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 	}
 
 	serv := &Service{
-		_preferences:       *preferences.Create(),
-		_evtReceiver:       evtReceiver,
-		_api:               api,
-		_serversUpdater:    updater,
-		_netChangeDetector: netChDetector,
-		_wgKeysMgr:         wgKeysMgr}
+		_preferences:                  *preferences.Create(),
+		_evtReceiver:                  evtReceiver,
+		_api:                          api,
+		_serversUpdater:               updater,
+		_netChangeDetector:            netChDetector,
+		_wgKeysMgr:                    wgKeysMgr,
+		_serversPingProgressSemaphore: syncSemaphore.NewWeighted(1),
+	}
 
 	// register the current service as a 'Connectivity checker' for API object
 	serv._api.SetConnectivityChecker(serv)
@@ -304,9 +307,17 @@ func (s *Service) OnControlConnectionClosed() (isServiceMustBeClosed bool, err e
 	return isServiceMustBeClosed, err
 }
 
-// ServersList - get VPN servers info
+// ServersList returns servers info
+// (if there is a cached data available - will be returned data from cache)
 func (s *Service) ServersList() (*types.ServersInfoResponse, error) {
 	return s._serversUpdater.GetServers()
+}
+
+// ServersListForceUpdate returns servers list info.
+// The daemon will make request to update servers from the backend.
+// The cached data will be ignored in this case.
+func (s *Service) ServersListForceUpdate() (*types.ServersInfoResponse, error) {
+	return s._serversUpdater.GetServersForceUpdate()
 }
 
 // APIRequest do custom request to API
@@ -1013,62 +1024,6 @@ func (s *Service) ResetManualDNS() error {
 	}
 
 	return vpn.ResetManualDNS()
-}
-
-// if 'currentLocation' defined - the output hosts list will be sorted by distance to current location
-func (s *Service) getHostsToPing(currentLocation *types.GeoLookupResponse) ([]net.IP, error) {
-	// get servers info
-	servers, err := s._serversUpdater.GetServers()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get servers list: %w", err)
-	}
-
-	type hostInfo struct {
-		Latitude  float32
-		Longitude float32
-		host      net.IP
-	}
-
-	hosts := make([]hostInfo, 0, uint16(len(servers.OpenvpnServers)+len(servers.WireguardServers)))
-
-	// OpenVPN servers
-	for _, s := range servers.OpenvpnServers {
-		if len(s.Hosts) <= 0 {
-			continue
-		}
-
-		ip := net.ParseIP(s.Hosts[0].Host)
-		if ip != nil {
-			hosts = append(hosts, hostInfo{Latitude: s.Latitude, Longitude: s.Longitude, host: ip})
-		}
-	}
-
-	// ping each WireGuard server
-	for _, s := range servers.WireguardServers {
-		if len(s.Hosts) <= 0 {
-			continue
-		}
-
-		ip := net.ParseIP(s.Hosts[0].Host)
-		if ip != nil {
-			hosts = append(hosts, hostInfo{Latitude: s.Latitude, Longitude: s.Longitude, host: ip})
-		}
-	}
-
-	if currentLocation != nil {
-		cLat := float64(currentLocation.Latitude)
-		cLot := float64(currentLocation.Longitude)
-		sort.Slice(hosts, func(i, j int) bool {
-			di := helpers.GetDistanceFromLatLonInKm(cLat, cLot, float64(hosts[i].Latitude), float64(hosts[i].Longitude))
-			dj := helpers.GetDistanceFromLatLonInKm(cLat, cLot, float64(hosts[j].Latitude), float64(hosts[j].Longitude))
-			return di < dj
-		})
-	}
-	ret := make([]net.IP, 0, len(hosts))
-	for _, h := range hosts {
-		ret = append(ret, h.host)
-	}
-	return ret, nil
 }
 
 //////////////////////////////////////////////////////////

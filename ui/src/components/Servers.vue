@@ -160,7 +160,7 @@
       @scroll="recalcScrollButtonVisiblity()"
       class="commonMargins flexColumn scrollableColumnContainer"
     >
-      <!-- FASTEST & RANDOMM SERVER -->
+      <!-- FASTEST & RANDOM SERVER -->
       <div v-if="isFavoritesView == false && isFastestServerConfig === false">
         <div class="flexRow" v-if="!isMultihop">
           <button
@@ -189,32 +189,91 @@
         v-bind:key="server.gateway"
       >
         <button
-          class="serverSelectBtn flexRow"
+          class="serverSelectBtn"
           v-on:click="onServerSelected(server)"
           v-bind:class="{ disabledButton: isInaccessibleServer(server) }"
         >
-          <serverNameControl
-            class="serverName"
-            :server="server"
-            :isCountryFirst="sortTypeStr === 'Country'"
-          />
+          <div class="flexRow">
+            <serverNameControl
+              class="serverName"
+              :server="server"
+              :isCountryFirst="sortTypeStr === 'Country'"
+              :onExpandClick="onServerExpandClick"
+              :isExpanded="isServerHostsExpanded(server)"
+            />
 
+            <div
+              class="flexColumn"
+              v-if="isFastestServerConfig !== true"
+              style="margin-top: -22px"
+            >
+              <div class="flexRow">
+                <serverPingInfoControl
+                  class="pingInfo"
+                  :server="server"
+                  :isShowPingTime="true"
+                />
+
+                <img
+                  :src="favoriteImage(server)"
+                  v-on:click="favoriteClicked($event, server)"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!--HOSTS (expanded list)-->
           <div
-            class="flexColumn"
-            v-if="isFastestServerConfig === false"
-            style="margin-top: 11px"
+            v-if="
+              isServerHostsExpanded(server) === true &&
+              isFastestServerConfig !== true
+            "
           >
-            <div class="flexRow">
-              <serverPingInfoControl
-                class="pingInfo"
-                :server="server"
-                :isShowPingTime="true"
-              />
+            <div
+              class="flexRow"
+              v-for="host of server.hosts"
+              v-bind:key="host.hostname"
+            >
+              <button
+                class="serverHostSelectBtn"
+                v-on:click.stop
+                v-on:click="onServerHostSelected(server, host)"
+              >
+                <div style="display: flex; margin-top: 2px; margin-bottom: 6px">
+                  <div
+                    title="Host name"
+                    style="
+                      text-align: left;
+                      margin-left: 40px;
+                      min-width: 154px;
+                    "
+                  >
+                    {{ host.hostname }}
+                  </div>
 
-              <img
-                :src="favoriteImage(server)"
-                v-on:click="favoriteClicked($event, server)"
-              />
+                  <!-- host load + favorite-->
+                  <div>
+                    <div class="flexRow">
+                      <div class="pingInfo" style="text-align: right">
+                        <div
+                          title="Server load"
+                          style="
+                            margin-right: 10px;
+                            color: var(--text-color-details);
+                          "
+                        >
+                          {{ Math.round(host.load) }}%
+                        </div>
+                      </div>
+
+                      <img
+                        :src="favoriteImage(server, host)"
+                        v-on:click="favoriteClicked($event, server, host)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </button>
             </div>
           </div>
         </button>
@@ -296,6 +355,7 @@ export default {
       isFastestServerConfig: false,
       isSortMenu: false,
       isShowScrollButton: false,
+      expandedGateways: [], // list of server.gateway strings (list of gateways which is expanded to show server hosts)
     };
   },
   created: function () {
@@ -341,6 +401,15 @@ export default {
     favoriteServers: function () {
       // Favorite servers for current protocol
       return this.$store.getters["settings/favoriteServers"];
+    },
+    favoriteHosts: function () {
+      // Favorite hosts for current protocol
+
+      if (this.$store.state.settings.showHosts !== true) return [];
+
+      // Returns array of information objects about favorite hosts:
+      // host object extended by all properties from parent server object +favHostParentServerObj +favHost
+      return this.$store.getters["settings/favoriteHosts"];
     },
 
     filteredServers: function () {
@@ -395,18 +464,24 @@ export default {
       }
 
       let servers = this.servers;
-      if (this.isFavoritesView) servers = this.favoriteServers;
+      if (this.isFavoritesView) {
+        servers = this.favoriteServers;
+        servers = servers.concat(this.favoriteHosts);
+      }
 
       if (this.filter == null || this.filter.length == 0)
         return servers.slice().sort(compare);
 
       let filter = this.filter.toLowerCase();
-      let filtered = servers.filter(
-        (s) =>
+      let filtered = servers.filter((s) => {
+        // check if the filtered object id 'favorite host'
+        return (
+          (s.favHost && s.favHost.hostname.toLowerCase().includes(filter)) || // only for favorite hosts (host object extended by all properties from parent server object +favHostParentServerObj +favHost)
           (s.city && s.city.toLowerCase().includes(filter)) ||
           (s.country && s.country.toLowerCase().includes(filter)) ||
           (s.country_code && s.country_code.toLowerCase().includes(filter))
-      );
+        );
+      });
 
       return filtered.slice().sort(compare);
     },
@@ -460,21 +535,51 @@ export default {
       }
       if (this.onBack != null) this.onBack();
     },
-    onServerSelected: function (server) {
+
+    isServerHostsExpanded: function (server) {
+      if (
+        this.$store.state.settings.showHosts !== true ||
+        this.isFastestServerConfig === true ||
+        this.$store.state.uiState.serversFavoriteView === true
+      )
+        return undefined; //hide expand button
+      return this.expandedGateways.includes(server.gateway);
+    },
+    onServerExpandClick: function (server) {
+      var index = this.expandedGateways.indexOf(server.gateway);
+      if (index === -1) this.expandedGateways.push(server.gateway);
+      else this.expandedGateways.splice(index, 1);
+    },
+
+    checkAndNotifyInaccessibleServer: function (server) {
       if (this.isInaccessibleServer(server)) {
         sender.showMessageBoxSync({
           type: "info",
           buttons: ["OK"],
           message: "Entry and exit servers cannot be in the same country",
           detail:
-            "When using multihop you must select entry and exit servers in different countries. Please select a different entry or exit server.",
+            "When using Multi-Hop you must select entry and exit servers in different countries. Please select a different entry or exit server.",
         });
-        return;
+        return false;
       }
-
+    },
+    onServerSelected: function (server) {
+      if (server.favHost) {
+        return this.onServerHostSelected(
+          server.favHostParentServerObj,
+          server.favHost
+        );
+      }
+      if (this.checkAndNotifyInaccessibleServer(server) == false) return;
       this.onServerChanged(server, this.isExitServer != null);
       this.onBack();
     },
+    onServerHostSelected: function (server, host) {
+      if (this.checkAndNotifyInaccessibleServer(server) == false) return;
+      this.onServerChanged(server, this.isExitServer != null, host.hostname);
+      this.onBack();
+    },
+
     onSortMenuClickedOutside: function () {
       this.isSortMenu = false;
     },
@@ -501,12 +606,24 @@ export default {
         server.gateway
       );
     },
-    favoriteImage: function (server) {
-      if (
-        this.$store.state.settings.serversFavoriteList.includes(server.gateway)
-      )
-        return Image_star_active;
-      return Image_star_inactive;
+    favoriteImage: function (server, host) {
+      const settings = this.$store.state.settings;
+      if (server.favHost) {
+        // favorite host: only for favorite hosts (host object extended by all properties from parent server object)
+        if (settings.hostsFavoriteList.includes(server.favHost.hostname))
+          return Image_star_active;
+        return Image_star_inactive;
+      } else if (host) {
+        // host
+        if (settings.hostsFavoriteList.includes(host.hostname))
+          return Image_star_active;
+        return Image_star_inactive;
+      } else {
+        //server
+        if (settings.serversFavoriteList.includes(server.gateway))
+          return Image_star_active;
+        return Image_star_inactive;
+      }
     },
     favoriteImageActive: function () {
       return Image_star_active;
@@ -537,25 +654,50 @@ export default {
       if (server.country_code === ccSkip) return true;
       return false;
     },
-    favoriteClicked: function (evt, server) {
+    favoriteClicked: function (evt, server, host) {
       evt.stopPropagation();
 
-      let favorites = this.$store.state.settings.serversFavoriteList.slice();
+      if (server.favHost) {
+        return this.favoriteClicked(
+          evt,
+          server.favHostParentServerObj,
+          server.favHost
+        );
+      }
       let serversHashed = this.$store.state.vpnState.serversHashed;
       let gateway = server.gateway;
 
-      if (favorites.includes(gateway)) {
-        // remove
-        console.log(`Removing favorite ${gateway}`);
-        favorites = favorites.filter((gw) => gw != gateway);
-      } else {
-        // add
-        console.log(`Adding favorite ${gateway}`);
-        if (serversHashed[gateway] == null) return;
-        favorites.push(gateway);
-      }
+      if (!host) {
+        // favorite SERVER
+        let favorites = this.$store.state.settings.serversFavoriteList.slice();
+        if (favorites.includes(gateway)) {
+          console.log(`Removing favorite location ${gateway}`);
+          favorites = favorites.filter((gw) => gw != gateway);
+        } else {
+          console.log(`Adding favorite location ${gateway}`);
+          if (!serversHashed[gateway]) return;
+          favorites.push(gateway);
+        }
 
-      this.$store.dispatch("settings/serversFavoriteList", favorites);
+        this.$store.dispatch("settings/serversFavoriteList", favorites);
+      } else if (host.hostname) {
+        // favorite HOST
+        let favoriteHosts =
+          this.$store.state.settings.hostsFavoriteList.slice();
+        let hostname = host.hostname;
+
+        if (favoriteHosts.includes(hostname)) {
+          // remove host
+          console.log(`Removing favorite host ${hostname}`);
+          favoriteHosts = favoriteHosts.filter((hn) => hn != hostname);
+        } else {
+          // add host
+          if (!serversHashed[gateway]) return;
+          console.log(`Adding favorite host ${hostname}`);
+          favoriteHosts.push(hostname);
+        }
+        this.$store.dispatch("settings/hostsFavoriteList", favoriteHosts);
+      }
     },
     configFastestSvrClicked(server, event) {
       if (server == null || server.gateway == null) return;
@@ -651,10 +793,31 @@ input#filter {
   outline-width: 0;
   cursor: pointer;
 
-  height: 48px;
+  min-height: 48px;
   width: 100%;
 
   padding: 0px;
+
+  padding-bottom: 3px;
+  padding-top: 3px;
+}
+
+.serverHostSelectBtn {
+  border: none;
+  background-color: inherit;
+  outline-width: 0;
+  cursor: pointer;
+
+  width: 100%;
+
+  padding: 0px;
+  font-size: 14px;
+  line-height: 13px;
+  color: var(--text-color-details);
+}
+
+.serverHostSelectBtn:hover {
+  opacity: 0.7;
 }
 
 .serverName {

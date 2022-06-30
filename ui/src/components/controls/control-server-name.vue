@@ -13,20 +13,37 @@
     </div>
 
     <div
-      class="textBloack text"
+      class="textBlock text"
       v-if="isShowSingleLine"
       v-bind:class="{ text_large: isLargeText, firstLine: !isSingleLine }"
     >
       {{ singleLine }}
     </div>
-    <div class="textBloack text" v-else>
-      <div class="text firstLine">
-        {{ multilineFirstLine }}
+    <div class="textBlock" v-else>
+      <div class="firstLine flexRow" style="max-width: 154px">
+        <div class="text flexRowRestSpace">
+          {{ multilineFirstLine }}
+        </div>
+        <div>
+          <button
+            class="noBordersBtn expandButton"
+            v-if="onExpandClick != null && isExpanded !== undefined"
+            v-on:click.stop
+            v-on:click="onExpandClick(server)"
+          >
+            <img
+              v-if="isExpanded"
+              style="transform: rotate(180deg)"
+              src="@/assets/arrow-bottom.svg"
+            />
+            <img v-else src="@/assets/arrow-bottom.svg" />
+          </button>
+        </div>
       </div>
       <div class="text secondLine">
         <div v-if="isShowIPVersionBage && isIPv6" class="bage">IPv6</div>
         <!--<div v-else-if="isShowIPVersionBage && !isIPv6" class="bage">IPv4</div>-->
-        {{ multilineSecondLine }}
+        {{ multilineSecondLine }} {{ selectedHostInfo }}
       </div>
     </div>
   </div>
@@ -44,6 +61,8 @@ import Image_iconStatusBad from "@/assets/iconStatusBad.svg";
 export default {
   props: {
     server: Object,
+    serverHostName: String, // in use on Main view to show selected host for selected server
+
     isLargeText: Boolean,
 
     isSingleLine: Boolean,
@@ -53,6 +72,9 @@ export default {
 
     isFastestServer: Boolean,
     isRandomServer: Boolean,
+
+    onExpandClick: Function,
+    isExpanded: Boolean,
   },
   data: () => ({
     isImgLoadError: false,
@@ -84,6 +106,10 @@ export default {
         return `${this.server.city}, ${this.server.country_code}`;
       }
     },
+    selectedHostInfo: function () {
+      if (!this.serverHostName) return "";
+      return "(" + this.serverHostName.split(".")[0] + ")";
+    },
     multilineFirstLine: function () {
       if (!this.server) return "";
       if (this.isCountryFirst) return this.server.country;
@@ -91,6 +117,10 @@ export default {
     },
     multilineSecondLine: function () {
       if (!this.server) return "";
+      if (this.server.favHost)
+        return `${this.server.favHost.hostname} (${Math.round(
+          this.server.favHost.load
+        )}%)`; // only for favorite hosts (host object extended by all properties from parent server object +favHostParentServerObj +favHost)
       if (this.isCountryFirst) return this.server.city;
       return this.server.country;
     },
@@ -168,7 +198,7 @@ img.flag {
   text-overflow: ellipsis;
 }
 
-div.textBloack {
+div.textBlock {
   font-size: 14px;
   line-height: 20.8px;
   margin-left: 16px;
@@ -213,5 +243,12 @@ div.bage {
 
 .pingtext {
   color: var(--text-color-details);
+}
+
+button.expandButton {
+  opacity: 0.6;
+}
+button.expandButton:hover {
+  opacity: 1;
 }
 </style>

@@ -54,7 +54,10 @@ func (p *port) String() string {
 	if p.tcp {
 		protoName = "TCP"
 	}
-	return fmt.Sprintf("%s:%d", protoName, p.port)
+	if p.port != 0 {
+		return fmt.Sprintf("%s:%d", protoName, p.port)
+	}
+	return fmt.Sprintf("%s", protoName)
 }
 
 var (
@@ -130,7 +133,7 @@ func (c *CmdConnect) Init() {
 	c.Initialize("connect", "Establish new VPN connection\nLOCATION can be a mask for filtering servers or full hostname (see 'servers' command)")
 	c.DefaultStringVar(&c.gateway, "LOCATION")
 
-	c.StringVar(&c.port, "port", "", "PROTOCOL:PORT", fmt.Sprintf("Port to connect to (default: %s - OpenVPN, %s - WireGuard)\nOpenVPN: %s\nWireGuard: %s",
+	c.StringVar(&c.port, "port", "", "PROTOCOL[:PORT]", fmt.Sprintf("Port to connect to (default: %s - OpenVPN, %s - WireGuard)\nOpenVPN: %s\nWireGuard: %s\nNote: port number ignored for Multi-Hop connections; port type only applicable (UDP/TCP)",
 		portsOpenVpn[0].String(), portsWireGuard[0].String(),
 		allPortsString(portsOpenVpn[:]), allPortsString(portsWireGuard[:])))
 
@@ -194,6 +197,9 @@ func (c *CmdConnect) Run() (retError error) {
 		return err
 	}
 
+	customHostEntryServer := c.gateway
+	customHostExitServer := c.multihopExitSvr
+
 	// check is logged-in
 	helloResp := _proto.GetHelloResponse()
 	if len(helloResp.Command) > 0 && (len(helloResp.Session.Session) == 0) {
@@ -250,10 +256,6 @@ func (c *CmdConnect) Run() (retError error) {
 		c.isIPv6Tunnel = ci.IPv6Tunnel
 	}
 
-	if c.obfsproxy && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
-		return fmt.Errorf(helloResp.DisabledFunctions.ObfsproxyError)
-	}
-
 	// MULTI\SINGLE -HOP
 	// Check if the parametars are correct and define correct values for c.gateway and c.multihopExitSvr
 	if len(c.multihopExitSvr) > 0 {
@@ -267,12 +269,12 @@ func (c *CmdConnect) Run() (retError error) {
 			fmt.Println("WARNING: filtering flags are ignored for Multi-Hop connection [exit_svr]")
 		}
 
-		entrySvrs, _ := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, false, false, false, false, false)
+		entrySvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, false, false, false, false, false)
 		if len(entrySvrs) == 0 || len(entrySvrs) > 1 {
 			return flags.BadParameter{Message: "specify correct entry server ID for multi-hop connection"}
 		}
 
-		exitSvrs, _ := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multihopExitSvr, c.filter_proto, false, false, false, false, false)
+		exitSvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multihopExitSvr, c.filter_proto, false, false, false, false, false)
 		if len(exitSvrs) == 0 || len(exitSvrs) > 1 {
 			return flags.BadParameter{Message: "specify correct exit server ID for multi-hop connection"}
 		}
@@ -287,13 +289,19 @@ func (c *CmdConnect) Run() (retError error) {
 		c.multihopExitSvr = exitSvr.gateway
 	} else {
 		//SINGLE-HOP
-		svrs, _ = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
+		svrs = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
 
 		srvID := ""
 
 		// Fastest server
 		if c.fastest && len(svrs) > 1 {
-			if err := serversPing(svrs, true); err != nil && c.any == false {
+			var vpnType *vpn.Type = nil
+			if len(c.filter_proto) > 0 {
+				if p, err := getVpnTypeByFlag(c.filter_proto); err == nil {
+					vpnType = &p
+				}
+			}
+			if err := serversPing(svrs, true, false, vpnType); err != nil && c.any == false {
 				if c.any {
 					fmt.Printf("Error: Failed to ping servers to determine fastest: %s\n", err)
 				} else {
@@ -365,6 +373,15 @@ func (c *CmdConnect) Run() (retError error) {
 	vpntype := vpn.WireGuard
 	// WireGuard
 	{
+		funcApplyCustomHost := func(hosts []apitypes.WireGuardServerHostInfo, hostname string) []apitypes.WireGuardServerHostInfo {
+			for _, h := range hosts {
+				if h.Hostname == hostname {
+					return []apitypes.WireGuardServerHostInfo{h}
+				}
+			}
+			return hosts
+		}
+
 		var entrySvrWg *apitypes.WireGuardServerInfo = nil
 		var exitSvrWg *apitypes.WireGuardServerInfo = nil
 		// exit server
@@ -383,24 +400,24 @@ func (c *CmdConnect) Run() (retError error) {
 
 				serverFound = true
 				req.VpnType = vpn.WireGuard
-				req.WireGuardParameters.EntryVpnServer.Hosts = s.Hosts
+				req.WireGuardParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
 				req.IPv6 = c.isIPv6Tunnel
 
-				// port
-				p, err := getPort(vpn.WireGuard, c.port)
-				if err != nil {
-					return err
-				}
-				req.WireGuardParameters.Port.Port = p.port
-
 				if len(c.multihopExitSvr) == 0 {
+					// port
+					p, err := getPort(vpn.WireGuard, c.port, false)
+					if err != nil {
+						return err
+					}
+					req.WireGuardParameters.Port.Port = p.port
 					fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s %s...\n", s.City, s.CountryCode, s.Country, s.Gateway, p.String())
 				} else {
 					if exitSvrWg == nil {
 						return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
 					}
+
 					req.WireGuardParameters.MultihopExitServer.ExitSrvID = strings.Split(exitSvrWg.Gateway, ".")[0]
-					req.WireGuardParameters.MultihopExitServer.Hosts = exitSvrWg.Hosts
+					req.WireGuardParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrWg.Hosts, customHostExitServer)
 
 					fmt.Printf("[WireGuard] Connecting Multi-Hop...\n")
 					fmt.Printf("\tentry server: %s, %s (%s) %s\n", entrySvrWg.City, entrySvrWg.CountryCode, entrySvrWg.Country, entrySvrWg.Gateway)
@@ -413,7 +430,20 @@ func (c *CmdConnect) Run() (retError error) {
 
 	// OpenVPN
 	if serverFound == false {
+		if c.obfsproxy && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
+			return fmt.Errorf(helloResp.DisabledFunctions.ObfsproxyError)
+		}
+
 		vpntype = vpn.OpenVPN
+
+		funcApplyCustomHost := func(hosts []apitypes.OpenVPNServerHostInfo, hostname string) []apitypes.OpenVPNServerHostInfo {
+			for _, h := range hosts {
+				if h.Hostname == hostname {
+					return []apitypes.OpenVPNServerHostInfo{h}
+				}
+			}
+			return hosts
+		}
 
 		var entrySvrOvpn *apitypes.OpenvpnServerInfo = nil
 		var exitSvrOvpn *apitypes.OpenvpnServerInfo = nil
@@ -433,6 +463,7 @@ func (c *CmdConnect) Run() (retError error) {
 		for i, s := range servers.OpenvpnServers {
 			if s.Gateway == c.gateway {
 				entrySvrOvpn = &servers.OpenvpnServers[i]
+
 				// TODO: obfsproxy configuration for this connection must be sent in 'Connect' request (avoid using daemon preferences)
 				if err = _proto.SetPreferences("enable_obfsproxy", fmt.Sprint(c.obfsproxy)); err != nil {
 					return err
@@ -440,20 +471,26 @@ func (c *CmdConnect) Run() (retError error) {
 
 				serverFound = true
 				req.VpnType = vpn.OpenVPN
-				req.OpenVpnParameters.EntryVpnServer.Hosts = s.Hosts
+				req.OpenVpnParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
+
+				isMultihop := exitSvrOvpn != nil && len(c.multihopExitSvr) > 0
 
 				// port
-				destPort, err = getPort(vpn.OpenVPN, c.port)
+				destPort, err = getPort(vpn.OpenVPN, c.port, isMultihop)
 				if err != nil {
 					return err
 				}
+
+				if isMultihop {
+					// get Multi-Hop ID
+					req.OpenVpnParameters.MultihopExitServer.ExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
+					req.OpenVpnParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrOvpn.Hosts, customHostExitServer)
+					destPort.port = 0 // do not use port number (port-based multihop)
+				}
+
 				req.OpenVpnParameters.Port.Port = destPort.port
 				req.OpenVpnParameters.Port.Protocol = destPort.IsTCP()
 
-				if len(c.multihopExitSvr) > 0 {
-					// get Multi-Hop ID
-					req.OpenVpnParameters.MultihopExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
-				}
 				break
 			}
 		}
@@ -463,6 +500,14 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 		if len(c.multihopExitSvr) > 0 && exitSvrOvpn == nil {
 			return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
+		}
+
+		if c.obfsproxy {
+			if len(c.port) > 0 {
+				// if user manually defined port for obfsproxy connection - inform that it is ignored
+				fmt.Printf("Note: port definition is ignored for the connections when the obfsproxy enabled\n")
+			}
+			destPort.tcp = true
 		}
 
 		if len(c.multihopExitSvr) == 0 {
@@ -555,7 +600,7 @@ func (c *CmdConnect) Run() (retError error) {
 	return nil
 }
 
-func getPort(vpnType vpn.Type, portInfo string) (port, error) {
+func getPort(vpnType vpn.Type, portInfo string, isMultiHop bool) (port, error) {
 	var err error
 	var portPtr *int
 	var isTCPPtr *bool
@@ -583,14 +628,21 @@ func getPort(vpnType vpn.Type, portInfo string) (port, error) {
 		retPort.tcp = *isTCPPtr
 	}
 
-	// ckeck is port allowed
+	if !isMultiHop && retPort.port == 0 {
+		return port{}, flags.BadParameter{Message: "port number not defined"}
+	}
+
+	// check is port allowed
 	if vpnType == vpn.WireGuard {
 		if isPortAllowed(portsWireGuard[:], retPort) == false {
 			fmt.Printf("WARNING: using non-standard port '%s' (allowed ports: %s)\n", retPort.String(), allPortsString(portsWireGuard[:]))
 		}
 	} else {
-		if isPortAllowed(portsOpenVpn[:], retPort) == false {
-			fmt.Printf("WARNING: using non-standard port '%s' (allowed ports: %s)\n", retPort.String(), allPortsString(portsOpenVpn[:]))
+		if !isMultiHop {
+			// for multi-hop connections we are ingnoring port number. Only port type have sense (TCP/UDP)
+			if isPortAllowed(portsOpenVpn[:], retPort) == false {
+				fmt.Printf("WARNING: using non-standard port '%s' (allowed ports: %s)\n", retPort.String(), allPortsString(portsOpenVpn[:]))
+			}
 		}
 	}
 
