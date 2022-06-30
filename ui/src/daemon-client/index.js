@@ -342,13 +342,8 @@ async function processResponse(response) {
 
       commitSession(obj.Session);
 
-      // if no info about account status - request it
-      if (
-        store.getters["account/isLoggedIn"] &&
-        !store.getters["account/isAccountStateExists"]
-      ) {
-        AccountStatus();
-      }
+      // request account status update every app start
+      if (store.getters["account/isLoggedIn"]) AccountStatus();
 
       if (obj.DisabledFunctions) {
         store.commit("disabledFunctions", obj.DisabledFunctions);
