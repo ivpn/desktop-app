@@ -83,6 +83,11 @@ func findPinnedKey(certHashes []string, certBase64hash256 string) bool {
 type dialer func(network, addr string) (net.Conn, error)
 
 func makeDialer(certHashes []string, skipCAVerification bool, serverName string, dialTimeout time.Duration) dialer {
+	if len(certHashes) == 0 {
+		log.Warning("No pinned certificates for ", _apiHost)
+		return nil
+	}
+
 	return func(network, addr string) (net.Conn, error) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -188,6 +193,11 @@ func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, ur
 
 func (a *API) doRequestUpdateHost(urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
 	transCfg := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12, // seems, it is redundant (since we use custom DialTLS)
+			ServerName: _updateHost,      // despite, we using custom DialTLS, we have to define ServerName (this avoids certificate verification problems, for example, when the request is going through a proxy server)
+		},
+
 		// using certificate key pinning
 		DialTLS: makeDialer(UpdateIvpnHashes, false, _updateHost, 0),
 	}
@@ -245,23 +255,13 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 	// we need to configure TLS to use api.ivpn.net hostname
 	// (to avoid certificate errors)
 	transCfg := &http.Transport{
-		// NOTE: TLSClientConfig not in use in case of DialTLS defined
-		//TLSClientConfig: &tls.Config{
-		//	ServerName: _apiHost,
-		//},
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12, // seems, it is redundant (since we use custom DialTLS)
+			ServerName: _apiHost,         // despite, we using custom DialTLS, we have to define ServerName (this avoids certificate verification problems, for example, when the request is going through a proxy server)
+		},
 
 		// using certificate key pinning
 		DialTLS: makeDialer(APIIvpnHashes, false, _apiHost, timeoutDial),
-	}
-	if len(APIIvpnHashes) == 0 {
-		log.Warning("No pinned certificates for ", _apiHost)
-		transCfg = &http.Transport{
-			// NOTE: TLSClientConfig not in use in case of DialTLS defined
-			TLSClientConfig: &tls.Config{
-				MinVersion: tls.VersionTLS12,
-				ServerName: _apiHost,
-			},
-		}
 	}
 
 	// configure http-client with preconfigured TLS transport
