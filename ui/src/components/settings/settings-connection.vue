@@ -281,7 +281,7 @@
 
 <script>
 import spinner from "@/components/controls/control-spinner.vue";
-import { VpnTypeEnum, VpnStateEnum, PortTypeEnum, Ports } from "@/store/types";
+import { VpnTypeEnum, VpnStateEnum, PortTypeEnum } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 const sender = window.ipcSender;
 import { dateDefaultFormat } from "@/helpers/helpers";
@@ -523,7 +523,7 @@ export default {
       return ret;
     },
     prefferedPorts: function () {
-      let data = this.isOpenVPN ? Ports.OpenVPN : Ports.WireGuard;
+      let data = this.$store.getters["vpnState/connectionPorts"];
       let ret = [];
       data.forEach((p) =>
         ret.push({

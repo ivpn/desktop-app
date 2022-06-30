@@ -88,10 +88,21 @@ type InfoAPI struct {
 	IPv6Addresses []string `json:"ipv6s"`
 }
 
+type PortInfo struct {
+	Type string `json:"type"` // "TCP" or "UDP"
+	Port int    `json:"port"`
+}
+
+type PortsInfo struct {
+	OpenVPN   []PortInfo `json:"openvpn"`
+	WireGuard []PortInfo `json:"wireguard"`
+}
+
 // ConfigInfo contains different configuration info (Antitracker, API ...)
 type ConfigInfo struct {
 	Antitracker AntitrackerInfo `json:"antitracker"`
 	API         InfoAPI         `json:"api"`
+	Ports       PortsInfo       `json:"ports"`
 }
 
 // ServersInfoResponse all info from servers.json

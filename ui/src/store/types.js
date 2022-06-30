@@ -58,31 +58,6 @@ export const VpnStateEnum = Object.freeze({
 export const PingQuality = Object.freeze({ Good: 0, Moderate: 1, Bad: 2 });
 
 export const PortTypeEnum = Object.freeze({ UDP: 0, TCP: 1 });
-export const Ports = Object.freeze({
-  OpenVPN: [
-    { port: 2049, type: PortTypeEnum.UDP },
-    { port: 2050, type: PortTypeEnum.UDP },
-    { port: 53, type: PortTypeEnum.UDP },
-    { port: 1194, type: PortTypeEnum.UDP },
-    { port: 80, type: PortTypeEnum.UDP },
-    { port: 443, type: PortTypeEnum.UDP },
-    { port: 443, type: PortTypeEnum.TCP },
-    { port: 1443, type: PortTypeEnum.TCP },
-    { port: 80, type: PortTypeEnum.TCP },
-  ],
-  WireGuard: [
-    { port: 2049, type: PortTypeEnum.UDP },
-    { port: 2050, type: PortTypeEnum.UDP },
-    { port: 53, type: PortTypeEnum.UDP },
-    { port: 1194, type: PortTypeEnum.UDP },
-    { port: 30587, type: PortTypeEnum.UDP },
-    { port: 41893, type: PortTypeEnum.UDP },
-    { port: 48574, type: PortTypeEnum.UDP },
-    { port: 58237, type: PortTypeEnum.UDP },
-    { port: 80, type: PortTypeEnum.UDP },
-    { port: 443, type: PortTypeEnum.UDP },
-  ],
-});
 
 export const ServersSortTypeEnum = Object.freeze({
   City: 0,
@@ -108,3 +83,14 @@ export const AppUpdateStage = Object.freeze({
   Installing: "Installing...",
   Error: "Error",
 });
+
+export function NormalizedConfigPortObject(portFromServersConfig) {
+  if (!portFromServersConfig.port || !portFromServersConfig.type) return null;
+  return {
+    port: parseInt(portFromServersConfig.port, 10),
+    type:
+      portFromServersConfig.type.trim().toUpperCase() == "TCP"
+        ? PortTypeEnum.TCP
+        : PortTypeEnum.UDP,
+  };
+}

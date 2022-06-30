@@ -31,6 +31,7 @@ import {
   PingQuality,
   PauseStateEnum,
   DnsEncryption,
+  NormalizedConfigPortObject,
 } from "./types";
 
 export default {
@@ -163,6 +164,10 @@ export default {
           hardcore: { ip: "", "multihop-ip": "" }
         },
         api: { ips: [""], ipv6s:[""] }
+        ports: {
+         openvpn: [ {type: "UDP/TCP", port: "X"}, ...],
+         wireguard: [ {type: "UDP/TCP", port: "X"},  ...]
+        }
       }
     }*/
   },
@@ -344,6 +349,16 @@ export default {
 
       return retSvr;
     },
+    connectionPorts(state, getters, rootState) {
+      const vpnType = rootState.settings.vpnType;
+      let ports = state.servers.config.ports.wireguard;
+      if (vpnType === VpnTypeEnum.OpenVPN)
+        ports = state.servers.config.ports.openvpn;
+      if (!ports) return [];
+      return ports
+        .map((p) => NormalizedConfigPortObject(p))
+        .filter((p) => p != null);
+    },
   },
 
   // can be called from renderer
@@ -381,7 +396,7 @@ export default {
     servers(context, value) {
       context.commit("servers", value);
       // notify 'settings' module about updated servers list
-      // (it is required to update selected servers, if necessary)
+      // (it is required to update selected servers, selected ports ... etc. (if necessary))
       context.dispatch("settings/updateSelectedServers", null, { root: true });
     },
     // Split-Tunnelling
