@@ -385,7 +385,10 @@ export default {
     isShowFavoriteDescriptionBlock: function () {
       if (!this.isFavoritesView) return false;
       let favSvrs = this.favoriteServers;
-      return favSvrs == null || favSvrs.length == 0;
+      let favHosts = this.favoriteHosts;
+      return (
+        (!favSvrs || favSvrs.length == 0) && (!favHosts || favHosts.length == 0)
+      );
     },
     servers: function () {
       return this.$store.getters["vpnState/activeServers"];
@@ -549,6 +552,10 @@ export default {
       var index = this.expandedGateways.indexOf(server.gateway);
       if (index === -1) this.expandedGateways.push(server.gateway);
       else this.expandedGateways.splice(index, 1);
+
+      setTimeout(() => {
+        this.recalcScrollButtonVisiblity();
+      }, 0);
     },
 
     checkAndNotifyInaccessibleServer: function (server) {
@@ -743,7 +750,7 @@ export default {
 
       const show = sa.scrollHeight > sa.clientHeight + sa.scrollTop;
 
-      // hide - imadiately; show - with 1sec delay
+      // hide - immediately; show - with 1sec delay
       if (!show) this.isShowScrollButton = false;
       else {
         setTimeout(() => {

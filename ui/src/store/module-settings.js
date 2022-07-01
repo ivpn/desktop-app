@@ -197,14 +197,14 @@ export default {
     serverEntry(state, srv) {
       if (srv == null || srv.gateway == null)
         throw new Error("Unable to change server. Wrong server object.");
-      if (!isServerContainsHost(state.serverEntry, state.serverEntryHostId))
+      if (!isServerContainsHost(srv, state.serverEntryHostId))
         state.serverEntryHostId = null;
       state.serverEntry = srv;
     },
     serverExit(state, srv) {
       if (srv == null || srv.gateway == null)
         throw new Error("Unable to change server. Wrong server object.");
-      if (!isServerContainsHost(state.serverExit, state.serverExitHostId))
+      if (!isServerContainsHost(srv, state.serverExitHostId))
         state.serverExitHostId = null;
       state.serverExit = srv;
     },
@@ -512,6 +512,33 @@ export default {
     serverExitHostId(context, hostId) {
       context.commit("serverExitHostId", hostId);
     },
+
+    // Ensure the selected hosts equals to connected one. Of not equals - erase host selection
+    serverEntryHostIPCheckOrErase(context, hostIp) {
+      if (!this.state.settings.serverEntryHostId) return;
+      const svr = this.state.settings.serverEntry;
+      const hostId = this.state.settings.serverEntryHostId;
+      let hostConnected = getServerHostByIp(svr, hostIp);
+      let hostSelected = getServerHostById(svr, hostId);
+
+      if (
+        !hostConnected ||
+        !hostSelected ||
+        hostConnected.hostname != hostSelected.hostname
+      )
+        context.commit("serverEntryHostId", null);
+    },
+    serverExitHostCheckOrErase(context, hostname) {
+      if (!this.state.settings.serverExitHostId) return;
+      if (!hostname) {
+        context.commit("serverExitHostId", null);
+        return;
+      }
+      let hostId = hostname.split(".")[0]; // convert hostname to hostId (if necessary)
+      if (hostId != this.state.settings.serverExitHostId)
+        context.commit("serverExitHostId", null);
+    },
+
     isFastestServer(context, val) {
       context.commit("isFastestServer", val);
     },
@@ -879,6 +906,23 @@ function isServerContainsHost(server, hostID) {
     if (h.hostname.startsWith(hostID + ".")) return true;
   }
   return false;
+}
+
+function getServerHostByIp(server, hostIP) {
+  if (!hostIP) return null;
+  for (const h of server.hosts) {
+    if (h.host == hostIP) return h;
+  }
+  return null;
+}
+
+function getServerHostById(server, hostId) {
+  if (!hostId) return null;
+  hostId = hostId.split(".")[0]; // convert hostname to hostId (if necessary)
+  for (const h of server.hosts) {
+    if (h.hostname.startsWith(hostId + ".")) return h;
+  }
+  return null;
 }
 
 function getDefaultPortFromList(ports, curPort) {

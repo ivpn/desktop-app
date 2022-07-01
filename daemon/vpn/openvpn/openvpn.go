@@ -220,6 +220,8 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 				if o.state == vpn.CONNECTED {
 					// save exitServerID (in MultiHop)
 					stateInf.ExitServerID = o.connectParams.multihopExitSrvID
+					stateInf.ExitHostname = o.connectParams.multihopExitHostname
+
 					// save source and destination port
 					stateInf.ClientPort = o.localPort
 					stateInf.ServerPort = o.connectParams.hostPort

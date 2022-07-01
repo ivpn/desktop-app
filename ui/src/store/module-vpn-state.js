@@ -47,6 +47,7 @@ export default {
       ClientIP: "",
       ServerIP: "",
       ExitServerID: "",
+      ExitHostname: "",
       ManualDNS: {
         DnsHost: "",      // string // DNS host IP address
 	      Encryption: 0,    // DnsEncryption [	EncryptionNone = 0,	EncryptionDnsOverTls = 1,	EncryptionDnsOverHttps = 2]
@@ -421,7 +422,7 @@ export default {
 
       // Received 'connected' state
       // Connection can be triggered outside (not by current application instance)
-      // So, we should just update received data in settings (vpnType, multihop, entry\exit servers)
+      // So, we should just update received data in settings (vpnType, multihop, entry\exit servers and hosts)
       // (no consistency checks should be performed)
       const isMultiHop = isStrNullOrEmpty(ci.ExitServerID) ? false : true;
       context.commit("settings/vpnType", ci.VpnType, { root: true });
@@ -434,6 +435,14 @@ export default {
         const exitSvr = findServerByExitId(servers, ci.ExitServerID);
         context.commit("settings/serverExit", exitSvr, { root: true });
       }
+
+      // Ensure the selected host equals to connected one. Of not equals - erase host selection
+      context.dispatch("settings/serverEntryHostIPCheckOrErase", ci.ServerIP, {
+        root: true,
+      });
+      context.dispatch("settings/serverExitHostCheckOrErase", ci.ExitHostname, {
+        root: true,
+      });
 
       // save last DNS state
       context.commit("dns", ci.ManualDNS);

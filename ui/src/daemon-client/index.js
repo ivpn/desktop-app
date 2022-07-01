@@ -420,6 +420,7 @@ async function processResponse(response) {
         ClientIP: obj.ClientIP,
         ServerIP: obj.ServerIP,
         ExitServerID: obj.ExitServerID,
+        ExitHostname: obj.ExitHostname,
         ManualDNS: obj.ManualDNS,
         IsCanPause: "IsCanPause" in obj ? obj.IsCanPause : null,
       });

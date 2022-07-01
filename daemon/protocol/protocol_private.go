@@ -249,6 +249,7 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ServerIP:        state.ServerIP.String(),
 		VpnType:         state.VpnType,
 		ExitServerID:    state.ExitServerID,
+		ExitHostname:    state.ExitHostname,
 		ManualDNS:       dns.GetLastManualDNS(),
 		IsCanPause:      state.IsCanPause}
 
@@ -326,6 +327,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 			// Multi-Hop
 			connectionParams = openvpn.CreateConnectionParams(
 				multihopExitSrvID,
+				exitHostValue.Hostname,
 				r.OpenVpnParameters.Port.Protocol > 0, // is TCP
 				exitHostValue.MultihopPort,
 				host,
@@ -337,7 +339,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		} else {
 			// Single-Hop
 			connectionParams = openvpn.CreateConnectionParams(
-				"",
+				"", "",
 				r.OpenVpnParameters.Port.Protocol > 0, // is TCP
 				r.OpenVpnParameters.Port.Port,
 				host,
@@ -436,9 +438,11 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 
 		var connectionParams wireguard.ConnectionParams
 		if exitHostValue != nil && len(multihopExitSrvID) > 0 {
+
 			// Multi-Hop
 			connectionParams = wireguard.CreateConnectionParams(
 				multihopExitSrvID,
+				exitHostValue.Hostname,
 				exitHostValue.MultihopPort,
 				net.ParseIP(hostValue.Host),
 				exitHostValue.PublicKey,
@@ -447,7 +451,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		} else {
 			// Single-Hop
 			connectionParams = wireguard.CreateConnectionParams(
-				"",
+				"", "",
 				r.WireGuardParameters.Port.Port,
 				net.ParseIP(hostValue.Host),
 				hostValue.PublicKey,

@@ -38,17 +38,18 @@ import (
 
 // ConnectionParams represents OpenVPN connection parameters
 type ConnectionParams struct {
-	username          string
-	password          string
-	multihopExitSrvID string
-	tcp               bool
-	hostPort          int
-	hostIP            net.IP
-	proxyType         string
-	proxyAddress      net.IP
-	proxyPort         int
-	proxyUsername     string
-	proxyPassword     string
+	username             string
+	password             string
+	multihopExitSrvID    string
+	multihopExitHostname string // (e.g.: "nl4.wg.ivpn.net") we need it only for informing clients about connection status
+	tcp                  bool
+	hostPort             int
+	hostIP               net.IP
+	proxyType            string
+	proxyAddress         net.IP
+	proxyPort            int
+	proxyUsername        string
+	proxyPassword        string
 }
 
 // SetCredentials update WG credentials
@@ -60,6 +61,7 @@ func (c *ConnectionParams) SetCredentials(username, password string) {
 // CreateConnectionParams creates OpenVPN connection parameters object
 func CreateConnectionParams(
 	multihopExitSrvID string,
+	multihopExitHostname string,
 	tcp bool,
 	hostPort int,
 	hostIP net.IP,
@@ -70,15 +72,16 @@ func CreateConnectionParams(
 	proxyPassword string) ConnectionParams {
 
 	return ConnectionParams{
-		multihopExitSrvID: multihopExitSrvID,
-		tcp:               tcp,
-		hostPort:          hostPort,
-		hostIP:            hostIP,
-		proxyType:         proxyType,
-		proxyAddress:      proxyAddress,
-		proxyPort:         proxyPort,
-		proxyUsername:     proxyUsername,
-		proxyPassword:     proxyPassword}
+		multihopExitSrvID:    multihopExitSrvID,
+		multihopExitHostname: multihopExitHostname,
+		tcp:                  tcp,
+		hostPort:             hostPort,
+		hostIP:               hostIP,
+		proxyType:            proxyType,
+		proxyAddress:         proxyAddress,
+		proxyPort:            proxyPort,
+		proxyUsername:        proxyUsername,
+		proxyPassword:        proxyPassword}
 }
 
 // WriteConfigFile saves OpenVPN connection parameters into a config file
