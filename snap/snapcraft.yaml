@@ -12,7 +12,7 @@
 #     $ sudo snap install <filename>.snap --danderous
 #
 # After package installed:
-#   (this is not required, since the SnapStore enabled auto-connection 
+#   (this is not required, since the SnapStore enabled auto-connection
 #   of required interfaces for IVPN package;
 #   the steps can be useful only when snap package was built manually)
 #   1) Manual connection of the required interfaces:
@@ -35,17 +35,17 @@
 #     $ sudo snap logs -n=all ivpn.daemon
 # **********************************************
 # To release/deploy package to SnapStore (only for IVPN developers!):
-#   $ snapcraft upload --release=<risk_level> <snap_file> 
+#   $ snapcraft upload --release=<risk_level> <snap_file>
 #     * where <risk_level> could be: edge/beta/candidate/stable
 #     * https://snapcraft.io/docs/releasing-your-app
-#   Example: 
-#     $ snapcraft upload --release=beta ivpn_${VERSION}_amd64.snap 
+#   Example:
+#     $ snapcraft upload --release=beta ivpn_${VERSION}_amd64.snap
 # **********************************************
 
 name: ivpn # you probably want to 'snapcraft register <name>'
 base: core20 # the base snap is the execution environment for this snap
 # TODO: Set 'version:' to the same value as in 'ui/package.json'. This value will be used to stamp version for CLI and daemon
-version: "3.8.25" 
+version: "3.8.26" 
 
 title: IVPN
 summary: IVPN - Secure VPN for Privacy  # 79 char long summary
