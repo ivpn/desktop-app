@@ -113,6 +113,14 @@ function enable_firewall {
       create_chain ${IPv6BIN} ${IN_IVPN_STAT_USER_EXP}
       create_chain ${IPv6BIN} ${OUT_IVPN_STAT_USER_EXP}
 
+      # block DNS for IPv6
+      #
+      # Important: Block DNS before allowing link-local and unique-localaddresses!
+      # It will prevent potential DNS leaking in some situations (for example, from VM to a host machine)
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_DNS}
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
+      
       # IPv6: allow  local (lo) interface
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -o lo -j ACCEPT
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -i lo -j ACCEPT
@@ -138,11 +146,6 @@ function enable_firewall {
       # exceptions
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF0}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF0}
-
-      # block DNS for IPv6
-      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_DNS}
-      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
-      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
 
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF1}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF1}
