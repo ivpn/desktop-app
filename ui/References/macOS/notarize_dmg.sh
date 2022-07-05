@@ -39,7 +39,7 @@ done
 
 if [ -z "${_VERSION}" ] || [ -z "${_SIGN_CERT}" ]; then
   echo "Usage:"
-  echo "    $0 -v <version> -c <APPLE_DEVID_SERT>"
+  echo "    $0 -v <version> -c <APPLE_DEVID_SERT> -f <file_to_notarize>"
   exit 1
 fi
 
