@@ -32,7 +32,6 @@ import {
   PauseStateEnum,
   DnsEncryption,
   NormalizedConfigPortObject,
-  PortTypeEnum,
 } from "./types";
 
 export default {
@@ -105,7 +104,11 @@ export default {
     serversHashed: {},
     // Hosts hash object: hostsHashed[hostname] = host
     hostsHashed: {},
-    servers: { wireguard: [], openvpn: [], config: {} },
+    servers: {
+      wireguard: [],
+      openvpn: [],
+      config: { ports: { wireguard: null, openvpn: null } },
+    },
 
     // true when servers pinging in progress
     isPingingServers: false,
@@ -359,58 +362,28 @@ export default {
 
       return retSvr;
     },
-    connectionPorts(state, getters, rootState) {
-      const vpnType = rootState.settings.vpnType;
 
-      let ports = state.servers.config.ports.wireguard;
-      if (vpnType === VpnTypeEnum.OpenVPN)
-        ports = state.servers.config.ports.openvpn;
+    funcGetConnectionPorts: (state, getters, rootState) => (vpnType) => {
+      try {
+        if (!vpnType) vpnType = rootState.settings.vpnType;
 
-      if (!ports) return [];
-      ports = ports
-        .map((p) => NormalizedConfigPortObject(p))
-        .filter((p) => p != null);
+        let ports = state.servers.config.ports.wireguard;
+        if (vpnType === VpnTypeEnum.OpenVPN)
+          ports = state.servers.config.ports.openvpn;
 
-      // For Multi-Hop: port number is ignored. Only protocol has sense.
-      // So we just return one port definition for each protocol applicable for current VPN
-      if (
-        rootState.settings.isMultiHop ||
-        (vpnType === VpnTypeEnum.OpenVPN &&
-          rootState.settings.connectionUseObfsproxy)
-      ) {
-        // properties: tcp, udp (TCP applicable only for OpenVPN)
-        let portsByProtoHash = { udp: null, tcp: null };
+        if (!ports) return [];
+        ports = ports
+          .map((p) => NormalizedConfigPortObject(p))
+          .filter((p) => p != null);
 
-        // initialize hash by current port data
-        // (this avoids changing current port when it fully fits to our requirements)
-        const activePort =
-          vpnType === VpnTypeEnum.OpenVPN
-            ? rootState.settings.port.OpenVPN
-            : rootState.settings.port.WireGuard;
-        if (activePort.type === PortTypeEnum.TCP)
-          portsByProtoHash.tcp = activePort;
-        else portsByProtoHash.udp = activePort;
-
-        for (const p of ports) {
-          if (p.type === PortTypeEnum.TCP && portsByProtoHash.tcp === null)
-            portsByProtoHash.tcp = p;
-          if (p.type === PortTypeEnum.UDP && portsByProtoHash.udp === null)
-            portsByProtoHash.udp = p;
-          if (portsByProtoHash.tcp != null && portsByProtoHash.udp != null)
-            break;
-        }
-
-        ports = [];
-        // only UDP is applicable for WireGuard
-        // only TCP applicable for obfsproxy
-        if (vpnType !== VpnTypeEnum.OpenVPN) ports.push(portsByProtoHash.udp);
-        else {
-          if (!rootState.settings.connectionUseObfsproxy)
-            ports.push(portsByProtoHash.udp);
-          ports.push(portsByProtoHash.tcp);
-        }
+        return ports;
+      } catch (e) {
+        console.error(e);
       }
-      return ports;
+    },
+
+    connectionPorts(state, getters) {
+      return getters.funcGetConnectionPorts();
     },
   },
 

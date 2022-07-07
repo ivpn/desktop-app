@@ -264,9 +264,19 @@ export default {
       state.connectionUseObfsproxy = val;
     },
     setPort(state, portVal) {
+      if (!portVal) {
+        console.log("Warning! setPort() unable to set port. Port not defined.");
+        return;
+      }
       state.port[enumValueName(VpnTypeEnum, state.vpnType)] = portVal;
     },
     port(state, val) {
+      if (!val || !val.OpenVPN || !val.WireGuard) {
+        {
+          console.log("Warning! port: unable to change port. Bad object.");
+          return;
+        }
+      }
       state.port = val;
     },
 
@@ -574,15 +584,8 @@ export default {
     // connection
     connectionUseObfsproxy(context, val) {
       context.commit("connectionUseObfsproxy", val);
-      if (val === true) {
-        // only TCP connections applicable for obfsproxy
-        const applicablePorts = context.rootGetters["vpnState/connectionPorts"];
-        if (applicablePorts && applicablePorts.length > 0)
-          context.commit(
-            "setPort",
-            getDefaultPortFromList(applicablePorts, context.getters["getPort"])
-          );
-      }
+      // only TCP connections applicable for obfsproxy
+      if (val === true) ensurePortsSelectedCorrectly(context);
     },
     setPort(context, portVal) {
       context.commit("setPort", portVal);
@@ -731,11 +734,7 @@ function updateSelectedServers(context) {
   // - ensure if selected servers exists in a servers list and using latest data
   // - ensure if selected ports exists in a servers configuration
   // TODO: ensure IPv6 configuration
-  if (
-    context == null ||
-    context.rootGetters == null ||
-    context.rootState == null
-  ) {
+  if (!context || !context.rootGetters || !context.rootState) {
     console.error("Update selected servers failed (context not defined)");
     return;
   }
@@ -866,8 +865,20 @@ function updateSelectedServers(context) {
   if (favHostsChanged) context.commit("hostsFavoriteList", favHosts);
 
   //
-  // Ensure if selected ports exists in a servers configuration
+  // Ensure if selected ports exists in a servers configuration or port is selected correctly
   //
+  ensurePortsSelectedCorrectly(context);
+}
+
+// Ensure if selected ports exists in a servers configuration or port is selected correctly
+function ensurePortsSelectedCorrectly(context) {
+  if (!context || !context.rootGetters || !context.rootState) {
+    console.error("ensurePortsSelectedCorrectly: failed (context not defined)");
+    return;
+  }
+
+  const state = context.state;
+
   let funcIsPortExists = function (ports, port) {
     if (!ports || ports.length <= 0) return true; // do not perform any changes if there is no ports info in configuration
     for (const configPort of ports) {
@@ -876,25 +887,41 @@ function updateSelectedServers(context) {
     }
     return false;
   };
-  let funcGetDefaultPort = function (ports, fallbackData) {
+
+  let funcGetDefaultPort = function (ports) {
     for (const configPort of ports) {
       const p = NormalizedConfigPortObject(configPort);
       if (p) return p;
     }
-    return fallbackData;
+    return null;
   };
+
+  // returns null - if port is ok; otherwise - port value which have to be applied
+  let funcTestPort = function (allPorts, applicablePorts, currPort) {
+    let retPort = null;
+    if (!funcIsPortExists(allPorts, currPort)) {
+      console.log(`Selected port does not exists anymore!`);
+      retPort = funcGetDefaultPort(allPorts);
+    }
+    // Check is port applicable (according to current settings)
+    if (!funcIsPortExists(applicablePorts, retPort ? retPort : currPort)) {
+      console.log(`Selected port not applicable!`);
+      retPort = funcGetDefaultPort(applicablePorts);
+    }
+    return retPort;
+  };
+
   const portsCfg = context.rootState.vpnState.servers.config.ports;
   let cPort = Object.assign({}, state.port);
-  // openvpn
-  if (!funcIsPortExists(portsCfg.openvpn, cPort.OpenVPN)) {
-    cPort.OpenVPN = funcGetDefaultPort(portsCfg.openvpn, cPort.OpenVPN);
-    console.log(`Selected port does not exists anymore!`);
-    context.commit("port", cPort);
-  }
-  // wireguard
-  if (!funcIsPortExists(portsCfg.wireguard, cPort.WireGuard)) {
-    cPort.WireGuard = funcGetDefaultPort(portsCfg.wireguard, cPort.WireGuard);
-    console.log(`Selected port does not exists anymore!`);
+
+  const funcGetPorts = context.rootGetters["vpnState/funcGetConnectionPorts"];
+  const applicableWg = funcGetPorts(VpnTypeEnum.WireGuard);
+  const applicableOvpn = funcGetPorts(VpnTypeEnum.OpenVPN);
+  let portOvpn = funcTestPort(portsCfg.openvpn, applicableOvpn, cPort.OpenVPN);
+  let portWg = funcTestPort(portsCfg.wireguard, applicableWg, cPort.WireGuard);
+  if (portOvpn) cPort.OpenVPN = portOvpn;
+  if (portWg) cPort.WireGuard = portWg;
+  if (portOvpn || portWg) {
     context.commit("port", cPort);
   }
 }

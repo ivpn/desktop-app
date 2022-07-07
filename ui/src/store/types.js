@@ -89,7 +89,9 @@ export function NormalizedConfigPortObject(portFromServersConfig) {
   return {
     port: parseInt(portFromServersConfig.port, 10),
     type:
-      portFromServersConfig.type.trim().toUpperCase() == "TCP"
+      portFromServersConfig.type === PortTypeEnum.TCP || // the type can be already converted value
+      (typeof portFromServersConfig.type === "string" &&
+        portFromServersConfig.type.trim().toUpperCase() == "TCP")
         ? PortTypeEnum.TCP
         : PortTypeEnum.UDP,
   };

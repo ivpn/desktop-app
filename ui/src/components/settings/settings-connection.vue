@@ -158,7 +158,9 @@
           >Use obfsproxy</label
         >
       </div>
-      <div class="description">Only enable if you have trouble connecting</div>
+      <div class="description">
+        Only enable if you have trouble connecting. TCP connections only
+      </div>
 
       <div class="param" v-if="userDefinedOvpnFile">
         <input
@@ -532,14 +534,49 @@ export default {
     },
     prefferedPorts: function () {
       let ret = [];
-      let data = this.$store.getters["vpnState/connectionPorts"];
+      let ports = this.$store.getters["vpnState/connectionPorts"];
 
       const isMH = this.$store.state.settings.isMultiHop;
-      let isObfsproxy =
+      const isObfsproxy =
         this.isOpenVPN === true &&
         this.$store.state.settings.connectionUseObfsproxy === true;
 
-      data.forEach((p) =>
+      if (isObfsproxy) {
+        // For Obfsproxy: port number is ignored. Only TCP protocol is applicable.
+        // So we just return one TCP port definition (by default, currently selected port if it can be applied)
+        ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+        // try to use currently selected port
+        let port = ports.find((p) => p.port === this.port.port);
+        if (port) ports = [port];
+        else if (ports.length > 0) ports = [ports[0]];
+      } else if (isMH) {
+        // For Multi-Hop: port number is ignored. Only protocol has sense.
+        // So we just return one port definition for each protocol applicable for current VPN
+        // (by default, using currently selected port if it can be applied)
+        let portsByProtoHash = { udp: null, tcp: null };
+
+        // try to use currently selected port
+        let curPort = ports.find(
+          (p) => p.port === this.port.port && p.type === this.port.type
+        );
+        if (curPort) {
+          if (curPort.type === PortTypeEnum.TCP) portsByProtoHash.tcp = curPort;
+          else portsByProtoHash.udp = curPort;
+        }
+        // get first port definition for each protocol
+        if (!portsByProtoHash.tcp)
+          portsByProtoHash.tcp = ports.find((p) => p.type === PortTypeEnum.TCP);
+        if (!portsByProtoHash.udp)
+          portsByProtoHash.udp = ports.find((p) => p.type === PortTypeEnum.UDP);
+
+        if (portsByProtoHash.tcp || portsByProtoHash.udp) {
+          ports = [];
+          if (portsByProtoHash.udp) ports.push(portsByProtoHash.udp);
+          if (portsByProtoHash.tcp) ports.push(portsByProtoHash.tcp);
+        }
+      }
+
+      ports.forEach((p) =>
         ret.push({
           text:
             isMH === true || isObfsproxy === true // port number ignored for multi-hop and obfsproxy
