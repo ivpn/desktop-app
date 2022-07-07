@@ -91,6 +91,17 @@ if (!gotTheLock) {
   });
 }
 
+// abortController can be used to cancel active messageBox dialogs when app exiting.
+// Example:
+//      dialog.showMessageBox(win, { signal: abortController.signal, })
+//      abortController.abort();
+let abortController = new AbortController();
+// Every time controller is aborted, we need to reinitialize new object (to become back in not-aborted state)
+function abortControllerAbort() {
+  abortController.abort();
+  abortController = new AbortController();
+}
+
 // main process requesting information about 'initial route' after window created
 ipcMain.handle("renderer-request-ui-initial-route-args", () => {
   return lastRouteArgs;
@@ -434,13 +445,14 @@ if (gotTheLock) {
                 detail:
                   "Active VPN connection is using Pro plan features (MultiHop or Port forwarding) and will be disconnected.",
                 buttons: ["OK", "Reconnect with SingleHop VPN"],
+                signal: abortController.signal, // cancel dialog on window close
               };
               setTimeout(async () => {
                 let action = null;
                 if (win == null)
                   action = await dialog.showMessageBox(msgBoxConfig);
                 else action = await dialog.showMessageBox(win, msgBoxConfig);
-                console.log(action.response);
+
                 switch (action.response) {
                   case 0: // OK
                     daemonClient.Disconnect();
@@ -664,6 +676,9 @@ function createWindow(doNotShowWhenReady) {
       isTrayInitialized == true &&
       store.state.settings.minimizeToTray == true
     ) {
+      // Aborting dialogs (if exists) which was initialized by "signal: abortController.signal"
+      // Info: (for Linux) if we are hiding window when active messageBox is active - showing window back will lead to freezing it (it stay unresponsive)
+      abortControllerAbort();
       // Prevent closing the window to be able to show it back immediately.
       // Just hide it.
       win.hide();
