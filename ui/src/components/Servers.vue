@@ -197,6 +197,7 @@
             <serverNameControl
               class="serverName"
               :server="server"
+              :isFavoriteServersView="isFavoritesView"
               :isCountryFirst="sortTypeStr === 'Country'"
               :onExpandClick="onServerExpandClick"
               :isExpanded="isServerHostsExpanded(server)"
@@ -267,6 +268,7 @@
                       </div>
 
                       <img
+                        v-if="server.hosts.length > 1"
                         :src="favoriteImage(server, host)"
                         v-on:click="favoriteClicked($event, server, host)"
                       />

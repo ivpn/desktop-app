@@ -62,7 +62,7 @@ export default {
   props: {
     server: Object,
     serverHostName: String, // in use on Main view to show selected host for selected server
-
+    isFavoriteServersView: Boolean,
     isLargeText: Boolean,
 
     isSingleLine: Boolean,
@@ -117,10 +117,18 @@ export default {
     },
     multilineSecondLine: function () {
       if (!this.server) return "";
-      if (this.server.favHost)
-        return `${this.server.favHost.hostname} (${Math.round(
-          this.server.favHost.load
-        )}%)`; // only for favorite hosts (host object extended by all properties from parent server object +favHostParentServerObj +favHost)
+
+      if (this.isFavoriteServersView && this.$store.state.settings.showHosts) {
+        // only for favorite hosts (host object extended by all properties from parent server object +favHostParentServerObj +favHost)
+        let favHost = this.server.favHost;
+        // if favorite server has only one host: show it as a host
+        if (this.server.hosts.length === 1) {
+          favHost = this.server.hosts[0];
+        }
+        if (favHost)
+          return `${favHost.hostname} (${Math.round(favHost.load)}%)`;
+      }
+
       if (this.isCountryFirst) return this.server.city;
       return this.server.country;
     },
