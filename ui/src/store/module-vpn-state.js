@@ -32,6 +32,7 @@ import {
   PauseStateEnum,
   DnsEncryption,
   NormalizedConfigPortObject,
+  PortTypeEnum,
 } from "./types";
 
 export default {
@@ -387,6 +388,13 @@ export default {
           .map((p) => NormalizedConfigPortObject(p))
           .filter((p) => p != null);
 
+        if (
+          vpnType === VpnTypeEnum.OpenVPN &&
+          rootState.settings.connectionUseObfsproxy === true
+        ) {
+          // For Obfsproxy: only TCP protocol is applicable.
+          ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+        }
         return ports;
       } catch (e) {
         console.error(e);
