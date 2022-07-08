@@ -85,7 +85,13 @@ export const AppUpdateStage = Object.freeze({
 });
 
 export function NormalizedConfigPortObject(portFromServersConfig) {
-  if (!portFromServersConfig.port || !portFromServersConfig.type) return null;
+  if (
+    !portFromServersConfig.port ||
+    portFromServersConfig.type == null ||
+    portFromServersConfig.type == undefined
+  )
+    return null;
+
   return {
     port: parseInt(portFromServersConfig.port, 10),
     type:

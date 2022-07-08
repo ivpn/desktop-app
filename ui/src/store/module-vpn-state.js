@@ -207,8 +207,19 @@ export default {
     pauseState(state, val) {
       state.pauseState = val;
     },
-    servers(state, serversObj) {
-      updateServers(state, serversObj);
+    setServersData(state, serversObj /*{servers,serversHashed,hostsHashed}*/) {
+      if (
+        !serversObj ||
+        !serversObj.servers ||
+        !serversObj.serversHashed ||
+        !serversObj.hostsHashed
+      ) {
+        console.error("Unable to set servers data. Bad data object");
+        return;
+      }
+      state.servers = serversObj.servers;
+      state.serversHashed = serversObj.serversHashed;
+      state.hostsHashed = serversObj.hostsHashed;
     },
     isPingingServers(state, val) {
       state.isPingingServers = val;
@@ -428,7 +439,11 @@ export default {
         context.dispatch("uiState/pauseConnectionTill", null, { root: true });
     },
     servers(context, value) {
-      context.commit("servers", value);
+      // Update servers data and hashes: {servers, serversHashed, hostsHashed}
+      // (avoid doing all calculations in mutation to do not freeze the UI!)
+      const serversInfoObj = updateServers(context.state.servers, value);
+      // Apply new servers data
+      context.commit("setServersData", serversInfoObj);
       // notify 'settings' module about updated servers list
       // (it is required to update selected servers, selected ports ... etc. (if necessary))
       context.dispatch("settings/updateSelectedServers", null, { root: true });
@@ -582,7 +597,7 @@ function isServerSupportIPv6(server) {
   return false;
 }
 
-function updateServers(state, newServers) {
+function updateServers(oldServers, newServers) {
   if (newServers == null) return;
 
   // ensure all required properties are defined (even with empty values)
@@ -618,21 +633,21 @@ function updateServers(state, newServers) {
   }
 
   let hash = initNewServersAndCreateHash(null, newServers.wireguard);
-  state.serversHashed = initNewServersAndCreateHash(hash, newServers.openvpn);
-
+  let serversHashed = initNewServersAndCreateHash(hash, newServers.openvpn);
+  let hostsHashed = null;
   try {
     // hashing hostnames (hostsHashed)
     let hHosts = {};
-    for (const gw in state.serversHashed) {
-      const s = state.serversHashed[gw];
+    for (const gw in serversHashed) {
+      const s = serversHashed[gw];
       for (const h of s.hosts) {
         hHosts[h.hostname] = h;
       }
     }
-    state.hostsHashed = hHosts;
+    hostsHashed = hHosts;
   } catch (e) {
     console.error(e);
-    state.hostsHashed = {};
+    hostsHashed = {};
   }
 
   // copy ping value from old objects
@@ -655,16 +670,8 @@ function updateServers(state, newServers) {
       }
     }
   }
-  copySvrsDataFromOld(
-    state.servers.wireguard,
-    state.serversHashed,
-    state.hostsHashed
-  );
-  copySvrsDataFromOld(
-    state.servers.openvpn,
-    state.serversHashed,
-    state.hostsHashed
-  );
+  copySvrsDataFromOld(oldServers.wireguard, serversHashed, hostsHashed);
+  copySvrsDataFromOld(oldServers.openvpn, serversHashed, hostsHashed);
 
   // sort new servers (by country/city)
   function compare(a, b) {
@@ -675,8 +682,11 @@ function updateServers(state, newServers) {
   newServers.wireguard.sort(compare);
   newServers.openvpn.sort(compare);
 
-  // save servers
-  state.servers = newServers;
+  return {
+    servers: newServers,
+    serversHashed: serversHashed,
+    hostsHashed: hostsHashed,
+  };
 }
 
 function isAntitrackerActive(state) {
