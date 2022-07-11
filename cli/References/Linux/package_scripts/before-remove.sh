@@ -2,33 +2,22 @@
 
 echo "[*] Before remove (<%= version %> : <%= pkg %> : $1)"
 
-PKG_TYPE=<%= pkg %>
+# When removing package: $1==0 for RPM; $1 == "remove" for DEB
+_IS_REMOVE=0
+if [ "$1" = "remove" -o "$1" = "0" ]; then    
+  _IS_REMOVE=1
+fi
 
-echo "[+] Disabling firewall (before remove) ..."
-/usr/bin/ivpn firewall -off || echo "[-] Failed to disable firewall"
-
-echo "[+] Disconnecting (before remove) ..."
+echo "[+] Trying to disconnect (before-remove) ..."
 /usr/bin/ivpn disconnect || echo "[-] Failed to disconnect"
 
-if [ "$PKG_TYPE" = "rpm" ]; then
-    if [ -f /opt/ivpn/mutable/rpm_upgrade.lock ]; then
-        echo "[ ] Upgrade detected. Remove operations skipped"
-        exit 0
-    fi
+if [ $_IS_REMOVE = 1 ]; then
+    echo "[+] Disabling firewall (before-remove) ..."
+    /usr/bin/ivpn firewall -off || echo "[-] Failed to disable firewall"
+
+    echo "[+] Logging out (before-remove) ..."
+    /usr/bin/ivpn logout || echo "[-] Failed to log out"
+
+    echo "[+] Service cleanup (before-remove: pleaserun) ..."
+    sh /usr/share/pleaserun/ivpn-service/generate-cleanup.sh || echo "[-] Service cleanup FAILED!"
 fi
-
-if [ -f /opt/ivpn/mutable/settings.json ]; then
-    # In case of installing new version, we have to login back with current logged-in accountID after installation finished.
-    # Therefore we are saving accountID into temporary file (will be deleted after 'after_install' script execution)
-    echo "[+] Preparing upgrade data ..."
-    ACCID=$(cat /opt/ivpn/mutable/settings.json | grep -o \"AccountID\":\"[a-zA-Z0-9]*\" | cut -d '"' -f 4) || echo "[-] Failed to read accountID"
-    if [ ! -z "$ACCID" ]; then
-        echo $ACCID > /opt/ivpn/mutable/upgradeID.tmp || echo "[-] Failed to save accountID into temporary file"
-    fi
-fi
-
-echo "[+] Logging out ..."
-/usr/bin/ivpn logout || echo "[-] Failed to log out"
-
-echo "[+] Service cleanup (pleaserun) ..."
-sh /usr/share/pleaserun/ivpn-service/generate-cleanup.sh || echo "[-] Service cleanup FAILED!"

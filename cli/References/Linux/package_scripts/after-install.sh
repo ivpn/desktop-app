@@ -2,6 +2,12 @@
 
 echo "[*] After install (<%= version %> : <%= pkg %> : $1)"
 
+# When removing package: $1==0 for RPM; $1 == "remove" for DEB
+_IS_REMOVE=0
+if [ "$1" = "remove" -o "$1" = "0" ]; then    
+  _IS_REMOVE=1
+fi
+
 NEED_TO_SAVE_INSTRUCTIONS=true
 IVPN_ETC="/opt/ivpn/etc"
 IVPN_TMP="/opt/ivpn/mutable"
@@ -44,30 +50,11 @@ silent chmod 0700 $IVPN_ETC/*.down        # can execute only owner (root)
 silent chmod 0755 /usr/bin/ivpn           # can change only owner (root)
 silent chmod 0755 /usr/bin/ivpn-service   # can change only owner (root)
 
-
-IVPN_SAVED_DNS_FILE="/etc/resolv.conf.ivpnsave"
-if [ -f $IVPN_SAVED_DNS_FILE ]; then
-  echo "[+] restoring DNS configuration from previous installation"
-  mv $IVPN_SAVED_DNS_FILE /etc/resolv.conf || echo "[-] Restoring DNS failed"
-fi
-
-if [ -f /opt/ivpn/upgrade.lock ]; then
-  rm /opt/ivpn/upgrade.lock
-  echo "[ ] Upgrade detected"
-  # let daemon know that it is an upgrade (settings.json should exists for that)
-  if [ ! -f "$IVPN_TMP/settings.json" ]; then
-    echo "[+] Creating empty '$IVPN_TMP/settings.json'"
-    mkdir -p $IVPN_TMP
-    echo "{}" > "$IVPN_TMP/settings.json"
-  fi
-fi
-
 echo "[+] Service install start (pleaserun) ..."
 INSTALL_OUTPUT=$(sh /usr/share/pleaserun/ivpn-service/install.sh)
 if [ $? -eq 0 ]; then
     # Print output of the install script
     echo $INSTALL_OUTPUT
-
     try_systemd_install
 else
     # Print output of the install script
@@ -80,8 +67,17 @@ if $NEED_TO_SAVE_INSTRUCTIONS == true ; then
     echo "[!] Service start instructions saved into file: '$INSTRUCTIONS_FILE'"
 fi
 
+# ########################################################################################
+#
+# Next lines is in use only for compatibility with old package versions (v3.8.20 and older)
+#
+# DEB: 'before-remove' script (old versions) saving account credentials into 'toUpgradeID.tmp' and doing logout,
+# here we have to re-login
+# 
+# ########################################################################################
 FILE_ACCID_TO_UPGRADE="/opt/ivpn/mutable/toUpgradeID.tmp"
 if [ -f $FILE_ACCID_TO_UPGRADE ]; then
+  echo "[ ] Upgrade detected (after-install: old-style)"
   # It is an upgrade.
   # We need to re-login after installation finished.
   # Read account ID
@@ -90,10 +86,13 @@ if [ -f $FILE_ACCID_TO_UPGRADE ]; then
   # do not forget to remove temporary file
   silent rm $FILE_ACCID_TO_UPGRADE
 
+  echo "[+] Disabling firewall (after-install: old-style) ..."
+  /usr/bin/ivpn firewall -off || echo "[-] Failed to disable firewall"
+
   if [ ! -z "$ACCID" ]; then
     # giving a chance for a daemon to fully start
     sleep 1
-    echo "[+] Logging in ..."
+    echo "[+] Logging in (after-install: old-style) ..."
     /usr/bin/ivpn login $ACCID #||  echo "[-] Finishing installation: Failed to to re-login (try#1)"
     if [ ! $? -eq 0 ]; then
       echo "[-] Finishing installation: Failed to to re-login (try#1)"
