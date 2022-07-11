@@ -174,7 +174,7 @@ CreatePackage()
   #   [*] After install (3.3.30 : deb : configure)
   # DEB (apt) Remove:
   #   [*] Before remove (3.3.20 : deb : remove)
-  #   [*] Before install (3.3.20 : deb : remove)
+  #   [*] After remove (3.3.20 : deb : remove)
   #
   # RPM
   # (Useful link: https://docs.fedoraproject.org/en-US/packaging-guidelines/Scriptlets/)

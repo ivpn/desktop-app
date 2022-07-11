@@ -184,6 +184,41 @@ CreatePackage()
   #   after_remove
   #
   # NOTE! 'remove' scripts is using from old version!
+  #
+  # EXAMPLES:
+  #
+  # DEB
+  # (Useful link: https://wiki.debian.org/MaintainerScripts)
+  #
+  # DEB (apt) Install3.3.30:
+  #   [*] Before install (3.3.30 : deb : install)
+  #   [*] After install (3.3.30 : deb : configure)
+  # DEB (apt) Upgrade 3.3.20->3.3.30:
+  #   [*] Before remove (3.3.20 : deb : upgrade)
+  #   [*] Before install (3.3.30 : deb : upgrade)
+  #   [*] After remove (3.3.20 : deb : upgrade)
+  #   [*] After install (3.3.30 : deb : configure)
+  # DEB (apt) Remove:
+  #   [*] Before remove (3.3.20 : deb : remove)
+  #   [*] After remove (3.3.20 : deb : remove)
+  #
+  # RPM
+  # (Useful link: https://docs.fedoraproject.org/en-US/packaging-guidelines/Scriptlets/)
+  #   When scriptlets are called, they will be supplied with an argument.
+  #   This argument, accessed via $1 (for shell scripts) is the number of packages of this name
+  #   which will be left on the system when the action completes.
+  #
+  # RPM (dnf) install:
+  #   [*] Before install (3.3.30 : rpm : 1)
+  #   [*] After install (3.3.30 : rpm : 1)
+  # RPM (dnf) upgrade:
+  #   [*] Before install (3.3.30 : rpm : 2)
+  #   [*] After install (3.3.30 : rpm : 2)
+  #   [*] Before remove (3.3.20 : rpm : 1)
+  #   [*] After remove (3.3.20 : rpm : 1)
+  # RPM (dnf) remove:
+  #   [*] Before remove (3.3.30 : rpm : 0)
+  #   [*] After remove (3.3.30 : rpm : 0)
 
   fpm -d ivpn $EXTRA_ARGS \
     --rpm-rpmbuild-define "_build_id_links none" \
