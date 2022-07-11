@@ -126,6 +126,14 @@ func (s *serversUpdater) updateServers() (*types.ServersInfoResponse, error) {
 	if err != nil {
 		return servers, fmt.Errorf("failed to download servers list: %w", err)
 	}
+
+	if len(servers.Config.Ports.OpenVPN) <= 0 {
+		return servers, fmt.Errorf("no ports info for OpenVPN in servers.json; skipping received data from backend")
+	}
+	if len(servers.Config.Ports.WireGuard) <= 0 {
+		return servers, fmt.Errorf("no ports info for WireGuard in servers.json; skipping received data from backend")
+	}
+
 	log.Info(fmt.Sprintf("Updated servers info (%d OpenVPN; %d WireGuard)\n", len(servers.OpenvpnServers), len(servers.WireguardServers)))
 
 	s.servers = servers
