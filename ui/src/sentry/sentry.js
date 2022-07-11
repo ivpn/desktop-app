@@ -46,7 +46,8 @@ export function SentrySendDiagnosticReport(
   AccountID,
   comment,
   eventAdditionalDataObject,
-  daemonVer
+  daemonVer,
+  buildExtraInfo
 ) {
   if (!DSN || comment == "" || eventAdditionalDataObject == null) return;
 
@@ -86,6 +87,12 @@ export function SentrySendDiagnosticReport(
   }
 
   try {
+    // buildExtraInfo
+    let tags = {
+      AccountID: AccountID,
+      DaemonVersion: daemonVer,
+    };
+    if (buildExtraInfo) tags.BuildExInfo = buildExtraInfo;
     return Sentry.captureEvent({
       _isAllowedToSend: true,
       message: `Diagnostic report`,
@@ -93,10 +100,7 @@ export function SentrySendDiagnosticReport(
       contexts: {
         ["comment"]: { "User comment": comment },
       },
-      tags: {
-        AccountID: AccountID,
-        DaemonVersion: daemonVer,
-      },
+      tags: tags,
     });
   } catch (e) {
     console.error(e);

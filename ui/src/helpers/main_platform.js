@@ -22,8 +22,8 @@ async function winInstallFolder() {
 // Returns: null - if we are not running in Snap environment,
 // otherwise it returns values of Snap sandbox environment variables
 export function GetLinuxSnapEnvVars() {
-  if (process.env.SNAP && process.env.SNAP_COMMON && process.env.SNAP_DATA) {        
-    if (app.getAppPath().startsWith(process.env.SNAP)) {      
+  if (process.env.SNAP && process.env.SNAP_COMMON && process.env.SNAP_DATA) {
+    if (app.getAppPath().startsWith(process.env.SNAP)) {
       return {
         SNAP: process.env.SNAP,
         SNAP_COMMON: process.env.SNAP_COMMON,
@@ -34,17 +34,17 @@ export function GetLinuxSnapEnvVars() {
 }
 
 export async function GetPortInfoFilePath() {
-  
   switch (Platform()) {
     case PlatformEnum.macOS:
       return "/Library/Application Support/IVPN/port.txt";
-    case PlatformEnum.Linux:
+    case PlatformEnum.Linux: {
       const snapVars = GetLinuxSnapEnvVars();
-      if (snapVars!=null) {
-          console.log("SNAP environment detected!")
-          return path.join(snapVars.SNAP_COMMON, "/opt/ivpn/mutable/port.txt");
-      }      
+      if (snapVars != null) {
+        console.log("SNAP environment detected!");
+        return path.join(snapVars.SNAP_COMMON, "/opt/ivpn/mutable/port.txt");
+      }
       return "/opt/ivpn/mutable/port.txt";
+    }
     case PlatformEnum.Windows: {
       let dir = await winInstallFolder();
       return `${dir}\\etc\\port.txt`;

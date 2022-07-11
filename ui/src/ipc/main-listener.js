@@ -28,6 +28,7 @@ import {
 import { ipcMain, nativeTheme, dialog, app, shell } from "electron";
 import path from "path";
 import { Platform } from "@/platform/platform";
+import { GetLinuxSnapEnvVars } from "@/helpers/main_platform";
 
 import client from "../daemon-client";
 import { CheckUpdates, IsAbleToCheckUpdate } from "@/app-updater";
@@ -241,11 +242,18 @@ ipcMain.handle(
     let accountID = "";
     if (store.state.account.session != null)
       accountID = store.state.account.session.AccountID;
+
+    let buildExtraInfo = "";
+    if (GetLinuxSnapEnvVars()) {
+      buildExtraInfo = "SNAP environement";
+    }
+
     return SentrySendDiagnosticReport(
       accountID,
       comment,
       dataObj,
-      store.state.daemonVersion
+      store.state.daemonVersion,
+      buildExtraInfo
     );
   }
 );
