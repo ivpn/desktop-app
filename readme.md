@@ -1,6 +1,7 @@
 [![CodeQL](https://github.com/ivpn/desktop-app/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/ivpn/desktop-app/actions/workflows/codeql-analysis.yml)
 [![Security Scan (gosec)](https://github.com/ivpn/desktop-app/actions/workflows/gosec.yml/badge.svg)](https://github.com/ivpn/desktop-app/actions/workflows/gosec.yml)
 [![CI](https://github.com/ivpn/desktop-app/actions/workflows/ci.yml/badge.svg)](https://github.com/ivpn/desktop-app/actions/workflows/ci.yml)
+[![ivpn](https://snapcraft.io/ivpn/badge.svg)](https://snapcraft.io/ivpn)
 # IVPN for Desktop (Windows/macOS/Linux)
 
 **IVPN for Desktop** is the official IVPN app for desktop platforms. Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Multi-Hop, Trusted Networks, AntiTracker, Custom DNS, Dark mode, and more.  
