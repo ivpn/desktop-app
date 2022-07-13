@@ -174,8 +174,8 @@ export default {
       ],
       config: {
         antitracker: {
-          default: { ip: "", "multihop-ip": "" },
-          hardcore: { ip: "", "multihop-ip": "" }
+          default: { ip: "" },
+          hardcore: { ip: "" }
         },
         api: { ips: [""], ipv6s:[""] }
         ports: {
@@ -288,12 +288,8 @@ export default {
         : atConfig.default;
       if (atIPs == null) return null;
 
-      if (rootState.settings.vpnType === VpnTypeEnum.WireGuard) {
-        // WireGuard (port-based MultiHop using the same DNS IP as SingleHop)
-        return atIPs.ip;
-      }
-      // OpenVPN
-      return rootState.settings.isMultiHop ? atIPs["multihop-ip"] : atIPs.ip;
+      // port-based MultiHop using the same DNS IP as SingleHop
+      return atIPs.ip;
     },
     isAntitrackerEnabled: (state) => {
       return isAntitrackerActive(state);
@@ -706,8 +702,6 @@ function isAntitrackerActive(state) {
   switch (dnsIP) {
     case atConfig.default.ip:
     case atConfig.hardcore.ip:
-    case atConfig.default["multihop-ip"]:
-    case atConfig.hardcore["multihop-ip"]:
       return true;
     default:
   }
@@ -722,7 +716,6 @@ function isAntitrackerHardcoreActive(state) {
   let atConfig = state.servers.config.antitracker;
   switch (dnsIP) {
     case atConfig.hardcore.ip:
-    case atConfig.hardcore["multihop-ip"]:
       return true;
     default:
   }

@@ -75,8 +75,7 @@ type OpenvpnServerInfo struct {
 
 // DNSInfo contains info about DNS server
 type DNSInfo struct {
-	IP         string `json:"ip"`
-	MultihopIP string `json:"multihop-ip"`
+	IP string `json:"ip"`
 }
 
 // AntitrackerInfo all info about antitracker DNSs

@@ -265,17 +265,10 @@ func printAntitrackerConfigInfo(w *tabwriter.Writer, antitracker, antitrackerHar
 
 // GetAntitrackerIP - returns IP of antitracker DNS
 func GetAntitrackerIP(vpntype vpn.Type, isHardcore, isMultihop bool, servers *apitypes.ServersInfoResponse) (string, error) {
-
 	if isHardcore {
-		if vpntype == vpn.OpenVPN && isMultihop {
-			return servers.Config.Antitracker.Hardcore.MultihopIP, nil
-		}
 		return servers.Config.Antitracker.Hardcore.IP, nil
 	}
 
-	if vpntype == vpn.OpenVPN && isMultihop {
-		return servers.Config.Antitracker.Default.MultihopIP, nil
-	}
 	return servers.Config.Antitracker.Default.IP, nil
 }
 
@@ -290,9 +283,9 @@ func IsAntiTrackerIP(dns string, servers *apitypes.ServersInfoResponse) (antitra
 		return false, false
 	}
 
-	if dns == servers.Config.Antitracker.Default.IP || dns == servers.Config.Antitracker.Default.MultihopIP {
+	if dns == servers.Config.Antitracker.Default.IP {
 		return true, false
-	} else if dns == servers.Config.Antitracker.Hardcore.IP || dns == servers.Config.Antitracker.Hardcore.MultihopIP {
+	} else if dns == servers.Config.Antitracker.Hardcore.IP {
 		return true, true
 	}
 
