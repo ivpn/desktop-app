@@ -86,16 +86,18 @@ func RegisterLanChangeListener(onChange chan<- struct{}) error {
 				}
 
 				if isChanged {
-					mutex.RLock()
-					defer mutex.RUnlock()
+					func() { // using anonymous function to unlock mutex correctly
+						mutex.RLock()
+						defer mutex.RUnlock()
 
-					// notify all receivers about network change
-					for _, c := range globalEvtReceivers {
-						select {
-						case c <- struct{}{}: // notified
-						default: // channel is full
+						// notify all receivers about network change
+						for _, c := range globalEvtReceivers {
+							select {
+							case c <- struct{}{}: // notified
+							default: // channel is full
+							}
 						}
-					}
+					}()
 				}
 			}
 		}()
