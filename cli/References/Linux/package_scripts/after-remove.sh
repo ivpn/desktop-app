@@ -62,7 +62,7 @@ try_systemd_stop() {
 
 
 IVPN_DIR="/opt/ivpn"
-if [ -d $IVPN_TMP ] ; then
+if [ -d $IVPN_DIR ] ; then
   echo "[+] Removing other files ..."
   # Normally, all files which were installed, deleted automatically.
   # But ivpn-service also writing to 'mutable' additional temporary files (uninstaller know nothing about them).
