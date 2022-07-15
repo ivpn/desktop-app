@@ -30,7 +30,12 @@ export function SentryInit() {
   try {
     Sentry.init({
       dsn: DSN,
-
+      // Disable sentry by default.
+      // It will be enabled only when user wants to send diagnostic report:
+      //    Sentry.getCurrentHub().getClient().getOptions().enabled = true;
+      // Note! It is important to have sentry disabled when app is going to close.
+      //    Otherwise, there could be situations when Sentry block app to quit (for example, when internet connectivity is blocked)
+      enabled: false,
       beforeSend: beforeSendFunc, // allow us to control when data can be sent on server
 
       enableJavaScript: false, // Enables crash reporting for JavaScript errors in this process.
@@ -93,6 +98,10 @@ export function SentrySendDiagnosticReport(
       DaemonVersion: daemonVer,
     };
     if (buildExtraInfo) tags.BuildExInfo = buildExtraInfo;
+
+    // Temporary enable Sentry to send Event
+    Sentry.getCurrentHub().getClient().getOptions().enabled = true;
+
     return Sentry.captureEvent({
       _isAllowedToSend: true,
       message: `Diagnostic report`,
@@ -104,6 +113,9 @@ export function SentrySendDiagnosticReport(
     });
   } catch (e) {
     console.error(e);
+  } finally {
+    // disable Sentry after event sent
+    Sentry.getCurrentHub().getClient().getOptions().enabled = false;
   }
   return null;
 }
