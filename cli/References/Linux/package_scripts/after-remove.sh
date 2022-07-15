@@ -4,12 +4,29 @@ echo "[*] After remove (<%= version %> : <%= pkg %> : $1)"
 
 # When removing package: $1==0 for RPM; $1 == "remove" for DEB
 _IS_REMOVE=0
-if [ "$1" = "remove" -o "$1" = "0" ]; then    
+if [ "$1" = "remove" -o "$1" = "0" ]; then
   _IS_REMOVE=1
 fi
 
+# ########################################################################################
+#
+# COMPATIBILITY BLOCK (BEGIN)
+#
+# Next block is in use only for compatibility with old package versions (v3.8.20 and older)
+#
+# ########################################################################################
+# RPM: do not forget to remove file '/opt/ivpn/mutable/rpm_upgrade.lock' (if exists)
+if [ "<%= pkg %>" = "rpm" ]; then
+    if [ -f /opt/ivpn/mutable/rpm_upgrade.lock ]; then
+        rm /opt/ivpn/mutable/rpm_upgrade.lock || echo "[-] Failed to remove rpm_upgrade.lock"
+    fi
+fi
+# ########################################################################################
+# COMPATIBILITY BLOCK (END)
+# ########################################################################################
+
 if [ $_IS_REMOVE = 0 ]; then
-  echo "[ ] Upgrade detected. After-remove operations skipped"  
+  echo "[ ] Upgrade detected. After-remove operations skipped"
   exit 0
 fi
 
@@ -45,17 +62,13 @@ try_systemd_stop() {
 
 
 IVPN_DIR="/opt/ivpn"
-IVPN_TMP="/opt/ivpn/mutable"
-IVPN_LOG="/opt/ivpn/log"
 if [ -d $IVPN_TMP ] ; then
   echo "[+] Removing other files ..."
-  # Normally, all files which were installed, deleted automatically
-  # But ivpn-service also writing to 'mutable' additional temporary files (uninstaller know nothing about them)
-  # Therefore, we are completely removing all content of '/opt/ivpn/mutable'
-  rm -rf $IVPN_TMP || echo "[-] Removing '$IVPN_TMP' folder failed"
-  rm -rf $IVPN_LOG || echo "[-] Removing '$IVPN_LOG' folder failed"
-  #remove 'ivpn' folder (if empy)
-  silent sudo rmdir $IVPN_DIR
+  # Normally, all files which were installed, deleted automatically.
+  # But ivpn-service also writing to 'mutable' additional temporary files (uninstaller know nothing about them).
+  # Therefore, we are completely removing all content of '/opt/ivpn/mutable'.
+  # Also, there could stay empty dirs which were not deleted automatically.
+  rm -rf $IVPN_DIR || echo "[-] Removing '$IVPN_DIR' folder failed"
 fi
 
 try_systemd_stop
