@@ -133,6 +133,12 @@ const daemonResponses = Object.freeze({
   ServiceExitingResp: "ServiceExitingResp",
 });
 
+export const AppUpdateInfoType = Object.freeze({
+  Default: "default",
+  Manual: "manual",
+  Beta: "beta",
+});
+
 const ErrorRespTypes = Object.freeze({
   ErrorUnknown: 0,
   ErrorParanoidModePasswordError: 1,
@@ -862,35 +868,12 @@ async function AccountStatus() {
   return await sendRecv({ Command: daemonRequests.AccountStatus });
 }
 
-async function GetAppUpdateInfo(doManualUpdateCheck) {
+async function GetAppUpdateInfo(appUpdateType) {
   try {
     let apiAlias = "";
     let apiAliasSign = "";
 
-    if (doManualUpdateCheck !== true) {
-      switch (Platform()) {
-        case PlatformEnum.Windows:
-          apiAlias = "updateInfo_Windows";
-          apiAliasSign = "updateSign_Windows";
-          break;
-        case PlatformEnum.macOS:
-          apiAlias = "updateInfo_macOS";
-          apiAliasSign = "updateSign_macOS";
-          break;
-        case PlatformEnum.Linux:
-          apiAlias = "updateInfo_Linux";
-          // For Linux it is not required to get update signature
-          // because are not perform automatic update for Linux.
-          // We just notifying users about new update available.
-          // Info:
-          //    Linux update is based on Linux repository (standard way for linux platforms)
-          //    (all binaries are signed by PGP key)
-          //apiAliasSign = "updateSign_Linux";
-          break;
-        default:
-          throw new Error("Unsupported platform");
-      }
-    } else {
+    if (appUpdateType === AppUpdateInfoType.Manual) {
       switch (Platform()) {
         case PlatformEnum.Windows:
           apiAlias = "updateInfo_manual_Windows";
@@ -903,10 +886,45 @@ async function GetAppUpdateInfo(doManualUpdateCheck) {
         case PlatformEnum.Linux:
           apiAlias = "updateInfo_manual_Linux";
           break;
-        default:
-          throw new Error("Unsupported platform");
+      }
+    } else if (appUpdateType === AppUpdateInfoType.Beta) {
+      switch (Platform()) {
+        case PlatformEnum.Windows:
+          apiAlias = "updateInfo_beta_Windows";
+          apiAliasSign = "updateSign_beta_Windows";
+          break;
+        case PlatformEnum.macOS:
+          apiAlias = "updateInfo_beta_macOS";
+          apiAliasSign = "updateSign_beta_macOS";
+          break;
+        case PlatformEnum.Linux:
+          apiAlias = "updateInfo_beta_Linux";
+          break;
+      }
+    } else {
+      switch (Platform()) {
+        case PlatformEnum.Windows:
+          apiAlias = "updateInfo_Windows";
+          apiAliasSign = "updateSign_Windows";
+          break;
+        case PlatformEnum.macOS:
+          apiAlias = "updateInfo_macOS";
+          apiAliasSign = "updateSign_macOS";
+          break;
+        case PlatformEnum.Linux:
+          // For Linux it is not required to get update signature
+          // because are not perform automatic update for Linux.
+          // We just notifying users about new update available.
+          // Info:
+          //    Linux update is based on Linux repository (standard way for linux platforms)
+          //    (all binaries are signed by PGP key)
+          //apiAliasSign = "updateSign_Linux";
+          apiAlias = "updateInfo_Linux";
+          break;
       }
     }
+
+    if (!apiAlias && !apiAliasSign) throw new Error("Unsupported platform");
 
     let updateInfoResp = await sendRecv({
       Command: daemonRequests.APIRequest,
@@ -1816,6 +1834,8 @@ async function SetLocalParanoidModePassword(password) {
 }
 
 export default {
+  AppUpdateInfoType,
+
   RegisterMsgBoxFunc,
   ConnectToDaemon,
 

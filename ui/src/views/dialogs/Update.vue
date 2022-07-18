@@ -50,7 +50,12 @@
                 </div>
                 <!-- NEW UPDATE -->
                 <div v-else>
-                  <div class="big_text">New IVPN version available</div>
+                  <div class="big_text">
+                    <div v-if="versionLatestIsBeta">
+                      New Beta version available
+                    </div>
+                    <div v-else>New IVPN version available</div>
+                  </div>
 
                   <!-- info: new version -->
                   <div class="small_text">
@@ -81,6 +86,22 @@
                         }})
                       </span>
                     </span>
+                    <!-- BETA info -->
+                    <div
+                      v-if="versionLatestIsBeta"
+                      style="text-align: left; margin-top: 10px"
+                    >
+                      <b
+                        ><span style="color: red"
+                          >Use at your own risk!</span
+                        ></b
+                      >
+                      <div style="margin-top: 10px">
+                        You are receiving this notification because you have
+                        "Notify beta version updates" enabled in the General
+                        settings.
+                      </div>
+                    </div>
                   </div>
 
                   <!--release notes-->
@@ -301,6 +322,9 @@ export default {
     },
     versionLatestDaemon: function () {
       return this.$store.state.latestVersionInfo?.daemon?.version;
+    },
+    versionLatestIsBeta: function () {
+      return this.$store.state.latestVersionInfo?.beta === true ? true : false;
     },
   },
 

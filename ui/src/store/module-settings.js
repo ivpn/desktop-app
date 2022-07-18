@@ -143,6 +143,9 @@ const getDefaultState = () => {
     showHosts: false, //Enable selection of individual servers in server selection list
 
     // updates
+    updates: {
+      isBetaProgram: false,
+    },
     skipAppUpdate: {
       genericVersion: null,
       daemonVersion: null,
@@ -383,6 +386,9 @@ export default {
     },
 
     // updates
+    updates(state, val) {
+      state.updates = val;
+    },
     skipAppUpdate(state, val) {
       state.skipAppUpdate = val;
     },
@@ -711,6 +717,9 @@ export default {
     },
 
     // UPDATES
+    updates(context, val) {
+      context.commit("updates", val);
+    },
     skipAppUpdate(context, val) {
       context.commit("skipAppUpdate", val);
     },

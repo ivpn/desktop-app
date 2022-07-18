@@ -132,23 +132,64 @@
       >
     </div>
 
-    <!-- DIAGNOSTIC LOGS-->
-    <div class="settingsBoldFont">Diagnostics:</div>
-    <div class="flexRow">
-      <div class="param">
-        <input type="checkbox" id="logging" v-model="logging" />
-        <label class="defColor" for="logging">Allow logging</label>
-      </div>
-      <div class="flexRowRestSpace"></div>
-
+    <!-- TAB-view header (diagnostic) -->
+    <div class="flexRow" style="margin-top: 15px">
       <button
-        class="settingsButton"
-        v-on:click="onLogs"
-        v-if="isCanSendDiagLogs"
+        v-on:click="onDiagnosticViewGeneral"
+        class="selectableButtonOff"
+        v-bind:class="{ selectableButtonOn: diagnosticViewIsGeneral }"
       >
-        Diagnostic logs ...
+        Diagnostics
       </button>
+      <button
+        v-on:click="onDiagnosticViewBeta"
+        class="selectableButtonOff"
+        v-bind:class="{ selectableButtonOn: diagnosticViewIsBeta }"
+      >
+        Beta
+      </button>
+      <button
+        style="cursor: auto; flex-grow: 1"
+        class="selectableButtonSeparator"
+      ></button>
     </div>
+
+    <div style="margin-top: 12px">
+      <!-- TAB-view (diagnostic): general -->
+      <div v-if="diagnosticViewIsGeneral" class="flexRow">
+        <div class="param">
+          <input type="checkbox" id="logging" v-model="logging" />
+          <label class="defColor" for="logging">Allow logging</label>
+        </div>
+        <div class="flexRowRestSpace"></div>
+
+        <button
+          class="settingsButton"
+          v-on:click="onLogs"
+          v-if="isCanSendDiagLogs"
+        >
+          Diagnostic logs ...
+        </button>
+      </div>
+      <!-- TAB-view (diagnostic): beta -->
+      <div v-if="diagnosticViewIsBeta" class="flexRow">
+        <div>
+          <div class="param">
+            <input type="checkbox" id="beta" v-model="beta" />
+            <label class="defColor" for="beta"
+              >Notify beta version updates</label
+            >
+          </div>
+          <div class="description">
+            Beta versions can break and change often
+          </div>
+        </div>
+
+        <div class="flexRowRestSpace"></div>
+      </div>
+    </div>
+
+    <!-- TOPMOST: Diagnostic logs 'dialog' -->
     <div id="diagnosticLogs" v-if="diagnosticLogsShown">
       <ComponentDiagnosticLogs
         :onClose="
@@ -177,6 +218,7 @@ export default {
       diagnosticLogsShown: false,
       isLaunchAtLoginValue: null,
       colorScheme: null,
+      diagnosticView: "general",
     };
   },
   mounted() {
@@ -194,6 +236,13 @@ export default {
         console.error("Error obtaining 'LaunchAtLogin' value: ", err);
         this.isLaunchAtLoginValue = null;
       }
+    },
+
+    onDiagnosticViewGeneral() {
+      this.diagnosticView = "general";
+    },
+    onDiagnosticViewBeta() {
+      this.diagnosticView = "beta";
     },
   },
   computed: {
@@ -296,6 +345,22 @@ export default {
       },
     },
 
+    beta: {
+      get() {
+        return this.$store.state.settings.updates.isBetaProgram;
+      },
+      set(value) {
+        let settingsUpdates = Object.assign(
+          {},
+          this.$store.state.settings.updates
+        );
+        settingsUpdates.isBetaProgram = value;
+
+        this.$store.dispatch("settings/updates", settingsUpdates);
+        sender.SetLogging();
+      },
+    },
+
     isCanSendDiagLogs() {
       return sender.IsAbleToSendDiagnosticReport();
     },
@@ -311,6 +376,12 @@ export default {
         sender.ColorSchemeSet(value);
         this.colorScheme = value;
       },
+    },
+    diagnosticViewIsGeneral() {
+      return !this.diagnosticViewIsBeta;
+    },
+    diagnosticViewIsBeta() {
+      return this.diagnosticView === "beta";
     },
   },
 };
@@ -341,7 +412,7 @@ label {
 
 div.description {
   @extend .settingsGrayLongDescriptionFont;
-  margin-left: 22px;
+  margin-left: 21px;
   max-width: 490px;
 }
 

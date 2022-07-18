@@ -36,12 +36,27 @@ const os = require("os");
 let DownloadUpdateCancelled = false;
 let DownloadRequest = null;
 
-export async function CheckUpdates(isAutomaticCheck) {
-  const defUpdInf = await checkUpdates();
+export async function CheckUpdates(isAutomaticCheck, isBetaProgram) {
+  // get info default update info
+  let defUpdInf = await checkUpdates();
+
+  // get info about 'beta' update
+  if (isBetaProgram === true) {
+    let betaUpdInf = await checkUpdates(client.AppUpdateInfoType.Beta);
+    if (betaUpdInf) {
+      betaUpdInf.beta = true;
+      if (!defUpdInf) defUpdInf = betaUpdInf;
+      else {
+        if (IsNewVersion(defUpdInf.generic.version, betaUpdInf.generic.version))
+          defUpdInf = betaUpdInf;
+      }
+    }
+  }
+
   if (isAutomaticCheck == true) return defUpdInf;
   else {
-    const doManualUpdateCheck = true;
-    const manualUpdInf = await checkUpdates(doManualUpdateCheck);
+    // 'manual' update info
+    const manualUpdInf = await checkUpdates(client.AppUpdateInfoType.Manual);
     if (!manualUpdInf) return defUpdInf;
     if (!defUpdInf) return manualUpdInf;
 
@@ -51,9 +66,9 @@ export async function CheckUpdates(isAutomaticCheck) {
   }
 }
 
-async function checkUpdates(doManualUpdateCheck) {
+async function checkUpdates(appUpdateType) {
   try {
-    let updatesInfoData = await client.GetAppUpdateInfo(doManualUpdateCheck);
+    let updatesInfoData = await client.GetAppUpdateInfo(appUpdateType);
 
     if (
       !updatesInfoData ||

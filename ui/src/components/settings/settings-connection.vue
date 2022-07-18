@@ -674,7 +674,7 @@ select {
 
 .description {
   @extend .settingsGrayLongDescriptionFont;
-  margin-left: 22px;
+  margin-left: 20px;
 }
 
 input.proxyParam {

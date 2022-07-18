@@ -128,7 +128,12 @@ export async function CheckUpdates(isAutomaticCheck) {
       state: AppUpdateStage.CheckingForUpdates,
     });
 
-    let updatesInfo = await updater.CheckUpdates(isAutomaticCheck);
+    const settingsUpdates = store.state.settings.updates;
+
+    let updatesInfo = await updater.CheckUpdates(
+      isAutomaticCheck,
+      settingsUpdates ? settingsUpdates.isBetaProgram : null
+    );
     store.commit("latestVersionInfo", updatesInfo);
 
     setState({
