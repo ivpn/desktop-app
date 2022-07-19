@@ -138,7 +138,7 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 		// Check if 'resolvectl status' command works without issues.
 		// If there is an issue - probably resolvectl is not applicable for this system
 		// (e.g. systemd-resolved service is not configured)
-		if err := exec.Command(resolvectlBinPath + "1").Run(); err != nil {
+		if err := exec.Command(resolvectlBinPath).Run(); err != nil {
 			logInfo = append(logInfo, "'resolvectl' is detected but it is failed to run status command: ", err.Error())
 			resolvectlBinPath = ""
 		} else {
