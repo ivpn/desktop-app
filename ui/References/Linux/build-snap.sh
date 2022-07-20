@@ -28,19 +28,22 @@ while getopts ":v:" opt; do
   case $opt in
     v) VERSION="$OPTARG"
     ;;
-#    \?) echo "Invalid option -$OPTARG" >&2
-#   ;;
   esac
 done
 
 if [ -z "$VERSION" ]
 then
   echo "Usage:"
-  echo "    $0 -v <version>"
-  echo ""
+  echo "      $0 -v <version>"
+  echo "    It is possible to use additional arguments which will be passed directly to snapcraft tool"
+  echo "      Example: $0 -v <version> --use-lxd"
   exit 1
 fi
 # ---------------------------------------------------------
+
+# exclude first two argunments (-v X.X.X) from $@
+shift
+shift
 
 # check correct versions
 echo "[i] (UI) package.json version: "
@@ -54,12 +57,13 @@ CheckLastResult "ERROR: Please set correct version in file '${PROJECT_ROOT}/snap
 echo
 
 # goto 'desktop-app' project root
+echo "Entering project root folder: ${PROJECT_ROOT}"
 cd ${PROJECT_ROOT}
 CheckLastResult
 
 # build snap package
-echo "[+] Building Snap v${VERSION}..."
-snapcraft
+echo "[+] Building Snap v${VERSION} ( snapcraft $@ )..."
+snapcraft $@
 CheckLastResult
 echo "**************************************"
 echo "[ ] *** Snap package build SUCCESS! ***"
@@ -73,25 +77,25 @@ echo [ ] SUCCESS!
 echo
 cat << EOF
 [NOTES]
- 
- To install the package, use command: 
+
+ To install the package, use command:
     $ snap install <snap_file> --dangerous
-        (argument '--dangerous' is needed because package was not provideded by SnapStore) 
-    Example: 
+        (argument '--dangerous' is needed because package was not provideded by SnapStore)
+    Example:
         $ snap install ivpn_${VERSION}_amd64.snap --dangerous
  Steps required after install of manually! build snap:
-    (not required when installing from SnapStore, since the SnapStore enabled auto-connection 
+    (not required when installing from SnapStore, since the SnapStore enabled auto-connection
     of required interfaces)
     1) Manual connection of the required interfaces:
         $ sudo snap connect ivpn:network-control
         $ sudo snap connect ivpn:firewall-control
     2) Restart daemon:
         $ sudo snap restart ivpn.daemon
- 
+
  To release/deploy package to SnapStore (only for IVPN developers!):
-    $ snapcraft upload --release=<risk_level> <snap_file> 
+    $ snapcraft upload --release=<risk_level> <snap_file>
         * where <risk_level> could be: edge/beta/candidate/stable
         * https://snapcraft.io/docs/releasing-your-app
-    Example: 
-        $ snapcraft upload --release=beta ivpn_${VERSION}_amd64.snap 
+    Example:
+        $ snapcraft upload --release=beta ivpn_${VERSION}_amd64.snap
 EOF
