@@ -111,13 +111,12 @@ func SetPersistant(persistant bool) error {
 func GetEnabled() (bool, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	log.Info("Getting status...")
 
 	ret, err := implGetEnabled()
 	if err != nil {
-		log.Error(err)
+		log.Error("Status check error: ", err)
 	} else {
-		log.Info("    ", ret)
+		log.Info("Firewall: ", ret)
 	}
 
 	return ret, err

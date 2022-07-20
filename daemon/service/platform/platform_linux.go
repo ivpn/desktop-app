@@ -103,7 +103,6 @@ func doInitConstants() {
 	paranoidModeSecretFile = path.Join(tmpDir, "eaa")
 
 	logFile = path.Join(logDir, "IVPN_Agent.log")
-	openvpnLogFile = path.Join(logDir, "openvpn.log")
 
 	openvpnUserParamsFile = path.Join(tmpDir, "ovpn_extra_params.txt")
 }

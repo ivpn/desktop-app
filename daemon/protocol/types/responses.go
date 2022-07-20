@@ -23,6 +23,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
@@ -181,11 +183,8 @@ type KillSwitchGetIsPestistentResp struct {
 // DiagnosticsGeneratedResp returns info from daemon logs
 type DiagnosticsGeneratedResp struct {
 	CommandBase
-	ServiceLog     string
-	ServiceLog0    string
-	OpenvpnLog     string
-	OpenvpnLog0    string
-	EnvironmentLog string
+	ServiceLog  string // active daemon log
+	ServiceLog0 string // previous daemon session log
 }
 
 // SetAlternateDNSResp returns status of changing DNS
@@ -285,4 +284,11 @@ type APIResponse struct {
 	APIPath      string
 	ResponseData string
 	Error        string
+}
+
+func (r APIResponse) LogExtraInfo() string {
+	if len(r.Error) > 0 {
+		return fmt.Sprint(r.APIPath, " Error!")
+	}
+	return fmt.Sprint(r.APIPath)
 }

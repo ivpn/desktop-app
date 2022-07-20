@@ -40,7 +40,6 @@ func doInitConstants() {
 
 	logDir := "/Library/Logs/"
 	logFile = path.Join(logDir, "IVPN Agent.log")
-	openvpnLogFile = path.Join(logDir, "openvpn.log")
 }
 
 func doOsInit() (warnings []string, errors []error, logInfo []string) {

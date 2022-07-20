@@ -212,7 +212,9 @@ function send(request, reqNo) {
   let serialized = toJson(request);
   // : Full logging is only for debug. Must be removed from production!
   //log.debug(`==> ${serialized}`);
-  log.debug(`==> ${request.Command}  [${request.Idx}]`);
+  if (request.Command == "APIRequest")
+    log.debug(`==> ${request.Command}  [${request.Idx}] ${request.APIPath}`);
+  else log.debug(`==> ${request.Command}  [${request.Idx}]`);
   socket.write(`${serialized}\n`);
 
   return request.Idx;
@@ -317,7 +319,12 @@ async function processResponse(response) {
     // TODO: Full logging is only for debug. Must be removed from production!
     //log.log(`<== ${obj.Command} ${response.length > 512 ? " ..." : response}`);
     //log.log(`<== ${response}`);
-    log.debug(`<== ${obj.Command} [${obj.Idx}]`);
+    if (obj.Command == "APIResponse")
+      log.debug(
+        `<== ${obj.Command}  [${obj.Idx}] ${obj.APIPath}` +
+          (obj.Error ? " Error!" : "")
+      );
+    else log.debug(`<== ${obj.Command} [${obj.Idx}]`);
   } else log.error(`<== ${response}`);
 
   if (obj == null || obj.Command == null || obj.Command.length <= 0) return;
@@ -1045,7 +1052,13 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
 
       setCorrectGeoIPView();
 
-      if (resp.Error && resp.Error.toLowerCase().includes("no ipv6 support"))
+      const errStr = resp.Error.toLowerCase();
+      // check error: if no route OR no protocol support - no sense to retry new requests
+      if (
+        // TODO! necessary to avoid checking text description of the golang errors
+        errStr.includes("no ipv6 support") ||
+        errStr.includes("no route to host")
+      )
         doNotRetry = true;
     } else {
       if (isRealGeoLocationOnStart != isRealGeoLocationCheck()) {

@@ -48,7 +48,6 @@ func doInitConstants() {
 	}
 
 	logFile = path.Join(installDir, "log/IVPN Agent.log")
-	openvpnLogFile = path.Join(installDir, "log/openvpn.log")
 
 	openvpnUserParamsFile = path.Join(installDir, "mutable/ovpn_extra_params.txt")
 	paranoidModeSecretFile = path.Join(installDir, "etc/eaa") // file located in 'etc' will not be removed during app upgrade

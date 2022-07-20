@@ -70,7 +70,7 @@ func (p *Protocol) connLogID(c net.Conn) string {
 }
 
 // -------------- send message to all active connections ---------------
-func (p *Protocol) notifyClients(cmd interface{}) {
+func (p *Protocol) notifyClients(cmd types.ICommandBase) {
 	p._connectionsMutex.RLock()
 	defer p._connectionsMutex.RUnlock()
 	for conn := range p._connections {
@@ -135,7 +135,7 @@ func (p *Protocol) sendErrorResponse(conn net.Conn, request types.RequestBase, e
 	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: err.Error()}, request.Idx)
 }
 
-func (p *Protocol) sendResponse(conn net.Conn, cmd interface{}, idx int) (retErr error) {
+func (p *Protocol) sendResponse(conn net.Conn, cmd types.ICommandBase, idx int) (retErr error) {
 	if conn == nil {
 		return fmt.Errorf("%sresponse not sent (no connection to client)", p.connLogID(conn))
 	}
@@ -146,7 +146,7 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd interface{}, idx int) (retErr
 
 	// Just for logging
 	if reqType := types.GetTypeName(cmd); len(reqType) > 0 {
-		log.Info(fmt.Sprintf("[-->] %s", p.connLogID(conn)), reqType, fmt.Sprintf(" [%d]", idx))
+		log.Info(fmt.Sprintf("[-->] %s", p.connLogID(conn)), reqType, fmt.Sprintf(" [%d]", idx), " ", cmd.LogExtraInfo())
 	} else {
 		return fmt.Errorf("%sprotocol error: BAD DATA SENT", p.connLogID(conn))
 	}

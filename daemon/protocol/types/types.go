@@ -30,6 +30,10 @@ import (
 	"strings"
 )
 
+type ICommandBase interface {
+	LogExtraInfo() string
+}
+
 // CommandBase is a base object for communication with daemon.
 // Contains fields required for all requests\responses.
 type CommandBase struct {
@@ -38,6 +42,10 @@ type CommandBase struct {
 	// Uses for separate request\response sessions.
 	// Response messages must have same Index as request
 	Idx int
+}
+
+func (cb CommandBase) LogExtraInfo() string {
+	return ""
 }
 
 // RequestBase contains fields which are common for requests to a daemon

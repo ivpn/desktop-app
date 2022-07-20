@@ -49,7 +49,6 @@ var (
 	servicePortFile string
 	serversFile     string
 	logFile         string
-	openvpnLogFile  string
 
 	openVpnBinaryPath     string
 	openvpnCaKeyFile      string
@@ -107,9 +106,6 @@ func Init() (warnings []string, errors []error, logInfo []string) {
 		errors = append(errors, err)
 	}
 	if err := makeDir("logFile", filepath.Dir(logFile), os.ModePerm); err != nil {
-		errors = append(errors, err)
-	}
-	if err := makeDir("openvpnLogFile", filepath.Dir(openvpnLogFile), os.ModePerm); err != nil {
 		errors = append(errors, err)
 	}
 	if err := makeDir("settingsFile", filepath.Dir(settingsFile), os.ModePerm); err != nil {
@@ -281,12 +277,6 @@ func LogFile() string {
 
 func LogDir() string {
 	return filepath.Dir(logFile)
-}
-
-// OpenvpnLogFile path to log-file for openvpn
-func OpenvpnLogFile() string {
-	return "" // OpenVPN logging disabled (it is not required due to all openvpn log data present in global daemon log)
-	//return  openvpnLogFile
 }
 
 // OpenVpnBinaryPath path to openvpn binary

@@ -348,7 +348,7 @@ div.row {
   height: 100vh;
 }
 #leftPanelHeader {
-  padding-bottom: 38px;
+  padding-bottom: 23px;
 }
 #tabsTitle {
   width: 100%;

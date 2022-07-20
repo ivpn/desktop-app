@@ -441,7 +441,7 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		vpnObj, err := openvpn.NewOpenVpnObject(
 			platform.OpenVpnBinaryPath(),
 			platform.OpenvpnConfigFile(),
-			platform.OpenvpnLogFile(),
+			"",
 			prefs.IsObfsproxy,
 			openVpnExtraParameters,
 			connectionParams)

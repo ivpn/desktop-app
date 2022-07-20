@@ -30,18 +30,17 @@ export function SentryInit() {
   try {
     Sentry.init({
       dsn: DSN,
-      // Disable sentry by default.
-      // It will be enabled only when user wants to send diagnostic report:
-      //    Sentry.getCurrentHub().getClient().getOptions().enabled = true;
-      // Note! It is important to have sentry disabled when app is going to close.
-      //    Otherwise, there could be situations when Sentry block app to quit (for example, when internet connectivity is blocked)
-      enabled: false,
       beforeSend: beforeSendFunc, // allow us to control when data can be sent on server
-
       enableJavaScript: false, // Enables crash reporting for JavaScript errors in this process.
       enableUnresponsive: false, // Enables event reporting for BrowserWindow 'unresponsive' events
       useSentryMinidumpUploader: false, // Enables the Sentry internal uploader for minidumps.
     });
+
+    // Disable sentry by default.
+    // It will be temporary enabled only when user wants to send diagnostic report.
+    // Note! It is important to have sentry disabled when app is going to close.
+    //    Otherwise, there could be situations when Sentry block app to quit (for example, when internet connectivity is blocked)
+    Sentry.getCurrentHub().getClient().getOptions().enabled = false;
   } catch (e) {
     console.error(e);
   }
