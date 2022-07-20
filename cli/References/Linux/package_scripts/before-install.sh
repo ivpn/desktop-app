@@ -2,6 +2,9 @@
 
 echo "[*] Before install (<%= version %> : <%= pkg %> : $1)"
 
+# Skip installation if 'ivpn' snap pachage already installed
+snap list ivpn > /dev/null 2>&1 && echo "[!] INSTALLATION CANCELED: The snap package 'ivpn' is already installed. Please, uninstall the 'ivpn' snap package first." && exit 1
+
 # When removing package: $1==0 for RPM; $1 == "remove" for DEB
 _IS_REMOVE=0
 if [ "$1" = "remove" -o "$1" = "0" ]; then
