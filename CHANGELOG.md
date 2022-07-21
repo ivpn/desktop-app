@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.9.0 - 2022-07-21
+
+[NEW] Ability to connect to a specific host in a location  
+[NEW] (Linux) Snap package support  
+[IMPROVED] Updating account status on every application start  
+[IMPROVED] Fetch VPN connection ports info from the backend  
+[IMPROVED] Warning about existing VPN connection when downgrading subscription plan   
+[IMPROVED] (Linux) Using systemd-resolved for controlling DNS settings (when possible)  
+[IMPROVED] (Linux) Upgrade retains user settings (applicable only for future updates)  
+[IMPROVED] (Linux) Retain firewall configuration on upgrade (applicable only for future updates)  
+[FIX] Communication with IVPN servers blocked by ISP’s proxy  
+[FIX] (Linux) Intermittent issue with users logged out after upgrade (applicable only for future updates)  
+[FIX] (Linux) Firewall rules: potential DNS leak via the link-local IPv6 addresses     
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.9.0.exe)  
+SHA256: 45194bc1c45a0a71919ff8a65d873c116011d7c639f4ba51634d7ca99871755c  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.9.0.dmg)  
+SHA256: 1401aebc95034a9f4ec78fec99cac37ea8af9f0723e2ad40848f02414c0749c8  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.9.0-arm64.dmg)  
+SHA256: 68f44e4bdc734cf659268ab4905d09384b7c7d7899f3a71fba6ae71732579bb4  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.9.0_amd64.deb)  
+SHA256: 9278a40f9afc8d0bf92a03c8fc00a216162e5ce1a7858e19f176806f0c581496  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.9.0-1.x86_64.rpm)  
+SHA256: 317a7ec94f3e473f2b9b034d0e807f27e38a9e0d29464809158a979eccab8c9b  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.9.0_amd64.deb)  
+SHA256: 05152ab69c8388ce75182e48c2b63fc48874a0467cd96952477f804d4b3b6488  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.9.0-1.x86_64.rpm)  
+SHA256: 1fcf3cd1d86a9dfd5a1e4181f5cbfe62aad3308ddb69aec6347382a7dc4ec94a  
+
 ## Version 3.8.20 - 2022-06-01
 
 [NEW] UI: Ability to see detailed info about the application version  
