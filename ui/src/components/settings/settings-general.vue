@@ -142,19 +142,22 @@
         Diagnostics
       </button>
       <button
+        v-if="!isLinux"
         v-on:click="onDiagnosticViewBeta"
         class="selectableButtonOff"
         v-bind:class="{ selectableButtonOn: diagnosticViewIsBeta }"
       >
         Beta
       </button>
+
       <button
         style="cursor: auto; flex-grow: 1"
         class="selectableButtonSeparator"
       ></button>
     </div>
 
-    <div style="margin-top: 12px">
+    <div v-if="!isLinux" style="height: 6px" />
+    <div style="margin-top: 2px">
       <!-- TAB-view (diagnostic): general -->
       <div v-if="diagnosticViewIsGeneral" class="flexRow">
         <div class="param">
