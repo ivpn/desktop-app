@@ -814,7 +814,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if log, log0, err := logger.GetLogText(1024 * 64); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
-			p.sendResponse(conn, &types.DiagnosticsGeneratedResp{ServiceLog: log, ServiceLog0: log0}, reqCmd.Idx)
+			p.sendResponse(conn, &types.DiagnosticsGeneratedResp{Log1_Active: log, Log0_Old: log0}, reqCmd.Idx)
 		}
 
 	case "SetAlternateDns":

@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/electron";
-
+import { app } from "electron";
 import { DSN } from "./dsn";
 
 function beforeSendFunc(event) {
@@ -56,6 +56,7 @@ export function SentrySendDiagnosticReport(
   if (!DSN || comment == "" || eventAdditionalDataObject == null) return;
 
   if (!daemonVer) daemonVer = "UNKNOWN";
+
   // Sentry can not accept very long fields (>16KB)
   // therefore, here we are dividing fields on smaller
   const maxFieldSize = 16 * 1024;
@@ -101,9 +102,13 @@ export function SentrySendDiagnosticReport(
     // Temporary enable Sentry to send Event
     Sentry.getCurrentHub().getClient().getOptions().enabled = true;
 
+    const uiVer = app.getVersion();
+    let reportName = `Diagnostic report (${uiVer})`;
+    if (uiVer != daemonVer) reportName += ` [daemon:${daemonVer}]`;
+
     return Sentry.captureEvent({
       _isAllowedToSend: true,
-      message: `Diagnostic report`,
+      message: reportName,
       extra: objectToSend,
       contexts: {
         ["comment"]: { "User comment": comment },

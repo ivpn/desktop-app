@@ -183,8 +183,8 @@ type KillSwitchGetIsPestistentResp struct {
 // DiagnosticsGeneratedResp returns info from daemon logs
 type DiagnosticsGeneratedResp struct {
 	CommandBase
-	ServiceLog  string // active daemon log
-	ServiceLog0 string // previous daemon session log
+	Log0_Old    string // previous daemon session log
+	Log1_Active string // active daemon log
 }
 
 // SetAlternateDNSResp returns status of changing DNS

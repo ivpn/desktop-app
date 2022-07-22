@@ -489,6 +489,11 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.KillSwitchStatusResp:
+      if (obj) {
+        delete obj.Idx;
+        delete obj.Command;
+      }
+
       store.dispatch(`vpnState/firewallState`, obj);
 
       if (

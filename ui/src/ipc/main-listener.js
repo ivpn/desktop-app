@@ -224,16 +224,62 @@ ipcMain.on("renderer-request-is-can-send-diagnostic-logs", (event) => {
 });
 ipcMain.handle("renderer-request-get-diagnostic-logs", async () => {
   let data = await client.GetDiagnosticLogs();
-  if (data != null) {
-    if (store.state.account.session != null)
-      data[" IVPN User"] = store.state.account.session.AccountID;
+  if (data == null) data = {};
 
-    let daemonVer = store.state.daemonVersion;
-    if (!daemonVer) daemonVer = "UNKNOWN";
-    data[" DaemonVersion"] = daemonVer;
+  const s = store.state;
 
-    data[" Settings"] = JSON.stringify(store.state.settings, null, 2);
+  //  version
+  let daemonVer = s.daemonVersion;
+  if (!daemonVer) daemonVer = "UNKNOWN";
+  if (s.daemonProcessorArch) daemonVer += ` [${s.daemonProcessorArch}]`;
+
+  const uiVersion = app.getVersion() + ` [${process.arch}]`;
+
+  // disabled functions
+  let disabledFunctions = [];
+  try {
+    for (var propName in s.disabledFunctions) {
+      if (!propName || !s.disabledFunctions[propName]) continue;
+      disabledFunctions.push(`${propName} (${s.disabledFunctions[propName]})`);
+    }
+  } catch (e) {
+    disabledFunctions.push([`ERROR: ${e}`]);
   }
+
+  // account info
+  let accInfo = "";
+  try {
+    const acc = s.account;
+    accInfo = `${acc.accountStatus.CurrentPlan} (${
+      acc.accountStatus.Active ? "Active" : "NOT ACTIVE"
+    })`;
+    if (acc.session.WgPublicKey)
+      accInfo += `; wgKeys=OK ${acc.session.WgKeyGenerated}`;
+    else accInfo += "; wgKeys=EMPTY";
+  } catch (e) {
+    accInfo = `ERROR: ${e}`;
+  }
+
+  // last disconnection
+  try {
+    if (s.vpnState.disconnectedInfo.ReasonDescription)
+      data[" LastDisconnectionReason"] =
+        s.vpnState.disconnectedInfo.ReasonDescription;
+  } catch (e) {
+    data[" LastDisconnectionReason"] = `ERROR: ${e}`;
+  }
+
+  data[" Account"] =
+    `${s.account.session ? s.account.session.AccountID : "???"}; ` + accInfo;
+  if (disabledFunctions.length > 0)
+    data[" DisabledFunctions"] = disabledFunctions.join("; ");
+  data[" Firewall"] = JSON.stringify(s.vpnState.firewallState, null, 2);
+  data[" ParanoidMode"] = s.paranoidModeStatus.IsEnabled ? "On" : "Off";
+  data[" SplitTunneling"] = s.vpnState.splitTunnelling.IsEnabled ? "On" : "Off";
+  data[" ParanoidMode"] = s.paranoidModeStatus.IsEnabled ? "On" : "Off";
+  data[" Version"] = `Daemon=${daemonVer}; UI=${uiVersion}`;
+  data[" Settings"] = JSON.stringify(s.settings, null, 2);
+
   return data;
 });
 ipcMain.handle(

@@ -56,10 +56,25 @@
           <div style="margin-bottom: 5px">
             Please write a description of the problem you are experiencing:
           </div>
-          <textarea id="commentBlock" v-model="userComment"></textarea>
+          <textarea
+            id="commentBlock"
+            v-model="userComment"
+            v-bind:class="{
+              redBorder:
+                showRedBorderWhenEmptyComment === true &&
+                userComment.length == 0,
+            }"
+          />
         </div>
       </div>
-
+      <div
+        v-if="!isLoggingEnabled"
+        style="margin-top: 5px; text-align: right; color: orange"
+      >
+        Logging is disabled.<br />
+        Please, enable "Allow logging" in the General settings to provide
+        extended information to the developers.
+      </div>
       <div class="flexRow" style="margin-top: 20px">
         <div style="flex-grow: 1" />
         <button class="slave btn" v-on:click="onCancel">Cancel</button>
@@ -75,8 +90,8 @@ const sender = window.ipcSender;
 
 const LogProperties = Object.freeze({
   Settings: " Settings",
-  ServiceLog: "ServiceLog",
-  ServiceLog0: "ServiceLog0",
+  Log0: "Log0_Old",
+  Log1: "Log1_Active",
 });
 
 export default {
@@ -86,6 +101,7 @@ export default {
 
   data() {
     return {
+      showRedBorderWhenEmptyComment: false,
       activeTabName: "daemonLogs", // [daemonLogs, settings, other, userComment]
       diagnosticDataObj: null,
       userComment: "",
@@ -97,17 +113,20 @@ export default {
     }, 0);
   },
   computed: {
+    isLoggingEnabled: function () {
+      return this.$store.state.settings.logging;
+    },
     viewTextLogs: function () {
       if (this.diagnosticDataObj == null) return null;
       let ret = [];
-      if (this.diagnosticDataObj[LogProperties.ServiceLog0]) {
-        ret.push("ServiceLog (old session):\n");
-        ret.push(this.diagnosticDataObj[LogProperties.ServiceLog0]);
+      if (this.diagnosticDataObj[LogProperties.Log0]) {
+        ret.push("Service log (old session):\n");
+        ret.push(this.diagnosticDataObj[LogProperties.Log0]);
         ret.push("\n");
       }
-      if (this.diagnosticDataObj[LogProperties.ServiceLog]) {
-        ret.push("ServiceLog:\n");
-        ret.push(this.diagnosticDataObj[LogProperties.ServiceLog]);
+      if (this.diagnosticDataObj[LogProperties.Log1]) {
+        ret.push("Service log (active session):\n");
+        ret.push(this.diagnosticDataObj[LogProperties.Log1]);
       }
       return ret.join("\n");
     },
@@ -130,12 +149,12 @@ export default {
       for (const pName of props) {
         if (
           pName == LogProperties.Settings ||
-          pName == LogProperties.ServiceLog ||
-          pName == LogProperties.ServiceLog0
+          pName == LogProperties.Log0 ||
+          pName == LogProperties.Log1
         )
           continue;
 
-        let val = this.diagnosticDataObj[pName];
+        let val = `${this.diagnosticDataObj[pName]}`;
         val = val.trim();
         if (!val) continue;
         val = val.replace(/\\n/g, "\n");
@@ -157,15 +176,17 @@ export default {
       if (this.onClose != null) this.onClose();
     },
     async onSendLogs() {
+      this.showRedBorderWhenEmptyComment = true;
       if (this.diagnosticDataObj != null) {
         let comment = this.userComment.trim();
         if (comment.length <= 0) {
           this.activeTabName = "userComment";
           setTimeout(() => {
             sender.showMessageBoxSync({
-              type: "info",
+              type: "warning",
               buttons: ["OK"],
-              message:
+              message: "User comment is empty",
+              detail:
                 "Please write a description of the problem you are experiencing",
             });
           }, 0);
@@ -221,6 +242,9 @@ export default {
   flex-grow: 1;
   resize: none;
   padding: 5px;
+}
+.redBorder {
+  border-color: red;
 }
 button.btn {
   height: 30px;
