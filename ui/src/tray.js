@@ -522,7 +522,7 @@ function serverName(entryServer, exitServer, entryServerHost, exitServerHost) {
     exitServerHostId = exitServerHost.hostname;
 
   if (entryServer == null) {
-    if (!isConnected && isFastestServer) {
+    if (!isConnected && isFastestServer && !isMultiHop) {
       entryServer = "Fastest Server";
       entryServerHostId = "";
     } else if (!isConnected && isRandomServer) {
