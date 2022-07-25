@@ -91,12 +91,9 @@ ipcMain.handle("renderer-request-update-servers-request", async () => {
   return client.ServersUpdateRequest();
 });
 
-ipcMain.handle(
-  "renderer-request-connect",
-  async (event, entryServer, exitServer) => {
-    return await client.Connect(entryServer, exitServer);
-  }
-);
+ipcMain.handle("renderer-request-connect", async () => {
+  return await client.Connect();
+});
 ipcMain.handle("renderer-request-disconnect", async () => {
   return await client.Disconnect();
 });

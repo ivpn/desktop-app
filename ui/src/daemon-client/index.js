@@ -1170,7 +1170,9 @@ async function GetDiagnosticLogs() {
 // (this can happen when 'Disconnect' called OR new call of 'Connect' method)
 let connectionRequestId = 0;
 
-async function Connect(entryServer, exitServer) {
+async function Connect() {
+  let entryServer = null;
+  let exitServer = null;
   // if entryServer or exitServer is null -> will be used current selected servers
   // otherwise -> current selected servers will be replaced by a new values before connect
   const connectID = ++connectionRequestId;

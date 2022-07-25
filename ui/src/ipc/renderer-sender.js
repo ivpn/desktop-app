@@ -126,10 +126,8 @@ export default {
   UpdateServersRequest: () => {
     return invoke("renderer-request-update-servers-request");
   },
-  Connect: async (entryServer, exitServer) => {
-    // if entryServer or exitServer is null -> will be used current selected servers
-    // otherwise -> current selected servers will be replaced by a new values before connect
-    return await invoke("renderer-request-connect", entryServer, exitServer);
+  Connect: async () => {
+    return await invoke("renderer-request-connect");
   },
   Disconnect: async () => {
     return await invoke("renderer-request-disconnect");

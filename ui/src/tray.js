@@ -167,6 +167,8 @@ export function InitTray(
         case "settings/isRandomServer":
         case "settings/isRandomExitServer":
         case "settings/serversFavoriteList":
+        case "settings/hostsFavoriteList":
+        case "settings/showHosts":
         case "account/session":
           updateTrayMenu();
           break;
@@ -243,42 +245,67 @@ function updateTrayMenu() {
 
   // FAVORITE SERVERS MENU
   let favoriteSvrsTemplate = [];
-  // favorite servers for current protocol
-  const favSvrs = store.getters["settings/favoriteServers"];
+
+  // favorite servers/hosts for current protocol
+  let favSvrs = store.getters["settings/favoriteServers"];
+  let favHosts = store.getters["settings/favoriteHosts"];
+  if (favSvrs == null) favSvrs = [];
+  if (favHosts == null || store.state.settings.showHosts !== true)
+    favHosts = [];
+  favSvrs = favSvrs.concat(favHosts);
+
   if (favSvrs == null || favSvrs.length == 0) {
     favoriteSvrsTemplate = [
       { label: "No servers in favorite list", enabled: false },
     ];
   } else {
-    favoriteSvrsTemplate = [{ label: "Connect to ...", enabled: false }];
-
+    favoriteSvrsTemplate = [];
     const serversHashed = store.state.vpnState.serversHashed;
+    const hostsHashed = store.state.vpnState.hostsHashed;
     favSvrs.forEach((gw) => {
+      let host = null;
+      if (gw.favHostParentServerObj && gw.favHost) {
+        host = gw.favHost;
+        gw = gw.favHostParentServerObj;
+      }
+
       if (!gw || !gw.gateway) return;
       const s = serversHashed[gw.gateway];
       if (s == null) return;
 
-      var options = {};
+      if (host) host = hostsHashed[host.hostname];
 
+      var options = null;
       if (store.state.settings.isMultiHop) {
-        options = {
-          label: serverName(null, s, null, /*hostID*/ null),
-          click: () => {
-            menuItemConnect(null, s, null, /*hostID*/ null); // TODO: implement menuItemConnect when host specified
-          },
-        };
+        // for multihop: do not allow to connect to the servers from same country
+        if (store.state.settings.serverEntry.country_code !== gw.country_code) {
+          options = {
+            label: serverName(null, s, null, host),
+            click: () => {
+              menuItemConnect(null, s, null, host);
+            },
+          };
+        }
       } else {
         options = {
-          label: serverName(s, null, /*hostID*/ null, null),
+          label: serverName(s, null, host, null),
           click: () => {
-            menuItemConnect(s, null, /*hostID*/ null, null); // TODO: implement menuItemConnect when host specified
+            menuItemConnect(s, null, host, null);
           },
         };
       }
 
-      favoriteSvrsTemplate.push(options);
+      if (options) favoriteSvrsTemplate.push(options);
     });
+
+    // sort
+    favoriteSvrsTemplate = favoriteSvrsTemplate.slice().sort((a, b) => {
+      return a.label.localeCompare(b.label);
+    });
+    // add 'header'
+    favoriteSvrsTemplate.unshift({ label: "Connect to ...", enabled: false });
   }
+
   const favorites = Menu.buildFromTemplate(favoriteSvrsTemplate);
 
   // MAIN MENU
@@ -460,19 +487,14 @@ function GetStatusText() {
   return retStr;
 }
 
-function serverName(
-  entryServer,
-  exitServer,
-  entryServerHostId,
-  exitServerHostId
-) {
+function serverName(entryServer, exitServer, entryServerHost, exitServerHost) {
   function text(svr, svrHostId) {
     if (svr == null) return "";
     if (typeof svr === "string") return svr;
 
     let ret = `${svr.city}, ${svr.country_code}`;
     if (svrHostId) {
-      ret += " (" + svrHostId + ")";
+      ret += " (" + svrHostId.split(".")[0] + ")";
     }
     return ret;
   }
@@ -482,6 +504,13 @@ function serverName(
   const isRandomServer = store.state.settings.isRandomServer;
   const isMultiHop = store.state.settings.isMultiHop;
   const isRandomExitServer = store.state.settings.isRandomExitServer;
+
+  let entryServerHostId = "";
+  let exitServerHostId = "";
+  if (entryServerHost && entryServerHost.hostname)
+    entryServerHostId = entryServerHost.hostname;
+  if (exitServerHost && exitServerHost.hostname)
+    exitServerHostId = exitServerHost.hostname;
 
   if (entryServer == null) {
     if (!isConnected && isFastestServer) {
@@ -513,9 +542,17 @@ function serverName(
 }
 
 // TODO: implement menuItemConnect when host specified
-async function menuItemConnect(entrySvr, exitSvr) {
+async function menuItemConnect(entrySvr, exitSvr, entryHost, exitHost) {
   try {
-    await daemonClient.Connect(entrySvr, exitSvr);
+    if (entrySvr) store.dispatch("settings/serverEntry", entrySvr);
+    if (exitSvr) store.dispatch("settings/serverExit", exitSvr);
+
+    if (entryHost && entryHost.hostname)
+      store.dispatch("settings/serverEntryHostId", entryHost.hostname);
+    if (exitHost && exitHost.hostname)
+      store.dispatch("settings/serverExitHostId", exitHost.hostname);
+
+    await daemonClient.Connect();
   } catch (e) {
     console.error(e);
     dialog.showMessageBox({

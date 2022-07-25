@@ -546,11 +546,15 @@ export default {
             return;
           }
           this.$store.dispatch("settings/isRandomExitServer", false);
-          await sender.Connect(null, location);
+          this.$store.dispatch("settings/serverExit", location);
+          this.$store.dispatch("settings/serverExitHostId", null);
+          await sender.Connect();
         } else {
           this.$store.dispatch("settings/isFastestServer", false);
           this.$store.dispatch("settings/isRandomServer", false);
-          await sender.Connect(location, null);
+          this.$store.dispatch("settings/serverEntry", location);
+          this.$store.dispatch("settings/serverEntryHostId", null);
+          await sender.Connect();
         }
       } catch (e) {
         console.error(e);
