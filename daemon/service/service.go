@@ -107,6 +107,9 @@ type Service struct {
 	// nil - when session checker stopped
 	// to stop -> write to channel (it is synchronous channel)
 	_sessionCheckerStopChn chan struct{}
+
+	// when true - necessary to update account status as soon as it will be possible (e.g. on firewall disconnected)
+	_isNeedToUpdateSessionInfo bool
 }
 
 // VpnSessionInfo - Additional information about current VPN connection
@@ -291,8 +294,8 @@ func (s *Service) updateAPIAddrInFWExceptions() {
 	}
 }
 
-// OnControlConnectionClosed - Perform reqired operations when protocol (controll channel with UI application) was closed
-// (for example, we must disable firewall (if it not persistant))
+// OnControlConnectionClosed - Perform required operations when protocol (control channel with UI application) was closed
+// (for example, we must disable firewall (if it not persistent))
 // Must be called by protocol object
 // Return parameters:
 // - isServiceMustBeClosed: true informing that service have to be closed ("Stop IVPN Agent when application is not running" feature)
@@ -1029,6 +1032,14 @@ func (s *Service) ResetManualDNS() error {
 //////////////////////////////////////////////////////////
 // KillSwitch
 //////////////////////////////////////////////////////////
+func (s *Service) onKillSwitchStateChanged() {
+	s._evtReceiver.OnKillSwitchStateChanged()
+
+	// check if we need try to update account info
+	if s._isNeedToUpdateSessionInfo {
+		go s.RequestSessionStatus()
+	}
+}
 
 // SetKillSwitchState enable\disable killswitch
 func (s *Service) SetKillSwitchState(isEnabled bool) error {
@@ -1039,7 +1050,7 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 
 	err := firewall.SetEnabled(isEnabled)
 	if err == nil {
-		s._evtReceiver.OnKillSwitchStateChanged()
+		s.onKillSwitchStateChanged()
 	}
 	return err
 }
@@ -1059,7 +1070,7 @@ func (s *Service) SetKillSwitchIsPersistent(isPersistant bool) error {
 
 	err := firewall.SetPersistant(isPersistant)
 	if err == nil {
-		s._evtReceiver.OnKillSwitchStateChanged()
+		s.onKillSwitchStateChanged()
 	}
 	return err
 }
@@ -1082,7 +1093,7 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 
 	err := firewall.AllowLAN(prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast)
 	if err == nil {
-		s._evtReceiver.OnKillSwitchStateChanged()
+		s.onKillSwitchStateChanged()
 	}
 	return err
 }
@@ -1100,7 +1111,7 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 	prefs := s._preferences
 	prefs.IsFwAllowApiServers = isAllowAPIServers
 	s.setPreferences(prefs)
-	s._evtReceiver.OnKillSwitchStateChanged()
+	s.onKillSwitchStateChanged()
 	s.updateAPIAddrInFWExceptions()
 	return nil
 }
@@ -1115,7 +1126,7 @@ func (s *Service) SetKillSwitchUserExceptions(exceptions string, ignoreParsingEr
 
 	err := firewall.SetUserExceptions(exceptions, ignoreParsingErrors)
 	if err == nil {
-		s._evtReceiver.OnKillSwitchStateChanged()
+		s.onKillSwitchStateChanged()
 	}
 	return err
 }
@@ -1467,6 +1478,16 @@ func (s *Service) RequestSessionStatus() (
 	if !session.IsLoggedIn() {
 		return apiCode, "", "", accountInfo, srverrors.ErrorNotLoggedIn{}
 	}
+
+	// if no connectivity - skip request (and activate _isWaitingToUpdateAccInfoChan)
+	if isBlocked, _, err := s.IsConnectivityBlocked(); isBlocked && err == nil {
+		s._isNeedToUpdateSessionInfo = true
+		return apiCode, "", "", accountInfo, fmt.Errorf("session status request skipped (connectivity is blocked)")
+	}
+	// defer: ensure s._isWaitingToUpdateAccInfoChan is empty
+	defer func() {
+		s._isNeedToUpdateSessionInfo = false
+	}()
 
 	log.Info("Requesting session status...")
 	stat, apiErr, err := s._api.SessionStatus(session.Session)
