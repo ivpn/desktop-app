@@ -427,11 +427,20 @@ function updateTrayMenu() {
     mainMenu.push({ type: "separator" });
   }
 
+  // macOS: APPLY DOCK MENU
+  try {
+    if (process.platform === "darwin") {
+      app.dock.setMenu(Menu.buildFromTemplate(mainMenu));
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  // APPLY TRAY MENU
   mainMenu.push({ label: "Quit", click: menuItemQuit });
 
-  const contextMenu = Menu.buildFromTemplate(mainMenu);
   tray.setToolTip("IVPN Client");
-  tray.setContextMenu(contextMenu);
+  tray.setContextMenu(Menu.buildFromTemplate(mainMenu));
 }
 
 function GetStatusText() {
