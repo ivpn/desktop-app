@@ -351,6 +351,7 @@ if (gotTheLock) {
     lastRouteArgs = null;
 
     if (
+      isAppReadyToQuit != true &&
       isTrayInitialized == true &&
       store.state.settings.minimizeToTray == true
     )
