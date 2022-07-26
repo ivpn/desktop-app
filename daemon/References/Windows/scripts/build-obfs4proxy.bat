@@ -1,6 +1,10 @@
 @ECHO OFF
 
 setlocal
+
+rem TODO: define here obfs4proxy version to build
+set _VERSION=obfs4proxy-0.0.13
+
 set SCRIPTDIR=%~dp0
 
 if exist "%SCRIPTDIR%..\OpenVPN\obfsproxy" (
@@ -21,11 +25,14 @@ mkdir "%SCRIPTDIR%..\.deps\obfsproxy" || exit /b 1
 echo [*] Cloning obfs4proxy sources...
 cd "%SCRIPTDIR%..\.deps\obfsproxy"
 git clone https://github.com/Yawning/obfs4.git || exit /b 1
-
-echo [*] Compiling obfs4proxy ...
 cd obfs4
 
-go build -o "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe" ./obfs4proxy >nul 2>&1 || exit /b 1
+echo [*] Checkout version '%_VERSION%'' of obfs4proxy..."
+git checkout tags/%_VERSION%
+
+echo [*] Compiling obfs4proxy ...
+
+go build -o "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe" -trimpath -ldflags "-s -w" ./obfs4proxy >nul 2>&1 || exit /b 1
 
 echo [ ] SUCCESS
 echo [ ] The compiled 'obfs4proxy.exe' binary located at:

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+OBFS4_VER=obfs4proxy-0.0.13
+
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
@@ -18,10 +20,13 @@ mkdir -pv ${INSTALL_DIR}
 echo "******** Cloning obfs4proxy sources..."
 cd ${BUILD_DIR}
 git clone https://github.com/Yawning/obfs4.git
+cd obfs4
+
+echo "******** Checkout obfs4proxy version (${OBFS4_VER})..."
+git checkout ${OBFS4_VER}
 
 echo "******** Compiling 'obfs4proxy'..."
-cd obfs4
-go build -o ${INSTALL_DIR}/obfs4proxy ./obfs4proxy
+go build -o ${INSTALL_DIR}/obfs4proxy  -trimpath -ldflags "-s -w" ./obfs4proxy
 
 echo "********************************"
 echo "******** BUILD COMPLETE ********"

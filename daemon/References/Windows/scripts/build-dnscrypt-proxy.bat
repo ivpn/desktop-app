@@ -2,7 +2,7 @@
 
 setlocal
 
-rem TODO: define here dnscrypt-roxy version to build
+rem TODO: define here dnscrypt-proxy version to build
 set _VERSION=2.1.1
 
 set SCRIPTDIR=%~dp0
@@ -27,7 +27,7 @@ cd "%SCRIPTDIR%..\.deps\dnscrypt-proxy"
 git clone https://github.com/DNSCrypt/dnscrypt-proxy.git || exit /b 1
 cd dnscrypt-proxy
 
-echo [*] Checkout version ${_VERSION} of 'dnscrypt-proxy'..."
+echo [*] Checkout version '%_VERSION%' of 'dnscrypt-proxy'..."
 git checkout tags/%_VERSION%
 
 echo [*] Compiling dnscrypt-proxy ...
