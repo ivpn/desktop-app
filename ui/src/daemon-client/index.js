@@ -457,13 +457,35 @@ async function processResponse(response) {
       if (obj.VpnServers == null) break;
       store.dispatch(`vpnState/servers`, obj.VpnServers);
       break;
-    case daemonResponses.PingServersResp:
+    case daemonResponses.PingServersResp: {
       if (obj.PingResults == null) break;
-      store.commit(`vpnState/serversPingStatus`, obj.PingResults);
-      // update ping time info for selected servers
-      store.dispatch("settings/notifySelectedServersPropsUpdated");
-      break;
 
+      // remember old ping values for selected servers
+      const settings = store.state.settings;
+      let entrySvrPing = 0;
+      let exitSvrPing = 0;
+      try {
+        entrySvrPing = settings.serverEntry.ping;
+        exitSvrPing = settings.serverExit.ping;
+      } catch (e) {
+        log.error(e);
+      }
+
+      // apply new ping info
+      store.commit(`vpnState/serversPingStatus`, obj.PingResults);
+
+      // Update ping time info for selected servers
+      // (Do nothing. Just trigger mechanism to update properties for 'selected servers' objects)
+      try {
+        if (entrySvrPing !== settings.serverEntry.ping)
+          store.commit("settings/serverEntry", settings.serverEntry);
+        if (exitSvrPing !== settings.serverExit.ping)
+          store.commit("settings/serverExit", settings.serverExit);
+      } catch (e) {
+        console.error(e);
+      }
+      break;
+    }
     case daemonResponses.SetAlternateDNSResp:
       if (obj.IsSuccess == null) break;
       if (obj.IsSuccess !== true) {

@@ -428,12 +428,19 @@ function updateTrayMenu() {
   }
 
   // macOS: APPLY DOCK MENU
-  try {
-    if (process.platform === "darwin") {
-      app.dock.setMenu(Menu.buildFromTemplate(mainMenu));
-    }
-  } catch (e) {
-    console.error(e);
+  if (process.platform === "darwin") {
+    setTimeout(() => {
+      try {
+        const oldMenu = app.dock.getMenu();
+        const newMenu = Menu.buildFromTemplate(mainMenu);
+        // The dock menu items are not responsible first 1-2 seconds after the menu update
+        // TODO: investigate this strange behavior ^^^
+        // So, we are trying not to update menu if it is not necessary (no necessary to update menu to the same object)
+        if (isMenuEquals(oldMenu, newMenu) !== true) app.dock.setMenu(newMenu);
+      } catch (e) {
+        console.error(e);
+      }
+    }, 0);
   }
 
   // APPLY TRAY MENU
@@ -441,6 +448,20 @@ function updateTrayMenu() {
 
   tray.setToolTip("IVPN Client");
   tray.setContextMenu(Menu.buildFromTemplate(mainMenu));
+}
+
+function isMenuEquals(menu1, menu2) {
+  if (menu1 == menu2) return true;
+  if ((!menu1 && menu2) || (menu1 && !menu2)) return false;
+  if (menu1.items.length != menu2.items.length) return false;
+  const len = menu1.items.length;
+  for (let i = 0; i < len; i++) {
+    const it1 = menu1.items[i];
+    const it2 = menu2.items[i];
+    if (it1.label != it2.label) return false;
+    if (!isMenuEquals(it1.submenu, it2.submenu)) return false;
+  }
+  return true;
 }
 
 function GetStatusText() {
