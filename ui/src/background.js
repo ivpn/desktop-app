@@ -33,6 +33,7 @@ import {
   nativeTheme,
   screen,
   session,
+  powerMonitor,
 } from "electron";
 import {
   createProtocol,
@@ -359,6 +360,12 @@ if (gotTheLock) {
 
     // the app 'before-quit' event will be raised
     app.quit();
+  });
+
+  // Event: 'shutdown' (Linux and macOS only !!!)
+  // Emitted when the system is about to reboot or shut down.
+  powerMonitor.on("shutdown", () => {
+    isAppReadyToQuit = true;
   });
 
   app.on("before-quit", async (event) => {
