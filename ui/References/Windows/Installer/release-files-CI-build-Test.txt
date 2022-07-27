@@ -5,7 +5,6 @@ etc\ca.crt
 etc\servers.json
 etc\ta.key
 devcon\x86_64\devcon.exe
-OpenVPN\x86_64\liblzo2-2.dll
 OpenVPN\x86_64\libpkcs11-helper-1.dll
 OpenVPN\x86_64\openssl.exe
 OpenVPN\x86_64\openvpn.exe
