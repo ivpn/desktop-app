@@ -46,7 +46,7 @@ goto :success
 
 	echo [ ] x86_64 ...
 	set GOARCH=amd64
-	go build -tags release -o "bin\x86_64\cli\ivpn.exe" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
+	go build -tags release -o "bin\x86_64\cli\ivpn.exe" -trimpath -ldflags "-s -w -X github.com/ivpn/desktop-app/daemon/version._version=%APPVER% -X github.com/ivpn/desktop-app/daemon/version._commit=%COMMIT% -X github.com/ivpn/desktop-app/daemon/version._time=%DATE%" || exit /b 1
 
 	set TIMESTAMP_SERVER=http://timestamp.digicert.com
 	if NOT "%CERT_SHA1%" == "" (

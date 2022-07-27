@@ -3,8 +3,8 @@
 # ##############################################################################
 # Define here OpenSSL and OpenVPN versions
 # ##############################################################################
-OPEN_SSL_VER=1.1.1k
-OPEN_VPN_VER=v2.5.3
+OPEN_SSL_VER=1.1.1o
+OPEN_VPN_VER=v2.5.7
 
 # This has to be installed
 echo "******** Installing xcode command lines tools..."
