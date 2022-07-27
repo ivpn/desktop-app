@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.16'
+          go-version: '1.18'
 
       - name: setup-msbuild
         uses: microsoft/setup-msbuild@v1
@@ -55,7 +55,7 @@ jobs:
 
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.16'
+          go-version: '1.18'
 
       - name: Setup node
         uses: actions/setup-node@v2
@@ -99,7 +99,7 @@ jobs:
 
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.16'
+          go-version: '1.18'
 
       - name: Setup node
         uses: actions/setup-node@v2
