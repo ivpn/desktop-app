@@ -56,6 +56,15 @@ OUT_IVPN_STAT_USER_EXP=IVPN-OUT-STAT-USER-EXP
 IN_IVPN_ICMP_EXP=IVPN-IN-ICMP-EXP
 OUT_IVPN_ICMP_EXP=IVPN-OUT-ICMP-EXP
 
+# ### Split Tunnel ###
+# Info: The 'mark' value for packets coming from the Split-Tunneling environment.
+# Using here value 0xca6c. It is the same as WireGuard marking packets which were processed.
+_splittun_packets_fwmark_value=0xca6c
+# Split Tunnel iptables rules comment
+_splittun_comment="IVPN Split Tunneling"
+# Split Tunnel cgroup id
+_splittun_cgroup_classid=0x4956504e      
+
 # returns 0 if chain exists
 function chain_exists()
 {
@@ -120,7 +129,7 @@ function enable_firewall {
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_DNS}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
-      
+
       # IPv6: allow  local (lo) interface
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -o lo -j ACCEPT
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -i lo -j ACCEPT
@@ -142,6 +151,11 @@ function enable_firewall {
       # Note! Using "-I" parameter to add IVPN rules on the top of iptables rules sequence
       ${IPv6BIN} -w ${LOCKWAITTIME} -I OUTPUT -j ${OUT_IVPN}
       ${IPv6BIN} -w ${LOCKWAITTIME} -I INPUT -j ${IN_IVPN}
+
+      # Split Tunnel: Allow packets from/to cgroup (bypass IVPN firewall)
+      ${IPv6BIN} -w ${LOCKWAITTIME} -I OUTPUT -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT
+      ${IPv6BIN} -w ${LOCKWAITTIME} -I INPUT -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+      ${IPv6BIN} -w ${LOCKWAITTIME} -I INPUT -m mark --mark ${_splittun_packets_fwmark_value} -m comment --comment  "${_splittun_comment}" -j ACCEPT
 
       # exceptions
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF0}
@@ -209,6 +223,11 @@ function enable_firewall {
     # Note! Using "-I" parameter to add IVPN rules on the top of iptables rules sequence
     ${IPv4BIN} -w ${LOCKWAITTIME} -I OUTPUT -j ${OUT_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -I INPUT -j ${IN_IVPN}
+
+    # Split Tunnel: Allow packets from/to cgroup (bypass IVPN firewall)
+    ${IPv4BIN} -w ${LOCKWAITTIME} -I OUTPUT -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT
+    ${IPv4BIN} -w ${LOCKWAITTIME} -I INPUT -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+    ${IPv4BIN} -w ${LOCKWAITTIME} -I INPUT -m mark --mark ${_splittun_packets_fwmark_value} -m comment --comment  "${_splittun_comment}" -j ACCEPT
 
     # exceptions (must be processed before OUT_IVPN_DNS!)
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF0}
