@@ -146,60 +146,10 @@ func (p *Preferences) LoadPreferences() error {
 		return fmt.Errorf("failed to read preferences file: %w", err)
 	}
 
-	dataStr := string(data)
-	if strings.Contains(dataStr, `"firewall_is_persistent"`) {
-		// TODO: remove this old code
-		// It is a first time loading preferences after IVPN Client upgrade from old version (<= v2.10.9)
-		// Loading preferences with an old parameter names and types:
-		type PreferencesOld struct {
-			IsLogging                string `json:"enable_logging"`
-			IsFwPersistant           string `json:"firewall_is_persistent"`
-			IsFwAllowLAN             string `json:"firewall_allow_lan"`
-			IsFwAllowLANMulticast    string `json:"firewall_allow_lan_multicast"`
-			IsStopOnClientDisconnect string `json:"is_stop_server_on_client_disconnect"`
-			IsObfsproxy              string `json:"enable_obfsproxy"`
-		}
-		oldStylePrefs := &PreferencesOld{}
-
-		if err := json.Unmarshal(data, oldStylePrefs); err != nil {
-			return err
-		}
-
-		p.IsLogging = oldStylePrefs.IsLogging == "1"
-		p.IsFwPersistant = oldStylePrefs.IsFwPersistant == "1"
-		p.IsFwAllowLAN = oldStylePrefs.IsFwAllowLAN == "1"
-		p.IsFwAllowLANMulticast = oldStylePrefs.IsFwAllowLANMulticast == "1"
-		p.IsStopOnClientDisconnect = oldStylePrefs.IsStopOnClientDisconnect == "1"
-		p.IsObfsproxy = oldStylePrefs.IsObfsproxy == "1"
-
-		return nil
-	}
-
-	//	We need to determine if some of variables are present in json at all.
-	//	After the app upgrade new configuration parameters will not be saved in JSON jet.
-	// 	In this case we will understand that we are able to set initial parameters for this values (e.g. platform-specific values)
-	//
-	//	The 'PreferencesValsCheck' contains SAME PROPERTIES NAMES which original properties object, but fields is pointers
-	//	If field==nil => it is not exists in json.
-	type PreferencesValsCheck struct {
-		IsFwAllowApiServers *bool
-	}
-	var testJsonObj PreferencesValsCheck
-	err = json.Unmarshal(data, &testJsonObj)
-	if err != nil {
-		return err
-	}
-
 	// Parse json onto preferences object
 	err = json.Unmarshal(data, p)
 	if err != nil {
 		return err
-	}
-
-	// set initial values for a properties (if necessary)
-	if testJsonObj.IsFwAllowApiServers == nil {
-		// IsFwAllowApiServers was not initialized (it is a first start after application update)
-		p.IsFwAllowApiServers = platform.FwInitialValueAllowApiServers()
 	}
 
 	// init WG properties
@@ -210,7 +160,6 @@ func (p *Preferences) LoadPreferences() error {
 	if p.Session.WGKeysRegenInerval <= 0 {
 		p.Session.WGKeysRegenInerval = DefaultWGKeysInterval
 		log.Info(fmt.Sprintf("default value for preferences: WgKeysRegenIntervalDays=%v", p.Session.WGKeysRegenInerval))
-		p.SavePreferences()
 	}
 
 	return nil

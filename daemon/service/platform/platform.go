@@ -41,10 +41,6 @@ var (
 	// This file should be accessible to read only for 'privilaged' user
 	paranoidModeSecretFile string
 
-	// The INITIAL value (AFTER APPLICATION UPGRADE) for AllowApiServers parameter is platform dependend
-	// Due to historical reasons it has value 'true' for Windows but 'false' for macOS and Linux
-	fwInitialValueAllowApiServers bool
-
 	settingsFile    string
 	servicePortFile string
 	serversFile     string
@@ -240,12 +236,6 @@ func makeDir(description string, dirpath string, mode fs.FileMode) error {
 // Is64Bit - returns 'true' if binary compiled in 64-bit architecture
 func Is64Bit() bool {
 	return strconv.IntSize == 64
-}
-
-// The INITIAL value (AFTER APPLICATION UPGRADE) for AllowApiServers parameter is platform dependend
-// Due to historical reasons it has value 'true' for Windows but 'false' for macOS and Linux
-func FwInitialValueAllowApiServers() bool {
-	return fwInitialValueAllowApiServers
 }
 
 // SettingsFile path to settings file

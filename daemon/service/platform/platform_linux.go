@@ -97,7 +97,6 @@ func doInitConstants() {
 		openVpnBinaryPath = path.Join(envs.SNAP, openVpnBinaryPath)
 	}
 
-	fwInitialValueAllowApiServers = false
 	serversFile = path.Join(tmpDir, "servers.json")
 	servicePortFile = path.Join(tmpDir, "port.txt")
 	paranoidModeSecretFile = path.Join(tmpDir, "eaa")

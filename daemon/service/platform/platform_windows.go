@@ -36,7 +36,6 @@ var (
 )
 
 func doInitConstants() {
-	fwInitialValueAllowApiServers = true
 	doInitConstantsForBuild()
 
 	installDir := getInstallDir()
