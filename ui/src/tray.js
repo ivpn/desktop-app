@@ -429,10 +429,11 @@ function updateTrayMenu() {
 
   // macOS: APPLY DOCK MENU
   if (process.platform === "darwin") {
+    let dockMenuSource = [...mainMenu];
     setTimeout(() => {
       try {
         const oldMenu = app.dock.getMenu();
-        const newMenu = Menu.buildFromTemplate(mainMenu);
+        const newMenu = Menu.buildFromTemplate(dockMenuSource);
         // The dock menu items are not responsible first 1-2 seconds after the menu update
         // TODO: investigate this strange behavior ^^^
         // So, we are trying not to update menu if it is not necessary (no necessary to update menu to the same object)
