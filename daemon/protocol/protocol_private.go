@@ -324,6 +324,11 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		// OpenVPN connection parameters
 		var connectionParams openvpn.ConnectionParams
 		if exitHostValue != nil && len(multihopExitSrvID) > 0 {
+			// Check is it allowed to connect multihop
+			if mhErr := p._service.IsCanConnectMultiHop(); mhErr != nil {
+				return mhErr
+			}
+
 			// Multi-Hop
 			connectionParams = openvpn.CreateConnectionParams(
 				multihopExitSrvID,
@@ -438,6 +443,10 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 
 		var connectionParams wireguard.ConnectionParams
 		if exitHostValue != nil && len(multihopExitSrvID) > 0 {
+			// Check is it allowed to connect multihop
+			if mhErr := p._service.IsCanConnectMultiHop(); mhErr != nil {
+				return mhErr
+			}
 
 			// Multi-Hop
 			connectionParams = wireguard.CreateConnectionParams(

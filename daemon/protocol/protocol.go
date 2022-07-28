@@ -106,6 +106,7 @@ type Service interface {
 	SetManualDNS(dns dns.DnsSettings) error
 	ResetManualDNS() error
 
+	IsCanConnectMultiHop() error
 	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
 	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
 	Disconnect() error

@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,6 +38,7 @@ import (
 )
 
 var log *logger.Logger
+var mutexRW sync.RWMutex
 
 func init() {
 	log = logger.NewLogger("sprefs")
@@ -68,6 +70,7 @@ type Preferences struct {
 
 	// last known account status
 	Session SessionStatus
+	Account AccountStatus
 }
 
 func Create() *Preferences {
@@ -81,7 +84,8 @@ func Create() *Preferences {
 }
 
 // SetSession save account credentials
-func (p *Preferences) SetSession(accountID string,
+func (p *Preferences) SetSession(accountInfo AccountStatus,
+	accountID string,
 	session string,
 	vpnUser string,
 	vpnPass string,
@@ -89,7 +93,21 @@ func (p *Preferences) SetSession(accountID string,
 	wgPrivateKey string,
 	wgLocalIP string) {
 
+	if len(session) == 0 || len(accountID) == 0 {
+		p.Account = AccountStatus{}
+	} else {
+		p.Account = accountInfo
+	}
+
 	p.setSession(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP)
+	p.SavePreferences()
+}
+
+func (p *Preferences) UpdateAccountInfo(acc AccountStatus) {
+	if len(p.Session.AccountID) == 0 || len(p.Session.Session) == 0 {
+		acc = AccountStatus{}
+	}
+	p.Account = acc
 	p.SavePreferences()
 }
 
@@ -101,6 +119,9 @@ func (p *Preferences) UpdateWgCredentials(wgPublicKey string, wgPrivateKey strin
 
 // SavePreferences saves preferences
 func (p *Preferences) SavePreferences() error {
+	mutexRW.Lock()
+	defer mutexRW.Unlock()
+
 	data, err := json.Marshal(p)
 	if err != nil {
 		return fmt.Errorf("failed to save preferences file (json marshal error): %w", err)
@@ -116,6 +137,9 @@ func (p *Preferences) SavePreferences() error {
 
 // LoadPreferences loads preferences
 func (p *Preferences) LoadPreferences() error {
+	mutexRW.RLock()
+	defer mutexRW.RUnlock()
+
 	data, err := ioutil.ReadFile(platform.SettingsFile())
 
 	if err != nil {

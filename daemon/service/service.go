@@ -374,6 +374,19 @@ func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr 
 	return wgErr, ovpnErr, obfspErr, splitTunErr
 }
 
+func (s *Service) IsCanConnectMultiHop() error {
+	if !s._preferences.Account.IsInitialized() {
+		// It could be that account status is not known. We allow MH in this case.
+		// It can happen on upgrading from an old version (which did not keep s._preferences.Account)
+		return nil
+	}
+
+	if s._preferences.Account.IsHasCapability(preferences.MultiHop) {
+		return nil
+	}
+	return fmt.Errorf("MultiHop connections are not allowed for the current subscription plan. Please upgrade your subscription to Pro")
+}
+
 // ConnectOpenVPN start OpenVPN connection
 func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
 
@@ -1287,9 +1300,10 @@ func (s *Service) SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecut
 // SESSIONS
 //////////////////////////////////////////////////////////
 
-func (s *Service) setCredentials(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64) error {
+func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64) error {
 	// save session info
-	s._preferences.SetSession(accountID,
+	s._preferences.SetSession(accountInfo,
+		accountID,
 		session,
 		vpnUser,
 		vpnPass,
@@ -1384,7 +1398,8 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	// get account status info
 	accountInfo = s.createAccountStatus(successResp.ServiceStatus)
 
-	s.setCredentials(accountID,
+	s.setCredentials(accountInfo,
+		accountID,
 		successResp.Token,
 		successResp.VpnUsername,
 		successResp.VpnPassword,
@@ -1450,7 +1465,7 @@ func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLo
 		}
 	}
 
-	s._preferences.SetSession("", "", "", "", "", "", "")
+	s._preferences.SetSession(preferences.AccountStatus{}, "", "", "", "", "", "", "")
 	log.Info("Logged out locally")
 
 	// notify clients about session update
@@ -1464,6 +1479,13 @@ func (s *Service) OnSessionNotFound() {
 	needToDeleteOnBackend := false
 	canLogoutOnlyLocally := true
 	s.logOut(needToDeleteOnBackend, canLogoutOnlyLocally)
+}
+
+func (s *Service) OnAccountStatus(sessionToken string, accountInfo preferences.AccountStatus) {
+	// save last known info about account status
+	s._preferences.UpdateAccountInfo(accountInfo)
+	// notify about account status
+	s._evtReceiver.OnAccountStatus(sessionToken, accountInfo)
 }
 
 // RequestSessionStatus receives session status
@@ -1510,11 +1532,16 @@ func (s *Service) RequestSessionStatus() (
 			s.OnSessionNotFound()
 		}
 
-		// notify clients that account not active
+		// save last account info AND notify clients that account not active
 		if apiCode == types.AccountNotActive {
+			accountInfo = preferences.AccountStatus{}
+			if stat != nil {
+				accountInfo = s.createAccountStatus(*stat)
+			}
+			accountInfo.Active = false
 			// notify about account status
-			s._evtReceiver.OnAccountStatus(session.Session, accountInfo)
-			return apiCode, apiErr.Message, session.Session, preferences.AccountStatus{Active: false}, err
+			s.OnAccountStatus(session.Session, accountInfo)
+			return apiCode, apiErr.Message, session.Session, accountInfo, err
 		}
 	}
 
@@ -1534,8 +1561,8 @@ func (s *Service) RequestSessionStatus() (
 
 	// get account status info
 	accountInfo = s.createAccountStatus(*stat)
-	// notify about account status
-	s._evtReceiver.OnAccountStatus(session.Session, accountInfo)
+	// ave last account info AND notify about account status
+	s.OnAccountStatus(session.Session, accountInfo)
 
 	// success
 	return apiCode, "", session.Session, accountInfo, nil

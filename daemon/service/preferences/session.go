@@ -43,10 +43,7 @@ type SessionStatus struct {
 
 // IsLoggedIn returns 'true' when user logged-in
 func (s *SessionStatus) IsLoggedIn() bool {
-	if len(s.Session) == 0 {
-		return false
-	}
-	return true
+	return len(s.Session) != 0
 }
 
 // IsWGCredentialsOk returns 'true' when WireGuard credentials are initialized

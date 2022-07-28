@@ -22,6 +22,14 @@
 
 package preferences
 
+import "strings"
+
+type Capability string
+
+const (
+	MultiHop Capability = "multihop"
+)
+
 // AccountStatus contains information about current account
 type AccountStatus struct {
 	Active         bool
@@ -36,4 +44,17 @@ type AccountStatus struct {
 	UpgradeToPlan  string
 	UpgradeToURL   string
 	Limit          int
+}
+
+func (a AccountStatus) IsInitialized() bool {
+	return len(a.CurrentPlan) > 0 || len(a.Capabilities) > 0
+}
+
+func (a AccountStatus) IsHasCapability(cap Capability) bool {
+	for _, c := range a.Capabilities {
+		if strings.ToLower(c) == string(cap) {
+			return true
+		}
+	}
+	return false
 }
