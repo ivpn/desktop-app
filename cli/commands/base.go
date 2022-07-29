@@ -85,7 +85,18 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 	if len(connected.ClientIPv6) > 0 {
 		fmt.Fprintf(w, "    Local IPv6\t:\t%v\n", connected.ClientIPv6)
 	}
-	fmt.Fprintf(w, "    Server IP\t:\t%v\n", connected.ServerIP)
+
+	portInfo := ""
+	if connected.ServerPort > 0 {
+		if connected.IsTCP {
+			portInfo += " (TCP:"
+		} else {
+			portInfo += " (UDP:"
+		}
+		portInfo += fmt.Sprintf(":%d)", connected.ServerPort)
+	}
+	fmt.Fprintf(w, "    Server IP\t:\t%v%v\n", connected.ServerIP, portInfo)
+
 	fmt.Fprintf(w, "    Connected\t:\t%v\n", since)
 
 	return w

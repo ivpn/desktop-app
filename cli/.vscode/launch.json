@@ -36,7 +36,7 @@
             //"args": ["dns"],
             "args": ["firewall", "-off"],
             //"args": ["eaa", "-on"],
-            "buildFlags": "-tags debug"
+            "buildFlags": "-buildvcs=false -tags debug"
         }
     ]
 }

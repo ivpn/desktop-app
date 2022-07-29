@@ -45,7 +45,9 @@ export default {
       VpnType: VpnTypeEnum.OpenVPN,
       ConnectedSince: new Date(),
       ClientIP: "",
+      ClientIPv6: "",
       ServerIP: "",
+      ServerPort: 0,
       ExitServerID: "",
       ExitHostname: "",
       ManualDNS: {
@@ -53,7 +55,8 @@ export default {
 	      Encryption: 0,    // DnsEncryption [	EncryptionNone = 0,	EncryptionDnsOverTls = 1,	EncryptionDnsOverHttps = 2]
 	      DohTemplate: "",  // string // DoH/DoT template URI (for Encryption = DnsOverHttps or Encryption = DnsOverTls)
       },
-      IsCanPause: null //(true/false)
+      IsCanPause: null, //(true/false)
+      IsTCP: false,
     }*/,
 
     disconnectedInfo: {
@@ -423,6 +426,15 @@ export default {
         const exitSvr = findServerByExitId(servers, ci.ExitServerID);
         context.commit("settings/serverExit", exitSvr, { root: true });
       }
+      if (ci.ServerPort && ci.IsTCP != undefined)
+        context.commit(
+          "settings/setPort",
+          {
+            port: ci.ServerPort,
+            type: ci.IsTCP === true ? PortTypeEnum.TCP : PortTypeEnum.UDP,
+          },
+          { root: true }
+        );
 
       // Ensure the selected host equals to connected one. Of not equals - erase host selection
       context.dispatch("settings/serverEntryHostIPCheckOrErase", ci.ServerIP, {

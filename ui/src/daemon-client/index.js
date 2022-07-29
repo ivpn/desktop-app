@@ -427,20 +427,18 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.ConnectedResp:
-      store.dispatch(`vpnState/connectionInfo`, {
-        VpnType: obj.VpnType,
-        ConnectedSince: new Date(obj.TimeSecFrom1970 * 1000),
-        ClientIP: obj.ClientIP,
-        ServerIP: obj.ServerIP,
-        ExitServerID: obj.ExitServerID,
-        ExitHostname: obj.ExitHostname,
-        ManualDNS: obj.ManualDNS,
-        IsCanPause: "IsCanPause" in obj ? obj.IsCanPause : null,
-      });
+      {
+        let connectionInfo = Object.assign({}, obj);
+        connectionInfo.ConnectedSince = new Date(obj.TimeSecFrom1970 * 1000);
+        if (connectionInfo.IsCanPause == undefined)
+          connectionInfo.IsCanPause = null;
 
-      if (store.state.vpnState.pauseState == PauseStateEnum.Paused)
-        await ApplyPauseConnection();
-      else requestGeoLookupAsync();
+        store.dispatch(`vpnState/connectionInfo`, connectionInfo);
+
+        if (store.state.vpnState.pauseState == PauseStateEnum.Paused)
+          await ApplyPauseConnection();
+        else requestGeoLookupAsync();
+      }
       break;
 
     case daemonResponses.DisconnectedResp:

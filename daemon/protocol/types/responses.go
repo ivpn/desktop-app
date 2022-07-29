@@ -209,10 +209,12 @@ type ConnectedResp struct {
 	ClientIP        string
 	ClientIPv6      string
 	ServerIP        string
+	ServerPort      int
 	ExitServerID    string // multi-hop exit server gateway ID. Example: "gateway":"zz.wg.ivpn.net" => "zz"
 	ExitHostname    string // multi-hop exit hostname (e.g. "us-tx1.wg.ivpn.net")
 	ManualDNS       dns.DnsSettings
 	IsCanPause      bool
+	IsTCP           bool
 }
 
 // DisconnectionReason - disconnection reason
