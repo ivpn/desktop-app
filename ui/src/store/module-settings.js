@@ -590,6 +590,7 @@ export default {
 
     // connection
     connectionUseObfsproxy(context, val) {
+      if (typeof val != "boolean") return;
       context.commit("connectionUseObfsproxy", val);
       // only TCP connections applicable for obfsproxy
       if (val === true) ensurePortsSelectedCorrectly(context);

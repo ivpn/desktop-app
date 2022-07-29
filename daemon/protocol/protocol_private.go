@@ -248,6 +248,7 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ClientIPv6:      ipv6,
 		ServerIP:        state.ServerIP.String(),
 		ServerPort:      state.ServerPort,
+		IsObfsproxy:     state.IsObfsproxy,
 		VpnType:         state.VpnType,
 		ExitServerID:    state.ExitServerID,
 		ExitHostname:    state.ExitHostname,

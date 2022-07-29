@@ -234,6 +234,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 						// in case of obfsproxy - 'stateInf.ServerIP' returns local IP (IP of obfsproxy 127.0.0.1)
 						// We must notify about real remote ServerIP, therefore we modifying this parameter before notifying about successful connection
 						stateInf.ServerIP = o.connectParams.hostIP
+						stateInf.IsObfsproxy = true
 					}
 
 					// Process "on connected" event (if necessary)

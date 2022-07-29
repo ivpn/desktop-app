@@ -134,6 +134,7 @@ type StateInfo struct {
 	ClientPort   int    // applicable only for 'CONNECTED' state (source port)
 	ServerIP     net.IP // applicable only for 'CONNECTED' state
 	ServerPort   int    // applicable only for 'CONNECTED' state (destination port)
+	IsObfsproxy  bool   // applicable only for 'CONNECTED' state (OpenVPN)
 	ExitServerID string // applicable only for 'CONNECTED' state
 	ExitHostname string // applicable only for 'CONNECTED' state
 	IsCanPause   bool   // applicable only for 'CONNECTED' state

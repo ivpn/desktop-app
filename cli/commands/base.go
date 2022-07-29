@@ -93,7 +93,7 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 		} else {
 			portInfo += " (UDP:"
 		}
-		portInfo += fmt.Sprintf(":%d)", connected.ServerPort)
+		portInfo += fmt.Sprintf("%d)", connected.ServerPort)
 	}
 	fmt.Fprintf(w, "    Server IP\t:\t%v%v\n", connected.ServerIP, portInfo)
 

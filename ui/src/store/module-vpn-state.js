@@ -426,15 +426,40 @@ export default {
         const exitSvr = findServerByExitId(servers, ci.ExitServerID);
         context.commit("settings/serverExit", exitSvr, { root: true });
       }
-      if (ci.ServerPort && ci.IsTCP != undefined)
-        context.commit(
-          "settings/setPort",
-          {
-            port: ci.ServerPort,
-            type: ci.IsTCP === true ? PortTypeEnum.TCP : PortTypeEnum.UDP,
-          },
-          { root: true }
-        );
+
+      context.dispatch("settings/connectionUseObfsproxy", ci.IsObfsproxy, {
+        root: true,
+      });
+
+      // apply port selection
+      if (ci.ServerPort && ci.IsTCP != undefined) {
+        let newPort = NormalizedConfigPortObject({
+          type: ci.IsTCP ? PortTypeEnum.TCP : PortTypeEnum.UDP,
+          port: ci.ServerPort,
+        });
+        if (newPort) {
+          // Get applicable ports for current configuration
+          // It is important to read 'connectionPorts' only after vpnType, multihop, obfsproxy was updated!
+          const ports = context.getters.connectionPorts;
+          // Check if the port exists in applicable ports list
+          if (!isPortExists(ports, newPort))
+            if (ports && ports.length > 0) {
+              // New port does not exists. It could be because of multi-hop connection or/and obfsproxy.
+              // (the port-base connection in use for MH or/and obfsproxy, so the final connection ports are not in a list)
+              // For MH and obfsproxy only port type has sense. Looking for first applicable port
+
+              // anyway, try to choose the same port number which is already selected
+              let changedPort = ports.find(
+                (p) => p.port === newPort.port && p.type === newPort.type
+              );
+              // if nothing found - try to get first applicable port by type
+              if (!changedPort)
+                changedPort = ports.find((p) => p.type === newPort.type);
+              newPort = changedPort;
+            }
+          context.commit("settings/setPort", newPort, { root: true });
+        }
+      }
 
       // Ensure the selected host equals to connected one. Of not equals - erase host selection
       context.dispatch("settings/serverEntryHostIPCheckOrErase", ci.ServerIP, {
@@ -731,5 +756,15 @@ function isAntitrackerHardcoreActive(state) {
       return true;
     default:
   }
+  return false;
+}
+
+function isPortExists(availablePorts, portToFind) {
+  portToFind = NormalizedConfigPortObject(portToFind);
+  if (!portToFind || !availablePorts) return false;
+  const found = availablePorts.find(
+    (p) => p.type === portToFind.type && p.port === portToFind.port
+  );
+  if (found) return true;
   return false;
 }

@@ -543,8 +543,6 @@ export default {
 
       if (isObfsproxy) {
         // For Obfsproxy: port number is ignored. Only TCP protocol is applicable.
-        // So we just return one TCP port definition (by default, currently selected port if it can be applied)
-        ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
         // try to use currently selected port
         let port = ports.find((p) => p.port === this.port.port);
         if (port) ports = [port];
