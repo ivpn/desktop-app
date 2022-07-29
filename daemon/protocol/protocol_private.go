@@ -250,7 +250,6 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ServerPort:      state.ServerPort,
 		IsObfsproxy:     state.IsObfsproxy,
 		VpnType:         state.VpnType,
-		ExitServerID:    state.ExitServerID,
 		ExitHostname:    state.ExitHostname,
 		ManualDNS:       dns.GetLastManualDNS(),
 		IsCanPause:      state.IsCanPause,
@@ -306,8 +305,6 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		}
 
 		// Multi-Hop
-		// only one-line parameter is allowed
-		multihopExitSrvID := strings.Split(r.OpenVpnParameters.MultihopExitServer.ExitSrvID, "\n")[0]
 		var exitHostValue *apitypes.OpenVPNServerHostInfo
 		multihopExitHosts := r.OpenVpnParameters.MultihopExitServer.Hosts
 		if len(multihopExitHosts) > 0 {
@@ -326,7 +323,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		// CONNECTION
 		// OpenVPN connection parameters
 		var connectionParams openvpn.ConnectionParams
-		if exitHostValue != nil && len(multihopExitSrvID) > 0 {
+		if exitHostValue != nil {
 			// Check is it allowed to connect multihop
 			if mhErr := p._service.IsCanConnectMultiHop(); mhErr != nil {
 				return mhErr
@@ -334,7 +331,6 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 
 			// Multi-Hop
 			connectionParams = openvpn.CreateConnectionParams(
-				multihopExitSrvID,
 				exitHostValue.Hostname,
 				r.OpenVpnParameters.Port.Protocol > 0, // is TCP
 				exitHostValue.MultihopPort,
@@ -347,7 +343,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		} else {
 			// Single-Hop
 			connectionParams = openvpn.CreateConnectionParams(
-				"", "",
+				"",
 				r.OpenVpnParameters.Port.Protocol > 0, // is TCP
 				r.OpenVpnParameters.Port.Port,
 				host,
@@ -430,8 +426,6 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 				}
 			}
 		}
-		// only one-line parameter is allowed
-		multihopExitSrvID := strings.Split(r.WireGuardParameters.MultihopExitServer.ExitSrvID, "\n")[0]
 
 		// prevent user-defined data injection: ensure that nothing except the base64 public key will be stored in the configuration
 		if !helpers.ValidateBase64(hostValue.PublicKey) {
@@ -445,7 +439,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		}
 
 		var connectionParams wireguard.ConnectionParams
-		if exitHostValue != nil && len(multihopExitSrvID) > 0 {
+		if exitHostValue != nil {
 			// Check is it allowed to connect multihop
 			if mhErr := p._service.IsCanConnectMultiHop(); mhErr != nil {
 				return mhErr
@@ -453,7 +447,6 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 
 			// Multi-Hop
 			connectionParams = wireguard.CreateConnectionParams(
-				multihopExitSrvID,
 				exitHostValue.Hostname,
 				exitHostValue.MultihopPort,
 				net.ParseIP(hostValue.Host),
@@ -463,7 +456,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 		} else {
 			// Single-Hop
 			connectionParams = wireguard.CreateConnectionParams(
-				"", "",
+				"",
 				r.WireGuardParameters.Port.Port,
 				net.ParseIP(hostValue.Host),
 				hostValue.PublicKey,

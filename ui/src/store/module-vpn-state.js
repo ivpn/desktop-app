@@ -48,7 +48,6 @@ export default {
       ClientIPv6: "",
       ServerIP: "",
       ServerPort: 0,
-      ExitServerID: "",
       ExitHostname: "",
       ManualDNS: {
         DnsHost: "",      // string // DNS host IP address
@@ -415,15 +414,15 @@ export default {
       // Connection can be triggered outside (not by current application instance)
       // So, we should just update received data in settings (vpnType, multihop, entry\exit servers and hosts)
       // (no consistency checks should be performed)
-      const isMultiHop = isStrNullOrEmpty(ci.ExitServerID) ? false : true;
+      const isMultiHop = !isStrNullOrEmpty(ci.ExitHostname);
       context.commit("settings/vpnType", ci.VpnType, { root: true });
       context.dispatch("settings/isMultiHop", isMultiHop, { root: true });
       // it is important to read 'activeServers' only after vpnType was updated!
       const servers = context.getters.activeServers;
       const entrySvr = findServerByIp(servers, ci.ServerIP);
       context.commit("settings/serverEntry", entrySvr, { root: true });
-      if (!isStrNullOrEmpty(ci.ExitServerID)) {
-        const exitSvr = findServerByExitId(servers, ci.ExitServerID);
+      if (isMultiHop) {
+        const exitSvr = findServerByHostname(servers, ci.ExitHostname);
         context.commit("settings/serverExit", exitSvr, { root: true });
       }
 
@@ -572,11 +571,12 @@ function findServerByIp(servers, ip) {
   return null;
 }
 
-function findServerByExitId(servers, id) {
-  for (let i = 0; i < servers.length; i++) {
-    const srv = servers[i];
-    if (srv.gateway == null) continue;
-    if (id === srv.gateway.split(".")[0]) return srv;
+function findServerByHostname(servers, hostname) {
+  for (const srv of servers) {
+    if (!srv || !srv.hosts) continue;
+    for (const host of srv.hosts) {
+      if (host.hostname == hostname) return srv;
+    }
   }
 }
 

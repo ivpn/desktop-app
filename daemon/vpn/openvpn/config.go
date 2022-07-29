@@ -40,7 +40,6 @@ import (
 type ConnectionParams struct {
 	username             string
 	password             string
-	multihopExitSrvID    string
 	multihopExitHostname string // (e.g.: "nl4.wg.ivpn.net") we need it only for informing clients about connection status
 	tcp                  bool
 	hostPort             int
@@ -60,7 +59,6 @@ func (c *ConnectionParams) SetCredentials(username, password string) {
 
 // CreateConnectionParams creates OpenVPN connection parameters object
 func CreateConnectionParams(
-	multihopExitSrvID string,
 	multihopExitHostname string,
 	tcp bool,
 	hostPort int,
@@ -72,7 +70,6 @@ func CreateConnectionParams(
 	proxyPassword string) ConnectionParams {
 
 	return ConnectionParams{
-		multihopExitSrvID:    multihopExitSrvID,
 		multihopExitHostname: multihopExitHostname,
 		tcp:                  tcp,
 		hostPort:             hostPort,
@@ -126,7 +123,7 @@ func (c *ConnectionParams) generateConfiguration(
 
 	if obfsproxyPort > 0 {
 		c.tcp = true
-		if len(c.multihopExitSrvID) > 0 {
+		if len(c.multihopExitHostname) > 0 {
 			// Multi-Hop with obfsproxy:	just uses the multihop port +1.
 			c.hostPort += 1
 		} else {

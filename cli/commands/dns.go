@@ -196,7 +196,7 @@ func (c *CmdAntitracker) Run() error {
 			} else {
 				var dnsStr string
 				if cfg.Antitracker || cfg.AntitrackerHardcore {
-					dnsStr, err = GetAntitrackerIP(connectInfo.VpnType, cfg.AntitrackerHardcore, len(connectInfo.ExitServerID) > 0, &servers)
+					dnsStr, err = GetAntitrackerIP(connectInfo.VpnType, cfg.AntitrackerHardcore, len(connectInfo.ExitHostname) > 0, &servers)
 					if err != nil {
 						return err
 					}

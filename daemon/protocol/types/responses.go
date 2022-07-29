@@ -211,7 +211,6 @@ type ConnectedResp struct {
 	ServerIP        string
 	ServerPort      int
 	IsObfsproxy     bool
-	ExitServerID    string // multi-hop exit server gateway ID. Example: "gateway":"zz.wg.ivpn.net" => "zz"
 	ExitHostname    string // multi-hop exit hostname (e.g. "us-tx1.wg.ivpn.net")
 	ManualDNS       dns.DnsSettings
 	IsCanPause      bool

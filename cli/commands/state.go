@@ -23,6 +23,7 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/ivpn/desktop-app/cli/flags"
@@ -68,7 +69,7 @@ func showState() error {
 			slist := serversListByVpnType(servers, connected.VpnType)
 
 			serverInfo = getServerInfoByIP(slist, connected.ServerIP)
-			exitServerInfo = getServerInfoByID(slist, connected.ExitServerID)
+			exitServerInfo = getServerInfoByHostName(slist, connected.ExitHostname)
 		}
 	}
 
@@ -111,24 +112,30 @@ func getServerInfoByIP(servers []serverDesc, ip string) string {
 	for _, s := range servers {
 		for _, h := range s.hosts {
 			if ip == strings.TrimSpace(h.host) {
-				return s.String()
+				return ConnectedServerInfo(s, h)
 			}
 		}
 	}
 	return ""
 }
 
-func getServerInfoByID(servers []serverDesc, id string) string {
-	id = strings.ToLower(strings.TrimSpace(id))
-	if len(id) == 0 {
+func getServerInfoByHostName(servers []serverDesc, hostname string) string {
+	hostname = strings.ToLower(strings.TrimSpace(hostname))
+	if len(hostname) == 0 {
 		return ""
 	}
 
 	for _, s := range servers {
-		sID := strings.ToLower(strings.TrimSpace(s.gateway))
-		if strings.HasPrefix(sID, id) {
-			return s.String()
+		for _, h := range s.hosts {
+			hn := strings.ToLower(strings.TrimSpace(h.hostname))
+			if hn == hostname {
+				return ConnectedServerInfo(s, h)
+			}
 		}
 	}
 	return ""
+}
+
+func ConnectedServerInfo(s serverDesc, host hostDesc) string {
+	return fmt.Sprintf("%s [%s], %s (%s), %s", s.gateway, host.hostname, s.city, s.countryCode, s.country)
 }

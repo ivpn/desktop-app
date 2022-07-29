@@ -410,6 +410,10 @@ func (c *CmdConnect) Run() (retError error) {
 					}
 
 					// port definition is not required for WireGuard multi-hop (in use: UDP + port-based-multihop)
+					if len(c.port) > 0 {
+						// if user manually defined port for obfsproxy connection - inform that it is ignored
+						fmt.Printf("Note: port definition is ignored for WireGuard Multi-Hop connections\n")
+					}
 
 					req.WireGuardParameters.MultihopExitServer.ExitSrvID = strings.Split(exitSvrWg.Gateway, ".")[0]
 					req.WireGuardParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrWg.Hosts, customHostExitServer)
@@ -504,19 +508,26 @@ func (c *CmdConnect) Run() (retError error) {
 			return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
 		}
 
+		portStrInfo := destPort.String()
 		if c.obfsproxy {
 			if len(c.port) > 0 {
 				// if user manually defined port for obfsproxy connection - inform that it is ignored
 				fmt.Printf("Note: port definition is ignored for the connections when the obfsproxy enabled\n")
 			}
+			portStrInfo = "TCP"
 			destPort.tcp = true
 		}
 
 		if len(c.multihopExitSvr) == 0 {
-			fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s %s...\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, destPort.String())
+			fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s %s...\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, portStrInfo)
 		} else {
+			portStrInfo = "UDP"
+			if destPort.tcp {
+				portStrInfo = "TCP"
+			}
+
 			fmt.Printf("[OpenVPN] Connecting Multi-Hop...\n")
-			fmt.Printf("\tentry server: %s, %s (%s) %s %s\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, destPort.String())
+			fmt.Printf("\tentry server: %s, %s (%s) %s %s\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, portStrInfo)
 			fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvrOvpn.City, exitSvrOvpn.CountryCode, exitSvrOvpn.Country, exitSvrOvpn.Gateway)
 		}
 	}

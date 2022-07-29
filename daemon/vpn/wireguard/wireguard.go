@@ -44,18 +44,13 @@ func init() {
 
 // ConnectionParams contains all information to make new connection
 type ConnectionParams struct {
-	clientLocalIP    net.IP
-	clientPrivateKey string
-	hostPort         int
-	hostIP           net.IP
-	hostPublicKey    string
-	hostLocalIP      net.IP
-	ipv6Prefix       string
-
-	// multihopExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
-	// in same manner as for OpenVPN connection.
-	// Example: "gateway":"zz.wg.ivpn.net" => "zz"
-	multihopExitSrvID    string
+	clientLocalIP        net.IP
+	clientPrivateKey     string
+	hostPort             int
+	hostIP               net.IP
+	hostPublicKey        string
+	hostLocalIP          net.IP
+	ipv6Prefix           string
 	multihopExitHostname string // (e.g.: "nl4.wg.ivpn.net") we need it only for informing clients about connection status
 }
 
@@ -80,7 +75,6 @@ func (cp *ConnectionParams) SetCredentials(privateKey string, localIP net.IP) {
 
 // CreateConnectionParams initializing connection parameters object
 func CreateConnectionParams(
-	multihopExitSrvID string,
 	multihopExitHostName string,
 	hostPort int,
 	hostIP net.IP,
@@ -89,7 +83,6 @@ func CreateConnectionParams(
 	ipv6Prefix string) ConnectionParams {
 
 	return ConnectionParams{
-		multihopExitSrvID:    multihopExitSrvID,
 		multihopExitHostname: multihopExitHostName,
 		hostPort:             hostPort,
 		hostIP:               hostIP,
@@ -271,7 +264,6 @@ func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
 		wg.connectParams.hostPort,
 		isCanPause)
 
-	si.ExitServerID = wg.connectParams.multihopExitSrvID
 	si.ExitHostname = wg.connectParams.multihopExitHostname
 
 	stateChan <- si
