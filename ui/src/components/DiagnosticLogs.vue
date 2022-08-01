@@ -3,7 +3,8 @@
     <div id="innerColumn">
       <div style="text-align: center" id="title">Diagnostic logs</div>
       <div style="text-align: center">
-        The following information will be submitted to IVPN for further analysis
+        The information in the tabs shown below will be submitted to IVPN for
+        further analysis
       </div>
 
       <!-- TAB-view header (diagnostic) -->
@@ -13,7 +14,7 @@
           class="selectableButtonOff"
           v-bind:class="{ selectableButtonOn: activeTabName == 'daemonLogs' }"
         >
-          Logs
+          App
         </button>
         <button
           v-on:click="onTabSelected('settings')"
@@ -71,15 +72,19 @@
         v-if="!isLoggingEnabled"
         style="margin-top: 5px; text-align: right; color: orange"
       >
-        Logging is disabled.<br />
-        Please, enable "Allow logging" in the General settings to provide
-        extended information to the developers.
+        Logging is disabled.
       </div>
       <div class="flexRow" style="margin-top: 20px">
         <div style="flex-grow: 1" />
         <button class="slave btn" v-on:click="onCancel">Cancel</button>
         <div style="width: 10px" />
-        <button class="master btn" v-on:click="onSendLogs">Send logs</button>
+        <button
+          class="master btn"
+          :class="{ btnDisabled: !isLoggingEnabled }"
+          v-on:click="onSendLogs"
+        >
+          Send logs
+        </button>
       </div>
     </div>
   </body>
@@ -185,9 +190,9 @@ export default {
             sender.showMessageBoxSync({
               type: "warning",
               buttons: ["OK"],
-              message: "User comment is empty",
+              message: "Comment is empty",
               detail:
-                "Please write a description of the problem you are experiencing",
+                "Please add a description of the issue you are experiencing",
             });
           }, 0);
           return;
