@@ -222,6 +222,7 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 		Version:             version.Version(),
 		ProcessorArch:       runtime.GOARCH,
 		Session:             types.CreateSessionResp(prefs.Session),
+		Account:             prefs.Account,
 		SettingsSessionUUID: prefs.SettingsSessionUUID,
 		DisabledFunctions: types.DisabledFunctionality{
 			WireGuardError:   wgErr,

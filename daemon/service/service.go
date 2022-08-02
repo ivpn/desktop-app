@@ -375,16 +375,7 @@ func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr 
 }
 
 func (s *Service) IsCanConnectMultiHop() error {
-	if !s._preferences.Account.IsInitialized() {
-		// It could be that account status is not known. We allow MH in this case.
-		// It can happen on upgrading from an old version (which did not keep s._preferences.Account)
-		return nil
-	}
-
-	if s._preferences.Account.IsHasCapability(preferences.MultiHop) {
-		return nil
-	}
-	return fmt.Errorf("MultiHop connections are not allowed for the current subscription plan. Please upgrade your subscription to Pro")
+	return s._preferences.Account.IsCanConnectMultiHop()
 }
 
 // ConnectOpenVPN start OpenVPN connection

@@ -22,7 +22,10 @@
 
 package preferences
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type Capability string
 
@@ -57,4 +60,17 @@ func (a AccountStatus) IsHasCapability(cap Capability) bool {
 		}
 	}
 	return false
+}
+
+func (a AccountStatus) IsCanConnectMultiHop() error {
+	if !a.IsInitialized() {
+		// It could be that account status is not known. We allow MH in this case.
+		// It can happen on upgrading from an old version (which did not keep s._preferences.Account)
+		return nil
+	}
+
+	if a.IsHasCapability(MultiHop) {
+		return nil
+	}
+	return fmt.Errorf("MultiHop connections are not allowed for the current subscription plan. Please upgrade your subscription to Pro")
 }

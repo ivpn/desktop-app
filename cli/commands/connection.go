@@ -252,6 +252,10 @@ func (c *CmdConnect) Run() (retError error) {
 	if len(c.multihopExitSvr) > 0 {
 		// MULTI-HOP
 
+		if err := helloResp.Account.IsCanConnectMultiHop(); err != nil {
+			return err
+		}
+
 		if c.fastest {
 			return flags.BadParameter{Message: "'fastest' flag is not applicable for Multi-Hop connection [exit_svr]"}
 		}

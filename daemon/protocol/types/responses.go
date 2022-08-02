@@ -111,6 +111,7 @@ type HelloResp struct {
 	Version           string
 	ProcessorArch     string
 	Session           SessionResp
+	Account           preferences.AccountStatus
 	DisabledFunctions DisabledFunctionality
 	Dns               DnsAbilities
 
