@@ -50,6 +50,16 @@ let iconDisconnected_ForLightTheme = null; // (Windows-only) Black icon for ligh
 let iconPaused_ForLightTheme = null; // (Windows-only) Black icon for light background
 let iconsConnecting_ForLightTheme = []; // (Windows-only) Black icon for light background
 
+const EnumMenuId = Object.freeze({
+  CommonSeparator: "CommonSeparator",
+  Connect: "Connect",
+  Pause: "Pause",
+  Resume: "Resume",
+  ResumeIn: "ResumeIn",
+  Disconnect: "Disconnect",
+  Favorite: "Favorite",
+});
+
 // (Windows) We have to know information about the system theme (not the application theme)
 // This is needed for determining the required color for the tray icons (white on a dark or black on a light)
 // There is no possibility to detect the change of system theme! Therefore we are relying ONLY on the system theme at the application start!
@@ -335,12 +345,17 @@ function updateTrayMenu() {
       mainMenu.push({
         label: `Connect to ${connectToName}`,
         click: () => menuItemConnect(),
+        id: EnumMenuId.Connect,
       });
     } else {
       // PAUSE\RESUME
       if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED) {
         if (store.state.vpnState.pauseState === PauseStateEnum.Paused) {
-          mainMenu.push({ label: "Resume", click: menuItemResume });
+          mainMenu.push({
+            label: "Resume",
+            click: menuItemResume,
+            id: EnumMenuId.Resume,
+          });
           const pauseSubMenuTemplate = [
             {
               label: "Resume in 5 min",
@@ -370,9 +385,10 @@ function updateTrayMenu() {
           mainMenu.push({
             label: "Resume in",
             type: "submenu",
+            id: EnumMenuId.ResumeIn,
             submenu: Menu.buildFromTemplate(pauseSubMenuTemplate),
           });
-          mainMenu.push({ type: "separator" });
+          mainMenu.push({ type: "separator", id: EnumMenuId.CommonSeparator });
         } else if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) {
           const pauseSubMenuTemplate = [
             {
@@ -403,19 +419,26 @@ function updateTrayMenu() {
           mainMenu.push({
             label: "Pause",
             type: "submenu",
+            id: EnumMenuId.Pause,
             submenu: Menu.buildFromTemplate(pauseSubMenuTemplate),
           });
         }
       }
-      mainMenu.push({ label: `Disconnect`, click: menuItemDisconnect });
+      mainMenu.push({
+        label: `Disconnect`,
+        click: menuItemDisconnect,
+        id: EnumMenuId.Disconnect,
+      });
     }
 
     mainMenu.push({
       label: "Favorite servers",
       type: "submenu",
       submenu: favorites,
+      id: EnumMenuId.Favorite,
     });
     mainMenu.push({ type: "separator" });
+
     mainMenu.push({ label: "Account", click: menuHandlerAccount });
     mainMenu.push({ label: "Settings", click: menuHandlerPreferences });
     if (menuHandlerCheckUpdates != null) {
@@ -427,28 +450,52 @@ function updateTrayMenu() {
     mainMenu.push({ type: "separator" });
   }
 
-  // macOS: APPLY DOCK MENU
-  if (process.platform === "darwin") {
-    let dockMenuSource = [...mainMenu];
-    setTimeout(() => {
-      try {
-        const oldMenu = app.dock.getMenu();
-        const newMenu = Menu.buildFromTemplate(dockMenuSource);
-        // The dock menu items are not responsible first 1-2 seconds after the menu update
-        // TODO: investigate this strange behavior ^^^
-        // So, we are trying not to update menu if it is not necessary (no necessary to update menu to the same object)
-        if (isMenuEquals(oldMenu, newMenu) !== true) app.dock.setMenu(newMenu);
-      } catch (e) {
-        console.error(e);
-      }
-    }, 0);
-  }
-
   // APPLY TRAY MENU
   mainMenu.push({ label: "Quit", click: menuItemQuit });
 
   tray.setToolTip("IVPN Client");
   tray.setContextMenu(Menu.buildFromTemplate(mainMenu));
+
+  updateDockMenuMacOS(mainMenu);
+}
+
+function updateDockMenuMacOS(mainMenuTemplate) {
+  // macOS: APPLY DOCK MENU
+  if (process.platform !== "darwin") return;
+  try {
+    // Minimize amount of calls: app.dock.setMenu(...);
+    //
+    // There is a scenario the Dock menu items handlers will not be triggered:
+    //    User opened the dock menu and then the dock menu have been updated in the background
+    //    In this situation  the already opened menu became not workable (clicking on menu items will have no effect)
+    if (
+      store.getters["vpnState/isConnecting"] ||
+      store.getters["vpnState/isDisconnecting"]
+    ) {
+      // We are in connecting/disconnecting stage. Just erasing the dock menu for now (to avoid the situation described above).
+      // The Dock menu will be updated soon (as soon as connected/disconnected)
+      app.dock.setMenu(Menu.buildFromTemplate([]));
+    } else {
+      // only specific items can be shown in Dock menu
+      let dockMenuSource = mainMenuTemplate.filter(
+        (el) =>
+          el.id == EnumMenuId.CommonSeparator ||
+          el.id == EnumMenuId.Connect ||
+          el.id == EnumMenuId.Disconnect ||
+          el.id == EnumMenuId.Pause ||
+          el.id == EnumMenuId.Resume ||
+          el.id == EnumMenuId.ResumeIn ||
+          el.id == EnumMenuId.Favorite
+      );
+
+      const oldMenu = app.dock.getMenu();
+      const newMenu = Menu.buildFromTemplate(dockMenuSource);
+
+      if (isMenuEquals(oldMenu, newMenu) !== true) app.dock.setMenu(newMenu);
+    }
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 function isMenuEquals(menu1, menu2) {
