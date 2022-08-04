@@ -109,7 +109,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 		}
 	}()
 
-	// keep info about current manual DNS configuration (can be used for pause/resume)
+	// keep info about current manual DNS configuration (can be used for pause/resume/restore)
 	manualDNS = dnsCfg
 
 	dnscryptproxy.Stop()

@@ -72,7 +72,10 @@ func (o *OpenVPN) implOnConnected() error {
 		return dns.SetManual(o.psProps.manualDNS, o.clientIP)
 	}
 
-	return nil
+	// Normally, the DNS configuration performed by OpenVPN by calling script (OpenVPN config: "up client.up")
+	// But we also have to start DNS-change monitoring mechanisms. So we applying the DNS config again and starting/initializing all necessary internal DNS stuff
+	defDns := dns.DnsSettingsCreate(o.DefaultDNS())
+	return dns.SetManual(defDns, o.clientIP)
 }
 
 func (o *OpenVPN) implOnDisconnected() error {
