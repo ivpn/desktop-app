@@ -619,11 +619,18 @@ function serverName(entryServer, exitServer, entryServerHost, exitServerHost) {
   return ret;
 }
 
-// TODO: implement menuItemConnect when host specified
 async function menuItemConnect(entrySvr, exitSvr, entryHost, exitHost) {
   try {
-    if (entrySvr) store.dispatch("settings/serverEntry", entrySvr);
-    if (exitSvr) store.dispatch("settings/serverExit", exitSvr);
+    if (entrySvr) {
+      store.dispatch("settings/serverEntry", entrySvr);
+      store.dispatch("settings/isFastestServer", false);
+      store.dispatch("settings/isRandomServer", false);
+    }
+
+    if (exitSvr) {
+      store.dispatch("settings/serverExit", exitSvr);
+      store.dispatch("settings/isRandomExitServer", false);
+    }
 
     if (entryHost && entryHost.hostname)
       store.dispatch("settings/serverEntryHostId", entryHost.hostname);
