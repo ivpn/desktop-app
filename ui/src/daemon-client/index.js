@@ -73,6 +73,7 @@ const daemonRequests = Object.freeze({
   Disconnect: "Disconnect",
   PauseConnection: "PauseConnection",
   ResumeConnection: "ResumeConnection",
+  GetVPNState: "GetVPNState",
 
   KillSwitchGetStatus: "KillSwitchGetStatus",
   KillSwitchSetEnabled: "KillSwitchSetEnabled",
@@ -1204,6 +1205,10 @@ async function Connect() {
   // we are not in paused state anymore
   store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
 
+  // Switching the UI to the 'connecting' view
+  // Important! This put UI in un-synchronized state with the real state of the daemon!
+  //            Normally we are updating VPN state after connection/disconnection.
+  //            But in case of any problems - we have to request VPN status manually (to synchronize the VPN state in UI with the daemon state)
   store.commit("vpnState/connectionState", VpnStateEnum.CONNECTING);
 
   let manualDNS = {
@@ -1340,8 +1345,9 @@ async function Connect() {
       };
     }
   } catch (e) {
-    store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED);
     console.error("Failed to connect: ", e);
+    // We have to request VPN status manually (to synchronize the VPN state in UI with the daemon state)
+    await RequestVPNState();
     return;
   }
 
@@ -1363,6 +1369,12 @@ async function Connect() {
     // Use ONLY IPv6 hosts (use IPv6 connection inside tunnel)
     // (ignored when IPv6!=true)
     IPv6Only: settings.showGatewaysWithoutIPv6 != true,
+  });
+}
+
+async function RequestVPNState() {
+  await sendRecv({
+    Command: daemonRequests.GetVPNState,
   });
 }
 
