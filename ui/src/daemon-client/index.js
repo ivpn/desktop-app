@@ -1232,7 +1232,12 @@ async function Connect() {
           console.log(
             "Connect to fastest server (fastest server not defined). Pinging servers..."
           );
+
+          // Try to ping servers
           await PingServers();
+          // NOTE: in case if not possible to ping - we will have exception here (next line will not be executed)
+          // Surround 'PingServers()' in try/catch if it is necessary to continue anyway
+
           fastest = store.getters["vpnState/fastestServer"];
           // if fastest.ping == null - it means no any ping info available (e.g. communication blocked by firewall or no internet connectivity)
           // Anyway, we have to use the server calculated by 'vpnState/fastestServer' as fastest
