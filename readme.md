@@ -5,8 +5,11 @@
 # IVPN for Desktop (Windows/macOS/Linux)
 
 **IVPN for Desktop** is the official IVPN app for desktop platforms. Some of the features include: multiple protocols (OpenVPN, WireGuard), Kill-switch, Multi-Hop, Trusted Networks, AntiTracker, Custom DNS, Dark mode, and more.  
-IVPN Client app is distributed on the official site [www.ivpn.net](https://www.ivpn.net).  
-![IVPN application image](/.github/readme_images/ivpn_app.png)
+IVPN Client app is distributed on the official site [www.ivpn.net](https://www.ivpn.net).
+
+![IVPN application image](/.github/readme_images/ivpn_app.png#gh-light-mode-only)
+![IVPN application image](/.github/readme_images/ivpn_app_dark.png#gh-dark-mode-only)
+
 * [About this Repo](#about-repo)
 * [Installation](#installation)
   * [Requirements](#requirements)
