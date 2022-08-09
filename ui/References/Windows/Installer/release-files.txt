@@ -12,6 +12,7 @@ OpenVPN\x86_64\openssl.exe
 OpenVPN\x86_64\openvpn.exe
 OpenVPN\x86_64\libssl-1_1-x64.dll
 OpenVPN\x86_64\libcrypto-1_1-x64.dll
+OpenVPN\x86_64\liblzo2-2.dll
 OpenVPN\x86_64\tap\license.txt
 OpenVPN\x86_64\tap\OemVista.inf
 OpenVPN\x86_64\tap\tapivpn.cat
