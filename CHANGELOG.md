@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.9.8 - 2022-08-09
+
+[NEW] (Windows/macOS) Option to take part in Beta testing  
+[NEW] (macOS) Dock menu in macOS app  
+[IMPROVED] Show specific hosts in the favorite menu of the system tray  
+[IMPROVED] Updating account status  
+[IMPROVED] Reworked UI for sending diagnostic logs  
+[IMPROVED] CLI: Show specific host and obfsproxy status in the connection info  
+[IMPROVED] (Windows) Updated: WireGuard v0.5.3; OpenVPN v2.5.7 (OpenSSL v1.1.1o)  
+[IMPROVED] (macOS) Updated: WireGuard v0.0.20220316; OpenVPN v2.5.7 (OpenSSL v1.1.1o)  
+[IMPROVED] (macOS/Linux) Removed unnecessary popup when shutting down  
+[IMPROVED] (Linux) Implemented the DNS-change protection mechanism  
+[FIX] (Linux) Applications in Split Tunnel were blocked by the firewall  
+[FIX] (Linux) VPN's DNS server was missing after waking the system from suspend state on some Linux distributions  
+[FIX] (macOS) Application won't close with Cmd+Q  
+[FIX] Sometimes UI shows the wrong connection status after connecting to Fastest Server  
+[FIX] UI: Update Port and obfsproxy status used in the CLI  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.9.8.exe)  
+SHA256: 0b6ab6256a142070d0fb0244234ccd1ec1ddbe0fc631f6ab3c1cc04b035c30a2  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.9.8.dmg)  
+SHA256: b64e2fe7ea8296a63cb3e75274c73379731d64dc492778214e6f3ae728e330d1  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.9.8-arm64.dmg)  
+SHA256: f915d4954c3f8be86f523b057bca2d976c221628458a8d4ffccfe520417e73f5  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.9.8_amd64.deb)  
+SHA256: a196f136a2271913767ab441e0a5e61be9eca81b15c0dfce13d422fdac4ccd5c  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.9.8-1.x86_64.rpm)  
+SHA256: 181945f51690fe6fcf17e3ebd50ce0b253e76e4633e22e26d0522550356cac29  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.9.8_amd64.deb)  
+SHA256: c818ff2dfb97dcb360d193adfa8aaa261758d1066383e5bed4369f08721e5559  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.9.8-1.x86_64.rpm)  
+SHA256: 3abc4235a6f905b7cdf76ef6e4dc49b29f9a715161e69351ed53f2e5b0d80c5a  
+
 ## Version 3.9.0 - 2022-07-21
 
 [NEW] Ability to connect to a specific host in a location  
