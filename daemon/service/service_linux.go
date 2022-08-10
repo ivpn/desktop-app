@@ -30,10 +30,40 @@ import (
 	"regexp"
 	"strings"
 
+	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/firewall"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/shell"
 	"github.com/ivpn/desktop-app/daemon/splittun"
 )
+
+func (s *Service) implIsCanApplyUserPreferences(userPrefs preferences.UserPreferences) error {
+	if s.Connected() {
+		return fmt.Errorf("unable to change settings in the connected state")
+	}
+	if userPrefs.Platform.IsDnsMgmtOldStyle {
+		disabledFuncs := s.GetDisabledFunctions()
+		dnsMgmtOldErr := disabledFuncs.Platform.Linux.DnsMgmtOldResolvconfError
+		if len(dnsMgmtOldErr) > 0 {
+			return fmt.Errorf("the old-style DNS management is not applicable to the current environment: %s", dnsMgmtOldErr)
+		}
+	}
+	return nil
+}
+
+func (s *Service) implGetDisabledFuncForPlatform() protocolTypes.DisabledFunctionalityForPlatform {
+	var linuxFuncs protocolTypes.DisabledFunctionalityLinux
+
+	if len(platform.ResolvectlBinPath()) <= 0 {
+		linuxFuncs.DnsMgmtNewResolvectlError = "the 'resolvectl' is not applicable or missing"
+	}
+	if envs := platform.GetSnapEnvs(); envs != nil {
+		linuxFuncs.DnsMgmtOldResolvconfError = "it is not allowed to modify 'resolv.conf' from the snap environment"
+	}
+
+	return protocolTypes.DisabledFunctionalityForPlatform{Linux: linuxFuncs}
+}
 
 func (s *Service) implPingServersStarting(hosts []net.IP) error {
 	const onlyForICMP = true

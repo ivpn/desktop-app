@@ -26,8 +26,18 @@ import (
 	"fmt"
 	"net"
 
+	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/firewall"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
 )
+
+func (s *Service) implIsCanApplyUserPreferences(userPrefs preferences.UserPreferences) error {
+	return nil
+}
+
+func (s *Service) implGetDisabledFuncForPlatform() protocolTypes.DisabledFunctionalityForPlatform {
+	return protocolTypes.DisabledFunctionalityForPlatform{}
+}
 
 func (s *Service) implPingServersStarting(hosts []net.IP) error {
 	const onlyForICMP = true

@@ -49,6 +49,15 @@ const (
 	DefaultWGKeysInterval = time.Hour * 24 * 1
 )
 
+// UserPreferences - IVPN service preferences which can be exposed to client
+type UserPreferences struct {
+	// NOTE: update this type when adding new preferenvces which can be exposed for clients
+	// ...
+
+	// The platform-specific preferences
+	Platform PlatformSpecificUserPrefs
+}
+
 // Preferences - IVPN service preferences
 type Preferences struct {
 	// SettingsSessionUUID is unique for Preferences object
@@ -71,6 +80,9 @@ type Preferences struct {
 	// last known account status
 	Session SessionStatus
 	Account AccountStatus
+
+	// NOTE: update this type when adding new preferences which can be exposed to clients
+	UserPrefs UserPreferences
 }
 
 func Create() *Preferences {

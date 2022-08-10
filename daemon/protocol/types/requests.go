@@ -25,6 +25,7 @@ package types
 import (
 	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -130,10 +131,17 @@ type KillSwitchSetIsPersistent struct {
 }
 
 // SetPreference sets daemon configuration parameter
+// (This is an old implementation. It is necessary to use 'SetUserPreferences/SettingsResp' for future extensions)
 type SetPreference struct {
 	RequestBase
 	Key   string
 	Value string
+}
+
+// SetUserPreferences sets daemon configuration parameters (the 'SettingsResp' is in use to send this settings to client)
+type SetUserPreferences struct {
+	RequestBase
+	UserPrefs preferences.UserPreferences
 }
 
 // SetAlternateDns request to set custom DNS

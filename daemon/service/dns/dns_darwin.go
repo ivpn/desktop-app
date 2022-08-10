@@ -36,6 +36,10 @@ func implInitialize() error {
 	return nil
 }
 
+func implApplyUserSettings() error {
+	return nil // nothing to do here for current platfom
+}
+
 func implPause(localInterfaceIP net.IP) error {
 	err := shell.Exec(log, platform.DNSScript(), "-pause")
 	if err != nil {
