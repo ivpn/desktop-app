@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.9.9 - 2022-08-10
+
+[FIX] (Windows) OpenVPN connection issue  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.9.9.exe)  
+SHA256: c433289eb2b7d0661e5d68d0776b536670f7cc7524b40de17130af73fb7c1fa5  
+
 ## Version 3.9.8 - 2022-08-09
 
 [NEW] (Windows/macOS) Option to take part in Beta testing  
