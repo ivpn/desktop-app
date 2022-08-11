@@ -237,7 +237,7 @@ func (wg *WireGuard) resetManualDNS() error {
 
 	if wg.internals.isRunning {
 		// changing DNS to default value for current WireGuard connection
-		return dns.SetManual(dns.DnsSettingsCreate(wg.DefaultDNS()), wg.connectParams.clientLocalIP)
+		return dns.SetDefault(dns.DnsSettingsCreate(wg.DefaultDNS()), wg.connectParams.clientLocalIP)
 	}
 	return dns.DeleteManual(nil, wg.connectParams.clientLocalIP)
 }
