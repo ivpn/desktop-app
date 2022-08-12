@@ -55,17 +55,6 @@ func (p *Protocol) connLogID(c net.Conn) string {
 		return ""
 	}
 
-	// not necessary to print additional data into a log when only one connection available
-	numConnections := 0
-	func() {
-		p._connectionsMutex.RLock()
-		defer p._connectionsMutex.RUnlock()
-		numConnections = len(p._connections)
-	}()
-	if numConnections <= 1 {
-		return ""
-	}
-
 	return fmt.Sprintf("%s ", getConnectionName(c))
 }
 
