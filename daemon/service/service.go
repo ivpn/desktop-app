@@ -1211,6 +1211,8 @@ func (s *Service) SetUserPreferences(userPrefs preferences.UserPreferences) erro
 
 	prefs := s._preferences
 	prefs.UserPrefs = userPrefs
+	s.setPreferences(prefs)
+
 	return nil
 }
 

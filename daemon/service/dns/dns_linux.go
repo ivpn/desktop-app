@@ -65,6 +65,7 @@ func implInitialize() error {
 		f_implSetManual = rctl_implSetManual
 		f_implDeleteManual = rctl_implDeleteManual
 		isOldMgmtStyleInUse = false
+		log.Info("Initialized management: resolvectl in use")
 	} else {
 		// old management style: direct modifying '/etc/resolv.conf'
 		f_implInitialize = rconf_implInitialize
@@ -73,6 +74,7 @@ func implInitialize() error {
 		f_implSetManual = rconf_implSetManual
 		f_implDeleteManual = rconf_implDeleteManual
 		isOldMgmtStyleInUse = true
+		log.Info("Initialized management: direct modification the '/etc/resolv.conf' ")
 	}
 
 	return f_implInitialize()

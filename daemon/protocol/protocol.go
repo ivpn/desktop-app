@@ -730,20 +730,26 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 	case "SetUserPreferences":
-		var req types.SetUserPreferences
-		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			break
-		}
+		func() {
+			defer func() {
+				//  notify all connected clients about changed (or not changed!) preferences
+				p.notifyClients(p.createSettingsResponse())
+			}()
 
-		if err := p._service.SetUserPreferences(req.UserPrefs); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			break
-		}
-		//  notify all connected clients about changed preferences
-		p.notifyClients(p.createSettingsResponse())
-		// notify 'success'
-		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
+			var req types.SetUserPreferences
+			if err := json.Unmarshal(messageData, &req); err != nil {
+				p.sendErrorResponse(conn, reqCmd, err)
+				return
+			}
+
+			if err := p._service.SetUserPreferences(req.UserPrefs); err != nil {
+				p.sendErrorResponse(conn, reqCmd, err)
+				return
+			}
+
+			// notify 'success'
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
+		}()
 
 	case "SplitTunnelGetStatus":
 		status, err := p._service.SplitTunnelling_GetStatus()
