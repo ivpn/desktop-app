@@ -45,7 +45,7 @@
 name: ivpn # you probably want to 'snapcraft register <name>'
 base: core20 # the base snap is the execution environment for this snap
 # TODO: Set 'version:' to the same value as in 'ui/package.json'. This value will be used to stamp version for CLI and daemon
-version: "3.9.8"
+version: "3.9.14"
 
 title: IVPN
 summary: IVPN - Secure VPN for Privacy  # 79 char long summary
