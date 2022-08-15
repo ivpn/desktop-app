@@ -42,7 +42,7 @@ func (s *Service) implIsCanApplyUserPreferences(userPrefs preferences.UserPrefer
 	if s.Connected() {
 		return fmt.Errorf("unable to change settings in the connected state")
 	}
-	if userPrefs.Platform.IsDnsMgmtOldStyle {
+	if userPrefs.Linux.IsDnsMgmtOldStyle {
 		disabledFuncs := s.GetDisabledFunctions()
 		dnsMgmtOldErr := disabledFuncs.Platform.Linux.DnsMgmtOldResolvconfError
 		if len(dnsMgmtOldErr) > 0 {

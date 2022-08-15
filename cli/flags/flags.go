@@ -46,6 +46,7 @@ type CmdInfo struct {
 	defaultArgName string
 	argNames       map[string]string // variable name -> argument description
 	parseSpecial   func(arguments []string) bool
+	argIsAllowed   map[string]func() bool // variable name -> func which returns 'false' when argument is not applicable for current environment
 }
 
 // Initialize initialises object
@@ -56,6 +57,7 @@ func (c *CmdInfo) Initialize(name, description string) {
 	c.fs.Usage = func() {
 		c.Usage(false)
 	}
+	c.argIsAllowed = make(map[string]func() bool)
 }
 
 // Parse parses flag definitions from the argument list
@@ -122,7 +124,7 @@ func (c *CmdInfo) usage(w *tabwriter.Writer, short bool) {
 
 	// collect output date
 	flagIterator := func(f *flag.Flag) {
-		if flags, ok := tmpmap[f.Usage]; ok == false {
+		if flags, ok := tmpmap[f.Usage]; !ok {
 			tmpmap[f.Usage] = flagInfo{DetailedName: "-" + f.Name, ArgDesc: c.argNames[f.Name]}
 		} else {
 			flags.DetailedName = flags.DetailedName + "|-" + f.Name
@@ -159,7 +161,16 @@ func (c *CmdInfo) usage(w *tabwriter.Writer, short bool) {
 
 	// loop trough flags map
 	for _, usage := range keys {
-		flag, _ := tmpmap[usage]
+		flag := tmpmap[usage]
+
+		// check if we can print info about this argument
+		argNormalized := strings.Trim(flag.DetailedName, "- \n\r\t")
+		if isArgAllowedFunc, ok := c.argIsAllowed[argNormalized]; ok && isArgAllowedFunc != nil && !isArgAllowedFunc() {
+			// The argument is not applicable for current platform
+			// Do not show it in usage
+			continue
+		}
+
 		lines := strings.Split(usage, "\n")
 		fmt.Fprintln(writer, fmt.Sprintf("  %s %s\t- %s", flag.DetailedName, flag.ArgDesc, lines[0]))
 		if len(lines) > 1 {
@@ -187,6 +198,12 @@ func (c *CmdInfo) StringVar(p *string, name string, defValue string, argNAme str
 	c.fs.StringVar(p, name, defValue, usage)
 	c.argNames[name] = argNAme
 }
+func (c *CmdInfo) StringVarEx(p *string, name string, defValue string, argNAme string, usage string, isAllowedFunc func() bool) {
+	c.StringVar(p, name, defValue, argNAme, usage)
+	if isAllowedFunc != nil {
+		c.argIsAllowed[name] = isAllowedFunc
+	}
+}
 
 // IntVar defines an int flag with specified name, default value, and usage string.
 // The argument p points to an int variable in which to store the value of the flag.
@@ -194,9 +211,21 @@ func (c *CmdInfo) IntVar(p *int, name string, defValue int, argNAme string, usag
 	c.fs.IntVar(p, name, defValue, usage)
 	c.argNames[name] = argNAme
 }
+func (c *CmdInfo) IntVarEx(p *int, name string, defValue int, argNAme string, usage string, isAllowedFunc func() bool) {
+	c.IntVar(p, name, defValue, argNAme, usage)
+	if isAllowedFunc != nil {
+		c.argIsAllowed[name] = isAllowedFunc
+	}
+}
 
 // BoolVar defines a bool flag with specified name, default value, and usage string.
 // The argument p points to a bool variable in which to store the value of the flag.
 func (c *CmdInfo) BoolVar(p *bool, name string, defValue bool, usage string) {
 	c.fs.BoolVar(p, name, defValue, usage)
+}
+func (c *CmdInfo) BoolVarEx(p *bool, name string, defValue bool, usage string, isAllowedFunc func() bool) {
+	c.BoolVar(p, name, defValue, usage)
+	if isAllowedFunc != nil {
+		c.argIsAllowed[name] = isAllowedFunc
+	}
 }

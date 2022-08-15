@@ -49,13 +49,19 @@ const (
 	DefaultWGKeysInterval = time.Hour * 24 * 1
 )
 
+type LinuxSpecificUserPrefs struct {
+	// If true - use old style DNS management mechanism
+	// by direct modifying file '/etc/resolv.conf'
+	IsDnsMgmtOldStyle bool
+}
+
 // UserPreferences - IVPN service preferences which can be exposed to client
 type UserPreferences struct {
 	// NOTE: update this type when adding new preferenvces which can be exposed for clients
 	// ...
 
 	// The platform-specific preferences
-	Platform PlatformSpecificUserPrefs
+	Linux LinuxSpecificUserPrefs
 }
 
 // Preferences - IVPN service preferences

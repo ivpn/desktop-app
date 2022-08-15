@@ -208,7 +208,7 @@ export default {
   mounted() {
     this.requestPredefinedDohConfigs();
     this.val_linuxDnsIsResolvConfMgmt =
-      this.daemonSettings.UserPrefs.Platform.IsDnsMgmtOldStyle;
+      this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
   },
   methods: {
     checkIsDisconnectedAndWarn: function () {
@@ -280,7 +280,7 @@ export default {
     },
     daemonSettings() {
       this.val_linuxDnsIsResolvConfMgmt =
-        this.daemonSettings.UserPrefs.Platform.IsDnsMgmtOldStyle;
+        this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
     },
   },
 
@@ -329,9 +329,9 @@ export default {
         if (
           !dSettings ||
           !dSettings.UserPrefs ||
-          !dSettings.UserPrefs.Platform ||
-          dSettings.UserPrefs.Platform.IsDnsMgmtOldStyle == undefined ||
-          dSettings.UserPrefs.Platform.IsDnsMgmtOldStyle == null
+          !dSettings.UserPrefs.Linux ||
+          dSettings.UserPrefs.Linux.IsDnsMgmtOldStyle == undefined ||
+          dSettings.UserPrefs.Linux.IsDnsMgmtOldStyle == null
         )
           return false;
 
@@ -363,8 +363,8 @@ export default {
           let prefs = clone(
             this.$store.state.settings.daemonSettings.UserPrefs
           );
-          if (prefs.Platform.IsDnsMgmtOldStyle != value) {
-            prefs.Platform.IsDnsMgmtOldStyle = value;
+          if (prefs.Linux.IsDnsMgmtOldStyle != value) {
+            prefs.Linux.IsDnsMgmtOldStyle = value;
             await sender.SetUserPrefs(prefs);
           }
         } catch (e) {
@@ -372,7 +372,7 @@ export default {
         } finally {
           setTimeout(() => {
             this.val_linuxDnsIsResolvConfMgmt =
-              this.daemonSettings.UserPrefs.Platform.IsDnsMgmtOldStyle;
+              this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
           }, 0);
         }
       },
