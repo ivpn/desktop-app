@@ -193,6 +193,10 @@ export default {
     return await invoke("renderer-request-GetInstalledApps");
   },
 
+  SetUserPrefs: async (userPrefs) => {
+    return await invoke("renderer-request-SetUserPrefs", userPrefs);
+  },
+
   SetAutoconnectOnLaunch: async (isEnabled) => {
     return await invoke("renderer-request-SetAutoconnectOnLaunch", isEnabled);
   },

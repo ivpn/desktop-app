@@ -95,8 +95,10 @@ const daemonRequests = Object.freeze({
   GetDnsPredefinedConfigs: "GetDnsPredefinedConfigs",
 
   WireGuardGenerateNewKeys: "WireGuardGenerateNewKeys",
-  SetPreference: "SetPreference",
   WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval",
+
+  SetPreference: "SetPreference",
+  SetUserPreferences: "SetUserPreferences",
 
   WiFiAvailableNetworks: "WiFiAvailableNetworks",
   WiFiCurrentNetwork: "WiFiCurrentNetwork",
@@ -1797,6 +1799,15 @@ async function RequestDnsPredefinedConfigs() {
   else store.commit(`dnsPredefinedConfigurations`, []);
 }
 
+async function SetUserPrefs(userPrefs) {
+  if (!userPrefs) return;
+
+  await sendRecv({
+    Command: daemonRequests.SetUserPreferences,
+    UserPrefs: userPrefs,
+  });
+}
+
 async function SetAutoconnectOnLaunch(enable) {
   await sendRecv({
     Command: daemonRequests.SetPreference,
@@ -1929,6 +1940,8 @@ export default {
 
   SetDNS,
   RequestDnsPredefinedConfigs,
+
+  SetUserPrefs,
 
   SetAutoconnectOnLaunch,
   SetLogging,

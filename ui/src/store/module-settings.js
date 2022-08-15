@@ -70,6 +70,17 @@ const getDefaultState = () => {
     daemonSettings: {
       IsAutoconnectOnLaunch: false,
       UserDefinedOvpnFile: "",
+
+      //UserPrefs: {
+      //  // (Linux)
+      //  Platform: {
+      //    IsDnsMgmtOldStyle bool
+      //  }
+      //  // (macOS)
+      //  Platform: { }
+      //  // (Windows)
+      //  Platform: { }
+      //}
     },
 
     // connection

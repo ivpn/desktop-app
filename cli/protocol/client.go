@@ -39,6 +39,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -684,6 +685,19 @@ func (c *Client) SetParanoidModePassword(secret string) error {
 	req := types.ParanoidModeSetPasswordReq{NewSecret: paranoidModeSecretHash(secret)}
 	var resp types.HelloResp
 	// Waiting for HelloResp (ignoring command index) or for ErrorResp (not ignoring command index)
+	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) SetUserPreferences(upref preferences.UserPreferences) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.SetUserPreferences{UserPrefs: upref}
+	var resp types.SettingsResp
 	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
 		return err
 	}

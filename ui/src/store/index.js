@@ -61,6 +61,12 @@ export default new Vuex.Store({
       OpenVPNError: "",
       ObfsproxyError: "",
       SplitTunnelError: "",
+      Platform: {
+        Linux: {
+          DnsMgmtOldResolvconfError: "",
+          DnsMgmtNewResolvectlError: "",
+        },
+      },
     },
 
     dnsAbilities: {

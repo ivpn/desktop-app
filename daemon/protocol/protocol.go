@@ -68,7 +68,7 @@ type Service interface {
 	// Some functionality can be not accessible
 	// It can happen, for example, if some external binaries not installed
 	// (e.g. obfsproxy or WireGuard on Linux)
-	GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr error)
+	GetDisabledFunctions() types.DisabledFunctionality
 
 	// ServersList returns servers info
 	// (if there is a cached data available - will be returned data from cache)
@@ -101,6 +101,7 @@ type Service interface {
 
 	Preferences() preferences.Preferences
 	SetPreference(key types.ServicePreference, val string) (isChanged bool, err error)
+	SetUserPreferences(userPrefs preferences.UserPreferences) (err error)
 	ResetPreferences() error
 
 	SetManualDNS(dns dns.DnsSettings) error
@@ -700,8 +701,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
 
-	// TODO: must return response
 	// TODO: avoid using raw key as a string
+	// NOTE: please, use 'SetUserPreferences' for future extensions
 	case "SetPreference":
 		var req types.SetPreference
 		if err := json.Unmarshal(messageData, &req); err != nil {
@@ -712,6 +713,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if types.Prefs_IsAutoconnectOnLaunch.Equals(req.Key) {
 			if p._eaa.IsEnabled() {
 				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("the 'Autoconnect on application launch' cannot be enabled whilst Enhanced Application Authentication is enabled"))
+				break
 			}
 		}
 
@@ -726,6 +728,28 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			// notify 'success'
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
+
+	case "SetUserPreferences":
+		func() {
+			defer func() {
+				//  notify all connected clients about changed (or not changed!) preferences
+				p.notifyClients(p.createSettingsResponse())
+			}()
+
+			var req types.SetUserPreferences
+			if err := json.Unmarshal(messageData, &req); err != nil {
+				p.sendErrorResponse(conn, reqCmd, err)
+				return
+			}
+
+			if err := p._service.SetUserPreferences(req.UserPrefs); err != nil {
+				p.sendErrorResponse(conn, reqCmd, err)
+				return
+			}
+
+			// notify 'success'
+			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
+		}()
 
 	case "SplitTunnelGetStatus":
 		status, err := p._service.SplitTunnelling_GetStatus()

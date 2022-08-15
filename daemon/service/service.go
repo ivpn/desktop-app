@@ -162,7 +162,7 @@ func (s *Service) init() error {
 	}
 
 	// initialize dns functionality
-	if err := dns.Initialize(firewall.OnChangeDNS); err != nil {
+	if err := dns.Initialize(firewall.OnChangeDNS, func() preferences.UserPreferences { return s._preferences.UserPrefs }); err != nil {
 		log.Error(fmt.Sprintf("failed to initialize DNS : %s", err))
 	}
 
@@ -341,7 +341,9 @@ func (s *Service) APIRequest(apiAlias string, ipTypeRequired protocolTypes.Requi
 // Some functionality can be not accessible
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGuard on Linux)
-func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr error) {
+func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
+	var ovpnErr, obfspErr, wgErr, splitTunErr error
+
 	if err := filerights.CheckFileAccessRightsExecutable(platform.OpenVpnBinaryPath()); err != nil {
 		ovpnErr = fmt.Errorf("OpenVPN binary: %w", err)
 	}
@@ -371,7 +373,24 @@ func (s *Service) GetDisabledFunctions() (wgErr, ovpnErr, obfspErr, splitTunErr 
 		wgErr = fmt.Errorf("%w. Please install WireGuard", wgErr)
 	}
 
-	return wgErr, ovpnErr, obfspErr, splitTunErr
+	var ret protocolTypes.DisabledFunctionality
+
+	if wgErr != nil {
+		ret.WireGuardError = wgErr.Error()
+	}
+	if ovpnErr != nil {
+		ret.OpenVPNError = ovpnErr.Error()
+	}
+	if obfspErr != nil {
+		ret.ObfsproxyError = obfspErr.Error()
+	}
+	if splitTunErr != nil {
+		ret.SplitTunnelError = splitTunErr.Error()
+	}
+
+	ret.Platform = s.implGetDisabledFuncForPlatform()
+
+	return ret
 }
 
 func (s *Service) IsCanConnectMultiHop() error {
@@ -385,12 +404,12 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		prefs := s.Preferences()
 
 		// checking if functionality accessible
-		_, ovpnErr, obfspErr, _ := s.GetDisabledFunctions()
-		if ovpnErr != nil {
-			return nil, ovpnErr
+		disabledFuncs := s.GetDisabledFunctions()
+		if len(disabledFuncs.OpenVPNError) > 0 {
+			return nil, fmt.Errorf(disabledFuncs.OpenVPNError)
 		}
-		if prefs.IsObfsproxy && obfspErr != nil {
-			return nil, obfspErr
+		if prefs.IsObfsproxy && len(disabledFuncs.ObfsproxyError) > 0 {
+			return nil, fmt.Errorf(disabledFuncs.ObfsproxyError)
 		}
 
 		connectionParams.SetCredentials(prefs.Session.OpenVPNUser, prefs.Session.OpenVPNPass)
@@ -470,9 +489,9 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 	}
 
 	// checking if functionality accessible
-	wgErr, _, _, _ := s.GetDisabledFunctions()
-	if wgErr != nil {
-		return wgErr
+	disabledFuncs := s.GetDisabledFunctions()
+	if len(disabledFuncs.WireGuardError) > 0 {
+		return fmt.Errorf(disabledFuncs.WireGuardError)
 	}
 
 	// Update WG keys, if necessary
@@ -886,6 +905,13 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 	}
 
 	log.Info("Initializing DNS")
+
+	// Reinitialise DNS configuration according to user settings
+	// It is applicable, for example for Linux: when the user changed DNS management style
+	if err := dns.ApplyUserSettings(); err != nil {
+		return err
+	}
+
 	// set manual DNS
 	if manualDNS.IsEmpty() {
 		err = s.ResetManualDNS()
@@ -1174,6 +1200,20 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 	log.Info(fmt.Sprintf("preferences %s='%s'", key, val))
 
 	return isChanged, nil
+}
+
+// SetPreference set preference value
+func (s *Service) SetUserPreferences(userPrefs preferences.UserPreferences) error {
+	// platform-specific check if we can apply this preferences
+	if err := s.implIsCanApplyUserPreferences(userPrefs); err != nil {
+		return err
+	}
+
+	prefs := s._preferences
+	prefs.UserPrefs = userPrefs
+	s.setPreferences(prefs)
+
+	return nil
 }
 
 // Preferences returns preferences

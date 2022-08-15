@@ -67,6 +67,29 @@ type ServiceExitingResp struct {
 	CommandBase
 }
 
+type DisabledFunctionalityLinux struct {
+	// If not empty - it is not possible to use the old way of DNS management
+	// (which is based on a direct change of '/etc/resolv.conf')
+	// For example: It could be because of snap environment (it does not allow to modify '/etc/resolv.conf')
+	DnsMgmtOldResolvconfError string
+
+	// If not empty - it is not possible to use modern way of DNS management
+	// (based on communicationd with 'resolved' using 'resolvectl')
+	// There could be different reasons of it:
+	//	- there is no 'resolvectl' binary on target system
+	//	- 'resolvectl' initialisation try was failed
+	DnsMgmtNewResolvectlError string
+}
+
+type DisabledFunctionalityForPlatform struct {
+	// Linux specific functionality which is disabled
+	Linux DisabledFunctionalityLinux
+
+	// Windows ...
+
+	// macOS ...
+}
+
 // DisabledFunctionality Some functionality can be not accessible
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGaurd on Linux)
@@ -75,6 +98,9 @@ type DisabledFunctionality struct {
 	OpenVPNError     string
 	ObfsproxyError   string
 	SplitTunnelError string
+
+	// Linux specific functionality which is disabled
+	Platform DisabledFunctionalityForPlatform
 }
 
 type DnsAbilities struct {
@@ -103,6 +129,8 @@ type SettingsResp struct {
 	// SplitTunnelApps       []string
 
 	UserDefinedOvpnFile string
+
+	UserPrefs preferences.UserPreferences
 }
 
 // HelloResp response on initial request

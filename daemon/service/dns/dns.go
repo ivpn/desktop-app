@@ -31,14 +31,18 @@ import (
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
 )
 
 type FuncDnsChangeFirewallNotify func(dns *DnsSettings) error
+
+type FuncGetUserSettings func() preferences.UserPreferences
 
 var (
 	log                         *logger.Logger
 	lastManualDNS               DnsSettings
 	funcDnsChangeFirewallNotify FuncDnsChangeFirewallNotify
+	funcGetUserSettings         FuncGetUserSettings
 )
 
 func init() {
@@ -142,12 +146,24 @@ func (d DnsSettings) InfoString() string {
 
 // Initialize is doing initialization stuff
 // Must be called on application start
-func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify) error {
+func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify, getUserSettingsFunc FuncGetUserSettings) error {
 	funcDnsChangeFirewallNotify = fwNotifyDnsChangeFunc
 	if funcDnsChangeFirewallNotify == nil {
 		logger.Debug("WARNING! Firewall notification function not defined!")
 	}
+
+	funcGetUserSettings = getUserSettingsFunc
+	if funcGetUserSettings == nil {
+		logger.Debug("WARNING! getUserSettingsFunc() function not defined!")
+	}
+
 	return wrapErrorIfFailed(implInitialize())
+}
+
+// ApplyUserSettings - reinitialise DNS configuration according to user settings
+// It is applicable, for example for Linux: when the user changed DNS management style
+func ApplyUserSettings() error {
+	return implApplyUserSettings()
 }
 
 // Pause pauses DNS (restore original DNS)

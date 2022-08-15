@@ -70,6 +70,10 @@ func implInitialize() error {
 	return nil
 }
 
+func implApplyUserSettings() error {
+	return nil // nothing to do here for current platfom
+}
+
 func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dnsCfg DnsSettings, ipv6 bool, op Operation) error {
 	isDoH := uint32(0)
 	switch dnsCfg.Encryption {

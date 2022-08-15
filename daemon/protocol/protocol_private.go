@@ -170,6 +170,7 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 	return &types.SettingsResp{
 		IsAutoconnectOnLaunch: prefs.IsAutoconnectOnLaunch,
 		UserDefinedOvpnFile:   platform.OpenvpnUserParamsFile(),
+		UserPrefs:             prefs.UserPrefs,
 		// TODO: implement the rest of daemon settings
 	}
 }
@@ -177,26 +178,7 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 func (p *Protocol) createHelloResponse() *types.HelloResp {
 	prefs := p._service.Preferences()
 
-	wg, ovpn, obfsp, splitTun := p._service.GetDisabledFunctions()
-	var (
-		wgErr    string
-		ovpnErr  string
-		obfspErr string
-		stErr    string
-	)
-
-	if wg != nil {
-		wgErr = wg.Error()
-	}
-	if ovpn != nil {
-		ovpnErr = ovpn.Error()
-	}
-	if obfsp != nil {
-		obfspErr = obfsp.Error()
-	}
-	if splitTun != nil {
-		stErr = splitTun.Error()
-	}
+	disabledFuncs := p._service.GetDisabledFunctions()
 
 	dnsOverHttps, dnsOverTls, err := dns.EncryptionAbilities()
 	if err != nil {
@@ -213,11 +195,7 @@ func (p *Protocol) createHelloResponse() *types.HelloResp {
 		Session:             types.CreateSessionResp(prefs.Session),
 		Account:             prefs.Account,
 		SettingsSessionUUID: prefs.SettingsSessionUUID,
-		DisabledFunctions: types.DisabledFunctionality{
-			WireGuardError:   wgErr,
-			OpenVPNError:     ovpnErr,
-			ObfsproxyError:   obfspErr,
-			SplitTunnelError: stErr},
+		DisabledFunctions:   disabledFuncs,
 		Dns: types.DnsAbilities{
 			CanUseDnsOverTls:   dnsOverTls,
 			CanUseDnsOverHttps: dnsOverHttps,

@@ -172,6 +172,10 @@ ipcMain.handle("renderer-request-GetInstalledApps", async () => {
   return await client.GetInstalledApps();
 });
 
+ipcMain.handle("renderer-request-SetUserPrefs", async (event, userPrefs) => {
+  return await client.SetUserPrefs(userPrefs);
+});
+
 ipcMain.handle(
   "renderer-request-SetAutoconnectOnLaunch",
   async (event, isEnabled) => {

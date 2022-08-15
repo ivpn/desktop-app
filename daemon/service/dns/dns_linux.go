@@ -26,6 +26,7 @@
 package dns
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
@@ -40,11 +41,12 @@ func isResolveCtlInUse() bool {
 }
 
 var (
-	f_implInitialize   func() error
-	f_implPause        func(localInterfaceIP net.IP) error
-	f_implResume       func(localInterfaceIP net.IP) error
-	f_implSetManual    func(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error)
-	f_implDeleteManual func(localInterfaceIP net.IP) error
+	isOldMgmtStyleInUse bool
+	f_implInitialize    func() error
+	f_implPause         func(localInterfaceIP net.IP) error
+	f_implResume        func(localInterfaceIP net.IP) error
+	f_implSetManual     func(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error)
+	f_implDeleteManual  func(localInterfaceIP net.IP) error
 )
 
 var (
@@ -54,21 +56,48 @@ var (
 
 // implInitialize doing initialization stuff (called on application start)
 func implInitialize() error {
-	if isResolveCtlInUse() {
+
+	if !isNeedUseOldMgmtStyle() && isResolveCtlInUse() {
+		// new management style: using 'resolvectl'
 		f_implInitialize = rctl_implInitialize
 		f_implPause = rctl_implPause
 		f_implResume = rctl_implResume
 		f_implSetManual = rctl_implSetManual
 		f_implDeleteManual = rctl_implDeleteManual
+		isOldMgmtStyleInUse = false
+		log.Info("Initialized management: resolvectl in use")
 	} else {
+		// old management style: direct modifying '/etc/resolv.conf'
 		f_implInitialize = rconf_implInitialize
 		f_implPause = rconf_implPause
 		f_implResume = rconf_implResume
 		f_implSetManual = rconf_implSetManual
 		f_implDeleteManual = rconf_implDeleteManual
+		isOldMgmtStyleInUse = true
+		log.Info("Initialized management: direct modification the '/etc/resolv.conf' ")
 	}
 
 	return f_implInitialize()
+}
+
+func isNeedUseOldMgmtStyle() bool {
+	if funcGetUserSettings != nil {
+		cfg := funcGetUserSettings()
+		return cfg.Linux.IsDnsMgmtOldStyle
+	}
+	return false
+}
+
+func implApplyUserSettings() error {
+	// checking if the required settings is already initialised
+	if isNeedUseOldMgmtStyle() == isOldMgmtStyleInUse {
+		return nil // expected configuratin already applied
+	}
+	// if DNS changed to a custom value - we have to restore the original DNS settings before changing the DNS management style
+	if !manualDNS.IsEmpty() {
+		return fmt.Errorf("unable to apply new DNS management style: DNS currently changed to a custom value")
+	}
+	return implInitialize() // nothing to do here for current platfom
 }
 
 func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {

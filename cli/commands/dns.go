@@ -25,6 +25,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"text/tabwriter"
 
@@ -38,22 +39,76 @@ import (
 
 type CmdDns struct {
 	flags.CmdInfo
-	reset       bool
-	dns         string
-	dohTemplate string
-	dotTemplate string
+	reset                bool
+	dns                  string
+	dohTemplate          string
+	dotTemplate          string
+	linuxManagementStyle string // LinuxDnsMgmt
+}
+
+type LinuxDnsMgmt string
+
+const (
+	LinuxDnsMgmt_Auto       = "auto"
+	LinuxDnsMgmt_Resolvconf = "resolvconf"
+)
+const (
+	ArgName_Off        = "off"
+	ArgName_DoH        = "doh"
+	ArgName_DoT        = "dot"
+	ArgName_Management = "management"
+)
+
+func IsParamApplicable_LinuxForceModifyResolvconf() (bool, error) {
+	// "force_use_resolvconf" is applicable only for linux AND only if both types of DNS management can be applied
+	if runtime.GOOS != "linux" {
+		return false, fmt.Errorf(fmt.Sprintf("functionality not applicable for %s", runtime.GOOS))
+	}
+
+	if _proto != nil {
+		hr := _proto.GetHelloResponse()
+
+		if len(hr.DisabledFunctions.Platform.Linux.DnsMgmtOldResolvconfError) > 0 {
+			return false, fmt.Errorf(hr.DisabledFunctions.Platform.Linux.DnsMgmtOldResolvconfError)
+		}
+
+		if len(hr.DisabledFunctions.Platform.Linux.DnsMgmtNewResolvectlError) > 0 {
+			return false, fmt.Errorf(hr.DisabledFunctions.Platform.Linux.DnsMgmtNewResolvectlError)
+		}
+	}
+
+	return true, nil
 }
 
 func (c *CmdDns) Init() {
-	c.Initialize("dns", "Default 'custom DNS' management for VPN connection\nDNS_IP - optional parameter used to set custom dns value (ignored when AntiTracker enabled)")
+	c.Initialize("dns", "DNS management for VPN connection\nDNS_IP - optional parameter used to set custom dns value (ignored when AntiTracker enabled)")
 	c.DefaultStringVar(&c.dns, "DNS_IP")
-	c.BoolVar(&c.reset, "off", false, "Reset DNS server to a default")
+	c.BoolVar(&c.reset, ArgName_Off, false, "Reset DNS server to a default")
 
 	if cliplatform.IsDnsOverHttpsSupported() {
-		c.StringVar(&c.dohTemplate, "doh", "", "URI", "DNS-over-HTTPS URI template\nExample: ivpn dns -doh https://cloudflare-dns.com/dns-query 1.1.1.1")
+		c.StringVar(&c.dohTemplate, ArgName_DoH, "", "URI", "DNS-over-HTTPS URI template\n  Example: ivpn dns -doh https://cloudflare-dns.com/dns-query 1.1.1.1")
 	}
 	if cliplatform.IsDnsOverTlsSupported() {
-		c.StringVar(&c.dotTemplate, "dot", "", "URI", "DNS-over-TLS URI template")
+		c.StringVar(&c.dotTemplate, ArgName_DoT, "", "URI", "DNS-over-TLS URI template")
+	}
+
+	// "force_use_resolvconf" is applicable only for linux AND only if both types of DNS management can be applied
+	if runtime.GOOS == "linux" {
+		c.StringVarEx(&c.linuxManagementStyle, ArgName_Management, "", "METHOD",
+			fmt.Sprintf(`By default IVPN manages DNS resolvers using the 'systemd-resolved' daemon 
+		which is the correct method for systems based on Systemd. 
+		This option enables you to override this behavior and allow the IVPN app 
+		to directly modify the '/etc/resolv.conf' file. 		
+		Note: This option is not applicable if there is only one DNS management method supported by the system.
+		Possible values: %s (default); %s
+			Example: 
+				'ivpn dns -management=%s' 
+				'ivpn dns -management=%s'`,
+				LinuxDnsMgmt_Auto, LinuxDnsMgmt_Resolvconf, LinuxDnsMgmt_Resolvconf, LinuxDnsMgmt_Auto),
+			func() bool {
+				ret, _ := IsParamApplicable_LinuxForceModifyResolvconf()
+				return ret
+			})
 	}
 }
 
@@ -69,6 +124,37 @@ func (c *CmdDns) Run() error {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return err
+	}
+
+	hr := _proto.GetHelloResponse()
+	uPrefs := hr.DaemonSettings.UserPrefs
+
+	if len(c.linuxManagementStyle) > 0 {
+		if ret, err := IsParamApplicable_LinuxForceModifyResolvconf(); !ret {
+			return flags.BadParameter{Message: fmt.Sprintf("Option '-%s' is not applicable for current environment: %v", ArgName_Management, err)}
+		}
+
+		val := strings.TrimSpace(strings.ToLower(c.linuxManagementStyle))
+		if val != LinuxDnsMgmt_Auto && val != LinuxDnsMgmt_Resolvconf {
+			return flags.BadParameter{}
+		}
+		isForceResolvconf := val == LinuxDnsMgmt_Resolvconf
+		if uPrefs.Linux.IsDnsMgmtOldStyle != isForceResolvconf {
+			if isForceResolvconf {
+				fmt.Print("Applying configuration: force the IVPN app to directly modify the '/etc/resolv.conf' file (when VPN connected)...\n\n")
+			} else {
+				fmt.Print("Applying configuration: use default DNS configuration management style (when VPN connected)...\n\n")
+			}
+			uPrefs.Linux.IsDnsMgmtOldStyle = isForceResolvconf
+			if err := _proto.SetUserPreferences(uPrefs); err != nil {
+				return err
+			}
+
+			// trigger daemon to send HelloResponse with updated user preferences (will be in use for 'printDNSConfigInfo()')
+			if _, err := _proto.SendHello(); err != nil {
+				return err
+			}
+		}
 	}
 
 	var servers *apitypes.ServersInfoResponse
@@ -240,6 +326,13 @@ func printDNSConfigInfo(w *tabwriter.Writer, customDNS dns.DnsSettings) *tabwrit
 		fmt.Fprintf(w, "Default config\t:\tCustom DNS %v\n", customDNS.InfoString())
 	} else {
 		fmt.Fprintf(w, "Default config\t:\tCustom DNS not defined\n")
+	}
+
+	if ret, _ := IsParamApplicable_LinuxForceModifyResolvconf(); ret && _proto != nil {
+		hr := _proto.GetHelloResponse()
+		if hr.DaemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle {
+			fmt.Fprintf(w, "Management method\t:\tForce to modify the '/etc/resolv.conf' file\n")
+		}
 	}
 
 	return w
