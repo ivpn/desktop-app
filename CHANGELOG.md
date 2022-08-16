@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.9.14 - 2022-08-16
+
+[FIX] (Linux) OpenVPN connection issue  
+[FIX] (Linux) Sometimes installer gets stuck during the update  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.9.14_amd64.deb)  
+SHA256: 3ae5632b8efc2359ec1fe7964db6e05a6ec841c2d511e848b13add11bc4dae29  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.9.14-1.x86_64.rpm)  
+SHA256: 6876a3a3037c31ee5597dcd2fc7f66a55982464a036cb5e8c8b6d1ed79b34e61  
+
 ## Version 3.9.9 - 2022-08-10
 
 [FIX] (Windows) OpenVPN connection issue  

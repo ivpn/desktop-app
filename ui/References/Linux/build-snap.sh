@@ -61,6 +61,16 @@ echo "Entering project root folder: ${PROJECT_ROOT}"
 cd ${PROJECT_ROOT}
 CheckLastResult
 
+# removing previous compilation results (to avoid including them into snap build VM)
+echo "[+] REMOVING: rm -fr $SCRIPT_DIR/_out_bin/*"
+rm -fr $SCRIPT_DIR/_out_bin/*
+echo "[+] REMOVING: rm -fr $SCRIPT_DIR/_tmp/*"
+rm -fr $SCRIPT_DIR/_tmp/*
+echo "[+] REMOVING: rm -fr $PROJECT_ROOT/cli/References/Linux/_out_bin/*"
+rm -fr $PROJECT_ROOT/cli/References/Linux/_out_bin/*
+echo "[+] REMOVING: rm -fr $PROJECT_ROOT/cli/References/Linux/_tmp/*"
+rm -fr $PROJECT_ROOT/cli/References/Linux/_tmp/*
+
 # build snap package
 echo "[+] Building Snap v${VERSION} ( snapcraft $@ )..."
 snapcraft $@
