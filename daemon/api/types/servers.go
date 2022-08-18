@@ -90,9 +90,16 @@ type InfoAPI struct {
 	IPv6Addresses []string `json:"ipv6s"`
 }
 
+type PortRange struct {
+	Min int `json:"min"`
+	Max int `json:"max"`
+}
+
 type PortInfo struct {
-	Type string `json:"type"` // "TCP" or "UDP"
-	Port int    `json:"port"`
+	Type     string    `json:"type"` // "TCP" or "UDP"
+	Port     int       `json:"port"`
+	Range    PortRange `json:"rangeVal"`
+	RangeTmp string    `json:"range"` // Example: "30000:40000"
 }
 
 type PortsInfo struct {

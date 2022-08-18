@@ -73,6 +73,13 @@
           >
             {{ item.text }}
           </option>
+          <option
+            v-if="isShowAddPortOption"
+            key="keyAddCustomPort"
+            value="valueAddCustomPort"
+          >
+            Add custom port ...
+          </option>
         </select>
       </div>
 
@@ -223,6 +230,13 @@
           >
             {{ item.text }}
           </option>
+          <option
+            v-if="isShowAddPortOption"
+            key="keyAddCustomPort"
+            value="valueAddCustomPort"
+          >
+            Add custom port ...
+          </option>
         </select>
       </div>
 
@@ -292,6 +306,7 @@
 <script>
 import spinner from "@/components/controls/control-spinner.vue";
 import { VpnTypeEnum, VpnStateEnum, PortTypeEnum } from "@/store/types";
+import { IpcModalDialogType, IpcOwnerWindowType } from "@/ipc/types.js";
 import { enumValueName } from "@/helpers/helpers";
 const sender = window.ipcSender;
 import { dateDefaultFormat } from "@/helpers/helpers";
@@ -426,7 +441,21 @@ export default {
       get() {
         return this.$store.getters["settings/getPort"];
       },
-      set(value) {
+      async set(value) {
+        if (value == "valueAddCustomPort") {
+          let cfg = {
+            width: 400,
+            height: 175,
+          };
+          await sender.showModalDialog(
+            IpcModalDialogType.AddCustomPort,
+            IpcOwnerWindowType.SettingsWindow,
+            cfg
+          );
+
+          return;
+        }
+
         this.$store.dispatch("settings/setPort", value);
       },
     },
@@ -531,6 +560,19 @@ export default {
         ret.push({ text: `${i} days`, seconds: i * 24 * 60 * 60 });
       }
       return ret;
+    },
+    isShowAddPortOption: function () {
+      if (
+        this.$store.state.settings.isMultiHop === true ||
+        (this.isOpenVPN === true &&
+          this.$store.state.settings.connectionUseObfsproxy === true)
+      )
+        return false;
+
+      const ranges = this.$store.getters["vpnState/portRanges"];
+      if (!ranges || ranges.length <= 0) return false;
+
+      return true;
     },
     prefferedPorts: function () {
       let ret = [];

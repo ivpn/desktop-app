@@ -29,6 +29,7 @@ import Update from "../views/dialogs/Update.vue";
 
 import DlgEaaEnable from "../views/dialogs/eaaEnable.vue";
 import DlgEaaDisable from "../views/dialogs/eaaDisable.vue";
+import DlgAddCustomPort from "../views/dialogs/addCustomPort.vue";
 
 import { IpcModalDialogType } from "@/ipc/types.js";
 
@@ -73,6 +74,10 @@ const forbiddenToChangeRouteFrom = [
   {
     path: `/${IpcModalDialogType.DisableEAA}`,
     component: DlgEaaDisable,
+  },
+  {
+    path: `/${IpcModalDialogType.AddCustomPort}`,
+    component: DlgAddCustomPort,
   },
 ];
 

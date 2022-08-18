@@ -91,6 +91,9 @@ const getDefaultState = () => {
       WireGuard: defaultPort,
     },
 
+    // custom ports defined by user (based on the applicable port range)
+    customPorts: [], // [ {type: "UDP/TCP", port: "X", range: {min: X, max: X}}, ... ],
+
     ovpnProxyType: "",
     ovpnProxyServer: "",
     ovpnProxyPort: 0,
@@ -293,6 +296,11 @@ export default {
         }
       }
       state.port = val;
+    },
+
+    customPorts(state, val) {
+      if (!state || !val) return;
+      state.customPorts = val;
     },
 
     ovpnProxyType(state, val) {
@@ -626,6 +634,11 @@ export default {
       context.commit("ovpnProxyPass", val);
     },
 
+    addNewCustomPort(context, val) {
+      console.log("New custom port:", val);
+      doAddNewCustomPort(context, val);
+    },
+
     // firewall
     firewallActivateOnConnect(context, val) {
       context.commit("firewallActivateOnConnect", val);
@@ -887,6 +900,14 @@ function updateSelectedServers(context) {
   ensurePortsSelectedCorrectly(context);
 }
 
+function isPortExists(ports, port) {
+  for (const configPort of ports) {
+    const p = NormalizedConfigPortObject(configPort);
+    if (p && p.type === port.type && p.port === port.port) return true;
+  }
+  return false;
+}
+
 // Ensure if selected ports exists in a servers configuration or port is selected correctly
 function ensurePortsSelectedCorrectly(context) {
   if (!context || !context.rootGetters || !context.rootState) {
@@ -894,16 +915,10 @@ function ensurePortsSelectedCorrectly(context) {
     return;
   }
 
-  const state = context.state;
+  // clean custom ports which are not applicable anymore (range is not exists anymore)
+  eraseNonAcceptableCustomPorts(context);
 
-  let funcIsPortExists = function (ports, port) {
-    if (!ports || ports.length <= 0) return true; // do not perform any changes if there is no ports info in configuration
-    for (const configPort of ports) {
-      const p = NormalizedConfigPortObject(configPort);
-      if (p && p.type === port.type && p.port === port.port) return true;
-    }
-    return false;
-  };
+  const state = context.state;
 
   let funcGetDefaultPort = function (ports) {
     for (const configPort of ports) {
@@ -916,12 +931,20 @@ function ensurePortsSelectedCorrectly(context) {
   // returns null - if port is ok; otherwise - port value which have to be applied
   let funcTestPort = function (allPorts, applicablePorts, currPort) {
     let retPort = null;
-    if (!funcIsPortExists(allPorts, currPort)) {
+
+    if (context.rootState.settings.customPorts)
+      allPorts = allPorts.concat(context.rootState.settings.customPorts);
+
+    if (allPorts && allPorts.length > 0 && !isPortExists(allPorts, currPort)) {
       console.log(`Selected port does not exists anymore!`);
       retPort = funcGetDefaultPort(allPorts);
     }
     // Check is port applicable (according to current settings)
-    if (!funcIsPortExists(applicablePorts, retPort ? retPort : currPort)) {
+    if (
+      applicablePorts &&
+      applicablePorts.length > 0 &&
+      !isPortExists(applicablePorts, retPort ? retPort : currPort)
+    ) {
       console.log(`Selected port not applicable!`);
       retPort = funcGetDefaultPort(applicablePorts);
     }
@@ -940,6 +963,81 @@ function ensurePortsSelectedCorrectly(context) {
   if (portWg) cPort.WireGuard = portWg;
   if (portOvpn || portWg) {
     context.commit("port", cPort);
+  }
+}
+
+function isAcceptablePortForRange(p, range) {
+  if (!range || !p) return false;
+  if (
+    range.find(
+      (r) =>
+        p.type === r.type &&
+        p.port >= r.rangeVal.min &&
+        p.port <= r.rangeVal.max
+    ) === undefined
+  )
+    return false;
+  return true;
+}
+
+function doAddNewCustomPort(context, port) {
+  port = NormalizedConfigPortObject(port);
+  if (!context || !port) return;
+  try {
+    const getRanges =
+      context.rootGetters["vpnState/funcGetConnectionPortRanges"];
+
+    const state = context.state;
+    const currVpnPortRanges = getRanges(state.vpnType);
+
+    if (!isAcceptablePortForRange(port, currVpnPortRanges)) return;
+
+    // check if custom port already exists
+    if (isPortExists(state.customPorts, port) === true) return;
+
+    const clone = function (obj) {
+      return JSON.parse(JSON.stringify(obj));
+    };
+
+    // update custom ports
+    let newCustomPorts = clone(state.customPorts);
+    newCustomPorts.push(port);
+    context.commit("customPorts", newCustomPorts);
+
+    // apply port
+    context.dispatch("setPort", port);
+
+    // ensure that the port selected correctly
+    ensurePortsSelectedCorrectly(context);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function eraseNonAcceptableCustomPorts(context) {
+  try {
+    if (!context) return;
+    const getRanges =
+      context.rootGetters["vpnState/funcGetConnectionPortRanges"];
+
+    const state = context.state;
+
+    const rangesOvpn = getRanges(VpnTypeEnum.OpenVPN);
+    const rangesWg = getRanges(VpnTypeEnum.WireGuard);
+
+    let newCustomPorts = [];
+    state.customPorts.forEach((p) => {
+      if (
+        isAcceptablePortForRange(p, rangesOvpn) ||
+        isAcceptablePortForRange(p, rangesWg)
+      )
+        newCustomPorts.push(p);
+    });
+
+    if (newCustomPorts.length != state.customPorts.length)
+      context.commit("customPorts", newCustomPorts);
+  } catch (e) {
+    console.error(e);
   }
 }
 

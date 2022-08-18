@@ -31,18 +31,18 @@
       <div style="flex-grow: 1"></div>
       <div class="flexRow">
         <button
-          class="master"
-          style="height: 28px; min-width: 100px"
-          v-on:click="onApplyNewPassword()"
-        >
-          Enable
-        </button>
-        <button
           class="slave"
-          style="height: 28px; min-width: 100px; margin-left: 12px"
+          style="height: 28px; min-width: 100px"
           v-on:click="onCancel()"
         >
           Cancel
+        </button>
+        <button
+          class="master"
+          style="height: 28px; min-width: 100px; margin-left: 12px"
+          v-on:click="onApplyNewPassword()"
+        >
+          Enable
         </button>
       </div>
     </div>
@@ -64,7 +64,6 @@ export default {
   },
   created() {
     window.onkeydown = function (event) {
-      console.log(onkeydown);
       if (event.keyCode == 27) {
         window.close();
       }

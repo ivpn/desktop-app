@@ -223,6 +223,48 @@ func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 		return nil, err
 	}
 
+	// TODO: DELME START (remove this code when backend will change the range value format) <<<
+	for i, p := range servers.Config.Ports.OpenVPN {
+		if p.Port == 0 && p.RangeTmp != "" {
+			theRange := strings.Split(p.RangeTmp, ":")
+			if len(theRange) != 2 {
+				continue
+			}
+			var err error
+			var min, max int
+			if min, err = strconv.Atoi(theRange[0]); err != nil || min == 0 {
+				continue
+			}
+			if max, err = strconv.Atoi(theRange[1]); err != nil || max == 0 {
+				continue
+			}
+
+			servers.Config.Ports.OpenVPN[i].Range.Min = min
+			servers.Config.Ports.OpenVPN[i].Range.Max = max
+		}
+	}
+
+	for i, p := range servers.Config.Ports.WireGuard {
+		if p.Port == 0 && p.RangeTmp != "" {
+			theRange := strings.Split(p.RangeTmp, ":")
+			if len(theRange) != 2 {
+				continue
+			}
+			var err error
+			var min, max int
+			if min, err = strconv.Atoi(theRange[0]); err != nil || min == 0 {
+				continue
+			}
+			if max, err = strconv.Atoi(theRange[1]); err != nil || max == 0 {
+				continue
+			}
+
+			servers.Config.Ports.WireGuard[i].Range.Min = min
+			servers.Config.Ports.WireGuard[i].Range.Max = max
+		}
+	}
+	// TODO: DELME END (remove this code when backend will change the range value format) >>>
+
 	// save info about alternate API hosts
 	a.SetAlternateIPs(servers.Config.API.IPAddresses, servers.Config.API.IPv6Addresses)
 	return servers, nil

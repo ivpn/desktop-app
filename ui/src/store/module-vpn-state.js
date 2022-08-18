@@ -32,6 +32,7 @@ import {
   PauseStateEnum,
   DnsEncryption,
   NormalizedConfigPortObject,
+  NormalizedConfigPortRangeObject,
   PortTypeEnum,
 } from "./types";
 
@@ -181,8 +182,8 @@ export default {
         },
         api: { ips: [""], ipv6s:[""] }
         ports: {
-         openvpn: [ {type: "UDP/TCP", port: "X"}, ...],
-         wireguard: [ {type: "UDP/TCP", port: "X"},  ...]
+         openvpn: [ {type: "UDP/TCP", port: "X", range: {min: X, max: X}}, ... ],
+         wireguard: [ {type: "UDP/TCP", port: "X", range: {min: X, max: X}}, ... ]
         }
       }
     }*/
@@ -381,26 +382,67 @@ export default {
         if (vpnType === VpnTypeEnum.OpenVPN)
           ports = state.servers.config.ports.openvpn;
 
+        // add custom ports
+        if (
+          rootState.settings.customPorts &&
+          rootState.settings.customPorts.length > 0
+        ) {
+          let customPorts = rootState.settings.customPorts;
+          if (vpnType === VpnTypeEnum.WireGuard)
+            customPorts = customPorts.filter((p) => p.type == PortTypeEnum.UDP);
+          ports = ports.concat(customPorts);
+        }
+
         if (!ports) return [];
+
+        // normalize ports from configuration
         ports = ports
           .map((p) => NormalizedConfigPortObject(p))
           .filter((p) => p != null);
 
+        // For Obfsproxy: only TCP protocol is applicable.
         if (
           vpnType === VpnTypeEnum.OpenVPN &&
           rootState.settings.connectionUseObfsproxy === true
-        ) {
-          // For Obfsproxy: only TCP protocol is applicable.
+        )
           ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
-        }
+
+        // return
         return ports;
       } catch (e) {
         console.error(e);
+        return [];
       }
     },
 
     connectionPorts(state, getters) {
       return getters.funcGetConnectionPorts();
+    },
+
+    funcGetConnectionPortRanges: (state, getters, rootState) => (vpnType) => {
+      try {
+        if (!vpnType) vpnType = rootState.settings.vpnType;
+
+        let ports = state.servers.config.ports.wireguard;
+        if (vpnType === VpnTypeEnum.OpenVPN)
+          ports = state.servers.config.ports.openvpn;
+        if (!ports) return [];
+
+        let ranges = ports
+          .map((p) => {
+            return NormalizedConfigPortRangeObject(p);
+          })
+          .filter((p) => p != null);
+
+        return ranges;
+      } catch (e) {
+        console.error(e);
+        return [];
+      }
+    },
+
+    portRanges(state, getters) {
+      return getters.funcGetConnectionPortRanges();
     },
   },
 

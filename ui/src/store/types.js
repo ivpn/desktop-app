@@ -86,14 +86,50 @@ export const AppUpdateStage = Object.freeze({
 
 export function NormalizedConfigPortObject(portFromServersConfig) {
   if (
+    !portFromServersConfig ||
     !portFromServersConfig.port ||
     portFromServersConfig.type == null ||
     portFromServersConfig.type == undefined
   )
     return null;
 
+  const p = parseInt(portFromServersConfig.port, 10);
+  if (isNaN(p)) return null;
+
   return {
-    port: parseInt(portFromServersConfig.port, 10),
+    port: p,
+    type:
+      portFromServersConfig.type === PortTypeEnum.TCP || // the type can be already converted value
+      (typeof portFromServersConfig.type === "string" &&
+        portFromServersConfig.type.trim().toUpperCase() == "TCP")
+        ? PortTypeEnum.TCP
+        : PortTypeEnum.UDP,
+  };
+}
+
+export function NormalizedConfigPortRangeObject(portFromServersConfig) {
+  if (!portFromServersConfig) return null;
+
+  const rangeVal = portFromServersConfig.rangeVal;
+  if (
+    !rangeVal ||
+    !rangeVal.min ||
+    !rangeVal.max ||
+    portFromServersConfig.type == null ||
+    portFromServersConfig.type == undefined
+  )
+    return null;
+
+  const r = {
+    min: parseInt(rangeVal.min, 10),
+    max: parseInt(rangeVal.max, 10),
+  };
+
+  if (isNaN(r.min) || isNaN(r.max)) return null;
+  if (r.min <= 0 || r.min > rangeVal.max) return null;
+
+  return {
+    rangeVal: r,
     type:
       portFromServersConfig.type === PortTypeEnum.TCP || // the type can be already converted value
       (typeof portFromServersConfig.type === "string" &&

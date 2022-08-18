@@ -181,3 +181,8 @@ button.btnScrollDown {
   button.btnScrollDown:hover {
     background-color: var(--background-color-alternate);
   }
+
+  div.disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }

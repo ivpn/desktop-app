@@ -853,6 +853,9 @@ async function showModalDialog(
     case IpcModalDialogType.DisableEAA:
       windowTitle = "Enhanced App Authentication";
       break;
+    case IpcModalDialogType.AddCustomPort:
+      windowTitle = "New custom port";
+      break;
     default:
       throw "Internal error: unsupported dialog name: '" + dialogTypeName + "'";
   }
@@ -904,6 +907,14 @@ async function showModalDialog(
 
   modalDialog.once("ready-to-show", () => {
     modalDialog.show();
+
+    if (isDevelopment) {
+      try {
+        modalDialog.webContents.openDevTools();
+      } catch (e) {
+        console.error("Failed to open dev tools:", e.toString());
+      }
+    }
   });
 
   // Prevent parent window from flickering (Electron issue on Windows)
