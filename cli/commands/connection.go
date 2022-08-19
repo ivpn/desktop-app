@@ -185,8 +185,8 @@ func (c *CmdConnect) Run() (retError error) {
 		return srverrors.ErrorNotLoggedIn{}
 	}
 
-	allowedPortsWg := parseConfigPorts(servers.Config.Ports.WireGuard)
-	allowedPortsOvpn := parseConfigPorts(servers.Config.Ports.OpenVPN)
+	allowedPortsWg := servers.Config.Ports.WireGuard
+	allowedPortsOvpn := servers.Config.Ports.OpenVPN
 	if c.portsShow {
 		printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
 		return nil
@@ -248,7 +248,7 @@ func (c *CmdConnect) Run() (retError error) {
 	}
 
 	// MULTI\SINGLE -HOP
-	// Check if the parametars are correct and define correct values for c.gateway and c.multihopExitSvr
+	// Check if the parameters are correct and define correct values for c.gateway and c.multihopExitSvr
 	if len(c.multihopExitSvr) > 0 {
 		// MULTI-HOP
 
@@ -617,7 +617,7 @@ func (c *CmdConnect) Run() (retError error) {
 	return nil
 }
 
-func getPort(portInfo string, allowedPorts []port) (port, error) {
+func getPort(portInfo string, allowedPorts []apitypes.PortInfo) (port, error) {
 	var err error
 	var portPtr *int
 	var isTCPPtr *bool
@@ -639,29 +639,36 @@ func getPort(portInfo string, allowedPorts []port) (port, error) {
 
 	if len(allowedPorts) > 0 {
 		if isPortAllowed(allowedPorts[:], retPort) == false {
-			return port{}, fmt.Errorf(fmt.Sprintf("using non-standard port '%s'", retPort.String()))
+			return port{}, fmt.Errorf(fmt.Sprintf("not allowed port '%s'", retPort.String()))
 		}
 	}
 
 	return retPort, nil
 }
 
-func printAllowedPorts(allowedPortsWg, allowedOvpnPorts []port) {
+func printAllowedPorts(allowedPortsWg, allowedOvpnPorts []apitypes.PortInfo) {
 	fmt.Printf("Allowed ports:\n")
-	fmt.Printf("  WireGuard: %s\n", allPortsString(allowedPortsWg[:]))
-	fmt.Printf("  OpenVPN: %s\n", allPortsString(allowedOvpnPorts[:]))
+	if allowedPortsWg != nil {
+		fmt.Printf("  WireGuard: %s\n", allPortsString(allowedPortsWg[:]))
+	}
+	if allowedOvpnPorts != nil {
+		fmt.Printf("  OpenVPN: %s\n", allPortsString(allowedOvpnPorts[:]))
+	}
 }
 
-func isPortAllowed(ports []port, thePort port) bool {
+func isPortAllowed(ports []apitypes.PortInfo, thePort port) bool {
 	for _, p := range ports {
-		if p.port == thePort.port && p.tcp == thePort.tcp {
+		if p.Port != 0 && p.Port == thePort.port && p.IsTCP() == thePort.tcp {
+			return true
+		}
+		if p.Range.Min > 0 && thePort.port >= p.Range.Min && thePort.port <= p.Range.Max {
 			return true
 		}
 	}
 	return false
 }
 
-func allPortsString(ports []port) string {
+func allPortsString(ports []apitypes.PortInfo) string {
 	s := make([]string, 0, len(ports))
 	for _, p := range ports {
 		s = append(s, p.String())
@@ -679,11 +686,12 @@ func parsePort(portInfo string) (pPort *int, pIsTCP *bool, err error) {
 		return nil, nil, nil
 	}
 
+	pInfoOrig := portInfo
 	portInfo = strings.ToLower(portInfo)
 
 	fields := strings.Split(portInfo, ":")
 	if len(fields) > 2 {
-		return nil, nil, flags.BadParameter{Message: "port"}
+		return nil, nil, fmt.Errorf("failed to parse the port value '%s' (bad format)", pInfoOrig)
 	}
 
 	protoStr := ""
@@ -705,33 +713,17 @@ func parsePort(portInfo string) (pPort *int, pIsTCP *bool, err error) {
 		} else if protoStr == "udp" {
 			isTCP = false
 		} else {
-			return nil, nil, flags.BadParameter{Message: "port"}
+			return nil, nil, fmt.Errorf("failed to parse the port value '%s' (bad format)", pInfoOrig)
 		}
 	}
 
 	if len(portStr) > 0 {
 		p, err := strconv.Atoi(portStr)
 		if err != nil {
-			return nil, nil, flags.BadParameter{Message: "port"}
+			return nil, nil, fmt.Errorf("failed to parse the port value '%s' (bad format)", pInfoOrig)
 		}
 		port = p
 	}
 
 	return &port, &isTCP, nil
-}
-
-func parseConfigPorts(configPorts []apitypes.PortInfo) []port {
-	ret := make([]port, 0, len(configPorts))
-	for _, cfgPort := range configPorts {
-		if cfgPort.Port == 0 || len(cfgPort.Type) <= 0 {
-			continue
-		}
-
-		pTypeStr := strings.TrimSpace(strings.ToLower(cfgPort.Type))
-		if pTypeStr != "tcp" && pTypeStr != "udp" {
-			continue
-		}
-		ret = append(ret, port{port: cfgPort.Port, tcp: pTypeStr == "tcp"})
-	}
-	return ret
 }

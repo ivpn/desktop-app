@@ -932,6 +932,7 @@ function ensurePortsSelectedCorrectly(context) {
   let funcTestPort = function (allPorts, applicablePorts, currPort) {
     let retPort = null;
 
+    // add custom ports to base list of all ports
     if (context.rootState.settings.customPorts)
       allPorts = allPorts.concat(context.rootState.settings.customPorts);
 

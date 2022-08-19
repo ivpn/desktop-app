@@ -483,8 +483,15 @@ export default {
           // It is important to read 'connectionPorts' only after vpnType, multihop, obfsproxy was updated!
           const ports = context.getters.connectionPorts;
           // Check if the port exists in applicable ports list
-          if (!isPortExists(ports, newPort))
-            if (ports && ports.length > 0) {
+          if (!isPortExists(ports, newPort)) {
+            const portRagnes = context.getters.portRanges;
+            if (isPortInAllowedRanges(portRagnes, newPort)) {
+              // Outside connection (CLI) on custom port
+              // Save new custom port into app settings
+              context.dispatch("settings/addNewCustomPort", newPort, {
+                root: true,
+              });
+            } else if (ports && ports.length > 0) {
               // New port does not exists. It could be because of multi-hop connection or/and obfsproxy.
               // (the port-base connection in use for MH or/and obfsproxy, so the final connection ports are not in a list)
               // For MH and obfsproxy only port type has sense. Looking for first applicable port
@@ -498,6 +505,7 @@ export default {
                 changedPort = ports.find((p) => p.type === newPort.type);
               newPort = changedPort;
             }
+          }
           context.commit("settings/setPort", newPort, { root: true });
         }
       }
@@ -798,6 +806,19 @@ function isAntitrackerHardcoreActive(state) {
       return true;
     default:
   }
+  return false;
+}
+
+function isPortInAllowedRanges(availablePortRanges, portToFind) {
+  portToFind = NormalizedConfigPortObject(portToFind);
+  if (!portToFind || !availablePortRanges) return false;
+  const found = availablePortRanges.find(
+    (p) =>
+      p.type === portToFind.type &&
+      portToFind.port >= p.range.min &&
+      portToFind.port <= p.range.max
+  );
+  if (found) return true;
   return false;
 }
 
