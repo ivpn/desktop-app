@@ -191,6 +191,8 @@ type Connect struct {
 			ExitSrvID string
 			Hosts     []types.WireGuardServerHostInfo
 		}
+
+		Mtu int // Set 0 to use default MTU value
 	}
 
 	OpenVpnParameters struct {

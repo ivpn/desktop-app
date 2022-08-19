@@ -52,6 +52,7 @@ type ConnectionParams struct {
 	hostLocalIP          net.IP
 	ipv6Prefix           string
 	multihopExitHostname string // (e.g.: "nl4.wg.ivpn.net") we need it only for informing clients about connection status
+	mtu                  int    // Set 0 to use default MTU value
 }
 
 func (cp *ConnectionParams) GetIPv6ClientLocalIP() net.IP {
@@ -80,7 +81,8 @@ func CreateConnectionParams(
 	hostIP net.IP,
 	hostPublicKey string,
 	hostLocalIP net.IP,
-	ipv6Prefix string) ConnectionParams {
+	ipv6Prefix string,
+	mtu int) ConnectionParams {
 
 	return ConnectionParams{
 		multihopExitHostname: multihopExitHostName,
@@ -88,7 +90,9 @@ func CreateConnectionParams(
 		hostIP:               hostIP,
 		hostPublicKey:        hostPublicKey,
 		hostLocalIP:          hostLocalIP,
-		ipv6Prefix:           ipv6Prefix}
+		ipv6Prefix:           ipv6Prefix,
+		mtu:                  mtu,
+	}
 }
 
 // WireGuard structure represents all data of wireguard connection
@@ -135,8 +139,8 @@ func (wg *WireGuard) Type() vpn.Type { return vpn.WireGuard }
 
 // Init performs basic initializations before connection
 // It is useful, for example:
-//	- for WireGuard(Windows) - to ensure that WG service is fully uninstalled
-//	- for OpenVPN(Linux) - to ensure that OpenVPN has correct version
+//   - for WireGuard(Windows) - to ensure that WG service is fully uninstalled
+//   - for OpenVPN(Linux) - to ensure that OpenVPN has correct version
 func (wg *WireGuard) Init() error {
 	return wg.init()
 }
@@ -236,6 +240,9 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 		"[Interface]",
 		"PrivateKey = " + wg.connectParams.clientPrivateKey,
 		"ListenPort = " + strconv.Itoa(wg.localPort)}
+	if wg.connectParams.mtu > 0 {
+		interfaceCfg = append(interfaceCfg, fmt.Sprintf("MTU = %d", wg.connectParams.mtu))
+	}
 
 	peerCfg := []string{
 		"[Peer]",

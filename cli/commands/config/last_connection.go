@@ -47,6 +47,7 @@ type LastConnectionInfo struct {
 	Antitracker     bool
 	AntitrackerHard bool
 	IPv6Tunnel      bool
+	Mtu             int
 
 	MultiopExitSvr string // variable name spelling error ->  'MultihopExitSvr' (keeped as is for compatibility with previous versions)
 }

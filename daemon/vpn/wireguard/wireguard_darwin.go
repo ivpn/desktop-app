@@ -42,7 +42,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
-//TODO: BE CAREFUL! Constant string! (can be changed after WireGuard update)
+// TODO: BE CAREFUL! Constant string! (can be changed after WireGuard update)
 const (
 	strTriggerSuccessInit      string = "UAPI listener started"
 	strTriggerAddrAlreadyInUse string = "Address already in use"
