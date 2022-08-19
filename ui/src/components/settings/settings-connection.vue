@@ -302,12 +302,22 @@ export default {
   },
   data: function () {
     return {
+      isUpdated: false,
       isProcessing: false,
       openvpnManualConfig: false,
     };
   },
+  updated() {
+    this.isUpdated = true;
+  },
   watch: {
     async port(newValue, oldValue) {
+      if (this.isUpdated === false) {
+        // Do not perform anything until the store data is initialized
+        // Otherwise, we can get unexpected reconnection
+        return;
+      }
+
       if (this.$store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED)
         return;
       if (newValue == null || oldValue == null) return;
