@@ -848,16 +848,24 @@ async function showModalDialog(
   let windowTitle = "";
   switch (dialogTypeName) {
     case IpcModalDialogType.EnableEAA:
-      windowTitle = "Enhanced App Authentication";
+      //windowTitle = "Enhanced App Authentication";
       break;
     case IpcModalDialogType.DisableEAA:
-      windowTitle = "Enhanced App Authentication";
+      //windowTitle = "Enhanced App Authentication";
       break;
     case IpcModalDialogType.AddCustomPort:
-      windowTitle = "New custom port";
+      //windowTitle = "New custom port";
       break;
     default:
       throw "Internal error: unsupported dialog name: '" + dialogTypeName + "'";
+  }
+
+  if (
+    Platform() !== PlatformEnum.macOS && // Windows , Linux
+    windowCfgExtra &&
+    windowCfgExtra.height
+  ) {
+    windowCfgExtra.height -= 28;
   }
 
   let ownerWndObj = win;
@@ -876,6 +884,7 @@ async function showModalDialog(
     fullscreenable: false,
     maximizable: false,
     minimizable: false, // on Linux: this parameter still have value 'true' after window created (Electron bug?)
+    closable: false,
 
     parent: ownerWndObj,
 
@@ -892,9 +901,10 @@ async function showModalDialog(
   }
 
   modalDialog = createBrowserWindow(windowConfig);
-  // on Linux: 'minimizable' parameter still has value 'true' after window created (Electron bug?)
-  // Therefore, we are  using additional parameter (minimizableFix) to keep needed value
-  modalDialog.minimizableFix = false;
+  // on Linux: 'minimizable' and 'closable' parameters still has value 'true' after window created (Electron bug?)
+  // Therefore, we are  using additional parameter (minimizableFix / closableFix) to keep needed value
+  modalDialog.minimizableFix = windowConfig.minimizable;
+  modalDialog.closableFix = windowConfig.closable;
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     modalDialog.loadURL(

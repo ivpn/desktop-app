@@ -40,7 +40,6 @@
 
 <script>
 import { IpcModalDialogType, IpcOwnerWindowType } from "@/ipc/types.js";
-import { Platform, PlatformEnum } from "@/platform/platform";
 
 const sender = window.ipcSender;
 
@@ -53,11 +52,6 @@ export default {
 
   methods: {
     async onChangeState() {
-      let cfg = {
-        width: 400,
-        height: 170,
-      };
-
       if (!this.IsPmEnabled) {
         if (
           true ===
@@ -88,15 +82,14 @@ export default {
         }
       }
 
-      let dlgType = IpcModalDialogType.EnableEAA;
-      if (Platform() !== PlatformEnum.macOS) cfg.height = 142;
+      let cfg = { width: 400, height: 170 };
 
+      let dlgType = IpcModalDialogType.EnableEAA;
       if (this.IsPmEnabled) {
         dlgType = IpcModalDialogType.DisableEAA;
-
         cfg.height = 150;
-        if (Platform() !== PlatformEnum.macOS) cfg.height = 122;
       }
+
       await sender.showModalDialog(
         dlgType,
         IpcOwnerWindowType.SettingsWindow,
