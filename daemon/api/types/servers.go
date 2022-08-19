@@ -22,6 +22,11 @@
 
 package types
 
+import (
+	"fmt"
+	"strings"
+)
+
 type HostInfoBase struct {
 	Hostname     string  `json:"hostname"`
 	Host         string  `json:"host"`
@@ -96,10 +101,27 @@ type PortRange struct {
 }
 
 type PortInfo struct {
-	Type     string    `json:"type"` // "TCP" or "UDP"
-	Port     int       `json:"port"`
-	Range    PortRange `json:"rangeVal"`
-	RangeTmp string    `json:"range"` // Example: "30000:40000"
+	Type  string    `json:"type"` // "TCP" or "UDP"
+	Port  int       `json:"port"`
+	Range PortRange `json:"range"`
+}
+
+func (pi PortInfo) String() string {
+	if pi.Port > 0 {
+		return fmt.Sprintf("%s:%d", pi.Type, pi.Port)
+	}
+	if pi.Range.Min > 0 && pi.Range.Min < pi.Range.Max {
+		return fmt.Sprintf("%s:[%d-%d]", pi.Type, pi.Range.Min, pi.Range.Max)
+	}
+	return ""
+}
+
+func (pi PortInfo) IsTCP() bool {
+	return strings.TrimSpace(strings.ToLower(pi.Type)) == "tcp"
+}
+
+func (pi PortInfo) IsUDP() bool {
+	return strings.TrimSpace(strings.ToLower(pi.Type)) == "udp"
 }
 
 type PortsInfo struct {

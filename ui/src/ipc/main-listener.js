@@ -263,7 +263,11 @@ ipcMain.handle("renderer-request-get-diagnostic-logs", async () => {
 
   // last disconnection
   try {
-    if (s.vpnState.disconnectedInfo.ReasonDescription)
+    data[" LastDisconnectionReason"] = "";
+    if (
+      s.vpnState.disconnectedInfo &&
+      s.vpnState.disconnectedInfo.ReasonDescription
+    )
       data[" LastDisconnectionReason"] =
         s.vpnState.disconnectedInfo.ReasonDescription;
   } catch (e) {

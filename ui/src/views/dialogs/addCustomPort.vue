@@ -128,9 +128,9 @@ export default {
       try {
         let retPlaceholder = "";
         this.ranges.forEach((r) => {
-          if (r.type !== this.portType || !r.rangeVal) return;
+          if (r.type !== this.portType || !r.range) return;
           if (retPlaceholder.length > 0) retPlaceholder += ", ";
-          retPlaceholder += `${r.rangeVal.min} - ${r.rangeVal.max}`;
+          retPlaceholder += `${r.range.min} - ${r.range.max}`;
         });
         return retPlaceholder;
       } catch (e) {
@@ -172,7 +172,7 @@ export default {
 
       // check port range
       const rPos = this.ranges.find(
-        (r) => portNumVal >= r.rangeVal.min && portNumVal <= r.rangeVal.max
+        (r) => portNumVal >= r.range.min && portNumVal <= r.range.max
       );
       if (!rPos) {
         await sender.showMessageBoxSync({

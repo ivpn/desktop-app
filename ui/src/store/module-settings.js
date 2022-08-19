@@ -970,10 +970,7 @@ function isAcceptablePortForRange(p, range) {
   if (!range || !p) return false;
   if (
     range.find(
-      (r) =>
-        p.type === r.type &&
-        p.port >= r.rangeVal.min &&
-        p.port <= r.rangeVal.max
+      (r) => p.type === r.type && p.port >= r.range.min && p.port <= r.range.max
     ) === undefined
   )
     return false;

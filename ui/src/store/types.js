@@ -110,26 +110,26 @@ export function NormalizedConfigPortObject(portFromServersConfig) {
 export function NormalizedConfigPortRangeObject(portFromServersConfig) {
   if (!portFromServersConfig) return null;
 
-  const rangeVal = portFromServersConfig.rangeVal;
+  const range = portFromServersConfig.range;
   if (
-    !rangeVal ||
-    !rangeVal.min ||
-    !rangeVal.max ||
+    !range ||
+    !range.min ||
+    !range.max ||
     portFromServersConfig.type == null ||
     portFromServersConfig.type == undefined
   )
     return null;
 
   const r = {
-    min: parseInt(rangeVal.min, 10),
-    max: parseInt(rangeVal.max, 10),
+    min: parseInt(range.min, 10),
+    max: parseInt(range.max, 10),
   };
 
   if (isNaN(r.min) || isNaN(r.max)) return null;
-  if (r.min <= 0 || r.min > rangeVal.max) return null;
+  if (r.min <= 0 || r.min > range.max) return null;
 
   return {
-    rangeVal: r,
+    range: r,
     type:
       portFromServersConfig.type === PortTypeEnum.TCP || // the type can be already converted value
       (typeof portFromServersConfig.type === "string" &&
