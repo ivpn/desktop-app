@@ -1,8 +1,10 @@
 <template>
   <div class="defaultMainDiv">
+    <!--
     <div class="settingsBoldFont" style="margin-top: 0px; margin-bottom: 12px">
       New port properties
     </div>
+    -->
 
     <!-- Port number -->
     <div class="flexRow">
@@ -13,7 +15,7 @@
         style="flex-grow: 1"
         class="settingsTextInput"
         :placeholder="numberPlaceholder"
-        :title="`Acceptable port range: ${numberPlaceholder}`"
+        :title="`Allowed port range: ${numberPlaceholder}`"
         v-model="portNumber"
         v-on:keyup.enter="onApply()"
       />
@@ -27,7 +29,7 @@
       }"
       style="margin-top: 6px"
     >
-      <div class="paramName">Type:</div>
+      <div class="paramName">Protocol:</div>
       <div style="margin-right: 12px">
         <input
           type="radio"

@@ -445,7 +445,7 @@ export default {
         if (value == "valueAddCustomPort") {
           let cfg = {
             width: 400,
-            height: 175,
+            height: 145,
           };
           await sender.showModalDialog(
             IpcModalDialogType.AddCustomPort,
