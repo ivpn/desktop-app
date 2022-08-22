@@ -240,9 +240,6 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 		"[Interface]",
 		"PrivateKey = " + wg.connectParams.clientPrivateKey,
 		"ListenPort = " + strconv.Itoa(wg.localPort)}
-	if wg.connectParams.mtu > 0 {
-		interfaceCfg = append(interfaceCfg, fmt.Sprintf("MTU = %d", wg.connectParams.mtu))
-	}
 
 	peerCfg := []string{
 		"[Peer]",

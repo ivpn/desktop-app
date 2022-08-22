@@ -405,7 +405,7 @@ func (c *CmdConnect) Run() (retError error) {
 				req.IPv6 = c.isIPv6Tunnel
 
 				if c.mtu > 0 {
-					fmt.Printf("Using custom MTU: %d\n", c.mtu)
+					fmt.Printf("[!] Using custom MTU: %d\n", c.mtu)
 					req.WireGuardParameters.Mtu = c.mtu
 				}
 

@@ -307,6 +307,9 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 	} else {
 		interfaceCfg = append(interfaceCfg, "DNS = "+wg.DefaultDNS().String())
 	}
+	if wg.connectParams.mtu > 0 {
+		interfaceCfg = append(interfaceCfg, fmt.Sprintf("MTU = %d", wg.connectParams.mtu))
+	}
 
 	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
 	ipv6LocalIPStr := ""

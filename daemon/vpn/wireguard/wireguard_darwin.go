@@ -187,6 +187,8 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		return fmt.Errorf("failed to start WireGuard process: %w", err)
 	}
 
+	var initError error = nil
+
 	// waiting to start and initialize
 	routineStopWaiter.Add(1)
 	go func() {
@@ -196,9 +198,9 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		select {
 		case <-isStartedChannel:
 			// Process started. Perform initialization...
-			if err := wg.initialize(utunName); err != nil {
-				// TODO: REWORK - return initialization error as a result of connect
-				log.ErrorTrace(err)
+			if initError = wg.initialize(utunName); initError != nil {
+				// (return initialization error as a result of connect)
+				log.ErrorTrace(initError)
 				isHaveToBeStopped = true
 			} else {
 				log.Info("Started")
@@ -225,13 +227,13 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 	}
 
 	if err := wg.internals.command.Wait(); err != nil {
-		// error will be received anyway. We are logging it only if process was stopped unexpectable
+		// error will be received anyway. We are logging it only if process was stopped unexpectedly
 		if !wg.internals.isGoingToStop {
 			log.Error(err.Error())
 			return fmt.Errorf("WireGuard process error: %w", err)
 		}
 	}
-	return nil
+	return initError
 }
 
 func (wg *WireGuard) disconnect() error {
@@ -320,7 +322,23 @@ func (wg *WireGuard) initializeConfiguration(utunName string) error {
 	}
 
 	// WireGuard configuration
-	return wg.setWgConfiguration(utunName)
+	if err := wg.setWgConfiguration(utunName); err != nil {
+		return err
+	}
+
+	if wg.connectParams.mtu > 0 {
+		// Custom MTU
+		if wg.connectParams.mtu < 80 /*min MTU for IPv6 WireGuard*/ || wg.connectParams.mtu > 0xFFFF {
+			return fmt.Errorf("bad MTU value (acceptable interval is: [80 - 65535])")
+		}
+		log.Info(fmt.Sprintf("Configuring custom MTU = %d ...", wg.connectParams.mtu))
+		err := shell.Exec(log, "/sbin/ifconfig", utunName, "mtu", strconv.Itoa(wg.connectParams.mtu))
+		if err != nil {
+			return fmt.Errorf("failed to set custom MTU (%d): %w", wg.connectParams.mtu, err)
+		}
+	}
+
+	return nil
 }
 
 // Configure WireGuard interface

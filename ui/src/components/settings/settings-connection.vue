@@ -229,6 +229,7 @@
       <div class="flexRow paramBlock">
         <div class="defColor paramName">Rotate key every:</div>
         <select
+          class="defInputWidth"
           v-model="wgKeyRegenerationInterval"
           style="background: var(--background-color)"
         >
@@ -240,6 +241,37 @@
             {{ item.text }}
           </option>
         </select>
+      </div>
+
+      <div v-bind:class="{ disabled: !isDisconnected }">
+        <div class="flexRow paramBlock" style="margin: 0px; margin-top: 3px">
+          <div class="defColor paramName">Custom MTU:</div>
+          <div>
+            <input
+              ref="mtuInput"
+              v-model="mtu"
+              type="number"
+              step="1"
+              style="background: var(--background-color); width: 165px"
+              class="settingsTextInput"
+              placeholder="Leave empty for default"
+              title="[80 - 65535] Please be aware that this is a feature for advanced users as it may affect the proper functioning VPN tunnel. Leave empty for the default value"
+            />
+          </div>
+          <div
+            v-if="isMtuBadValue"
+            class="description"
+            style="margin-top: 4px; margin-left: 4px; color: darkred"
+          >
+            Expected value: [80 - 65535]
+          </div>
+        </div>
+        <div class="flexRow">
+          <div class="paramName" />
+          <div class="description" style="margin-left: 0px">
+            Define MTU only if you understand what you are doing
+          </div>
+        </div>
       </div>
 
       <div v-if="IsAccountActive">
@@ -399,6 +431,11 @@ export default {
     },
   },
   computed: {
+    isDisconnected: function () {
+      return (
+        this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
+      );
+    },
     isCanUseIPv6InTunnel: function () {
       return this.$store.getters["isCanUseIPv6InTunnel"];
     },
@@ -439,6 +476,25 @@ export default {
       set(value) {
         this.$store.dispatch("settings/setPort", value);
       },
+    },
+    mtu: {
+      get() {
+        return this.$store.state.settings.mtu;
+      },
+      set(value) {
+        this.$store.dispatch("settings/mtu", value);
+      },
+    },
+    isMtuBadValue: function () {
+      if (
+        this.mtu != null &&
+        this.mtu != "" &&
+        this.mtu != 0 &&
+        (this.mtu < 80 || this.mtu > 65535)
+      ) {
+        return true;
+      }
+      return false;
     },
     userDefinedOvpnFile: function () {
       if (!this.$store.state.settings.daemonSettings) return null;
@@ -663,6 +719,11 @@ div.detailedParamValue {
   letter-spacing: 0.1px;
 }
 
+div.defInputWidth {
+  width: 100px;
+  background: red;
+}
+
 div.paramName {
   min-width: 161px;
   max-width: 161px;
@@ -677,7 +738,7 @@ select {
   background: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
   border: 0.5px solid rgba(0, 0, 0, 0.2);
   border-radius: 3.5px;
-  width: 186px;
+  width: 170px;
 }
 
 .description {

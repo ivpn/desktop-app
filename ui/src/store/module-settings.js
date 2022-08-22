@@ -44,6 +44,7 @@ const getDefaultState = () => {
     // VPN
     enableIPv6InTunnel: false,
     vpnType: VpnTypeEnum.WireGuard,
+    mtu: null, // (number: [80-65535]) MTU option is applicable only for WiregUard connections
     isMultiHop: false,
     serverEntry: null,
     serverExit: null,
@@ -204,6 +205,9 @@ export default {
     },
     vpnType(state, val) {
       state.vpnType = val;
+    },
+    mtu(state, val) {
+      state.mtu = val;
     },
     isMultiHop(state, isMH) {
       state.isMultiHop = isMH;
@@ -503,6 +507,9 @@ export default {
       context.commit("vpnType", val);
       // selected servers should be of correct VPN type. Necessary to update them
       updateSelectedServers(context);
+    },
+    mtu(context, val) {
+      context.commit("mtu", val);
     },
     isMultiHop(context, val) {
       if (context.rootGetters["account/isMultihopAllowed"] === false)
