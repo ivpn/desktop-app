@@ -97,6 +97,8 @@ type CmdConnect struct {
 	antitrackerHard bool
 	isIPv6Tunnel    bool
 
+	mtu int // MTU value (applicable only for WireGuard)
+
 	filter_proto       string
 	filter_location    bool
 	filter_city        bool
@@ -151,6 +153,8 @@ func (c *CmdConnect) Init() {
 	c.BoolVar(&c.fastest, "fastest", false, "Connect to fastest server")
 
 	c.BoolVar(&c.last, "last", false, "Connect with last successful connection parameters")
+
+	c.IntVar(&c.mtu, "mtu", 0, "MTU", "Maximum transmission unit (applicable only for WireGuard connections)")
 }
 
 // Run executes command
@@ -245,6 +249,8 @@ func (c *CmdConnect) Run() (retError error) {
 		c.antitrackerHard = ci.AntitrackerHard
 		c.multihopExitSvr = ci.MultiopExitSvr
 		c.isIPv6Tunnel = ci.IPv6Tunnel
+
+		c.mtu = ci.Mtu
 	}
 
 	// MULTI\SINGLE -HOP
@@ -397,6 +403,11 @@ func (c *CmdConnect) Run() (retError error) {
 				req.VpnType = vpn.WireGuard
 				req.WireGuardParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
 				req.IPv6 = c.isIPv6Tunnel
+
+				if c.mtu > 0 {
+					fmt.Printf("[!] Using custom MTU: %d\n", c.mtu)
+					req.WireGuardParameters.Mtu = c.mtu
+				}
 
 				if len(c.multihopExitSvr) == 0 {
 					// port
@@ -612,7 +623,8 @@ func (c *CmdConnect) Run() (retError error) {
 		Antitracker:     c.antitracker,
 		AntitrackerHard: c.antitrackerHard,
 		IPv6Tunnel:      c.isIPv6Tunnel,
-		MultiopExitSvr:  c.multihopExitSvr})
+		MultiopExitSvr:  c.multihopExitSvr,
+		Mtu:             c.mtu})
 
 	return nil
 }

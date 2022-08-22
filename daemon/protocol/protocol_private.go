@@ -420,7 +420,8 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 				net.ParseIP(hostValue.Host),
 				exitHostValue.PublicKey,
 				hostLocalIP,
-				ipv6Prefix)
+				ipv6Prefix,
+				r.WireGuardParameters.Mtu)
 		} else {
 			// Single-Hop
 			connectionParams = wireguard.CreateConnectionParams(
@@ -429,7 +430,8 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 				net.ParseIP(hostValue.Host),
 				hostValue.PublicKey,
 				hostLocalIP,
-				ipv6Prefix)
+				ipv6Prefix,
+				r.WireGuardParameters.Mtu)
 		}
 
 		return p._service.ConnectWireGuard(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)

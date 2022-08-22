@@ -1339,6 +1339,11 @@ async function Connect() {
           Port: port.port,
         },
       };
+
+      const mtu = Number.parseInt(settings.mtu);
+      if (!Number.isNaN(mtu) && mtu >= 80 && mtu <= 65535) {
+        vpnParamsObj.Mtu = mtu;
+      }
     }
 
     if (settings.dnsIsCustom) {

@@ -251,6 +251,9 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 		allowedIPsV6 = ", ::/0"
 	}
 
+	if wg.connectParams.mtu > 0 {
+		interfaceCfg = append(interfaceCfg, fmt.Sprintf("MTU = %d", wg.connectParams.mtu))
+	}
 	interfaceCfg = append(interfaceCfg, "Address = "+wg.connectParams.clientLocalIP.String()+"/32"+ipv6LocalIPStr)
 	interfaceCfg = append(interfaceCfg, "SaveConfig = true")
 
