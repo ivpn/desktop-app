@@ -114,6 +114,10 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	defer wg.uninstallService()
 	err = wg.installService(stateChan)
 	if err != nil {
+		// check is there any custom parameters defined. If so - warn user about potential problem because of them
+		if wg.connectParams.mtu > 0 {
+			return fmt.Errorf("failed to install windows service: %w\n[probably the 'Custom MTU' option has the wrong value, try to not use it or change its value (e.g. 1420)]", err)
+		}
 		return fmt.Errorf("failed to install windows service: %w", err)
 	}
 
