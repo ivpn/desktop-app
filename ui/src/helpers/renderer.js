@@ -28,6 +28,35 @@ export function IsOsDarkColorScheme() {
   return false;
 }
 
+//
+// Allow input only numerical characters
+//
+// Usage example:
+// <input ref="myInput" ...
+//   mounted() {
+//  SetInputFilterNumbers(this.$refs.myInput);
+//
+export function SetInputFilterNumbers(inputElement) {
+  inputElement.addEventListener("keypress", function (evt) {
+    try {
+      var charCode = evt.which ? evt.which : evt.keyCode;
+      if (charCode > 31 && (charCode < 48 || charCode > 57))
+        evt.preventDefault();
+    } catch (e) {
+      console.error(e);
+    }
+  });
+  inputElement.addEventListener("paste", function (evt) {
+    try {
+      const pastedData = evt.clipboardData.getData("text");
+      const isOK = /^\d*$/.test(pastedData);
+      if (!isOK) evt.preventDefault();
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
 export function GetTimeLeftText(endTime /*Date()*/) {
   if (endTime == null) return "";
 
