@@ -319,9 +319,10 @@
 <script>
 import spinner from "@/components/controls/control-spinner.vue";
 import { VpnTypeEnum, VpnStateEnum, PortTypeEnum } from "@/store/types";
-import { enumValueName } from "@/helpers/helpers";
+import { enumValueName, dateDefaultFormat } from "@/helpers/helpers";
+import { SetInputFilterNumbers } from "@/helpers/renderer";
+
 const sender = window.ipcSender;
-import { dateDefaultFormat } from "@/helpers/helpers";
 
 export default {
   components: {
@@ -333,6 +334,9 @@ export default {
       isProcessing: false,
       openvpnManualConfig: false,
     };
+  },
+  mounted() {
+    SetInputFilterNumbers(this.$refs.mtuInput);
   },
   updated() {
     this.isUpdated = true;
