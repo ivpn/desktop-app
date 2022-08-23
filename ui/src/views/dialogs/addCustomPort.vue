@@ -78,12 +78,14 @@
 
 <script>
 import { PortTypeEnum } from "@/store/types";
+import { SetInputFilterNumbers } from "@/helpers/renderer";
 
 const sender = window.ipcSender;
 
 export default {
   mounted() {
     if (this.$refs.portField) this.$refs.portField.focus();
+    SetInputFilterNumbers(this.$refs.portField);
   },
   data: function () {
     return {
