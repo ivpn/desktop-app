@@ -57,10 +57,7 @@
     <div class="settingsBoldFont">View:</div>
     <div class="flexRow paramBlock">
       <div class="defColor paramName">Color theme:</div>
-      <select
-        v-model="colorTheme"
-        style="margin-left: 30px; background: var(--background-color)"
-      >
+      <select v-model="colorTheme" style="margin-left: 30px">
         <option :value="colorThemeEnum.system" :key="colorThemeEnum.system">
           System default
         </option>
@@ -430,7 +427,6 @@ div.description {
 }
 
 select {
-  background: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
   border: 0.5px solid rgba(0, 0, 0, 0.2);
   border-radius: 3.5px;
   width: 186px;
