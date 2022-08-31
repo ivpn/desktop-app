@@ -328,8 +328,8 @@ func (wg *WireGuard) initializeConfiguration(utunName string) error {
 
 	if wg.connectParams.mtu > 0 {
 		// Custom MTU
-		if wg.connectParams.mtu < 80 /*min MTU for IPv6 WireGuard*/ || wg.connectParams.mtu > 0xFFFF {
-			return fmt.Errorf("bad MTU value (acceptable interval is: [80 - 65535])")
+		if wg.connectParams.mtu < 576 || wg.connectParams.mtu > 65535 {
+			return fmt.Errorf("bad MTU value (acceptable interval is: [576 - 65535])")
 		}
 		log.Info(fmt.Sprintf("Configuring custom MTU = %d ...", wg.connectParams.mtu))
 		err := shell.Exec(log, "/sbin/ifconfig", utunName, "mtu", strconv.Itoa(wg.connectParams.mtu))

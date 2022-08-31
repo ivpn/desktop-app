@@ -44,7 +44,7 @@ const getDefaultState = () => {
     // VPN
     enableIPv6InTunnel: false,
     vpnType: VpnTypeEnum.WireGuard,
-    mtu: null, // (number: [80-65535]) MTU option is applicable only for WiregUard connections
+    mtu: null, // (number: [576-65535]) MTU option is applicable only for WiregUard connections
     isMultiHop: false,
     serverEntry: null,
     serverExit: null,
