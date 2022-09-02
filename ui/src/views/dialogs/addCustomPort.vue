@@ -131,7 +131,45 @@ export default {
     numberPlaceholder: function () {
       try {
         let retPlaceholder = "";
-        this.ranges.forEach((r) => {
+
+        // filter required ranges (by port type)
+        let ranges = JSON.parse(JSON.stringify(this.ranges)); // clone array
+
+        ranges = ranges.filter(
+          (r) =>
+            r.type === this.portType && r.range && r.range.min <= r.range.max
+        );
+
+        // Trying to union ranges (when it is possible)
+        // E.g. : [40000-49999], [50000-59999] => [40000-59999]
+
+        // sort
+        ranges.sort((a, b) => {
+          if (a.range.min < b.range.min) return -1;
+          if (a.range.min > b.range.min) return 1;
+          return 0;
+        });
+
+        let newRanges = [];
+        if (ranges.length <= 1) {
+          newRanges = ranges;
+        } else {
+          let r = Object.assign({}, ranges[0]);
+          for (let i = 1; i < ranges.length; i++) {
+            let rCur = Object.assign({}, ranges[i]);
+
+            if (r.range.max >= rCur.range.min - 1) {
+              if (rCur.range.max >= r.range.max) r.range.max = rCur.range.max;
+            } else {
+              newRanges.push(r);
+              r = Object.assign({}, rCur);
+            }
+          }
+          if (r) newRanges.push(r);
+        }
+
+        // make final string
+        newRanges.forEach((r) => {
           if (r.type !== this.portType || !r.range) return;
           if (retPlaceholder.length > 0) retPlaceholder += ", ";
           retPlaceholder += `${r.range.min} - ${r.range.max}`;

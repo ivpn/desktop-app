@@ -383,14 +383,36 @@ export default {
           ports = state.servers.config.ports.openvpn;
 
         // add custom ports
-        if (
-          rootState.settings.customPorts &&
-          rootState.settings.customPorts.length > 0
-        ) {
-          let customPorts = rootState.settings.customPorts;
-          if (vpnType === VpnTypeEnum.WireGuard)
-            customPorts = customPorts.filter((p) => p.type == PortTypeEnum.UDP);
-          ports = ports.concat(customPorts);
+        try {
+          if (
+            rootState.settings.customPorts &&
+            rootState.settings.customPorts.length > 0
+          ) {
+            let customPorts = rootState.settings.customPorts;
+            // Filter custom port for current VPN type:
+            // - WG supports only UDP ports
+            // - custom port have to be in a range of allowed ports for current protocol
+            const ranges = getters.funcGetConnectionPortRanges(vpnType);
+            customPorts = customPorts.filter((p) => {
+              if (!p) return false;
+              // avoid duplicated
+              if (isPortExists(ports, p) === true) {
+                return false;
+              }
+              // WG supports only UDP ports
+              if (
+                vpnType === VpnTypeEnum.WireGuard &&
+                p.type != PortTypeEnum.UDP
+              )
+                return false;
+              // custom port have to be in a range of allowed ports for current protocol
+              return isPortInAllowedRanges(ranges, p);
+            });
+
+            ports = ports.concat(customPorts);
+          }
+        } catch (e) {
+          console.error(e);
         }
 
         if (!ports) return [];
@@ -825,9 +847,11 @@ function isPortInAllowedRanges(availablePortRanges, portToFind) {
 function isPortExists(availablePorts, portToFind) {
   portToFind = NormalizedConfigPortObject(portToFind);
   if (!portToFind || !availablePorts) return false;
-  const found = availablePorts.find(
-    (p) => p.type === portToFind.type && p.port === portToFind.port
-  );
+  const found = availablePorts.find((p) => {
+    p = NormalizedConfigPortObject(p);
+    if (!p) return false;
+    return p.type === portToFind.type && p.port === portToFind.port;
+  });
   if (found) return true;
   return false;
 }
