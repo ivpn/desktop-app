@@ -395,6 +395,10 @@ export default {
             const ranges = getters.funcGetConnectionPortRanges(vpnType);
             customPorts = customPorts.filter((p) => {
               if (!p) return false;
+              // avoid duplicated
+              if (isPortExists(ports, p) === true) {
+                return false;
+              }
               // WG supports only UDP ports
               if (
                 vpnType === VpnTypeEnum.WireGuard &&
@@ -843,9 +847,11 @@ function isPortInAllowedRanges(availablePortRanges, portToFind) {
 function isPortExists(availablePorts, portToFind) {
   portToFind = NormalizedConfigPortObject(portToFind);
   if (!portToFind || !availablePorts) return false;
-  const found = availablePorts.find(
-    (p) => p.type === portToFind.type && p.port === portToFind.port
-  );
+  const found = availablePorts.find((p) => {
+    p = NormalizedConfigPortObject(p);
+    if (!p) return false;
+    return p.type === portToFind.type && p.port === portToFind.port;
+  });
   if (found) return true;
   return false;
 }
