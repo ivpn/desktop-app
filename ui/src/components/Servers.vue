@@ -293,7 +293,7 @@
         </div>
       </div>
 
-      <!-- SCROOL DOWN BUTTON -->
+      <!-- SCROLL DOWN BUTTON -->
       <transition name="fade">
         <button
           class="btnScrollDown"
@@ -611,9 +611,11 @@ export default {
       this.onBack();
     },
     isSvrExcludedFomFastest: function (server) {
-      return this.$store.state.settings.serversFastestExcludeList.includes(
-        server.gateway
+      const sGwId = getGatewayId(server.gateway);
+      const found = this.$store.state.settings.serversFastestExcludeList.find(
+        (excGw) => sGwId == getGatewayId(excGw)
       );
+      return found != undefined;
     },
     favoriteImage: function (server, host) {
       const settings = this.$store.state.settings;
@@ -713,13 +715,19 @@ export default {
       let excludeSvrs =
         this.$store.state.settings.serversFastestExcludeList.slice();
 
-      if (excludeSvrs.includes(server.gateway))
-        excludeSvrs = excludeSvrs.filter((gw) => gw != server.gateway);
-      else excludeSvrs.push(server.gateway);
+      // work only with Gateway ID (not with full gateway name). We need it to have common 'serversFastestExcludeList' for all protocols
+      const sGwId = getGatewayId(server.gateway);
+      excludeSvrs = excludeSvrs.map((el) => {
+        return getGatewayId(el);
+      });
+
+      if (excludeSvrs.includes(sGwId))
+        excludeSvrs = excludeSvrs.filter((gw) => gw != sGwId);
+      else excludeSvrs.push(sGwId);
 
       const activeServers = this.servers.slice();
       const notExcludedActiveServers = activeServers.filter(
-        (s) => !excludeSvrs.includes(s.gateway)
+        (s) => !excludeSvrs.includes(getGatewayId(s.gateway))
       );
 
       if (notExcludedActiveServers.length < 1) {
@@ -771,6 +779,10 @@ export default {
     },
   },
 };
+
+function getGatewayId(gatewayName) {
+  return gatewayName.split(".")[0];
+}
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
