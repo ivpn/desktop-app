@@ -60,7 +60,7 @@ const getDefaultState = () => {
     hostsFavoriteList: [],
 
     // List of servers to exclude from fastest servers list (gateway, strings)
-    serversFastestExcludeList: [],
+    serversFastestExcludeList: [], // only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
 
     // general
     quitWithoutConfirmation: false,

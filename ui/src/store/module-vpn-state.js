@@ -311,10 +311,18 @@ export default {
       // save the info about the first applicable server (which is not in skipSvrs)
       let fallbackSvr = null;
 
+      let getGatewayId = function (gatewayName) {
+        return gatewayName.split(".")[0];
+      };
+
       for (let i = 0; i < servers.length; i++) {
         let curSvr = servers[i];
         if (!curSvr) continue;
-        if (skipSvrs != null && skipSvrs.includes(curSvr.gateway)) continue;
+
+        // skip servers which user excluded from the 'fastest server' list
+        const curGwID = getGatewayId(curSvr.gateway);
+        if (skipSvrs.find((ss) => curGwID == getGatewayId(ss))) continue;
+
         if (!fallbackSvr) fallbackSvr = curSvr;
         if (
           curSvr != null &&

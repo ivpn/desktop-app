@@ -23,7 +23,9 @@
 package commands
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"net"
 	"strconv"
 	"strings"
@@ -118,7 +120,7 @@ func (c *CmdConnect) Init() {
 	c.StringVar(&c.port, "port", "", "PROTOCOL:PORT", fmt.Sprintf("Port to connect to (default: '%s')\n  Note: port number ignored for Multi-Hop connections; port type only applicable (UDP/TCP)\n  Tip: use `ivpn connect -show_ports` command to show all supported ports", defaultPort()))
 	c.BoolVar(&c.portsShow, "show_ports", false, "Ports which are applicable for '-port' argument. Show all supported connection ports")
 
-	c.BoolVar(&c.any, "any", false, "When LOCATION points to more than one server, use first found server to connect")
+	c.BoolVar(&c.any, "any", false, "When LOCATION points to more than one server, use a random server from the found results to connect")
 
 	c.BoolVar(&c.obfsproxy, "o", false, "Use obfsproxy (OpenVPN only)")
 	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "Use obfsproxy (OpenVPN only)")
@@ -340,16 +342,21 @@ func (c *CmdConnect) Run() (retError error) {
 
 			// 'any' option
 			if len(svrs) > 1 {
-				fmt.Println("More than one server found")
+				fmt.Print("More than one server was found. ")
 
 				if c.any == false {
 					fmt.Println("Please specify server more correctly or use flag '-any'")
 					showTipsServerFilterError()
 					return fmt.Errorf("more than one server found")
 				}
-				fmt.Printf("Taking first found server\n")
+				fmt.Printf("Taking one random from found servers ...\n")
 			}
-			srvID = svrs[0].gateway
+
+			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(svrs)))); err == nil {
+				srvID = svrs[rnd.Int64()].gateway
+			} else {
+				srvID = svrs[0].gateway
+			}
 		}
 		c.gateway = srvID
 	}

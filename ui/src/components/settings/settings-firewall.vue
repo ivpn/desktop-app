@@ -134,7 +134,7 @@
             class="settingsTextInput"
             style="width: calc(100% - 5px)"
             v-bind:class="{ badData: isExceptionsStringError === true }"
-            placeholder="1.2.3.0/24, 11.22.33.44"
+            placeholder="192.0.2.0/24, 198.51.100.1"
             v-model="firewallExceptions"
           />
           <div class="fwDescription" style="margin-left: 0px; margin-top: 4px">
