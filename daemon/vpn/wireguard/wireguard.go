@@ -156,7 +156,18 @@ func (wg *WireGuard) Connect(stateChan chan<- vpn.StateInfo) error {
 		stateChan <- vpn.NewStateInfo(vpn.DISCONNECTED, disconnectDescription)
 	}()
 
-	err := wg.connect(stateChan)
+	err := func() error {
+		// Check custom MTU value
+		if wg.connectParams.mtu > 0 {
+			// According to Windows specification: "... For IPv4 the minimum value is 576 bytes. For IPv6 the minimum is value is 1280 bytes... "
+			// Using the same limitations for all platforms
+			if wg.connectParams.mtu < 1280 || wg.connectParams.mtu > 65535 {
+				return fmt.Errorf("bad MTU value (acceptable interval is: [1280 - 65535])")
+			}
+		}
+
+		return wg.connect(stateChan)
+	}()
 
 	if err != nil {
 		disconnectDescription = err.Error()
