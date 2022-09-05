@@ -206,7 +206,7 @@
               "
             >
               {{ userDefinedOvpnFile }}
-            </div>            
+            </div>
           </div>
           -->
         </div>
@@ -264,7 +264,7 @@
               step="1"
               style="width: 165px"
               class="settingsTextInput"
-              title="Valid range [576 - 65535]. Please note that changing this value make affect the proper functioning of the VPN tunnel."
+              title="Valid range [1280 - 65535]. Please note that changing this value make affect the proper functioning of the VPN tunnel."
             />
           </div>
           <div
@@ -272,7 +272,7 @@
             class="description"
             style="margin-top: 4px; margin-left: 4px; width: 180px; color: red"
           >
-            Expected value: [576 - 65535]
+            Expected value: [1280 - 65535]
           </div>
         </div>
         <div class="flexRow">
@@ -518,7 +518,7 @@ export default {
         this.mtu != null &&
         this.mtu != "" &&
         this.mtu != 0 &&
-        (this.mtu < 576 || this.mtu > 65535)
+        (this.mtu < 1280 || this.mtu > 65535)
       ) {
         return true;
       }

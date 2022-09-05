@@ -1341,7 +1341,7 @@ async function Connect() {
       };
 
       const mtu = Number.parseInt(settings.mtu);
-      if (!Number.isNaN(mtu) && mtu >= 576 && mtu <= 65535) {
+      if (!Number.isNaN(mtu) && mtu >= 1280 && mtu <= 65535) {
         vpnParamsObj.Mtu = mtu;
       }
     }
