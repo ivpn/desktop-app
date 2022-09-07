@@ -118,7 +118,7 @@ func (c *CmdConnect) Init() {
 	c.StringVar(&c.port, "port", "", "PROTOCOL:PORT", fmt.Sprintf("Port to connect to (default: '%s')\n  Note: port number ignored for Multi-Hop connections; port type only applicable (UDP/TCP)\n  Tip: use `ivpn connect -show_ports` command to show all supported ports", defaultPort()))
 	c.BoolVar(&c.portsShow, "show_ports", false, "Ports which are applicable for '-port' argument. Show all supported connection ports")
 
-	c.BoolVar(&c.any, "any", false, "When LOCATION points to more than one server, use a random server from the found results to connect")
+	c.BoolVar(&c.any, "any", false, "Use a random server from the found results to connect")
 
 	c.BoolVar(&c.obfsproxy, "o", false, "Use obfsproxy (OpenVPN only)")
 	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "Use obfsproxy (OpenVPN only)")
