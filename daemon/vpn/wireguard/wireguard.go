@@ -277,7 +277,8 @@ func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
 		wg.localPort,
 		wg.connectParams.hostIP,
 		wg.connectParams.hostPort,
-		isCanPause)
+		isCanPause,
+		wg.connectParams.mtu)
 
 	si.ExitHostname = wg.connectParams.multihopExitHostname
 

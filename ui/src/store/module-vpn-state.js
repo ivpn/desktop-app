@@ -471,6 +471,11 @@ export default {
       // save last DNS state
       context.commit("dns", ci.ManualDNS);
       updateDnsSettings(context);
+
+      // save Mtu state (for WireGuard connections)
+      if (ci.VpnType === VpnTypeEnum.WireGuard && Number.isInteger(ci.Mtu)) {
+        context.commit("settings/mtu", ci.Mtu, { root: true });
+      }
     },
     pauseState(context, val) {
       context.commit("pauseState", val);

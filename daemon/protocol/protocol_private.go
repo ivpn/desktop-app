@@ -221,7 +221,8 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ExitHostname:    state.ExitHostname,
 		ManualDNS:       dns.GetLastManualDNS(),
 		IsCanPause:      state.IsCanPause,
-		IsTCP:           state.IsTCP}
+		IsTCP:           state.IsTCP,
+		Mtu:             state.Mtu}
 
 	return ret
 }

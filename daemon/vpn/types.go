@@ -55,10 +55,11 @@ type State int
 
 // Possible VPN state values (must be applicable for all protocols)
 // Such stetes MUST be in use by ALL supportded VPN protocols:
-// 		DISCONNECTED
-// 		CONNECTING
-// 		CONNECTED
-// 		EXITING
+//
+//	DISCONNECTED
+//	CONNECTING
+//	CONNECTED
+//	EXITING
 const (
 	DISCONNECTED State = iota
 	CONNECTING   State = iota // OpenVPN's initial state.
@@ -137,6 +138,7 @@ type StateInfo struct {
 	IsObfsproxy  bool   // applicable only for 'CONNECTED' state (OpenVPN)
 	ExitHostname string // applicable only for 'CONNECTED' state
 	IsCanPause   bool   // applicable only for 'CONNECTED' state
+	Mtu          int    // applicable only for 'CONNECTED' state (WireGuard)
 	IsAuthError  bool   // applicable only for 'EXITING' state
 
 	// TODO: try to avoid using this protocol-specific parameter in future
@@ -156,7 +158,7 @@ func NewStateInfo(state State, description string) StateInfo {
 }
 
 // NewStateInfoConnected - create new state object for CONNECTED state
-func NewStateInfoConnected(isTCP bool, clientIP net.IP, clientIPv6 net.IP, localPort int, serverIP net.IP, destPort int, isCanPause bool) StateInfo {
+func NewStateInfoConnected(isTCP bool, clientIP net.IP, clientIPv6 net.IP, localPort int, serverIP net.IP, destPort int, isCanPause bool, mtu int) StateInfo {
 	return StateInfo{
 		State:       CONNECTED,
 		Description: "",
@@ -167,7 +169,9 @@ func NewStateInfoConnected(isTCP bool, clientIP net.IP, clientIPv6 net.IP, local
 		ServerIP:    serverIP,
 		ServerPort:  destPort,
 		IsAuthError: false,
-		IsCanPause:  isCanPause}
+		IsCanPause:  isCanPause,
+		Mtu:         mtu,
+	}
 }
 
 // Process represents VPN object operations

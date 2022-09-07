@@ -205,10 +205,10 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 			log.Info("Restarting...")
 			if err := wg.uninstallService(); err != nil {
-				log.Error("failed to restart connection (disconnetion error):", err.Error())
+				log.Error("failed to restart connection (disconnection error):", err.Error())
 			} else {
 				if err := wg.installService(stateChan); err != nil {
-					log.Error("failed to restart connection (new connetion error):", err.Error())
+					log.Error("failed to restart connection (new connection error):", err.Error())
 				} else {
 					// reconnected successfully
 					log.Info("Connection restarted")
