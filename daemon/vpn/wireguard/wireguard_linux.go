@@ -90,7 +90,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 	wg.internals.resumeDisconnectChan = make(chan operation, 1)
 
-	// loop connection initialisation (required for pause\resume functionality)
+	// loop connection initialization (required for pause\resume functionality)
 	// on 'pause' - we stopping WG interface but not exiting this (connect) method
 	// (method 'connect' is synchronous, must NOT exit on pause)
 	for {

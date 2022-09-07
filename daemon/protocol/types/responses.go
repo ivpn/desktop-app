@@ -244,6 +244,7 @@ type ConnectedResp struct {
 	ManualDNS       dns.DnsSettings
 	IsCanPause      bool
 	IsTCP           bool
+	Mtu             int // (for WireGuard connections)
 }
 
 // DisconnectionReason - disconnection reason
@@ -279,7 +280,7 @@ type ServerListResp struct {
 	VpnServers types.ServersInfoResponse
 }
 
-//PingResultType represents information ping TTL for a host (is a part of 'PingServersResp')
+// PingResultType represents information ping TTL for a host (is a part of 'PingServersResp')
 type PingResultType struct {
 	Host string
 	Ping int
