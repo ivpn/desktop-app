@@ -157,7 +157,7 @@ func (c *CmdConnect) Init() {
 
 // Run executes command
 func (c *CmdConnect) Run() (retError error) {
-	if len(c.gateway) == 0 && c.fastest == false && c.last == false && c.portsShow == false {
+	if len(c.gateway) == 0 && c.fastest == false && c.any == false && c.last == false && c.portsShow == false {
 		return flags.BadParameter{}
 	}
 
