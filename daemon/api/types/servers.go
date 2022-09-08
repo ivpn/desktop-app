@@ -47,6 +47,12 @@ type WireGuardServerHostInfo struct {
 	IPv6      WireGuardServerHostInfoIPv6 `json:"ipv6"`
 }
 
+type ObfsParams struct {
+	Obfs3MultihopPort int    `json:"obfs3_multihop_port"`
+	Obfs4MultihopPort int    `json:"obfs4_multihop_port"`
+	Obfs4Key          string `json:"obfs4_key"`
+}
+
 // WireGuardServerInfo contains all info about WG server
 type WireGuardServerInfo struct {
 	Gateway     string `json:"gateway"`
@@ -63,6 +69,7 @@ type WireGuardServerInfo struct {
 // OpenVPNServerHostInfo contains info about OpenVPN server host
 type OpenVPNServerHostInfo struct {
 	HostInfoBase
+	Obfs ObfsParams `json:"obfs"`
 }
 
 // OpenvpnServerInfo contains all info about OpenVPN server
@@ -124,9 +131,15 @@ func (pi PortInfo) IsUDP() bool {
 	return strings.TrimSpace(strings.ToLower(pi.Type)) == "udp"
 }
 
+type ObfsPortInfo struct {
+	Port int `json:"port"`
+}
+
 type PortsInfo struct {
-	OpenVPN   []PortInfo `json:"openvpn"`
-	WireGuard []PortInfo `json:"wireguard"`
+	OpenVPN   []PortInfo   `json:"openvpn"`
+	WireGuard []PortInfo   `json:"wireguard"`
+	Obfs3     ObfsPortInfo `json:"obfs3"`
+	Obfs4     ObfsPortInfo `json:"obfs4"`
 }
 
 // ConfigInfo contains different configuration info (Antitracker, API ...)

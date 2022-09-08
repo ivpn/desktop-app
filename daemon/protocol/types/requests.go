@@ -70,13 +70,14 @@ type GetServers struct {
 // PingServers request to ping servers
 //
 // Pinging operation separated on few phases:
-// 1) Fast ping:  ping one host for each nearest location (locations only for specified VPN type when VpnTypePrioritization==true)
-//	  Operation ends after 'TimeOutMs'. Then daemon sends response PingServersResp with all data were collected.
-// 2) Full ping: Pinging all hosts for all locations. There is no time limit for this operation. It runs in background.
-//		2.1) Ping all hosts only for specified VPN type (when VpnTypePrioritization==true) or for all VPN types (when VpnTypePrioritization==false)
-//			2.1.1) Ping one host for all locations (for prioritized VPN protocol)
-//			2.1.2) Ping the rest hosts for all locations (for prioritized VPN protocol)
-//		2.2) (when VpnTypePrioritization==true) Ping all hosts for the rest protocols
+//  1. Fast ping:  ping one host for each nearest location (locations only for specified VPN type when VpnTypePrioritization==true)
+//     Operation ends after 'TimeOutMs'. Then daemon sends response PingServersResp with all data were collected.
+//  2. Full ping: Pinging all hosts for all locations. There is no time limit for this operation. It runs in background.
+//     2.1) Ping all hosts only for specified VPN type (when VpnTypePrioritization==true) or for all VPN types (when VpnTypePrioritization==false)
+//     2.1.1) Ping one host for all locations (for prioritized VPN protocol)
+//     2.1.2) Ping the rest hosts for all locations (for prioritized VPN protocol)
+//     2.2) (when VpnTypePrioritization==true) Ping all hosts for the rest protocols
+//
 // If PingAllHostsOnFirstPhase==true - daemon will ping all hosts for nearest locations on the phase (1)
 // If SkipSecondPhase==true - phase (2) will be skipped
 type PingServers struct {
@@ -202,7 +203,7 @@ type Connect struct {
 
 		//MultihopExitSrvID string
 		MultihopExitServer struct {
-			// ExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
+			// ExitSrvID (gateway ID) just in use to keep clients notified about connected MH exit server
 			// Example: "gateway":"zz.wg.ivpn.net" => "zz"
 			ExitSrvID string
 			Hosts     []types.OpenVPNServerHostInfo

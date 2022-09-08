@@ -316,6 +316,21 @@ func (s *Service) ServersList() (*types.ServersInfoResponse, error) {
 	return s._serversUpdater.GetServers()
 }
 
+func (s *Service) findOpenVpnHost(hostname string, ip net.IP, svrs []types.OpenvpnServerInfo) (types.OpenVPNServerHostInfo, error) {
+	if ((len(hostname) > 0) || (ip != nil && !ip.IsUnspecified())) && svrs != nil {
+		for _, svr := range svrs {
+			for _, host := range svr.Hosts {
+				if (len(hostname) <= 0 || !strings.EqualFold(host.Hostname, hostname)) && (ip == nil || ip.IsUnspecified() || !ip.Equal(net.ParseIP(host.Host))) {
+					continue
+				}
+				return host, nil
+			}
+		}
+	}
+
+	return types.OpenVPNServerHostInfo{}, fmt.Errorf(fmt.Sprintf("host '%s' not found", hostname))
+}
+
 // ServersListForceUpdate returns servers list info.
 // The daemon will make request to update servers from the backend.
 // The cached data will be ignored in this case.
@@ -463,12 +478,60 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 			}
 		}
 
+		// initialize obfsproxy parameters
+		obfsParams := openvpn.ObfsParams{}
+		if prefs.IsObfsproxy {
+			// TODO: use obfs version as argument
+			obfsParams.ObfsVer = 3 // 4
+			svrs, err := s.ServersList()
+			if err != nil {
+				return nil, fmt.Errorf("failed to initialize obfsproxy configuration: %w", err)
+			}
+
+			if connectionParams.IsMultihop() {
+				// find host by hostname
+				host, err := s.findOpenVpnHost(connectionParams.GetMultihopExitHostName(), nil, svrs.OpenvpnServers)
+				if err != nil {
+					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: %w", err)
+				}
+
+				switch obfsParams.ObfsVer {
+				case 3:
+					obfsParams.RemotePort = host.Obfs.Obfs3MultihopPort
+				case 4:
+					obfsParams.RemotePort = host.Obfs.Obfs4MultihopPort
+					obfsParams.Obfs4Key = host.Obfs.Obfs4Key
+				default:
+					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: unsupported obfs version: %d", obfsParams.ObfsVer)
+				}
+			} else {
+				switch obfsParams.ObfsVer {
+				case 3:
+					obfsParams.RemotePort = svrs.Config.Ports.Obfs3.Port
+				case 4:
+					{
+						// find host by host ip
+						host, err := s.findOpenVpnHost("", connectionParams.GetHostIp(), svrs.OpenvpnServers)
+						if err != nil {
+							return nil, fmt.Errorf("failed to initialize obfsproxy configuration: %w", err)
+						}
+
+						obfsParams.RemotePort = svrs.Config.Ports.Obfs4.Port
+						obfsParams.Obfs4Key = host.Obfs.Obfs4Key
+					}
+				default:
+					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: unsupported obfs version: %d", obfsParams.ObfsVer)
+				}
+			}
+
+		}
+
 		// creating OpenVPN object
 		vpnObj, err := openvpn.NewOpenVpnObject(
 			platform.OpenVpnBinaryPath(),
 			platform.OpenvpnConfigFile(),
 			"",
-			prefs.IsObfsproxy,
+			obfsParams,
 			openVpnExtraParameters,
 			connectionParams)
 
@@ -1059,9 +1122,9 @@ func (s *Service) ResetManualDNS() error {
 	return vpn.ResetManualDNS()
 }
 
-//////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////
 // KillSwitch
-//////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////
 func (s *Service) onKillSwitchStateChanged() {
 	s._evtReceiver.OnKillSwitchStateChanged()
 
@@ -1148,7 +1211,7 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 
 // SetKillSwitchUserExceptions set ip/mask to be excluded from FW block
 // Parameters:
-//	- exceptions - comma separated list of IP addresses in format: x.x.x.x[/xx]
+//   - exceptions - comma separated list of IP addresses in format: x.x.x.x[/xx]
 func (s *Service) SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error {
 	prefs := s._preferences
 	prefs.FwUserExceptions = exceptions
@@ -1319,7 +1382,9 @@ func (s *Service) SplitTunnelling_RemoveApp(pid int, exec string) (err error) {
 // Parameters:
 // pid 			- process PID
 // exec 		- Command executed in ST environment (e.g. binary + arguments)
-// 				  (identical to SplitTunnelAddApp.Exec and SplitTunnelAddAppCmdResp.Exec)
+//
+//	(identical to SplitTunnelAddApp.Exec and SplitTunnelAddAppCmdResp.Exec)
+//
 // cmdToExecute - Shell command used to perform this operation
 func (s *Service) SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error {
 	// notify changed ST configuration status

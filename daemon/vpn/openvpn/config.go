@@ -49,6 +49,20 @@ type ConnectionParams struct {
 	proxyPort            int
 	proxyUsername        string
 	proxyPassword        string
+	proxyObfs4Key        string // required for for obfs4 socks proxy `--socks-proxy server [port] [authfile]`. If this parameter is defined - `proxyUsername` and `proxyPassword`` will be ignored.
+	// (e.g. the obfs4 requires the key to be stored in 'authfile': `cert=E50PjFCkOIkSh6R498XkLJDushl831mbeTgoKuZEqAB7FKtFkG553qWIonRX6R7jzP0gYQ;iat-mode=0`)
+}
+
+func (c *ConnectionParams) IsMultihop() bool {
+	return len(c.multihopExitHostname) > 0
+}
+
+func (c *ConnectionParams) GetMultihopExitHostName() string {
+	return c.multihopExitHostname
+}
+
+func (c *ConnectionParams) GetHostIp() net.IP {
+	return c.hostIP
 }
 
 // SetCredentials update WG credentials
@@ -88,11 +102,10 @@ func (c *ConnectionParams) WriteConfigFile(
 	miAddr string,
 	miPort int,
 	logFile string,
-	obfsproxyPort int,
 	extraParameters string,
 	isCanUseV24Params bool) error {
 
-	cfg, err := c.generateConfiguration(localPort, miAddr, miPort, logFile, obfsproxyPort, extraParameters, isCanUseV24Params)
+	cfg, err := c.generateConfiguration(localPort, miAddr, miPort, logFile, extraParameters, isCanUseV24Params)
 	if err != nil {
 		return fmt.Errorf("failed to generate openvpn configuration : %w", err)
 	}
@@ -117,26 +130,8 @@ func (c *ConnectionParams) generateConfiguration(
 	miAddr string,
 	miPort int,
 	logFile string,
-	obfsproxyPort int,
 	extraParameters string,
 	isCanUseV24Params bool) (cfg []string, err error) {
-
-	if obfsproxyPort > 0 {
-		c.tcp = true
-		if len(c.multihopExitHostname) > 0 {
-			// Multi-Hop with obfsproxy:	just uses the multihop port +1.
-			c.hostPort += 1
-		} else {
-			// Single-Hop
-			c.hostPort = platform.ObfsproxyHostPort()
-		}
-		c.proxyType = "socks"
-		c.proxyAddress = net.IPv4(127, 0, 0, 1) // "127.0.0.1"
-		c.proxyPort = obfsproxyPort
-		c.proxyUsername = ""
-		c.proxyPassword = ""
-
-	}
 
 	cfg = make([]string, 0, 32)
 
@@ -173,12 +168,22 @@ func (c *ConnectionParams) generateConfiguration(
 
 		// proxy authentication
 		proxyAuthFile := ""
-		if c.proxyUsername != "" && c.proxyPassword != "" {
+		proxyAuthFileData := ""
+		if c.proxyObfs4Key != "" {
+			// obfs4 authentication file format:
+			//		cert=<server certificate>;iat-mode=
+			//		0
+			proxyAuthFileData = fmt.Sprintf("cert=%s;iat-mode=\n0", c.proxyObfs4Key) // Note! The line break after iat-mode=is required for correct operation.
+		} else if c.proxyUsername != "" && c.proxyPassword != "" {
+			proxyAuthFileData = fmt.Sprintf("%s\n%s", c.proxyUsername, c.proxyPassword)
+		}
+
+		if len(proxyAuthFileData) > 0 {
 			proxyAuthFile = "\"" + platform.OpenvpnProxyAuthFile() + "\""
-			err := ioutil.WriteFile(platform.OpenvpnProxyAuthFile(), []byte(fmt.Sprintf("%s\n%s", c.proxyUsername, c.proxyPassword)), 0600)
+			err := ioutil.WriteFile(platform.OpenvpnProxyAuthFile(), []byte(proxyAuthFileData), 0600)
 			if err != nil {
 				log.Error(err)
-				return nil, fmt.Errorf("Failed to save file with proxy credentials: %w", err)
+				return nil, fmt.Errorf("failed to save file with proxy credentials: %w", err)
 			}
 		}
 
@@ -187,11 +192,9 @@ func (c *ConnectionParams) generateConfiguration(
 		case "http":
 			cfg = append(cfg, "http-proxy-retry")
 			cfg = append(cfg, fmt.Sprintf("http-proxy %s %d %s", c.proxyAddress.String(), c.proxyPort, proxyAuthFile))
-			break
 		case "socks":
 			cfg = append(cfg, "socks-proxy-retry")
 			cfg = append(cfg, fmt.Sprintf("socks-proxy %s %d %s", c.proxyAddress.String(), c.proxyPort, proxyAuthFile))
-			break
 		}
 	}
 

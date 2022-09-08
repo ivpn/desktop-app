@@ -39,6 +39,13 @@ import (
 
 var log *logger.Logger
 
+type ObfsProxyVersion int
+
+const (
+	OBFS3 ObfsProxyVersion = 3
+	OBFS4 ObfsProxyVersion = 4
+)
+
 func init() {
 	log = logger.NewLogger("obfpxy")
 }
@@ -52,12 +59,13 @@ type startedCmd struct {
 // Obfsproxy structure. Contains info about obfsproxy binary
 type Obfsproxy struct {
 	binaryPath string
+	version    ObfsProxyVersion
 	proc       *startedCmd
 }
 
 // CreateObfsproxy creates new obfsproxy object
-func CreateObfsproxy(theBinaryPath string) (obj *Obfsproxy) {
-	return &Obfsproxy{binaryPath: theBinaryPath}
+func CreateObfsproxy(theBinaryPath string, ver ObfsProxyVersion) (obj *Obfsproxy) {
+	return &Obfsproxy{binaryPath: theBinaryPath, version: ver}
 }
 
 // Start - asynchronously start obfsproxy
@@ -111,10 +119,15 @@ func (p *Obfsproxy) start() (port int, command *startedCmd, err error) {
 	cmd := exec.Command(p.binaryPath)
 
 	ptStateDir := path.Join(platform.LogDir(), "ivpn-obfsproxy-state")
+
 	// obfs4 configuration parameters
 	// https://github.com/Pluggable-Transports/Pluggable-Transports-spec/tree/main/releases
 	// https://gitweb.torproject.org/torspec.git/tree/pt-spec.txt
-	const obfsProxyVer = "obfs3"
+
+	obfsProxyVer := "obfs4"
+	if p.version == OBFS3 {
+		obfsProxyVer = "obfs3"
+	}
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "TOR_PT_CLIENT_TRANSPORTS="+obfsProxyVer)
 	cmd.Env = append(cmd.Env, "TOR_PT_MANAGED_TRANSPORT_VER=1")
