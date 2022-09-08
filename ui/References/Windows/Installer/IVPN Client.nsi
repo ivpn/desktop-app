@@ -614,6 +614,8 @@ Section "Uninstall"
       RMDir /r "$APPDATA\IVPN"
       SetShellVarContext all
       RMDir /r "$APPDATA\IVPN"
+
+      RMDir /r "$PROFILE\.ivpn" ; ~/.ivpn (created by CLI)      
   ${Else}
       ; update
   ${EndIf}
