@@ -214,7 +214,7 @@
     </div>
 
     <!-- Wireguard -->
-    <div v-if="!isOpenVPN">
+    <div v-show="!isOpenVPN">
       <div class="settingsBoldFont">Wireguard configuration:</div>
 
       <div

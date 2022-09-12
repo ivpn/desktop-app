@@ -554,7 +554,9 @@ export default {
 
       // save Mtu state (for WireGuard connections)
       if (ci.VpnType === VpnTypeEnum.WireGuard && Number.isInteger(ci.Mtu)) {
-        context.commit("settings/mtu", ci.Mtu, { root: true });
+        var mtu = ci.Mtu;
+        if (mtu === 0) mtu = null;
+        context.commit("settings/mtu", mtu, { root: true });
       }
     },
     pauseState(context, val) {

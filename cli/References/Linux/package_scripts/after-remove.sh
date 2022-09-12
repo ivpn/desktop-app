@@ -2,6 +2,10 @@
 
 echo "[*] After remove (<%= version %> : <%= pkg %> : $1)"
 
+# Obtaining information about user running the script
+# (script can be executed with 'sudo', but we should get real user)
+USER="${SUDO_USER:-$USER}"
+
 # When removing package: $1==0 for RPM; $1 == "remove" for DEB
 _IS_REMOVE=0
 if [ "$1" = "remove" -o "$1" = "0" ]; then
@@ -69,6 +73,12 @@ if [ -d $IVPN_DIR ] ; then
   # Therefore, we are completely removing all content of '/opt/ivpn/mutable'.
   # Also, there could stay empty dirs which were not deleted automatically.
   rm -rf $IVPN_DIR || echo "[-] Removing '$IVPN_DIR' folder failed"
+fi
+
+CLI_CONFIG_DIR="/home/${USER}/.ivpn"
+if [ -d $CLI_CONFIG_DIR ] ; then
+  echo "[+] Removing CLI config folder ..."
+  rm -rf $CLI_CONFIG_DIR || echo "[-] Removing '$CLI_CONFIG_DIR' folder failed"
 fi
 
 try_systemd_stop
