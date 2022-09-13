@@ -37,6 +37,7 @@ import (
 
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
@@ -222,6 +223,20 @@ func (c *Client) SetPreferences(key, value string) error {
 
 	// TODO: daemon have to return confirmation
 	if err := c.send(&req, 0); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) SetObfsProxy(cfg obfsproxy.Config) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.SetObfsProxy{ObfsproxyConfig: cfg}
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
 	}
 

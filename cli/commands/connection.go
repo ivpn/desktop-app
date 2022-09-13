@@ -33,6 +33,7 @@ import (
 	"github.com/ivpn/desktop-app/cli/commands/config"
 	"github.com/ivpn/desktop-app/cli/flags"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
@@ -83,7 +84,25 @@ func (c *CmdDisconnect) Run() error {
 	return nil
 }
 
-//-----------------------------------------------
+// -----------------------------------------------
+const AllowedObfsproxyValues = "'obfs4' (default), 'obfs3', 'obfs4_iat' (or 'obfs4_iat1'), 'obfs4_iat_paranoid' (or 'obfs4_iat2')"
+
+func parseObfsproxyParam(param string) (obfsproxy.Config, error) {
+	switch strings.ToLower(param) {
+	case "":
+		return obfsproxy.Config{}, nil
+	case "obfs3":
+		return obfsproxy.Config{Version: obfsproxy.OBFS3}, nil
+	case "obfs4":
+		return obfsproxy.Config{Version: obfsproxy.OBFS4}, nil
+	case "obfs4_iat1", "obfs4_iat":
+		return obfsproxy.Config{Version: obfsproxy.OBFS4, Obfs4Iat: obfsproxy.Obfs4IatOn}, nil
+	case "obfs4_iat2", "obfs4_iat_paranoid":
+		return obfsproxy.Config{Version: obfsproxy.OBFS4, Obfs4Iat: obfsproxy.Obfs4IatOnParanoid}, nil
+	}
+
+	return obfsproxy.Config{}, fmt.Errorf("unsupported obfsproxy value '%s' (acceptable values: %s)", param, AllowedObfsproxyValues)
+}
 
 type CmdConnect struct {
 	flags.CmdInfo
@@ -92,7 +111,7 @@ type CmdConnect struct {
 	port            string
 	portsShow       bool
 	any             bool
-	obfsproxy       bool
+	obfsproxy       string // 'obfs4' (default), 'obfs3', 'obfs4_iat' (or 'obfs4_iat1'), 'obfs4_iat_paranoid' (or 'obfs4_iat2')
 	firewallOff     bool
 	dns             string
 	antitracker     bool
@@ -114,6 +133,8 @@ type CmdConnect struct {
 }
 
 func (c *CmdConnect) Init() {
+	c.SetPreParseFunc(c.preParse)
+
 	c.Initialize("connect", "Establish new VPN connection\nLOCATION can be a mask for filtering servers or full hostname (see 'servers' command)")
 	c.DefaultStringVar(&c.gateway, "LOCATION")
 
@@ -122,8 +143,9 @@ func (c *CmdConnect) Init() {
 
 	c.BoolVar(&c.any, "any", false, "Use a random server from the found results to connect")
 
-	c.BoolVar(&c.obfsproxy, "o", false, "Use obfsproxy (OpenVPN only)")
-	c.BoolVar(&c.obfsproxy, "obfsproxy", false, "Use obfsproxy (OpenVPN only)")
+	obfsproxyUsage := fmt.Sprintf("Use obfsproxy (OpenVPN only)\n  Acceptable values: %s", AllowedObfsproxyValues)
+	c.StringVar(&c.obfsproxy, "o", "", "TYPE", obfsproxyUsage)
+	c.StringVar(&c.obfsproxy, "obfsproxy", "", "TYPE", obfsproxyUsage)
 
 	c.StringVar(&c.multihopExitSvr, "exit_svr", "", "LOCATION", "Exit-server for Multi-Hop connection\n  (use full serverID as a parameter, servers filtering not applicable for it)")
 
@@ -136,8 +158,8 @@ func (c *CmdConnect) Init() {
 	c.BoolVar(&c.isIPv6Tunnel, "ipv6tunnel", false, "Enable IPv6 in VPN tunnel (WireGuard connections only)\n  (IPv6 addresses are preferred when a host has a dual stack IPv6/IPv4; IPv4-only hosts are unaffected)")
 
 	// filters
-	c.StringVar(&c.filter_proto, "p", "", "PROTOCOL", "Protocol type OpenVPN|ovpn|WireGuard|wg")
-	c.StringVar(&c.filter_proto, "protocol", "", "PROTOCOL", "Protocol type OpenVPN|ovpn|WireGuard|wg")
+	c.StringVar(&c.filter_proto, "p", "", "PROTOCOL", "Protocol type (OpenVPN|ovpn|WireGuard|wg)")
+	c.StringVar(&c.filter_proto, "protocol", "", "PROTOCOL", "Protocol type (OpenVPN|ovpn|WireGuard|wg)")
 
 	c.BoolVar(&c.filter_location, "l", false, "Apply LOCATION as a filter to server location (Hostname)")
 	c.BoolVar(&c.filter_location, "location", false, "Apply LOCATION as a filter to server location (Hostname)")
@@ -159,8 +181,49 @@ func (c *CmdConnect) Init() {
 	c.IntVar(&c.mtu, "mtu", 0, "MTU", "Maximum transmission unit (applicable only for WireGuard connections)")
 }
 
+func (c *CmdConnect) preParse(arguments []string) ([]string, error) {
+	// Pre-parse function (called before parsing arguments by 'flag' package)
+	//
+	// We need to have compatibility with old app versions:
+	// 	parameters '-o' and '-obfsproxy' can be used without argument (which is not possible by 'flag' package)
+	// 	When '-o'|'-obfsproxy' are without argument - use default obfsproxy configuration
+
+	obfsEmptyParamIdx := -1
+	for idx, a := range arguments {
+		arg := strings.ToLower(a)
+		if arg == "-o" || arg == "-obfsproxy" {
+			// Check if '-o' parameter is alone (old app implementation style):
+			// - argument for '-o' should not be last in arguments list (because last argument for 'connect' is always filter value)
+			// - ... and next argument after '-o' must start with '-' (must be new arg definition)
+			nextIdx := idx + 1
+			lastIdx := len(arguments) - 1
+
+			if nextIdx == lastIdx { // last argument for 'connect' is always filter value (not a parameter of '-o' )
+				obfsEmptyParamIdx = idx // empty '-o' argument is detected
+				break
+			}
+			if nextIdx < lastIdx {
+				nextArg := arguments[nextIdx]
+				if !strings.HasPrefix(nextArg, "-") { // next argument after '-o' must start with '-'
+					break
+				}
+				obfsEmptyParamIdx = idx // empty '-o' argument is detected
+			}
+			break
+		}
+	}
+
+	if obfsEmptyParamIdx >= 0 {
+		c.obfsproxy = "obfs4"
+		return append(arguments[:obfsEmptyParamIdx], arguments[obfsEmptyParamIdx+1:]...), nil
+	}
+
+	return arguments, nil
+}
+
 // Run executes command
 func (c *CmdConnect) Run() (retError error) {
+
 	if len(c.gateway) == 0 && c.fastest == false && c.any == false && c.last == false && c.portsShow == false {
 		return flags.BadParameter{}
 	}
@@ -177,6 +240,11 @@ func (c *CmdConnect) Run() (retError error) {
 
 	customHostEntryServer := c.gateway
 	customHostExitServer := c.multihopExitSvr
+
+	obfsproxyCfg, err := parseObfsproxyParam(c.obfsproxy)
+	if err != nil {
+		return flags.BadParameter{Message: err.Error()}
+	}
 
 	// check is logged-in
 	helloResp := _proto.GetHelloResponse()
@@ -451,7 +519,7 @@ func (c *CmdConnect) Run() (retError error) {
 
 	// OpenVPN
 	if serverFound == false {
-		if c.obfsproxy && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
+		if obfsproxyCfg.IsObfsproxy() && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
 			return fmt.Errorf(helloResp.DisabledFunctions.ObfsproxyError)
 		}
 
@@ -485,9 +553,14 @@ func (c *CmdConnect) Run() (retError error) {
 			if s.Gateway == c.gateway {
 				entrySvrOvpn = &servers.OpenvpnServers[i]
 
-				// TODO: obfsproxy configuration for this connection must be sent in 'Connect' request (avoid using daemon preferences)
-				if err = _proto.SetPreferences("enable_obfsproxy", fmt.Sprint(c.obfsproxy)); err != nil {
-					return err
+				// set obfsproxy config
+				if !_proto.GetHelloResponse().DaemonSettings.ObfsproxyConfig.Equals(obfsproxyCfg) {
+					if err = _proto.SetObfsProxy(obfsproxyCfg); err != nil {
+						return err
+					}
+				}
+				if obfsproxyCfg.IsObfsproxy() {
+					fmt.Println("obfsproxy configuration: " + obfsproxyCfg.ToString())
 				}
 
 				serverFound = true
@@ -531,7 +604,7 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 
 		portStrInfo := destPort.String()
-		if c.obfsproxy {
+		if obfsproxyCfg.IsObfsproxy() {
 			if len(c.port) > 0 {
 				// if user manually defined port for obfsproxy connection - inform that it is ignored
 				fmt.Printf("Note: port definition is ignored for the connections when the obfsproxy enabled\n")

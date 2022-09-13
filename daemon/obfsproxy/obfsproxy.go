@@ -81,6 +81,26 @@ func (c Config) IsObfsproxy() bool {
 	return true
 }
 
+func (c Config) Equals(b Config) bool {
+	if c.IsObfsproxy() != b.IsObfsproxy() {
+		return false
+	}
+	if c.Version == b.Version && c.Version == OBFS3 {
+		return true
+	}
+	return c.Version == b.Version && c.Obfs4Iat == b.Obfs4Iat
+}
+
+func (c Config) ToString() string {
+	if !c.IsObfsproxy() {
+		return "disabled"
+	}
+	if c.Version == OBFS4 {
+		return fmt.Sprintf("obfs%d, IAT%d", c.Version, c.Obfs4Iat)
+	}
+	return fmt.Sprintf("obfs%d", c.Version)
+}
+
 type startedCmd struct {
 	command   *exec.Cmd
 	stopped   <-chan struct{}
@@ -115,7 +135,7 @@ func (p *Obfsproxy) Config() Config {
 
 // Start - asynchronously start obfsproxy
 func (p *Obfsproxy) Start() (port int, err error) {
-	log.Info(fmt.Sprintf("Starting obfsproxy [obfs%d, IAT%d]", p.config.Version, p.config.Obfs4Iat))
+	log.Info(fmt.Sprintf("Starting obfsproxy [%s]", p.config.ToString()))
 	defer func() {
 		if err != nil || port <= 0 {
 			if err == nil {
