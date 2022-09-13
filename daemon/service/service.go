@@ -39,6 +39,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
@@ -423,7 +424,7 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		if len(disabledFuncs.OpenVPNError) > 0 {
 			return nil, fmt.Errorf(disabledFuncs.OpenVPNError)
 		}
-		if prefs.IsObfsproxy && len(disabledFuncs.ObfsproxyError) > 0 {
+		if prefs.Obfs4proxy.IsObfsproxy() && len(disabledFuncs.ObfsproxyError) > 0 {
 			return nil, fmt.Errorf(disabledFuncs.ObfsproxyError)
 		}
 
@@ -480,9 +481,8 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 
 		// initialize obfsproxy parameters
 		obfsParams := openvpn.ObfsParams{}
-		if prefs.IsObfsproxy {
-			// TODO: use obfs version as argument
-			obfsParams.ObfsVer = 3 // 4
+		if prefs.Obfs4proxy.IsObfsproxy() {
+			obfsParams.Config = prefs.Obfs4proxy
 			svrs, err := s.ServersList()
 			if err != nil {
 				return nil, fmt.Errorf("failed to initialize obfsproxy configuration: %w", err)
@@ -495,20 +495,20 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: %w", err)
 				}
 
-				switch obfsParams.ObfsVer {
-				case 3:
+				switch obfsParams.Config.Version {
+				case obfsproxy.OBFS3:
 					obfsParams.RemotePort = host.Obfs.Obfs3MultihopPort
-				case 4:
+				case obfsproxy.OBFS4:
 					obfsParams.RemotePort = host.Obfs.Obfs4MultihopPort
 					obfsParams.Obfs4Key = host.Obfs.Obfs4Key
 				default:
-					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: unsupported obfs version: %d", obfsParams.ObfsVer)
+					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: unsupported obfs version: %d", obfsParams.Config.Version)
 				}
 			} else {
-				switch obfsParams.ObfsVer {
-				case 3:
+				switch obfsParams.Config.Version {
+				case obfsproxy.OBFS3:
 					obfsParams.RemotePort = svrs.Config.Ports.Obfs3.Port
-				case 4:
+				case obfsproxy.OBFS4:
 					{
 						// find host by host ip
 						host, err := s.findOpenVpnHost("", connectionParams.GetHostIp(), svrs.OpenvpnServers)
@@ -520,7 +520,7 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 						obfsParams.Obfs4Key = host.Obfs.Obfs4Key
 					}
 				default:
-					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: unsupported obfs version: %d", obfsParams.ObfsVer)
+					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: unsupported obfs version: %d", obfsParams.Config.Version)
 				}
 			}
 
@@ -1245,11 +1245,7 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 			isChanged = val != prefs.IsStopOnClientDisconnect
 			prefs.IsStopOnClientDisconnect = val
 		}
-	case protocolTypes.Prefs_IsEnableObfsproxy:
-		if val, err := strconv.ParseBool(val); err == nil {
-			isChanged = val != prefs.IsObfsproxy
-			prefs.IsObfsproxy = val
-		}
+
 	case protocolTypes.Prefs_IsAutoconnectOnLaunch:
 		if val, err := strconv.ParseBool(val); err == nil {
 			isChanged = val != prefs.IsAutoconnectOnLaunch
@@ -1263,6 +1259,13 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 	log.Info(fmt.Sprintf("preferences %s='%s'", key, val))
 
 	return isChanged, nil
+}
+
+func (s *Service) SetObfsProxy(cfg obfsproxy.Config) error {
+	prefs := s._preferences
+	prefs.Obfs4proxy = cfg
+	s.setPreferences(prefs)
+	return nil
 }
 
 // SetPreference set preference value

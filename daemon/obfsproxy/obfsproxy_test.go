@@ -35,7 +35,7 @@ import (
 func TestStart(t *testing.T) {
 	platform.Init()
 	logger.Enable(true)
-	obfsp := obfsproxy.CreateObfsproxy(platform.ObfsproxyStartScript())
+	obfsp := obfsproxy.CreateObfsproxy(platform.ObfsproxyStartScript(), obfsproxy.Config{Version: obfsproxy.OBFS3})
 
 	port, err := obfsp.Start()
 	if err != nil {

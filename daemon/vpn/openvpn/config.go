@@ -49,8 +49,8 @@ type ConnectionParams struct {
 	proxyPort            int
 	proxyUsername        string
 	proxyPassword        string
-	proxyObfs4Key        string // required for for obfs4 socks proxy `--socks-proxy server [port] [authfile]`. If this parameter is defined - `proxyUsername` and `proxyPassword`` will be ignored.
-	// (e.g. the obfs4 requires the key to be stored in 'authfile': `cert=E50PjFCkOIkSh6R498XkLJDushl831mbeTgoKuZEqAB7FKtFkG553qWIonRX6R7jzP0gYQ;iat-mode=0`)
+	proxyAuthFileData    string // required for for obfs4 socks(!) proxy `--socks-proxy server [port] [authfile]`. If this parameter is defined - `proxyUsername` and `proxyPassword`` will be ignored.
+	// (e.g. the obfs4 requires the key to be stored in 'authfile': `cert=E50PjFC...6R7jzP0gYQ;iat-mode=0`)
 }
 
 func (c *ConnectionParams) IsMultihop() bool {
@@ -165,15 +165,11 @@ func (c *ConnectionParams) generateConfiguration(
 
 	// proxy
 	if c.proxyType == "http" || c.proxyType == "socks" {
-
 		// proxy authentication
 		proxyAuthFile := ""
 		proxyAuthFileData := ""
-		if c.proxyObfs4Key != "" {
-			// obfs4 authentication file format:
-			//		cert=<server certificate>;iat-mode=
-			//		0
-			proxyAuthFileData = fmt.Sprintf("cert=%s;iat-mode=\n0", c.proxyObfs4Key) // Note! The line break after iat-mode=is required for correct operation.
+		if c.proxyAuthFileData != "" {
+			proxyAuthFileData = c.proxyAuthFileData
 		} else if c.proxyUsername != "" && c.proxyPassword != "" {
 			proxyAuthFileData = fmt.Sprintf("%s\n%s", c.proxyUsername, c.proxyPassword)
 		}

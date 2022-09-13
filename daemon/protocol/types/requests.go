@@ -24,6 +24,7 @@ package types
 
 import (
 	"github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/vpn"
@@ -143,6 +144,12 @@ type SetPreference struct {
 type SetUserPreferences struct {
 	RequestBase
 	UserPrefs preferences.UserPreferences
+}
+
+// SetObfsProxy sets obfsproxy configuration
+type SetObfsProxy struct {
+	RequestBase
+	ObfsproxyConfig obfsproxy.Config
 }
 
 // SetAlternateDns request to set custom DNS

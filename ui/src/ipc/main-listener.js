@@ -185,9 +185,12 @@ ipcMain.handle(
 ipcMain.handle("renderer-request-set-logging", async () => {
   return await client.SetLogging();
 });
-ipcMain.handle("renderer-request-set-obfsproxy", async () => {
-  return await client.SetObfsproxy();
-});
+ipcMain.handle(
+  "renderer-request-set-obfsproxy",
+  async (event, obfsproxyVer, obfs4Iat) => {
+    return await client.SetObfsproxy(obfsproxyVer, obfs4Iat);
+  }
+);
 
 ipcMain.handle(
   "renderer-request-set-dns",

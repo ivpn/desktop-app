@@ -80,27 +80,23 @@ func GetOpenVPNVersion(ovpnBinary string) []int {
 }
 
 type ObfsParams struct {
-	ObfsVer    int // Acceptable values: [3, 4]; 0 - means do not use obfsproxy
+	Config     obfsproxy.Config
 	RemotePort int
 	Obfs4Key   string
 }
 
-func (obfs ObfsParams) IsObfsProxy() bool {
-	return obfs.ObfsVer != 0
-}
-
 func (obfs ObfsParams) CheckConsistency() error {
-	if !obfs.IsObfsProxy() {
+	if !obfs.Config.IsObfsproxy() {
 		return nil
 	}
 	if obfs.RemotePort <= 0 {
 		return fmt.Errorf("obfsproxy port not defined")
 	}
 
-	if obfs.ObfsVer != int(obfsproxy.OBFS3) && obfs.ObfsVer != int(obfsproxy.OBFS4) {
-		return fmt.Errorf("unacceptable version of obfsproxy protocol: %d (acceptable values: [%d, %d])", obfs.ObfsVer, obfsproxy.OBFS3, obfsproxy.OBFS4)
+	if obfs.Config.Version != obfsproxy.OBFS3 && obfs.Config.Version != obfsproxy.OBFS4 {
+		return fmt.Errorf("unacceptable version of obfsproxy protocol: %d (acceptable values: [%d, %d])", obfs.Config.Version, obfsproxy.OBFS3, obfsproxy.OBFS4)
 	}
-	if obfs.ObfsVer == int(obfsproxy.OBFS4) && len(obfs.Obfs4Key) == 0 {
+	if obfs.Config.Version == obfsproxy.OBFS4 && len(obfs.Obfs4Key) == 0 {
 		return fmt.Errorf("bad configuration (empty Key for obfs4)")
 	}
 	return nil
@@ -260,7 +256,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 						// in case of obfsproxy - 'stateInf.ServerIP' returns local IP (IP of obfsproxy 127.0.0.1)
 						// We must notify about real remote ServerIP, therefore we modifying this parameter before notifying about successful connection
 						stateInf.ServerIP = o.connectParams.hostIP
-						stateInf.IsObfsproxy = true
+						stateInf.Obfsproxy = o.obfsproxy.Config()
 					}
 
 					// Process "on connected" event (if necessary)
@@ -292,11 +288,11 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 	var err error
 	obfsproxyPort := 0
 	// start Obfsproxy (if necessary)
-	if o.obfsProxyParams.IsObfsProxy() {
+	if o.obfsProxyParams.Config.IsObfsproxy() {
 		if err := o.obfsProxyParams.CheckConsistency(); err != nil {
 			return err
 		}
-		o.obfsproxy = obfsproxy.CreateObfsproxy(platform.ObfsproxyStartScript(), obfsproxy.ObfsProxyVersion(o.obfsProxyParams.ObfsVer))
+		o.obfsproxy = obfsproxy.CreateObfsproxy(platform.ObfsproxyStartScript(), o.obfsProxyParams.Config)
 		if obfsproxyPort, err = o.obfsproxy.Start(); err != nil {
 			return errors.New("unable to initialize OpenVPN (obfsproxy not started): " + err.Error())
 		}
@@ -310,7 +306,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		o.connectParams.proxyUsername = ""
 		o.connectParams.proxyPassword = ""
 		o.connectParams.hostPort = o.obfsProxyParams.RemotePort
-		o.connectParams.proxyObfs4Key = o.obfsProxyParams.Obfs4Key
+		o.connectParams.proxyAuthFileData = o.obfsproxy.MakeObfs4AuthFileContent(o.obfsProxyParams.Obfs4Key)
 		//--------------------------------------------------
 
 		// detect obfsproxy process stop

@@ -28,6 +28,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 )
 
@@ -128,18 +129,18 @@ type StateInfo struct {
 	Description string
 
 	VpnType      Type
-	Time         int64  // unix time (seconds)
-	IsTCP        bool   // applicable only for 'CONNECTED' state
-	ClientIP     net.IP // applicable only for 'CONNECTED' state
-	ClientIPv6   net.IP // applicable only for 'CONNECTED' state. Initialized only if protocol supports IPv6 inside tunnel
-	ClientPort   int    // applicable only for 'CONNECTED' state (source port)
-	ServerIP     net.IP // applicable only for 'CONNECTED' state
-	ServerPort   int    // applicable only for 'CONNECTED' state (destination port)
-	IsObfsproxy  bool   // applicable only for 'CONNECTED' state (OpenVPN)
-	ExitHostname string // applicable only for 'CONNECTED' state
-	IsCanPause   bool   // applicable only for 'CONNECTED' state
-	Mtu          int    // applicable only for 'CONNECTED' state (WireGuard)
-	IsAuthError  bool   // applicable only for 'EXITING' state
+	Time         int64            // unix time (seconds)
+	IsTCP        bool             // applicable only for 'CONNECTED' state
+	ClientIP     net.IP           // applicable only for 'CONNECTED' state
+	ClientIPv6   net.IP           // applicable only for 'CONNECTED' state. Initialized only if protocol supports IPv6 inside tunnel
+	ClientPort   int              // applicable only for 'CONNECTED' state (source port)
+	ServerIP     net.IP           // applicable only for 'CONNECTED' state
+	ServerPort   int              // applicable only for 'CONNECTED' state (destination port)
+	Obfsproxy    obfsproxy.Config // applicable only for 'CONNECTED' state (OpenVPN)
+	ExitHostname string           // applicable only for 'CONNECTED' state
+	IsCanPause   bool             // applicable only for 'CONNECTED' state
+	Mtu          int              // applicable only for 'CONNECTED' state (WireGuard)
+	IsAuthError  bool             // applicable only for 'EXITING' state
 
 	// TODO: try to avoid using this protocol-specific parameter in future
 	// Currently, in use by OpenVPN connection to inform about "RECONNECTING" reason (e.g. "tls-error", "init_instance"...)

@@ -27,6 +27,7 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/vpn"
@@ -116,6 +117,8 @@ type SettingsResp struct {
 	CommandBase
 
 	IsAutoconnectOnLaunch bool
+	UserDefinedOvpnFile   string
+	ObfsproxyConfig       obfsproxy.Config // (for OpenVPN connections)
 
 	// TODO: implement the rest of daemon settings
 	// IsLogging             bool
@@ -124,11 +127,8 @@ type SettingsResp struct {
 	// IsFwAllowLANMulticast bool
 	// IsFwAllowApiServers   bool
 	// FwUserExceptions      string
-	// IsObfsproxy           bool
 	// IsSplitTunnel         bool
 	// SplitTunnelApps       []string
-
-	UserDefinedOvpnFile string
 
 	UserPrefs preferences.UserPreferences
 }
@@ -239,7 +239,6 @@ type ConnectedResp struct {
 	ClientIPv6      string
 	ServerIP        string
 	ServerPort      int
-	IsObfsproxy     bool
 	ExitHostname    string // multi-hop exit hostname (e.g. "us-tx1.wg.ivpn.net")
 	ManualDNS       dns.DnsSettings
 	IsCanPause      bool

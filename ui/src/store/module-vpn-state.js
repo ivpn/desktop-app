@@ -431,11 +431,14 @@ export default {
           .filter((p) => p != null);
 
         // For Obfsproxy: only TCP protocol is applicable.
-        if (
-          vpnType === VpnTypeEnum.OpenVPN &&
-          rootState.settings.connectionUseObfsproxy === true
-        )
-          ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+        try {
+          const isUseObfsproxy =
+            rootState.settings.daemonSettings.ObfsproxyConfig.Version > 0;
+          if (vpnType === VpnTypeEnum.OpenVPN && isUseObfsproxy === true)
+            ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+        } catch (e) {
+          console.error(e);
+        }
 
         // return
         return ports;
@@ -497,10 +500,6 @@ export default {
         const exitSvr = findServerByHostname(servers, ci.ExitHostname);
         context.commit("settings/serverExit", exitSvr, { root: true });
       }
-
-      context.dispatch("settings/connectionUseObfsproxy", ci.IsObfsproxy, {
-        root: true,
-      });
 
       // apply port selection
       if (ci.ServerPort && ci.IsTCP != undefined) {
