@@ -345,7 +345,7 @@ export default {
   },
   data: function () {
     return {
-      isUpdated: false,
+      isPortModified: false,
       isProcessing: false,
       openvpnManualConfig: false,
     };
@@ -353,23 +353,17 @@ export default {
   mounted() {
     SetInputFilterNumbers(this.$refs.mtuInput);
   },
-  updated() {
-    this.isUpdated = true;
-  },
   watch: {
     async port(newValue, oldValue) {
-      if (this.isUpdated === false) {
-        // Do not perform anything until the store data is initialized
-        // Otherwise, we can get unexpected reconnection
-        return;
-      }
-
-      if (this.$store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED)
+      if (this.isPortModified === false) return;
+      if (
+        !this.$store.getters["vpnState/isConnected"] &&
+        !this.$store.getters["vpnState/isConnecting"]
+      )
         return;
       if (newValue == null || oldValue == null) return;
       if (newValue.port === oldValue.port && newValue.type === oldValue.type)
         return;
-
       try {
         await sender.Connect();
       } catch (e) {
@@ -488,6 +482,8 @@ export default {
         return this.$store.getters["settings/getPort"];
       },
       async set(value) {
+        this.isPortModified = true;
+
         if (value == "valueAddCustomPort") {
           let cfg = {
             width: 400,
