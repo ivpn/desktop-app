@@ -1,6 +1,7 @@
 <template>
   <div>
     <div class="settingsTitle">CONNECTION SETTINGS</div>
+
     <div class="settingsBoldFont">VPN protocol:</div>
 
     <div>
@@ -168,16 +169,53 @@
             >
           </div>
 
-          <select v-if="connectionUseObfsproxy" v-model="obfsproxyType">
-            <option
-              v-for="item in obfsproxyTypes"
-              :value="item"
-              :key="item.text"
-            >
-              {{ item.text }}
-            </option>
-          </select>
+          <div v-if="connectionUseObfsproxy">
+            <select v-model="obfsproxyType">
+              <option
+                v-for="item in obfsproxyTypes"
+                :value="item"
+                :key="item.text"
+              >
+                {{ item.text }}
+              </option>
+            </select> 
+
+            <button class="noBordersBtn" style="margin-left: 4px;" title="Help" v-on:click="onShowHelpObfsproxy">
+              <img style="vertical-align: middle; margin-bottom: 2px;" src="@/assets/question.svg" />
+            </button>
+          </div>
         </div>
+
+        <ComponentDialog ref="helpDialogObfsproxy" center header="Info">
+          <div class="selectable">
+            <p class="selectable">
+              <b>Obfsproxy</b> attempts to circumvent censorship, by transforming the traffic between the client and the server.
+            </p>
+            <p>
+              The <i>obfs4</i> protocol is  less likely to be blocked than <i>obfs3</i>.
+            </p>
+            <p>Inter-Arrival Time (<b>IAT</b>) parameter is applicable for <i>obfs4</i>:</p>
+            <p>              
+              <ul>
+                <li>
+                  When IAT-mode is disabled the large packets will be split by the
+                  network drivers, whose network fingerprints could be detected by
+                  censors. 
+                </li>
+                <li>
+                  IAT1 - means splitting large packets into MTU-size packets instead
+                  of letting the network drivers do it. Here, the MTU is 1448 bytes
+                  for the <i>obfs4</i>. This means the smaller packets cannot be
+                  reassembled for analysis and censoring. 
+                </li>
+                <li>
+                  IAT2 - (paranoid mode) means splitting large packets into variable size packets.
+                </li>
+              </ul>
+            </p>            
+            <p> <b> Note! </b> Enabling IAT mode will affect overall VPN speed and CPU load. </p>            
+          </div>
+        </ComponentDialog>        
 
         <div class="description">
           Only enable if you have trouble connecting. TCP connections only
@@ -357,12 +395,13 @@ import {
 import { IpcModalDialogType, IpcOwnerWindowType } from "@/ipc/types.js";
 import { enumValueName, dateDefaultFormat } from "@/helpers/helpers";
 import { SetInputFilterNumbers } from "@/helpers/renderer";
-
+import ComponentDialog from "@/components/component-dialog.vue";
 const sender = window.ipcSender;
 
 export default {
   components: {
     spinner,
+    ComponentDialog,
   },
   data: function () {
     return {
@@ -461,7 +500,14 @@ export default {
     formatDate: function (d) {
       if (d == null) return null;
       return dateDefaultFormat(d);
-    },
+    },    
+    onShowHelpObfsproxy: function() {
+      try {
+        this.$refs.helpDialogObfsproxy.showModal();
+      } catch (e) {
+        console.Error(e)
+      }
+    }
   },
   computed: {
     isDisconnected: function () {
