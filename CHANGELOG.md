@@ -25,12 +25,12 @@ SHA256: 74a640f30c22a5197b26de7b2fbc4f2b21cdfe848ed7869ec13d6d94253bee35
 [Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.9.32_amd64.deb)  
 SHA256: 77997488e180cbd2a7f770581cd0218bf237e4c4928f557dae14b9548ce1d8c3  
 [Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.9.32-1.x86_64.rpm)  
-SHA256: 8343079470a7f7fc6ebe323d2aa25d03ed4f91e90452febc2c4a2d3e47637407  
+SHA256: 88c364d4366c9bf75db376d3c511421eef493e3458c7f7499502f11a1078b8c0  
 
 [Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.9.32_amd64.deb)  
 SHA256: 24cc3909242ce883a7b70997afa49cf14b0865d0fbe10498e0903b4c95cf0ba5  
 [Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.9.32-1.x86_64.rpm)  
-SHA256: b009f4381e2c26df27d4b5d80ce93ce2081e4b225ed2a58bf546845827fa2eab  
+SHA256: 5a74aedf7df9485083c3398d780fc59cdd8b7c2c63abfb67c8fcb681f55babc7  
 
 ## Version 3.9.14 - 2022-08-16
 
