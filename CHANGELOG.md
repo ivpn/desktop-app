@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.  
 
+
+## Version 3.9.32 - 2022-09-15
+
+[NEW] Support for custom ports  
+[NEW] Ability to adjust MTU value for WireGuard connections  
+[NEW] (Linux) Ability to change DNS management method to directly modify the '/etc/resolv.conf' file  
+[IMPROVED] CLI: `-any` option now connects to a random server  
+[IMPROVED] Use the same fastest server configuration for OpenVPN and WireGuard  
+[FIX] Uninstalling the app does not remove custom CLI settings  
+[FIX] UI: App reconnects when clicking on the protocol section of the main panel  
+[FIX] Minor UI fixes  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.9.32.exe)  
+SHA256: 2b2df9a1e560b186e333d1020b0dc32d6879dbf00492cdb7b92603b458c4fcb9  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.9.32.dmg)  
+SHA256: f2c5ff37ec33c427694ff8680f4e3567ae207ee24038eb7fe41faf7e05e1a417  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.9.32-arm64.dmg)  
+SHA256: 74a640f30c22a5197b26de7b2fbc4f2b21cdfe848ed7869ec13d6d94253bee35  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.9.32_amd64.deb)  
+SHA256: 77997488e180cbd2a7f770581cd0218bf237e4c4928f557dae14b9548ce1d8c3  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.9.32-1.x86_64.rpm)  
+SHA256: 8343079470a7f7fc6ebe323d2aa25d03ed4f91e90452febc2c4a2d3e47637407  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.9.32_amd64.deb)  
+SHA256: 24cc3909242ce883a7b70997afa49cf14b0865d0fbe10498e0903b4c95cf0ba5  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.9.32-1.x86_64.rpm)  
+SHA256: b009f4381e2c26df27d4b5d80ce93ce2081e4b225ed2a58bf546845827fa2eab  
+
 ## Version 3.9.14 - 2022-08-16
 
 [FIX] (Linux) OpenVPN connection issue  
