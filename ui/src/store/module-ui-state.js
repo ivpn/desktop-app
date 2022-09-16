@@ -35,7 +35,7 @@ export default {
     isIPv6View: false,
 
     //{
-    //  state: AppUpdaterStageEnum.Downloading,
+    //  state: AppUpdateStage.Downloading,
     //  error: null,
     //  readyToInstallBinary: "",
     //  readyToInstallSignatureFile: "",

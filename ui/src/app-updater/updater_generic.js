@@ -122,6 +122,19 @@ export function IsNeedSkipThisVersion(updatesInfo) {
 }
 
 function setState(updateState) {
+  // logging
+  try {
+    if (store.state.uiState.appUpdateProgress.state !== updateState.state) {
+      let stateStr = `Update state: ${updateState.state}`;
+      if (updateState.state === AppUpdateStage.Error)
+        stateStr += ` (${updateState.error})`;
+      console.log(stateStr);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  // set state
   store.commit("uiState/appUpdateProgress", updateState);
 }
 
@@ -144,11 +157,12 @@ async function installWindows(updateProgress) {
     detached: true,
   });
 
-  cmd.on("exit", (code) => {
+  cmd.on("close", (code) => {
+    console.log(`[DEBUG updater] installer exited with code ${code}`);
     if (code != 0) {
       setState({
         state: AppUpdateStage.Error,
-        error: "Failed to run update binary",
+        error: `failed (${code})`,
       });
     }
   });
@@ -170,11 +184,12 @@ async function installMacOS(updateProgress) {
     }
   );
 
-  cmd.on("exit", (code) => {
+  cmd.on("close", (code) => {
+    console.log(`[DEBUG updater] installer exited with code ${code}`);
     if (code != 0) {
       setState({
         state: AppUpdateStage.Error,
-        error: "Failed to run update binary",
+        error: `failed (${code})`,
       });
     }
   });

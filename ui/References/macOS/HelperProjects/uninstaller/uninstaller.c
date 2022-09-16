@@ -459,21 +459,23 @@ int update(char* dmgFile, char* signatureFile) {
 
       char *args[] = {dmgFile, signatureFile, NULL};
       OSStatus ret = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/install.sh", kAuthorizationFlagDefaults, args, NULL);
-
-      if (ret)
+     
+      if (ret != errAuthorizationSuccess) 
       {
-        logmes(LOG_ERR, "FAILED to get privileges");
+        logmes(LOG_ERR, "FAILED to AuthorizationExecuteWithPrivileges(install.sh)");
         return 3;
       }
 
       AuthorizationFree(authRef, kAuthorizationFlagDefaults);
 
+      logmes(LOG_INFO, "Update script started");
+      
       return ret;
 }
 
 int start_helper() {
   // This instructions is creating 'fake' connection to service.
-  // Benefints of this operations - OS will restart helper if it will crash.
+  // Benefits of this operations - OS will restart helper if it will crash.
   // Additionally, (already installed) helper will be started (if it not started)
   xpc_connection_t connection = xpc_connection_create_mach_service(HELPER_LABEL, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
   xpc_connection_set_event_handler(connection, ^(xpc_object_t server)
