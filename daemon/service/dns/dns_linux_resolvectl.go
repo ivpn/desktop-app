@@ -218,7 +218,7 @@ func rctl_startDnsChangeMonitor() {
 				return
 			}
 
-			// wait 2 seconds for reaction (needed to avoid multiple reactions on the chnages in short period of time)
+			// wait 2 seconds for reaction (needed to avoid multiple reactions on the changes in short period of time)
 			select {
 			case <-time.After(time.Second * 2):
 			case <-done:

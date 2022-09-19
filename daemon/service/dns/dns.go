@@ -160,7 +160,7 @@ func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify, getUserSettin
 	return wrapErrorIfFailed(implInitialize())
 }
 
-// ApplyUserSettings - reinitialise DNS configuration according to user settings
+// ApplyUserSettings - reinitialize DNS configuration according to user settings
 // It is applicable, for example for Linux: when the user changed DNS management style
 func ApplyUserSettings() error {
 	return implApplyUserSettings()

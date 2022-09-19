@@ -468,7 +468,7 @@ func (wg *WireGuard) onRoutingChanged() error {
 	}
 
 	if defGatewayIP.String() != wg.internals.defGateway.String() {
-		log.Info(fmt.Sprintf("Default gateway chaged: %s -> %s. Updating routes...", wg.internals.defGateway.String(), defGatewayIP.String()))
+		log.Info(fmt.Sprintf("Default gateway changed: %s -> %s. Updating routes...", wg.internals.defGateway.String(), defGatewayIP.String()))
 		wg.internals.defGateway = defGatewayIP
 		wg.removeRoutes()
 		wg.setRoutes()

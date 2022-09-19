@@ -111,8 +111,5 @@ func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
 // <this method in use by macOS:WireGuard implementation>
 func IsPrimaryInterfaceFound() bool {
 	err := shell.Exec(log, platform.DNSScript(), "-is_main_interface_detected")
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
