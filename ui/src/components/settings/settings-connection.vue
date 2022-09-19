@@ -204,8 +204,7 @@
                 </li>
                 <li>
                   IAT1 - means splitting large packets into MTU-size packets instead
-                  of letting the network drivers do it. Here, the MTU is 1448 bytes
-                  for the <i>obfs4</i>. This means the smaller packets cannot be
+                  of letting the network drivers do it. This means the smaller packets cannot be
                   reassembled for analysis and censoring. 
                 </li>
                 <li>
