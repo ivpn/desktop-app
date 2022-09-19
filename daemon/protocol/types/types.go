@@ -59,7 +59,6 @@ type ServicePreference string
 const (
 	Prefs_IsEnableLogging                ServicePreference = "enable_logging"
 	Prefs_IsStopServerOnClientDisconnect ServicePreference = "is_stop_server_on_client_disconnect"
-	Prefs_IsEnableObfsproxy              ServicePreference = "enable_obfsproxy"
 	Prefs_IsAutoconnectOnLaunch          ServicePreference = "autoconnect_on_launch"
 )
 

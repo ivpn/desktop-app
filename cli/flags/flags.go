@@ -46,6 +46,7 @@ type CmdInfo struct {
 	defaultArgName string
 	argNames       map[string]string // variable name -> argument description
 	parseSpecial   func(arguments []string) bool
+	preParse       func(arguments []string) (argumentsUpdated []string, err error)
 	argIsAllowed   map[string]func() bool // variable name -> func which returns 'false' when argument is not applicable for current environment
 }
 
@@ -91,6 +92,17 @@ func (c *CmdInfo) ParseSpecial(arguments []string) (haveParseSpecial bool) {
 
 func (c *CmdInfo) SetParseSpecialFunc(f func(arguments []string) bool) {
 	c.parseSpecial = f
+}
+
+func (c *CmdInfo) PreParse(arguments []string) (argumentsUpdated []string, err error) {
+	if c.preParse != nil {
+		return c.preParse(arguments)
+	}
+	return arguments, nil
+}
+
+func (c *CmdInfo) SetPreParseFunc(f func(arguments []string) (argumentsUpdated []string, err error)) {
+	c.preParse = f
 }
 
 // NFlag returns the number of flags that have been set.

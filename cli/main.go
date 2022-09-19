@@ -48,6 +48,7 @@ type ICommand interface {
 	Init()
 	Parse(arguments []string) error
 	ParseSpecial(arguments []string) (parsedSpecial bool)
+	PreParse(arguments []string) (argumentsUpdated []string, err error)
 	Run() error
 
 	Name() string
@@ -198,23 +199,30 @@ func RequestParanoidModePassword(c *protocol.Client) (string, error) {
 }
 
 func runCommand(c ICommand, args []string) {
-	parsedSpecial := c.ParseSpecial(args)
-	if !parsedSpecial {
-		if err := c.Parse(args); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			if _, ok := err.(flags.BadParameter); ok == true {
-				c.Usage(false)
-			}
-			os.Exit(1)
-		}
-	}
 
-	if err := c.Run(); err != nil {
+	funcExitErrBadParam := func(err error) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		if _, ok := err.(flags.BadParameter); ok == true {
 			c.Usage(false)
 		}
 		os.Exit(1)
+	}
+
+	parsedSpecial := c.ParseSpecial(args)
+	if !parsedSpecial {
+		var err error
+		args, err = c.PreParse(args)
+		if err != nil {
+			funcExitErrBadParam(err)
+		}
+
+		if err := c.Parse(args); err != nil {
+			funcExitErrBadParam(err)
+		}
+	}
+
+	if err := c.Run(); err != nil {
+		funcExitErrBadParam(err)
 	}
 }
 

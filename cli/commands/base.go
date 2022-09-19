@@ -61,7 +61,7 @@ func printAccountInfo(w *tabwriter.Writer, accountID string) *tabwriter.Writer {
 	return w
 }
 
-func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedResp, serverInfo string, exitServerInfo string) *tabwriter.Writer {
+func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedResp, serverInfo string, exitServerInfo string, helloResp types.HelloResp) *tabwriter.Writer {
 
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
@@ -81,8 +81,11 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 	}
 	since := time.Unix(connected.TimeSecFrom1970, 0)
 	protocol := fmt.Sprintf("%v", connected.VpnType)
-	if connected.IsObfsproxy {
-		protocol += " (Obfsproxy)"
+	if connected.VpnType == vpn.OpenVPN {
+		obfsCfg := helloResp.DaemonSettings.ObfsproxyConfig
+		if obfsCfg.IsObfsproxy() {
+			protocol += fmt.Sprintf(" (Obfsproxy: %s)", obfsCfg.ToString())
+		}
 	}
 	fmt.Fprintf(w, "    Protocol\t:\t%v\n", protocol)
 	fmt.Fprintf(w, "    Local IP\t:\t%v\n", connected.ClientIP)

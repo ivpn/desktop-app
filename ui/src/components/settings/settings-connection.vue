@@ -1,6 +1,7 @@
 <template>
   <div>
     <div class="settingsTitle">CONNECTION SETTINGS</div>
+
     <div class="settingsBoldFont">VPN protocol:</div>
 
     <div>
@@ -155,45 +156,97 @@
       </div>
 
       <div class="settingsBoldFont">Additional settings:</div>
-      <div class="param">
-        <input
-          type="checkbox"
-          id="connectionUseObfsproxy"
-          v-model="connectionUseObfsproxy"
-        />
-        <label class="defColor" for="connectionUseObfsproxy"
-          >Use obfsproxy</label
-        >
-      </div>
-      <div class="description">
-        Only enable if you have trouble connecting. TCP connections only
-      </div>
-
-      <div class="param" v-if="userDefinedOvpnFile">
-        <input
-          type="checkbox"
-          id="openvpnManualConfig"
-          v-model="openvpnManualConfig"
-        />
-        <label class="defColor" for="openvpnManualConfig"
-          >Add additional OpenVPN configuration parameters</label
-        >
-      </div>
-      <div v-if="openvpnManualConfig && userDefinedOvpnFile">
-        <div class="description">
-          <div class="settingsGrayLongDescriptionFont">
-            Please be aware that this is a feature for advanced users as adding
-            parameters may affect the proper functioning and security of the VPN
-            tunnel
+      <div v-bind:class="{ disabled: !isDisconnected }">
+        <div class="flexRow">
+          <div class="flexRow paramName">
+            <input
+              type="checkbox"
+              id="connectionUseObfsproxy"
+              v-model="connectionUseObfsproxy"
+            />
+            <label class="defColor" for="connectionUseObfsproxy"
+              >Use obfsproxy</label
+            >
           </div>
-          <button
-            style="margin-top: 4px"
-            class="settingsButton"
-            v-on:click="onVPNConfigFileLocation"
+
+          <div v-if="connectionUseObfsproxy">
+            <select v-model="obfsproxyType">
+              <option
+                v-for="item in obfsproxyTypes"
+                :value="item"
+                :key="item.text"
+              >
+                {{ item.text }}
+              </option>
+            </select> 
+
+            <button class="noBordersBtn" style="margin-left: 4px;" title="Help" v-on:click="onShowHelpObfsproxy">
+              <img style="vertical-align: middle; margin-bottom: 2px;" src="@/assets/question.svg" />
+            </button>
+          </div>
+        </div>
+
+        <ComponentDialog ref="helpDialogObfsproxy" center header="Info">
+          <div class="selectable">
+            <p class="selectable">
+              <b>Obfsproxy</b> attempts to circumvent censorship, by transforming the traffic between the client and the server.
+            </p>
+            <p>
+              The <i>obfs4</i> protocol is  less likely to be blocked than <i>obfs3</i>.
+            </p>
+            <p>Inter-Arrival Time (<b>IAT</b>) parameter is applicable for <i>obfs4</i>:</p>
+            <p>              
+              <ul>
+                <li>
+                  When IAT-mode is disabled the large packets will be split by the
+                  network drivers, whose network fingerprints could be detected by
+                  censors. 
+                </li>
+                <li>
+                  IAT1 - means splitting large packets into MTU-size packets instead
+                  of letting the network drivers do it. Here, the MTU is 1448 bytes
+                  for the <i>obfs4</i>. This means the smaller packets cannot be
+                  reassembled for analysis and censoring. 
+                </li>
+                <li>
+                  IAT2 - (paranoid mode) means splitting large packets into variable size packets.
+                </li>
+              </ul>
+            </p>            
+            <p> <b> Note! </b> Enabling IAT mode will affect overall VPN speed and CPU load. </p>            
+          </div>
+        </ComponentDialog>        
+
+        <div class="description">
+          Only enable if you have trouble connecting. TCP connections only
+        </div>
+
+        <div class="param" v-if="userDefinedOvpnFile">
+          <input
+            type="checkbox"
+            id="openvpnManualConfig"
+            v-model="openvpnManualConfig"
+          />
+          <label class="defColor" for="openvpnManualConfig"
+            >Add additional OpenVPN configuration parameters</label
           >
-            Open configuration file location ...
-          </button>
-          <!--
+        </div>
+
+        <div v-if="openvpnManualConfig && userDefinedOvpnFile">
+          <div class="description">
+            <div class="settingsGrayLongDescriptionFont">
+              Please be aware that this is a feature for advanced users as
+              adding parameters may affect the proper functioning and security
+              of the VPN tunnel
+            </div>
+            <button
+              style="margin-top: 4px"
+              class="settingsButton"
+              v-on:click="onVPNConfigFileLocation"
+            >
+              Open configuration file location ...
+            </button>
+            <!--
           <div style="max-width: 500px; margin: 0px; padding: 0px">
             <div
               class="settingsGrayLongDescriptionFont selectable"
@@ -208,7 +261,7 @@
               {{ userDefinedOvpnFile }}
             </div>
           </div>
-          -->
+          --></div>
         </div>
       </div>
     </div>
@@ -332,22 +385,33 @@
 
 <script>
 import spinner from "@/components/controls/control-spinner.vue";
-import { VpnTypeEnum, VpnStateEnum, PortTypeEnum } from "@/store/types";
+import {
+  VpnTypeEnum,
+  VpnStateEnum,
+  PortTypeEnum,
+  ObfsproxyVerEnum,
+  Obfs4IatEnum,
+} from "@/store/types";
 import { IpcModalDialogType, IpcOwnerWindowType } from "@/ipc/types.js";
 import { enumValueName, dateDefaultFormat } from "@/helpers/helpers";
 import { SetInputFilterNumbers } from "@/helpers/renderer";
-
+import ComponentDialog from "@/components/component-dialog.vue";
 const sender = window.ipcSender;
 
 export default {
   components: {
     spinner,
+    ComponentDialog,
   },
   data: function () {
     return {
       isPortModified: false,
       isProcessing: false,
       openvpnManualConfig: false,
+      lastObfsproxyCfg: makeObfsproxyInfoUiObj(
+        ObfsproxyVerEnum.obfs4,
+        Obfs4IatEnum.IAT0
+      ), // Obfsproxy info UI object {obfsVer, obfs4Iat, text}
     };
   },
   mounted() {
@@ -436,7 +500,14 @@ export default {
     formatDate: function (d) {
       if (d == null) return null;
       return dateDefaultFormat(d);
-    },
+    },    
+    onShowHelpObfsproxy: function() {
+      try {
+        this.$refs.helpDialogObfsproxy.showModal();
+      } catch (e) {
+        console.Error(e)
+      }
+    }
   },
   computed: {
     isDisconnected: function () {
@@ -533,15 +604,54 @@ export default {
         sender.WgSetKeysRotationInterval(value);
       },
     },
+
+    //  -------- obfsproxy BEGIN ------------------
     connectionUseObfsproxy: {
       get() {
-        return this.$store.state.settings.connectionUseObfsproxy;
+        return this.$store.getters["settings/isConnectionUseObfsproxy"];
       },
       set(value) {
-        this.$store.dispatch("settings/connectionUseObfsproxy", value);
-        sender.SetObfsproxy();
+        if (!value) sender.SetObfsproxy(null, null);
+        else {
+          sender.SetObfsproxy(
+            this.lastObfsproxyCfg.obfsVer,
+            this.lastObfsproxyCfg.obfs4Iat
+          );
+        }
       },
     },
+
+    obfsproxyType: {
+      get() {
+        let obfsCfg = this.$store.state.settings.daemonSettings.ObfsproxyConfig;
+        if (!obfsCfg || obfsCfg.Version === 0) {
+          // if obfsproxy not enabled - use default (or last used value)
+          return makeObfsproxyInfoUiObj(
+            this.lastObfsproxyCfg.obfsVer,
+            this.lastObfsproxyCfg.Obfs4Iat
+          );
+        }
+
+        return makeObfsproxyInfoUiObj(obfsCfg.Version, obfsCfg.Obfs4Iat);
+      },
+      set(value) {
+        this.lastObfsproxyCfg = value;
+        sender.SetObfsproxy(value.obfsVer, value.obfs4Iat);
+      },
+    },
+
+    obfsproxyTypes: {
+      get() {
+        return [
+          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT0),
+          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT1),
+          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT2),
+          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs3, Obfs4IatEnum.IAT0),
+        ];
+      },
+    },
+
+    //  -------- obfsproxy END ------------------
 
     ovpnProxyType: {
       get() {
@@ -625,8 +735,7 @@ export default {
     isShowAddPortOption: function () {
       if (
         this.$store.state.settings.isMultiHop === true ||
-        (this.isOpenVPN === true &&
-          this.$store.state.settings.connectionUseObfsproxy === true)
+        this.$store.getters["settings/isConnectionUseObfsproxy"]
       )
         return false;
 
@@ -641,8 +750,7 @@ export default {
 
       const isMH = this.$store.state.settings.isMultiHop;
       const isObfsproxy =
-        this.isOpenVPN === true &&
-        this.$store.state.settings.connectionUseObfsproxy === true;
+        this.$store.getters["settings/isConnectionUseObfsproxy"];
 
       if (isObfsproxy) {
         // For Obfsproxy: port number is ignored. Only TCP protocol is applicable.
@@ -692,6 +800,17 @@ export default {
     },
   },
 };
+
+function makeObfsproxyInfoUiObj(obfsVer, obfs4Iat) {
+  let iatStr = "";
+  if (obfs4Iat && obfs4Iat > 0)
+    iatStr = ` (${enumValueName(Obfs4IatEnum, obfs4Iat)})`;
+  return {
+    text: `${enumValueName(ObfsproxyVerEnum, obfsVer)}${iatStr}`,
+    obfsVer: obfsVer,
+    obfs4Iat: obfs4Iat,
+  };
+}
 </script>
 
 <style scoped lang="scss">

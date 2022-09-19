@@ -170,6 +170,7 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 	return &types.SettingsResp{
 		IsAutoconnectOnLaunch: prefs.IsAutoconnectOnLaunch,
 		UserDefinedOvpnFile:   platform.OpenvpnUserParamsFile(),
+		ObfsproxyConfig:       prefs.Obfs4proxy,
 		UserPrefs:             prefs.UserPrefs,
 		// TODO: implement the rest of daemon settings
 	}
@@ -216,7 +217,6 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ClientIPv6:      ipv6,
 		ServerIP:        state.ServerIP.String(),
 		ServerPort:      state.ServerPort,
-		IsObfsproxy:     state.IsObfsproxy,
 		VpnType:         state.VpnType,
 		ExitHostname:    state.ExitHostname,
 		ManualDNS:       dns.GetLastManualDNS(),

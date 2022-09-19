@@ -73,6 +73,20 @@ const getDefaultState = () => {
       IsAutoconnectOnLaunch: false,
       UserDefinedOvpnFile: "",
 
+      // obfsproxy configuration
+      ObfsproxyConfig: {
+        // 0 - do not use obfsproxy; obfs3 - 3; obfs4 - 4
+        Version: 0,
+        // Inter-Arrival Time (IAT)
+        //	The values of IAT-mode can be “0”, “1”, or “2” in obfs4
+        //	0 -	means that the IAT-mode is disabled and that large packets will be split by the network drivers,
+        //		whose network fingerprints could be detected by censors.
+        //	1 - means splitting large packets into MTU-size packets instead of letting the network drivers do it.
+        //		Here, the MTU is 1448 bytes for the Obfs4 Bridge. This means the smaller packets cannot be reassembled for analysis and censoring.
+        //	2 - means splitting large packets into variable size packets. The sizes are defined in Obfs4.
+        Obfs4Iat: 0,
+      },
+
       //UserPrefs: {
       //  // (Linux)
       //  Platform: {
@@ -86,7 +100,6 @@ const getDefaultState = () => {
     },
 
     // connection
-    connectionUseObfsproxy: false, // this parameter saves on the daemon's side
 
     port: {
       OpenVPN: defaultPort,
@@ -283,9 +296,6 @@ export default {
     },
 
     // connection
-    connectionUseObfsproxy(state, val) {
-      state.connectionUseObfsproxy = val;
-    },
     setPort(state, portVal) {
       if (!portVal) {
         console.log("Warning! setPort() unable to set port. Port not defined.");
@@ -437,6 +447,17 @@ export default {
     getPort: (state) => {
       return state.port[enumValueName(VpnTypeEnum, state.vpnType)];
     },
+
+    isConnectionUseObfsproxy: (state) => {
+      try {
+        if (state.vpnType !== VpnTypeEnum.OpenVPN) return false;
+        return state.daemonSettings.ObfsproxyConfig.Version > 0;
+      } catch (e) {
+        console.error(e);
+      }
+      return false;
+    },
+
     favoriteServers: (state, getters, rootState, rootGetters) => {
       // Get favorite servers for current protocol
       try {
@@ -503,6 +524,11 @@ export default {
       context.commit("resetToDefaults");
       // Necessary to initialize selected VPN servers
       updateSelectedServers(context);
+    },
+
+    daemonSettings(context, val) {
+      context.commit("daemonSettings", val);
+      ensurePortsSelectedCorrectly(context);
     },
 
     isExpectedAccountToBeLoggedIn(context, val) {
@@ -616,12 +642,6 @@ export default {
     },
 
     // connection
-    connectionUseObfsproxy(context, val) {
-      if (typeof val != "boolean") return;
-      context.commit("connectionUseObfsproxy", val);
-      // only TCP connections applicable for obfsproxy
-      if (val === true) ensurePortsSelectedCorrectly(context);
-    },
     setPort(context, portVal) {
       context.commit("setPort", portVal);
     },
@@ -938,6 +958,8 @@ function ensurePortsSelectedCorrectly(context) {
 
   // returns null - if port is ok; otherwise - port value which have to be applied
   let funcTestPort = function (allPorts, applicablePorts, currPort) {
+    if (!allPorts) return null;
+
     let retPort = null;
 
     // add custom ports to base list of all ports

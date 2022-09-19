@@ -98,6 +98,7 @@ const daemonRequests = Object.freeze({
   WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval",
 
   SetPreference: "SetPreference",
+  SetObfsProxy: "SetObfsProxy",
   SetUserPreferences: "SetUserPreferences",
 
   WiFiAvailableNetworks: "WiFiAvailableNetworks",
@@ -370,7 +371,7 @@ async function processResponse(response) {
       }
 
       if (obj.DaemonSettings) {
-        store.commit("settings/daemonSettings", obj.DaemonSettings);
+        store.dispatch("settings/daemonSettings", obj.DaemonSettings);
       }
 
       {
@@ -401,21 +402,18 @@ async function processResponse(response) {
 
         if (obj.ParanoidMode.IsEnabled === false) ParanoidModeSecret = "";
 
-        // send logging + obfsproxy configuration
+        // send logging configuration
         // (apply UI settings to daemon only when HelloResp directed directly to us obj.Idx>0 )
-        // TODO: do not send logging and obfsproxy settings, but ask for this values from the daemon
+        // TODO: do not send logging settings, but ask for this values from the daemon
         if (!isPmPassError) {
-          if (obj.Idx != undefined && obj.Idx !== 0) {
-            SetLogging();
-            SetObfsproxy();
-          }
+          if (obj.Idx != undefined && obj.Idx !== 0) SetLogging();
         }
       }
 
       break;
 
     case daemonResponses.SettingsResp:
-      store.commit("settings/daemonSettings", obj);
+      store.dispatch("settings/daemonSettings", obj);
       break;
 
     case daemonResponses.AccountStatusResp:
@@ -1833,15 +1831,13 @@ async function SetLogging() {
   });
 }
 
-async function SetObfsproxy() {
-  const enable = store.state.settings.connectionUseObfsproxy;
-  const Key = "enable_obfsproxy";
-  let Value = `${enable}`;
-
+async function SetObfsproxy(obfsproxyVer, obfs4Iat) {
   await sendRecv({
-    Command: daemonRequests.SetPreference,
-    Key,
-    Value,
+    Command: daemonRequests.SetObfsProxy,
+    ObfsproxyConfig: {
+      Version: obfsproxyVer,
+      Obfs4Iat: obfs4Iat,
+    },
   });
 }
 

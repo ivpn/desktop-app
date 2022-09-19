@@ -57,7 +57,6 @@ var (
 	openvpnUserParamsFile string
 
 	obfsproxyStartScript string
-	obfsproxyHostPort    int
 
 	routeCommand string // Example: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux, "C:\\Windows\\System32\\ROUTE.EXE" - for Windows
 
@@ -82,8 +81,6 @@ func init() {
 // Init - initialize all preferences required for a daemon
 // Must be called on beginning of application start by a daemon(service)
 func Init() (warnings []string, errors []error, logInfo []string) {
-
-	obfsproxyHostPort = 5145
 
 	// do variables initialization for current OS
 	warnings, errors, logInfo = doOsInit()
@@ -315,11 +312,6 @@ func OpenvpnUserParamsFile() string {
 // ObfsproxyStartScript path to obfsproxy binary
 func ObfsproxyStartScript() string {
 	return obfsproxyStartScript
-}
-
-// ObfsproxyHostPort is an port of obfsproxy host
-func ObfsproxyHostPort() int {
-	return obfsproxyHostPort
 }
 
 // RouteCommand shell command to update routing table

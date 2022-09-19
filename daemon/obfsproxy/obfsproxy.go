@@ -43,6 +43,64 @@ func init() {
 	log = logger.NewLogger("obfpxy")
 }
 
+type ObfsProxyVersion int
+
+const (
+	OBFS3 ObfsProxyVersion = 3
+	OBFS4 ObfsProxyVersion = 4
+)
+
+// Obfs4IatMode - Inter-Arrival Time (IAT)
+//
+//	The values of IAT-mode can be “0”, “1”, or “2” in obfs4
+//	0 -	means that the IAT-mode is disabled and that large packets will be split by the network drivers,
+//		whose network fingerprints could be detected by censors.
+//	1 - means splitting large packets into MTU-size packets instead of letting the network drivers do it.
+//		Here, the MTU is 1448 bytes for the Obfs4 Bridge. This means the smaller packets cannot be reassembled for analysis and censoring.
+//	2 - means splitting large packets into variable size packets. The sizes are defined in Obfs4.
+type Obfs4IatMode int
+
+const (
+	Obfs4IatOff        Obfs4IatMode = 0
+	Obfs4IatOn         Obfs4IatMode = 1
+	Obfs4IatOnParanoid Obfs4IatMode = 2
+)
+
+type Config struct {
+	Version  ObfsProxyVersion
+	Obfs4Iat Obfs4IatMode
+}
+
+// IsObfsproxy returns 'true' when enabled
+func (c Config) IsObfsproxy() bool {
+	switch c.Version {
+	case OBFS3, OBFS4:
+	default:
+		return false
+	}
+	return true
+}
+
+func (c Config) Equals(b Config) bool {
+	if c.IsObfsproxy() != b.IsObfsproxy() {
+		return false
+	}
+	if c.Version == b.Version && c.Version == OBFS3 {
+		return true
+	}
+	return c.Version == b.Version && c.Obfs4Iat == b.Obfs4Iat
+}
+
+func (c Config) ToString() string {
+	if !c.IsObfsproxy() {
+		return "disabled"
+	}
+	if c.Version == OBFS4 {
+		return fmt.Sprintf("obfs%d, IAT%d", c.Version, c.Obfs4Iat)
+	}
+	return fmt.Sprintf("obfs%d", c.Version)
+}
+
 type startedCmd struct {
 	command   *exec.Cmd
 	stopped   <-chan struct{}
@@ -52,17 +110,32 @@ type startedCmd struct {
 // Obfsproxy structure. Contains info about obfsproxy binary
 type Obfsproxy struct {
 	binaryPath string
+	config     Config
 	proc       *startedCmd
 }
 
 // CreateObfsproxy creates new obfsproxy object
-func CreateObfsproxy(theBinaryPath string) (obj *Obfsproxy) {
-	return &Obfsproxy{binaryPath: theBinaryPath}
+func CreateObfsproxy(theBinaryPath string, conf Config) (obj *Obfsproxy) {
+	return &Obfsproxy{binaryPath: theBinaryPath, config: conf}
+}
+
+func (p *Obfsproxy) MakeObfs4AuthFileContent(cert string) string {
+	if p.config.Version != OBFS4 {
+		return ""
+	}
+	// obfs4 authentication file format:
+	//	cert=<server certificate>;
+	//	iat-mode=0
+	return fmt.Sprintf("cert=%s;\niat-mode=%d", cert, p.config.Obfs4Iat)
+}
+
+func (p *Obfsproxy) Config() Config {
+	return p.config
 }
 
 // Start - asynchronously start obfsproxy
 func (p *Obfsproxy) Start() (port int, err error) {
-	log.Info("Starting obfsproxy")
+	log.Info(fmt.Sprintf("Starting obfsproxy [%s]", p.config.ToString()))
 	defer func() {
 		if err != nil || port <= 0 {
 			if err == nil {
@@ -107,14 +180,21 @@ func (p *Obfsproxy) Stop() {
 }
 
 func (p *Obfsproxy) start() (port int, command *startedCmd, err error) {
+
+	ptStateDir := path.Join(platform.LogDir(), "ivpn-obfsproxy-state")
+
 	// obfsproxy command
 	cmd := exec.Command(p.binaryPath)
 
-	ptStateDir := path.Join(platform.LogDir(), "ivpn-obfsproxy-state")
 	// obfs4 configuration parameters
 	// https://github.com/Pluggable-Transports/Pluggable-Transports-spec/tree/main/releases
 	// https://gitweb.torproject.org/torspec.git/tree/pt-spec.txt
-	const obfsProxyVer = "obfs3"
+	// https://www.fortinet.com/blog/threat-research/dissecting-tor-bridges-pluggable-transport-part-2
+
+	obfsProxyVer := "obfs4"
+	if p.config.Version == OBFS3 {
+		obfsProxyVer = "obfs3"
+	}
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "TOR_PT_CLIENT_TRANSPORTS="+obfsProxyVer)
 	cmd.Env = append(cmd.Env, "TOR_PT_MANAGED_TRANSPORT_VER=1")

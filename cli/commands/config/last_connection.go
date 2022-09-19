@@ -41,7 +41,7 @@ func lastConnectionInfoFile() string {
 type LastConnectionInfo struct {
 	Gateway         string
 	Port            string
-	Obfsproxy       bool
+	Obfsproxy       string
 	FirewallOff     bool
 	DNS             string
 	Antitracker     bool

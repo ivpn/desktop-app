@@ -79,12 +79,35 @@ func GetOpenVPNVersion(ovpnBinary string) []int {
 	return verNums
 }
 
+type ObfsParams struct {
+	Config     obfsproxy.Config
+	RemotePort int
+	Obfs4Key   string
+}
+
+func (obfs ObfsParams) CheckConsistency() error {
+	if !obfs.Config.IsObfsproxy() {
+		return nil
+	}
+	if obfs.RemotePort <= 0 {
+		return fmt.Errorf("obfsproxy port not defined")
+	}
+
+	if obfs.Config.Version != obfsproxy.OBFS3 && obfs.Config.Version != obfsproxy.OBFS4 {
+		return fmt.Errorf("unacceptable version of obfsproxy protocol: %d (acceptable values: [%d, %d])", obfs.Config.Version, obfsproxy.OBFS3, obfsproxy.OBFS4)
+	}
+	if obfs.Config.Version == obfsproxy.OBFS4 && len(obfs.Obfs4Key) == 0 {
+		return fmt.Errorf("bad configuration (empty Key for obfs4)")
+	}
+	return nil
+}
+
 // OpenVPN structure represents all data of OpenVPN connection
 type OpenVPN struct {
 	binaryPath      string
 	configPath      string
 	logFile         string
-	isObfsProxy     bool
+	obfsProxyParams ObfsParams
 	extraParameters string // user-defined extra-parameters of OpenVPN configuration
 	connectParams   ConnectionParams
 
@@ -115,7 +138,7 @@ func NewOpenVpnObject(
 	binaryPath string,
 	configPath string,
 	logFile string,
-	isObfsProxy bool,
+	obfsoroxy ObfsParams,
 	extraParameters string,
 	connectionParams ConnectionParams) (*OpenVPN, error) {
 
@@ -128,7 +151,7 @@ func NewOpenVpnObject(
 			binaryPath:      binaryPath,
 			configPath:      configPath,
 			logFile:         logFile,
-			isObfsProxy:     isObfsProxy,
+			obfsProxyParams: obfsoroxy,
 			extraParameters: extraParameters,
 			connectParams:   connectionParams},
 		nil
@@ -148,8 +171,8 @@ func (o *OpenVPN) Type() vpn.Type { return vpn.OpenVPN }
 
 // Init performs basic initializations before connection
 // It is useful, for example:
-//	- for WireGuard(Windows) - to ensure that WG service is fully uninstalled
-//	- for OpenVPN(Linux) - to ensure that OpenVPN has correct version
+//   - for WireGuard(Windows) - to ensure that WG service is fully uninstalled
+//   - for OpenVPN(Linux) - to ensure that OpenVPN has correct version
 func (o *OpenVPN) Init() error {
 	return o.implInit()
 }
@@ -229,11 +252,11 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 					// notify about correct local IP in VPN network
 					o.clientIP = stateInf.ClientIP
 
-					if o.isObfsProxy {
+					if o.obfsproxy != nil {
 						// in case of obfsproxy - 'stateInf.ServerIP' returns local IP (IP of obfsproxy 127.0.0.1)
 						// We must notify about real remote ServerIP, therefore we modifying this parameter before notifying about successful connection
 						stateInf.ServerIP = o.connectParams.hostIP
-						stateInf.IsObfsproxy = true
+						stateInf.Obfsproxy = o.obfsproxy.Config()
 					}
 
 					// Process "on connected" event (if necessary)
@@ -265,13 +288,28 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 	var err error
 	obfsproxyPort := 0
 	// start Obfsproxy (if necessary)
-	if o.isObfsProxy {
-		o.obfsproxy = obfsproxy.CreateObfsproxy(platform.ObfsproxyStartScript())
+	if o.obfsProxyParams.Config.IsObfsproxy() {
+		if err := o.obfsProxyParams.CheckConsistency(); err != nil {
+			return err
+		}
+		o.obfsproxy = obfsproxy.CreateObfsproxy(platform.ObfsproxyStartScript(), o.obfsProxyParams.Config)
 		if obfsproxyPort, err = o.obfsproxy.Start(); err != nil {
 			return errors.New("unable to initialize OpenVPN (obfsproxy not started): " + err.Error())
 		}
 
-		// detect obfsproxy ptocess stop
+		// update connection parameters according to obfsproxy configuration
+		//--------------------------------------------------
+		o.connectParams.tcp = true
+		o.connectParams.proxyType = "socks"
+		o.connectParams.proxyAddress = net.IPv4(127, 0, 0, 1) // "127.0.0.1"
+		o.connectParams.proxyPort = obfsproxyPort
+		o.connectParams.proxyUsername = ""
+		o.connectParams.proxyPassword = ""
+		o.connectParams.hostPort = o.obfsProxyParams.RemotePort
+		o.connectParams.proxyAuthFileData = o.obfsproxy.MakeObfs4AuthFileContent(o.obfsProxyParams.Obfs4Key)
+		//--------------------------------------------------
+
+		// detect obfsproxy process stop
 		routinesWaiter.Add(1)
 		go func() {
 			defer routinesWaiter.Done()
@@ -302,7 +340,7 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 
 	var rnd1, rnd2 uint64
 	if err := binary.Read(rand.Reader, binary.BigEndian, &rnd1); err != nil {
-		return fmt.Errorf("failed to generete secret: %w", err)
+		return fmt.Errorf("failed to generate secret: %w", err)
 	}
 	if err := binary.Read(rand.Reader, binary.BigEndian, &rnd2); err != nil {
 		return fmt.Errorf("failed to generete secret: %w", err)
@@ -341,7 +379,6 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		o.configPath,
 		miIP, miPort,
 		o.logFile,
-		obfsproxyPort,
 		o.extraParameters,
 		o.implIsCanUseParamsV24())
 

@@ -37,6 +37,7 @@ import (
 
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -101,6 +102,7 @@ type Service interface {
 
 	Preferences() preferences.Preferences
 	SetPreference(key types.ServicePreference, val string) (isChanged bool, err error)
+	SetObfsProxy(cfg obfsproxy.Config) error
 	SetUserPreferences(userPrefs preferences.UserPreferences) (err error)
 	ResetPreferences() error
 
@@ -728,6 +730,23 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			// notify 'success'
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
+
+	case "SetObfsProxy":
+		var req types.SetObfsProxy
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+
+		if err := p._service.SetObfsProxy(req.ObfsproxyConfig); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+
+		// notify all clients about change
+		p.notifyClients(p.createHelloResponse())
+		// send 'success' response to the requestor
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 
 	case "SetUserPreferences":
 		func() {
