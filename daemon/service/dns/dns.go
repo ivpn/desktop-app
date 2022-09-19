@@ -241,6 +241,12 @@ func GetPredefinedDnsConfigurations() ([]DnsSettings, error) {
 	return settings, wrapErrorIfFailed(err)
 }
 
+// UpdateDnsIfWrongSettings - ensures that current DNS configuration is correct. If not - it re-apply the required configuration.
+// Currently, it is in use for macOS - like a DNS change monitor.
+func UpdateDnsIfWrongSettings() error {
+	return implUpdateDnsIfWrongSettings()
+}
+
 func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 	defer func() {
 		if r := recover(); r != nil {

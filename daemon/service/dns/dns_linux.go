@@ -176,3 +176,10 @@ func implDeleteManual(localInterfaceIP net.IP) error {
 
 	return f_implDeleteManual(localInterfaceIP)
 }
+
+// UpdateDnsIfWrongSettings - ensures that current DNS configuration is correct. If not - it re-apply the required configuration.
+func implUpdateDnsIfWrongSettings() error {
+	// Not in use for Linux implementation
+	// We are using platform-specific implementation of DNS change monitor for Linux
+	return nil
+}

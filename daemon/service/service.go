@@ -834,6 +834,14 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 				}
 			case <-routingUpdateChan: // there were some routing changes but 'interfaceToProtect' is still is the default route
 				s._vpn.OnRoutingChanged()
+				go func() {
+					// Ensure that current DNS configuration is correct. If not - it re-apply the required configuration.
+					// Currently, it is in use for macOS - like a DNS change monitor.
+					err := dns.UpdateDnsIfWrongSettings()
+					if err != nil {
+						log.Error(fmt.Errorf("failed to update DNS settings: %w", err))
+					}
+				}()
 			case <-stopChannel: // triggered when the stopChannel is closed
 				isRuning = false
 			}
@@ -1059,9 +1067,9 @@ func (s *Service) ResetManualDNS() error {
 	return vpn.ResetManualDNS()
 }
 
-//////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////
 // KillSwitch
-//////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////
 func (s *Service) onKillSwitchStateChanged() {
 	s._evtReceiver.OnKillSwitchStateChanged()
 
@@ -1148,7 +1156,7 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 
 // SetKillSwitchUserExceptions set ip/mask to be excluded from FW block
 // Parameters:
-//	- exceptions - comma separated list of IP addresses in format: x.x.x.x[/xx]
+//   - exceptions - comma separated list of IP addresses in format: x.x.x.x[/xx]
 func (s *Service) SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error {
 	prefs := s._preferences
 	prefs.FwUserExceptions = exceptions
@@ -1319,7 +1327,9 @@ func (s *Service) SplitTunnelling_RemoveApp(pid int, exec string) (err error) {
 // Parameters:
 // pid 			- process PID
 // exec 		- Command executed in ST environment (e.g. binary + arguments)
-// 				  (identical to SplitTunnelAddApp.Exec and SplitTunnelAddAppCmdResp.Exec)
+//
+//	(identical to SplitTunnelAddApp.Exec and SplitTunnelAddAppCmdResp.Exec)
+//
 // cmdToExecute - Shell command used to perform this operation
 func (s *Service) SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error {
 	// notify changed ST configuration status

@@ -323,10 +323,18 @@ func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
 	return []DnsSettings{}, nil
 }
 
+// UpdateDnsIfWrongSettings - ensures that current DNS configuration is correct. If not - it re-apply the required configuration.
+func implUpdateDnsIfWrongSettings() error {
+	// Not in use for Windows implementation
+	// We are using platform-specific implementation of DNS change monitor for Windows
+	return nil
+}
+
 // getInterfacesIPsWhichContainsIP - get IP addresses of local network interfaces to which belongs an IP address
 // (interface which is in same network as 'addr')
-// 		addr - IP address from local network (which can be accessed by interface)
-//		localAddrToSkip - local IP of interface which can be excluded from output (e.g. VPN interface)
+//
+//	addr - IP address from local network (which can be accessed by interface)
+//	localAddrToSkip - local IP of interface which can be excluded from output (e.g. VPN interface)
 func getInterfacesIPsWhichContainsIP(addr net.IP, localAddrToSkip net.IP) (ret []net.IPNet, err error) {
 	if addr == nil {
 		return ret, nil
