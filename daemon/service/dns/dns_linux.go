@@ -34,8 +34,9 @@ import (
 )
 
 // For reference: DNS configuration in Linux
-// 	https://github.com/systemd/systemd/blob/main/docs/RESOLVED-VPNS.md
-// 	https://blogs.gnome.org/mcatanzaro/2020/12/17/understanding-systemd-resolved-split-dns-and-vpn-configuration/
+//
+//	https://github.com/systemd/systemd/blob/main/docs/RESOLVED-VPNS.md
+//	https://blogs.gnome.org/mcatanzaro/2020/12/17/understanding-systemd-resolved-split-dns-and-vpn-configuration/
 func isResolveCtlInUse() bool {
 	return len(platform.ResolvectlBinPath()) > 0
 }
@@ -89,15 +90,15 @@ func isNeedUseOldMgmtStyle() bool {
 }
 
 func implApplyUserSettings() error {
-	// checking if the required settings is already initialised
+	// checking if the required settings is already initialized
 	if isNeedUseOldMgmtStyle() == isOldMgmtStyleInUse {
-		return nil // expected configuratin already applied
+		return nil // expected configuration already applied
 	}
 	// if DNS changed to a custom value - we have to restore the original DNS settings before changing the DNS management style
 	if !manualDNS.IsEmpty() {
 		return fmt.Errorf("unable to apply new DNS management style: DNS currently changed to a custom value")
 	}
-	return implInitialize() // nothing to do here for current platfom
+	return implInitialize() // nothing to do here for current platform
 }
 
 func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) {
@@ -174,4 +175,11 @@ func implDeleteManual(localInterfaceIP net.IP) error {
 	}
 
 	return f_implDeleteManual(localInterfaceIP)
+}
+
+// UpdateDnsIfWrongSettings - ensures that current DNS configuration is correct. If not - it re-apply the required configuration.
+func implUpdateDnsIfWrongSettings() error {
+	// Not in use for Linux implementation
+	// We are using platform-specific implementation of DNS change monitor for Linux
+	return nil
 }

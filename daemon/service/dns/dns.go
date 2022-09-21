@@ -160,7 +160,7 @@ func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify, getUserSettin
 	return wrapErrorIfFailed(implInitialize())
 }
 
-// ApplyUserSettings - reinitialise DNS configuration according to user settings
+// ApplyUserSettings - reinitialize DNS configuration according to user settings
 // It is applicable, for example for Linux: when the user changed DNS management style
 func ApplyUserSettings() error {
 	return implApplyUserSettings()
@@ -239,6 +239,12 @@ func GetLastManualDNS() DnsSettings {
 func GetPredefinedDnsConfigurations() ([]DnsSettings, error) {
 	settings, err := implGetPredefinedDnsConfigurations()
 	return settings, wrapErrorIfFailed(err)
+}
+
+// UpdateDnsIfWrongSettings - ensures that current DNS configuration is correct. If not - it re-apply the required configuration.
+// Currently, it is in use for macOS - like a DNS change monitor.
+func UpdateDnsIfWrongSettings() error {
+	return implUpdateDnsIfWrongSettings()
 }
 
 func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {

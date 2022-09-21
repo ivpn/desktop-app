@@ -897,6 +897,14 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 				}
 			case <-routingUpdateChan: // there were some routing changes but 'interfaceToProtect' is still is the default route
 				s._vpn.OnRoutingChanged()
+				go func() {
+					// Ensure that current DNS configuration is correct. If not - it re-apply the required configuration.
+					// Currently, it is in use for macOS - like a DNS change monitor.
+					err := dns.UpdateDnsIfWrongSettings()
+					if err != nil {
+						log.Error(fmt.Errorf("failed to update DNS settings: %w", err))
+					}
+				}()
 			case <-stopChannel: // triggered when the stopChannel is closed
 				isRuning = false
 			}

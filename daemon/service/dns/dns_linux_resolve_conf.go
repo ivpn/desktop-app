@@ -162,7 +162,7 @@ func rconf_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFo
 
 			//stop watching file
 			if err := w.Remove(resolvFile); err != nil {
-				log.Error(fmt.Errorf("failed to remove warcher (fsnotify error): %w", err))
+				log.Error(fmt.Errorf("failed to remove watcher (fsnotify error): %w", err))
 			}
 
 			// wait 2 seconds for reaction (in case if we are stopping of when multiple consecutive file changes)

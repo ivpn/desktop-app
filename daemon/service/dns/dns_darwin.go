@@ -111,8 +111,16 @@ func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
 // <this method in use by macOS:WireGuard implementation>
 func IsPrimaryInterfaceFound() bool {
 	err := shell.Exec(log, platform.DNSScript(), "-is_main_interface_detected")
+	return err == nil
+}
+
+// UpdateDnsIfWrongSettings - ensures that current DNS configuration is correct. If not - it re-apply the required configuration.
+// Currently, it is in use for macOS - like a DNS change monitor.
+func implUpdateDnsIfWrongSettings() error {
+	log.Info("Validating DNS configuration ...")
+	err := shell.Exec(log, platform.DNSScript(), "-update")
 	if err != nil {
-		return false
+		return fmt.Errorf("the DNS configuration validation error: %w", err)
 	}
-	return true
+	return nil
 }
