@@ -1077,7 +1077,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	case "Connect":
 		p._disconnectRequested = false
+
 		requestTime := p.vpnConnectReqCounterIncrease()
+		defer p.vpnConnectReqCounterDecrease()
 
 		stateChan := make(chan vpn.StateInfo, 1)
 		isExitChan := make(chan bool, 1)
@@ -1089,14 +1091,22 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			log.ErrorTrace(err)
 		}
 
+		// Ensure that we are using latest connection request
+		// Skip this request if new connection request available
+		if _, lastRequestTime := p.vpnConnectReqCounter(); !requestTime.Equal(lastRequestTime) {
+			log.Info(fmt.Sprintf("Skipping connection request[%d]. Newest request received!", reqCmd.Idx))
+			p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+			return
+		}
+
 		p._vpnConnectMutex.Lock()
 		defer p._vpnConnectMutex.Unlock()
 
-		defer p.vpnConnectReqCounterDecrease()
-
-		// skip this request if new connection request available
+		// Double-check to ensure that we are using latest connection request
+		// Skip this request if new connection request available (this should never happen)
 		if _, lastRequestTime := p.vpnConnectReqCounter(); !requestTime.Equal(lastRequestTime) {
-			log.Info("Skipping connection request. Newest request received.")
+			log.Info(fmt.Sprintf("Skipping connection request[%d]. Newest request received.", reqCmd.Idx))
+			p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 			return
 		}
 
@@ -1171,12 +1181,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 					switch state.State {
 					case vpn.CONNECTED:
-						// Do not send "Connected" notification if we are going to establish new connection immediately
-						if cnt, _ := p.vpnConnectReqCounter(); cnt == 1 || p._disconnectRequested {
-							p.notifyClients(p.createConnectedResponse(state))
-						} else {
-							log.Debug("Skip sending 'Connected' notification. New connection request is awaiting ", cnt)
-						}
+						p.notifyClients(p.createConnectedResponse(state))
 					case vpn.EXITING:
 						disconnectAuthError = state.IsAuthError
 					default:
