@@ -113,10 +113,6 @@ async function connect(me, isConnect) {
   }
 }
 
-function connected(me) {
-  return me.$store.state.vpnState.connectionState === VpnStateEnum.CONNECTED;
-}
-
 export default {
   props: {
     onConnectionSettings: Function,
@@ -150,7 +146,10 @@ export default {
 
   computed: {
     isConnected: function () {
-      return connected(this);
+      return this.$store.getters["vpnState/isConnected"];
+    },
+    isConnecting: function () {
+      return this.$store.getters["vpnState/isConnecting"];
     },
     isOpenVPN: function () {
       return this.$store.state.settings.vpnType === VpnTypeEnum.OpenVPN;
@@ -295,17 +294,18 @@ export default {
         needReconnect = true;
       }
 
-      if (needReconnect == true && connected(this)) connect(this, true);
+      if (needReconnect == true && (this.isConnecting || this.isConnected))
+        connect(this, true);
     },
     onFastestServer() {
       this.$store.dispatch("settings/isFastestServer", true);
-      if (connected(this)) connect(this, true);
+      if (this.isConnected) connect(this, true);
     },
     onRandomServer(isExitServer) {
       if (isExitServer === true)
         this.$store.dispatch("settings/isRandomExitServer", true);
       else this.$store.dispatch("settings/isRandomServer", true);
-      if (connected(this)) connect(this, true);
+      if (this.isConnected) connect(this, true);
     },
     recalcScrollButtonVisiblity() {
       let sa = this.$refs.scrollArea;

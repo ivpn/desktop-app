@@ -1186,8 +1186,8 @@ async function GetDiagnosticLogs() {
   return logs;
 }
 
-// The 'Connect' method increasing this value on the method beginning and then checks this value before sending request to a daemon:
-//  if the value is not equal to the value on method beginning - do not send 'Connect' request to the daemon.
+// The 'Connect' method increasing this value at the method beginning and then checks this value before sending request to a daemon:
+//  if the value is not equal to the value at method beginning - do not send 'Connect' request to the daemon.
 // (this can happen when 'Disconnect' called OR new call of 'Connect' method)
 let connectionRequestId = 0;
 
