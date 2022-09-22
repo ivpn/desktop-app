@@ -40,7 +40,7 @@ silent() {
 
 has_systemd() {
   # Some OS vendors put systemd in ... different places ...
-  [ -d "/lib/systemd/system/" -o -d "/usr/lib/systemd/system" ] && silent which systemctl
+  [ -d "/lib/systemd/system/" -o -d "/usr/lib/systemd/system" ] && silent command -v systemctl
 }
 
 try_systemd_stop() {

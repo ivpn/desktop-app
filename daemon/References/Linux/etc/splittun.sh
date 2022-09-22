@@ -89,15 +89,15 @@ function test()
         fi
     fi
 
-    if ! which ${_bin_iptables} &>/dev/null ;   then echo "ERROR: Binary Not Found (${_bin_iptables})" 1>&2; return 1; fi
-    if ! which ${_bin_ip} &>/dev/null ;         then echo "ERROR: Binary Not Found (${_bin_ip})" 1>&2; return 1; fi    
-    if ! which ${_bin_grep} &>/dev/null ;       then echo "ERROR: Binary Not Found (${_bin_grep})" 1>&2; return 1; fi
-    if ! which ${_bin_dirname} &>/dev/null ;    then echo "ERROR: Binary Not Found (${_bin_dirname})" 1>&2; return 1; fi
-    if ! which ${_bin_sed} &>/dev/null ;        then echo "ERROR: Binary Not Found (${_bin_sed})" 1>&2; return 1; fi
+    if ! command -v ${_bin_iptables} &>/dev/null ;   then echo "ERROR: Binary Not Found (${_bin_iptables})" 1>&2; return 1; fi
+    if ! command -v ${_bin_ip} &>/dev/null ;         then echo "ERROR: Binary Not Found (${_bin_ip})" 1>&2; return 1; fi    
+    if ! command -v ${_bin_grep} &>/dev/null ;       then echo "ERROR: Binary Not Found (${_bin_grep})" 1>&2; return 1; fi
+    if ! command -v ${_bin_dirname} &>/dev/null ;    then echo "ERROR: Binary Not Found (${_bin_dirname})" 1>&2; return 1; fi
+    if ! command -v ${_bin_sed} &>/dev/null ;        then echo "ERROR: Binary Not Found (${_bin_sed})" 1>&2; return 1; fi
 
-    if ! which ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})" 1>&2; fi
-    if ! which ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})" 1>&2; fi
-    if ! which ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})" 1>&2; fi    
+    if ! command -v ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})" 1>&2; fi
+    if ! command -v ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})" 1>&2; fi
+    if ! command -v ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})" 1>&2; fi    
 }
 
 function init()
