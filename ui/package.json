@@ -16,6 +16,7 @@
     "postinstall": "electron-builder install-app-deps",
     "postuninstall": "electron-builder install-app-deps"
   },
+  "main": "background.js",
   "dependencies": {
     "@babel/eslint-parser": "7.19.1",
     "@sentry/electron": "3.0.7",    
