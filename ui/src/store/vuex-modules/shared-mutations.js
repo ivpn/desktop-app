@@ -62,6 +62,8 @@ class SharedMutations {
   }
 
   notifyRenderers(connections, payload) {
+    payload = JSON.parse(JSON.stringify(payload)); // INFO: making payload serializable! // TODO: ensure this is a good approach.
+
     Object.keys(connections).forEach((processId) => {
       connections[processId].send(IPC_EVENT_NOTIFY_RENDERERS, payload);
     });
@@ -88,6 +90,8 @@ class SharedMutations {
 
     // Forward dispatch to main process
     this.store.dispatch = (type, payload) => {
+      payload = JSON.parse(JSON.stringify(payload)); // INFO: making payload serializable! // TODO: ensure this is a good approach.
+
       this.notifyMain({ type, payload });
     };
 

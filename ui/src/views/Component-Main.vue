@@ -38,7 +38,7 @@
     </div>
     <div id="right" v-if="!isMinimizedUI">
       <transition name="fade" appear>
-        <Map
+        <TheMap
           :isBlured="isMapBlured"
           :onAccountSettings="onAccountSettings"
           :onSettings="onSettings"
@@ -54,10 +54,10 @@ const sender = window.ipcSender;
 
 import { DaemonConnectionType } from "@/store/types";
 import { Platform, PlatformEnum, IsWindowHasFrame } from "@/platform/platform";
-import Init from "@/components/Init.vue";
-import Login from "@/components/Login.vue";
-import Control from "@/components/Control.vue";
-import Map from "@/components/Map.vue";
+import Init from "@/components/Component-Init.vue";
+import Login from "@/components/Component-Login.vue";
+import Control from "@/components/Component-Control.vue";
+import TheMap from "@/components/Component-Map.vue";
 import ParanoidModePassword from "@/components/ParanoidModePassword.vue";
 
 export default {
@@ -65,7 +65,7 @@ export default {
     Init,
     Login,
     Control,
-    Map,
+    TheMap,
     ParanoidModePassword,
   },
   data: function () {

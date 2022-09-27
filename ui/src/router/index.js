@@ -20,20 +20,17 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import Vue from "vue";
-import VueRouter from "vue-router";
-import Main from "../views/Main.vue";
+import { createRouter, createWebHashHistory } from "vue-router";
+import Main from "../views/Component-Main.vue";
 import AccountLimit from "../views/AccountLimit.vue";
-import Settings from "../views/Settings.vue";
-import Update from "../views/dialogs/Update.vue";
+import Settings from "../views/Component-Settings.vue";
+import Update from "../views/dialogs/Dlg-Update.vue";
 
 import DlgEaaEnable from "../views/dialogs/eaaEnable.vue";
 import DlgEaaDisable from "../views/dialogs/eaaDisable.vue";
 import DlgAddCustomPort from "../views/dialogs/addCustomPort.vue";
 
 import { IpcModalDialogType } from "@/ipc/types.js";
-
-Vue.use(VueRouter);
 
 const mainRoutes = [
   {
@@ -58,7 +55,7 @@ const mainRoutes = [
     // this generates a separate chunk (about.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
     component: () =>
-      import(/* webpackChunkName: "about" */ "../views/Test.vue"),
+      import(/* webpackChunkName: "about" */ "../views/Component-Test.vue"),
   },
 ];
 const forbiddenToChangeRouteFrom = [
@@ -83,8 +80,8 @@ const forbiddenToChangeRouteFrom = [
 
 const routes = mainRoutes.concat(forbiddenToChangeRouteFrom);
 
-const router = new VueRouter({
-  mode: "hash",
+const router = createRouter({
+  history: createWebHashHistory(),
   base: process.env.BASE_URL,
   routes,
 });

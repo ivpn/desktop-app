@@ -148,14 +148,14 @@
 
 <script>
 import SwitchProgress from "@/components/controls/control-switch.vue";
-import imgPause from "@/components/images/pause.vue";
+import imgPause from "@/components/images/img-pause.vue";
 import { PauseStateEnum } from "@/store/types";
 import { GetTimeLeftText } from "@/helpers/renderer";
-import ClickOutside from "vue-click-outside";
+import vClickOutside from "click-outside-vue3";
 
 export default {
   directives: {
-    ClickOutside,
+    clickOutside: vClickOutside.directive,
   },
   components: {
     SwitchProgress,
@@ -176,15 +176,6 @@ export default {
   }),
   mounted() {
     this.startPauseTimer();
-  },
-  created: function () {
-    let self = this;
-    window.addEventListener("click", function (e) {
-      // close dropdown when clicked outside
-      if (!self.$el.contains(e.target)) {
-        self.isPauseMenuAllowed = false;
-      }
-    });
   },
   computed: {
     isMinimizedUI: function () {

@@ -80,7 +80,7 @@
 </template>
 
 <script>
-import Servers from "./Servers.vue";
+import Servers from "./Component-Servers.vue";
 import ConnectBlock from "./blocks/block-connect.vue";
 import ConnectionDetailsBlock from "./blocks/block-connection-details.vue";
 import SelectedServerBlock from "@/components/blocks/block-selected-server.vue";

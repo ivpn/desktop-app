@@ -20,33 +20,24 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import Vue from "vue";
+import { createApp } from "vue";
+
 import App from "./App.vue";
 import router from "./router";
 import store from "./store";
 
 const sender = window.ipcSender;
 
-Vue.config.productionTip = false;
-
 import "@/main_style.js";
 
-new Vue({
-  router,
-  store,
-  render: (h) => h(App),
-}).$mount("#app");
+const app = createApp(App);
+app.use(store);
+app.use(router);
+app.mount("#app");
 
 // Waiting for "change view" requests from main thread
 const ipcRenderer = sender.GetSafeIpcRenderer();
 ipcRenderer.on("main-change-view-request", (event, arg) => {
-  try {
-    // Avoid error:'Avoided redundant navigation to current location: ...'
-    // That error can happen when navigating to a current route
-    if (arg === router.history.current.path) return;
-  } catch (e) {
-    console.error(e);
-  }
   router.push(arg);
 });
 

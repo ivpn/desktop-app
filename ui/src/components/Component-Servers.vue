@@ -332,11 +332,11 @@ import Image_check_thin from "@/assets/check-thin.svg";
 import Image_star_active from "@/assets/star-active.svg";
 import Image_star_inactive from "@/assets/star-inactive.svg";
 
-import ClickOutside from "vue-click-outside";
+import vClickOutside from "click-outside-vue3";
 
 export default {
   directives: {
-    ClickOutside,
+    clickOutside: vClickOutside.directive,
   },
   props: [
     "onBack",
@@ -359,15 +359,6 @@ export default {
       isShowScrollButton: false,
       expandedGateways: [], // list of server.gateway strings (list of gateways which is expanded to show server hosts)
     };
-  },
-  created: function () {
-    let self = this;
-    window.addEventListener("click", function (e) {
-      // close dropdown when clicked outside
-      if (!self.$el.contains(e.target)) {
-        self.isSortMenu = false;
-      }
-    });
   },
   mounted() {
     this.recalcScrollButtonVisiblity();

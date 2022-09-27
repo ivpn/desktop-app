@@ -182,7 +182,7 @@ export default {
   props: { registerBeforeCloseHandler: Function },
   created() {
     // We have to call applyChanges() even when Settings window was closed by user
-    // (the 'beforeDestroy()' is not called in this case)
+    // (the 'beforeUnmount()' is not called in this case)
     window.addEventListener("beforeunload", this.applyChanges);
 
     if (this.registerBeforeCloseHandler != null) {
@@ -192,7 +192,7 @@ export default {
     }
   },
 
-  async beforeDestroy() {
+  async beforeUnmount() {
     window.removeEventListener("beforeunload", this.applyChanges);
     await this.applyChanges();
   },
