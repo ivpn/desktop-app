@@ -11,7 +11,16 @@
   >
     <!-- Header -->
     <div v-if="this.header && this.header.length > 0">
-      <H3>{{ header }}</H3>
+      <div
+        style="
+          margin-bottom: 10px;
+          font-weight: 500;
+          font-size: 16px;
+          letter-spacing: 0.5px;
+        "
+      >
+        {{ header }}
+      </div>
       <div class="horizontalLine" />
     </div>
     <div>
