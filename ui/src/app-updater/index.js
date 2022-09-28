@@ -114,19 +114,17 @@ export function StartUpdateChecker(onHasUpdateCallback) {
 }
 
 export async function CheckUpdates(isAutomaticCheck) {
-  if (isAutomaticCheck != true) forgetVersionToSkip();
-
-  const updater = getUpdater();
-  if (updater == null) {
-    console.error("App updater not available for this platform");
-    return null;
-  }
-
-  console.log("Checking for app updates...");
   try {
+    console.log("Checking for app updates...");
+
     setState({
       state: AppUpdateStage.CheckingForUpdates,
     });
+
+    if (isAutomaticCheck != true) forgetVersionToSkip();
+
+    const updater = getUpdater();
+    if (updater == null) throw "App updater not available for this platform";
 
     const settingsUpdates = store.state.settings.updates;
 
