@@ -751,12 +751,12 @@ function createSettingsWindow(viewName) {
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
     settingsWindow.loadURL(
-      process.env.WEBPACK_DEV_SERVER_URL + `/#/settings/${viewName}`
+      process.env.WEBPACK_DEV_SERVER_URL + `#settings/${viewName}`
     );
   } else {
     createProtocol("app");
     // Load the index.html when not in development
-    settingsWindow.loadURL("app://./index.html" + `/#/settings/${viewName}`);
+    settingsWindow.loadURL("app://./index.html" + `#settings/${viewName}`);
   }
 
   settingsWindow.once("ready-to-show", () => {
@@ -811,11 +811,11 @@ function createUpdateWindow() {
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
-    updateWindow.loadURL(process.env.WEBPACK_DEV_SERVER_URL + `/#/update`);
+    updateWindow.loadURL(process.env.WEBPACK_DEV_SERVER_URL + `#update`);
   } else {
     createProtocol("app");
     // Load the index.html when not in development
-    updateWindow.loadURL("app://./index.html" + `/#/update`);
+    updateWindow.loadURL("app://./index.html" + `#update`);
   }
 
   updateWindow.once("ready-to-show", () => {
@@ -908,11 +908,11 @@ async function showModalDialog(
 
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     modalDialog.loadURL(
-      process.env.WEBPACK_DEV_SERVER_URL + `/#/${dialogTypeName}`
+      process.env.WEBPACK_DEV_SERVER_URL + `#${dialogTypeName}`
     );
   } else {
     createProtocol("app");
-    modalDialog.loadURL("app://./index.html" + `/#/${dialogTypeName}`);
+    modalDialog.loadURL("app://./index.html" + `#${dialogTypeName}`);
   }
 
   modalDialog.once("ready-to-show", () => {

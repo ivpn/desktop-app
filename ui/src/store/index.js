@@ -20,8 +20,7 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import Vue from "vue";
-import Vuex from "vuex";
+import { createStore } from "vuex";
 import createSharedMutations from "./vuex-modules/shared-mutations.js";
 
 import { isStrNullOrEmpty, IsRenderer } from "../helpers/helpers";
@@ -31,8 +30,6 @@ import vpnState from "./module-vpn-state";
 import uiState from "./module-ui-state";
 import settings from "./module-settings";
 import { VpnTypeEnum } from "@/store/types";
-
-Vue.use(Vuex);
 
 let sharedMutationsOptions = {};
 if (IsRenderer()) {
@@ -44,7 +41,7 @@ if (IsRenderer()) {
   sharedMutationsOptions.type = "main";
 }
 
-export default new Vuex.Store({
+export default createStore({
   plugins: [createSharedMutations(sharedMutationsOptions)],
 
   modules: { account, vpnState, uiState, settings },

@@ -406,12 +406,14 @@ export default {
   created: function () {
     window.addEventListener("mousemove", this.windowsmousemove);
   },
-  destroyed: function () {
+  unmounted: function () {
     window.removeEventListener("mousemove", this.windowsmousemove);
   },
 
   watch: {
     servers() {
+      // NOTE! When watching an array, the callback will only trigger when the array is replaced. If you need to trigger on mutation, the 'deep' option must be specified.
+      // https://v3-migration.vuejs.org/breaking-changes/watch.html
       this.updateCities();
     },
 

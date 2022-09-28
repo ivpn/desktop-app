@@ -60,6 +60,9 @@ export function SetInputFilterNumbers(inputElement) {
 export function GetTimeLeftText(endTime /*Date()*/) {
   if (endTime == null) return "";
 
+  if (typeof endTime === "string" || endTime instanceof String)
+    endTime = Date.parse(endTime);
+
   let secondsLeft = (endTime - new Date()) / 1000;
   if (secondsLeft <= 0) return "";
 

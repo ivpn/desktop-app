@@ -4,7 +4,7 @@ echo "[*] After install (<%= version %> : <%= pkg %> : $1)"
 
 # When removing package: $1==0 for RPM; $1 == "remove" for DEB
 _IS_REMOVE=0
-if [ "$1" = "remove" -o "$1" = "0" ]; then    
+if [ "$1" = "remove" -o "$1" = "0" ]; then
   _IS_REMOVE=1
 fi
 
@@ -21,7 +21,7 @@ silent() {
 
 has_systemd() {
   # Some OS vendors put systemd in ... different places ...
-  [ -d "/lib/systemd/system/" -o -d "/usr/lib/systemd/system" ] && silent which systemctl
+  [ -d "/lib/systemd/system/" -o -d "/usr/lib/systemd/system" ] && silent command -v systemctl
 }
 
 try_systemd_install() {
@@ -73,7 +73,7 @@ fi
 #
 # DEB: 'before-remove' script (old versions) saving account credentials into 'toUpgradeID.tmp' and doing logout,
 # here we have to re-login
-# 
+#
 # ########################################################################################
 FILE_ACCID_TO_UPGRADE="/opt/ivpn/mutable/toUpgradeID.tmp"
 if [ -f $FILE_ACCID_TO_UPGRADE ]; then

@@ -1,7 +1,15 @@
 module.exports = {
-  configureWebpack: (config) => {
-    /* possibility to debug from VS code */
-    config.devtool = "source-map";
+  configureWebpack: {
+    devtool: "source-map", // possibility to debug from VS Code
+
+    // required after moving from webpack < 5 (do not include polyfill)
+    resolve: {
+      fallback: {
+        os: false,
+        fs: false,
+        path: false,
+      },
+    },
   },
 
   pluginOptions: {
@@ -36,7 +44,7 @@ module.exports = {
         },
 
         linux: {
-          //target: ["dir", "snap"], 
+          //target: ["dir", "snap"],
           target: ["dir"],
           category: "Network",
         },
