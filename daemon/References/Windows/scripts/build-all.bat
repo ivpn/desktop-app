@@ -54,7 +54,7 @@ goto :success
 
 :update_servers_info
 	echo [*] Updating servers.json ...
-	curl -#fLo %SCRIPTDIR%..\etc\servers.json https://api.ivpn.net/v5/servers.json || exit /b 1
+	curl -#fLo %SCRIPTDIR%..\..\common\etc\servers.json https://api.ivpn.net/v5/servers.json || exit /b 1
 	goto :eof
 
 :build_agent

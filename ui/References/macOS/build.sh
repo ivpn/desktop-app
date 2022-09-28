@@ -219,6 +219,9 @@ rm ${_PATH_ABS_REPO_UI}/dist_electron/IVPN* # removing all created DMG (we do no
 
 echo "[+] Preparing DMG image: Copying 'etc' ..."
 cp -R "${_PATH_ABS_REPO_DAEMON}/References/macOS/etc" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources" || CheckLastResult
+echo "[+] Preparing DMG image: Copying 'common/etc' ..."
+cp -R "${_PATH_ABS_REPO_DAEMON}/References/common/etc" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources" || CheckLastResult
+
 echo "[+] Preparing DMG image: Setting correct file permissions for 'etc' folder ..."
 echo "    (sudo pass can be asked now)"
 sudo chmod 0400 ${_PATH_UI_COMPILED_IMAGE}/Contents/Resources/etc/*.* || CheckLastResult
