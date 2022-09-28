@@ -26,12 +26,6 @@ import AccountLimit from "../views/AccountLimit.vue";
 import Settings from "../views/Component-Settings.vue";
 import Update from "../views/dialogs/Dlg-Update.vue";
 
-import DlgEaaEnable from "../views/dialogs/eaaEnable.vue";
-import DlgEaaDisable from "../views/dialogs/eaaDisable.vue";
-import DlgAddCustomPort from "../views/dialogs/addCustomPort.vue";
-
-import { IpcModalDialogType } from "@/ipc/types.js";
-
 const mainRoutes = [
   {
     path: "/",
@@ -63,18 +57,6 @@ const forbiddenToChangeRouteFrom = [
     path: "/update",
     name: "Update",
     component: Update,
-  },
-  {
-    path: `/${IpcModalDialogType.EnableEAA}`,
-    component: DlgEaaEnable,
-  },
-  {
-    path: `/${IpcModalDialogType.DisableEAA}`,
-    component: DlgEaaDisable,
-  },
-  {
-    path: `/${IpcModalDialogType.AddCustomPort}`,
-    component: DlgAddCustomPort,
   },
 ];
 

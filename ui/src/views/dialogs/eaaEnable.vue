@@ -9,7 +9,7 @@
         ref="passwordField"
         type="password"
         style="flex-grow: 1"
-        class="settingsTextInput"
+        class="settingsTextInput minSize"
         placeholder=""
         v-model="newPass"
         v-on:keyup.enter="onApplyNewPassword()"
@@ -20,7 +20,7 @@
       <input
         type="password"
         style="flex-grow: 1"
-        class="settingsTextInput"
+        class="settingsTextInput minSize"
         placeholder=""
         v-model="newPassConfirm"
         v-on:keyup.enter="onApplyNewPassword()"
@@ -53,6 +53,10 @@
 const sender = window.ipcSender;
 
 export default {
+  props: {
+    onClose: Function,
+  },
+
   mounted() {
     if (this.$refs.passwordField) this.$refs.passwordField.focus();
   },
@@ -62,13 +66,7 @@ export default {
       newPassConfirm: "",
     };
   },
-  created() {
-    window.onkeydown = function (event) {
-      if (event.keyCode == 27) {
-        window.close();
-      }
-    };
-  },
+
   computed: {
     IsPmEnabled: function () {
       return this.$store.state.paranoidModeStatus.IsEnabled;
@@ -76,8 +74,11 @@ export default {
   },
 
   methods: {
+    close() {
+      if (this.onClose) this.onClose();
+    },
     onCancel() {
-      window.close();
+      this.close();
     },
     async onApplyNewPassword() {
       if (!this.newPass) {
@@ -111,7 +112,7 @@ export default {
 
       try {
         await sender.setParanoidModePassword(this.newPass);
-        window.close();
+        this.close();
       } catch (e) {
         console.error(e);
         sender.showMessageBoxSync({
@@ -132,5 +133,9 @@ export default {
 div.paramName {
   min-width: 120px;
   max-width: 120px;
+}
+
+input.minSize {
+  min-width: 260px;
 }
 </style>

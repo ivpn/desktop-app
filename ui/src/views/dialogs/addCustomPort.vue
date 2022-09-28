@@ -12,7 +12,7 @@
       <input
         ref="portField"
         type="number"
-        style="flex-grow: 1"
+        style="flex-grow: 1; min-width: 286px"
         class="settingsTextInput"
         :placeholder="numberPlaceholder"
         :title="`Allowed port range: ${numberPlaceholder}`"
@@ -83,6 +83,9 @@ import { SetInputFilterNumbers } from "@/helpers/renderer";
 const sender = window.ipcSender;
 
 export default {
+  props: {
+    onClose: Function,
+  },
   mounted() {
     if (this.$refs.portField) this.$refs.portField.focus();
     SetInputFilterNumbers(this.$refs.portField);
@@ -91,13 +94,6 @@ export default {
     return {
       type: "UDP",
       portNumber: null,
-    };
-  },
-  created() {
-    window.onkeydown = function (event) {
-      if (event.keyCode == 27) {
-        window.close();
-      }
     };
   },
 
@@ -249,8 +245,11 @@ export default {
       };
     },
 
+    close() {
+      if (this.onClose) this.onClose();
+    },
     onCancel() {
-      window.close();
+      this.close();
     },
     async onApply() {
       try {
@@ -258,7 +257,7 @@ export default {
         if (newPort) {
           console.log("New port added: ", newPort);
           this.$store.dispatch("settings/addNewCustomPort", newPort);
-          window.close();
+          this.close();
         }
       } catch (e) {
         console.error(e);

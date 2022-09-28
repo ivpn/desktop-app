@@ -1,5 +1,13 @@
 <template>
   <div>
+    <ComponentDialog ref="eaaEnableDlg" noCloseButtons>
+      <ComponentEaaEnable style="margin: 0px" :onClose="onCloseEaaDlg" />
+    </ComponentDialog>
+
+    <ComponentDialog ref="eaaDisableDlg" noCloseButtons>
+      <ComponentEaaDisable style="margin: 0px" :onClose="onCloseEaaDlg" />
+    </ComponentDialog>
+
     <div class="settingsTitle">ADVANCED SETTINGS</div>
     <div class="settingsBoldFont">Enhanced App Authentication</div>
     <div class="settingsParamProps settingsDescription">
@@ -39,11 +47,19 @@
 </template>
 
 <script>
-import { IpcModalDialogType, IpcOwnerWindowType } from "@/ipc/types.js";
+import ComponentDialog from "@/components/component-dialog.vue";
+import ComponentEaaDisable from "@/views/dialogs/eaaDisable.vue";
+import ComponentEaaEnable from "@/views/dialogs/eaaEnable.vue";
 
 const sender = window.ipcSender;
 
 export default {
+  components: {
+    ComponentDialog,
+    ComponentEaaDisable,
+    ComponentEaaEnable,
+  },
+
   computed: {
     IsPmEnabled: function () {
       return this.$store.state.paranoidModeStatus.IsEnabled;
@@ -51,6 +67,14 @@ export default {
   },
 
   methods: {
+    onCloseEaaDlg() {
+      try {
+        this.$refs.eaaDisableDlg.close();
+        this.$refs.eaaEnableDlg.close();
+      } catch (e) {
+        console.error(e);
+      }
+    },
     async onChangeState() {
       if (!this.IsPmEnabled) {
         if (
@@ -67,7 +91,7 @@ export default {
           return;
         }
 
-        if (true === this.$store.state.settings.wifi.trustedNetworksControl) {
+        if (true === this.$store.state.settings?.wifi?.trustedNetworksControl) {
           let ret = await sender.showMessageBoxSync(
             {
               type: "warning",
@@ -82,19 +106,12 @@ export default {
         }
       }
 
-      let cfg = { width: 400, height: 170 };
-
-      let dlgType = IpcModalDialogType.EnableEAA;
-      if (this.IsPmEnabled) {
-        dlgType = IpcModalDialogType.DisableEAA;
-        cfg.height = 150;
+      try {
+        if (this.IsPmEnabled) this.$refs.eaaDisableDlg.showModal();
+        else this.$refs.eaaEnableDlg.showModal();
+      } catch (e) {
+        console.error(e);
       }
-
-      await sender.showModalDialog(
-        dlgType,
-        IpcOwnerWindowType.SettingsWindow,
-        cfg
-      );
     },
   },
 };

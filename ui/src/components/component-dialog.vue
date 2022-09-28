@@ -55,8 +55,7 @@ export default {
   props: {
     header: String,
     center: Boolean,
-    noCloseButtons: Boolean,
-    onShow: Function,
+    noCloseButtons: Boolean, // do not show close buttons and do not close when click outside (or escape)
   },
   data: function () {
     return {};
@@ -64,22 +63,25 @@ export default {
   created() {},
   mounted() {
     let theThis = this;
-    window.onkeydown = function (event) {
-      if (event.keyCode == 27) {
-        theThis.$refs.dlgEl.close();
-      }
-    };
 
-    // close dialog when click outside (applicable only for 'showModal()' )
-    window.addEventListener("click", (event) => {
-      try {
-        if (event.target === theThis.$refs.dlgEl) {
-          theThis.$refs.dlgEl.close();
+    if (!this.noCloseButtons) {
+      window.onkeydown = function (event) {
+        if (event.keyCode == 27) {
+          theThis.close();
         }
-      } catch (e) {
-        console.error(e);
-      }
-    });
+      };
+
+      // close dialog when click outside (applicable only for 'showModal()' )
+      window.addEventListener("click", (event) => {
+        try {
+          if (event.target === theThis.$refs.dlgEl) {
+            theThis.close();
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    }
   },
 
   computed: {
@@ -121,7 +123,8 @@ export default {
 @import "@/components/scss/constants";
 dialog.dialogDefaults {
   background: var(--background-color);
-  border: 1px solid;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-radius: 12px;
 
   max-height: 85%;
   max-width: 85%;

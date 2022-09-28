@@ -49,7 +49,6 @@ import "./ipc/main-listener";
 import store from "@/store";
 import { AutoLaunchSet } from "@/auto-launch";
 import { DaemonConnectionType, ColorTheme } from "@/store/types";
-import { IpcModalDialogType, IpcOwnerWindowType } from "@/ipc/types.js";
 import daemonClient from "./daemon-client";
 import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
@@ -126,16 +125,6 @@ ipcMain.handle("renderer-request-update-wnd-close", async () => {
   if (!updateWindow) return;
   updateWindow.destroy();
 });
-ipcMain.handle(
-  "renderer-request-showModalDialog",
-  async (event, dialogTypeName, ownerWnd, windowCfgExtra) => {
-    return await showModalDialog(
-      dialogTypeName /*ModalDialogType*/,
-      ownerWnd /*OwnerWindowType*/,
-      windowCfgExtra /*(nullable) BrowserWindow options*/
-    );
-  }
-);
 
 ipcMain.handle(
   "renderer-request-update-wnd-resize",
@@ -829,119 +818,6 @@ function createUpdateWindow() {
 function closeUpdateWindow() {
   if (updateWindow == null) return;
   updateWindow.destroy(); // close();
-}
-
-// Modal Dialogs
-var modalDialog = null;
-async function showModalDialog(
-  dialogTypeName /*ModalDialogType*/,
-  ownerWnd /*OwnerWindowType*/,
-  windowCfgExtra /*(nullable) BrowserWindow options*/
-) {
-  if (modalDialog != null) {
-    console.warn(
-      "Blocked to load new modal dialog (another dialog still not closed)"
-    );
-    return;
-  }
-
-  let windowTitle = "";
-  switch (dialogTypeName) {
-    case IpcModalDialogType.EnableEAA:
-      //windowTitle = "Enhanced App Authentication";
-      break;
-    case IpcModalDialogType.DisableEAA:
-      //windowTitle = "Enhanced App Authentication";
-      break;
-    case IpcModalDialogType.AddCustomPort:
-      //windowTitle = "New custom port";
-      break;
-    default:
-      throw "Internal error: unsupported dialog name: '" + dialogTypeName + "'";
-  }
-
-  if (
-    Platform() !== PlatformEnum.macOS && // Windows , Linux
-    windowCfgExtra &&
-    windowCfgExtra.height
-  ) {
-    windowCfgExtra.height -= 28;
-  }
-
-  let ownerWndObj = win;
-  if (ownerWnd == IpcOwnerWindowType.SettingsWindow) {
-    if (settingsWindow) ownerWndObj = settingsWindow;
-  }
-
-  if (!ownerWndObj) throw "Unable to show modal dialog: No parent window found";
-
-  // lastModalDialog
-  let windowConfig = {
-    backgroundColor: getBackgroundColor(),
-    show: false,
-
-    resizable: false,
-    fullscreenable: false,
-    maximizable: false,
-    minimizable: false, // on Linux: this parameter still have value 'true' after window created (Electron bug?)
-    closable: false,
-
-    parent: ownerWndObj,
-
-    center: true,
-    title: windowTitle,
-
-    modal: true,
-
-    frame: IsWindowHasFrame(),
-  };
-
-  if (windowCfgExtra) {
-    windowConfig = Object.assign(windowConfig, windowCfgExtra);
-  }
-
-  modalDialog = createBrowserWindow(windowConfig);
-  // on Linux: 'minimizable' and 'closable' parameters still has value 'true' after window created (Electron bug?)
-  // Therefore, we are  using additional parameter (minimizableFix / closableFix) to keep needed value
-  modalDialog.minimizableFix = windowConfig.minimizable;
-  modalDialog.closableFix = windowConfig.closable;
-
-  if (process.env.WEBPACK_DEV_SERVER_URL) {
-    modalDialog.loadURL(
-      process.env.WEBPACK_DEV_SERVER_URL + `#${dialogTypeName}`
-    );
-  } else {
-    createProtocol("app");
-    modalDialog.loadURL("app://./index.html" + `#${dialogTypeName}`);
-  }
-
-  modalDialog.once("ready-to-show", () => {
-    modalDialog.show();
-
-    if (isDevelopment) {
-      try {
-        modalDialog.webContents.openDevTools();
-      } catch (e) {
-        console.error("Failed to open dev tools:", e.toString());
-      }
-    }
-  });
-
-  // Prevent parent window from flickering (Electron issue on Windows)
-  // https://github.com/electron/electron/issues/10616#issuecomment-447613986
-  modalDialog.on("focus", () => {
-    ownerWndObj.setAlwaysOnTop(true);
-  });
-  modalDialog.on("blur", () => {
-    ownerWndObj.setAlwaysOnTop(false);
-  });
-  modalDialog.on("closed", () => {
-    ownerWndObj.setAlwaysOnTop(false);
-    //forget about active dialog
-    modalDialog = null;
-  });
-
-  return true;
 }
 
 // INITIALIZE CONNECTION TO A DAEMON

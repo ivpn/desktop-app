@@ -408,11 +408,6 @@ ipcMain.on("renderer-request-properties-current-window", (event) => {
       minimizable: wnd.minimizable,
     };
 
-  // on Linux: 'minimizable' and 'closable' parameters still has value 'true' after window created (Electron bug?)
-  // Therefore, we are  using additional parameter (minimizableFix / closableFix) to keep needed value
-  if (wnd.minimizableFix !== undefined) retVal.minimizable = wnd.minimizableFix;
-  if (wnd.closableFix !== undefined) retVal.closable = wnd.closableFix;
-
   event.returnValue = retVal;
 });
 

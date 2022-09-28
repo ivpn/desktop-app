@@ -8,7 +8,7 @@
         ref="passwordField"
         type="password"
         style="flex-grow: 1"
-        class="settingsTextInput"
+        class="settingsTextInput minSize"
         placeholder=""
         v-model="oldPass"
         v-on:keyup.enter="onApplyPasswordReset()"
@@ -41,19 +41,15 @@
 const sender = window.ipcSender;
 
 export default {
+  props: {
+    onClose: Function,
+  },
   mounted() {
     if (this.$refs.passwordField) this.$refs.passwordField.focus();
   },
   data: function () {
     return {
       oldPass: "",
-    };
-  },
-  created() {
-    window.onkeydown = function (event) {
-      if (event.keyCode == 27) {
-        window.close();
-      }
     };
   },
 
@@ -64,8 +60,11 @@ export default {
   },
 
   methods: {
+    close() {
+      if (this.onClose) this.onClose();
+    },
     onCancel() {
-      window.close();
+      this.close();
     },
     async onApplyPasswordReset() {
       if (!this.oldPass) {
@@ -80,7 +79,7 @@ export default {
 
       try {
         await sender.setParanoidModePassword("", this.oldPass);
-        window.close();
+        this.close();
       } catch (e) {
         console.error(e);
         sender.showMessageBoxSync({
@@ -97,4 +96,8 @@ export default {
 
 <style scoped lang="scss">
 @import "@/components/scss/constants";
+
+input.minSize {
+  min-width: 380px;
+}
 </style>

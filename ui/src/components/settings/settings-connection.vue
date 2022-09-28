@@ -1,5 +1,9 @@
 <template>
   <div>
+    <ComponentDialog ref="addCustomPortDlg" noCloseButtons >
+      <ComponentAddCustomPort style="margin: 0px" :onClose="onCloseAddCustomPortDlg"/>
+    </ComponentDialog>
+
     <div class="settingsTitle">CONNECTION SETTINGS</div>
 
     <div class="settingsBoldFont">VPN protocol:</div>
@@ -186,7 +190,7 @@
           </div>
         </div>
 
-        <ComponentDialog ref="helpDialogObfsproxy" center header="Info">
+        <ComponentDialog ref="helpDialogObfsproxy" header="Info">
           <div class="selectable">
             <p class="selectable">
               <b>Obfsproxy</b> attempts to circumvent censorship, by transforming the traffic between the client and the server.
@@ -391,16 +395,19 @@ import {
   ObfsproxyVerEnum,
   Obfs4IatEnum,
 } from "@/store/types";
-import { IpcModalDialogType, IpcOwnerWindowType } from "@/ipc/types.js";
+
 import { enumValueName, dateDefaultFormat } from "@/helpers/helpers";
 import { SetInputFilterNumbers } from "@/helpers/renderer";
 import ComponentDialog from "@/components/component-dialog.vue";
+import ComponentAddCustomPort from "@/views/dialogs/addCustomPort.vue";
+
 const sender = window.ipcSender;
 
 export default {
   components: {
     spinner,
     ComponentDialog,
+    ComponentAddCustomPort,
   },
   data: function () {
     return {
@@ -504,7 +511,15 @@ export default {
       try {
         this.$refs.helpDialogObfsproxy.showModal();
       } catch (e) {
-        console.Error(e)
+        console.error(e)
+      }
+    },
+
+    onCloseAddCustomPortDlg: function() {
+      try {
+        this.$refs.addCustomPortDlg.close();
+      } catch (e) {
+        console.error(e)
       }
     }
   },
@@ -551,21 +566,19 @@ export default {
       get() {
         return this.$store.getters["settings/getPort"];
       },
-      async set(value) {
+      set(value) {
         this.isPortModified = true;
 
         if (value == "valueAddCustomPort") {
-          let cfg = {
-            width: 400,
-            height: 145,
-          };
-          await sender.showModalDialog(
-            IpcModalDialogType.AddCustomPort,
-            IpcOwnerWindowType.SettingsWindow,
-            cfg
-          );
+          // we need it just to update UI to show current port (except 'Add custom port...')
+          this.$store.dispatch("settings/setPort", this.port);
 
-          return;
+            try {
+              this.$refs.addCustomPortDlg.showModal();
+            } catch (e) {
+              console.error(e)
+            }           
+           return;
         }
 
         this.$store.dispatch("settings/setPort", value);
