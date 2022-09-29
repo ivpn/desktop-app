@@ -20,6 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build windows && !debug
 // +build windows,!debug
 
 package platform
@@ -69,4 +70,8 @@ func getInstallDir() string {
 	}
 
 	return strings.ReplaceAll(ret, `\`, `/`)
+}
+
+func getEtcDirCommon() string {
+	return getEtcDir()
 }

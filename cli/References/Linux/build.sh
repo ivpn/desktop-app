@@ -205,6 +205,7 @@ CreatePackage()
     --before-remove "$SCRIPT_DIR/package_scripts/before-remove.sh" \
     --after-remove "$SCRIPT_DIR/package_scripts/after-remove.sh" \
     $DAEMON_REPO_ABS_PATH/References/Linux/etc=/opt/ivpn/ \
+    $DAEMON_REPO_ABS_PATH/References/common/etc=/opt/ivpn/ \
     $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/bin/ \
     $OUT_DIR/ivpn=/usr/bin/ \
     $OBFSPXY_BIN=/opt/ivpn/obfsproxy/obfs4proxy \

@@ -20,6 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build windows && debug
 // +build windows,debug
 
 package platform
@@ -85,4 +86,8 @@ func getInstallDir() string {
 
 	installDir = path.Join(installDir, "References/Windows")
 	return installDir
+}
+
+func getEtcDirCommon() string {
+	return path.Join(getEtcDir(), "../../common/etc")
 }

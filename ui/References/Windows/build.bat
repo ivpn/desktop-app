@@ -122,6 +122,7 @@ goto :success
 
 	echo     Copying other files ...
 	set BIN_FOLDER_SERVICE=%SERVICE_REPO%\bin\x86_64\
+	set BIN_FOLDER_SERVICE_COMMON_REFS=%SERVICE_REPO%\References\common\
 	set BIN_FOLDER_SERVICE_REFS=%SERVICE_REPO%\References\Windows\
 	set BIN_FOLDER_CLI=%CLI_REPO%\bin\x86_64\
 
@@ -138,6 +139,7 @@ goto :success
 		set SRCPATH=???
 		if exist "%BIN_FOLDER_SERVICE%%%i" set SRCPATH=%BIN_FOLDER_SERVICE%%%i
 		if exist "%BIN_FOLDER_CLI%%%i" set SRCPATH=%BIN_FOLDER_CLI%%%i
+		if exist "%BIN_FOLDER_SERVICE_COMMON_REFS%%%i" set SRCPATH=%BIN_FOLDER_SERVICE_COMMON_REFS%%%i
 		if exist "%BIN_FOLDER_SERVICE_REFS%%%i" set SRCPATH=%BIN_FOLDER_SERVICE_REFS%%%i
 		if exist "%BIN_FOLDER_APP%%%i"  set SRCPATH=%BIN_FOLDER_APP%%%i
 		if exist "%SCRIPTDIR%Installer\%%i" set SRCPATH=%SCRIPTDIR%Installer\%%i
