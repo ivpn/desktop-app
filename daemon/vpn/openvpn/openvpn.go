@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -374,6 +375,12 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 	}
 
 	// create config file
+	defer func() {
+		// do not forget to remove proxy authentication file (if exists)
+		if proxyAuthFile := platform.OpenvpnProxyAuthFile(); proxyAuthFile != "" {
+			os.Remove(proxyAuthFile)
+		}
+	}()
 	err = o.connectParams.WriteConfigFile(
 		o.localPort,
 		o.configPath,
