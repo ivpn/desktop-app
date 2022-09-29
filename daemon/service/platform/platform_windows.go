@@ -74,17 +74,23 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 	}
 
 	// common variables initialization
-	settingsDir := path.Join(_installDir, "etc")
+	settingsDir := getEtcDir()
+	settingsDirCommon := getEtcDirCommon()
+
+	if settingsDir != settingsDirCommon {
+		fmt.Printf("!!! DEBUG VERSION? !!! extra 'etc' folder    : '%s'\n", settingsDirCommon)
+	}
+
 	settingsFile = path.Join(settingsDir, "settings.json")
 
-	serversFile = path.Join(settingsDir, "servers.json")
+	serversFile = path.Join(settingsDirCommon, "servers.json")
 	openvpnConfigFile = path.Join(settingsDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(settingsDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(settingsDir, "IVPN.conf") // will be used also for WireGuard service name (e.g. "WireGuardTunnel$IVPN")
 
 	openVpnBinaryPath = path.Join(_installDir, "OpenVPN", _archDir, "openvpn.exe")
-	openvpnCaKeyFile = path.Join(settingsDir, "ca.crt")
-	openvpnTaKeyFile = path.Join(settingsDir, "ta.key")
+	openvpnCaKeyFile = path.Join(settingsDirCommon, "ca.crt")
+	openvpnTaKeyFile = path.Join(settingsDirCommon, "ta.key")
 	openvpnUpScript = ""
 	openvpnDownScript = ""
 
@@ -101,7 +107,7 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 	wgToolBinaryPath = path.Join(_installDir, "WireGuard", _wgArchDir, "wg.exe")
 
 	dnscryptproxyBinPath = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.exe")
-	dnscryptproxyConfigTemplate = path.Join(settingsDir, "dnscrypt-proxy-template.toml")
+	dnscryptproxyConfigTemplate = path.Join(settingsDirCommon, "dnscrypt-proxy-template.toml")
 	dnscryptproxyConfig = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.toml")
 	dnscryptproxyLog = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.log")
 
@@ -116,6 +122,10 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 	}
 
 	return warnings, errors, logInfo
+}
+
+func getEtcDir() string {
+	return path.Join(getInstallDir(), "etc")
 }
 
 func doInitOperations() (w string, e error) { return "", nil }

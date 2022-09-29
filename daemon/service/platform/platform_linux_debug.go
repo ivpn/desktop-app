@@ -54,15 +54,17 @@ func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 		installDir = installDir[:idx+len(rootDir)]
 	}
 
+	etcDir := path.Join(installDir, "References/Linux/etc")
+	etcDirCommon := path.Join(installDir, "References/common/etc")
 	installDir = path.Join(installDir, "References/Linux")
 
-	firewallScript = path.Join(installDir, "etc/firewall.sh")
-	splitTunScript = path.Join(installDir, "etc/splittun.sh")
-	openvpnCaKeyFile = path.Join(installDir, "etc/ca.crt")
-	openvpnTaKeyFile = path.Join(installDir, "etc/ta.key")
-	openvpnUpScript = path.Join(installDir, "etc/client.up")
-	openvpnDownScript = path.Join(installDir, "etc/client.down")
-	serversFileBundled = path.Join(installDir, "etc/servers.json")
+	firewallScript = path.Join(etcDir, "firewall.sh")
+	splitTunScript = path.Join(etcDir, "splittun.sh")
+	openvpnCaKeyFile = path.Join(etcDirCommon, "ca.crt")
+	openvpnTaKeyFile = path.Join(etcDirCommon, "ta.key")
+	openvpnUpScript = path.Join(etcDir, "client.up")
+	openvpnDownScript = path.Join(etcDir, "client.down")
+	serversFileBundled = path.Join(etcDirCommon, "servers.json")
 
 	obfsproxyStartScript = path.Join(installDir, "_deps/obfs4proxy_inst/obfs4proxy")
 
@@ -70,7 +72,7 @@ func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 	wgToolBinaryPath = path.Join(installDir, "_deps/wireguard-tools_inst/wg")
 
 	dnscryptproxyBinPath = path.Join(installDir, "_deps/dnscryptproxy_inst/dnscrypt-proxy")
-	dnscryptproxyConfigTemplate = path.Join(installDir, "etc/dnscrypt-proxy-template.toml")
+	dnscryptproxyConfigTemplate = path.Join(etcDirCommon, "dnscrypt-proxy-template.toml")
 	dnscryptproxyConfig = path.Join(tmpDir, "dnscrypt-proxy.toml")
 
 	settingsFile = path.Join(tmpDir, "settings.json")

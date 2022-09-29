@@ -20,6 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build darwin && debug
 // +build darwin,debug
 
 package platform
@@ -66,8 +67,8 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	wgConfigFilePath = path.Join(settingsDir, "wireguard.conf")
 
 	openVpnBinaryPath = path.Join(installDir, "References/macOS/_deps/openvpn_inst/bin/openvpn")
-	openvpnCaKeyFile = path.Join(installDir, "References/macOS/etc/ca.crt")
-	openvpnTaKeyFile = path.Join(installDir, "References/macOS/etc/ta.key")
+	openvpnCaKeyFile = path.Join(installDir, "References/common/etc/ca.crt")
+	openvpnTaKeyFile = path.Join(installDir, "References/common/etc/ta.key")
 	openvpnUpScript = path.Join(installDir, "References/macOS/etc/dns.sh -up")
 	openvpnDownScript = path.Join(installDir, "References/macOS/etc/dns.sh -down")
 
@@ -77,7 +78,7 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	wgToolBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wg")
 
 	dnscryptproxyBinPath = path.Join(installDir, "References/macOS/_deps/dnscryptproxy_inst/dnscrypt-proxy")
-	dnscryptproxyConfigTemplate = path.Join(installDir, "References/macOS/etc/dnscrypt-proxy-template.toml")
+	dnscryptproxyConfigTemplate = path.Join(installDir, "References/common/etc/dnscrypt-proxy-template.toml")
 	dnscryptproxyConfig = path.Join(settingsDir, "dnscrypt-proxy.toml")
 
 	return nil, nil
