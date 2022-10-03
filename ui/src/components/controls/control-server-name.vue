@@ -238,6 +238,7 @@ div.bage {
   padding-right: 4px;
   border: 1px solid #777777;
   border-radius: 4px;
+  margin-right: 4px;
 }
 
 .flexRow {

@@ -52,13 +52,14 @@
     />
 
     <!-- WIFI -->
-    <transition
-      name="fade"
-      v-if="isTrustedNetworksControlActive || isConnectVPNOnInsecureNetwork"
-    >
-      <div v-if="wifiSSID">
+    <transition name="fade">
+      <div
+        v-if="
+          wifiSSID &&
+          (isTrustedNetworksControlActive || isConnectVPNOnInsecureNetwork)
+        "
+      >
         <div class="horizontalLine" />
-
         <SelectButtonControl
           class="leftPanelBlock"
           :click="onShowWifiConfig"

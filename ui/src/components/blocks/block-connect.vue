@@ -74,23 +74,26 @@
     <div class="buttons">
       <div class="buttonWithPopup" style="margin-right: 17px">
         <transition name="fade">
-          <button
-            class="settingsBtn"
-            style="background: var(--background-color)"
-            v-if="isCanPause"
-            v-on:click="onPauseMenu"
-            v-click-outside="onPauseMenuClickOutside"
-          >
-            <imgPause />
-          </button>
+          <div v-if="isCanPause || isCanResume">
+            <button
+              v-if="isCanPause"
+              class="settingsBtn"
+              style="background: var(--background-color); position: relative"
+              v-on:click="onPauseMenu"
+              v-click-outside="onPauseMenuClickOutside"
+            >
+              <imgPause />
+            </button>
 
-          <button
-            class="settingsBtnResume"
-            v-else-if="isCanResume"
-            v-on:click="onPauseResume(null)"
-          >
-            <img src="@/assets/resume.svg" style="margin-left: 2px" />
-          </button>
+            <button
+              v-else-if="isCanResume"
+              class="settingsBtnResume"
+              style="position: relative"
+              v-on:click="onPauseResume(null)"
+            >
+              <img src="@/assets/resume.svg" style="margin-left: 2px" />
+            </button>
+          </div>
         </transition>
 
         <!-- Popup -->
