@@ -1,3 +1,4 @@
+//go:build darwin || linux
 // +build darwin linux
 
 package filerights
@@ -14,26 +15,29 @@ var (
 )
 
 const (
-	// WrongExecutableFilePermissionsMask - file permissions mask for executables which are not allowed.
+	// permsForExecutableNotAcceptable - file permissions mask for executables which are not allowed.
 	// Executable files should not have write access for someone else except root
-	wrongExecutableFilePermissionsMask os.FileMode = 0022
-	// DefaultFilePermissionForConfig - mutable config files should have permissions read/write only for owner (root)
-	defaultFilePermissionForConfig os.FileMode = 0600
-	// DefaultFilePermissionForStaticConfig - unmutable config files should have permissions read/write only for owner (root)
-	defaultFilePermissionForStaticConfig os.FileMode = 0400
+	permsForExecutableNotAcceptable os.FileMode = 0022
+
+	// permsForConfig - mutable config files should have permissions read/write ONLY for owner (root)
+	permsForConfig os.FileMode = 0600
+
+	// un-mutable config files should have read rights ONLY for owner (root)
+	permsForStaticConfigRequired      os.FileMode = 0400
+	permsForStaticConfigNotAcceptable os.FileMode = 0077
 )
 
 // DefaultFilePermissionsForConfig - returns default file permissions to save config files
-func DefaultFilePermissionsForConfig() os.FileMode { return defaultFilePermissionForConfig }
+func DefaultFilePermissionsForConfig() os.FileMode { return permsForConfig }
 
 // CheckFileAccessRightsConfig ensures if given file has correct rights for mutable config file
 func CheckFileAccessRightsConfig(file string) error {
-	return ensureFileAccessRights(file, defaultFilePermissionForConfig)
+	return checkFileAccessRights(file, permsForConfig, 0, 0)
 }
 
-// CheckFileAccessRightsStaticConfig ensures if given file has correct rights for unmutable config file
+// CheckFileAccessRightsStaticConfig ensures if given file has correct rights for un-mutable config file
 func CheckFileAccessRightsStaticConfig(file string) error {
-	return ensureFileAccessRights(file, defaultFilePermissionForStaticConfig)
+	return checkFileAccessRights(file, 0, permsForStaticConfigRequired, permsForStaticConfigNotAcceptable)
 }
 
 // CheckFileAccessRightsExecutable checks if file has correct access-permission for executable
@@ -46,31 +50,14 @@ func CheckFileAccessRightsExecutable(file string) error {
 		file = strings.Split(file, "\t-")[0]
 	}
 
-	// check is file exists
-	stat, err := getFileStat(file)
-	if err != nil {
-		return err
-	}
-
-	if isDebug {
-		fmt.Println("WARNING! DEBUG MODE : permissions check skipped for file: ", file)
-		return nil
-	}
-
-	// check file owner
-	if err := ensureFileOwner(stat); err != nil {
-		return fmt.Errorf("%s: %w", file, err)
-	}
-
-	// check file access rights
-	mode := stat.Mode()
-	if (mode & wrongExecutableFilePermissionsMask) > 0 {
-		return fmt.Errorf("file '%s' has wrong permissions (it can be modified not only by owner [%o])", file, mode)
-	}
-	return nil
+	return checkFileAccessRights(file, 0, 0, permsForExecutableNotAcceptable)
 }
 
-func ensureFileAccessRights(file string, fmode os.FileMode) error {
+func checkFileAccessRights(file string, fmodeOnly os.FileMode, fmodeRequired os.FileMode, fmodeNotAcceptable os.FileMode) error {
+	if fmodeOnly == 0 && fmodeRequired == 0 && fmodeNotAcceptable == 0 {
+		return fmt.Errorf("INTERNAL ERROR: parameters not defined")
+	}
+
 	// check is file exists
 	stat, err := getFileStat(file)
 	if err != nil {
@@ -87,10 +74,26 @@ func ensureFileAccessRights(file string, fmode os.FileMode) error {
 		return fmt.Errorf("%s: %w", file, err)
 	}
 
-	// check file access rights
 	mode := stat.Mode()
-	if mode != fmode {
-		return fmt.Errorf(fmt.Sprintf("file '%s' has wrong access permissions (%o but expected %o)", file, mode, fmode))
+	if fmodeOnly > 0 {
+		if mode != fmodeOnly {
+			return fmt.Errorf(fmt.Sprintf("file '%s' has wrong access permissions (%03o but expected %03o)", file, mode, fmodeOnly))
+		}
+		return nil
+	}
+
+	// check file REQUIRED access rights
+	if fmodeRequired > 0 {
+		if (mode & fmodeRequired) == 0 {
+			return fmt.Errorf(fmt.Sprintf("file '%s' has wrong access permissions (%03o but required %03o)", file, mode, fmodeRequired))
+		}
+	}
+
+	// check file NOT ACCEPTABLE access rights
+	if fmodeNotAcceptable > 0 {
+		if (mode & fmodeNotAcceptable) > 0 {
+			return fmt.Errorf(fmt.Sprintf("file '%s' has wrong access permissions (%03o but not applicable perms mask is %03o)", file, mode, fmodeNotAcceptable))
+		}
 	}
 
 	return nil
@@ -116,7 +119,7 @@ func ensureFileOwner(finfo os.FileInfo) error {
 	fileOwnerUID := finfo.Sys().(*syscall.Stat_t).Uid
 	curUserID := uint32(os.Getuid())
 	if fileOwnerUID != curUserID {
-		return fmt.Errorf("wrong owner for a file (UID:%d). Expected a privilaged user as owner (UID:%d)", fileOwnerUID, curUserID)
+		return fmt.Errorf("wrong owner for a file (UID:%d). Expected a privileged user as owner (UID:%d)", fileOwnerUID, curUserID)
 	}
 	return nil
 }
