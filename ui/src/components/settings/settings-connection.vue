@@ -187,8 +187,8 @@
         </div>
 
         <ComponentDialog ref="helpDialogObfsproxy" center header="Info">
-          <div class="selectable">
-            <p class="selectable">
+          <div>
+            <p>
               <b>Obfsproxy</b> attempts to circumvent censorship, by transforming the traffic between the client and the server.
             </p>
             <p>
@@ -198,21 +198,21 @@
             <p>              
               <ul>
                 <li>
-                  When IAT-mode is disabled the large packets will be split by the
-                  network drivers, whose network fingerprints could be detected by
+                  When IAT-mode is disabled large packets will be split by the
+                  network drivers which may result in network fingerprints that could be detected by
                   censors. 
                 </li>
                 <li>
-                  IAT1 - means splitting large packets into MTU-size packets instead
-                  of letting the network drivers do it. This means the smaller packets cannot be
+                  IAT1 - Large packets will be split into MTU-size packets by Obfsproxy (instead
+                  the network drivers), resulting in smaller packets that are more resistant to being
                   reassembled for analysis and censoring. 
                 </li>
                 <li>
-                  IAT2 - (paranoid mode) means splitting large packets into variable size packets.
+                  IAT2 - (paranoid mode) - Large packets will be split into variable size packets by Obfsproxy.
                 </li>
               </ul>
             </p>            
-            <p> <b> Note! </b> Enabling IAT mode will affect overall VPN speed and CPU load. </p>            
+            <p> <b> Note! </b> Enabling IAT mode will affect overall VPN speed and CPU load. </p> 
           </div>
         </ComponentDialog>        
 
