@@ -178,10 +178,18 @@
               >
                 {{ item.text }}
               </option>
-            </select> 
+            </select>
 
-            <button class="noBordersBtn" style="margin-left: 4px;" title="Help" v-on:click="onShowHelpObfsproxy">
-              <img style="vertical-align: middle; margin-bottom: 2px;" src="@/assets/question.svg" />
+            <button
+              class="noBordersBtn"
+              style="margin-left: 4px"
+              title="Help"
+              v-on:click="onShowHelpObfsproxy"
+            >
+              <img
+                style="vertical-align: middle; margin-bottom: 2px"
+                src="@/assets/question.svg"
+              />
             </button>
           </div>
         </div>
@@ -189,32 +197,42 @@
         <ComponentDialog ref="helpDialogObfsproxy" center header="Info">
           <div>
             <p>
-              <b>Obfsproxy</b> attempts to circumvent censorship, by transforming the traffic between the client and the server.
+              <b>Obfsproxy</b> attempts to circumvent censorship, by
+              transforming the traffic between the client and the server.
             </p>
             <p>
-              The <i>obfs4</i> protocol is  less likely to be blocked than <i>obfs3</i>.
+              The <i>obfs4</i> protocol is less likely to be blocked than
+              <i>obfs3</i>.
             </p>
-            <p>Inter-Arrival Time (<b>IAT</b>) parameter is applicable for <i>obfs4</i>:</p>
-            <p>              
-              <ul>
-                <li>
-                  When IAT-mode is disabled large packets will be split by the
-                  network drivers which may result in network fingerprints that could be detected by
-                  censors. 
-                </li>
-                <li>
-                  IAT1 - Large packets will be split into MTU-size packets by Obfsproxy (instead
-                  the network drivers), resulting in smaller packets that are more resistant to being
-                  reassembled for analysis and censoring. 
-                </li>
-                <li>
-                  IAT2 - (paranoid mode) - Large packets will be split into variable size packets by Obfsproxy.
-                </li>
-              </ul>
-            </p>            
-            <p> <b> Note! </b> Enabling IAT mode will affect overall VPN speed and CPU load. </p> 
+            <p>
+              Inter-Arrival Time (<b>IAT</b>) parameter is applicable for
+              <i>obfs4</i>:
+            </p>
+
+            <ul>
+              <li>
+                When IAT-mode is disabled large packets will be split by the
+                network drivers which may result in network fingerprints that
+                could be detected by censors.
+              </li>
+              <li>
+                IAT1 - Large packets will be split into MTU-size packets by
+                Obfsproxy (instead the network drivers), resulting in smaller
+                packets that are more resistant to being reassembled for
+                analysis and censoring.
+              </li>
+              <li>
+                IAT2 - (paranoid mode) - Large packets will be split into
+                variable size packets by Obfsproxy.
+              </li>
+            </ul>
+
+            <p>
+              <b> Note! </b> Enabling IAT mode will affect overall VPN speed and
+              CPU load.
+            </p>
           </div>
-        </ComponentDialog>        
+        </ComponentDialog>
 
         <div class="description">
           Only enable if you have trouble connecting. TCP connections only
@@ -499,14 +517,14 @@ export default {
     formatDate: function (d) {
       if (d == null) return null;
       return dateDefaultFormat(d);
-    },    
-    onShowHelpObfsproxy: function() {
+    },
+    onShowHelpObfsproxy: function () {
       try {
         this.$refs.helpDialogObfsproxy.showModal();
       } catch (e) {
-        console.Error(e)
+        console.Error(e);
       }
-    }
+    },
   },
   computed: {
     isDisconnected: function () {
@@ -871,6 +889,7 @@ div.detailedParamValue {
 
   overflow-wrap: break-word;
   -webkit-user-select: text;
+  user-select: text;
   letter-spacing: 0.1px;
 }
 
