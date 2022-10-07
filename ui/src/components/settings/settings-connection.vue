@@ -165,7 +165,7 @@
       <div class="settingsBoldFont">Additional settings:</div>
       <div v-bind:class="{ disabled: !isDisconnected }">
         <div class="flexRow">
-          <div class="flexRow paramName">
+          <div class="flexRow paramName" style="padding-top: 2px">
             <input
               type="checkbox"
               id="connectionUseObfsproxy"
@@ -186,12 +186,13 @@
                 {{ item.text }}
               </option>
             </select>
+
             <button
-              class="noBordersBtn"
+              class="noBordersBtn flexRow"
               title="Help"
               v-on:click="onShowHelpObfsproxy"
             >
-              <img style="vertical-align: middle" src="@/assets/question.svg" />
+              <img src="@/assets/question.svg" />
             </button>
           </div>
         </div>

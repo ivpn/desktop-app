@@ -66,7 +66,7 @@
       "parser": "@babel/eslint-parser"
     },
     "rules": {
-      "prettier/prettier": [ "error", { "endOfLine": "auto" }]
+      "prettier/prettier": [ "warn", { "endOfLine": "auto" }]
     }
   },
   "browserslist": [

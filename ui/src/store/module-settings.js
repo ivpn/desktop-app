@@ -942,7 +942,7 @@ function ensurePortsSelectedCorrectly(context) {
     console.error("ensurePortsSelectedCorrectly: failed (context not defined)");
     return;
   }
-  
+
   // if we still not received configuration info (servers.json) - do nothing
   if (context.rootGetters["vpnState/isConfigInitialized"] !== true) return;
 
