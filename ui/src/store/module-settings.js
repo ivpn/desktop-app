@@ -1045,6 +1045,9 @@ function doAddNewCustomPort(context, port) {
 function eraseNonAcceptableCustomPorts(context) {
   try {
     if (!context) return;
+    // if we still not received configuration info (servers.json) - do nothing
+    if (context.rootGetters["vpnState/isConfigInitialized"] !== true) return;
+
     const getRanges =
       context.rootGetters["vpnState/funcGetConnectionPortRanges"];
 
@@ -1062,8 +1065,12 @@ function eraseNonAcceptableCustomPorts(context) {
         newCustomPorts.push(p);
     });
 
-    if (newCustomPorts.length != state.customPorts.length)
+    if (newCustomPorts.length != state.customPorts.length) {
+      console.log(
+        "Warning! Removing custom ports that do not belong to new ranges!"
+      );
       context.commit("customPorts", newCustomPorts);
+    }
   } catch (e) {
     console.error(e);
   }

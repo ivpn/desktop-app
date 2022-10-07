@@ -253,6 +253,18 @@ export default {
   },
 
   getters: {
+    isConfigInitialized: (state) => {
+      if (
+        !state ||
+        !state.servers ||
+        !state.servers.config ||
+        !state.servers.config.ports
+      )
+        return false;
+      let cfgPorts = state.servers.config.ports;
+      if (!cfgPorts.openvpn || !cfgPorts.wireguard) return false;
+      return true;
+    },
     isDisconnecting: (state) => {
       return state.connectionState === VpnStateEnum.DISCONNECTING;
     },
