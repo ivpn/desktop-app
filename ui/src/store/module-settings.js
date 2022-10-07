@@ -942,6 +942,9 @@ function ensurePortsSelectedCorrectly(context) {
     console.error("ensurePortsSelectedCorrectly: failed (context not defined)");
     return;
   }
+  
+  // if we still not received configuration info (servers.json) - do nothing
+  if (context.rootGetters["vpnState/isConfigInitialized"] !== true) return;
 
   // clean custom ports which are not applicable anymore (range is not exists anymore)
   eraseNonAcceptableCustomPorts(context);
