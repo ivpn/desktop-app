@@ -15,6 +15,12 @@ module.exports = {
   pluginOptions: {
     electronBuilder: {
       preload: "src/preload.js",
+
+      // Next line fixes an issue when fonts not loaded in production:
+      //    "Failed to read /Ubuntu-Regular.9bf2074c.woff on app protocol Error: ENOENT, Ubuntu-Regular.9bf2074c.woff not found in /opt/ivpn/ui/bin/resources/app.asar"
+      // https://github.com/nklayman/vue-cli-plugin-electron-builder/issues/1647
+      customFileProtocol: "./",
+
       //nodeIntegration: true,
       builderOptions: {
         // options placed here will be merged with default configuration and passed to electron-builder
