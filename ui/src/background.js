@@ -614,7 +614,7 @@ function createWindow(doNotShowWhenReady) {
     fullscreenable: false,
     maximizable: false,
     skipTaskbar:
-      store.state.settings.showAppInSystemDock !== false ? false : true,
+      store.state.settings.showAppInSystemDock !== false ? false : true, // not applicable for Linux (since Electron v20)
 
     center: true,
     title: "IVPN",
@@ -984,9 +984,9 @@ function setAppDockVisibility(isShow) {
       if (win && win.isVisible()) win.show(); // ensure window is still shown (sometimes on macOS window is jumping under other window)
     }
 
-    // Windows & Linux
+    // Windows
     if (win != null) {
-      win.setSkipTaskbar(true);
+      win.setSkipTaskbar(true); // 'skip-taskbar' not applicable for Linux (since Electron v20)
     }
   }
 }

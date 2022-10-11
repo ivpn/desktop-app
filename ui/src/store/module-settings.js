@@ -186,7 +186,7 @@ const getDefaultState = () => {
     // Not all Linux distro support tray icons.
     // Therefore, we have to change default config for Linux.
     defState.minimizeToTray = false;
-    defState.showAppInSystemDock = true;
+    defState.showAppInSystemDock = true; // 'skip-taskbar' not applicable for Linux (since Electron v20)
   }
 
   return defState;
