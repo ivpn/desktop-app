@@ -12,12 +12,11 @@
       <label class="defColor" for="launchAtLogin">Launch at login</label>
     </div>
 
-    <div class="param">
+    <div class="param" v-show="!isLinux">
       <input
         type="checkbox"
         id="showAppInSystemDock"
         v-model="showAppInSystemDock"
-        :disabled="minimizeToTray !== true"
       />
       <label class="defColor" for="showAppInSystemDock"
         >Show application icon in system dock</label

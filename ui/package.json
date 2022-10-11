@@ -43,7 +43,7 @@
     "@vue/cli-service": "5.0.8",
     "@vue/compiler-sfc": "3.2.39",
     "@vue/eslint-config-prettier": "7.0.0",
-    "electron": "18.3.6",
+    "electron": "21.0.1",
     "eslint": "8.24.0",
     "eslint-plugin-prettier": "4.2.1",
     "eslint-plugin-vue": "9.5.1",
