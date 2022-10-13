@@ -29,6 +29,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/service/wgkeys"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 // IServersUpdater - interface for updating server info mechanism
@@ -72,4 +73,5 @@ type IServiceEventsReceiver interface {
 	OnPingStatus(retMap map[string]int)
 	OnServersUpdated(*types.ServersInfoResponse)
 	OnSplitTunnelStatusChanged()
+	OnVpnStateChanged(state vpn.StateInfo)
 }

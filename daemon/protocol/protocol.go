@@ -33,7 +33,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
@@ -57,8 +56,8 @@ func init() {
 
 // Service - service interface
 type Service interface {
-	// OnControlConnectionClosed - Perform reqired operations when protocol (controll channel with UI application) was closed
-	// (for example, we must disable firewall (if it not persistant))
+	// OnControlConnectionClosed - Perform required operations when protocol (control channel with UI application) was closed
+	// (for example, we must disable firewall (if it not persistent))
 	// Must be called by protocol object
 	// Return parameters:
 	// - isServiceMustBeClosed: true informing that service have to be closed ("Stop IVPN Agent when application is not running" feature)
@@ -110,8 +109,8 @@ type Service interface {
 	ResetManualDNS() error
 
 	IsCanConnectMultiHop() error
-	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
-	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error
+	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error
+	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error
 	Disconnect() error
 	Connected() bool
 
@@ -143,7 +142,11 @@ type Service interface {
 
 // CreateProtocol - Create new protocol object
 func CreateProtocol() (*Protocol, error) {
-	return &Protocol{_connections: make(map[net.Conn]struct{}), _eaa: eaa.Init(platform.ParanoidModeSecretFile())}, nil
+	return &Protocol{
+		_connections:     make(map[net.Conn]struct{}),
+		_eaa:             eaa.Init(platform.ParanoidModeSecretFile()),
+		_connRequestChan: make(chan types.Connect, 1),
+	}, nil
 }
 
 // Protocol - TCP interface to communicate with IVPN application
@@ -156,14 +159,13 @@ type Protocol struct {
 	_connectionsMutex sync.RWMutex
 	_connections      map[net.Conn]struct{}
 
-	_service Service
+	// Only last connect request will be processed (if there are more then one received in short period of time)
+	_connRequestMutex sync.Mutex
+	_connRequestChan  chan types.Connect
 
-	_vpnConnectMutex     sync.Mutex
 	_disconnectRequested bool
 
-	_connectRequestsMutex   sync.Mutex
-	_connectRequests        int
-	_connectRequestLastTime time.Time
+	_service Service
 
 	// keep info about last VPN state
 	_lastVPNState vpn.StateInfo
@@ -239,6 +241,9 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 		listener.Close()
 		log.Info("Listener closed")
 	}()
+
+	// start processing of new connection requests
+	go p.processConnectionRequests()
 
 	// infinite loop of processing IVPN client connection
 	for {
@@ -351,15 +356,6 @@ func (p *Protocol) processClient(conn net.Conn) {
 		// Processing requests from client (in separate routine)
 		go p.processRequest(conn, message)
 	}
-}
-
-// normalizeField - wrapper around strings.Fields(). Returns only first field or empty string.
-func normalizeField(s string) string {
-	fields := strings.Fields(s)
-	if len(fields) <= 0 {
-		return ""
-	}
-	return fields[0]
 }
 
 func (p *Protocol) processRequest(conn net.Conn, message string) {
@@ -633,7 +629,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// send the response to the requestor
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
+		// all clients will be notified in case of successful change by OnKillSwitchStateChanged() handler
 
 	case "KillSwitchSetAllowLANMulticast":
 		var req types.KillSwitchSetAllowLANMulticast
@@ -644,7 +640,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		p._service.SetKillSwitchAllowLANMulticast(req.AllowLANMulticast)
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
+		// all clients will be notified in case of successful change by OnKillSwitchStateChanged() handler
 
 	case "KillSwitchSetAllowLAN":
 		var req types.KillSwitchSetAllowLAN
@@ -655,7 +651,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		p._service.SetKillSwitchAllowLAN(req.AllowLAN)
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
+		// all clients will be notified in case of successful change by OnKillSwitchStateChanged() handler
 
 	case "KillSwitchSetUserExceptions":
 		var req types.KillSwitchSetUserExceptions
@@ -670,7 +666,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		} else {
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
-		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
+		// all clients will be notified in case of successful change by OnKillSwitchStateChanged() handler
 
 	case "KillSwitchSetIsPersistent":
 		var req types.KillSwitchSetIsPersistent
@@ -686,7 +682,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// send the response to the requestor
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
+		// all clients will be notified in case of successful change by OnKillSwitchStateChanged() handler
 
 	case "KillSwitchSetAllowApiServers":
 		var req types.KillSwitchSetAllowApiServers
@@ -701,7 +697,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		// send the response to the requestor
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
-		// all clients will be notified in case of successfull change by OnKillSwitchStateChanged() handler
+		// all clients will be notified in case of successful change by OnKillSwitchStateChanged() handler
 
 	// TODO: avoid using raw key as a string
 	// NOTE: please, use 'SetUserPreferences' for future extensions
@@ -862,40 +858,51 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 	case "SetAlternateDns":
-		var req types.SetAlternateDns
-		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			break
-		}
-		req.Dns.DnsHost = normalizeField(req.Dns.DnsHost)
-		req.Dns.DohTemplate = normalizeField(req.Dns.DohTemplate)
+		{
+			var req types.SetAlternateDns
+			if err := json.Unmarshal(messageData, &req); err != nil {
+				p.sendErrorResponse(conn, reqCmd, err)
+				break
+			}
 
-		var err error
-		if req.Dns.IsEmpty() {
-			err = p._service.ResetManualDNS()
-		} else {
-			err = p._service.SetManualDNS(req.Dns)
+			// wrapper around strings.Fields(). Returns only first field or empty string.
+			getSingleField := func(s string) string {
+				fields := strings.Fields(s)
+				if len(fields) <= 0 {
+					return ""
+				}
+				return fields[0]
+			}
 
-			if err != nil {
-				// DNS set failed. Trying to reset DNS
-				errReset := p._service.ResetManualDNS()
-				if errReset != nil {
-					log.ErrorTrace(errReset)
+			req.Dns.DnsHost = getSingleField(req.Dns.DnsHost)
+			req.Dns.DohTemplate = getSingleField(req.Dns.DohTemplate)
+
+			var err error
+			if req.Dns.IsEmpty() {
+				err = p._service.ResetManualDNS()
+			} else {
+				err = p._service.SetManualDNS(req.Dns)
+
+				if err != nil {
+					// DNS set failed. Trying to reset DNS
+					errReset := p._service.ResetManualDNS()
+					if errReset != nil {
+						log.ErrorTrace(errReset)
+					}
 				}
 			}
-		}
 
-		if err != nil {
-			log.ErrorTrace(err)
-			// send the response to the requestor
-			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
-		} else {
-			// notify all connected clients
-			p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns})
-			// send the response to the requestor
-			p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns}, req.Idx)
+			if err != nil {
+				log.ErrorTrace(err)
+				// send the response to the requestor
+				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
+			} else {
+				// notify all connected clients
+				p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns})
+				// send the response to the requestor
+				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns}, req.Idx)
+			}
 		}
-
 	case "GetDnsPredefinedConfigs":
 		cfgs, err := dns.GetPredefinedDnsConfigurations()
 		if err != nil {
@@ -1094,131 +1101,145 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
 
-	case "Connect":
-		p._disconnectRequested = false
+	case "ConnectionSettings":
+		// Similar data to 'Connect' request but this command not start the connection.
+		// UI client have to notify daemon about changes in connection settings.
+		// It is required for automatic connection on daemon's side (e.g. 'Auto-connect on Launch' or 'Trusted WiFi' functionality)
 
-		requestTime := p.vpnConnectReqCounterIncrease()
-		defer p.vpnConnectReqCounterDecrease()
-
-		stateChan := make(chan vpn.StateInfo, 1)
-		isExitChan := make(chan bool, 1)
-		disconnectAuthError := false
-		var connectionError error
-
-		// disconnect active connection (if connected)
-		if err := p._service.Disconnect(); err != nil {
-			log.ErrorTrace(err)
-		}
-
-		// Ensure that we are using latest connection request
-		// Skip this request if new connection request available
-		if _, lastRequestTime := p.vpnConnectReqCounter(); !requestTime.Equal(lastRequestTime) {
-			log.Info(fmt.Sprintf("Skipping connection request[%d]. Newest request received!", reqCmd.Idx))
-			p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+		// parse request
+		var connectionSettings types.ConnectionSettings
+		if err := json.Unmarshal(messageData, &connectionSettings); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
 			return
 		}
 
-		p._vpnConnectMutex.Lock()
-		defer p._vpnConnectMutex.Unlock()
+		// TODO: ...
 
-		// Double-check to ensure that we are using latest connection request
-		// Skip this request if new connection request available (this should never happen)
-		if _, lastRequestTime := p.vpnConnectReqCounter(); !requestTime.Equal(lastRequestTime) {
-			log.Info(fmt.Sprintf("Skipping connection request[%d]. Newest request received.", reqCmd.Idx))
-			p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
-			return
-		}
-
-		var waiter sync.WaitGroup
-
-		// do not forget to notify that process was stopped (disconnected)
-		defer func() {
-
-			// stop all go-routines related to this connections
-			close(isExitChan)
-
-			// Do not send "Disconnected" notification if we are going to establish new connection immediately
-			if cnt, _ := p.vpnConnectReqCounter(); cnt == 1 || p._disconnectRequested {
-				p._lastVPNState = vpn.NewStateInfo(vpn.DISCONNECTED, "")
-
-				// Sending "Disconnected" only in one place (after VPN process stopped)
-				disconnectionReason := types.Unknown
-				if disconnectAuthError {
-					disconnectionReason = types.AuthenticationError
-					if connectionError == nil {
-						connectionError = fmt.Errorf("authentication failure")
-					}
-				}
-				if p._disconnectRequested {
-					// notify clients that disconnection was manually requested by one of connected clients
-					// (prevent UI clients trying to reconnect)
-					disconnectionReason = types.DisconnectRequested
-				}
-
-				errMsg := ""
-				if connectionError != nil {
-					errMsg = connectionError.Error()
-				}
-				p.notifyClients(&types.DisconnectedResp{Failure: connectionError != nil, Reason: disconnectionReason, ReasonDescription: errMsg})
-			}
-
-			// wait all routines to stop
-			waiter.Wait()
-		}()
-
-		// forwarding VPN state in separate routine
-		waiter.Add(1)
-		go func() {
-			log.Info("Enter VPN status checker")
-			defer func() {
-				if r := recover(); r != nil {
-					log.Error("VPN status checker panic!")
-					if err, ok := r.(error); ok {
-						log.ErrorTrace(err)
-					}
-				}
-				log.Info("Exit VPN status checker")
-				waiter.Done()
-			}()
-
-		state_forward_loop:
-			for {
-				select {
-				case <-isExitChan:
-					break state_forward_loop
-
-				case state := <-stateChan:
-
-					select {
-					case <-isExitChan:
-						// channel closed in defer function (vpn disconnected)
-						break state_forward_loop
-					default:
-					}
-
-					p._lastVPNState = state
-
-					switch state.State {
-					case vpn.CONNECTED:
-						p.notifyClients(p.createConnectedResponse(state))
-					case vpn.EXITING:
-						disconnectAuthError = state.IsAuthError
-					default:
-						p.notifyClients(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo})
-					}
-				}
-			}
-		}()
-
+		// send request confirmation to client
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
-		// SYNCHRONOUSLY start VPN connection process (wait until it finished)
-		if connectionError = p.processConnectRequest(messageData, stateChan); connectionError != nil {
-			log.ErrorTrace(connectionError)
+
+	case "Connect":
+		// parse request
+		var connectRequest types.Connect
+		if err := json.Unmarshal(messageData, &connectRequest); err != nil {
+			p.sendErrorResponse(conn, reqCmd, fmt.Errorf("failed to unmarshal json 'Connect' request: %w", err))
+			return
 		}
+
+		// Save last received connection request. It will be processed in separate routine 'processConnectionRequests()' which is already running
+		p.RegisterConnectionRequest(connectRequest)
+
+		// send request confirmation to client
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	default:
 		log.Warning("!!! Unsupported request type !!! ", reqCmd.Command)
 		log.Debug("Unsupported request:", message)
 		p.sendErrorResponse(conn, reqCmd, fmt.Errorf("unsupported request: '%s'", reqCmd.Command))
+	}
+}
+
+func (p *Protocol) RegisterConnectionRequest(r types.Connect) {
+	p._disconnectRequested = false
+
+	func() {
+		p._connRequestMutex.Lock()
+		defer p._connRequestMutex.Unlock()
+		// remove previous unprocessed requests (if they are)
+		select {
+		case oldR := <-p._connRequestChan:
+			log.Info(fmt.Sprintf("Skipping previous connection request[%d]. Newest request received!", oldR.Idx))
+		default:
+		}
+		// save new request
+		p._connRequestChan <- r
+	}()
+
+	// disconnect active connection (if connected)
+	// It is important to call it after new connection request registered
+	if err := p._service.Disconnect(); err != nil {
+		log.ErrorTrace(err)
+	}
+}
+
+func (p *Protocol) processConnectionRequests() {
+	log.Info("Connection requests processor started")
+	defer log.Info("Connection requests processor stopped")
+
+	for {
+		if !p._isRunning {
+			break
+		}
+
+		connectRequest := <-p._connRequestChan
+
+		// processing each connection request is wrapped into function in order to call 'defer' sections properly
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Error(fmt.Errorf("PANIC during processing connection request: %v", r))
+					if err, ok := r.(error); ok {
+						log.ErrorTrace(err)
+					}
+				}
+			}()
+
+			var connectionError error
+
+			// do not forget to notify that process was stopped (disconnected)
+			defer func() {
+				// Do not send "Disconnected" notification ONLY if we are going to establish new connection immediately
+				if len(p._connRequestChan) == 0 || p._disconnectRequested {
+					lastState := p._lastVPNState
+					p._lastVPNState = vpn.NewStateInfo(vpn.DISCONNECTED, "")
+
+					// Sending "Disconnected" only in one place (after VPN process stopped)
+					disconnectionReason := types.Unknown
+					if lastState.State == vpn.EXITING && lastState.IsAuthError {
+						disconnectionReason = types.AuthenticationError
+						if connectionError == nil {
+							connectionError = fmt.Errorf("authentication failure")
+						}
+					}
+					if p._disconnectRequested {
+						// notify clients that disconnection was manually requested by one of connected clients
+						// (prevent UI clients trying to reconnect)
+						disconnectionReason = types.DisconnectRequested
+					}
+
+					errMsg := ""
+					if connectionError != nil {
+						errMsg = connectionError.Error()
+					}
+					p.notifyClients(&types.DisconnectedResp{Failure: connectionError != nil, Reason: disconnectionReason, ReasonDescription: errMsg})
+				}
+			}()
+
+			// SYNCHRONOUSLY start VPN connection process (wait until it finished)
+			if connectionError = p.processConnectRequest(connectRequest); connectionError != nil {
+				log.ErrorTrace(connectionError)
+			}
+		}()
+	}
+
+}
+
+func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("Panic when notifying VPN status to clients! (recovered)")
+			if err, ok := r.(error); ok {
+				log.ErrorTrace(err)
+			}
+		}
+	}()
+
+	p._lastVPNState = state
+
+	switch state.State {
+	case vpn.CONNECTED:
+		p.notifyClients(p.createConnectedResponse(state))
+	default:
+		p.notifyClients(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo})
 	}
 }

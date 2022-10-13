@@ -24,14 +24,12 @@ package protocol
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 	"net"
 	"runtime"
 	"strings"
-	"time"
 
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/helpers"
@@ -44,8 +42,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 )
 
-// connID returns connection info (required to distinguish communication between several connections in log)
-
+// ----------------------------------------------------------------------
 func getConnectionName(c net.Conn) string {
 	return strings.TrimSpace(strings.Replace(c.RemoteAddr().String(), "127.0.0.1:", "", 1))
 }
@@ -54,7 +51,6 @@ func (p *Protocol) connLogID(c net.Conn) string {
 	if c == nil {
 		return ""
 	}
-
 	return fmt.Sprintf("%s ", getConnectionName(c))
 }
 
@@ -143,28 +139,7 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd types.ICommandBase, idx int) 
 	return nil
 }
 
-// -------------- VPN connection requests counter ---------------
-func (p *Protocol) vpnConnectReqCounter() (int, time.Time) {
-	p._connectRequestsMutex.Lock()
-	defer p._connectRequestsMutex.Unlock()
-
-	return p._connectRequests, p._connectRequestLastTime
-}
-func (p *Protocol) vpnConnectReqCounterIncrease() time.Time {
-	p._connectRequestsMutex.Lock()
-	defer p._connectRequestsMutex.Unlock()
-
-	p._connectRequestLastTime = time.Now()
-	p._connectRequests++
-	return p._connectRequestLastTime
-}
-func (p *Protocol) vpnConnectReqCounterDecrease() {
-	p._connectRequestsMutex.Lock()
-	defer p._connectRequestsMutex.Unlock()
-
-	p._connectRequests--
-}
-
+// -------------- Initialize response objects ---------------
 func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 	prefs := p._service.Preferences()
 	return &types.SettingsResp{
@@ -228,7 +203,7 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 }
 
 // -------------- processing connection request ---------------
-func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vpn.StateInfo) (err error) {
+func (p *Protocol) processConnectRequest(r types.Connect) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("PANIC on connect: ", r)
@@ -240,11 +215,6 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 	if p._disconnectRequested {
 		log.Info("Disconnection was requested. Canceling connection.")
 		return p._service.Disconnect()
-	}
-
-	var r types.Connect
-	if err := json.Unmarshal(messageData, &r); err != nil {
-		return fmt.Errorf("failed to unmarshal json 'Connect' request: %w", err)
 	}
 
 	retManualDNS := r.ManualDNS
@@ -323,7 +293,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 				proxyPassword)
 		}
 
-		return p._service.ConnectOpenVPN(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
+		return p._service.ConnectOpenVPN(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection)
 
 	} else if vpn.Type(r.VpnType) == vpn.WireGuard {
 		hosts := r.WireGuardParameters.EntryVpnServer.Hosts
@@ -435,7 +405,7 @@ func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vp
 				r.WireGuardParameters.Mtu)
 		}
 
-		return p._service.ConnectWireGuard(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
+		return p._service.ConnectWireGuard(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection)
 
 	}
 

@@ -303,7 +303,7 @@ func (s *Service) updateAPIAddrInFWExceptions() {
 // - err: error
 func (s *Service) OnControlConnectionClosed() (isServiceMustBeClosed bool, err error) {
 	isServiceMustBeClosed = s._preferences.IsStopOnClientDisconnect
-	// disable firewall if it not persistant
+	// disable firewall if it not persistent
 	if !s._preferences.IsFwPersistant {
 		log.Info("Control connection was closed. Disabling firewall.")
 		err = s.SetKillSwitchState(false)
@@ -414,7 +414,7 @@ func (s *Service) IsCanConnectMultiHop() error {
 }
 
 // ConnectOpenVPN start OpenVPN connection
-func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
@@ -541,11 +541,11 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection, stateChan)
+	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection)
 }
 
 // ConnectWireGuard start WireGuard connection
-func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
 	// stop active connection (if exists)
 	if err := s.Disconnect(); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
@@ -598,10 +598,10 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection, stateChan)
+	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection)
 }
 
-func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return srverrors.ErrorNotLoggedIn{}
@@ -616,7 +616,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 	// no delay before first reconnection
 	delayBeforeReconnect := 0 * time.Second
 
-	stateChan <- vpn.NewStateInfo(vpn.CONNECTING, "Connecting")
+	s._evtReceiver.OnVpnStateChanged(vpn.NewStateInfo(vpn.CONNECTING, "Connecting"))
 	for {
 		// create new VPN object
 		vpnObj, err := createVpnObj()
@@ -627,7 +627,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		lastConnectionTryTime := time.Now()
 
 		// start connection
-		connErr := s.connect(vpnObj, s._manualDNS, firewallOn, firewallDuringConnection, stateChan)
+		connErr := s.connect(vpnObj, s._manualDNS, firewallOn, firewallDuringConnection)
 		if connErr != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", connErr))
 			if s._requiredVpnState == Connect {
@@ -640,7 +640,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		// retry, if reconnection requested
 		if s._requiredVpnState == KeepConnection {
 			// notifying clients about reconnection
-			stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "Reconnecting due to disconnection")
+			s._evtReceiver.OnVpnStateChanged(vpn.NewStateInfo(vpn.RECONNECTING, "Reconnecting due to disconnection"))
 
 			// no delay before reconnection (if last connection was long time ago)
 			if time.Now().After(lastConnectionTryTime.Add(time.Second * 30)) {
@@ -667,7 +667,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 			}
 
 			if s._requiredVpnState == KeepConnection {
-				// consecutive reconnections has delay 5 seconds
+				// consecutive re-connections has delay 5 seconds
 				delayBeforeReconnect = time.Second * 5
 				continue
 			}
@@ -683,7 +683,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 // Connect connect vpn.
 // Param 'firewallOn' - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored).
 // Param 'firewallDuringConnection' - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
-func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool, stateChan chan<- vpn.StateInfo) error {
+func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
 	var connectRoutinesWaiter sync.WaitGroup
 
 	// stop active connection (if exists)
@@ -705,7 +705,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 		if done != nil {
 			done <- struct{}{}
 			// Closing channel
-			// Note: reading from empty and closed channel will not lead to deadlock (immediately returns zero value)
+			// Note: reading from empty or closed channel will not lead to deadlock (immediately returns zero value)
 			close(done)
 		}
 	}()
@@ -797,7 +797,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 				state.VpnType = vpnProc.Type()
 
 				// forward state to 'stateChan'
-				stateChan <- state
+				s._evtReceiver.OnVpnStateChanged(state)
 
 				log.Info(fmt.Sprintf("State: %v", state))
 
@@ -977,7 +977,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 
 	log.Info("Initializing DNS")
 
-	// Reinitialise DNS configuration according to user settings
+	// Re-initialize DNS configuration according to user settings
 	// It is applicable, for example for Linux: when the user changed DNS management style
 	if err := dns.ApplyUserSettings(); err != nil {
 		return err
@@ -1142,7 +1142,7 @@ func (s *Service) onKillSwitchStateChanged() {
 	}
 }
 
-// SetKillSwitchState enable\disable killswitch
+// SetKillSwitchState enable\disable kill-switch
 func (s *Service) SetKillSwitchState(isEnabled bool) error {
 
 	if !isEnabled && s._preferences.IsFwPersistant {
@@ -1156,7 +1156,7 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 	return err
 }
 
-// KillSwitchState returns killswitch state
+// KillSwitchState returns kill-switch state
 func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, fwUserExceptions string, err error) {
 	prefs := s._preferences
 	enabled, err := firewall.GetEnabled()
@@ -1358,7 +1358,7 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 	defer s._evtReceiver.OnSplitTunnelStatusChanged()
 
 	if splittun.GetFuncNotAvailableError() != nil {
-		// Split-Tunneling not accessable (not able to connect to a driver or not implemented for current platform)
+		// Split-Tunneling not accessible (not able to connect to a driver or not implemented for current platform)
 		return nil
 	}
 

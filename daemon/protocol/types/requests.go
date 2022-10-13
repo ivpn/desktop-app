@@ -163,6 +163,14 @@ type GetDnsPredefinedConfigs struct {
 	RequestBase
 }
 
+// Similar data to 'Connect' request but this command not start the connection.
+// UI client have to notify daemon about changes in connection settings.
+// It is required for automatic connection on daemon's side (e.g. 'Auto-connect on Launch' or 'Trusted WiFi' functionality)
+type ConnectionSettings struct {
+	RequestBase
+	ConnectSettings Connect
+}
+
 // Connect request to establish new VPN connection
 type Connect struct {
 	RequestBase
