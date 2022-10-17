@@ -20,6 +20,9 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build darwin
+// +build darwin
+
 package service
 
 import (

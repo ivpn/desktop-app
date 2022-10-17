@@ -162,6 +162,7 @@ type Protocol struct {
 	// Only last connect request will be processed (if there are more then one received in short period of time)
 	_connRequestMutex sync.Mutex
 	_connRequestChan  chan types.Connect
+	_connRequestReady sync.WaitGroup
 
 	_disconnectRequested bool
 
@@ -1113,7 +1114,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			return
 		}
 
-		// TODO: ...
+		//p.saveLastConnectionRequest(connectionSettings.ConnectReq)
 
 		// send request confirmation to client
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
@@ -1127,7 +1128,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		// Save last received connection request. It will be processed in separate routine 'processConnectionRequests()' which is already running
-		p.RegisterConnectionRequest(connectRequest)
+		//p.RegisterConnectionRequest(connectRequest)
 
 		// send request confirmation to client
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
@@ -1142,6 +1143,12 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 func (p *Protocol) RegisterConnectionRequest(r types.Connect) {
 	p._disconnectRequested = false
 
+	// New connection request would not start processing until p._connRequestReady.Done()
+	p._connRequestReady.Add(1)
+	// At the end: allow processing connection request which was added
+	defer p._connRequestReady.Done()
+
+	// synchronized block: only one connection request allowed. Remove previous request (if exists)
 	func() {
 		p._connRequestMutex.Lock()
 		defer p._connRequestMutex.Unlock()
@@ -1151,11 +1158,17 @@ func (p *Protocol) RegisterConnectionRequest(r types.Connect) {
 			log.Info(fmt.Sprintf("Skipping previous connection request[%d]. Newest request received!", oldR.Idx))
 		default:
 		}
-		// save new request
+
+		// Add request to chain (it will be processed in 'processConnectionRequests()' routine)
+		// Note: new connection request would not start processing until p._connRequestReady.Done()
 		p._connRequestChan <- r
 	}()
 
-	// disconnect active connection (if connected)
+	// save last request into preferences
+	//p.saveLastConnectionRequest(r)
+
+	// Disconnect active connection (if connected).
+	// "Disconnected" notification will not be sent to the clients in this case (because new connection request is pending).
 	// It is important to call it after new connection request registered
 	if err := p._service.Disconnect(); err != nil {
 		log.ErrorTrace(err)
@@ -1172,6 +1185,7 @@ func (p *Protocol) processConnectionRequests() {
 		}
 
 		connectRequest := <-p._connRequestChan
+		p._connRequestReady.Wait() // wait processing connection request until everything is ready
 
 		// processing each connection request is wrapped into function in order to call 'defer' sections properly
 		func() {
@@ -1188,7 +1202,7 @@ func (p *Protocol) processConnectionRequests() {
 
 			// do not forget to notify that process was stopped (disconnected)
 			defer func() {
-				// Do not send "Disconnected" notification ONLY if we are going to establish new connection immediately
+				// Do not send "Disconnected" notification if we are going to establish new connection immediately
 				if len(p._connRequestChan) == 0 || p._disconnectRequested {
 					lastState := p._lastVPNState
 					p._lastVPNState = vpn.NewStateInfo(vpn.DISCONNECTED, "")
@@ -1239,6 +1253,8 @@ func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
 	switch state.State {
 	case vpn.CONNECTED:
 		p.notifyClients(p.createConnectedResponse(state))
+	case vpn.DISCONNECTED:
+		// suppress DISCONNECTED event. It will be sent to the client only after finishing the synchronous function processConnectRequest().
 	default:
 		p.notifyClients(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo})
 	}

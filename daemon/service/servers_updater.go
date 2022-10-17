@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -168,7 +167,7 @@ func readServersFromCache() (svrs *types.ServersInfoResponse, apiIPsV4 []string,
 		return nil, nil, nil, fmt.Errorf("failed to info about servers cache file: %w", err)
 	}
 
-	data, err := ioutil.ReadFile(serversFile)
+	data, err := os.ReadFile(serversFile)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to read servers cache file: %w", err)
 	}
@@ -204,5 +203,5 @@ func writeServersToCache(servers *types.ServersInfoResponse) error {
 		return errors.New("failed to serialize servers")
 	}
 
-	return ioutil.WriteFile(platform.ServersFile(), data, filerights.DefaultFilePermissionsForConfig())
+	return os.WriteFile(platform.ServersFile(), data, filerights.DefaultFilePermissionsForConfig())
 }
