@@ -1128,7 +1128,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		// Save last received connection request. It will be processed in separate routine 'processConnectionRequests()' which is already running
-		//p.RegisterConnectionRequest(connectRequest)
+		p.RegisterConnectionRequest(connectRequest)
 
 		// send request confirmation to client
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
