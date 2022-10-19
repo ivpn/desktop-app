@@ -74,4 +74,5 @@ type IServiceEventsReceiver interface {
 	OnServersUpdated(*types.ServersInfoResponse)
 	OnSplitTunnelStatusChanged()
 	OnVpnStateChanged(state vpn.StateInfo)
+	OnServiceRequiresConnection() error // called by a service when new connection is required (e.g. requested by 'trusted-wifi' functionality or 'auto-connect' on launch)
 }

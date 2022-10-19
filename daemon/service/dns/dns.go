@@ -31,18 +31,21 @@ import (
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
-	"github.com/ivpn/desktop-app/daemon/service/preferences"
 )
 
 type FuncDnsChangeFirewallNotify func(dns *DnsSettings) error
 
-type FuncGetUserSettings func() preferences.UserPreferences
+type DnsExtraSettings struct {
+	// If true - use old style DNS management mechanism
+	// by direct modifying file '/etc/resolv.conf'
+	Linux_IsDnsMgmtOldStyle bool
+}
 
 var (
 	log                         *logger.Logger
 	lastManualDNS               DnsSettings
 	funcDnsChangeFirewallNotify FuncDnsChangeFirewallNotify
-	funcGetUserSettings         FuncGetUserSettings
+	extraSettings               DnsExtraSettings
 )
 
 func init() {
@@ -146,16 +149,13 @@ func (d DnsSettings) InfoString() string {
 
 // Initialize is doing initialization stuff
 // Must be called on application start
-func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify, getUserSettingsFunc FuncGetUserSettings) error {
+func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify, exSettings DnsExtraSettings) error {
 	funcDnsChangeFirewallNotify = fwNotifyDnsChangeFunc
 	if funcDnsChangeFirewallNotify == nil {
 		logger.Debug("WARNING! Firewall notification function not defined!")
 	}
 
-	funcGetUserSettings = getUserSettingsFunc
-	if funcGetUserSettings == nil {
-		logger.Debug("WARNING! getUserSettingsFunc() function not defined!")
-	}
+	extraSettings = exSettings
 
 	return wrapErrorIfFailed(implInitialize())
 }

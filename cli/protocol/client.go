@@ -41,6 +41,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -134,11 +135,16 @@ func (c *Client) SendHelloEx(isSendResponseToAllClients bool) (helloResponse typ
 		return helloResponse, err
 	}
 
+	ver := version.Version()
+	if ver == "" {
+		ver = "unknown"
+	}
 	helloReq := types.Hello{
 		Secret:                   c._secret,
+		ClientType:               types.ClientCli,
 		KeepDaemonAlone:          true,
 		GetStatus:                true,
-		Version:                  "1.0",
+		Version:                  ver + ": CLI",
 		SendResponseToAllClients: isSendResponseToAllClients,
 	}
 

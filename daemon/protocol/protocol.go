@@ -44,8 +44,6 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/vpn"
-	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
-	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 )
 
 var log *logger.Logger
@@ -90,6 +88,9 @@ type Service interface {
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
 	SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error
 
+	SetConnectionParams(params preferences.ConnectionParams) error
+	GetConnectionParams() (preferences.ConnectionParams, error)
+
 	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
 	SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error)
@@ -109,8 +110,7 @@ type Service interface {
 	ResetManualDNS() error
 
 	IsCanConnectMultiHop() error
-	ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error
-	ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error
+	Connect(params preferences.ConnectionParams) error
 	Disconnect() error
 	Connected() bool
 
@@ -1102,19 +1102,22 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
 
-	case "ConnectionSettings":
+	case "ConnectSettings":
 		// Similar data to 'Connect' request but this command not start the connection.
 		// UI client have to notify daemon about changes in connection settings.
 		// It is required for automatic connection on daemon's side (e.g. 'Auto-connect on Launch' or 'Trusted WiFi' functionality)
 
 		// parse request
-		var connectionSettings types.ConnectionSettings
+		var connectionSettings types.ConnectSettings
 		if err := json.Unmarshal(messageData, &connectionSettings); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			return
 		}
 
-		//p.saveLastConnectionRequest(connectionSettings.ConnectReq)
+		if err := p._service.SetConnectionParams(connectionSettings.Params); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			return
+		}
 
 		// send request confirmation to client
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
@@ -1163,9 +1166,6 @@ func (p *Protocol) RegisterConnectionRequest(r types.Connect) {
 		// Note: new connection request would not start processing until p._connRequestReady.Done()
 		p._connRequestChan <- r
 	}()
-
-	// save last request into preferences
-	//p.saveLastConnectionRequest(r)
 
 	// Disconnect active connection (if connected).
 	// "Disconnected" notification will not be sent to the clients in this case (because new connection request is pending).
@@ -1236,6 +1236,22 @@ func (p *Protocol) processConnectionRequests() {
 		}()
 	}
 
+}
+
+func (p *Protocol) processConnectRequest(r types.Connect) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("panic on connect: " + fmt.Sprint(r))
+			log.Error(err)
+		}
+	}()
+
+	if p._disconnectRequested {
+		log.Info("Disconnection was requested. Canceling connection.")
+		return p._service.Disconnect()
+	}
+
+	return p._service.Connect(r.Params)
 }
 
 func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {

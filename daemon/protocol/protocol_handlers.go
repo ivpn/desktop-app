@@ -95,3 +95,8 @@ func (p *Protocol) OnSplitTunnelStatusChanged() {
 	}
 	p.notifyClients(&status)
 }
+
+func (p *Protocol) OnServiceRequiresConnection() error {
+	log.Debug("AUTO CONNECTION REQUESTED!!!!!!!!")
+	return nil
+}

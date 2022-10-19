@@ -23,7 +23,6 @@
 package service
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"net"
@@ -36,7 +35,6 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/api"
 	"github.com/ivpn/desktop-app/daemon/api/types"
-	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
@@ -50,7 +48,6 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/splittun"
 	"github.com/ivpn/desktop-app/daemon/vpn"
-	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 
 	syncSemaphore "golang.org/x/sync/semaphore"
@@ -163,7 +160,7 @@ func (s *Service) init() error {
 	}
 
 	// initialize dns functionality
-	if err := dns.Initialize(firewall.OnChangeDNS, func() preferences.UserPreferences { return s._preferences.UserPrefs }); err != nil {
+	if err := dns.Initialize(firewall.OnChangeDNS, dns.DnsExtraSettings{Linux_IsDnsMgmtOldStyle: s._preferences.UserPrefs.Linux.IsDnsMgmtOldStyle}); err != nil {
 		log.Error(fmt.Sprintf("failed to initialize DNS : %s", err))
 	}
 
@@ -236,6 +233,13 @@ func (s *Service) init() error {
 			// update firewall rules: notify firewall about new IP addresses of IVPN API
 			s.updateAPIAddrInFWExceptions()
 		}
+	}()
+
+	// 'Auto-connect on launch' functionality: auto-connect if necessary
+	// 'trusted-wifi' functionality: auto-connect if necessary
+	go func() {
+		ssid, isInsecure := s.GetWiFiCurrentState()
+		s.autoConnectIfRequired(curStatusForAutoConnect{IsServiceJustStarted: true, WifiSsid: ssid, WifiIsInsecure: isInsecure})
 	}()
 
 	return nil
@@ -411,194 +415,6 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 
 func (s *Service) IsCanConnectMultiHop() error {
 	return s._preferences.Account.IsCanConnectMultiHop()
-}
-
-// ConnectOpenVPN start OpenVPN connection
-func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
-
-	createVpnObjfunc := func() (vpn.Process, error) {
-		prefs := s.Preferences()
-
-		// checking if functionality accessible
-		disabledFuncs := s.GetDisabledFunctions()
-		if len(disabledFuncs.OpenVPNError) > 0 {
-			return nil, fmt.Errorf(disabledFuncs.OpenVPNError)
-		}
-		if prefs.Obfs4proxy.IsObfsproxy() && len(disabledFuncs.ObfsproxyError) > 0 {
-			return nil, fmt.Errorf(disabledFuncs.ObfsproxyError)
-		}
-
-		connectionParams.SetCredentials(prefs.Session.OpenVPNUser, prefs.Session.OpenVPNPass)
-
-		openVpnExtraParameters := ""
-		// read user-defined extra parameters for OpenVPN configuration (if exists)
-		extraParamsFile := platform.OpenvpnUserParamsFile()
-
-		if helpers.FileExists(extraParamsFile) {
-			if err := filerights.CheckFileAccessRightsConfig(extraParamsFile); err != nil {
-				log.Info("NOTE! User-defined OpenVPN parameters are ignored! %w", err)
-				os.Remove(extraParamsFile)
-			} else {
-				// read file line by line
-				openVpnExtraParameters = func() string {
-					var allParams strings.Builder
-
-					file, err := os.Open(extraParamsFile)
-					if err != nil {
-						log.Error(err)
-						return ""
-					}
-					defer file.Close()
-
-					scanner := bufio.NewScanner(file)
-					for scanner.Scan() {
-						line := scanner.Text()
-						line = strings.TrimSpace(line)
-						if len(line) <= 0 {
-							continue
-						}
-						if strings.HasPrefix(line, "#") {
-							continue // comment
-						}
-						if strings.HasPrefix(line, ";") {
-							continue // comment
-						}
-						allParams.WriteString(line + "\n")
-					}
-
-					if err := scanner.Err(); err != nil {
-						log.Error("Failed to parse '%s': %s", extraParamsFile, err)
-						return ""
-					}
-					return allParams.String()
-				}()
-
-				if len(openVpnExtraParameters) > 0 {
-					log.Info(fmt.Sprintf("WARNING! User-defined OpenVPN parameters loaded from file '%s'!", extraParamsFile))
-				}
-			}
-		}
-
-		// initialize obfsproxy parameters
-		obfsParams := openvpn.ObfsParams{}
-		if prefs.Obfs4proxy.IsObfsproxy() {
-			obfsParams.Config = prefs.Obfs4proxy
-			svrs, err := s.ServersList()
-			if err != nil {
-				return nil, fmt.Errorf("failed to initialize obfsproxy configuration: %w", err)
-			}
-
-			if connectionParams.IsMultihop() {
-				// find host by hostname
-				host, err := s.findOpenVpnHost(connectionParams.GetMultihopExitHostName(), nil, svrs.OpenvpnServers)
-				if err != nil {
-					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: %w", err)
-				}
-
-				switch obfsParams.Config.Version {
-				case obfsproxy.OBFS3:
-					obfsParams.RemotePort = host.Obfs.Obfs3MultihopPort
-				case obfsproxy.OBFS4:
-					obfsParams.RemotePort = host.Obfs.Obfs4MultihopPort
-					obfsParams.Obfs4Key = host.Obfs.Obfs4Key
-				default:
-					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: unsupported obfs version: %d", obfsParams.Config.Version)
-				}
-			} else {
-				switch obfsParams.Config.Version {
-				case obfsproxy.OBFS3:
-					obfsParams.RemotePort = svrs.Config.Ports.Obfs3.Port
-				case obfsproxy.OBFS4:
-					{
-						// find host by host ip
-						host, err := s.findOpenVpnHost("", connectionParams.GetHostIp(), svrs.OpenvpnServers)
-						if err != nil {
-							return nil, fmt.Errorf("failed to initialize obfsproxy configuration: %w", err)
-						}
-
-						obfsParams.RemotePort = svrs.Config.Ports.Obfs4.Port
-						obfsParams.Obfs4Key = host.Obfs.Obfs4Key
-					}
-				default:
-					return nil, fmt.Errorf("failed to initialize obfsproxy configuration: unsupported obfs version: %d", obfsParams.Config.Version)
-				}
-			}
-
-		}
-
-		// creating OpenVPN object
-		vpnObj, err := openvpn.NewOpenVpnObject(
-			platform.OpenVpnBinaryPath(),
-			platform.OpenvpnConfigFile(),
-			"",
-			obfsParams,
-			openVpnExtraParameters,
-			connectionParams)
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to create new openVPN object: %w", err)
-		}
-		return vpnObj, nil
-	}
-
-	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection)
-}
-
-// ConnectWireGuard start WireGuard connection
-func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
-	// stop active connection (if exists)
-	if err := s.Disconnect(); err != nil {
-		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
-	}
-
-	// checking if functionality accessible
-	disabledFuncs := s.GetDisabledFunctions()
-	if len(disabledFuncs.WireGuardError) > 0 {
-		return fmt.Errorf(disabledFuncs.WireGuardError)
-	}
-
-	// Update WG keys, if necessary
-	err := s.WireGuardGenerateKeys(true)
-	if err != nil {
-		// If new WG keys regeneration failed but we still have active keys - keep connecting
-		// (this could happen, for example, when FW is enabled and we even not tried to make API request)
-		// Return error only if the keys had to be regenerated more than 3 days ago.
-		_, activePublicKey, _, _, lastUpdate, interval := s.WireGuardGetKeys()
-
-		if len(activePublicKey) > 0 && lastUpdate.Add(interval).Add(time.Hour*24*3).After(time.Now()) {
-			// continue connection
-			log.Warning(fmt.Errorf("WG KEY generation failed (%w). But we keep connecting (will try to regenerate it next 3 days)", err))
-		} else {
-			return err
-		}
-	}
-
-	createVpnObjfunc := func() (vpn.Process, error) {
-		session := s.Preferences().Session
-
-		if !session.IsWGCredentialsOk() {
-			return nil, fmt.Errorf("WireGuard credentials are not defined (please, regenerate WG credentials or re-login)")
-		}
-
-		localip := net.ParseIP(session.WGLocalIP)
-		if localip == nil {
-			return nil, fmt.Errorf("error updating WG connection preferences (failed parsing local IP for WG connection)")
-		}
-		connectionParams.SetCredentials(session.WGPrivateKey, localip)
-
-		vpnObj, err := wireguard.NewWireGuardObject(
-			platform.WgBinaryPath(),
-			platform.WgToolBinaryPath(),
-			platform.WGConfigFilePath(),
-			connectionParams)
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to create new WireGuard object: %w", err)
-		}
-		return vpnObj, nil
-	}
-
-	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection)
 }
 
 func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
@@ -1259,12 +1075,16 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 			isChanged = val != prefs.IsAutoconnectOnLaunch
 			prefs.IsAutoconnectOnLaunch = val
 		}
+
 	default:
 		log.Warning(fmt.Sprintf("Preference key '%s' not supported", key))
 	}
 
 	s.setPreferences(prefs)
-	log.Info(fmt.Sprintf("preferences %s='%s'", key, val))
+
+	if isChanged {
+		log.Info(fmt.Sprintf("(prefs '%s' changed) %s", key, val))
+	}
 
 	return isChanged, nil
 }
@@ -1300,6 +1120,13 @@ func (s *Service) ResetPreferences() error {
 
 	// erase ST config
 	s.SplitTunnelling_SetConfig(false, true)
+	return nil
+}
+
+func (s *Service) SetConnectionParams(params preferences.ConnectionParams) error {
+	prefs := s._preferences
+	prefs.LastConnectionParams = params
+	s.setPreferences(prefs)
 	return nil
 }
 

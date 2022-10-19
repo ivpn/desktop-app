@@ -29,9 +29,8 @@ import { API_SUCCESS } from "@/api/statuscode";
 import { IsNewVersion } from "@/app-updater/helper";
 import config from "@/config";
 
-import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { GetPortInfoFilePath } from "@/helpers/main_platform";
-
+import { InitConnectionParamsObject } from "@/daemon-client/connectionParams.js";
 import { IsCanAutoConnectForCurrentSSID } from "@/trusted-wifi";
 
 import {
@@ -69,6 +68,8 @@ const daemonRequests = Object.freeze({
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
   AccountStatus: "AccountStatus",
+
+  ConnectSettings: "ConnectSettings",
   Connect: "Connect",
   Disconnect: "Disconnect",
   PauseConnection: "PauseConnection",
@@ -638,24 +639,22 @@ function makeHelloRequest(isSimpleConnect) {
     console.error(e);
   }
 
-  let helloReq = null;
-  if (isSimpleConnect === true) {
-    helloReq = {
-      Command: daemonRequests.Hello,
-      Version: appVersion,
-      KeepDaemonAlone: true,
-    };
-  } else {
-    helloReq = {
-      Command: daemonRequests.Hello,
-      Version: appVersion,
+  let helloReq = {
+    Command: daemonRequests.Hello,
+    ClientType: 0, // 0 - UI client; 1 - CLI
+    Version: appVersion,
+    KeepDaemonAlone: true,
+  };
+
+  if (isSimpleConnect !== true) {
+    helloReq = Object.assign(helloReq, {
       GetServersList: true,
       GetStatus: true,
       GetConfigParams: true,
       KeepDaemonAlone: true,
       GetSplitTunnelStatus: true,
       GetWiFiCurrentState: true,
-    };
+    });
   }
 
   return helloReq;
@@ -695,6 +694,61 @@ async function convertAndSyncOldSettings() {
       );
     }
   }
+}
+
+var timerNotifyConnectParamsChange = null;
+async function startDaemonNotifyConnectParamsChange() {
+  console.debug("startDaemonNotifyConnectParamsChange...");
+
+  // subscribe to changes in a store
+  store.subscribe((mutation) => {
+    try {
+      switch (mutation.type) {
+        case "settings/serverEntry":
+        case "settings/serverExit":
+        case "settings/isFastestServer":
+        case "settings/isRandomServer":
+        case "settings/isRandomExitServer":
+        case "settings/setPort":
+        case "settings/port":
+        case "settings/isMultiHop":
+        case "settings/serverEntryHostId":
+        case "settings/serverExitHostId":
+        case "settings/vpnType":
+        case "settings/firewallActivateOnConnect":
+        case "settings/enableIPv6InTunnel":
+        case "settings/showGatewaysWithoutIPv6":
+        case "settings/isAntitracker":
+        case "settings/dnsIsCustom":
+        case "settings/dnsCustomCfg":
+        case "settings/mtu":
+        case "settings/ovpnProxyType":
+        case "settings/ovpnProxyServer":
+        case "settings/ovpnProxyPort":
+        case "settings/ovpnProxyUser":
+        case "settings/ovpnProxyPass":
+          {
+            //console.debug("Notifying daemon:", mutation.type);
+
+            // reduce notifications amount: send notifications not often than once per second
+            let tId = timerNotifyConnectParamsChange;
+            if (tId) {
+              timerNotifyConnectParamsChange = null;
+              clearTimeout(tId);
+            }
+            timerNotifyConnectParamsChange = setTimeout(() => {
+              NotifyDaemonConnectionSettings();
+              timerNotifyConnectParamsChange = null;
+            }, 1000);
+          }
+          break;
+
+        default:
+      }
+    } catch (e) {
+      console.error("Error in store subscriber:", e);
+    }
+  });
 }
 
 async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
@@ -816,6 +870,9 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
               Connect();
             }
           }, 0);
+
+          // start daemon notification about connection parameters change
+          startDaemonNotifyConnectParamsChange();
 
           const pingRetryCount = 5;
           const pingTimeOutMs = 5000;
@@ -1186,20 +1243,23 @@ async function GetDiagnosticLogs() {
   return logs;
 }
 
+async function NotifyDaemonConnectionSettings() {
+  const paramsObj = InitConnectionParamsObject();
+
+  await sendRecv({
+    Command: daemonRequests.ConnectSettings,
+    Params: paramsObj,
+  });
+}
+
 // The 'Connect' method increasing this value at the method beginning and then checks this value before sending request to a daemon:
 //  if the value is not equal to the value at method beginning - do not send 'Connect' request to the daemon.
 // (this can happen when 'Disconnect' called OR new call of 'Connect' method)
 let connectionRequestId = 0;
 
 async function Connect() {
-  let entryServer = null;
-  let exitServer = null;
-  // if entryServer or exitServer is null -> will be used current selected servers
-  // otherwise -> current selected servers will be replaced by a new values before connect
   const connectID = ++connectionRequestId;
 
-  let vpnParamsPropName = "";
-  let vpnParamsObj = {};
   let settings = store.state.settings;
 
   // we are not in paused state anymore
@@ -1211,148 +1271,52 @@ async function Connect() {
   //            But in case of any problems - we have to request VPN status manually (to synchronize the VPN state in UI with the daemon state)
   store.commit("vpnState/connectionState", VpnStateEnum.CONNECTING);
 
-  let manualDNS = {
-    DnsHost: "",
-    Encryption: DnsEncryption.None,
-    DohTemplate: "",
-  };
-
+  // In case of "fastest server" or "random server" -> update entry-/exit- servers
   try {
     const isRandomExitSvr = store.getters["settings/isRandomExitServer"];
 
     // ENTRY SERVER
-    if (entryServer != null)
-      store.dispatch("settings/serverEntry", entryServer);
-    else {
-      if (store.getters["settings/isFastestServer"]) {
-        // looking for fastest server
-        let fastest = store.getters["vpnState/fastestServer"];
-        if (fastest == null || fastest.ping == null) {
-          // request servers ping
-          console.log(
-            "Connect to fastest server (fastest server not defined). Pinging servers..."
-          );
-
-          // Try to ping servers
-          await PingServers();
-          // NOTE: in case if not possible to ping - we will have exception here (next line will not be executed)
-          // Surround 'PingServers()' in try/catch if it is necessary to continue anyway
-
-          fastest = store.getters["vpnState/fastestServer"];
-          // if fastest.ping == null - it means no any ping info available (e.g. communication blocked by firewall or no internet connectivity)
-          // Anyway, we have to use the server calculated by 'vpnState/fastestServer' as fastest
-        }
-        if (fastest != null) store.dispatch("settings/serverEntry", fastest);
-      } else if (store.getters["settings/isRandomServer"]) {
-        // random server
-        let servers = store.getters["vpnState/activeServers"];
-        if (!isRandomExitSvr) {
-          servers = servers.filter(
-            (s) => s.country_code !== settings.serverExit.country_code
-          );
-        }
-        let randomIdx = Math.floor(Math.random() * Math.floor(servers.length));
-        store.dispatch("settings/serverEntry", servers[randomIdx]);
-      }
-
-      // EXIT SERVER
-      if (exitServer != null) store.dispatch("settings/serverExit", exitServer);
-      else if (isRandomExitSvr) {
-        const servers = store.getters["vpnState/activeServers"];
-        const exitServers = servers.filter(
-          (s) => s.country_code !== settings.serverEntry.country_code
+    if (store.getters["settings/isFastestServer"]) {
+      // looking for fastest server
+      let fastest = store.getters["vpnState/fastestServer"];
+      if (fastest == null || fastest.ping == null) {
+        // request servers ping
+        console.log(
+          "Connect to fastest server (fastest server not defined). Pinging servers..."
         );
-        const randomIdx = Math.floor(
-          Math.random() * Math.floor(exitServers.length)
+
+        // Try to ping servers
+        await PingServers();
+        // NOTE: in case if not possible to ping - we will have exception here (next line will not be executed)
+        // Surround 'PingServers()' in try/catch if it is necessary to continue anyway
+
+        fastest = store.getters["vpnState/fastestServer"];
+        // if fastest.ping == null - it means no any ping info available (e.g. communication blocked by firewall or no internet connectivity)
+        // Anyway, we have to use the server calculated by 'vpnState/fastestServer' as fastest
+      }
+      if (fastest != null) store.dispatch("settings/serverEntry", fastest);
+    } else if (store.getters["settings/isRandomServer"]) {
+      // random server
+      let servers = store.getters["vpnState/activeServers"];
+      if (!isRandomExitSvr) {
+        servers = servers.filter(
+          (s) => s.country_code !== settings.serverExit.country_code
         );
-        store.dispatch("settings/serverExit", exitServers[randomIdx]);
       }
+      let randomIdx = Math.floor(Math.random() * Math.floor(servers.length));
+      store.dispatch("settings/serverEntry", servers[randomIdx]);
     }
 
-    const getHosts = function (server, customHostId) {
-      if (!customHostId) return server.hosts;
-      for (const h of server.hosts) {
-        if (h.hostname.startsWith(customHostId + ".")) return [h];
-      }
-      return server.hosts;
-    };
-
-    let port = store.getters["settings/getPort"];
-
-    let multihopExitSrvID = settings.isMultiHop
-      ? settings.serverExit.gateway.split(".")[0]
-      : "";
-
-    if (settings.vpnType === VpnTypeEnum.OpenVPN) {
-      vpnParamsPropName = "OpenVpnParameters";
-
-      vpnParamsObj = {
-        EntryVpnServer: {
-          Hosts: getHosts(settings.serverEntry, settings.serverEntryHostId),
-        },
-
-        MultihopExitServer: settings.isMultiHop
-          ? {
-              ExitSrvID: multihopExitSrvID,
-              Hosts: getHosts(settings.serverExit, settings.serverExitHostId),
-            }
-          : null,
-
-        Port: {
-          Port: port.port,
-          Protocol: port.type, // 0 === UDP
-        },
-      };
-
-      const ProxyType = settings.ovpnProxyType;
-
-      if (
-        !isStrNullOrEmpty(ProxyType) &&
-        !isStrNullOrEmpty(settings.ovpnProxyServer)
-      ) {
-        const ProxyPort = parseInt(settings.ovpnProxyPort);
-        if (ProxyPort != null) {
-          vpnParamsObj.ProxyType = ProxyType;
-          vpnParamsObj.ProxyAddress = settings.ovpnProxyServer;
-          vpnParamsObj.ProxyPort = ProxyPort;
-          vpnParamsObj.ProxyUsername = settings.ovpnProxyUser;
-          vpnParamsObj.ProxyPassword = settings.ovpnProxyPass;
-        }
-      }
-    } else {
-      vpnParamsPropName = "WireGuardParameters";
-      vpnParamsObj = {
-        EntryVpnServer: {
-          Hosts: getHosts(settings.serverEntry, settings.serverEntryHostId),
-        },
-
-        MultihopExitServer: settings.isMultiHop
-          ? {
-              ExitSrvID: multihopExitSrvID,
-              Hosts: getHosts(settings.serverExit, settings.serverExitHostId),
-            }
-          : null,
-
-        Port: {
-          Port: port.port,
-        },
-      };
-
-      const mtu = Number.parseInt(settings.mtu);
-      if (!Number.isNaN(mtu) && mtu >= 1280 && mtu <= 65535) {
-        vpnParamsObj.Mtu = mtu;
-      }
-    }
-
-    if (settings.dnsIsCustom) {
-      manualDNS = settings.dnsCustomCfg;
-    }
-    if (settings.isAntitracker) {
-      manualDNS = {
-        DnsHost: store.getters["vpnState/antitrackerIp"],
-        Encryption: DnsEncryption.None,
-        DohTemplate: "",
-      };
+    // EXIT SERVER
+    if (isRandomExitSvr) {
+      const servers = store.getters["vpnState/activeServers"];
+      const exitServers = servers.filter(
+        (s) => s.country_code !== settings.serverEntry.country_code
+      );
+      const randomIdx = Math.floor(
+        Math.random() * Math.floor(exitServers.length)
+      );
+      store.dispatch("settings/serverExit", exitServers[randomIdx]);
     }
   } catch (e) {
     console.error("Failed to connect: ", e);
@@ -1366,19 +1330,11 @@ async function Connect() {
     return;
   }
 
+  const paramsObj = InitConnectionParamsObject();
+
   await sendRecv({
     Command: daemonRequests.Connect,
-    VpnType: settings.vpnType,
-    [vpnParamsPropName]: vpnParamsObj,
-    ManualDNS: manualDNS,
-    FirewallOn: store.state.settings.firewallActivateOnConnect === true,
-    // Can use IPv6 connection inside tunnel
-    // IPv6 has higher priority, if it supported by a server - we will use IPv6.
-    // If IPv6 does not supported by server - we will use IPv4
-    IPv6: settings.enableIPv6InTunnel,
-    // Use ONLY IPv6 hosts (use IPv6 connection inside tunnel)
-    // (ignored when IPv6!=true)
-    IPv6Only: settings.showGatewaysWithoutIPv6 != true,
+    Params: paramsObj,
   });
 }
 
@@ -1389,7 +1345,7 @@ async function RequestVPNState() {
 }
 
 async function Disconnect() {
-  // Just to cancel current connection request (if we are preparing to connection now)
+  // Just to cancel current connection request (if we are preparing for connection now)
   ++connectionRequestId;
 
   // Disconnect command will automatically 'resume' on daemon side (if necessary)
@@ -1920,6 +1876,8 @@ export default {
   PingServers,
   ServersUpdateRequest,
   KillSwitchGetStatus,
+
+  NotifyDaemonConnectionSettings,
   Connect,
   Disconnect,
   PauseConnection,

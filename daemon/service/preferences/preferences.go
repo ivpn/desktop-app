@@ -90,6 +90,8 @@ type Preferences struct {
 
 	// NOTE: update this type when adding new preferences which can be exposed to clients
 	UserPrefs UserPreferences
+
+	LastConnectionParams ConnectionParams
 }
 
 func Create() *Preferences {

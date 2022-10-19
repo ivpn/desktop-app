@@ -313,7 +313,6 @@ import serverNameControl from "@/components/controls/control-server-name.vue";
 import serverPingInfoControl from "@/components/controls/control-server-ping.vue";
 import SwitchProgress from "@/components/controls/control-switch-small.vue";
 import imgArrowLeft from "@/components/images/arrow-left.vue";
-import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import { enumValueName, getDistanceFromLatLonInKm } from "@/helpers/helpers";
 import { ServersSortTypeEnum } from "@/store/types";
@@ -493,7 +492,7 @@ export default {
       }
     },
     searchImage: function () {
-      if (!isStrNullOrEmpty(this.filter)) return null;
+      if (this.filter) return null;
 
       switch (Platform()) {
         case PlatformEnum.Windows:
