@@ -325,7 +325,7 @@ export default {
         return this.$store.state.settings.wifi?.actions?.unTrustedConnectVpn;
       },
       set(value) {
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        let wifi = JSON.parse(JSON.stringify(this.$store.state.settings.wifi));
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.unTrustedConnectVpn = value;
         this.$store.dispatch("settings/wifi", wifi);
@@ -337,7 +337,7 @@ export default {
           ?.unTrustedEnableFirewall;
       },
       set(value) {
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        let wifi = JSON.parse(JSON.stringify(this.$store.state.settings.wifi));
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.unTrustedEnableFirewall = value;
         this.$store.dispatch("settings/wifi", wifi);
@@ -348,7 +348,7 @@ export default {
         return this.$store.state.settings.wifi?.actions?.trustedDisconnectVpn;
       },
       set(value) {
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        let wifi = JSON.parse(JSON.stringify(this.$store.state.settings.wifi));
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.trustedDisconnectVpn = value;
         this.$store.dispatch("settings/wifi", wifi);
@@ -359,7 +359,7 @@ export default {
         return this.$store.state.settings.wifi?.actions?.trustedDisableFirewall;
       },
       set(value) {
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        let wifi = JSON.parse(JSON.stringify(this.$store.state.settings.wifi));
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.trustedDisableFirewall = value;
         this.$store.dispatch("settings/wifi", wifi);
