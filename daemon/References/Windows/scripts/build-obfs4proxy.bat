@@ -3,7 +3,7 @@
 setlocal
 
 rem TODO: define here obfs4proxy version to build
-set _VERSION=obfs4proxy-0.0.13
+set _VERSION=obfs4proxy-0.0.14
 
 set SCRIPTDIR=%~dp0
 
