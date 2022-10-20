@@ -1,6 +1,6 @@
 #!/bin/sh
 
-OBFS4_VER=obfs4proxy-0.0.13
+OBFS4_VER=obfs4proxy-0.0.14
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
