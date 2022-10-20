@@ -91,6 +91,8 @@ type Service interface {
 	SetConnectionParams(params preferences.ConnectionParams) error
 	GetConnectionParams() (preferences.ConnectionParams, error)
 
+	SetTrustedWifiParams(params preferences.TrustedWiFiParams) error
+
 	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
 	SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error)
@@ -1101,6 +1103,18 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err := p._service.Disconnect(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
+
+	case "TrustedWiFiSettings":
+		var r types.TrustedWiFiSettings
+		if err := json.Unmarshal(messageData, &r); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			return
+		}
+		if err := p._service.SetTrustedWifiParams(r.Params); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			return
+		}
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	case "ConnectSettings":
 		// Similar data to 'Connect' request but this command not start the connection.

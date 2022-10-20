@@ -92,6 +92,7 @@ type Preferences struct {
 	UserPrefs UserPreferences
 
 	LastConnectionParams ConnectionParams
+	TrustedWiFi          TrustedWiFiParams
 }
 
 func Create() *Preferences {

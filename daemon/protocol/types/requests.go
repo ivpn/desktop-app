@@ -173,6 +173,11 @@ type GetDnsPredefinedConfigs struct {
 	RequestBase
 }
 
+type TrustedWiFiSettings struct {
+	RequestBase
+	Params preferences.TrustedWiFiParams
+}
+
 // ConnectSettings contains same data as 'Connect' request but this command not start the connection.
 // UI client have to notify daemon about changes in connection settings.
 // It is required for automatic connection on daemon's side (e.g. 'Auto-connect on Launch' or 'Trusted WiFi' functionality)

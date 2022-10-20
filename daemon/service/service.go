@@ -1130,6 +1130,13 @@ func (s *Service) SetConnectionParams(params preferences.ConnectionParams) error
 	return nil
 }
 
+func (s *Service) SetTrustedWifiParams(params preferences.TrustedWiFiParams) error {
+	prefs := s._preferences
+	prefs.TrustedWiFi = params
+	s.setPreferences(prefs)
+	return nil
+}
+
 //////////////////////////////////////////////////////////
 // SPLIT TUNNEL
 //////////////////////////////////////////////////////////

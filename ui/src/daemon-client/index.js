@@ -69,6 +69,7 @@ const daemonRequests = Object.freeze({
   SessionDelete: "SessionDelete",
   AccountStatus: "AccountStatus",
 
+  TrustedWiFiSettings: "TrustedWiFiSettings",
   ConnectSettings: "ConnectSettings",
   Connect: "Connect",
   Disconnect: "Disconnect",
@@ -696,8 +697,8 @@ async function convertAndSyncOldSettings() {
   }
 }
 
-var timerNotifyConnectParamsChange = null;
-async function startDaemonNotifyConnectParamsChange() {
+async function startNotifyDaemonOnParamsChange() {
+  var timerNotifyDaemonOnParamsChange = null;
   console.debug("startDaemonNotifyConnectParamsChange...");
 
   // subscribe to changes in a store
@@ -731,15 +732,23 @@ async function startDaemonNotifyConnectParamsChange() {
             //console.debug("Notifying daemon:", mutation.type);
 
             // reduce notifications amount: send notifications not often than once per second
-            let tId = timerNotifyConnectParamsChange;
+            let tId = timerNotifyDaemonOnParamsChange;
             if (tId) {
-              timerNotifyConnectParamsChange = null;
+              timerNotifyDaemonOnParamsChange = null;
               clearTimeout(tId);
             }
-            timerNotifyConnectParamsChange = setTimeout(() => {
+            timerNotifyDaemonOnParamsChange = setTimeout(() => {
               NotifyDaemonConnectionSettings();
-              timerNotifyConnectParamsChange = null;
+              timerNotifyDaemonOnParamsChange = null;
             }, 1000);
+          }
+          break;
+        case "settings/wifi":
+          {
+            // "Trusted WiFi" parameters changed
+            setTimeout(() => {
+              NotifyDaemonTrustedWifiSettings();
+            }, 0);
           }
           break;
 
@@ -749,6 +758,10 @@ async function startDaemonNotifyConnectParamsChange() {
       console.error("Error in store subscriber:", e);
     }
   });
+
+  // Send initial data to a daemon
+  NotifyDaemonConnectionSettings();
+  NotifyDaemonTrustedWifiSettings();
 }
 
 async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
@@ -872,7 +885,7 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
           }, 0);
 
           // start daemon notification about connection parameters change
-          startDaemonNotifyConnectParamsChange();
+          startNotifyDaemonOnParamsChange();
 
           const pingRetryCount = 5;
           const pingTimeOutMs = 5000;
@@ -1249,6 +1262,13 @@ async function NotifyDaemonConnectionSettings() {
   await sendRecv({
     Command: daemonRequests.ConnectSettings,
     Params: paramsObj,
+  });
+}
+
+async function NotifyDaemonTrustedWifiSettings() {
+  await sendRecv({
+    Command: daemonRequests.TrustedWiFiSettings,
+    Params: store.state.settings.wifi,
   });
 }
 
