@@ -90,7 +90,6 @@
         type="checkbox"
         id="connectOnLaunch"
         v-model="isAutoconnectOnLaunch"
-        :disabled="this.$store.state.paranoidModeStatus.IsEnabled === true"
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
@@ -270,6 +269,18 @@ export default {
         return this.$store.state.settings.daemonSettings.IsAutoconnectOnLaunch;
       },
       set(value) {
+        if (
+          value === true &&
+          this.$store.state.paranoidModeStatus.IsEnabled === true
+        ) {
+          sender.showMessageBoxSync({
+            type: "info",
+            message: `Enhanced App Authentication enabled`,
+            detail:
+              "Warning: On application start 'Autoconnect on application launch' will not be applied until the EAA password is entered.",
+            buttons: ["Ok"],
+          });
+        }
         sender.SetAutoconnectOnLaunch(value);
       },
     },

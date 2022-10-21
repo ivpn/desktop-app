@@ -31,7 +31,6 @@ import config from "@/config";
 
 import { GetPortInfoFilePath } from "@/helpers/main_platform";
 import { InitConnectionParamsObject } from "@/daemon-client/connectionParams.js";
-import { IsCanAutoConnectForCurrentSSID } from "@/trusted-wifi";
 
 import {
   VpnTypeEnum,
@@ -699,7 +698,6 @@ async function convertAndSyncOldSettings() {
 
 async function startNotifyDaemonOnParamsChange() {
   var timerNotifyDaemonOnParamsChange = null;
-  console.debug("startDaemonNotifyConnectParamsChange...");
 
   // subscribe to changes in a store
   store.subscribe((mutation) => {
@@ -868,21 +866,6 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
 
           // Saving 'connected' state to a daemon
           setConnState(DaemonConnectionType.Connected);
-
-          setTimeout(async () => {
-            // Till this time we already must receive 'connected' info (if we are connected)
-            // If we are in disconnected state and 'settings.autoConnectOnLaunch' enabled => start connection
-            if (
-              IsCanAutoConnectForCurrentSSID() == true &&
-              store.state.settings.daemonSettings.IsAutoconnectOnLaunch &&
-              store.getters["vpnState/isDisconnected"]
-            ) {
-              log.log(
-                "Connecting on app start according to configuration (AutoconnectOnLaunch)"
-              );
-              Connect();
-            }
-          }, 0);
 
           // start daemon notification about connection parameters change
           startNotifyDaemonOnParamsChange();
@@ -1897,7 +1880,6 @@ export default {
   ServersUpdateRequest,
   KillSwitchGetStatus,
 
-  NotifyDaemonConnectionSettings,
   Connect,
   Disconnect,
   PauseConnection,
