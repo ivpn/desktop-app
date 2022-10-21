@@ -20,10 +20,10 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-package preferences
+package types
 
 import (
-	"github.com/ivpn/desktop-app/daemon/api/types"
+	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
@@ -70,32 +70,20 @@ type ConnectionParams struct {
 		}
 
 		EntryVpnServer struct {
-			Hosts []types.WireGuardServerHostInfo
+			Hosts []api_types.WireGuardServerHostInfo
 		}
 
-		MultihopExitServer struct {
-			// ExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
-			// in same manner as for OpenVPN connection.
-			// Example: "gateway":"zz.wg.ivpn.net" => "zz"
-			ExitSrvID string
-			Hosts     []types.WireGuardServerHostInfo
-		}
+		MultihopExitServer MultiHopExitServer_WireGuard
 
 		Mtu int // Set 0 to use default MTU value
 	}
 
 	OpenVpnParameters struct {
 		EntryVpnServer struct {
-			Hosts []types.OpenVPNServerHostInfo
+			Hosts []api_types.OpenVPNServerHostInfo
 		}
 
-		//MultihopExitSrvID string
-		MultihopExitServer struct {
-			// ExitSrvID (gateway ID) just in use to keep clients notified about connected MH exit server
-			// Example: "gateway":"zz.wg.ivpn.net" => "zz"
-			ExitSrvID string
-			Hosts     []types.OpenVPNServerHostInfo
-		}
+		MultihopExitServer MultiHopExitServer_OpenVpn
 
 		Proxy struct {
 			Type     string
@@ -111,4 +99,18 @@ type ConnectionParams struct {
 			Port int
 		}
 	}
+}
+
+type MultiHopExitServer_WireGuard struct {
+	// ExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
+	// Example: "gateway":"zz.wg.ivpn.net" => "zz"
+	ExitSrvID string
+	Hosts     []api_types.WireGuardServerHostInfo
+}
+
+type MultiHopExitServer_OpenVpn struct {
+	// ExitSrvID (gateway ID) just in use to keep clients notified about connected MH exit server
+	// Example: "gateway":"zz.wg.ivpn.net" => "zz"
+	ExitSrvID string
+	Hosts     []api_types.OpenVPNServerHostInfo
 }

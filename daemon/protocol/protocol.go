@@ -34,7 +34,7 @@ import (
 	"strings"
 	"sync"
 
-	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
@@ -43,6 +43,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -54,6 +55,8 @@ func init() {
 
 // Service - service interface
 type Service interface {
+	OnAuthenticatedClient(t types.ClientTypeEnum)
+
 	// OnControlConnectionClosed - Perform required operations when protocol (control channel with UI application) was closed
 	// (for example, we must disable firewall (if it not persistent))
 	// Must be called by protocol object
@@ -70,11 +73,11 @@ type Service interface {
 
 	// ServersList returns servers info
 	// (if there is a cached data available - will be returned data from cache)
-	ServersList() (*apitypes.ServersInfoResponse, error)
+	ServersList() (*api_types.ServersInfoResponse, error)
 	// ServersListForceUpdate returns servers list info.
 	// The daemon will make request to update servers from the backend.
 	// The cached data will be ignored in this case.
-	ServersListForceUpdate() (*apitypes.ServersInfoResponse, error)
+	ServersListForceUpdate() (*api_types.ServersInfoResponse, error)
 
 	PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAllHostsOnFirstPhase bool, skipSecondPhase bool) (map[string]int, error)
 
@@ -88,9 +91,7 @@ type Service interface {
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
 	SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error
 
-	SetConnectionParams(params preferences.ConnectionParams) error
-	GetConnectionParams() (preferences.ConnectionParams, error)
-
+	SetConnectionParams(params service_types.ConnectionParams) error
 	SetTrustedWifiParams(params preferences.TrustedWiFiParams) error
 
 	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
@@ -112,7 +113,7 @@ type Service interface {
 	ResetManualDNS() error
 
 	IsCanConnectMultiHop() error
-	Connect(params preferences.ConnectionParams) error
+	Connect(params service_types.ConnectionParams) error
 	Disconnect() error
 	Connected() bool
 
@@ -145,10 +146,15 @@ type Service interface {
 // CreateProtocol - Create new protocol object
 func CreateProtocol() (*Protocol, error) {
 	return &Protocol{
-		_connections:     make(map[net.Conn]struct{}),
+		_connections:     make(map[net.Conn]connectionInfo),
 		_eaa:             eaa.Init(platform.ParanoidModeSecretFile()),
-		_connRequestChan: make(chan types.Connect, 1),
+		_connRequestChan: make(chan service_types.ConnectionParams, 1),
 	}, nil
+}
+
+type connectionInfo struct {
+	Type            types.ClientTypeEnum // UI or CLI
+	IsAuthenticated bool                 // true when connection fully authenticated (secret is OK and EAA check is passed)
 }
 
 // Protocol - TCP interface to communicate with IVPN application
@@ -159,11 +165,11 @@ type Protocol struct {
 	_connListener *net.TCPListener
 
 	_connectionsMutex sync.RWMutex
-	_connections      map[net.Conn]struct{}
+	_connections      map[net.Conn]connectionInfo
 
 	// Only last connect request will be processed (if there are more then one received in short period of time)
 	_connRequestMutex sync.Mutex
-	_connRequestChan  chan types.Connect
+	_connRequestChan  chan service_types.ConnectionParams
 	_connRequestReady sync.WaitGroup
 
 	_disconnectRequested bool
@@ -245,7 +251,9 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 		log.Info("Listener closed")
 	}()
 
-	// start processing of new connection requests
+	// Start processing of new connection requests
+	// (connection requests collecting in to chain and processing in order they were received.
+	// See also "RegisterConnectionRequest()" for details)
 	go p.processConnectionRequests()
 
 	// infinite loop of processing IVPN client connection
@@ -353,7 +361,12 @@ func (p *Protocol) processClient(conn net.Conn) {
 			// AUTHENTICATED
 			keepAlone = hello.KeepDaemonAlone
 			isAuthenticated = true
-			p.clientConnected(conn)
+			p.clientConnected(conn, hello.ClientType)
+
+			if !p._eaa.IsEnabled() {
+				// EAA is disabled. So, mark connection as authenticated
+				p.clientSetAuthenticated(conn)
+			}
 		}
 
 		// Processing requests from client (in separate routine)
@@ -441,6 +454,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 			return
 		}
+
+		// We are here. So we are authenticated.
+		// mark connection as authenticated
+		p.clientSetAuthenticated(conn)
 	}
 
 	switch reqCmd.Command {
@@ -505,16 +522,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		if len(strings.TrimSpace(req.NewSecret)) > 0 {
-			// going to enable EAA
-			prefs := p._service.Preferences()
-			if prefs.IsAutoconnectOnLaunch {
-				// do not allow to enable EAA if "autoconnect on launch" is enabled
-				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("the Enhanced Application Authentication cannot be enabled whilst 'Autoconnect on application launch' is enabled"))
-				break
-			}
-		}
-
 		if err := p._eaa.SetSecret(req.ProtocolSecret, req.NewSecret); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
@@ -534,7 +541,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		sendResponseFunc := func(retServ *apitypes.ServersInfoResponse, retErr error) {
+		sendResponseFunc := func(retServ *api_types.ServersInfoResponse, retErr error) {
 			if retErr != nil {
 				p.sendErrorResponse(conn, reqCmd, retErr)
 				return
@@ -709,13 +716,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
-		}
-
-		if types.Prefs_IsAutoconnectOnLaunch.Equals(req.Key) {
-			if p._eaa.IsEnabled() {
-				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("the 'Autoconnect on application launch' cannot be enabled whilst Enhanced Application Authentication is enabled"))
-				break
-			}
 		}
 
 		if isChanged, err := p._service.SetPreference(types.ServicePreference(req.Key), req.Value); err != nil {
@@ -1145,7 +1145,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		// Save last received connection request. It will be processed in separate routine 'processConnectionRequests()' which is already running
-		p.RegisterConnectionRequest(connectRequest)
+		p.RegisterConnectionRequest(connectRequest.Params)
 
 		// send request confirmation to client
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
@@ -1157,7 +1157,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	}
 }
 
-func (p *Protocol) RegisterConnectionRequest(r types.Connect) {
+// RegisterConnectionRequest - Register new connection request.
+// If there is more than one connection request available - all requests will be ignored except the last one
+// Call can be also initiated outside by service (e.g. "trusted-wifi" or "auto-connect on launch" functionality)
+func (p *Protocol) RegisterConnectionRequest(r service_types.ConnectionParams) error {
 	p._disconnectRequested = false
 
 	// New connection request would not start processing until p._connRequestReady.Done()
@@ -1171,8 +1174,8 @@ func (p *Protocol) RegisterConnectionRequest(r types.Connect) {
 		defer p._connRequestMutex.Unlock()
 		// remove previous unprocessed requests (if they are)
 		select {
-		case oldR := <-p._connRequestChan:
-			log.Info(fmt.Sprintf("Skipping previous connection request[%d]. Newest request received!", oldR.Idx))
+		case <-p._connRequestChan:
+			log.Info("Skipping previous connection request. Newest request received!")
 		default:
 		}
 
@@ -1184,9 +1187,12 @@ func (p *Protocol) RegisterConnectionRequest(r types.Connect) {
 	// Disconnect active connection (if connected).
 	// "Disconnected" notification will not be sent to the clients in this case (because new connection request is pending).
 	// It is important to call it after new connection request registered
-	if err := p._service.Disconnect(); err != nil {
-		log.ErrorTrace(err)
+	if p._service != nil {
+		if err := p._service.Disconnect(); err != nil {
+			log.ErrorTrace(err)
+		}
 	}
+	return nil
 }
 
 func (p *Protocol) processConnectionRequests() {
@@ -1252,7 +1258,7 @@ func (p *Protocol) processConnectionRequests() {
 
 }
 
-func (p *Protocol) processConnectRequest(r types.Connect) (err error) {
+func (p *Protocol) processConnectRequest(r service_types.ConnectionParams) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.New("panic on connect: " + fmt.Sprint(r))
@@ -1265,7 +1271,7 @@ func (p *Protocol) processConnectRequest(r types.Connect) (err error) {
 		return p._service.Disconnect()
 	}
 
-	return p._service.Connect(r.Params)
+	return p._service.Connect(r)
 }
 
 func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {

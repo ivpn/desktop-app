@@ -26,8 +26,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/ivpn/desktop-app/daemon/api/types"
+	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/service/wgkeys"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
@@ -36,11 +37,11 @@ import (
 type IServersUpdater interface {
 	// GetServers - get servers list.
 	// Use cached data (if exists), otherwise - download servers list.
-	GetServers() (*types.ServersInfoResponse, error)
+	GetServers() (*api_types.ServersInfoResponse, error)
 	// GetServersForceUpdate returns servers list info (locations, hosts and host load).
 	// The daemon will make request to update servers from the backend.
 	// The cached data will be ignored in this case.
-	GetServersForceUpdate() (*types.ServersInfoResponse, error)
+	GetServersForceUpdate() (*api_types.ServersInfoResponse, error)
 	// UpdateNotifierChannel returns channel which is notifying when servers was updated
 	UpdateNotifierChannel() chan struct{}
 }
@@ -71,8 +72,11 @@ type IServiceEventsReceiver interface {
 	OnKillSwitchStateChanged()
 	OnWiFiChanged(ssid string, isInsecureNetwork bool)
 	OnPingStatus(retMap map[string]int)
-	OnServersUpdated(*types.ServersInfoResponse)
+	OnServersUpdated(*api_types.ServersInfoResponse)
 	OnSplitTunnelStatusChanged()
 	OnVpnStateChanged(state vpn.StateInfo)
-	OnServiceRequiresConnection() error // called by a service when new connection is required (e.g. requested by 'trusted-wifi' functionality or 'auto-connect' on launch)
+
+	// called by a service when new connection is required (e.g. requested by 'trusted-wifi' functionality or 'auto-connect' on launch)
+	RegisterConnectionRequest(params service_types.ConnectionParams) error
+	IsAnyAuthenticatedClientConnected() bool
 }

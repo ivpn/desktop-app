@@ -57,10 +57,23 @@ func (p *Protocol) notifyClients(cmd types.ICommandBase) {
 }
 
 // -------------- clients connections ---------------
-func (p *Protocol) clientConnected(c net.Conn) {
+// IsAnyAuthenticatedClientConnected checks is any authenticated connection available of specific type client
+func (p *Protocol) IsAnyAuthenticatedClientConnected() bool {
+	p._connectionsMutex.RLock()
+	defer p._connectionsMutex.RUnlock()
+
+	for _, val := range p._connections {
+		if val.IsAuthenticated && val.Type == types.ClientUi {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *Protocol) clientConnected(c net.Conn, cType types.ClientTypeEnum) {
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
-	p._connections[c] = struct{}{}
+	p._connections[c] = connectionInfo{Type: cType}
 }
 
 func (p *Protocol) clientDisconnected(c net.Conn) {
@@ -99,7 +112,31 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 	// erasing clients connections
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
-	p._connections = make(map[net.Conn]struct{})
+	p._connections = make(map[net.Conn]connectionInfo)
+}
+
+func (p *Protocol) clientSetAuthenticated(c net.Conn) {
+	// contains information about just connected client (first authentication) or nil
+	var justConnectedClientInfo *connectionInfo
+
+	// separate anonymous function for correct mutex unlock
+	func() {
+		p._connectionsMutex.Lock()
+		defer p._connectionsMutex.Unlock()
+
+		if cInfo, ok := p._connections[c]; ok {
+			if !cInfo.IsAuthenticated {
+				cInfo.IsAuthenticated = true
+				p._connections[c] = cInfo
+
+				justConnectedClientInfo = &cInfo
+			}
+		}
+	}()
+
+	if justConnectedClientInfo != nil {
+		p._service.OnAuthenticatedClient(justConnectedClientInfo.Type)
+	}
 }
 
 // -------------- sending responses ---------------

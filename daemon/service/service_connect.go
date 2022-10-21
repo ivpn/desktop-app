@@ -33,23 +33,52 @@ import (
 	"strings"
 	"time"
 
-	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
-	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 )
 
-func (s *Service) GetConnectionParams() (preferences.ConnectionParams, error) {
-	return s._preferences.LastConnectionParams, nil
+func (s *Service) ValidateConnectionParameters(params types.ConnectionParams, isCanFix bool) (types.ConnectionParams, error) {
+	if params.VpnType == vpn.WireGuard {
+		// WireGuard connection parameters
+		if len(params.WireGuardParameters.EntryVpnServer.Hosts) <= 0 {
+			return params, fmt.Errorf("no hosts defined for WireGuard connection")
+		}
+		if len(params.WireGuardParameters.MultihopExitServer.Hosts) > 0 {
+			if mhErr := s.IsCanConnectMultiHop(); mhErr != nil {
+				if !isCanFix {
+					return params, mhErr
+				}
+				log.Info("Multi-Hop connection is not allowed. Using Single-Hop.")
+				params.WireGuardParameters.MultihopExitServer = types.MultiHopExitServer_WireGuard{}
+			}
+		}
+	} else {
+		// OpenVPN connection parameters
+		if len(params.OpenVpnParameters.EntryVpnServer.Hosts) <= 0 {
+			return params, fmt.Errorf("no hosts defined for OpenVPN connection")
+		}
+		if len(params.OpenVpnParameters.MultihopExitServer.Hosts) > 0 {
+			if mhErr := s.IsCanConnectMultiHop(); mhErr != nil {
+				if !isCanFix {
+					return params, mhErr
+				}
+				log.Info("Multi-Hop connection is not allowed. Using Single-Hop.")
+				params.OpenVpnParameters.MultihopExitServer = types.MultiHopExitServer_OpenVpn{}
+			}
+		}
+	}
+	return params, nil
 }
 
-func (s *Service) Connect(params preferences.ConnectionParams) (err error) {
+func (s *Service) Connect(params types.ConnectionParams) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.New("panic on connect: " + fmt.Sprint(r))
@@ -87,7 +116,7 @@ func (s *Service) Connect(params preferences.ConnectionParams) (err error) {
 		}
 
 		// Multi-Hop
-		var exitHostValue *apitypes.OpenVPNServerHostInfo
+		var exitHostValue *api_types.OpenVPNServerHostInfo
 		multihopExitHosts := params.OpenVpnParameters.MultihopExitServer.Hosts
 		if len(multihopExitHosts) > 0 {
 			exitHostValue = &multihopExitHosts[0]
@@ -199,7 +228,7 @@ func (s *Service) Connect(params preferences.ConnectionParams) (err error) {
 			}
 		}
 
-		var exitHostValue *apitypes.WireGuardServerHostInfo
+		var exitHostValue *api_types.WireGuardServerHostInfo
 		if len(multihopExitHosts) > 0 {
 			exitHostValue = &multihopExitHosts[0]
 			if len(multihopExitHosts) > 1 {

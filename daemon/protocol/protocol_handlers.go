@@ -23,7 +23,7 @@
 package protocol
 
 import (
-	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 )
@@ -78,7 +78,7 @@ func (p *Protocol) OnPingStatus(retMap map[string]int) {
 	p.notifyClients(&types.PingServersResp{PingResults: results})
 }
 
-func (p *Protocol) OnServersUpdated(serv *apitypes.ServersInfoResponse) {
+func (p *Protocol) OnServersUpdated(serv *api_types.ServersInfoResponse) {
 	if serv == nil {
 		return
 	}
@@ -94,9 +94,4 @@ func (p *Protocol) OnSplitTunnelStatusChanged() {
 		return
 	}
 	p.notifyClients(&status)
-}
-
-func (p *Protocol) OnServiceRequiresConnection() error {
-	log.Debug("AUTO CONNECTION REQUESTED!!!!!!!!")
-	return nil
 }

@@ -34,7 +34,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/api"
-	"github.com/ivpn/desktop-app/daemon/api/types"
+	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
@@ -46,6 +46,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
+	"github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/splittun"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
@@ -237,10 +238,7 @@ func (s *Service) init() error {
 
 	// 'Auto-connect on launch' functionality: auto-connect if necessary
 	// 'trusted-wifi' functionality: auto-connect if necessary
-	go func() {
-		ssid, isInsecure := s.GetWiFiCurrentState()
-		s.autoConnectIfRequired(curStatusForAutoConnect{IsServiceJustStarted: true, WifiSsid: ssid, WifiIsInsecure: isInsecure})
-	}()
+	s.autoConnectIfRequired(OnDaemonStarted, nil)
 
 	return nil
 }
@@ -317,11 +315,11 @@ func (s *Service) OnControlConnectionClosed() (isServiceMustBeClosed bool, err e
 
 // ServersList returns servers info
 // (if there is a cached data available - will be returned data from cache)
-func (s *Service) ServersList() (*types.ServersInfoResponse, error) {
+func (s *Service) ServersList() (*api_types.ServersInfoResponse, error) {
 	return s._serversUpdater.GetServers()
 }
 
-func (s *Service) findOpenVpnHost(hostname string, ip net.IP, svrs []types.OpenvpnServerInfo) (types.OpenVPNServerHostInfo, error) {
+func (s *Service) findOpenVpnHost(hostname string, ip net.IP, svrs []api_types.OpenvpnServerInfo) (api_types.OpenVPNServerHostInfo, error) {
 	if ((len(hostname) > 0) || (ip != nil && !ip.IsUnspecified())) && svrs != nil {
 		for _, svr := range svrs {
 			for _, host := range svr.Hosts {
@@ -333,13 +331,13 @@ func (s *Service) findOpenVpnHost(hostname string, ip net.IP, svrs []types.Openv
 		}
 	}
 
-	return types.OpenVPNServerHostInfo{}, fmt.Errorf(fmt.Sprintf("host '%s' not found", hostname))
+	return api_types.OpenVPNServerHostInfo{}, fmt.Errorf(fmt.Sprintf("host '%s' not found", hostname))
 }
 
 // ServersListForceUpdate returns servers list info.
 // The daemon will make request to update servers from the backend.
 // The cached data will be ignored in this case.
-func (s *Service) ServersListForceUpdate() (*types.ServersInfoResponse, error) {
+func (s *Service) ServersListForceUpdate() (*api_types.ServersInfoResponse, error) {
 	return s._serversUpdater.GetServersForceUpdate()
 }
 
@@ -1123,7 +1121,7 @@ func (s *Service) ResetPreferences() error {
 	return nil
 }
 
-func (s *Service) SetConnectionParams(params preferences.ConnectionParams) error {
+func (s *Service) SetConnectionParams(params types.ConnectionParams) error {
 	prefs := s._preferences
 	prefs.LastConnectionParams = params
 	s.setPreferences(prefs)
@@ -1134,6 +1132,9 @@ func (s *Service) SetTrustedWifiParams(params preferences.TrustedWiFiParams) err
 	prefs := s._preferences
 	prefs.TrustedWiFi = params
 	s.setPreferences(prefs)
+
+	// 'trusted-wifi' functionality: auto-connect if necessary
+	s.autoConnectIfRequired(OnWifiChanged, nil)
 	return nil
 }
 
@@ -1469,12 +1470,12 @@ func (s *Service) RequestSessionStatus() (
 		apiCode = apiErr.Status
 
 		// Session not found - can happens when user forced to logout from another device
-		if apiCode == types.SessionNotFound {
+		if apiCode == api_types.SessionNotFound {
 			s.OnSessionNotFound()
 		}
 
 		// save last account info AND notify clients that account not active
-		if apiCode == types.AccountNotActive {
+		if apiCode == api_types.AccountNotActive {
 			accountInfo = preferences.AccountStatus{}
 			if stat != nil {
 				accountInfo = s.createAccountStatus(*stat)
@@ -1509,7 +1510,7 @@ func (s *Service) RequestSessionStatus() (
 	return apiCode, "", session.Session, accountInfo, nil
 }
 
-func (s *Service) createAccountStatus(apiResp types.ServiceStatusAPIResp) preferences.AccountStatus {
+func (s *Service) createAccountStatus(apiResp api_types.ServiceStatusAPIResp) preferences.AccountStatus {
 	return preferences.AccountStatus{
 		Active:         apiResp.Active,
 		ActiveUntil:    apiResp.ActiveUntil,

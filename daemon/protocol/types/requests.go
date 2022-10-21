@@ -26,6 +26,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -183,13 +184,13 @@ type TrustedWiFiSettings struct {
 // It is required for automatic connection on daemon's side (e.g. 'Auto-connect on Launch' or 'Trusted WiFi' functionality)
 type ConnectSettings struct {
 	RequestBase
-	Params preferences.ConnectionParams
+	Params service_types.ConnectionParams
 }
 
 // Connect request to establish new VPN connection
 type Connect struct {
 	RequestBase
-	Params preferences.ConnectionParams
+	Params service_types.ConnectionParams
 }
 
 // Disconnect disconnect active VPN connection

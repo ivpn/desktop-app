@@ -76,7 +76,7 @@ func (s *Service) onWiFiChanged(ssid string) {
 		s._evtReceiver.OnWiFiChanged(ssid, isInsecure)
 
 		// 'trusted-wifi' functionality: auto-connect if necessary
-		go s.autoConnectIfRequired(curStatusForAutoConnect{WifiSsid: ssid, WifiIsInsecure: isInsecure})
+		s.autoConnectIfRequired(OnWifiChanged, &wifiStatus{WifiSsid: ssid, WifiIsInsecure: isInsecure})
 	})
 }
 
