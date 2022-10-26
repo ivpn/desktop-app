@@ -27,16 +27,17 @@ type WiFiNetwork struct {
 	IsTrusted bool   `json:"isTrusted"`
 }
 
-type TrustedWiFiParams struct {
+type WiFiParams struct {
 	// CanApplyInBackground:
 	//	false - means the daemon applies actions in background
 	//	true - VPN connection and Firewall status can be changed ONLY when UI client is connected to the daemon (UI app is running)
-	CanApplyInBackground bool
+	CanApplyInBackground bool `json:"canApplyInBackground"`
 
-	TrustedNetworksControl      bool          `json:"trustedNetworksControl"`
-	DefaultTrustStatusTrusted   *bool         `json:"defaultTrustStatusTrusted"` // nil - no trust action
-	Networks                    []WiFiNetwork `json:"networks"`
-	ConnectVPNOnInsecureNetwork bool          `json:"connectVPNOnInsecureNetwork"`
+	ConnectVPNOnInsecureNetwork bool `json:"connectVPNOnInsecureNetwork"`
+
+	TrustedNetworksControl    bool          `json:"trustedNetworksControl"`
+	DefaultTrustStatusTrusted *bool         `json:"defaultTrustStatusTrusted"` // nil - no trust action
+	Networks                  []WiFiNetwork `json:"networks"`
 
 	Actions struct {
 		UnTrustedConnectVpn     bool `json:"unTrustedConnectVpn"`

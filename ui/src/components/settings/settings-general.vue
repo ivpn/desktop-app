@@ -78,30 +78,51 @@
     </div> -->
 
     <div class="settingsBoldFont">Autoconnect:</div>
-    <div
-      class="param"
-      :title="
-        this.$store.state.paranoidModeStatus.IsEnabled === true
-          ? `'Autoconnect on application launch' cannot be enabled whilst 'Enhanced App Authentication' is enabled`
-          : ''
-      "
-    >
+    <div class="param">
       <input
         type="checkbox"
         id="connectOnLaunch"
+        @click="isAutoconnectOnLaunchOnClick"
         v-model="isAutoconnectOnLaunch"
       />
       <label class="defColor" for="connectOnLaunch">On launch</label>
     </div>
-    <div class="param" v-if="!isLinux">
+
+    <div
+      class="param"
+      :title="
+        isParanoidMode
+          ? 'The option is not applicable when `Enhanced App Authentication` enabled'
+          : ''
+      "
+    >
       <input
+        :disabled="isAutoconnectOnLaunch === false || isParanoidMode === true"
         type="checkbox"
-        id="connectVPNOnInsecureNetwork"
-        v-model="connectVPNOnInsecureNetwork"
+        id="connectOnLaunchDaemon"
+        v-model="isAutoconnectOnLaunchDaemon"
       />
-      <label class="defColor" for="connectVPNOnInsecureNetwork"
-        >On joining WiFi networks without encryption</label
+      <label class="defColor" for="connectOnLaunchDaemon"
+        >Allow background daemon to manage autoconnect</label
       >
+
+      <button
+        class="noBordersBtn flexRow"
+        title="Help"
+        v-on:click="this.$refs.helpAutoconnectOnLaunchDaemon.showModal()"
+      >
+        <img src="@/assets/question.svg" />
+      </button>
+      <ComponentDialog ref="helpAutoconnectOnLaunchDaemon" header="Info">
+        <div>
+          <p>
+            By enabling this feature the IVPN daemon will manage the
+            auto-connection function. This enables the VPN tunnel to startup as
+            quickly as possible as the daemon is started early in the operating
+            system boot process and before the IVPN app (The GUI).
+          </p>
+        </div>
+      </ComponentDialog>
     </div>
 
     <div class="settingsBoldFont">On exit:</div>
@@ -204,12 +225,14 @@
 import { ColorTheme } from "@/store/types";
 import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
+import ComponentDialog from "@/components/component-dialog.vue";
 const sender = window.ipcSender;
 
 // VUE component
 export default {
   components: {
     ComponentDiagnosticLogs,
+    ComponentDialog,
   },
   data: function () {
     return {
@@ -242,8 +265,33 @@ export default {
     onDiagnosticViewBeta() {
       this.diagnosticView = "beta";
     },
+
+    async isAutoconnectOnLaunchOnClick(evt) {
+      if (
+        (this.isAutoconnectOnLaunch === false) & // going to enable
+        (this.$store.state.paranoidModeStatus.IsEnabled === true) // EAA enabled
+      ) {
+        let ret = await sender.showMessageBoxSync(
+          {
+            type: "warning",
+            message: `Enhanced App Authentication enabled`,
+            detail:
+              "Warning: On application start 'Autoconnect on application launch' will not be applied until the EAA password is entered.",
+            buttons: ["Enable", "Cancel"],
+          },
+          true
+        );
+        if (ret == 1) {
+          // cancel
+          evt.returnValue = false;
+        }
+      }
+    },
   },
   computed: {
+    isParanoidMode() {
+      return this.$store.state.paranoidModeStatus.IsEnabled === true;
+    },
     isLinux() {
       return Platform() === PlatformEnum.Linux;
     },
@@ -269,29 +317,16 @@ export default {
         return this.$store.state.settings.daemonSettings.IsAutoconnectOnLaunch;
       },
       set(value) {
-        if (
-          value === true &&
-          this.$store.state.paranoidModeStatus.IsEnabled === true
-        ) {
-          sender.showMessageBoxSync({
-            type: "info",
-            message: `Enhanced App Authentication enabled`,
-            detail:
-              "Warning: On application start 'Autoconnect on application launch' will not be applied until the EAA password is entered.",
-            buttons: ["Ok"],
-          });
-        }
-        sender.SetAutoconnectOnLaunch(value);
+        sender.SetAutoconnectOnLaunch(value, null);
       },
     },
-    connectVPNOnInsecureNetwork: {
+    isAutoconnectOnLaunchDaemon: {
       get() {
-        return this.$store.state.settings.wifi?.connectVPNOnInsecureNetwork;
+        return this.$store.state.settings.daemonSettings
+          .IsAutoconnectOnLaunchDaemon;
       },
       set(value) {
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
-        wifi.connectVPNOnInsecureNetwork = value;
-        this.$store.dispatch("settings/wifi", wifi);
+        sender.SetAutoconnectOnLaunch(null, value);
       },
     },
 

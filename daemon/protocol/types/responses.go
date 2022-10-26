@@ -116,9 +116,12 @@ type ParanoidModeStatus struct {
 type SettingsResp struct {
 	CommandBase
 
-	IsAutoconnectOnLaunch bool
-	UserDefinedOvpnFile   string
-	ObfsproxyConfig       obfsproxy.Config // (for OpenVPN connections)
+	IsAutoconnectOnLaunch       bool
+	IsAutoconnectOnLaunchDaemon bool
+	UserDefinedOvpnFile         string
+	ObfsproxyConfig             obfsproxy.Config // (for OpenVPN connections)
+	UserPrefs                   preferences.UserPreferences
+	WiFi                        preferences.WiFiParams
 
 	// TODO: implement the rest of daemon settings
 	// IsLogging             bool
@@ -129,8 +132,6 @@ type SettingsResp struct {
 	// FwUserExceptions      string
 	// IsSplitTunnel         bool
 	// SplitTunnelApps       []string
-
-	UserPrefs preferences.UserPreferences
 }
 
 // HelloResp response on initial request

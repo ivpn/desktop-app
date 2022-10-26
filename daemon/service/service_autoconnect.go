@@ -98,10 +98,10 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfo *wifi
 	// Check "Auto-connect on APP/daemon launch" action
 	// (skip when we are connected to a trusted network with "Disconnect VPN" action)
 	if prefs.IsAutoconnectOnLaunch && action.Vpn != Off {
-		if reason == OnDaemonStarted && prefs.IsAutoconnectOnLaunch_Daemon {
+		if reason == OnDaemonStarted && prefs.IsAutoconnectOnLaunchDaemon {
 			log.Info("Automatic connection manager: applying Auto-Connect on daemon Launch action...")
 			action.Vpn = On
-		} else if reason == OnUiClientConnected && !prefs.IsAutoconnectOnLaunch_Daemon {
+		} else if reason == OnUiClientConnected && !prefs.IsAutoconnectOnLaunchDaemon {
 			log.Info("Automatic connection manager: applying Auto-Connect on app Launch action...")
 			action.Vpn = On
 		}
@@ -109,7 +109,7 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfo *wifi
 
 	// Check Auto-connect 'On joining WiFi networks without encryption'
 	if action.Vpn == Off &&
-		prefs.TrustedWiFi.ConnectVPNOnInsecureNetwork &&
+		prefs.WiFiControl.ConnectVPNOnInsecureNetwork &&
 		wifiInfo.WifiIsInsecure &&
 		s.isCanApplyWiFiActions() {
 
@@ -164,7 +164,7 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfo *wifi
 
 func (s *Service) isCanApplyWiFiActions() bool {
 	prefs := s.Preferences()
-	if !prefs.TrustedWiFi.CanApplyInBackground && !s._evtReceiver.IsAnyAuthenticatedClientConnected() {
+	if !prefs.WiFiControl.CanApplyInBackground && !s._evtReceiver.IsAnyAuthenticatedClientConnected() {
 		// WiFi action not allowed: no UI client connected (CanApplyInBackground == false)
 		return false
 	}
@@ -181,7 +181,7 @@ func (s *Service) getActionForWifiNetwork(wifiInfo wifiStatus) (retAction automa
 		return
 	}
 
-	wifiParams := prefs.TrustedWiFi
+	wifiParams := prefs.WiFiControl
 	if !wifiParams.TrustedNetworksControl || wifiInfo.WifiSsid == "" {
 		return
 	}

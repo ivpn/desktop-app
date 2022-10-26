@@ -178,8 +178,11 @@ ipcMain.handle("renderer-request-SetUserPrefs", async (event, userPrefs) => {
 
 ipcMain.handle(
   "renderer-request-SetAutoconnectOnLaunch",
-  async (event, isEnabled) => {
-    return await client.SetAutoconnectOnLaunch(isEnabled);
+  async (event, isEnabled, isApplicableByDaemonInBackground) => {
+    return await client.SetAutoconnectOnLaunch(
+      isEnabled,
+      isApplicableByDaemonInBackground
+    );
   }
 );
 ipcMain.handle("renderer-request-set-logging", async () => {

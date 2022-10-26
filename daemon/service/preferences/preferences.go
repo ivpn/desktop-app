@@ -80,15 +80,15 @@ type Preferences struct {
 	IsStopOnClientDisconnect bool
 	Obfs4proxy               obfsproxy.Config
 
-	// IsAutoconnectOnLaunch_Daemon:
-	//	false - means the daemon applies operation 'IsAutoconnectOnLaunch' only when UI app connected
-	//	true - means the daemon applies operation 'IsAutoconnectOnLaunch' after daemon initialization
-	IsAutoconnectOnLaunch_Daemon bool
 	// IsAutoconnectOnLaunch.
 	// when 'true' - daemon will perform automatic connection:
-	//		when daemon initialized ('IsAutoconnectOnLaunch_Daemon' == true)
-	//		when UI app connected  ('IsAutoconnectOnLaunch_Daemon' == false)
+	//		when daemon initialized ('IsAutoconnectOnLaunchDaemon' == true)
+	//		when UI app connected  ('IsAutoconnectOnLaunchDaemon' == false)
 	IsAutoconnectOnLaunch bool
+	// IsAutoconnectOnLaunchDaemon:
+	//	false - means the daemon applies operation 'IsAutoconnectOnLaunch' only when UI app connected
+	//	true - means the daemon applies operation 'IsAutoconnectOnLaunch' after daemon initialization
+	IsAutoconnectOnLaunchDaemon bool
 
 	// split-tunnelling
 	IsSplitTunnel   bool
@@ -102,7 +102,7 @@ type Preferences struct {
 	UserPrefs UserPreferences
 
 	LastConnectionParams service_types.ConnectionParams
-	TrustedWiFi          TrustedWiFiParams
+	WiFiControl          WiFiParams
 }
 
 func Create() *Preferences {

@@ -36,8 +36,8 @@ import (
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
-	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -674,9 +674,9 @@ func (c *CmdConnect) Run() (retError error) {
 
 	// metadata
 	if c.fastest {
-		req.Params.Metadata.ServerSelectionEntry = preferences.Fastest
+		req.Params.Metadata.ServerSelectionEntry = service_types.Fastest
 	} else if c.any {
-		req.Params.Metadata.ServerSelectionEntry = preferences.Random
+		req.Params.Metadata.ServerSelectionEntry = service_types.Random
 	}
 
 	fmt.Println("Connecting...")

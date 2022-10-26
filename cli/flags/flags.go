@@ -40,19 +40,22 @@ func NewFlagSetEx(name, description string) *CmdInfo {
 
 // CmdInfo contains info about single command with arguments
 type CmdInfo struct {
-	description    string
-	fs             *flag.FlagSet
-	defaultArg     *string
-	defaultArgName string
-	argNames       map[string]string // variable name -> argument description
-	parseSpecial   func(arguments []string) bool
-	preParse       func(arguments []string) (argumentsUpdated []string, err error)
-	argIsAllowed   map[string]func() bool // variable name -> func which returns 'false' when argument is not applicable for current environment
+	KeepArgsOrderInHelp bool // (when showing help) keep arguments in the same order as they were defined
+	description         string
+	fs                  *flag.FlagSet
+	defaultArg          *string
+	defaultArgName      string
+	usageOrder          []string          // list of 'usage' text in the order flags have been defined
+	argNames            map[string]string // variable name -> argument description (example: "-port PROTOCOL:PORT" => ["port"]"PROTOCOL:PORT")
+	parseSpecial        func(arguments []string) bool
+	preParse            func(arguments []string) (argumentsUpdated []string, err error)
+	argIsAllowed        map[string]func() bool // variable name -> func which returns 'false' when argument is not applicable for current environment
 }
 
 // Initialize initialises object
 func (c *CmdInfo) Initialize(name, description string) {
 	c.argNames = make(map[string]string)
+
 	c.description = description
 	c.fs = flag.NewFlagSet(name, flag.ExitOnError)
 	c.fs.Usage = func() {
@@ -129,15 +132,16 @@ func (c *CmdInfo) usage(w *tabwriter.Writer, short bool) {
 
 	type flagInfo struct {
 		DetailedName string
-		ArgDesc      string
+		Arg          string
 	}
 
 	tmpmap := make(map[string]flagInfo)
 
+	keys := c.usageOrder
 	// collect output date
 	flagIterator := func(f *flag.Flag) {
 		if flags, ok := tmpmap[f.Usage]; !ok {
-			tmpmap[f.Usage] = flagInfo{DetailedName: "-" + f.Name, ArgDesc: c.argNames[f.Name]}
+			tmpmap[f.Usage] = flagInfo{DetailedName: "-" + f.Name, Arg: c.argNames[f.Name]}
 		} else {
 			flags.DetailedName = flags.DetailedName + "|-" + f.Name
 			tmpmap[f.Usage] = flags
@@ -151,20 +155,20 @@ func (c *CmdInfo) usage(w *tabwriter.Writer, short bool) {
 		writer = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
 
-	// sorting keys (map is not sorted)
-	keys := make([]string, 0, len(tmpmap))
-	for k := range tmpmap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
 	// Format output
 	// command
 	lines := strings.Split(c.Description(), "\n")
 	fmt.Fprintln(writer, fmt.Sprintf("%s %s\t%s", c.Name(), c.defaultArgName, lines[0]))
+
 	if short {
-		return
+		return // Short help printed
 	}
+
+	// sorting keys (map is not sorted)
+	if !c.KeepArgsOrderInHelp {
+		sort.Strings(keys)
+	}
+
 	if len(lines) > 1 {
 		for i := 1; i < len(lines); i++ {
 			fmt.Fprintln(writer, fmt.Sprintf("  %s %s\t%s", "", "", lines[i]))
@@ -184,7 +188,7 @@ func (c *CmdInfo) usage(w *tabwriter.Writer, short bool) {
 		}
 
 		lines := strings.Split(usage, "\n")
-		fmt.Fprintln(writer, fmt.Sprintf("  %s %s\t- %s", flag.DetailedName, flag.ArgDesc, lines[0]))
+		fmt.Fprintln(writer, fmt.Sprintf("  %s %s\t- %s", flag.DetailedName, flag.Arg, lines[0]))
 		if len(lines) > 1 {
 			for i := 1; i < len(lines); i++ {
 				fmt.Fprintln(writer, fmt.Sprintf("  %s %s\t%s", "", "", lines[i]))
@@ -204,11 +208,21 @@ func (c *CmdInfo) DefaultStringVar(p *string, usage string) {
 	c.defaultArg = p
 }
 
+func (c *CmdInfo) saveFlagHelpOrder(usage string) {
+	for _, v := range c.usageOrder {
+		if v == usage {
+			return
+		}
+	}
+	c.usageOrder = append(c.usageOrder, usage)
+}
+
 // StringVar defines a string flag with specified name, default value, and usage string.
 // The argument p points to a string variable in which to store the value of the flag.
 func (c *CmdInfo) StringVar(p *string, name string, defValue string, argNAme string, usage string) {
 	c.fs.StringVar(p, name, defValue, usage)
 	c.argNames[name] = argNAme
+	c.saveFlagHelpOrder(usage)
 }
 func (c *CmdInfo) StringVarEx(p *string, name string, defValue string, argNAme string, usage string, isAllowedFunc func() bool) {
 	c.StringVar(p, name, defValue, argNAme, usage)
@@ -222,6 +236,7 @@ func (c *CmdInfo) StringVarEx(p *string, name string, defValue string, argNAme s
 func (c *CmdInfo) IntVar(p *int, name string, defValue int, argNAme string, usage string) {
 	c.fs.IntVar(p, name, defValue, usage)
 	c.argNames[name] = argNAme
+	c.saveFlagHelpOrder(usage)
 }
 func (c *CmdInfo) IntVarEx(p *int, name string, defValue int, argNAme string, usage string, isAllowedFunc func() bool) {
 	c.IntVar(p, name, defValue, argNAme, usage)
@@ -234,6 +249,7 @@ func (c *CmdInfo) IntVarEx(p *int, name string, defValue int, argNAme string, us
 // The argument p points to a bool variable in which to store the value of the flag.
 func (c *CmdInfo) BoolVar(p *bool, name string, defValue bool, usage string) {
 	c.fs.BoolVar(p, name, defValue, usage)
+	c.saveFlagHelpOrder(usage)
 }
 func (c *CmdInfo) BoolVarEx(p *bool, name string, defValue bool, usage string, isAllowedFunc func() bool) {
 	c.BoolVar(p, name, defValue, usage)

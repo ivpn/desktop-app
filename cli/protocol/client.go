@@ -227,8 +227,8 @@ func (c *Client) SetPreferences(key, value string) error {
 
 	req := types.SetPreference{Key: key, Value: value}
 
-	// TODO: daemon have to return confirmation
-	if err := c.send(&req, 0); err != nil {
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
 	}
 

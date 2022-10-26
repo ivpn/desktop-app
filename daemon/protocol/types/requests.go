@@ -176,7 +176,7 @@ type GetDnsPredefinedConfigs struct {
 
 type TrustedWiFiSettings struct {
 	RequestBase
-	Params preferences.TrustedWiFiParams
+	Params preferences.WiFiParams
 }
 
 // ConnectSettings contains same data as 'Connect' request but this command not start the connection.

@@ -87,6 +87,8 @@ func printUsageAll(short bool) {
 
 	if short {
 		commands.PrintTips([]commands.TipType{commands.TipHelpCommand, commands.TipHelpFull})
+	} else {
+		commands.PrintTips([]commands.TipType{commands.TipHelp, commands.TipHelpCommand})
 	}
 }
 
@@ -113,6 +115,8 @@ func main() {
 	addCommand(&commands.CmdLogout{})
 	addCommand(&commands.CmdAccount{})
 	addCommand(&commands.CmdParanoidMode{})
+	addCommand(&commands.CmdAutoConnect{})
+	addCommand(&commands.CmdWiFi{})
 
 	if len(os.Args) >= 2 {
 		arg1 := strings.TrimLeft(strings.ToLower(os.Args[1]), "-")
@@ -128,7 +132,7 @@ func main() {
 
 		if arg1 == "?" || arg1 == "h" || arg1 == "help" {
 			if arg2 == "full" {
-				printUsageAll(false) // detailed commans descriptions
+				printUsageAll(false) // detailed commands descriptions
 			} else {
 				printUsageAll(true) // short commands descriptions
 			}

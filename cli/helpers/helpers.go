@@ -22,6 +22,53 @@
 
 package helpers
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/ivpn/desktop-app/cli/flags"
+)
+
 func CheckIsAdmin() bool {
 	return doCheckIsAdmin()
+}
+
+func BoolParameterParse(v string) (bool, error) {
+	//if num, err := strconv.Atoi(v); err == nil && num > 0 {
+	//	return true, nil
+	//}
+	return BoolParameterParseEx(v, []string{"on", "true", "1"}, []string{"off, false, 0"})
+}
+
+func BoolParameterParseEx(v string, trueValues []string, falseValues []string) (bool, error) {
+	if len(trueValues) == 0 && len(falseValues) == 0 {
+		return false, fmt.Errorf("internal error (bad arguments for BoolParameterParseEx)")
+	}
+
+	v = strings.ToLower(strings.TrimSpace(v))
+
+	for _, tV := range trueValues {
+		if v == strings.ToLower(strings.TrimSpace(tV)) {
+			return true, nil
+		}
+	}
+
+	for _, fV := range falseValues {
+		if v == strings.ToLower(strings.TrimSpace(fV)) {
+			return false, nil
+		}
+	}
+
+	return false, flags.BadParameter{Message: fmt.Sprintf("unsupported value '%s' for boolean parameter (acceptable values: %s, %s)", v, strings.Join(falseValues, "/"), strings.Join(trueValues, "/"))}
+}
+
+func BoolToStr(v *bool, trueVal, falseVal, nullVal string) string {
+	if v == nil {
+		return nullVal
+	}
+
+	if *v {
+		return trueVal
+	}
+	return falseVal
 }

@@ -173,10 +173,12 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd types.ICommandBase, idx int) 
 func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 	prefs := p._service.Preferences()
 	return &types.SettingsResp{
-		IsAutoconnectOnLaunch: prefs.IsAutoconnectOnLaunch,
-		UserDefinedOvpnFile:   platform.OpenvpnUserParamsFile(),
-		ObfsproxyConfig:       prefs.Obfs4proxy,
-		UserPrefs:             prefs.UserPrefs,
+		IsAutoconnectOnLaunch:       prefs.IsAutoconnectOnLaunch,
+		IsAutoconnectOnLaunchDaemon: prefs.IsAutoconnectOnLaunchDaemon,
+		UserDefinedOvpnFile:         platform.OpenvpnUserParamsFile(),
+		ObfsproxyConfig:             prefs.Obfs4proxy,
+		UserPrefs:                   prefs.UserPrefs,
+		WiFi:                        prefs.WiFiControl,
 		// TODO: implement the rest of daemon settings
 	}
 }

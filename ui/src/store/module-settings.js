@@ -71,6 +71,7 @@ const getDefaultState = () => {
     // this object must be received out from daemon
     daemonSettings: {
       IsAutoconnectOnLaunch: false,
+      IsAutoconnectOnLaunchDaemon: false,
       UserDefinedOvpnFile: "",
 
       // obfsproxy configuration
@@ -138,11 +139,17 @@ const getDefaultState = () => {
 
     // wifi
     wifi: {
+      // canApplyInBackground:
+      //	false - means the daemon applies actions in background
+      //	true - VPN connection and Firewall status can be changed ONLY when UI client is connected to the daemon (UI app is running)
+      canApplyInBackground: false,
+
+      connectVPNOnInsecureNetwork: false,
+
       trustedNetworksControl: true,
       defaultTrustStatusTrusted: null, // null/true/false
       networks: null, // []{ ssid: "" isTrusted: false }
 
-      connectVPNOnInsecureNetwork: false,
       actions: {
         unTrustedConnectVpn: true,
         unTrustedEnableFirewall: true,

@@ -1074,6 +1074,12 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 			prefs.IsAutoconnectOnLaunch = val
 		}
 
+	case protocolTypes.Prefs_IsAutoconnectOnLaunch_Daemon:
+		if val, err := strconv.ParseBool(val); err == nil {
+			isChanged = val != prefs.IsAutoconnectOnLaunchDaemon
+			prefs.IsAutoconnectOnLaunchDaemon = val
+		}
+
 	default:
 		log.Warning(fmt.Sprintf("Preference key '%s' not supported", key))
 	}
@@ -1128,9 +1134,9 @@ func (s *Service) SetConnectionParams(params types.ConnectionParams) error {
 	return nil
 }
 
-func (s *Service) SetTrustedWifiParams(params preferences.TrustedWiFiParams) error {
+func (s *Service) SetTrustedWifiParams(params preferences.WiFiParams) error {
 	prefs := s._preferences
-	prefs.TrustedWiFi = params
+	prefs.WiFiControl = params
 	s.setPreferences(prefs)
 
 	// 'trusted-wifi' functionality: auto-connect if necessary

@@ -2,6 +2,56 @@
   <div class="flexColumn">
     <div class="settingsTitle">WIFI CONTROL SETTINGS</div>
 
+    <div
+      class="param"
+      :title="
+        isParanoidMode
+          ? 'The option is not applicable when `Enhanced App Authentication` enabled'
+          : ''
+      "
+    >
+      <input
+        :disabled="isParanoidMode === true"
+        type="checkbox"
+        id="canApplyInBackground"
+        v-model="canApplyInBackground"
+      />
+      <label class="defColor" for="canApplyInBackground"
+        >Allow background daemon to Apply WiFi Control settings</label
+      >
+
+      <button
+        class="noBordersBtn flexRow"
+        title="Help"
+        v-on:click="$refs.helpCanApplyInBackground.showModal()"
+      >
+        <img src="@/assets/question.svg" />
+      </button>
+
+      <ComponentDialog ref="helpCanApplyInBackground" header="Info">
+        <div>
+          <p>
+            By enabling this feature the IVPN daemon will apply the WiFi control
+            settings before the IVPN app has been launched. This enables the
+            WiFi control settings to be applied as quickly as possible as the
+            daemon is started early in the operating system boot process and
+            before the IVPN app (The GUI).
+          </p>
+        </div>
+      </ComponentDialog>
+    </div>
+
+    <div class="param" v-if="!isLinux">
+      <input
+        type="checkbox"
+        id="connectVPNOnInsecureNetwork"
+        v-model="connectVPNOnInsecureNetwork"
+      />
+      <label class="defColor" for="connectVPNOnInsecureNetwork"
+        >Autoconnect on joining WiFi networks without encryption</label
+      >
+    </div>
+
     <div class="param">
       <input
         type="checkbox"
@@ -160,11 +210,15 @@
 
 <script>
 import trustedNetConfigControl from "@/components/controls/control-trusted-network-config.vue";
+import { Platform, PlatformEnum } from "@/platform/platform";
+import ComponentDialog from "@/components/component-dialog.vue";
+
 const sender = window.ipcSender;
 
 export default {
   components: {
     trustedNetConfigControl,
+    ComponentDialog,
   },
   mounted() {
     //if (this.trustedNetworksControl === true) sender.GetWiFiAvailableNetworks();
@@ -256,6 +310,35 @@ export default {
     },
   },
   computed: {
+    isParanoidMode() {
+      return this.$store.state.paranoidModeStatus.IsEnabled === true;
+    },
+    isLinux() {
+      return Platform() === PlatformEnum.Linux;
+    },
+
+    canApplyInBackground: {
+      get() {
+        return this.$store.state.settings.wifi?.canApplyInBackground;
+      },
+      set(value) {
+        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        wifi.canApplyInBackground = value;
+        this.$store.dispatch("settings/wifi", wifi);
+      },
+    },
+
+    connectVPNOnInsecureNetwork: {
+      get() {
+        return this.$store.state.settings.wifi?.connectVPNOnInsecureNetwork;
+      },
+      set(value) {
+        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        wifi.connectVPNOnInsecureNetwork = value;
+        this.$store.dispatch("settings/wifi", wifi);
+      },
+    },
+
     availableWiFiNetworks: function () {
       var nets = [];
       try {
@@ -403,5 +486,12 @@ select.trustedConfigUntrusted {
 select.trustedConfigTrusted {
   @extend .trustedConfigBase;
   color: #3b99fc;
+}
+
+input:disabled {
+  opacity: 0.5;
+}
+input:disabled + label {
+  opacity: 0.5;
 }
 </style>

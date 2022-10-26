@@ -39,3 +39,7 @@ func IsDnsOverHttpsSupported() bool {
 func IsDnsOverTlsSupported() bool {
 	return false
 }
+
+func IsLinux() bool {
+	return runtime.GOOS != "linux"
+}

@@ -92,7 +92,7 @@ type Service interface {
 	SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error
 
 	SetConnectionParams(params service_types.ConnectionParams) error
-	SetTrustedWifiParams(params preferences.TrustedWiFiParams) error
+	SetTrustedWifiParams(params preferences.WiFiParams) error
 
 	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)

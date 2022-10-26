@@ -1770,12 +1770,28 @@ async function SetUserPrefs(userPrefs) {
   });
 }
 
-async function SetAutoconnectOnLaunch(enable) {
-  await sendRecv({
-    Command: daemonRequests.SetPreference,
-    Key: "autoconnect_on_launch",
-    Value: `${enable}`,
-  });
+async function SetAutoconnectOnLaunch(
+  enable,
+  isApplicableByDaemonInBackground
+) {
+  if (enable != null && enable != undefined) {
+    await sendRecv({
+      Command: daemonRequests.SetPreference,
+      Key: "autoconnect_on_launch",
+      Value: `${enable}`,
+    });
+  }
+
+  if (
+    isApplicableByDaemonInBackground != null &&
+    isApplicableByDaemonInBackground != undefined
+  ) {
+    await sendRecv({
+      Command: daemonRequests.SetPreference,
+      Key: "autoconnect_on_launch_daemon",
+      Value: `${enable}`,
+    });
+  }
 }
 
 async function SetLogging() {
