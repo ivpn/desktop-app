@@ -57,16 +57,19 @@ const sender = window.ipcSender;
 
 export default {
   mounted() {
-    this.accountID = this.$route.params.accountID;
+    let params = history.state.params;
+    if (params) {
+      this.accountID = params.accountID;
+      this.devicesMaxLimit = params.devicesMaxLimit;
+      this.CurrentPlan = params.CurrentPlan;
+      this.Upgradable = params.Upgradable;
+      this.UpgradeToPlan = params.UpgradeToPlan;
+      this.UpgradeToURL = params.UpgradeToURL;
+    } else {
+      console.error("AccountLimit view: history params are not defined!");
+    }
 
-    this.devicesMaxLimit = this.$route.params.devicesMaxLimit;
-
-    this.CurrentPlan = this.$route.params.CurrentPlan;
-    this.Upgradable = this.$route.params.Upgradable;
-    this.UpgradeToPlan = this.$route.params.UpgradeToPlan;
-    this.UpgradeToURL = this.$route.params.UpgradeToURL;
-
-    this.extraArgs = this.$route.params.extraArgs; //{ confirmation2FA }
+    this.extraArgs = params.extraArgs; //{ confirmation2FA }
   },
   data: function () {
     return {
@@ -96,9 +99,11 @@ export default {
     onForceLogout: async function () {
       this.$router.push({
         name: "Main",
-        params: {
-          forceLoginAccount: this.accountID,
-          extraArgs: this.extraArgs,
+        state: {
+          params: {
+            forceLoginAccount: this.accountID,
+            extraArgs: JSON.parse(JSON.stringify(this.extraArgs)),
+          },
         },
       });
     },
