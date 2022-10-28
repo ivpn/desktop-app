@@ -724,3 +724,29 @@ func (c *Client) SetUserPreferences(upref preferences.UserPreferences) error {
 	}
 	return nil
 }
+
+func (c *Client) GetWiFiCurrentNetwork() (types.WiFiCurrentNetworkResp, error) {
+	var resp types.WiFiCurrentNetworkResp
+	if err := c.ensureConnected(); err != nil {
+		return resp, err
+	}
+
+	req := types.WiFiCurrentNetwork{}
+	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+func (c *Client) SetWiFiSettings(params preferences.WiFiParams) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.WiFiSettings{Params: params}
+	var resp types.EmptyResp
+	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+		return err
+	}
+	return nil
+}

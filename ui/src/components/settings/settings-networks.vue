@@ -245,10 +245,12 @@ export default {
       this.isActionsView = false;
     },
     onNetworkTrustChanged(ssid, isTrusted) {
-      let wifi = Object.assign({}, this.$store.state.settings.wifi);
+      let wifi = Object.assign({}, this.wifiSettings);
       var nets = [];
-      if (this.$store.state.settings.wifi?.networks != null)
-        nets = [...this.$store.state.settings.wifi.networks];
+
+      if (this.wifiSettings?.networks != null)
+        nets = [...this.wifiSettings.networks];
+
       if (isTrusted == null) {
         nets = nets.filter((wifi) => wifi.ssid != ssid);
       } else {
@@ -264,8 +266,9 @@ export default {
       }
       wifi.networks = nets;
 
-      this.$store.dispatch("settings/wifi", wifi);
+      sender.SetWiFiSettings(wifi);
     },
+
     onResetToDefaultSettings() {
       let actionNo = sender.showMessageBoxSync({
         type: "question",
@@ -275,7 +278,7 @@ export default {
       });
       if (actionNo == 1) return;
 
-      let wifi = Object.assign({}, this.$store.state.settings.wifi);
+      let wifi = Object.assign({}, this.wifiSettings);
       wifi.actions = {
         unTrustedConnectVpn: true,
         unTrustedEnableFirewall: true,
@@ -285,8 +288,10 @@ export default {
       };
       wifi.networks = null;
       wifi.defaultTrustStatusTrusted = null;
-      this.$store.dispatch("settings/wifi", wifi);
+
+      sender.SetWiFiSettings(wifi);
     },
+
     async trustedNetworksControlOnClick(evt) {
       if (
         (this.trustedNetworksControl === false) & // going to enable
@@ -319,24 +324,33 @@ export default {
 
     canApplyInBackground: {
       get() {
-        return this.$store.state.settings.wifi?.canApplyInBackground;
+        return this.wifiSettings?.canApplyInBackground;
       },
       set(value) {
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        let wifi = Object.assign({}, this.wifiSettings);
         wifi.canApplyInBackground = value;
-        this.$store.dispatch("settings/wifi", wifi);
+
+        sender.SetWiFiSettings(wifi);
       },
     },
 
     connectVPNOnInsecureNetwork: {
       get() {
-        return this.$store.state.settings.wifi?.connectVPNOnInsecureNetwork;
+        return this.wifiSettings?.connectVPNOnInsecureNetwork;
       },
       set(value) {
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        let wifi = Object.assign({}, this.wifiSettings);
         wifi.connectVPNOnInsecureNetwork = value;
-        this.$store.dispatch("settings/wifi", wifi);
+
+        sender.SetWiFiSettings(wifi);
       },
+    },
+
+    wifiSettings: function () {
+      if (!this.$store.state.settings.daemonSettings?.WiFi) return null;
+      return JSON.parse(
+        JSON.stringify(this.$store.state.settings.daemonSettings?.WiFi)
+      );
     },
 
     availableWiFiNetworks: function () {
@@ -352,14 +366,14 @@ export default {
     networks: function () {
       var nets = [];
       try {
-        if (this.$store.state.settings.wifi?.networks != null)
-          nets = [...this.$store.state.settings.wifi.networks];
+        if (this.wifiSettings?.networks != null)
+          nets = [...this.wifiSettings.networks];
 
         let currWiFi = this.$store.state.vpnState.currentWiFiInfo;
         if (currWiFi != null && currWiFi.SSID != "") {
           let alreadyExists = nets.filter((wifi) => wifi.ssid == currWiFi.SSID);
 
-          // check is curent wifi already exists
+          // check is current wifi already exists
           if (alreadyExists == null || alreadyExists.length == 0)
             nets.unshift({ ssid: currWiFi.SSID, isTrusted: null });
 
@@ -384,68 +398,73 @@ export default {
     },
     defaultTrustStatusIsTrusted: {
       get() {
-        return this.$store.state.settings.wifi?.defaultTrustStatusTrusted;
+        return this.wifiSettings?.defaultTrustStatusTrusted;
       },
       set(value) {
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        let wifi = Object.assign({}, this.wifiSettings);
         wifi.defaultTrustStatusTrusted = value;
-        this.$store.dispatch("settings/wifi", wifi);
+
+        sender.SetWiFiSettings(wifi);
       },
     },
     trustedNetworksControl: {
       get() {
-        return this.$store.state.settings.wifi?.trustedNetworksControl;
+        return this.wifiSettings?.trustedNetworksControl;
       },
       async set(value) {
         // INFO: see also method "trustedNetworksControlOnClick()"
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
+        let wifi = Object.assign({}, this.wifiSettings);
         wifi.trustedNetworksControl = value;
-        this.$store.dispatch("settings/wifi", wifi);
+
+        sender.SetWiFiSettings(wifi);
       },
     },
     unTrustedConnectVpn: {
       get() {
-        return this.$store.state.settings.wifi?.actions?.unTrustedConnectVpn;
+        return this.wifiSettings?.actions?.unTrustedConnectVpn;
       },
       set(value) {
-        let wifi = JSON.parse(JSON.stringify(this.$store.state.settings.wifi));
+        let wifi = JSON.parse(JSON.stringify(this.wifiSettings));
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.unTrustedConnectVpn = value;
-        this.$store.dispatch("settings/wifi", wifi);
+
+        sender.SetWiFiSettings(wifi);
       },
     },
     unTrustedEnableFirewall: {
       get() {
-        return this.$store.state.settings.wifi?.actions
-          ?.unTrustedEnableFirewall;
+        return this.wifiSettings?.actions?.unTrustedEnableFirewall;
       },
       set(value) {
-        let wifi = JSON.parse(JSON.stringify(this.$store.state.settings.wifi));
+        let wifi = JSON.parse(JSON.stringify(this.wifiSettings));
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.unTrustedEnableFirewall = value;
-        this.$store.dispatch("settings/wifi", wifi);
+
+        sender.SetWiFiSettings(wifi);
       },
     },
     trustedDisconnectVpn: {
       get() {
-        return this.$store.state.settings.wifi?.actions?.trustedDisconnectVpn;
+        return this.wifiSettings?.actions?.trustedDisconnectVpn;
       },
       set(value) {
-        let wifi = JSON.parse(JSON.stringify(this.$store.state.settings.wifi));
+        let wifi = JSON.parse(JSON.stringify(this.wifiSettings));
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.trustedDisconnectVpn = value;
-        this.$store.dispatch("settings/wifi", wifi);
+
+        sender.SetWiFiSettings(wifi);
       },
     },
     trustedDisableFirewall: {
       get() {
-        return this.$store.state.settings.wifi?.actions?.trustedDisableFirewall;
+        return this.wifiSettings?.actions?.trustedDisableFirewall;
       },
       set(value) {
-        let wifi = JSON.parse(JSON.stringify(this.$store.state.settings.wifi));
+        let wifi = JSON.parse(JSON.stringify(this.wifiSettings));
         if (wifi.actions == null) wifi.actions = {};
         wifi.actions.trustedDisableFirewall = value;
-        this.$store.dispatch("settings/wifi", wifi);
+
+        sender.SetWiFiSettings(wifi);
       },
     },
   },

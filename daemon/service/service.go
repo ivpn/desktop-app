@@ -1134,7 +1134,19 @@ func (s *Service) SetConnectionParams(params types.ConnectionParams) error {
 	return nil
 }
 
-func (s *Service) SetTrustedWifiParams(params preferences.WiFiParams) error {
+func (s *Service) SetWiFiSettings(params preferences.WiFiParams) error {
+	// remove duplicate networks from 'trusted' list
+	newNets := []preferences.WiFiNetwork{}
+	keys := make(map[string]struct{})
+	for _, n := range params.Networks {
+		if _, exists := keys[n.SSID]; !exists && len(n.SSID) > 0 {
+			newNets = append(newNets, n)
+			keys[n.SSID] = struct{}{}
+		}
+	}
+	params.Networks = newNets
+
+	// save settings
 	prefs := s._preferences
 	prefs.WiFiControl = params
 	s.setPreferences(prefs)

@@ -46,3 +46,12 @@ type WiFiParams struct {
 		TrustedDisableFirewall  bool `json:"trustedDisableFirewall"`
 	} `json:"actions"`
 }
+
+func WiFiParamsCreate() WiFiParams {
+	p := WiFiParams{}
+	p.Actions.UnTrustedConnectVpn = true
+	p.Actions.UnTrustedEnableFirewall = true
+	p.Actions.TrustedDisconnectVpn = true
+	p.Actions.TrustedDisableFirewall = true
+	return p
+}

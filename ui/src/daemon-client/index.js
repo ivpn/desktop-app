@@ -68,7 +68,7 @@ const daemonRequests = Object.freeze({
   SessionDelete: "SessionDelete",
   AccountStatus: "AccountStatus",
 
-  TrustedWiFiSettings: "TrustedWiFiSettings",
+  WiFiSettings: "WiFiSettings",
   ConnectSettings: "ConnectSettings",
   Connect: "Connect",
   Disconnect: "Disconnect",
@@ -741,14 +741,6 @@ async function startNotifyDaemonOnParamsChange() {
             }, 1000);
           }
           break;
-        case "settings/wifi":
-          {
-            // "Trusted WiFi" parameters changed
-            setTimeout(() => {
-              NotifyDaemonTrustedWifiSettings();
-            }, 0);
-          }
-          break;
 
         default:
       }
@@ -759,7 +751,6 @@ async function startNotifyDaemonOnParamsChange() {
 
   // Send initial data to a daemon
   NotifyDaemonConnectionSettings();
-  NotifyDaemonTrustedWifiSettings();
 }
 
 async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
@@ -1245,13 +1236,6 @@ async function NotifyDaemonConnectionSettings() {
   await sendRecv({
     Command: daemonRequests.ConnectSettings,
     Params: paramsObj,
-  });
-}
-
-async function NotifyDaemonTrustedWifiSettings() {
-  await sendRecv({
-    Command: daemonRequests.TrustedWiFiSettings,
-    Params: store.state.settings.wifi,
   });
 }
 
@@ -1829,6 +1813,13 @@ async function WgSetKeysRotationInterval(intervalSec) {
   });
 }
 
+async function SetWiFiSettings(wifiSettings) {
+  await sendRecv({
+    Command: daemonRequests.WiFiSettings,
+    Params: wifiSettings,
+  });
+}
+
 async function GetWiFiAvailableNetworks() {
   await sendRecv({
     Command: daemonRequests.WiFiAvailableNetworks,
@@ -1927,6 +1918,7 @@ export default {
   WgSetKeysRotationInterval,
 
   GetWiFiAvailableNetworks,
+  SetWiFiSettings,
 
   SetParanoidModePassword,
   SetLocalParanoidModePassword,

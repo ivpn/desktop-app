@@ -221,6 +221,13 @@ ipcMain.handle(
   }
 );
 
+ipcMain.handle(
+  "renderer-request-wifi-set-settings",
+  async (event, wifiParams) => {
+    return await client.SetWiFiSettings(wifiParams);
+  }
+);
+
 ipcMain.handle("renderer-request-wifi-get-available-networks", async () => {
   return await client.GetWiFiAvailableNetworks();
 });

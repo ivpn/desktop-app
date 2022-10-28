@@ -26,21 +26,41 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/ivpn/desktop-app/cli/flags"
+	"github.com/ivpn/desktop-app/cli/helpers"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
+)
+
+type actionType string
+
+const (
+	action_trusted_vpn_off       actionType = "trusted_vpn_off"
+	action_trusted_firewall_off  actionType = "trusted_firewall_off"
+	action_untrusted_vpn_on      actionType = "untrusted_vpn_on"
+	action_untrusted_firewall_on actionType = "untrusted_firewall_on"
+)
+
+type trustType string
+
+const (
+	NoTrustState trustType = "none"
+	Trusted      trustType = "trusted"
+	Untrusted    trustType = "untrusted"
 )
 
 type CmdWiFi struct {
 	flags.CmdInfo
-	status                 bool
-	background_control     string //[on/off]
-	connect_on_insecure    string //[on/off]
-	trusted_control        string //[on/off]
-	default_trust_status   string //[none/trusted/untrusted]
-	set_trusted_action     string // [action:value] // actions: 'trusted_vpn_off:[true/false]', 'trusted_firewall_off', 'untrusted_vpn_on', 'untrusted_firewall_on'
-	set_trusted_network    string // [network:status] (status: none/trusted/untrusted; e.g. 'my_home_wifi':trusted)
-	reset_trusted_settings bool
+	status               bool
+	background_control   string //[on/off]
+	connect_on_insecure  string //[on/off]
+	trusted_control      string //[on/off]
+	default_trust_status string //[none/trusted/untrusted]
+	set_trusted_action   string // [action:value] // actions: 'trusted_vpn_off:[true/false]', 'trusted_firewall_off', 'untrusted_vpn_on', 'untrusted_firewall_on'
+	set_trusted_network  string // [network:status] (status: none/trusted/untrusted; e.g. 'my_home_wifi':trusted)
+	reset_settings       bool
 }
 
 func (c *CmdWiFi) Init() {
@@ -53,7 +73,9 @@ func (c *CmdWiFi) Init() {
 		By enabling this feature the IVPN daemon will apply the WiFi control settings
 		before the IVPN app has been launched. This enables the WiFi control settings
 		to be applied as quickly as possible as the daemon is started early
-		in the operating system boot process and before the IVPN app (The GUI).`)
+		in the operating system boot process and before the IVPN app (The GUI).
+		NOTE: This parameter must be enabled to make work 'wifi' settings 
+		independently from the GUI app.`)
 	c.StringVarEx(&c.connect_on_insecure, "connect_on_insecure", "", "[on/off]", "Autoconnect on joining WiFi networks without encryption",
 		isInsecureNetworksSuppported)
 	c.StringVar(&c.trusted_control, "trusted_control", "", "[on/off]",
@@ -91,13 +113,181 @@ func (c *CmdWiFi) Init() {
 				Define current WiFi network as 'untrusted':
 					ivpn -set_trusted_network untrusted`)
 
-	c.BoolVar(&c.reset_trusted_settings, "reset_trusted_settings", false, "Reset settings of Trusted/Untrusted WiFi network control")
+	c.BoolVar(&c.reset_settings, "reset_settings", false, "Reset WiFi settings to defaults")
 }
 
 func (c *CmdWiFi) Run() error {
+	helloResp := _proto.GetHelloResponse()
+	wifiSettings := helloResp.DaemonSettings.WiFi
 
-	w := c.printStatus(nil)
-	w.Flush()
+	isSettingsChanged := false
+
+	if len(c.background_control) > 0 {
+		val, err := helpers.BoolParameterParse(c.background_control) // [on/off]
+		if err != nil {
+			return err
+		}
+		wifiSettings.CanApplyInBackground = val
+		isSettingsChanged = true
+	}
+
+	if len(c.connect_on_insecure) > 0 {
+		val, err := helpers.BoolParameterParse(c.connect_on_insecure) // [on/off]
+		if err != nil {
+			return err
+		}
+		wifiSettings.ConnectVPNOnInsecureNetwork = val
+		isSettingsChanged = true
+	}
+
+	if len(c.trusted_control) > 0 {
+		val, err := helpers.BoolParameterParse(c.trusted_control) // [on/off]
+		if err != nil {
+			return err
+		}
+		wifiSettings.TrustedNetworksControl = val
+		isSettingsChanged = true
+	}
+
+	if len(c.default_trust_status) > 0 {
+		//[none/trusted/untrusted]
+
+		val, isNull, err := helpers.BoolParameterParseEx(c.default_trust_status, []string{"trusted"}, []string{"untrusted"}, []string{"none"})
+		if err != nil {
+			return err
+		}
+		if isNull {
+			wifiSettings.DefaultTrustStatusTrusted = nil
+		} else {
+			wifiSettings.DefaultTrustStatusTrusted = &val
+		}
+		isSettingsChanged = true
+	}
+
+	if len(c.set_trusted_action) > 0 {
+		// [action:value]; actions: 'trusted_vpn_off:[true/false]', 'trusted_firewall_off', 'untrusted_vpn_on', 'untrusted_firewall_on'
+
+		c.set_trusted_action = strings.ToLower(c.set_trusted_action)
+
+		actionParams := strings.Split(c.set_trusted_action, ":")
+		if len(actionParams) != 2 {
+			return flags.BadParameter{Message: "action"}
+		}
+		actionTypeStr := actionParams[0]
+		actionValStr := actionParams[1]
+
+		val, err := helpers.BoolParameterParse(actionValStr) // [on/off]
+		if err != nil {
+			return err
+		}
+
+		switch actionType(actionTypeStr) {
+		case action_trusted_vpn_off:
+			wifiSettings.Actions.TrustedDisconnectVpn = val
+		case action_trusted_firewall_off:
+			wifiSettings.Actions.TrustedDisableFirewall = val
+		case action_untrusted_vpn_on:
+			wifiSettings.Actions.UnTrustedConnectVpn = val
+		case action_untrusted_firewall_on:
+			wifiSettings.Actions.UnTrustedEnableFirewall = val
+		default:
+			return flags.BadParameter{
+				Message: fmt.Sprintf("not supported action name '%s' (acceptable actions: %s, %s, %s, %s)", actionTypeStr,
+					string(action_trusted_vpn_off),
+					string(action_trusted_firewall_off),
+					string(action_untrusted_vpn_on),
+					string(action_untrusted_firewall_on))}
+		}
+		isSettingsChanged = true
+	}
+
+	if len(c.set_trusted_network) > 0 {
+		//c.set_trusted_network = helpers.TrimSpacesAndRemoveQuotes(c.set_trusted_network)
+		dividerIdx := strings.LastIndex(c.set_trusted_network, ":")
+
+		netName := ""
+		isTrusted := false
+		isUndefined := false
+
+		valueStr := ""
+		if dividerIdx >= 0 {
+			netName = c.set_trusted_network[:dividerIdx]
+		}
+		valueStr = c.set_trusted_network[dividerIdx+1:]
+
+		netName = helpers.TrimSpacesAndRemoveQuotes(netName)
+		valueStr = helpers.TrimSpacesAndRemoveQuotes(valueStr)
+
+		switch strings.ToLower(valueStr) {
+		case string(NoTrustState):
+			isUndefined = true
+		case string(Trusted):
+			isTrusted = true
+		case string(Untrusted):
+			isTrusted = false
+		default:
+			return flags.BadParameter{
+				Message: fmt.Sprintf("not supported trust state '%s' (acceptable values: %s, %s, %s)", valueStr,
+					string(NoTrustState),
+					string(Trusted),
+					string(Untrusted))}
+		}
+
+		if len(netName) == 0 {
+			curNet, err := _proto.GetWiFiCurrentNetwork()
+			if err != nil {
+				return fmt.Errorf("failed to obtain info about the currently connected WiFi network: %w", err)
+			}
+			netName = curNet.SSID
+			if len(netName) == 0 {
+				return fmt.Errorf("Unable to obtain info about currently connected WiFi network. Please, specify network name")
+			}
+			fmt.Printf("WiFi network not defined. Using current network: '%s'\n", netName)
+		}
+
+		// check if network already exists
+		for i, n := range wifiSettings.Networks {
+			if n.SSID == netName {
+				if isUndefined {
+					wifiSettings.Networks = append(wifiSettings.Networks[:i], wifiSettings.Networks[i+1:]...)
+				} else {
+					wifiSettings.Networks[i].IsTrusted = isTrusted
+				}
+				isSettingsChanged = true
+				break
+			}
+		}
+		if !isSettingsChanged {
+			wifiSettings.Networks = append(wifiSettings.Networks, preferences.WiFiNetwork{SSID: netName, IsTrusted: isTrusted})
+		}
+		isSettingsChanged = true
+	}
+
+	// reset all settings
+	if c.reset_settings {
+		fmt.Println("Resetting settings...")
+		wifiSettings = preferences.WiFiParamsCreate()
+		isSettingsChanged = true
+	}
+
+	// send updated settings
+	if isSettingsChanged {
+		fmt.Print("Applying changes... ")
+		if err := _proto.SetWiFiSettings(wifiSettings); err != nil {
+			fmt.Println()
+			return err
+		}
+		fmt.Println("Done")
+	}
+
+	// Status
+	if c.status || !isSettingsChanged {
+		w := c.printStatus(nil)
+		w.Flush()
+		PrintTips([]TipType{TipWiFiHelp})
+	} else {
+		PrintTips([]TipType{TipWiFiStatus})
+	}
 	return nil
 }
 
@@ -123,8 +313,20 @@ func (c *CmdWiFi) printStatus(w *tabwriter.Writer) *tabwriter.Writer {
 		return boolToStrEx(&v, "Enabled", "Disabled", "")
 	}
 
+	curNetworkName := ""
+	curNetworkInfo := ""
+	curNet, err := _proto.GetWiFiCurrentNetwork()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		curNetworkName = fmt.Sprintf("%s", curNet.SSID)
+		if curNet.IsInsecureNetwork {
+			curNetworkInfo = fmt.Sprintf(" (no encryption)")
+		}
+	}
+
 	wifiSettings := _proto.GetHelloResponse().DaemonSettings.WiFi
-	//fmt.Fprintf(w, "Connected WiFi network\t:\t%v\n", "stenya_house") // TODO:
+	fmt.Fprintf(w, "Connected WiFi network%s\t:\t%v\n", curNetworkInfo, curNetworkName)
 
 	fmt.Fprintf(w, "Allow background daemon to Apply WiFi Control settings\t:\t%v\n", boolToStr(wifiSettings.CanApplyInBackground))
 	if isInsecureNetworksSuppported() {

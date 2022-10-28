@@ -86,7 +86,11 @@ export default {
           warningMessage =
             "On application start 'Autoconnect on application launch' will not be applied until the EAA password is entered.";
 
-        if (true === this.$store.state.settings?.wifi?.trustedNetworksControl) {
+        if (
+          true ===
+          this.$store.state.settings?.daemonSettings?.WiFi
+            ?.trustedNetworksControl
+        ) {
           if (warningMessage) warningMessage += "\n\n";
           warningMessage +=
             "On application start Trusted WiFi will be disabled until the EAA password is entered.";

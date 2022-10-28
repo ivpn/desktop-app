@@ -240,6 +240,10 @@ export default {
     );
   },
 
+  SetWiFiSettings: async (wifiParams) => {
+    return await invoke("renderer-request-wifi-set-settings", wifiParams);
+  },
+
   GetWiFiAvailableNetworks: async () => {
     return await invoke("renderer-request-wifi-get-available-networks");
   },

@@ -174,7 +174,18 @@ type GetDnsPredefinedConfigs struct {
 	RequestBase
 }
 
-type TrustedWiFiSettings struct {
+// WiFiAvailableNetworks - get list of available WIFI networks
+type WiFiAvailableNetworks struct {
+	RequestBase
+}
+
+// WiFiCurrentNetwork - request info about connected WIFI
+type WiFiCurrentNetwork struct {
+	RequestBase
+}
+
+// WiFiSettings - set wifi configuration
+type WiFiSettings struct {
 	RequestBase
 	Params preferences.WiFiParams
 }
@@ -243,16 +254,6 @@ type WireGuardGenerateNewKeys struct {
 type WireGuardSetKeysRotationInterval struct {
 	RequestBase
 	Interval int64
-}
-
-// WiFiAvailableNetworks - get list of available WIFI networks
-type WiFiAvailableNetworks struct {
-	RequestBase
-}
-
-// WiFiCurrentNetwork - request info about connected WIFI
-type WiFiCurrentNetwork struct {
-	RequestBase
 }
 
 // IPProtocol - VPN type

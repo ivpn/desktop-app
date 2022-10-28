@@ -37,38 +37,54 @@ func BoolParameterParse(v string) (bool, error) {
 	//if num, err := strconv.Atoi(v); err == nil && num > 0 {
 	//	return true, nil
 	//}
-	return BoolParameterParseEx(v, []string{"on", "true", "1"}, []string{"off, false, 0"})
+	val, _, err := BoolParameterParseEx(v, []string{"on", "true", "1"}, []string{"off", "false", "0"}, []string{})
+	return val, err
 }
 
-func BoolParameterParseEx(v string, trueValues []string, falseValues []string) (bool, error) {
+func BoolParameterParseEx(v string, trueValues []string, falseValues []string, nullValue []string) (val bool, isNull bool, err error) {
 	if len(trueValues) == 0 && len(falseValues) == 0 {
-		return false, fmt.Errorf("internal error (bad arguments for BoolParameterParseEx)")
+		return false, false, fmt.Errorf("internal error (bad arguments for BoolParameterParseEx)")
 	}
 
 	v = strings.ToLower(strings.TrimSpace(v))
 
 	for _, tV := range trueValues {
 		if v == strings.ToLower(strings.TrimSpace(tV)) {
-			return true, nil
+			return true, false, nil
 		}
 	}
 
 	for _, fV := range falseValues {
 		if v == strings.ToLower(strings.TrimSpace(fV)) {
-			return false, nil
+			return false, false, nil
 		}
 	}
 
-	return false, flags.BadParameter{Message: fmt.Sprintf("unsupported value '%s' for boolean parameter (acceptable values: %s, %s)", v, strings.Join(falseValues, "/"), strings.Join(trueValues, "/"))}
+	for _, nV := range nullValue {
+		if v == strings.ToLower(strings.TrimSpace(nV)) {
+			return false, true, nil
+		}
+	}
+
+	// error: unsupported value
+	infoSupportedNullVals := strings.Join(nullValue, "/")
+	if len(infoSupportedNullVals) > 0 {
+		infoSupportedNullVals = ", " + infoSupportedNullVals
+	}
+	return false, false, flags.BadParameter{Message: fmt.Sprintf("unsupported value '%s' for parameter (acceptable values: %s, %s%s)", v, strings.Join(falseValues, "/"), strings.Join(trueValues, "/"), infoSupportedNullVals)}
 }
 
-func BoolToStr(v *bool, trueVal, falseVal, nullVal string) string {
-	if v == nil {
-		return nullVal
+func TrimSpacesAndRemoveQuotes(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) > 1 {
+		openSym := s[0]
+		switch openSym {
+		case '"', '\'', '`':
+			if s[len(s)-1] == openSym {
+				s = s[1 : len(s)-1]
+			}
+		default:
+		}
 	}
-
-	if *v {
-		return trueVal
-	}
-	return falseVal
+	return s
 }

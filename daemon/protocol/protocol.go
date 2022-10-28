@@ -92,7 +92,7 @@ type Service interface {
 	SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error
 
 	SetConnectionParams(params service_types.ConnectionParams) error
-	SetTrustedWifiParams(params preferences.WiFiParams) error
+	SetWiFiSettings(params preferences.WiFiParams) error
 
 	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
@@ -1092,6 +1092,28 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 		p.sendResponse(conn, &types.InstalledAppsResp{Apps: apps}, reqCmd.Idx)
 
+	case "WiFiCurrentNetwork":
+		// sending WIFI info
+		ssid, isInsecureNetwork := p._service.GetWiFiCurrentState()
+		p.sendResponse(conn, &types.WiFiCurrentNetworkResp{
+			SSID:              ssid,
+			IsInsecureNetwork: isInsecureNetwork}, reqCmd.Idx)
+
+	case "WiFiSettings":
+		var r types.WiFiSettings
+		if err := json.Unmarshal(messageData, &r); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			return
+		}
+		if err := p._service.SetWiFiSettings(r.Params); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			return
+		}
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+
+		// notify all clients about changed wifi settings
+		p.notifyClients(p.createHelloResponse())
+
 	case "Disconnect":
 		p._disconnectRequested = true
 
@@ -1103,18 +1125,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err := p._service.Disconnect(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
-
-	case "TrustedWiFiSettings":
-		var r types.TrustedWiFiSettings
-		if err := json.Unmarshal(messageData, &r); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			return
-		}
-		if err := p._service.SetTrustedWifiParams(r.Params); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			return
-		}
-		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	case "ConnectSettings":
 		// Similar data to 'Connect' request but this command not start the connection.
