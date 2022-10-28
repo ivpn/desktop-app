@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.9.43 - 2022-10-28
+
+[NEW] obfs4 support for OpenVPN connections  
+[IMPROVED] UI: Eliminated the delay which sometimes occurred before showing dialogs in app settings  
+[IMPROVED] UI: Migrated to latest frameworks  
+[IMPROVED] (Linux) Removed dependency from the "which" command  
+[FIX] UI: Mismatch of servers when changing entry/servers immediately one after the other  
+[FIX] UI: The application did not connect to the last port selected  
+[FIX] UI: The obfsproxy settings were disabled after changing the protocol  
+[FIX] (macOS) The application was unusable when installed from Homebrew Cask  
+[FIX] (macOS) Restoring DNS configuration after changing WiFi networks  
+[FIX] (macOS) Automatic updates installer issue  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.9.43.exe)  
+SHA256: 5bae4107305c33aed8c6c657965317a0a1ba6bf026d244d5da412bc5cccf98ad  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.9.43.dmg)  
+SHA256: 0e167ddc6418338b4f163008ee418eb0a3d5d6c8ff487b065fd7429b3d286b19  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.9.43-arm64.dmg)  
+SHA256: ad0d9f1eae0a42759df1f1115f8edd1c9176f8af46516d6d2ada2958409e1a1e 
 
 ## Version 3.9.32 - 2022-09-15
 
