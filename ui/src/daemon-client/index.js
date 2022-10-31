@@ -1794,7 +1794,7 @@ async function SetAutoconnectOnLaunch(
     await sendRecv({
       Command: daemonRequests.SetPreference,
       Key: "autoconnect_on_launch_daemon",
-      Value: `${enable}`,
+      Value: `${isApplicableByDaemonInBackground}`,
     });
   }
 }
