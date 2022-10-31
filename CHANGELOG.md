@@ -23,6 +23,16 @@ SHA256: 0e167ddc6418338b4f163008ee418eb0a3d5d6c8ff487b065fd7429b3d286b19
 [Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.9.43-arm64.dmg)  
 SHA256: ad0d9f1eae0a42759df1f1115f8edd1c9176f8af46516d6d2ada2958409e1a1e 
 
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.9.43_amd64.deb)  
+SHA256: 033564a1d2cb4c45c064036628b70f0fbefba45796f8cdbd1ab091c89af430c4  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.9.43-1.x86_64.rpm)  
+SHA256: d58ff2255535d1a543824a24c6723d48da7c5af79509ac375952ee5ceee88fe0  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.9.43_amd64.deb)  
+SHA256: 56b52ced5fb494d11abc50dc3ea61375348bf6c8d247c70e5be702aa03e71787  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.9.43-1.x86_64.rpm)  
+SHA256: 64ec17d679355107c312c27c74591601d696738df6a2211d8b60966474de88b8  
+
 ## Version 3.9.32 - 2022-09-15
 
 [NEW] Support for custom ports  
