@@ -164,12 +164,14 @@ export default {
 
     if (this.$refs.accountid) this.$refs.accountid.focus();
 
-    if (this.$route.params.forceLoginAccount != null) {
-      this.accountID = this.$route.params.forceLoginAccount;
+    let stateParams = history.state.params;
+
+    if (stateParams && stateParams.forceLoginAccount != null) {
+      this.accountID = stateParams.forceLoginAccount;
 
       let confirmation2FA = null;
-      if (this.$route.params.extraArgs) {
-        confirmation2FA = this.$route.params.extraArgs.confirmation2FA;
+      if (stateParams.extraArgs) {
+        confirmation2FA = stateParams.extraArgs.confirmation2FA;
       }
 
       const force = true;
@@ -246,15 +248,17 @@ export default {
           ) {
             this.$router.push({
               name: "AccountLimit",
-              params: {
-                accountID: this.accountID,
-                devicesMaxLimit: resp.Account.Limit,
-                CurrentPlan: resp.Account.CurrentPlan,
-                Upgradable: resp.Account.Upgradable,
-                UpgradeToPlan: resp.Account.UpgradeToPlan,
-                UpgradeToURL: resp.Account.UpgradeToURL,
-                extraArgs: {
-                  confirmation2FA: oldConfirmation2FA,
+              state: {
+                params: {
+                  accountID: this.accountID,
+                  devicesMaxLimit: resp.Account.Limit,
+                  CurrentPlan: resp.Account.CurrentPlan,
+                  Upgradable: resp.Account.Upgradable,
+                  UpgradeToPlan: resp.Account.UpgradeToPlan,
+                  UpgradeToURL: resp.Account.UpgradeToURL,
+                  extraArgs: {
+                    confirmation2FA: oldConfirmation2FA,
+                  },
                 },
               },
             });

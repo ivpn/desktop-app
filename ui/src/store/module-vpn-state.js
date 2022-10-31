@@ -392,7 +392,8 @@ export default {
 
     funcGetConnectionPorts: (state, getters, rootState) => (vpnType) => {
       try {
-        if (!vpnType) vpnType = rootState.settings.vpnType;
+        if (vpnType == undefined || vpnType == null)
+          vpnType = rootState.settings.vpnType;
 
         let ports = state.servers.config.ports.wireguard;
         if (vpnType === VpnTypeEnum.OpenVPN)
@@ -462,7 +463,8 @@ export default {
 
     funcGetConnectionPortRanges: (state, getters, rootState) => (vpnType) => {
       try {
-        if (!vpnType) vpnType = rootState.settings.vpnType;
+        if (vpnType == undefined || vpnType == null)
+          vpnType = rootState.settings.vpnType;
 
         let ports = state.servers.config.ports.wireguard;
         if (vpnType === VpnTypeEnum.OpenVPN)
