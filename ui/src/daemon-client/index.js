@@ -663,9 +663,15 @@ function makeHelloRequest(isSimpleConnect) {
 // Check is required operations to convert and synchronize the old-style settings with the daemon
 function isNeedToConvertAndSyncOldSettings() {
   let settings = store.state.settings;
-  // settings upgrade: 3.7.0 -> 3.8.1 ('autoConnectOnLaunch' n ow keeps on daemon's side)
+  // settings upgrade: 3.7.0 -> 3.8.1 ('autoConnectOnLaunch' now keeps on daemon's side)
   const oldIsAutoconnectOnLaunch = settings["autoConnectOnLaunch"];
   if (oldIsAutoconnectOnLaunch !== undefined) {
+    return true;
+  }
+
+  // settings upgrade: 3.9.43 -> 3.10.x ('wifi' now keeps on daemon's side)
+  const oldIsWifiSettings = settings["wifi"];
+  if (oldIsWifiSettings !== undefined) {
     return true;
   }
   return false;
@@ -679,6 +685,7 @@ async function convertAndSyncOldSettings() {
   const oldIsAutoconnectOnLaunch = settings["autoConnectOnLaunch"];
   if (oldIsAutoconnectOnLaunch !== undefined) {
     try {
+      // send current settings to daemon
       await sendRecv({
         Command: daemonRequests.SetPreference,
         Key: "autoconnect_on_launch",
@@ -692,6 +699,20 @@ async function convertAndSyncOldSettings() {
       log.error(
         "Failed to convert old style settings (autoconnect_on_launch): " + e
       );
+    }
+  }
+
+  // settings upgrade: 3.9.43 -> 3.10.x ('wifi' now keeps on daemon's side)
+  const oldIsWifiSettings = settings["wifi"];
+  if (oldIsWifiSettings !== undefined) {
+    try {
+      // send current settings to daemon
+      SetWiFiSettings(JSON.parse(JSON.stringify(oldIsWifiSettings)));
+      // forget old-style value
+      delete settings["wifi"];
+      store.commit("settings/replaceState", settings);
+    } catch (e) {
+      log.error("Failed to convert old style settings (wifi): " + e);
     }
   }
 }
