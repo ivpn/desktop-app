@@ -26,9 +26,11 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"reflect"
 
 	apiTypes "github.com/ivpn/desktop-app/daemon/api/types"
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
@@ -59,6 +61,13 @@ type automaticAction struct {
 	Firewall trustedWiFiActionType
 }
 
+type lastProcessedWiFiInfo struct {
+	wifi   wifiStatus
+	params preferences.WiFiParams
+}
+
+var autoconnectLastProcessedWifi lastProcessedWiFiInfo
+
 func (a automaticAction) IsHasAction() bool {
 	return a.Firewall != NoAction || a.Vpn != NoAction
 }
@@ -77,32 +86,59 @@ func (s *Service) OnAuthenticatedClient(t protocolTypes.ClientTypeEnum) {
 //
 //	reason - the reason why this method is called
 //	wifiInfo - current WiFi info. It can be 'nil', in this case, the function will check the WiFi info itself
-func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfo *wifiStatus) error {
+func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *wifiStatus) error {
 
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return nil
 	}
 
+	var wifiInfo wifiStatus
 	// Check WiFi status (if not defined)
-	if wifiInfo == nil {
+	if wifiInfoPtr == nil {
 		ssid, isInsecure := s.GetWiFiCurrentState()
-		wifiInfo = &wifiStatus{WifiSsid: ssid, WifiIsInsecure: isInsecure}
+		wifiInfo = wifiStatus{WifiSsid: ssid, WifiIsInsecure: isInsecure}
+	} else {
+		wifiInfo = *wifiInfoPtr
 	}
+
+	// Check if WiFi alredy processed
+	isWifiProcessedAlready := false
+
+	currWiFi := lastProcessedWiFiInfo{wifi: wifiInfo, params: prefs.WiFiControl}
+	lastWifi := autoconnectLastProcessedWifi
+
+	if reflect.DeepEqual(lastWifi, currWiFi) {
+		// this wifi network change has been processed already
+		if reason == OnWifiChanged {
+			return nil
+		}
+		isWifiProcessedAlready = true
+	}
+	autoconnectLastProcessedWifi = currWiFi
 
 	//
 	// Checking if new connection required
 	//
 
 	// Check "Trusted WiFi" actions
-	action := s.getActionForWifiNetwork(*wifiInfo)
+	action := s.getActionForWifiNetwork(wifiInfo)
+
+	isVpnOffRequired := false
+	if isWifiProcessedAlready {
+		// For already processed networks - keep only 'vpn-off' action (it works in combination with 'IsAutoconnectOnLaunch')
+		// Clean other actions for this network (because they were applied already)
+		isVpnOffRequired = action.Vpn == Off
+		action = automaticAction{}
+	}
+
 	if action.IsHasAction() {
-		log.Info("Automatic connection manager: applying 'Trusted-WIFI' action...")
+		log.Info("Automatic connection manager: applying 'Trusted-WiFi' action...")
 	}
 
 	// Check "Auto-connect on APP/daemon launch" action
 	// (skip when we are connected to a trusted network with "Disconnect VPN" action)
-	if prefs.IsAutoconnectOnLaunch && action.Vpn != Off {
+	if prefs.IsAutoconnectOnLaunch && !isVpnOffRequired {
 		if reason == OnDaemonStarted && prefs.IsAutoconnectOnLaunchDaemon {
 			log.Info("Automatic connection manager: applying Auto-Connect on daemon Launch action...")
 			action.Vpn = On
@@ -113,17 +149,24 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfo *wifi
 	}
 
 	// Check Auto-connect 'On joining WiFi networks without encryption'
-	if action.Vpn == Off &&
+	if !isWifiProcessedAlready &&
+		action.Vpn == NoAction &&
 		prefs.WiFiControl.ConnectVPNOnInsecureNetwork &&
 		wifiInfo.WifiIsInsecure {
+
 		if s.isCanApplyWiFiActions() {
-			log.Info("Automatic connection manager: applying Auto-Connect 'On joining WiFi networks without encryption'  action...")
+			log.Info("Automatic connection manager: applying Auto-Connect 'On joining WiFi networks without encryption' action...")
 			action.Vpn = On
 		}
 	}
 
+	if !action.IsHasAction() {
+		// No actions defined. Nothing to do here.
+		return nil
+	}
+
 	//
-	// Request new connection
+	// Apply actions (Firewall, VPN ...)
 	//
 
 	var retErr error = nil

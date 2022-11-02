@@ -251,10 +251,10 @@ func (s *Service) IsConnectivityBlocked() error {
 		(!s.Connected() || s.IsPaused()) {
 		enabled, err := s.FirewallEnabled()
 		if err != nil {
-			return fmt.Errorf("Access to IVPN servers is blocked: %w", err)
+			return fmt.Errorf("access to IVPN servers is blocked: %w", err)
 		}
 		if err == nil && enabled {
-			return fmt.Errorf("Access to IVPN servers is blocked (check IVPN Firewall settings)")
+			return fmt.Errorf("access to IVPN servers is blocked (check IVPN Firewall settings)")
 		}
 	}
 	return nil
