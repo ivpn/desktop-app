@@ -87,7 +87,6 @@ func (s *Service) OnAuthenticatedClient(t protocolTypes.ClientTypeEnum) {
 //	reason - the reason why this method is called
 //	wifiInfo - current WiFi info. It can be 'nil', in this case, the function will check the WiFi info itself
 func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *wifiStatus) error {
-
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return nil

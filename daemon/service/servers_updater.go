@@ -52,12 +52,6 @@ func CreateServersUpdater(apiObj *api.API) (IServersUpdater, error) {
 		// save alternate API IP's
 		apiObj.SetAlternateIPs(servers.Config.API.IPAddresses, servers.Config.API.IPv6Addresses)
 	}
-
-	// update servers list in background
-	if err := updater.startUpdater(); err != nil {
-		log.Error("Failed to start servers-list updater: ", err)
-		return nil, err
-	}
 	return updater, nil
 }
 
@@ -72,7 +66,7 @@ func (s *serversUpdater) GetServers() (*types.ServersInfoResponse, error) {
 	if err != nil {
 		log.Warning(err)
 
-		if !s.api.IsAlternateIPsInitialized(false) && s.api.IsAlternateIPsInitialized(true) {
+		if !s.api.IsAlternateIPsInitialized(false) && !s.api.IsAlternateIPsInitialized(true) {
 			// Probably we can not use servers info because servers.json has wrong privileges (potential vulnerability)
 			// Trying to initialize only API IP addresses
 			// It is safe, because we are checking TLS server name for "api.ivpn.net" when accessing API (https)
@@ -97,7 +91,8 @@ func (s *serversUpdater) GetServersForceUpdate() (*types.ServersInfoResponse, er
 	return s.updateServers()
 }
 
-func (s *serversUpdater) startUpdater() error {
+// Start periodically updating (downloading) servers in background
+func (s *serversUpdater) StartUpdater() error {
 	go func(s *serversUpdater) {
 		isFirstIteration := true
 		for {

@@ -35,6 +35,8 @@ import (
 
 // IServersUpdater - interface for updating server info mechanism
 type IServersUpdater interface {
+	// Start periodically updating (downloading) servers in background
+	StartUpdater() error
 	// GetServers - get servers list.
 	// Use cached data (if exists), otherwise - download servers list.
 	GetServers() (*api_types.ServersInfoResponse, error)

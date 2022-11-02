@@ -109,6 +109,9 @@ type Service struct {
 
 	// when true - necessary to update account status as soon as it will be possible (e.g. on firewall disconnected)
 	_isNeedToUpdateSessionInfo bool
+
+	// Channel closes as soon as IP stack initialized OR after timeout
+	_ipStackInitializationWaiter chan struct{}
 }
 
 // VpnSessionInfo - Additional information about current VPN connection
@@ -135,6 +138,7 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 		_netChangeDetector:            netChDetector,
 		_wgKeysMgr:                    wgKeysMgr,
 		_serversPingProgressSemaphore: syncSemaphore.NewWeighted(1),
+		_ipStackInitializationWaiter:  make(chan struct{}),
 	}
 
 	// register the current service as a 'Connectivity checker' for API object
@@ -147,7 +151,39 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 	return serv, nil
 }
 
+func (s *Service) WaitForIpStackInitialization() {
+	<-s._ipStackInitializationWaiter
+}
+
 func (s *Service) init() error {
+	// Start waiting for IP stack initialization
+	go func() {
+		defer close(s._ipStackInitializationWaiter)
+		log.Info("Waiting for IP stack initialization ...")
+		endTime := time.Now().Add(time.Minute * 2)
+		for {
+			ipv4, err4 := netinfo.GetOutboundIP(false)
+			ipv6, err6 := netinfo.GetOutboundIP(true)
+			if (!ipv4.IsUnspecified() && err4 == nil) || (!ipv6.IsUnspecified() && err6 == nil) {
+				log.Info("IP stack initializaed")
+				return
+			}
+			if time.Now().After(endTime) {
+				log.Info("WARNING! Timeout waiting for IP stack initialization!")
+				return
+			}
+			time.Sleep(time.Millisecond * 200)
+		}
+	}()
+
+	// Start periodically updating (downloading) servers in background
+	go func() {
+		s.WaitForIpStackInitialization()
+		if err := s._serversUpdater.StartUpdater(); err != nil {
+			log.Error("Failed to start servers-list updater: ", err)
+		}
+	}()
+
 	if err := s._preferences.LoadPreferences(); err != nil {
 		log.Error("Failed to load service preferences: ", err)
 
@@ -198,19 +234,23 @@ func (s *Service) init() error {
 	if err := s._wgKeysMgr.Init(s); err != nil {
 		log.Error("Failed to initialize WG keys rotation:", err)
 	} else {
-		if err := s._wgKeysMgr.StartKeysRotation(); err != nil {
-			log.Error("Failed to start WG keys rotation:", err)
-		}
+		go func() {
+			s.WaitForIpStackInitialization()
+			if err := s._wgKeysMgr.StartKeysRotation(); err != nil {
+				log.Error("Failed to start WG keys rotation:", err)
+			}
+		}()
 	}
 
 	if err := s.initWiFiFunctionality(); err != nil {
 		log.Error("Failed to init WiFi functionality:", err)
 	}
 
-	// Check session status (start as go-routine to do not block service initialization)
-	go s.RequestSessionStatus()
 	// Start session status checker
-	s.startSessionChecker()
+	go func() {
+		s.WaitForIpStackInitialization()
+		s.startSessionChecker()
+	}()
 
 	s.updateAPIAddrInFWExceptions()
 	// servers updated notifier
@@ -238,7 +278,10 @@ func (s *Service) init() error {
 
 	// 'Auto-connect on launch' functionality: auto-connect if necessary
 	// 'trusted-wifi' functionality: auto-connect if necessary
-	s.autoConnectIfRequired(OnDaemonStarted, nil)
+	go func() {
+		s.WaitForIpStackInitialization()
+		s.autoConnectIfRequired(OnDaemonStarted, nil)
+	}()
 
 	return nil
 }
@@ -1564,13 +1607,6 @@ func (s *Service) startSessionChecker() {
 
 		stopChn := s._sessionCheckerStopChn
 		for {
-			// wait for timeout or stop request
-			select {
-			case <-stopChn:
-				return
-			case <-time.After(SessionCheckInterval):
-			}
-
 			// check status
 			s.RequestSessionStatus()
 
@@ -1578,6 +1614,13 @@ func (s *Service) startSessionChecker() {
 			session := s.Preferences().Session
 			if !session.IsLoggedIn() {
 				return
+			}
+
+			// wait for timeout or stop request
+			select {
+			case <-stopChn:
+				return
+			case <-time.After(SessionCheckInterval):
 			}
 		}
 	}()
