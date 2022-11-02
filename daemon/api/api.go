@@ -102,7 +102,8 @@ func init() {
 
 // IConnectivityInfo information about connectivity
 type IConnectivityInfo interface {
-	IsConnectivityBlocked() (isBlocked bool, reasonDescription string, err error)
+	// IsConnectivityBlocked - returns nil if connectivity NOT blocked
+	IsConnectivityBlocked() (err error)
 }
 
 // API contains data about IVPN API servers

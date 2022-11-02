@@ -48,6 +48,10 @@ func (p *Protocol) OnAccountStatus(sessionToken string, accountInfo preferences.
 
 // OnKillSwitchStateChanged - Firewall change handler
 func (p *Protocol) OnKillSwitchStateChanged() {
+	if p._service == nil {
+		return
+	}
+
 	// notify all clients about KillSwitch status
 	if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err != nil {
 		log.Error(err)

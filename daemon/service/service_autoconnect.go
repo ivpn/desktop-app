@@ -23,9 +23,14 @@
 package service
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 
+	apiTypes "github.com/ivpn/desktop-app/daemon/api/types"
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
+	"github.com/ivpn/desktop-app/daemon/service/types"
+	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 type wifiStatus struct {
@@ -110,11 +115,11 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfo *wifi
 	// Check Auto-connect 'On joining WiFi networks without encryption'
 	if action.Vpn == Off &&
 		prefs.WiFiControl.ConnectVPNOnInsecureNetwork &&
-		wifiInfo.WifiIsInsecure &&
-		s.isCanApplyWiFiActions() {
-
-		log.Info("Automatic connection manager: applying Auto-Connect 'On joining WiFi networks without encryption'  action...")
-		action.Vpn = On
+		wifiInfo.WifiIsInsecure {
+		if s.isCanApplyWiFiActions() {
+			log.Info("Automatic connection manager: applying Auto-Connect 'On joining WiFi networks without encryption'  action...")
+			action.Vpn = On
+		}
 	}
 
 	//
@@ -128,11 +133,15 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfo *wifi
 	switch action.Firewall {
 	case Off:
 		log.Info("Automatic connection manager: disabling Firewall")
-		s.SetKillSwitchState(false)
+		if retErr = s.SetKillSwitchState(false); retErr != nil {
+			log.Error("Auto connection: disabling Firewall: ", retErr)
+		}
 		connParams.FirewallOn = false // Ensure Firewall connection params is the same as in action
 	case On:
 		log.Info("Automatic connection manager: enabling Firewall")
-		s.SetKillSwitchState(true)
+		if retErr = s.SetKillSwitchState(true); retErr != nil {
+			log.Error("Auto connection: enabling Firewall: ", retErr)
+		}
 		connParams.FirewallOn = true // Ensure Firewall connection params is the same as in action
 	default:
 	}
@@ -142,19 +151,29 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfo *wifi
 	case Off:
 		if s.Connected() {
 			log.Info("Automatic connection manager: disconnecting VPN")
-			s.Disconnect()
+			if retErr = s.Disconnect(); retErr != nil {
+				log.Error("Auto connection: disconnecting: ", retErr)
+			}
 		}
 	case On:
 		if !s.Connected() {
 			log.Info("Automatic connection manager: connecting VPN")
-			var err error
-			const canFixParams bool = true
-			connParams, err = s.ValidateConnectionParameters(connParams, canFixParams)
-			if err != nil {
-				log.Error(fmt.Sprintf("Auto-connection failed (bad connection parameters): %v", err))
+
+			connParams, retErr = s.updateParamsAccordingToMetadata(connParams)
+			if retErr != nil {
+				log.Info("[WARNING] Auto connection: failed updating connection parameters: ", retErr)
 			}
 
-			retErr = s._evtReceiver.RegisterConnectionRequest(connParams)
+			const canFixParams bool = true
+			if connParams, retErr = s.ValidateConnectionParameters(connParams, canFixParams); retErr != nil {
+				log.Error("Auto connection: error validating connection parameters: ", retErr)
+				return retErr
+			}
+
+			if retErr = s._evtReceiver.RegisterConnectionRequest(connParams); retErr != nil {
+				log.Error("Auto connection: connecting: ", retErr)
+			}
+
 		}
 	default:
 	}
@@ -226,4 +245,224 @@ func (s *Service) getActionForWifiNetwork(wifiInfo wifiStatus) (retAction automa
 	}
 
 	return
+}
+
+// updateParamsAccordingToMetadata - update Entry/Exit servers if connection requires 'Fastest' or 'Random'
+func (s *Service) updateParamsAccordingToMetadata(params types.ConnectionParams) (types.ConnectionParams, error) {
+	if params.Metadata.ServerSelectionEntry == types.Default && params.Metadata.ServerSelectionExit == types.Default {
+		return params, nil
+	}
+
+	allServers, err := s.ServersList()
+	if err != nil {
+		return params, err
+	}
+
+	// ENTRY server
+	if params.Metadata.ServerSelectionEntry != types.Default {
+		// Get countryCode of exit server (do not choose exit server from same country)
+		exitSvrCountryCode := ""
+		if params.IsMultiHop() && params.Metadata.ServerSelectionExit != types.Default {
+			exitSvrCountryCode = s.getServerCountryCode(params, false)
+		}
+
+		if params.VpnType == vpn.OpenVPN {
+			//OpenVPN
+			applicableEntryServers := []apiTypes.OpenvpnServerInfo{}
+			if exitSvrCountryCode == "" {
+				applicableEntryServers = allServers.OpenvpnServers
+			} else {
+				for _, s := range allServers.OpenvpnServers {
+					if s.CountryCode == exitSvrCountryCode {
+						continue // exclude exit server from the same country as Exit server
+					}
+					applicableEntryServers = append(applicableEntryServers, s)
+				}
+			}
+			// Random/Fastest
+			switch params.Metadata.ServerSelectionEntry {
+			case types.Random: // RANDOM SERVER (OpenVPN)
+				rndIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(applicableEntryServers))))
+				if err != nil {
+					return params, err
+				}
+				params.OpenVpnParameters.EntryVpnServer.Hosts = applicableEntryServers[rndIdx.Int64()].Hosts
+			case types.Fastest: // FASTEST SERVER (OpenVPN)
+				fastestSvr, err := getFastestServer(s, applicableEntryServers)
+				if err != nil {
+					return params, err
+				}
+				params.OpenVpnParameters.EntryVpnServer.Hosts = fastestSvr.Hosts
+			default:
+			}
+		} else {
+			// WireGuard
+			applicableEntryServers := []apiTypes.WireGuardServerInfo{}
+			if exitSvrCountryCode == "" {
+				applicableEntryServers = allServers.WireguardServers
+			} else {
+				for _, s := range allServers.WireguardServers {
+					if s.CountryCode == exitSvrCountryCode {
+						continue // exclude exit server from the same country as Exit server
+					}
+					applicableEntryServers = append(applicableEntryServers, s)
+				}
+			}
+			// Random/Fastest
+			switch params.Metadata.ServerSelectionEntry {
+			case types.Random: // RANDOM SERVER (WireGuard)
+				rndIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(applicableEntryServers))))
+				if err != nil {
+					return params, err
+				}
+				params.WireGuardParameters.EntryVpnServer.Hosts = applicableEntryServers[rndIdx.Int64()].Hosts
+			case types.Fastest: // FASTEST SERVER (WireGuard)
+				fastestSvr, err := getFastestServer(s, applicableEntryServers)
+				if err != nil {
+					return params, err
+				}
+				params.WireGuardParameters.EntryVpnServer.Hosts = fastestSvr.Hosts
+			default:
+			}
+		}
+	}
+
+	// EXIT server (Fastest server is not applicable for exit server)
+	if params.IsMultiHop() && params.Metadata.ServerSelectionExit == types.Random {
+
+		// Get countryCode of exit server (do not choose exit server from same country)
+		entrySvrCountryCode := s.getServerCountryCode(params, true)
+
+		if params.VpnType == vpn.OpenVPN {
+			//OpenVPN
+			applicableExitServers := []apiTypes.OpenvpnServerInfo{}
+			if entrySvrCountryCode == "" {
+				applicableExitServers = allServers.OpenvpnServers
+			} else {
+				for _, s := range allServers.OpenvpnServers {
+					if s.CountryCode == entrySvrCountryCode {
+						continue // exclude exit server from the same country as Exit server
+					}
+					applicableExitServers = append(applicableExitServers, s)
+				}
+			}
+			// Random/Fastest
+			switch params.Metadata.ServerSelectionEntry {
+			case types.Random: // RANDOM SERVER (OpenVPN)
+				rndIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(applicableExitServers))))
+				if err != nil {
+					return params, err
+				}
+				params.OpenVpnParameters.MultihopExitServer.Hosts = applicableExitServers[rndIdx.Int64()].Hosts
+
+			case types.Fastest: // FASTEST SERVER (OpenVPN)
+				// fastest server not applicable for ExitServer
+			default:
+			}
+		} else {
+			// WireGuard
+
+			applicableExitServers := []apiTypes.WireGuardServerInfo{}
+			if entrySvrCountryCode == "" {
+				applicableExitServers = allServers.WireguardServers
+			} else {
+				for _, s := range allServers.WireguardServers {
+					if s.CountryCode == entrySvrCountryCode {
+						continue // exclude exit server from the same country as Exit server
+					}
+					applicableExitServers = append(applicableExitServers, s)
+				}
+			}
+			// Random/Fastest
+			switch params.Metadata.ServerSelectionEntry {
+			case types.Random: // RANDOM SERVER (WireGuard)
+				rndIdx, err := rand.Int(rand.Reader, big.NewInt(int64(len(applicableExitServers))))
+				if err != nil {
+					return params, err
+				}
+				params.WireGuardParameters.MultihopExitServer.Hosts = applicableExitServers[rndIdx.Int64()].Hosts
+
+			case types.Fastest: // FASTEST SERVER (WireGuard)
+				// fastest server not applicable for ExitServer
+			default:
+			}
+		}
+	}
+
+	return params, nil
+}
+
+func (s *Service) getServerCountryCode(params types.ConnectionParams, isEntryServer bool) string {
+	allServers, err := s.ServersList()
+	if err != nil {
+		return ""
+	}
+
+	if params.VpnType == vpn.OpenVPN {
+		if isEntryServer {
+			return getServerCountryCode(s, params.OpenVpnParameters.EntryVpnServer.Hosts, allServers.OpenvpnServers)
+		}
+		if params.IsMultiHop() {
+			return getServerCountryCode(s, params.OpenVpnParameters.MultihopExitServer.Hosts, allServers.OpenvpnServers)
+		}
+	} else {
+		if isEntryServer {
+			return getServerCountryCode(s, params.WireGuardParameters.EntryVpnServer.Hosts, allServers.WireguardServers)
+		}
+		if params.IsMultiHop() {
+			return getServerCountryCode(s, params.WireGuardParameters.MultihopExitServer.Hosts, allServers.WireguardServers)
+		}
+	}
+	return ""
+}
+
+type hostBaseInterface interface {
+	apiTypes.OpenVPNServerHostInfo | apiTypes.WireGuardServerHostInfo
+	GetHostInfoBase() apiTypes.HostInfoBase
+}
+
+type serverBaseInterface interface {
+	apiTypes.WireGuardServerInfo | apiTypes.OpenvpnServerInfo
+	GetServerInfoBase() apiTypes.ServerInfoBase
+	GetHostsInfoBase() []apiTypes.HostInfoBase
+}
+
+// Return country code of server
+func getServerCountryCode[S serverBaseInterface, H hostBaseInterface](service *Service, serverHosts []H, allServers []S) string {
+	for _, pHost := range serverHosts {
+		for _, s := range allServers {
+			for _, h := range s.GetHostsInfoBase() {
+				if pHost.GetHostInfoBase().Host == h.Host {
+					return s.GetServerInfoBase().CountryCode
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func getFastestServer[S serverBaseInterface](service *Service, servers []S) (ret S, err error) {
+	hosts, err := service.PingServers(4000, vpn.WireGuard, false, true)
+	if err != nil {
+		return ret, err
+	}
+	// looking for IP with minimum ping time
+	minPingTime := -1
+	minPingTimeIp := ""
+	for ip, msTime := range hosts {
+		if minPingTime == -1 || minPingTime > msTime {
+			minPingTime = msTime
+			minPingTimeIp = ip
+		}
+	}
+	// looking for server info which contains host with lower ping time
+	for _, s := range servers {
+
+		for _, h := range s.GetHostsInfoBase() {
+			if h.Host == minPingTimeIp {
+				return s, nil
+			}
+		}
+	}
+	return ret, fmt.Errorf("unable to determine servers latency")
 }

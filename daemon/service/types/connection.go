@@ -101,6 +101,13 @@ type ConnectionParams struct {
 	}
 }
 
+func (p ConnectionParams) IsMultiHop() bool {
+	if p.VpnType == vpn.OpenVPN {
+		return len(p.OpenVpnParameters.MultihopExitServer.Hosts) > 0
+	}
+	return len(p.WireGuardParameters.MultihopExitServer.Hosts) > 0
+}
+
 type MultiHopExitServer_WireGuard struct {
 	// ExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
 	// Example: "gateway":"zz.wg.ivpn.net" => "zz"

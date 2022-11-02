@@ -243,17 +243,21 @@ func (s *Service) init() error {
 	return nil
 }
 
-func (s *Service) IsConnectivityBlocked() (isBlocked bool, reasonDescription string, err error) {
+// IsConnectivityBlocked - returns nil if connectivity NOT blocked
+func (s *Service) IsConnectivityBlocked() error {
 	preferences := s._preferences
 	if !preferences.IsFwAllowApiServers &&
 		preferences.Session.IsLoggedIn() &&
 		(!s.Connected() || s.IsPaused()) {
 		enabled, err := s.FirewallEnabled()
+		if err != nil {
+			return fmt.Errorf("Access to IVPN servers is blocked: %w", err)
+		}
 		if err == nil && enabled {
-			return true, "Access to IVPN servers is blocked (check IVPN Firewall settings)", nil
+			return fmt.Errorf("Access to IVPN servers is blocked (check IVPN Firewall settings)")
 		}
 	}
-	return false, "", nil
+	return nil
 }
 
 func (s *Service) GetVpnSessionInfo() VpnSessionInfo {
@@ -1462,9 +1466,9 @@ func (s *Service) RequestSessionStatus() (
 	}
 
 	// if no connectivity - skip request (and activate _isWaitingToUpdateAccInfoChan)
-	if isBlocked, _, err := s.IsConnectivityBlocked(); isBlocked && err == nil {
+	if err := s.IsConnectivityBlocked(); err != nil {
 		s._isNeedToUpdateSessionInfo = true
-		return apiCode, "", "", accountInfo, fmt.Errorf("session status request skipped (connectivity is blocked)")
+		return apiCode, "", "", accountInfo, fmt.Errorf("session status request skipped (%w)", err)
 	}
 	// defer: ensure s._isWaitingToUpdateAccInfoChan is empty
 	defer func() {
