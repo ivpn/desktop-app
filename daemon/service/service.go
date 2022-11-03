@@ -109,9 +109,6 @@ type Service struct {
 
 	// when true - necessary to update account status as soon as it will be possible (e.g. on firewall disconnected)
 	_isNeedToUpdateSessionInfo bool
-
-	// Channel closes as soon as IP stack initialized OR after timeout
-	_ipStackInitializationWaiter chan struct{}
 }
 
 // VpnSessionInfo - Additional information about current VPN connection
@@ -138,7 +135,6 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 		_netChangeDetector:            netChDetector,
 		_wgKeysMgr:                    wgKeysMgr,
 		_serversPingProgressSemaphore: syncSemaphore.NewWeighted(1),
-		_ipStackInitializationWaiter:  make(chan struct{}),
 	}
 
 	// register the current service as a 'Connectivity checker' for API object
@@ -151,14 +147,13 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 	return serv, nil
 }
 
-func (s *Service) WaitForIpStackInitialization() {
-	<-s._ipStackInitializationWaiter
-}
-
 func (s *Service) init() error {
 	// Start waiting for IP stack initialization
+	//
+	// _ipStackInitializationWaiter - channel closes as soon as IP stack initialized OR after timeout
+	_ipStackInitializationWaiter := make(chan struct{})
 	go func() {
-		defer close(s._ipStackInitializationWaiter)
+		defer close(_ipStackInitializationWaiter) // ip stack initialized (or timeout)
 		log.Info("Waiting for IP stack initialization ...")
 		endTime := time.Now().Add(time.Minute * 2)
 		for {
@@ -178,7 +173,7 @@ func (s *Service) init() error {
 
 	// Start periodically updating (downloading) servers in background
 	go func() {
-		s.WaitForIpStackInitialization()
+		<-_ipStackInitializationWaiter // Wait for IP stack initialization
 		if err := s._serversUpdater.StartUpdater(); err != nil {
 			log.Error("Failed to start servers-list updater: ", err)
 		}
@@ -235,7 +230,7 @@ func (s *Service) init() error {
 		log.Error("Failed to initialize WG keys rotation:", err)
 	} else {
 		go func() {
-			s.WaitForIpStackInitialization()
+			<-_ipStackInitializationWaiter // Wait for IP stack initialization
 			if err := s._wgKeysMgr.StartKeysRotation(); err != nil {
 				log.Error("Failed to start WG keys rotation:", err)
 			}
@@ -248,7 +243,7 @@ func (s *Service) init() error {
 
 	// Start session status checker
 	go func() {
-		s.WaitForIpStackInitialization()
+		<-_ipStackInitializationWaiter // Wait for IP stack initialization
 		s.startSessionChecker()
 	}()
 
@@ -279,7 +274,7 @@ func (s *Service) init() error {
 	// 'Auto-connect on launch' functionality: auto-connect if necessary
 	// 'trusted-wifi' functionality: auto-connect if necessary
 	go func() {
-		s.WaitForIpStackInitialization()
+		<-_ipStackInitializationWaiter // Wait for IP stack initialization
 		s.autoConnectIfRequired(OnDaemonStarted, nil)
 	}()
 
@@ -774,7 +769,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 
 	// Initialize VPN: ensure everything is prepared for a new connection
 	// (e.g. correct OpenVPN version or a previously started WireGuard service is stopped)
-	log.Info("Initializing...")
+	log.Info("Initializing connection...")
 	if err := vpnProc.Init(); err != nil {
 		return fmt.Errorf("failed to initialize VPN object: %w", err)
 	}
