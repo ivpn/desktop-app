@@ -80,5 +80,6 @@ type IServiceEventsReceiver interface {
 
 	// called by a service when new connection is required (e.g. requested by 'trusted-wifi' functionality or 'auto-connect' on launch)
 	RegisterConnectionRequest(params service_types.ConnectionParams) error
-	IsAnyAuthenticatedClientConnected() bool
+	// IsClientConnected checks is any authenticated connection available of specific client type
+	IsClientConnected(checkOnlyUiClients bool) bool
 }

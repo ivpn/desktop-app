@@ -159,11 +159,11 @@ func runWindowsService() {
 			mes := <-systemLog
 			switch mes.Type {
 			case service.Info:
-				_evtlog.Info(mes.EventId, mes.Message)
+				_evtlog.Info(0, mes.Message)
 			case service.Warning:
-				_evtlog.Warning(mes.EventId, mes.Message)
+				_evtlog.Warning(0, mes.Message)
 			case service.Error:
-				_evtlog.Error(mes.EventId, mes.Message)
+				_evtlog.Error(0, mes.Message)
 			}
 		}
 	}()

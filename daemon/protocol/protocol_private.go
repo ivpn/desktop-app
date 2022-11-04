@@ -57,14 +57,20 @@ func (p *Protocol) notifyClients(cmd types.ICommandBase) {
 }
 
 // -------------- clients connections ---------------
-// IsAnyAuthenticatedClientConnected checks is any authenticated connection available of specific type client
-func (p *Protocol) IsAnyAuthenticatedClientConnected() bool {
+// IsClientConnected checks is any authenticated connection available of specific client type
+func (p *Protocol) IsClientConnected(checkOnlyUiClients bool) bool {
 	p._connectionsMutex.RLock()
 	defer p._connectionsMutex.RUnlock()
 
 	for _, val := range p._connections {
-		if val.IsAuthenticated && val.Type == types.ClientUi {
-			return true
+		if val.IsAuthenticated {
+			if checkOnlyUiClients {
+				if val.Type == types.ClientUi {
+					return true
+				}
+			} else {
+				return true
+			}
 		}
 	}
 	return false
@@ -137,6 +143,14 @@ func (p *Protocol) clientSetAuthenticated(c net.Conn) {
 	if justConnectedClientInfo != nil {
 		p._service.OnAuthenticatedClient(justConnectedClientInfo.Type)
 	}
+
+	if len(p._lastConnectionErrorToNotifyClient) > 0 {
+		log.Info("Sending delayed error to client: ", p._lastConnectionErrorToNotifyClient)
+		delayedErr := types.ErrorRespDelayed{}
+		delayedErr.ErrorMessage = p._lastConnectionErrorToNotifyClient
+		p.sendResponse(c, &delayedErr, 0)
+	}
+	p._lastConnectionErrorToNotifyClient = ""
 }
 
 // -------------- sending responses ---------------

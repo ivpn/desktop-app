@@ -33,6 +33,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
@@ -182,6 +183,10 @@ type Protocol struct {
 	_eaa *eaa.Eaa
 
 	_isRunning bool // 'false' when not running OR after Stop() command call
+
+	// Send this error info to a first connected client
+	// (in use if no clients connected when the error happened)
+	_lastConnectionErrorToNotifyClient string
 }
 
 // Stop - stop communication
@@ -362,11 +367,6 @@ func (p *Protocol) processClient(conn net.Conn) {
 			keepAlone = hello.KeepDaemonAlone
 			isAuthenticated = true
 			p.clientConnected(conn, hello.ClientType)
-
-			if !p._eaa.IsEnabled() {
-				// EAA is disabled. So, mark connection as authenticated
-				p.clientSetAuthenticated(conn)
-			}
 		}
 
 		// Processing requests from client (in separate routine)
@@ -428,36 +428,41 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 	}
 
-	if !isDoSkipParanoidMode(reqCmd.Command) {
-		isOK, err := p._eaa.CheckSecret(reqCmd.ProtocolSecret)
-		if !isOK {
-			// ParanoidMode: wrong password
-			errorResp := types.ErrorResp{
-				ErrorType:    types.ErrorParanoidModePasswordError,
-				ErrorTitle:   "Enhanced App Authentication",
-				ErrorMessage: "The password is incorrect. Please try again."}
-
-			if err != nil && len(errorResp.Error()) > 0 {
-				errorResp.ErrorMessage = err.Error()
-			}
-
-			p.sendResponse(conn,
-				&errorResp,
-				reqCmd.Idx)
-
-			log.Info(fmt.Sprintf("      [%d] %sRequest error '%s': %s", reqCmd.Idx, p.connLogID(conn), reqCmd.Command, errorResp))
-
-			// send current connection state
-			if reqCmd.Command == "Connect" || reqCmd.Command == "Disconnect" {
-				sendState(reqCmd.Idx, false)
-			}
-
-			return
-		}
-
-		// We are here. So we are authenticated.
-		// mark connection as authenticated
+	if !p._eaa.IsEnabled() {
+		// EAA is disabled. So, mark connection as authenticated
 		p.clientSetAuthenticated(conn)
+	} else {
+		if !isDoSkipParanoidMode(reqCmd.Command) {
+			isOK, err := p._eaa.CheckSecret(reqCmd.ProtocolSecret)
+			if !isOK {
+				// ParanoidMode: wrong password
+				errorResp := types.ErrorResp{
+					ErrorType:    types.ErrorParanoidModePasswordError,
+					ErrorTitle:   "Enhanced App Authentication",
+					ErrorMessage: "The password is incorrect. Please try again."}
+
+				if err != nil && len(errorResp.Error()) > 0 {
+					errorResp.ErrorMessage = err.Error()
+				}
+
+				p.sendResponse(conn,
+					&errorResp,
+					reqCmd.Idx)
+
+				log.Info(fmt.Sprintf("      [%d] %sRequest error '%s': %s", reqCmd.Idx, p.connLogID(conn), reqCmd.Command, errorResp))
+
+				// send current connection state
+				if reqCmd.Command == "Connect" || reqCmd.Command == "Disconnect" {
+					sendState(reqCmd.Idx, false)
+				}
+
+				return
+			}
+
+			// We are here. So we are authenticated.
+			// mark connection as authenticated
+			p.clientSetAuthenticated(conn)
+		}
 	}
 
 	switch reqCmd.Command {
@@ -490,7 +495,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if req.GetStatus {
 			// send VPN connection  state
-			sendState(req.Idx, true)
+			sendState(req.Idx, false)
 
 			// send Firewall state
 			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err == nil {
@@ -1116,6 +1121,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	case "Disconnect":
 		p._disconnectRequested = true
+		p._lastConnectionErrorToNotifyClient = ""
 
 		if !p._service.Connected() {
 			p.sendResponse(conn, &types.DisconnectedResp{Reason: types.DisconnectRequested}, reqCmd.Idx)
@@ -1197,6 +1203,7 @@ func (p *Protocol) RegisterConnectionRequest(r service_types.ConnectionParams) e
 	// Disconnect active connection (if connected).
 	// "Disconnected" notification will not be sent to the clients in this case (because new connection request is pending).
 	// It is important to call it after new connection request registered
+	// Note: new connection will no start untill exit this function (see 'p._connRequestReady.Done()')
 	if p._service != nil {
 		if err := p._service.Disconnect(); err != nil {
 			log.ErrorTrace(err)
@@ -1228,6 +1235,14 @@ func (p *Protocol) processConnectionRequests() {
 				}
 			}()
 
+			saveLastError := func(e error) {
+				// If no any clients connected - error notification will not be passed to user
+				// Trerefore we keep this error an pass it to the first connected client
+				if !p.IsClientConnected(false) {
+					p._lastConnectionErrorToNotifyClient = fmt.Sprintf("[%v] Failed to connect VPN: %s", time.Now().Format(time.Stamp), e.Error())
+				}
+			}
+
 			var connectionError error
 
 			// do not forget to notify that process was stopped (disconnected)
@@ -1255,13 +1270,16 @@ func (p *Protocol) processConnectionRequests() {
 					if connectionError != nil {
 						errMsg = connectionError.Error()
 					}
+					saveLastError(connectionError)
 					p.notifyClients(&types.DisconnectedResp{Failure: connectionError != nil, Reason: disconnectionReason, ReasonDescription: errMsg})
 				}
 			}()
 
+			p._lastConnectionErrorToNotifyClient = ""
 			// SYNCHRONOUSLY start VPN connection process (wait until it finished)
 			if connectionError = p.processConnectRequest(connectRequest); connectionError != nil {
 				log.ErrorTrace(connectionError)
+				saveLastError(connectionError)
 			}
 		}()
 	}

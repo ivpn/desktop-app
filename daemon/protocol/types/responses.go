@@ -58,6 +58,11 @@ func (e ErrorResp) Error() string {
 	return e.ErrorMessage
 }
 
+// ErrorRespDelayed - error info which had happened in the past
+type ErrorRespDelayed struct {
+	ErrorResp
+}
+
 // EmptyResp empty response on request
 type EmptyResp struct {
 	CommandBase

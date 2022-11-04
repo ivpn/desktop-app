@@ -109,6 +109,9 @@ const daemonRequests = Object.freeze({
 });
 
 const daemonResponses = Object.freeze({
+  ErrorResp: "ErrorResp",
+  ErrorRespDelayed: "ErrorRespDelayed",
+
   EmptyResp: "EmptyResp",
   HelloResp: "HelloResp",
   APIResponse: "APIResponse",
@@ -134,7 +137,6 @@ const daemonResponses = Object.freeze({
   WiFiAvailableNetworksResp: "WiFiAvailableNetworksResp",
   WiFiCurrentNetworkResp: "WiFiCurrentNetworkResp",
 
-  ErrorResp: "ErrorResp",
   ServiceExitingResp: "ServiceExitingResp",
 });
 
@@ -542,6 +544,22 @@ async function processResponse(response) {
 
     case daemonResponses.ServiceExitingResp:
       if (_onDaemonExitingCallback) _onDaemonExitingCallback();
+      break;
+
+    case daemonResponses.ErrorRespDelayed:
+      if (obj.ErrorMessage) {
+        console.log("ERROR response (delayed):", obj.ErrorMessage);
+
+        // Wait some time before showing message (let app to start)
+        setTimeout(async () => {
+          await messageBox({
+            type: "error",
+            buttons: ["OK"],
+            message: `IVPN daemon notifies of an error that occurred earlier`,
+            detail: obj.ErrorMessage,
+          });
+        }, 3000);
+      }
       break;
 
     case daemonResponses.ErrorResp:

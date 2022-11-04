@@ -35,28 +35,24 @@ const (
 type SystemLogMessage struct {
 	Type    SystemLogMessageType
 	Message string
-	EventId uint32
 }
 
-func (s *Service) systemLog(mes SystemLogMessage) bool {
-	switch mes.Type {
-	case Info:
-		log.Info(fmt.Sprintf("<SYS_LOG> INFO: '%s' (%d)", mes.Message, mes.EventId))
-	case Warning:
-		log.Info(fmt.Sprintf("<SYS_LOG> WARNING: '%s' (%d)", mes.Message, mes.EventId))
-	case Error:
-		log.Info(fmt.Sprintf("<SYS_LOG> ERROR: '%s' (%d)", mes.Message, mes.EventId))
-	default:
-	}
-
+func (s *Service) systemLog(mesType SystemLogMessageType, message string) bool {
 	ch := s._systemLog
 	if ch == nil {
+		switch mesType {
+		case Info:
+			log.Info(fmt.Sprintf("(syslog not initialized) INFO: %s", message))
+		case Warning:
+			log.Info(fmt.Sprintf("(syslog not initialized) WARNING: %s", message))
+		case Error:
+			log.Info(fmt.Sprintf("(syslog not initialized) ERROR: %s", message))
+		default:
+		}
+
 		return false
 	}
-	select {
-	case ch <- mes:
-		return true
-	default:
-		return false
-	}
+
+	ch <- SystemLogMessage{Message: message, Type: mesType}
+	return true
 }
