@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2022 Privatus Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -20,32 +20,43 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-//go:build linux
-// +build linux
+package service
 
-package main
+import "fmt"
 
-import "os"
+type SystemLogMessageType int
 
-func doPrepareToRun() error {
-	return nil
+const (
+	Info    SystemLogMessageType = iota
+	Warning SystemLogMessageType = iota
+	Error   SystemLogMessageType = iota
+)
+
+type SystemLogMessage struct {
+	Type    SystemLogMessageType
+	Message string
+	EventId uint32
 }
 
-func doStopped() {
-}
-
-func doCheckIsAdmin() bool {
-	uid := os.Geteuid()
-	if uid != 0 {
-		return false
+func (s *Service) systemLog(mes SystemLogMessage) bool {
+	switch mes.Type {
+	case Info:
+		log.Info(fmt.Sprintf("<SYS_LOG> INFO: '%s' (%d)", mes.Message, mes.EventId))
+	case Warning:
+		log.Info(fmt.Sprintf("<SYS_LOG> WARNING: '%s' (%d)", mes.Message, mes.EventId))
+	case Error:
+		log.Info(fmt.Sprintf("<SYS_LOG> ERROR: '%s' (%d)", mes.Message, mes.EventId))
+	default:
 	}
 
-	return true
-}
-
-func doStartedOnPort(port int, secret uint64) {
-}
-
-func isNeedToSavePortInFile() bool {
-	return true
+	ch := s._systemLog
+	if ch == nil {
+		return false
+	}
+	select {
+	case ch <- mes:
+		return true
+	default:
+		return false
+	}
 }

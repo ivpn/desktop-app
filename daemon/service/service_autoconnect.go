@@ -46,7 +46,23 @@ const (
 	OnDaemonStarted     autoConnectReason = iota
 	OnUiClientConnected autoConnectReason = iota
 	OnWifiChanged       autoConnectReason = iota
+	OnSessionLogon      autoConnectReason = iota
 )
+
+func (cr autoConnectReason) ToString() string {
+	switch cr {
+	case OnDaemonStarted:
+		return "DaemonLaunch"
+	case OnUiClientConnected:
+		return "UIAppLaunch"
+	case OnWifiChanged:
+		return "WiFiChanged"
+	case OnSessionLogon:
+		return "UserSessionLogon"
+	default:
+		return "<unknown>"
+	}
+}
 
 type trustedWiFiActionType int
 
@@ -138,12 +154,14 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 	// Check "Auto-connect on APP/daemon launch" action
 	// (skip when we are connected to a trusted network with "Disconnect VPN" action)
 	if prefs.IsAutoconnectOnLaunch && !isVpnOffRequired {
-		if reason == OnDaemonStarted && prefs.IsAutoconnectOnLaunchDaemon {
-			log.Info("Automatic connection manager: applying Auto-Connect on daemon Launch action...")
-			action.Vpn = On
-		} else if reason == OnUiClientConnected && !prefs.IsAutoconnectOnLaunchDaemon {
-			log.Info("Automatic connection manager: applying Auto-Connect on app Launch action...")
-			action.Vpn = On
+		if !s.Connected() {
+			if (reason == OnDaemonStarted || reason == OnSessionLogon) && prefs.IsAutoconnectOnLaunchDaemon {
+				log.Info(fmt.Sprintf("Automatic connection manager: applying Auto-Connect action on '%s' ...", reason.ToString()))
+				action.Vpn = On
+			} else if reason == OnUiClientConnected {
+				log.Info(fmt.Sprintf("Automatic connection manager: applying Auto-Connect action on '%s' ...", reason.ToString()))
+				action.Vpn = On
+			}
 		}
 	}
 

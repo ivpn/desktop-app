@@ -109,6 +109,10 @@ type Service struct {
 
 	// when true - necessary to update account status as soon as it will be possible (e.g. on firewall disconnected)
 	_isNeedToUpdateSessionInfo bool
+
+	_globalEvents <-chan ServiceEventType
+
+	_systemLog chan<- SystemLogMessage
 }
 
 // VpnSessionInfo - Additional information about current VPN connection
@@ -122,7 +126,7 @@ type VpnSessionInfo struct {
 }
 
 // CreateService - service constructor
-func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater IServersUpdater, netChDetector INetChangeDetector, wgKeysMgr IWgKeysManager) (*Service, error) {
+func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater IServersUpdater, netChDetector INetChangeDetector, wgKeysMgr IWgKeysManager, globalEvents <-chan ServiceEventType, systemLog chan<- SystemLogMessage) (*Service, error) {
 	if updater == nil {
 		return &Service{}, fmt.Errorf("ServersUpdater is not defined")
 	}
@@ -135,6 +139,8 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 		_netChangeDetector:            netChDetector,
 		_wgKeysMgr:                    wgKeysMgr,
 		_serversPingProgressSemaphore: syncSemaphore.NewWeighted(1),
+		_globalEvents:                 globalEvents,
+		_systemLog:                    systemLog,
 	}
 
 	// register the current service as a 'Connectivity checker' for API object
@@ -277,6 +283,9 @@ func (s *Service) init() error {
 		<-_ipStackInitializationWaiter // Wait for IP stack initialization
 		s.autoConnectIfRequired(OnDaemonStarted, nil)
 	}()
+
+	// Start processing power events in separate routine (Windows)
+	s.startProcessingPowerEvents()
 
 	return nil
 }

@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2022 Privatus Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -20,32 +20,30 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-//go:build linux
-// +build linux
+package service
 
-package main
+type ServiceEventType uint32
 
-import "os"
+const (
+	On_Power_WakeUp  ServiceEventType = 0x10
+	On_Session_Logon ServiceEventType = 0x20
+)
 
-func doPrepareToRun() error {
-	return nil
-}
-
-func doStopped() {
-}
-
-func doCheckIsAdmin() bool {
-	uid := os.Geteuid()
-	if uid != 0 {
+func (s *Service) startProcessingPowerEvents() bool {
+	eventsChan := s._globalEvents
+	if eventsChan == nil {
 		return false
 	}
-
-	return true
-}
-
-func doStartedOnPort(port int, secret uint64) {
-}
-
-func isNeedToSavePortInFile() bool {
+	go func() {
+		log.Info("Power events receiver started")
+		defer log.Info("Power events receiver stopped")
+		for {
+			evt := <-eventsChan
+			if evt == On_Session_Logon {
+				log.Info("Event: On_Session_Logon")
+				s.autoConnectIfRequired(OnSessionLogon, nil)
+			}
+		}
+	}()
 	return true
 }

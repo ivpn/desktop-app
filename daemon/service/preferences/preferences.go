@@ -80,14 +80,14 @@ type Preferences struct {
 	IsStopOnClientDisconnect bool
 	Obfs4proxy               obfsproxy.Config
 
-	// IsAutoconnectOnLaunch.
-	// when 'true' - daemon will perform automatic connection:
-	//		when daemon initialized ('IsAutoconnectOnLaunchDaemon' == true)
-	//		when UI app connected  ('IsAutoconnectOnLaunchDaemon' == false)
+	// IsAutoconnectOnLaunch: if 'true' - daemon will perform automatic connection (see 'IsAutoconnectOnLaunchDaemon' for details)
 	IsAutoconnectOnLaunch bool
 	// IsAutoconnectOnLaunchDaemon:
 	//	false - means the daemon applies operation 'IsAutoconnectOnLaunch' only when UI app connected
-	//	true - means the daemon applies operation 'IsAutoconnectOnLaunch' after daemon initialization
+	//	true - means the daemon applies operation 'IsAutoconnectOnLaunch':
+	//		-	when UI app connected
+	//		-	after daemon initialization
+	//		-	on user session LogOn
 	IsAutoconnectOnLaunchDaemon bool
 
 	// split-tunnelling

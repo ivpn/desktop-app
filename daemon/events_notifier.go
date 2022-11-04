@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2022 Privatus Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -20,32 +20,17 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-//go:build linux
-// +build linux
-
 package main
 
-import "os"
+import "github.com/ivpn/desktop-app/daemon/service"
 
-func doPrepareToRun() error {
-	return nil
-}
+var serviceEventsChan chan service.ServiceEventType = make(chan service.ServiceEventType, 1)
 
-func doStopped() {
-}
-
-func doCheckIsAdmin() bool {
-	uid := os.Geteuid()
-	if uid != 0 {
+func serviceEventNotify(evt service.ServiceEventType) bool {
+	select {
+	case serviceEventsChan <- evt:
+		return true
+	default:
 		return false
 	}
-
-	return true
-}
-
-func doStartedOnPort(port int, secret uint64) {
-}
-
-func isNeedToSavePortInFile() bool {
-	return true
 }
