@@ -11,9 +11,14 @@
       "
     >
       <input
-        :disabled="isParanoidMode === true"
+        :disabled="
+          !canApplyInBackground &&
+          (isParanoidMode === true ||
+            (!connectVPNOnInsecureNetwork && !trustedNetworksControl))
+        "
         type="checkbox"
         id="canApplyInBackground"
+        @click="canApplyInBackgroundClick"
         v-model="canApplyInBackground"
       />
       <label class="defColor" for="canApplyInBackground"
@@ -222,14 +227,25 @@ export default {
   },
   mounted() {
     //if (this.trustedNetworksControl === true) sender.GetWiFiAvailableNetworks();
+    this.doUpdateIsLaunchAtLogin();
   },
   data: function () {
     return {
       isActionsView: false,
       showAllNetworks: false,
+      isLaunchAtLoginValue: null,
     };
   },
   methods: {
+    async doUpdateIsLaunchAtLogin() {
+      try {
+        this.isLaunchAtLoginValue = await sender.AutoLaunchIsEnabled();
+      } catch (err) {
+        console.error("Error obtaining 'LaunchAtLogin' value: ", err);
+        this.isLaunchAtLoginValue = null;
+      }
+    },
+
     onShowAllNetworks() {
       this.showAllNetworks = !this.showAllNetworks;
       if (
@@ -312,6 +328,50 @@ export default {
           evt.returnValue = false;
         }
       }
+    },
+
+    async canApplyInBackgroundClick(evt) {
+      if (this.canApplyInBackground === true) return; // we are going to disable this option. No messages required
+
+      if (this.isLaunchAtLoginValue !== true) {
+        let ret = await sender.showMessageBoxSync(
+          {
+            type: "warning",
+            message: `"Launch at login" disabled`,
+            detail:
+              'This option requires "Launch at login" to be enabled.\nDo you want to enable both options?',
+            buttons: ["Enable", "Cancel"],
+          },
+          true
+        );
+        if (ret == 1) {
+          // Cancel
+          evt.returnValue = false;
+        } else {
+          setTimeout(async () => {
+            try {
+              await sender.AutoLaunchSet(true);
+            } catch (err) {
+              console.error("Error enabling 'LaunchAtLogin': ", err);
+            }
+          }, 0);
+        }
+      }
+    },
+
+    resetBackgroundOptionIfReqiuired() {
+      if (!this.canApplyInBackground) return;
+      if (!this.connectVPNOnInsecureNetwork && !this.trustedNetworksControl) {
+        this.canApplyInBackground = false;
+      }
+    },
+  },
+  watch: {
+    connectVPNOnInsecureNetwork() {
+      this.resetBackgroundOptionIfReqiuired();
+    },
+    trustedNetworksControl() {
+      this.resetBackgroundOptionIfReqiuired();
     },
   },
   computed: {

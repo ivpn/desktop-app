@@ -2,12 +2,15 @@
   <div>
     <div class="settingsTitle">GENERAL SETTINGS</div>
 
-    <div class="param">
+    <div class="param" :title="isLaunchAtLoginDisableBlockerInfo">
       <input
         type="checkbox"
         id="launchAtLogin"
         v-model="isLaunchAtLogin"
-        :disabled="isLaunchAtLogin == null"
+        :disabled="
+          isLaunchAtLogin == null || isLaunchAtLoginDisableBlockerInfo != ''
+        "
+        @click="isLaunchAtLoginonClick"
       />
       <label class="defColor" for="launchAtLogin">Launch at login</label>
     </div>
@@ -100,6 +103,7 @@
         :disabled="isAutoconnectOnLaunch === false || isParanoidMode === true"
         type="checkbox"
         id="connectOnLaunchDaemon"
+        @click="isAutoconnectOnLaunchDaemonOnClick"
         v-model="isAutoconnectOnLaunchDaemon"
       />
       <label class="defColor" for="connectOnLaunchDaemon"
@@ -287,6 +291,27 @@ export default {
         }
       }
     },
+    async isAutoconnectOnLaunchDaemonOnClick(evt) {
+      if (this.isAutoconnectOnLaunchDaemon === true) return; // we are going to disable this option. No messages required
+      if (this.isLaunchAtLogin !== true) {
+        let ret = await sender.showMessageBoxSync(
+          {
+            type: "warning",
+            message: `"Launch at login" disabled`,
+            detail:
+              'This option requires "Launch at login" to be enabled.\nDo you want to enable both options?',
+            buttons: ["Enable", "Cancel"],
+          },
+          true
+        );
+        if (ret == 1) {
+          // Cancel
+          evt.returnValue = false;
+        } else {
+          this.isLaunchAtLogin = true;
+        }
+      }
+    },
   },
   computed: {
     isParanoidMode() {
@@ -295,6 +320,7 @@ export default {
     isLinux() {
       return Platform() === PlatformEnum.Linux;
     },
+
     isLaunchAtLogin: {
       get() {
         return this.isLaunchAtLoginValue;
@@ -312,12 +338,23 @@ export default {
         })();
       },
     },
+
+    isLaunchAtLoginDisableBlockerInfo() {
+      if (!this.isLaunchAtLogin) return "";
+      if (this.isWifiActionsInBackground === true)
+        return `This option can not be disabled\nbecause of 'Allow background daemon to Apply WiFi Control settings' is active`;
+      if (this.isAutoconnectOnLaunchDaemon === true)
+        return `This option can not be disabled\nbecause of 'Allow background daemon to manage autoconnect' is active`;
+      return "";
+    },
+
     isAutoconnectOnLaunch: {
       get() {
         return this.$store.state.settings.daemonSettings.IsAutoconnectOnLaunch;
       },
       set(value) {
         sender.SetAutoconnectOnLaunch(value, null);
+        if (value === false) this.isAutoconnectOnLaunchDaemon = false;
       },
     },
     isAutoconnectOnLaunchDaemon: {
@@ -327,6 +364,13 @@ export default {
       },
       set(value) {
         sender.SetAutoconnectOnLaunch(null, value);
+      },
+    },
+
+    isWifiActionsInBackground: {
+      get() {
+        return this.$store.state.settings.daemonSettings?.WiFi
+          ?.canApplyInBackground;
       },
     },
 
