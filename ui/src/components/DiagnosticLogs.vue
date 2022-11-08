@@ -198,9 +198,10 @@ export default {
           return;
         }
 
+        let data = JSON.parse(JSON.stringify(this.diagnosticDataObj))
         let id = await sender.SubmitDiagnosticLogs(
           this.userComment,
-          this.diagnosticDataObj
+          data
         );
 
         sender.showMessageBoxSync({
