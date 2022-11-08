@@ -313,6 +313,14 @@ export default {
       }
     },
   },
+  watch: {
+    isAutoconnectOnLaunchDaemon() {
+      this.doUpdateIsLaunchAtLogin();
+    },
+    isWifiActionsInBackground() {
+      this.doUpdateIsLaunchAtLogin();
+    },
+  },
   computed: {
     isParanoidMode() {
       return this.$store.state.paranoidModeStatus.IsEnabled === true;
