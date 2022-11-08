@@ -62,6 +62,8 @@ type Client struct {
 
 	_paranoidModeSecret            string
 	_paranoidModeSecretRequestFunc func(*Client) (string, error)
+
+	_printFunc func(string)
 }
 
 // ResponseTimeout error
@@ -123,6 +125,10 @@ func (c *Client) InitSetParanoidModeSecretHash(secretHash string) {
 
 func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) (string, error)) {
 	c._paranoidModeSecretRequestFunc = f
+}
+
+func (c *Client) SetPrintFunc(f func(string)) {
+	c._printFunc = f
 }
 
 // SendHello - send initial message and get current status

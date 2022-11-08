@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strings"
 
 	apiTypes "github.com/ivpn/desktop-app/daemon/api/types"
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -154,7 +155,7 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 	// Check "Auto-connect on APP/daemon launch" action
 	// (skip when we are connected to a trusted network with "Disconnect VPN" action)
 	if prefs.IsAutoconnectOnLaunch && !isVpnOffRequired {
-		if !s.Connected() {
+		if !s.Connected() && action.Vpn != On {
 			if (reason == OnDaemonStarted || reason == OnSessionLogon) && prefs.IsAutoconnectOnLaunchDaemon {
 				log.Info(fmt.Sprintf("Automatic connection manager: applying Auto-Connect action on '%s' ...", reason.ToString()))
 				action.Vpn = On
@@ -197,6 +198,7 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 			log.Error("Auto connection: disabling Firewall: ", retErr)
 		}
 		connParams.FirewallOn = false // Ensure Firewall connection params is the same as in action
+		connParams.FirewallOnDuringConnection = false
 	case On:
 		log.Info("Automatic connection manager: enabling Firewall")
 		if retErr = s.SetKillSwitchState(true); retErr != nil {
@@ -349,7 +351,7 @@ func (s *Service) updateParamsAccordingToMetadata(params types.ConnectionParams)
 				}
 				params.OpenVpnParameters.EntryVpnServer.Hosts = applicableEntryServers[rndIdx.Int64()].Hosts
 			case types.Fastest: // FASTEST SERVER (OpenVPN)
-				fastestSvr, err := getFastestServer(s, applicableEntryServers)
+				fastestSvr, err := getFastestServer(s, vpn.OpenVPN, applicableEntryServers, params.Metadata.FastestGatewaysExcludeList)
 				if err != nil {
 					return params, err
 				}
@@ -378,7 +380,7 @@ func (s *Service) updateParamsAccordingToMetadata(params types.ConnectionParams)
 				}
 				params.WireGuardParameters.EntryVpnServer.Hosts = applicableEntryServers[rndIdx.Int64()].Hosts
 			case types.Fastest: // FASTEST SERVER (WireGuard)
-				fastestSvr, err := getFastestServer(s, applicableEntryServers)
+				fastestSvr, err := getFastestServer(s, vpn.WireGuard, applicableEntryServers, params.Metadata.FastestGatewaysExcludeList)
 				if err != nil {
 					return params, err
 				}
@@ -502,8 +504,8 @@ func getServerCountryCode[S serverBaseInterface, H hostBaseInterface](service *S
 	return ""
 }
 
-func getFastestServer[S serverBaseInterface](service *Service, servers []S) (ret S, err error) {
-	hosts, err := service.PingServers(4000, vpn.WireGuard, false, true)
+func getFastestServer[S serverBaseInterface](service *Service, vpnTypePrioritized vpn.Type, servers []S, excludedGateways []string) (ret S, err error) {
+	hosts, err := service.PingServers(4000, vpnTypePrioritized, false, true)
 	if err != nil {
 		return ret, err
 	}
@@ -516,8 +518,27 @@ func getFastestServer[S serverBaseInterface](service *Service, servers []S) (ret
 			minPingTimeIp = ip
 		}
 	}
+
+	// Remove everything after symbol '.': "us-tx.wg.ivpn.net" => "us-tx"; or "us-tx" => "us-tx"
+	normalizeGwId := func(gwId string) string {
+		return strings.Split(gwId, ".")[0]
+	}
+	// ignored gateways in hashed map
+	excludedGatewaysHashed := make(map[string]struct{})
+	if len(excludedGateways) > 0 {
+		for _, gw := range excludedGateways {
+			excludedGatewaysHashed[normalizeGwId(gw)] = struct{}{}
+		}
+	}
+
 	// looking for server info which contains host with lower ping time
 	for _, s := range servers {
+		if len(excludedGatewaysHashed) > 0 {
+			gw := normalizeGwId(s.GetServerInfoBase().Gateway)
+			if _, ok := excludedGatewaysHashed[gw]; ok {
+				continue
+			}
+		}
 
 		for _, h := range s.GetHostsInfoBase() {
 			if h.Host == minPingTimeIp {

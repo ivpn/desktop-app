@@ -149,13 +149,15 @@ func main() {
 	}
 
 	proto := protocol.CreateClient(port, secret)
+
+	proto.SetParanoidModeSecretRequestFunc(RequestParanoidModePassword)
+	proto.SetPrintFunc(PrintToConsoleFunc)
+
 	if err := proto.Connect(); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Failed to connect to service : %s\n", err)
 		printServStartInstructions()
 		os.Exit(1)
 	}
-
-	proto.SetParanoidModeSecretRequestFunc(RequestParanoidModePassword)
 
 	commands.Initialize(proto)
 
@@ -178,7 +180,7 @@ func main() {
 	}
 
 	// unknown command
-	if isProcessed == false {
+	if !isProcessed {
 		fmt.Fprintf(os.Stderr, "Error. Unexpected command %s\n", os.Args[1])
 		printUsageAll(true)
 		os.Exit(1)
@@ -202,11 +204,15 @@ func RequestParanoidModePassword(c *protocol.Client) (string, error) {
 	return secret, nil
 }
 
+func PrintToConsoleFunc(text string) {
+	fmt.Println(text)
+}
+
 func runCommand(c ICommand, args []string) {
 
 	funcExitErrBadParam := func(err error) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		if _, ok := err.(flags.BadParameter); ok == true {
+		if _, ok := err.(flags.BadParameter); ok {
 			c.Usage(false)
 		}
 		os.Exit(1)

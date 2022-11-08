@@ -765,6 +765,7 @@ async function startNotifyDaemonOnParamsChange() {
         case "settings/ovpnProxyPort":
         case "settings/ovpnProxyUser":
         case "settings/ovpnProxyPass":
+        case "settings/serversFastestExcludeList":
           {
             //console.debug("Notifying daemon:", mutation.type);
 

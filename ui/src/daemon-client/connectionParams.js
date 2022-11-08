@@ -111,9 +111,11 @@ export function InitConnectionParamsObject() {
     ServerSelectionEntry: ServerSelectionEnum.Default,
     ServerSelectionExit: ServerSelectionEnum.Default,
   };
-  if (store.getters["settings/isFastestServer"])
+  if (store.getters["settings/isFastestServer"]) {
     metadata.ServerSelectionEntry = ServerSelectionEnum.Fastest;
-  else if (store.getters["settings/isRandomServer"])
+    metadata.FastestGatewaysExcludeList =
+      store.state.settings.serversFastestExcludeList;
+  } else if (store.getters["settings/isRandomServer"])
     metadata.ServerSelectionEntry = ServerSelectionEnum.Random;
   if (store.getters["settings/isRandomExitServer"])
     metadata.ServerSelectionExit = ServerSelectionEnum.Random;
@@ -124,6 +126,7 @@ export function InitConnectionParamsObject() {
     [vpnParamsPropName]: vpnParamsObj,
     ManualDNS: manualDNS,
     FirewallOn: store.state.settings.firewallActivateOnConnect === true,
+
     // Can use IPv6 connection inside tunnel
     // IPv6 has higher priority, if it supported by a server - we will use IPv6.
     // If IPv6 does not supported by server - we will use IPv4

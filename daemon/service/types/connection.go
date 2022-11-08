@@ -23,6 +23,8 @@
 package types
 
 import (
+	"fmt"
+
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/vpn"
@@ -41,6 +43,9 @@ type ConnectMetadata struct {
 	ServerSelectionEntry ServerSelectionEnum
 	// How the exit server was chosen ('Fastest' is not applicable for 'Exit' server)
 	ServerSelectionExit ServerSelectionEnum
+
+	// (only if Fastest server in use) List of fastest servers which must be ignored (only gateway ID in use: e.g."us-tx.wg.ivpn.net" => "us-tx")
+	FastestGatewaysExcludeList []string
 }
 
 // Connect request to establish new VPN connection
@@ -106,6 +111,19 @@ func (p ConnectionParams) IsMultiHop() bool {
 		return len(p.OpenVpnParameters.MultihopExitServer.Hosts) > 0
 	}
 	return len(p.WireGuardParameters.MultihopExitServer.Hosts) > 0
+}
+
+func (p ConnectionParams) CheckIsDefined() error {
+	if p.VpnType == vpn.WireGuard {
+		if len(p.WireGuardParameters.EntryVpnServer.Hosts) <= 0 {
+			return fmt.Errorf("no hosts defined for WireGuard connection")
+		}
+	} else {
+		if len(p.OpenVpnParameters.EntryVpnServer.Hosts) <= 0 {
+			return fmt.Errorf("no hosts defined for OpenVPN connection")
+		}
+	}
+	return nil
 }
 
 type MultiHopExitServer_WireGuard struct {

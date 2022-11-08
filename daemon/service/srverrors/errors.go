@@ -29,3 +29,10 @@ type ErrorNotLoggedIn struct {
 func (e ErrorNotLoggedIn) Error() string {
 	return "not logged in; please visit https://www.ivpn.net/ to Sign Up or Log In to get info about your Account ID"
 }
+
+type ErrorBackgroundConnectionNoParams struct {
+}
+
+func (e ErrorBackgroundConnectionNoParams) Error() string {
+	return "parameters for background connection are not defined; please manually connect the VPN once to initialize the default connection settings"
+}

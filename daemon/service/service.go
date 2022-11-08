@@ -730,6 +730,11 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 
 	case protocolTypes.Prefs_IsAutoconnectOnLaunch_Daemon:
 		if val, err := strconv.ParseBool(val); err == nil {
+			if val {
+				if e := prefs.LastConnectionParams.CheckIsDefined(); e != nil {
+					return false, srverrors.ErrorBackgroundConnectionNoParams{}
+				}
+			}
 			isChanged = val != prefs.IsAutoconnectOnLaunchDaemon
 			prefs.IsAutoconnectOnLaunchDaemon = val
 		}
@@ -789,6 +794,13 @@ func (s *Service) SetConnectionParams(params types.ConnectionParams) error {
 }
 
 func (s *Service) SetWiFiSettings(params preferences.WiFiParams) error {
+	if params.CanApplyInBackground {
+		prefs := s._preferences
+		if e := prefs.LastConnectionParams.CheckIsDefined(); e != nil {
+			return srverrors.ErrorBackgroundConnectionNoParams{}
+		}
+	}
+
 	// remove duplicate networks from 'trusted' list
 	newNets := []preferences.WiFiNetwork{}
 	keys := make(map[string]struct{})
