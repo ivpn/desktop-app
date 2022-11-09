@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.9.45 - 2022-11-09
+
+[FIX] Ability to send diagnostic logs  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.9.45.exe)  
+SHA256: e6e3df093c44c83a87cbf538d39983945f9955fadaec3f57a1a23fdfc8fcd678  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.9.45.dmg)  
+SHA256: 6768f6c79563ab0205604ba8b3513d033b4d4b5d456f9100556cecc8cf79cc8f  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.9.45-arm64.dmg)  
+SHA256: 3b91774e18b4e288d7794c5342002f7a90015d8cc2c637b1f13303dd3b06c5fd   
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.9.45_amd64.deb)  
+SHA256: d9ba7d9ceeed05c2e8913a5c36ad67194319246c8de932c30e0623e50fdb804d  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.9.45-1.x86_64.rpm)  
+SHA256: 9330ca5f4dc6e8375410b4005368d910b95aedfe91bc47e030d0f8876e3882c3  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.9.45_amd64.deb)  
+SHA256: 114abc02f0c0b62965ac6904962ba1fd9703585cebb8b495e34bdd1de2c124c0  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.9.45-1.x86_64.rpm)  
+SHA256: 580e3bca37c35984ce7f96448195fa02a26c4a9073c40fcd537495fa71856c4f  
+
 ## Version 3.9.43 - 2022-10-28
 
 [NEW] obfs4 support for OpenVPN connections  
