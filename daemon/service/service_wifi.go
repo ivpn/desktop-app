@@ -51,9 +51,9 @@ func (s *Service) onWiFiChanged(ssid string) {
 
 	// Stop old postponed notifier call
 	oldTimerId := timerDelayedWifiNotify
+	timerDelayedWifiNotify = nil
 	if oldTimerId != nil {
 		oldTimerId.Stop()
-		timerDelayedWifiNotify = nil
 	}
 
 	// check network encryption

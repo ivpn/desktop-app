@@ -46,7 +46,7 @@
       </ComponentDialog>
     </div>
 
-    <div class="param" v-if="!isLinux">
+    <div class="param">
       <input
         type="checkbox"
         id="connectVPNOnInsecureNetwork"
@@ -215,7 +215,6 @@
 
 <script>
 import trustedNetConfigControl from "@/components/controls/control-trusted-network-config.vue";
-import { Platform, PlatformEnum } from "@/platform/platform";
 import ComponentDialog from "@/components/component-dialog.vue";
 
 const sender = window.ipcSender;
@@ -377,9 +376,6 @@ export default {
   computed: {
     isParanoidMode() {
       return this.$store.state.paranoidModeStatus.IsEnabled === true;
-    },
-    isLinux() {
-      return Platform() === PlatformEnum.Linux;
     },
 
     canApplyInBackground: {
