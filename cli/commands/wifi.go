@@ -91,22 +91,23 @@ func (c *CmdWiFi) Init() {
 	c.StringVar(&c.set_trusted_action, "set_trusted_action", "", "CONFIG",
 		`Configure action for when joining wifi networks
 		CONFIG parameter format: <ACTION>:<VALUE> 
-			(VALUE: [on/off])
-		Acceptable actions:
-			Actions for Untrusted WiFi
-				* trusted_vpn_off       - Disconnect from VPN
-				* trusted_firewall_off  - Disable firewall
-			Actions for Trusted WiFi
-				* untrusted_vpn_on      - Connect to VPN
-				* untrusted_firewall_on - Enable firewall
+			VALUE: [on/off]
+			ACTION:
+				Actions for Untrusted WiFi
+					* trusted_vpn_off       - Disconnect from VPN
+					* trusted_firewall_off  - Disable firewall
+				Actions for Trusted WiFi
+					* untrusted_vpn_on      - Connect to VPN
+					* untrusted_firewall_on - Enable firewall
 		Example: 
 			ivpn -set_trusted_action untrusted_vpn_on:off
 			ivpn -set_trusted_action untrusted_firewall_on:on`)
 	c.StringVar(&c.set_trusted_network, "set_trusted_network", "", "CONFIG",
 		`Set trust status for WiFi network
 			CONFIG parameter format: '<NETWORK_NAME>':<VALUE> 
-				VALUE: [none/trusted/untrusted]
 				NETWORK_NAME: if empty - will be used WiFi network name which is currently connected
+				VALUE: [none/trusted/untrusted]
+					(Set the value to "none" to remove the network from the list)
 			Example:
 				ivpn -set_trusted_network work:untrusted
 				ivpn -set_trusted_network 'my home network':trusted
