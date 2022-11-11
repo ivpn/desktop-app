@@ -75,6 +75,10 @@ export function isValidIpOrMask(ipStr) {
   return true;
 }
 
+export function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 export function dateDefaultFormat(date) {
   return dateYyyyMonDd(date);
 }

@@ -88,6 +88,7 @@ import HopButtonsBlock from "./blocks/block-hop-buttons.vue";
 
 const sender = window.ipcSender;
 import { VpnStateEnum, VpnTypeEnum, PauseStateEnum } from "@/store/types";
+import { capitalizeFirstLetter } from "@/helpers/helpers";
 
 const viewTypeEnum = Object.freeze({
   default: "default",
@@ -191,7 +192,7 @@ export default {
         type: "error",
         buttons: ["OK"],
         message: `Failed to connect`,
-        detail: failureInfo.ReasonDescription,
+        detail: capitalizeFirstLetter(failureInfo.ReasonDescription),
       });
     },
     isMinimizedUI() {
