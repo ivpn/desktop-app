@@ -350,6 +350,7 @@ export default {
           setTimeout(async () => {
             try {
               await sender.AutoLaunchSet(true);
+              this.doUpdateIsLaunchAtLogin();
             } catch (err) {
               console.error("Error enabling 'LaunchAtLogin': ", err);
             }
