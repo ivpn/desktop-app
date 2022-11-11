@@ -77,31 +77,32 @@ export default {
     },
     async onChangeState() {
       if (!this.IsPmEnabled) {
+        let warningMessage = "";
+
         if (
           true ===
           this.$store.state.settings.daemonSettings.IsAutoconnectOnLaunch
+        )
+          warningMessage =
+            "On application start 'Autoconnect on application launch' will not be applied until the EAA password is entered.";
+
+        if (
+          true ===
+          this.$store.state.settings?.daemonSettings?.WiFi
+            ?.trustedNetworksControl
         ) {
-          sender.showMessageBoxSync({
-            type: "info",
-            buttons: ["OK"],
-            message: `Enhanced App Authentication`,
-            detail:
-              "EAA cannot be enabled whilst 'Autoconnect on application launch' is enabled.",
-          });
-          return;
+          if (warningMessage) warningMessage += "\n\n";
+          warningMessage +=
+            "On application start Trusted WiFi will be disabled until the EAA password is entered.";
         }
 
-        if (true === this.$store.state.settings?.wifi?.trustedNetworksControl) {
-          let ret = await sender.showMessageBoxSync(
-            {
-              type: "warning",
-              message: `Enhanced App Authentication`,
-              detail:
-                "Warning: On application start Trusted WiFi will be disabled until the EAA password is entered",
-              buttons: ["Enable", "Cancel"],
-            },
-            true
-          );
+        if (warningMessage) {
+          let ret = await sender.showMessageBoxSync({
+            type: "warning",
+            message: `Enhanced App Authentication`,
+            detail: "Warning!\n\n" + warningMessage,
+            buttons: ["Enable", "Cancel"],
+          });
           if (ret == 1) return; // cancel
         }
       }

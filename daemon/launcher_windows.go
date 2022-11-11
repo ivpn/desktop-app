@@ -20,11 +20,15 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build windows
+// +build windows
+
 package main
 
 import (
 	"fmt"
 
+	"github.com/ivpn/desktop-app/daemon/service"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
@@ -38,17 +42,39 @@ var _stopped chan struct{}
 
 type ivpnservice struct{}
 
+// EventType (svc.PowerEvent) info: https://learn.microsoft.com/en-us/windows/win32/power/wm-powerbroadcast
+//	https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nc-winsvc-lphandler_function_ex
+//	https://learn.microsoft.com/en-us/windows/win32/power/pbt-powersettingchange
+type PowerBroadcastType uint32
+
+const (
+	PBT_APMPOWERSTATUSCHANGE PowerBroadcastType = 10    // Power status has changed.
+	PBT_APMRESUMEAUTOMATIC   PowerBroadcastType = 18    // Operation is resuming automatically from a low-power state. This message is sent every time the system resumes.
+	PBT_APMRESUMESUSPEND     PowerBroadcastType = 7     // Operation is resuming from a low-power state. This message is sent after PBT_APMRESUMEAUTOMATIC if the resume is triggered by user input, such as pressing a key.
+	PBT_APMSUSPEND           PowerBroadcastType = 4     // System is suspending operation.
+	PBT_POWERSETTINGCHANGE   PowerBroadcastType = 32787 // A power setting change event has been received.
+)
+
+type SessioChangeType uint32
+
+const (
+	WTS_SESSION_LOGON  SessioChangeType = 0x5 // A user has logged on to the session identified by lParam.
+	WTS_SESSION_LOGOFF SessioChangeType = 0x6 // A user has logged off the session identified by lParam.
+	// More values: https://learn.microsoft.com/en-us/windows/win32/termserv/wm-wtssession-change
+)
+
 // Prepare to start IVPN service for Windows
 func doPrepareToRun() error {
+	systemLog = make(chan service.SystemLogMessage, 1)
 
-	isIntSess, err := svc.IsAnInteractiveSession()
+	isService, err := svc.IsWindowsService()
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to determine if we are running in an interactive session: %v", err))
+		log.Error(fmt.Sprintf("failed to determine if we are running in as a Windows service: %v", err))
 	}
 
-	log.Info("IsAnInteractiveSession: ", isIntSess)
-	if isIntSess {
-		log.Info("Starting as a console application (testing mode; InteractiveSession=true)")
+	log.Info("IsWindowsService: ", isService)
+	if !isService {
+		log.Info("Starting as a console application (testing mode; isService=true)")
 		// It is interactive session. Continue as console application (testing mode)
 		return nil
 	}
@@ -127,6 +153,21 @@ func runWindowsService() {
 		}
 	}()
 
+	// write service messages into system log
+	go func() {
+		for {
+			mes := <-systemLog
+			switch mes.Type {
+			case service.Info:
+				_evtlog.Info(0, mes.Message)
+			case service.Warning:
+				_evtlog.Warning(0, mes.Message)
+			case service.Error:
+				_evtlog.Error(0, mes.Message)
+			}
+		}
+	}()
+
 	log.Info(fmt.Sprintf("starting %s service", _serviceName))
 	if _evtlog != nil {
 		_evtlog.Info(1, fmt.Sprintf("starting %s service", _serviceName))
@@ -165,7 +206,7 @@ func (m *ivpnservice) Execute(args []string, r <-chan svc.ChangeRequest, changes
 		log.Info("Service handler: Stopped")
 	}()
 
-	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
+	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPowerEvent | svc.AcceptSessionChange
 	changes <- svc.Status{State: svc.StartPending}
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 
@@ -200,6 +241,15 @@ loop:
 				}
 				break loop
 
+			case svc.PowerEvent:
+				if c.EventType == uint32(PBT_APMRESUMEAUTOMATIC) {
+					serviceEventNotify(service.On_Power_WakeUp)
+				}
+
+			case svc.SessionChange:
+				if c.EventType == uint32(WTS_SESSION_LOGON) {
+					serviceEventNotify(service.On_Session_Logon)
+				}
 			default:
 				log.Warning("Unexpected service control request: ", c.Cmd)
 				if _evtlog != nil {

@@ -36,6 +36,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 )
 
 var log *logger.Logger
@@ -78,7 +79,16 @@ type Preferences struct {
 	FwUserExceptions         string // Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
 	IsStopOnClientDisconnect bool
 	Obfs4proxy               obfsproxy.Config
-	IsAutoconnectOnLaunch    bool // when 'true' - UI app (not the daemon!) will perform automation connection on app launch
+
+	// IsAutoconnectOnLaunch: if 'true' - daemon will perform automatic connection (see 'IsAutoconnectOnLaunchDaemon' for details)
+	IsAutoconnectOnLaunch bool
+	// IsAutoconnectOnLaunchDaemon:
+	//	false - means the daemon applies operation 'IsAutoconnectOnLaunch' only when UI app connected
+	//	true - means the daemon applies operation 'IsAutoconnectOnLaunch':
+	//		-	when UI app connected
+	//		-	after daemon initialization
+	//		-	on user session LogOn
+	IsAutoconnectOnLaunchDaemon bool
 
 	// split-tunnelling
 	IsSplitTunnel   bool
@@ -90,6 +100,9 @@ type Preferences struct {
 
 	// NOTE: update this type when adding new preferences which can be exposed to clients
 	UserPrefs UserPreferences
+
+	LastConnectionParams service_types.ConnectionParams
+	WiFiControl          WiFiParams
 }
 
 func Create() *Preferences {

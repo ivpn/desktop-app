@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2022 Privatus Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -20,19 +20,39 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-package srverrors
+package service
 
-// ErrorNotLoggedIn - error, user not logged in into account
-type ErrorNotLoggedIn struct {
+import "fmt"
+
+type SystemLogMessageType int
+
+const (
+	Info    SystemLogMessageType = iota
+	Warning SystemLogMessageType = iota
+	Error   SystemLogMessageType = iota
+)
+
+type SystemLogMessage struct {
+	Type    SystemLogMessageType
+	Message string
 }
 
-func (e ErrorNotLoggedIn) Error() string {
-	return "not logged in; please visit https://www.ivpn.net/ to Sign Up or Log In to get info about your Account ID"
-}
+func (s *Service) systemLog(mesType SystemLogMessageType, message string) bool {
+	ch := s._systemLog
+	if ch == nil {
+		switch mesType {
+		case Info:
+			log.Info(fmt.Sprintf("(syslog not initialized) INFO: %s", message))
+		case Warning:
+			log.Info(fmt.Sprintf("(syslog not initialized) WARNING: %s", message))
+		case Error:
+			log.Info(fmt.Sprintf("(syslog not initialized) ERROR: %s", message))
+		default:
+		}
 
-type ErrorBackgroundConnectionNoParams struct {
-}
+		return false
+	}
 
-func (e ErrorBackgroundConnectionNoParams) Error() string {
-	return "parameters for background connection are not defined; please manually connect the VPN once to initialize the default connection settings"
+	ch <- SystemLogMessage{Message: message, Type: mesType}
+	return true
 }

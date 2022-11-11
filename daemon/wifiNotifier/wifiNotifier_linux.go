@@ -167,7 +167,8 @@ static inline char*  scanSSIDList(const char* interfaceName, int *retIsInsecure,
                             && encodeFlags != -1
                             && strcmp(essid, ssidToCheckSecurity)==0)
                         {
-                            *retIsInsecure = ( encodeFlags & IW_ENCODE_DISABLED ) > 0; // IW_ENCODE_OPEN
+                            // TODO: networks with WEP encodong must be also trusred as insecure
+                            *retIsInsecure = ( encodeFlags & IW_ENCODE_DISABLED ) > 0;
                             encodeFlags = -1;
                         }
                     }
@@ -295,14 +296,7 @@ func GetCurrentSSID() string {
 
 // GetCurrentNetworkIsInsecure returns current security mode
 func GetCurrentNetworkIsInsecure() bool {
-	// TODO: implement GetCurrentNetworkIsInsecure functionality for Linux
-	return false
-
-	// ret := WiFiSecurityUnknown
-	// if C.getCurrentNetworkIsInsecure() == 1 {
-	// 	ret = WiFiSecurityNone
-	// }
-	// return ret
+	return C.getCurrentNetworkIsInsecure() == 1
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'

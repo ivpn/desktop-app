@@ -23,10 +23,10 @@
 package types
 
 import (
-	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -34,12 +34,23 @@ type EmptyReq struct {
 	RequestBase
 }
 
+type ClientTypeEnum int
+
+const (
+	ClientUi  ClientTypeEnum = iota // 0
+	ClientCli ClientTypeEnum = iota // 1
+)
+
 // Hello is an initial request
 type Hello struct {
 	RequestBase
+
+	// connected client type
+	ClientType ClientTypeEnum
 	// connected client version
 	Version string
-	Secret  uint64
+
+	Secret uint64
 
 	// when 'true' - send HelloResp to all connected clients
 	SendResponseToAllClients bool
@@ -163,71 +174,34 @@ type GetDnsPredefinedConfigs struct {
 	RequestBase
 }
 
+// WiFiAvailableNetworks - get list of available WIFI networks
+type WiFiAvailableNetworks struct {
+	RequestBase
+}
+
+// WiFiCurrentNetwork - request info about connected WIFI
+type WiFiCurrentNetwork struct {
+	RequestBase
+}
+
+// WiFiSettings - set wifi configuration
+type WiFiSettings struct {
+	RequestBase
+	Params preferences.WiFiParams
+}
+
+// ConnectSettings contains same data as 'Connect' request but this command not start the connection.
+// UI client have to notify daemon about changes in connection settings.
+// It is required for automatic connection on daemon's side (e.g. 'Auto-connect on Launch' or 'Trusted WiFi' functionality)
+type ConnectSettings struct {
+	RequestBase
+	Params service_types.ConnectionParams
+}
+
 // Connect request to establish new VPN connection
 type Connect struct {
 	RequestBase
-	// Can use IPv6 connection inside tunnel
-	// The hosts which support IPv6 have higher priority,
-	// but if there are no IPv6 hosts - we will use the IPv4 host.
-	IPv6 bool
-	// Use ONLY IPv6 hosts (ignored when IPv6!=true)
-	IPv6Only  bool
-	VpnType   vpn.Type
-	ManualDNS dns.DnsSettings
-
-	// Enable firewall before connection
-	// (if true - the parameter 'firewallDuringConnection' will be ignored)
-	FirewallOn bool
-	// Enable firewall before connection and disable after disconnection
-	// (has effect only if Firewall not enabled before)
-	FirewallOnDuringConnection bool
-
-	WireGuardParameters struct {
-		// Port in use only for Single-Hop connections
-		Port struct {
-			Port int
-		}
-
-		EntryVpnServer struct {
-			Hosts []types.WireGuardServerHostInfo
-		}
-
-		MultihopExitServer struct {
-			// ExitSrvID (geteway ID) just in use to keep clients notified about connected MH exit server
-			// in same manner as for OpenVPN connection.
-			// Example: "gateway":"zz.wg.ivpn.net" => "zz"
-			ExitSrvID string
-			Hosts     []types.WireGuardServerHostInfo
-		}
-
-		Mtu int // Set 0 to use default MTU value
-	}
-
-	OpenVpnParameters struct {
-		EntryVpnServer struct {
-			Hosts []types.OpenVPNServerHostInfo
-		}
-
-		//MultihopExitSrvID string
-		MultihopExitServer struct {
-			// ExitSrvID (gateway ID) just in use to keep clients notified about connected MH exit server
-			// Example: "gateway":"zz.wg.ivpn.net" => "zz"
-			ExitSrvID string
-			Hosts     []types.OpenVPNServerHostInfo
-		}
-
-		ProxyType     string
-		ProxyAddress  string
-		ProxyPort     int
-		ProxyUsername string
-		ProxyPassword string
-
-		Port struct {
-			Protocol int
-			// Port number in use only for Single-Hop connections
-			Port int
-		}
-	}
+	Params service_types.ConnectionParams
 }
 
 // Disconnect disconnect active VPN connection
@@ -280,16 +254,6 @@ type WireGuardGenerateNewKeys struct {
 type WireGuardSetKeysRotationInterval struct {
 	RequestBase
 	Interval int64
-}
-
-// WiFiAvailableNetworks - get list of available WIFI networks
-type WiFiAvailableNetworks struct {
-	RequestBase
-}
-
-// WiFiCurrentNetwork - request info about connected WIFI
-type WiFiCurrentNetwork struct {
-	RequestBase
 }
 
 // IPProtocol - VPN type

@@ -20,11 +20,42 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build linux
+// +build linux
+
 package main
 
-import "os"
+import (
+	"log/syslog"
+	"os"
+
+	"github.com/ivpn/desktop-app/daemon/service"
+)
 
 func doPrepareToRun() error {
+
+	// Create syslog writter
+	// and initialize channel to receive log messages from service
+	sysLogWriter, err := syslog.New(syslog.LOG_ERR, "ivpn-service")
+	if err != nil {
+		log.Error("Failed to initialize syslog: ", err)
+	} else {
+		systemLog = make(chan service.SystemLogMessage, 1)
+		go func() {
+			for {
+				mes := <-systemLog
+				switch mes.Type {
+				case service.Info:
+					sysLogWriter.Info(mes.Message)
+				case service.Warning:
+					sysLogWriter.Warning("WARNING: " + mes.Message)
+				case service.Error:
+					sysLogWriter.Err("ERROR: " + mes.Message)
+				}
+			}
+		}()
+	}
+
 	return nil
 }
 
@@ -32,12 +63,7 @@ func doStopped() {
 }
 
 func doCheckIsAdmin() bool {
-	uid := os.Geteuid()
-	if uid != 0 {
-		return false
-	}
-
-	return true
+	return os.Geteuid() == 0
 }
 
 func doStartedOnPort(port int, secret uint64) {

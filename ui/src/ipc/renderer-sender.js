@@ -197,8 +197,15 @@ export default {
     return await invoke("renderer-request-SetUserPrefs", userPrefs);
   },
 
-  SetAutoconnectOnLaunch: async (isEnabled) => {
-    return await invoke("renderer-request-SetAutoconnectOnLaunch", isEnabled);
+  SetAutoconnectOnLaunch: async (
+    isEnabled,
+    isApplicableByDaemonInBackground
+  ) => {
+    return await invoke(
+      "renderer-request-SetAutoconnectOnLaunch",
+      isEnabled,
+      isApplicableByDaemonInBackground
+    );
   },
   SetLogging: async () => {
     return await invoke("renderer-request-set-logging");
@@ -231,6 +238,10 @@ export default {
       "renderer-request-wg-set-keys-rotation-interval",
       intervalSec
     );
+  },
+
+  SetWiFiSettings: async (wifiParams) => {
+    return await invoke("renderer-request-wifi-set-settings", wifiParams);
   },
 
   GetWiFiAvailableNetworks: async () => {

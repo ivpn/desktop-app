@@ -23,7 +23,7 @@
 import { createStore } from "vuex";
 import createSharedMutations from "./vuex-modules/shared-mutations.js";
 
-import { isStrNullOrEmpty, IsRenderer } from "../helpers/helpers";
+import { IsRenderer } from "../helpers/helpers";
 
 import account from "./module-account";
 import vpnState from "./module-vpn-state";
@@ -187,14 +187,10 @@ export default createStore({
       );
     },
 
-    isWireGuardEnabled: (state) =>
-      isStrNullOrEmpty(state.disabledFunctions.WireGuardError),
-    isOpenVPNEnabled: (state) =>
-      isStrNullOrEmpty(state.disabledFunctions.OpenVPNError),
-    isObfsproxyEnabled: (state) =>
-      isStrNullOrEmpty(state.disabledFunctions.ObfsproxyError),
-    isSplitTunnelEnabled: (state) =>
-      isStrNullOrEmpty(state.disabledFunctions.SplitTunnelError),
+    isWireGuardEnabled: (state) => !state.disabledFunctions.WireGuardError,
+    isOpenVPNEnabled: (state) => !state.disabledFunctions.OpenVPNError,
+    isObfsproxyEnabled: (state) => !state.disabledFunctions.ObfsproxyError,
+    isSplitTunnelEnabled: (state) => !state.disabledFunctions.SplitTunnelError,
 
     getDnsAbilities: (state) => {
       return state.dnsAbilities;

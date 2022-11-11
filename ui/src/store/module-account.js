@@ -20,8 +20,6 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import { isStrNullOrEmpty } from "../helpers/helpers";
-
 const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
 
 export default {
@@ -105,7 +103,7 @@ export default {
   },
 
   getters: {
-    isLoggedIn: (state) => !isStrNullOrEmpty(state.session.Session),
+    isLoggedIn: (state) => !!state.session.Session,
 
     isAccountStateExists: (state) => {
       return state.accountStatus != null;

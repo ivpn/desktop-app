@@ -41,6 +41,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -61,6 +62,8 @@ type Client struct {
 
 	_paranoidModeSecret            string
 	_paranoidModeSecretRequestFunc func(*Client) (string, error)
+
+	_printFunc func(string)
 }
 
 // ResponseTimeout error
@@ -124,6 +127,10 @@ func (c *Client) SetParanoidModeSecretRequestFunc(f func(*Client) (string, error
 	c._paranoidModeSecretRequestFunc = f
 }
 
+func (c *Client) SetPrintFunc(f func(string)) {
+	c._printFunc = f
+}
+
 // SendHello - send initial message and get current status
 func (c *Client) SendHello() (helloResponse types.HelloResp, err error) {
 	return c.SendHelloEx(false)
@@ -134,11 +141,16 @@ func (c *Client) SendHelloEx(isSendResponseToAllClients bool) (helloResponse typ
 		return helloResponse, err
 	}
 
+	ver := version.Version()
+	if ver == "" {
+		ver = "unknown"
+	}
 	helloReq := types.Hello{
 		Secret:                   c._secret,
+		ClientType:               types.ClientCli,
 		KeepDaemonAlone:          true,
 		GetStatus:                true,
-		Version:                  "1.0",
+		Version:                  ver + ": CLI",
 		SendResponseToAllClients: isSendResponseToAllClients,
 	}
 
@@ -221,8 +233,8 @@ func (c *Client) SetPreferences(key, value string) error {
 
 	req := types.SetPreference{Key: key, Value: value}
 
-	// TODO: daemon have to return confirmation
-	if err := c.send(&req, 0); err != nil {
+	var resp types.EmptyResp
+	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
 	}
 
@@ -713,6 +725,32 @@ func (c *Client) SetUserPreferences(upref preferences.UserPreferences) error {
 
 	req := types.SetUserPreferences{UserPrefs: upref}
 	var resp types.SettingsResp
+	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) GetWiFiCurrentNetwork() (types.WiFiCurrentNetworkResp, error) {
+	var resp types.WiFiCurrentNetworkResp
+	if err := c.ensureConnected(); err != nil {
+		return resp, err
+	}
+
+	req := types.WiFiCurrentNetwork{}
+	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+func (c *Client) SetWiFiSettings(params preferences.WiFiParams) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	req := types.WiFiSettings{Params: params}
+	var resp types.EmptyResp
 	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
 		return err
 	}

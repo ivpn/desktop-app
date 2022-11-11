@@ -270,7 +270,6 @@
 <script>
 const sender = window.ipcSender;
 
-import { isStrNullOrEmpty } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
 
 import Image_search_windows from "@/assets/search-windows.svg";
@@ -775,7 +774,7 @@ export default {
     },
 
     searchImageInstalledApps: function () {
-      if (!isStrNullOrEmpty(this.filterAppsToAdd)) return null;
+      if (this.filterAppsToAdd) return null;
 
       switch (Platform()) {
         case PlatformEnum.Windows:

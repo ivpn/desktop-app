@@ -267,6 +267,15 @@ func (c *Client) receiverRoutine() {
 						}
 					}
 				}
+			} else if cmd.Command == types.GetTypeName(types.ErrorRespDelayed{}) {
+				// print delayed error message, received from daemon
+				pf := c._printFunc
+				if pf != nil {
+					var errDelayed types.ErrorRespDelayed
+					if err := json.Unmarshal(messageData, &errDelayed); err == nil {
+						pf("IVPN daemon notifies of an error that occurred earlier: " + errDelayed.ErrorMessage + "\n")
+					}
+				}
 			}
 
 			for receiver := range c._receivers {

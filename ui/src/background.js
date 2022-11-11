@@ -47,14 +47,13 @@ SentryInit();
 import "./ipc/main-listener";
 
 import store from "@/store";
-import { AutoLaunchSet } from "@/auto-launch";
+import { AutoLaunchSet, AutoLaunchIsEnabled } from "@/auto-launch";
 import { DaemonConnectionType, ColorTheme } from "@/store/types";
 import daemonClient from "./daemon-client";
 import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
 import { InitConnectionResumer } from "./connection-resumer";
-import { InitTrustedNetworks } from "./trusted-wifi";
 import { IsWindowHasFrame } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
@@ -139,7 +138,6 @@ ipcMain.handle(
 if (gotTheLock) {
   InitPersistentSettings();
   InitConnectionResumer();
-  InitTrustedNetworks();
   connectToDaemon();
 
   // INIT COLOR SCHEME
@@ -417,6 +415,28 @@ if (gotTheLock) {
         case "settings/showAppInSystemDock":
           updateAppDockVisibility();
           break;
+
+        case "settings/daemonSettings":
+          setTimeout(async () => {
+            try {
+              let dSettings = store.state.settings.daemonSettings;
+              if (
+                dSettings.IsAutoconnectOnLaunchDaemon === true ||
+                dSettings.WiFi.canApplyInBackground === true
+              ) {
+                if (AutoLaunchIsEnabled() !== true) {
+                  console.log(
+                    "Background VPN management is active: Enabling 'Launch at login' ..."
+                  );
+                  AutoLaunchSet(true);
+                }
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }, 0);
+          break;
+
         case "account/session":
           if (store.getters["account/isLoggedIn"] !== true) {
             closeSettingsWindow();

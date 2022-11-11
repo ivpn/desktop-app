@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2022 Privatus Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -20,19 +20,17 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-package srverrors
+package main
 
-// ErrorNotLoggedIn - error, user not logged in into account
-type ErrorNotLoggedIn struct {
-}
+import "github.com/ivpn/desktop-app/daemon/service"
 
-func (e ErrorNotLoggedIn) Error() string {
-	return "not logged in; please visit https://www.ivpn.net/ to Sign Up or Log In to get info about your Account ID"
-}
+var serviceEventsChan chan service.ServiceEventType = make(chan service.ServiceEventType, 1)
 
-type ErrorBackgroundConnectionNoParams struct {
-}
-
-func (e ErrorBackgroundConnectionNoParams) Error() string {
-	return "parameters for background connection are not defined; please manually connect the VPN once to initialize the default connection settings"
+func serviceEventNotify(evt service.ServiceEventType) bool {
+	select {
+	case serviceEventsChan <- evt:
+		return true
+	default:
+		return false
+	}
 }
