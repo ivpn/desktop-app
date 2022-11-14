@@ -126,20 +126,23 @@ func ExecAndProcessOutput(logger *logger.Logger, outProcessFunc func(text string
 }
 
 // ExecAndGetOutput - execute external process and return it's console output
-func ExecAndGetOutput(logger *logger.Logger, maxRetBuffSize int, textToHideInLog string, name string, args ...string) (outText string, outErrText string, exitCode int, err error) {
+func ExecAndGetOutput(logger *logger.Logger, maxRetBuffSize int, textToHideInLog string, name string, args ...string) (outText string, outErrText string, exitCode int, isBufferTooSmall bool, err error) {
 	strOut := strings.Builder{}
 	strErr := strings.Builder{}
+	isBufferTooSmall = false
 	outProcessFunc := func(text string, isError bool) {
 		if len(text) == 0 {
 			return
 		}
 		if isError {
 			if strErr.Len() > maxRetBuffSize {
+				isBufferTooSmall = true
 				return
 			}
 			strErr.WriteString(text + "\n")
 		} else {
 			if strOut.Len() > maxRetBuffSize {
+				isBufferTooSmall = true
 				return
 			}
 			strOut.WriteString(text + "\n")
@@ -155,7 +158,7 @@ func ExecAndGetOutput(logger *logger.Logger, maxRetBuffSize int, textToHideInLog
 		}
 	}
 
-	return strOut.String(), strErr.String(), retExitCode, retErr
+	return strOut.String(), strErr.String(), retExitCode, isBufferTooSmall, retErr
 }
 
 // ExecEx - execute external process

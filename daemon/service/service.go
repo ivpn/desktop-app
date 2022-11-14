@@ -1348,8 +1348,11 @@ func (s *Service) GetDiagnosticLogs() (logActive string, logPrevSession string, 
 }
 
 func (s *Service) diagnosticGetCommandOutput(command string, args ...string) string {
-	outText, outErrText, _, err := shell.ExecAndGetOutput(nil, 1024*5, "", command, args...)
+	outText, outErrText, _, isBufferTooSmall, err := shell.ExecAndGetOutput(nil, 1024*30, "", command, args...)
 	ret := fmt.Sprintf("[ $ %s %v ]:\n%s", command, args, outText)
+	if isBufferTooSmall {
+		ret += "... (buffer too small)"
+	}
 	if len(outErrText) > 0 {
 		ret += "\n [ERROR CHANNEL OUTPUT]: " + outErrText
 	}

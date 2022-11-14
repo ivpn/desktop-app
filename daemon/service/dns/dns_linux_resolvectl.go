@@ -276,7 +276,7 @@ func rctl_configOk() (bool, error) {
 	localInterfaceName := inf.Name
 
 	binPath := platform.ResolvectlBinPath()
-	outText, _, _, _ := shell.ExecAndGetOutput(nil, 1024*5, "", binPath, "status", localInterfaceName)
+	outText, _, _, _, _ := shell.ExecAndGetOutput(nil, 1024*5, "", binPath, "status", localInterfaceName)
 
 	regExpCurDns, err := regexp.Compile(fmt.Sprintf("(?i)[ \t\n\r]+DNS Servers:[ \t]*%s[ \t\n\r]+", manualDNS.DnsHost))
 	if err != nil {
