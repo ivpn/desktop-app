@@ -97,6 +97,7 @@ const LogProperties = Object.freeze({
   Settings: " Settings",
   Log0: "Log0_Old",
   Log1: "Log1_Active",
+  ExtraInfo: "ExtraInfo",
 });
 
 export default {
@@ -164,7 +165,13 @@ export default {
         if (!val) continue;
         val = val.replace(/\\n/g, "\n");
 
-        text.push(pName.trim() + ": ");
+        if (pName == LogProperties.ExtraInfo) {
+          text.push("----------------------\n");
+          text.push(pName.trim() + "\n");
+          text.push("----------------------\n");
+        } else {
+          text.push(pName.trim() + ": ");
+        }
         text.push(val + "\n\n");
       }
       return text.join("");
@@ -198,11 +205,8 @@ export default {
           return;
         }
 
-        let data = JSON.parse(JSON.stringify(this.diagnosticDataObj))
-        let id = await sender.SubmitDiagnosticLogs(
-          this.userComment,
-          data
-        );
+        let data = JSON.parse(JSON.stringify(this.diagnosticDataObj));
+        let id = await sender.SubmitDiagnosticLogs(this.userComment, data);
 
         sender.showMessageBoxSync({
           type: "info",

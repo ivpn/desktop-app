@@ -117,3 +117,10 @@ func (s *Service) implSplitTunnelling_RemoveApp(pid int, binaryPath string) (err
 func (s *Service) implSplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error {
 	return fmt.Errorf("function not applicable for this platform")
 }
+
+func (s *Service) implGetDiagnosticExtraInfo() (string, error) {
+	ifconfig := s.diagnosticGetCommandOutput("ipconfig /all")
+	route := s.diagnosticGetCommandOutput("route", "print")
+
+	return fmt.Sprintf("%s\n%s", ifconfig, route), nil
+}

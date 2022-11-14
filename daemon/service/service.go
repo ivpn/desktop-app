@@ -47,6 +47,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/service/types"
+	"github.com/ivpn/desktop-app/daemon/shell"
 	"github.com/ivpn/desktop-app/daemon/splittun"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
@@ -1327,6 +1328,35 @@ func (s *Service) WireGuardGenerateKeys(updateIfNecessary bool) error {
 	}
 
 	return nil
+}
+
+// ////////////////////////////////////////////////////////
+// Diagnostic
+// ////////////////////////////////////////////////////////
+func (s *Service) GetDiagnosticLogs() (logActive string, logPrevSession string, extraInfo string, err error) {
+	log, log0, err := logger.GetLogText(1024 * 64)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	extraInfo, err1 := s.implGetDiagnosticExtraInfo()
+	if err1 != nil {
+		extraInfo = fmt.Sprintf("<failed to obtain extra info> : %s : %s", err1.Error(), extraInfo)
+	}
+
+	return log, log0, extraInfo, nil
+}
+
+func (s *Service) diagnosticGetCommandOutput(command string, args ...string) string {
+	outText, outErrText, _, err := shell.ExecAndGetOutput(nil, 1024*5, "", command, args...)
+	ret := fmt.Sprintf("[ $ %s %v ]:\n%s", command, args, outText)
+	if len(outErrText) > 0 {
+		ret += "\n [ERROR CHANNEL OUTPUT]: " + outErrText
+	}
+	if err != nil {
+		ret += "\n [ERROR]: " + err.Error()
+	}
+	return ret
 }
 
 //////////////////////////////////////////////////////////

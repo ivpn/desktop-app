@@ -220,6 +220,7 @@ type DiagnosticsGeneratedResp struct {
 	CommandBase
 	Log0_Old    string // previous daemon session log
 	Log1_Active string // active daemon log
+	ExtraInfo   string // Extra info for logging (e.g. ifconfig, netstat -nr ... etc.)
 }
 
 // SetAlternateDNSResp returns status of changing DNS

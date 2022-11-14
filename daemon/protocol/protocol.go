@@ -142,6 +142,8 @@ type Service interface {
 
 	GetWiFiCurrentState() (ssid string, isInsecureNetwork bool)
 	GetWiFiAvailableNetworks() []string
+
+	GetDiagnosticLogs() (logActive string, logPrevSession string, extraInfo string, err error)
 }
 
 // CreateProtocol - Create new protocol object
@@ -859,10 +861,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	case "GenerateDiagnostics":
-		if log, log0, err := logger.GetLogText(1024 * 64); err != nil {
+		if log, log0, extraInfo, err := p._service.GetDiagnosticLogs(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
-			p.sendResponse(conn, &types.DiagnosticsGeneratedResp{Log1_Active: log, Log0_Old: log0}, reqCmd.Idx)
+			p.sendResponse(conn, &types.DiagnosticsGeneratedResp{Log1_Active: log, Log0_Old: log0, ExtraInfo: extraInfo}, reqCmd.Idx)
 		}
 
 	case "SetAlternateDns":

@@ -110,10 +110,21 @@ func (s *Service) implSplitTunnelling_RemoveApp(pid int, binaryPath string) (err
 // Parameters:
 // pid 			- process PID
 // exec 		- Command executed in ST environment (e.g. binary + arguments)
-// 				  (identical to SplitTunnelAddApp.Exec and SplitTunnelAddAppCmdResp.Exec)
+//
+//	(identical to SplitTunnelAddApp.Exec and SplitTunnelAddAppCmdResp.Exec)
+//
 // cmdToExecute - Shell command used to perform this operation
 func (s *Service) implSplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error {
 	return splittun.AddPid(pid, exec)
+}
+
+func (s *Service) implGetDiagnosticExtraInfo() (string, error) {
+	ifconfig := s.diagnosticGetCommandOutput("ifconfig")
+	netstat := s.diagnosticGetCommandOutput("netstat", "-nr", "--protocol", "inet,inet6")
+	resolvectl := s.diagnosticGetCommandOutput("resolvectl", "status")
+	resolvconf := s.diagnosticGetCommandOutput("cat", "/etc/resolv.conf")
+
+	return fmt.Sprintf("%s\n%s\n%s\n%s", ifconfig, netstat, resolvectl, resolvconf), nil
 }
 
 // Function: Check if the same process already running
