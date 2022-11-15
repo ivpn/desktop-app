@@ -25,6 +25,7 @@ import {
   NormalizedConfigPortObject,
   ServersSortTypeEnum,
   ColorTheme,
+  ColorThemeTrayIcon,
   DnsEncryption,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
@@ -167,6 +168,7 @@ const getDefaultState = () => {
     showAppInSystemDock: false,
     serversSortType: ServersSortTypeEnum.City,
     colorTheme: ColorTheme.system,
+    colorThemeTrayIcon: ColorThemeTrayIcon.auto,
     connectSelectedMapLocation: false,
     windowRestorePosition: null, // {x=xxx, y=xxx}
     showHosts: false, //Enable selection of individual servers in server selection list
@@ -407,6 +409,9 @@ export default {
     },
     colorTheme(state, val) {
       state.colorTheme = val;
+    },
+    colorThemeTrayIcon(state, val) {
+      state.colorThemeTrayIcon = val;
     },
     windowRestorePosition(state, val) {
       state.windowRestorePosition = val;
@@ -765,6 +770,9 @@ export default {
     },
     colorTheme(context, val) {
       context.commit("colorTheme", val);
+    },
+    colorThemeTrayIcon(context, val) {
+      context.commit("colorThemeTrayIcon", val);
     },
     showHosts(context, val) {
       context.commit("showHosts", val);

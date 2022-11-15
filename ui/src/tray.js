@@ -23,9 +23,12 @@
 
 const { Menu, Tray, app, nativeImage, dialog } = require("electron");
 import store from "@/store";
-import { PauseStateEnum } from "@/store/types";
+import {
+  PauseStateEnum,
+  VpnStateEnum,
+  ColorThemeTrayIcon,
+} from "@/store/types";
 
-import { VpnStateEnum } from "@/store/types";
 import daemonClient from "@/daemon-client";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import path from "path";
@@ -182,7 +185,9 @@ export function InitTray(
         case "account/session":
           updateTrayMenu();
           break;
-
+        case "settings/colorThemeTrayIcon":
+          updateTrayIcon();
+          break;
         case "isRequestingLocation":
         case "isRequestingLocationIPv6":
           updateTrayMenu();
@@ -201,10 +206,23 @@ export function InitTray(
 
 function updateTrayIcon() {
   if (tray == null) return;
+
+  let isLightIcons = useIconsForDarkTheme !== false;
+
+  switch (store.state.settings.colorThemeTrayIcon) {
+    case ColorThemeTrayIcon.light:
+      isLightIcons = true;
+      break;
+    case ColorThemeTrayIcon.dark:
+      isLightIcons = false;
+      break;
+    default:
+      break;
+  }
+
   if (store.getters["vpnState/isConnecting"]) {
     let icons = iconsConnecting;
-    if (useIconsForDarkTheme === false) icons = iconsConnecting_ForLightTheme;
-
+    if (isLightIcons === false) icons = iconsConnecting_ForLightTheme;
     tray.setImage(icons[iconConnectingIdx % icons.length]);
     if (icons.length > 1) {
       setTimeout(() => {
@@ -226,19 +244,15 @@ function updateTrayIcon() {
     iconPaused != null
   )
     tray.setImage(
-      useIconsForDarkTheme === false ? iconPaused_ForLightTheme : iconPaused
+      isLightIcons === false ? iconPaused_ForLightTheme : iconPaused
     );
   else if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED) {
     tray.setImage(
-      useIconsForDarkTheme === false
-        ? iconConnected_ForLightTheme
-        : iconConnected
+      isLightIcons === false ? iconConnected_ForLightTheme : iconConnected
     );
   } else {
     tray.setImage(
-      useIconsForDarkTheme === false
-        ? iconDisconnected_ForLightTheme
-        : iconDisconnected
+      isLightIcons === false ? iconDisconnected_ForLightTheme : iconDisconnected
     );
   }
 }
