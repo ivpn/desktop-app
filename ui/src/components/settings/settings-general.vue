@@ -75,6 +75,7 @@
       <div class="defColor paramName" style="min-width: 102px">Tray icon:</div>
       <select v-model="colorThemeTrayIcon">
         <option
+          v-if="isCanShowTrayIconThemeAuto"
           :value="colorThemeTrayIconEnum.auto"
           :key="colorThemeTrayIconEnum.auto"
         >
@@ -403,6 +404,11 @@ export default {
       },
     },
     isCanShowTrayIconTheme() {
+      return (
+        Platform() === PlatformEnum.Windows || Platform() === PlatformEnum.Linux
+      );
+    },
+    isCanShowTrayIconThemeAuto() {
       return Platform() === PlatformEnum.Windows;
     },
     colorThemeTrayIconEnum() {
@@ -410,9 +416,12 @@ export default {
     },
     colorThemeTrayIcon: {
       get() {
-        if (!this.$store.state.settings.colorThemeTrayIcon)
-          return ColorThemeTrayIcon.auto;
-        return this.$store.state.settings.colorThemeTrayIcon;
+        let ret = ColorThemeTrayIcon.auto;
+        if (this.$store.state.settings.colorThemeTrayIcon != undefined)
+          ret = this.$store.state.settings.colorThemeTrayIcon;
+        if (!this.isCanShowTrayIconThemeAuto && ret === ColorThemeTrayIcon.auto)
+          ret = ColorThemeTrayIcon.light;
+        return ret;
       },
       set(value) {
         this.$store.dispatch("settings/colorThemeTrayIcon", value);

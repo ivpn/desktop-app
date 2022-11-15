@@ -139,6 +139,20 @@ export function InitTray(
         iconDisconnected = nativeImage.createFromPath(f + "disconnected.png");
         iconPaused = nativeImage.createFromPath(f + "paused.png");
         iconsConnecting.push(nativeImage.createFromPath(f + "connecting.png"));
+
+        // lightTheme
+        iconConnected_ForLightTheme = nativeImage.createFromPath(
+          f + "connected_lt.png"
+        );
+        iconDisconnected_ForLightTheme = nativeImage.createFromPath(
+          f + "disconnected_lt.png"
+        );
+        iconPaused_ForLightTheme = nativeImage.createFromPath(
+          f + "paused_lt.png"
+        );
+        iconsConnecting_ForLightTheme.push(
+          nativeImage.createFromPath(f + "connecting_lt.png")
+        );
       }
       break;
     case PlatformEnum.macOS:
