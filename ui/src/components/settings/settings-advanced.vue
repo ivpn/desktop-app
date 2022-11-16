@@ -96,6 +96,16 @@ export default {
             "On application start Trusted WiFi will be disabled until the EAA password is entered.";
         }
 
+        if (
+          true ===
+          this.$store.state.settings?.daemonSettings?.WiFi
+            ?.connectVPNOnInsecureNetwork
+        ) {
+          if (warningMessage) warningMessage += "\n\n";
+          warningMessage +=
+            "On application start `Autoconnect on joining networks without encryption` will be disabled until the EAA password is entered.";
+        }
+
         if (warningMessage) {
           let ret = await sender.showMessageBoxSync({
             type: "warning",

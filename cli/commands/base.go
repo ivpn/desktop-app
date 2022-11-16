@@ -268,7 +268,7 @@ func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isFullPrint bool
 	return w
 }
 
-func printParamoidModeState(w *tabwriter.Writer, helloResp types.HelloResp) *tabwriter.Writer {
+func printParanoidModeState(w *tabwriter.Writer, helloResp types.HelloResp) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}

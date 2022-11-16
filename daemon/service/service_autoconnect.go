@@ -109,6 +109,10 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 		return nil
 	}
 
+	if !s._evtReceiver.IsCanDoBackgroundAction() {
+		return nil // background actions not allowed (e.g. due to EAA enabled)
+	}
+
 	var wifiInfo wifiStatus
 	// Check WiFi status (if not defined)
 	if wifiInfoPtr == nil {
@@ -118,7 +122,7 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 		wifiInfo = *wifiInfoPtr
 	}
 
-	// Check if WiFi alredy processed
+	// Check if WiFi already processed
 	isWifiProcessedAlready := false
 
 	currWiFi := lastProcessedWiFiInfo{wifi: wifiInfo, params: prefs.WiFiControl}

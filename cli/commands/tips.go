@@ -50,6 +50,7 @@ const (
 	TipEaaDisable                TipType = iota
 	TipWiFiStatus                TipType = iota
 	TipWiFiHelp                  TipType = iota
+	TipAutoconnectHelp           TipType = iota
 )
 
 func PrintTips(tips []TipType) {
@@ -111,6 +112,8 @@ func PrintTip(w *tabwriter.Writer, tip TipType) {
 		str = newTip("wifi -status", "Show WiFi settings")
 	case TipWiFiHelp:
 		str = newTip("wifi -h", "Show usage of 'wifi' command")
+	case TipAutoconnectHelp:
+		str = newTip("autoconnect -h", "Show usage of 'autoconnect' command")
 	}
 
 	if len(str) > 0 {

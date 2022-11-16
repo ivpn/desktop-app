@@ -48,15 +48,19 @@ func (c *CmdAutoConnect) Init() {
 }
 
 func (c *CmdAutoConnect) Run() error {
+	isChanged := false
 
 	if len(c.on_launch_val) > 0 {
 		val, err := helpers.BoolParameterParse(c.on_launch_val)
 		if err != nil {
 			return err
 		}
+
 		if err := c.setAutoconnectOnLaunch(val, true); err != nil {
 			return err
 		}
+
+		isChanged = true
 	}
 
 	// -status
@@ -68,10 +72,18 @@ func (c *CmdAutoConnect) Run() error {
 	w := c.printAutoconnectSettings(nil)
 	w.Flush()
 
+	if !isChanged {
+		PrintTips([]TipType{TipAutoconnectHelp})
+	}
+
 	return nil
 }
 
 func (c *CmdAutoConnect) setAutoconnectOnLaunch(enable bool, runInBackground bool) error {
+
+	if enable && runInBackground && _proto.GetHelloResponse().ParanoidMode.IsEnabled {
+		return EaaEnabledOptionNotApplicable{}
+	}
 
 	enable_strVal := "false"
 	if enable {

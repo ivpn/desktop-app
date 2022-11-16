@@ -50,6 +50,7 @@
       <input
         type="checkbox"
         id="connectVPNOnInsecureNetwork"
+        @click="connectVPNOnInsecureNetworkOnClick"
         v-model="connectVPNOnInsecureNetwork"
       />
       <label class="defColor" for="connectVPNOnInsecureNetwork"
@@ -319,6 +320,28 @@ export default {
             message: `Enhanced App Authentication`,
             detail:
               "Warning: On application start Trusted WiFi will be disabled until the EAA password is entered",
+            buttons: ["Enable", "Cancel"],
+          },
+          true
+        );
+        if (ret == 1) {
+          // cancel
+          evt.returnValue = false;
+        }
+      }
+    },
+
+    async connectVPNOnInsecureNetworkOnClick(evt) {
+      if (
+        (this.connectVPNOnInsecureNetwork === false) & // going to enable
+        (this.$store.state.paranoidModeStatus.IsEnabled === true) // EAA enabled
+      ) {
+        let ret = await sender.showMessageBoxSync(
+          {
+            type: "warning",
+            message: `Enhanced App Authentication`,
+            detail:
+              "Warning: On application start `Autoconnect on joining networks without encryption` will be disabled until the EAA password is entered",
             buttons: ["Enable", "Cancel"],
           },
           true

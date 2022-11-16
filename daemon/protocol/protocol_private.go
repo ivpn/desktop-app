@@ -76,6 +76,15 @@ func (p *Protocol) IsClientConnected(checkOnlyUiClients bool) bool {
 	return false
 }
 
+// IsCanDoBackgroundAction returns 'false' when no background action allowed (e.g. EAA enabled but no authenticated clients connected)
+func (p *Protocol) IsCanDoBackgroundAction() bool {
+	if p._eaa.IsEnabled() {
+		const checkOnlyUiClients = true
+		return p.IsClientConnected(checkOnlyUiClients)
+	}
+	return true
+}
+
 func (p *Protocol) clientConnected(c net.Conn, cType types.ClientTypeEnum) {
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()

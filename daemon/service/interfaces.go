@@ -82,4 +82,6 @@ type IServiceEventsReceiver interface {
 	RegisterConnectionRequest(params service_types.ConnectionParams) error
 	// IsClientConnected checks is any authenticated connection available of specific client type
 	IsClientConnected(checkOnlyUiClients bool) bool
+	// IsCanDoBackgroundAction returns 'false' when no background action allowed (e.g. EAA enabled but no authenticated clients connected)
+	IsCanDoBackgroundAction() bool
 }
