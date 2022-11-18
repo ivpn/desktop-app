@@ -54,7 +54,6 @@ const (
 type CmdWiFi struct {
 	flags.CmdInfo
 	status               bool
-	background_control   string //[on/off]
 	connect_on_insecure  string //[on/off]
 	trusted_control      string //[on/off]
 	default_trust_status string //[none/trusted/untrusted]
@@ -68,14 +67,6 @@ func (c *CmdWiFi) Init() {
 
 	c.Initialize("wifi", "WiFi control settings")
 	c.BoolVar(&c.status, "status", false, "(default) Show settings")
-	c.StringVar(&c.background_control, "background_control", "", "[on/off]",
-		`Allow background daemon to Apply WiFi Control settings
-		By enabling this feature the IVPN daemon will apply the WiFi control settings
-		before the IVPN app has been launched. This enables the WiFi control settings
-		to be applied as quickly as possible as the daemon is started early
-		in the operating system boot process and before the IVPN app (The GUI).
-		NOTE: This parameter must be enabled to make work 'wifi' settings 
-		independently from the GUI app.`)
 	c.StringVarEx(&c.connect_on_insecure, "connect_on_insecure", "", "[on/off]", "Autoconnect on joining WiFi networks without encryption",
 		isInsecureNetworksSuppported)
 	c.StringVar(&c.trusted_control, "trusted_control", "", "[on/off]",
@@ -123,19 +114,13 @@ func (c *CmdWiFi) Run() error {
 
 	isSettingsChanged := false
 
-	if len(c.background_control) > 0 {
-		val, err := helpers.BoolParameterParse(c.background_control) // [on/off]
-		if err != nil {
-			return err
-		}
-		wifiSettings.CanApplyInBackground = val
-		isSettingsChanged = true
-	}
-
 	if len(c.connect_on_insecure) > 0 {
 		val, err := helpers.BoolParameterParse(c.connect_on_insecure) // [on/off]
 		if err != nil {
 			return err
+		}
+		if val && helloResp.ParanoidMode.IsEnabled {
+			return EaaEnabledOptionNotApplicable{}
 		}
 		wifiSettings.ConnectVPNOnInsecureNetwork = val
 		isSettingsChanged = true
@@ -146,9 +131,15 @@ func (c *CmdWiFi) Run() error {
 		if err != nil {
 			return err
 		}
+		if val && helloResp.ParanoidMode.IsEnabled {
+			return EaaEnabledOptionNotApplicable{}
+		}
 		wifiSettings.TrustedNetworksControl = val
 		isSettingsChanged = true
 	}
+
+	// change "Allow background daemon to Apply WiFi Control settings" (based on other wifi parameters)
+	wifiSettings.CanApplyInBackground = wifiSettings.ConnectVPNOnInsecureNetwork || wifiSettings.TrustedNetworksControl
 
 	if len(c.default_trust_status) > 0 {
 		//[none/trusted/untrusted]
@@ -329,11 +320,11 @@ func (c *CmdWiFi) printStatus(w *tabwriter.Writer) *tabwriter.Writer {
 	wifiSettings := _proto.GetHelloResponse().DaemonSettings.WiFi
 	fmt.Fprintf(w, "Connected WiFi network%s\t:\t%v\n", curNetworkInfo, curNetworkName)
 
-	fmt.Fprintf(w, "Allow background daemon to Apply WiFi Control settings\t:\t%v\n", boolToStr(wifiSettings.CanApplyInBackground))
+	//fmt.Fprintf(w, "Allow background daemon to Apply WiFi Control settings\t:\t%v\n", boolToStr(wifiSettings.CanApplyInBackground))
 	if isInsecureNetworksSuppported() {
-		fmt.Fprintf(w, "Autoconnect on joining WiFi networks without encryption\t:\t%v\n", boolToStr(wifiSettings.ConnectVPNOnInsecureNetwork))
+		fmt.Fprintf(w, "Autoconnect on joining WiFi networks without encryption\t:\t%v\n", boolToStr(wifiSettings.CanApplyInBackground && wifiSettings.ConnectVPNOnInsecureNetwork))
 	}
-	fmt.Fprintf(w, "Trusted/Untrusted WiFi network control\t:\t%v\n", boolToStr(wifiSettings.TrustedNetworksControl))
+	fmt.Fprintf(w, "Trusted/Untrusted WiFi network control\t:\t%v\n", boolToStr(wifiSettings.CanApplyInBackground && wifiSettings.TrustedNetworksControl))
 	fmt.Fprintf(w, "Default trust status for undefined networks\t:\t%v\n", boolToStrEx(wifiSettings.DefaultTrustStatusTrusted, "Trusted", "Untrusted", "No status"))
 	fmt.Fprintf(w, "Actions:\t\n")
 	fmt.Fprintf(w, "    Actions for Untrusted WiFi:\t\n")

@@ -100,7 +100,20 @@ func (c *CmdParanoidMode) Run() error {
 	}
 
 	if c.enable && !_proto.GetHelloResponse().ParanoidMode.IsEnabled {
-		fmt.Println("Enabling Enhanced App Authentication")
+		fmt.Print("Enabling Enhanced App Authentication\n\n")
+
+		daemonSettings := _proto.GetHelloResponse().DaemonSettings
+		if daemonSettings.IsAutoconnectOnLaunch && _proto.GetHelloResponse().DaemonSettings.IsAutoconnectOnLaunchDaemon {
+			fmt.Print("Warning! 'Autoconnect on daemon launch' will not be applied\n\n")
+		}
+		if daemonSettings.WiFi.CanApplyInBackground {
+			if daemonSettings.WiFi.TrustedNetworksControl {
+				fmt.Print("Warning! 'Trusted WiFi' will not be applied\n         (until the EAA password is entered in Graphical User Interface application)\n\n")
+			}
+			if daemonSettings.WiFi.ConnectVPNOnInsecureNetwork {
+				fmt.Print("Warning! 'Autoconnect on joining WiFi networks without encryption' will not be applied\n         (until the EAA password is entered in Graphical User Interface application)\n\n")
+			}
+		}
 
 		fmt.Print("\tEnter new password: ")
 		data, err := term.ReadPassword(int(syscall.Stdin))
@@ -133,7 +146,7 @@ func (c *CmdParanoidMode) Run() error {
 
 	// print state
 	var w *tabwriter.Writer
-	w = printParamoidModeState(w, _proto.GetHelloResponse())
+	w = printParanoidModeState(w, _proto.GetHelloResponse())
 	w.Flush()
 
 	if _proto.GetHelloResponse().ParanoidMode.IsEnabled {
