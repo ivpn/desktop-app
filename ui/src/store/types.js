@@ -79,6 +79,12 @@ export const ColorTheme = Object.freeze({
   dark: "dark",
 });
 
+export const ColorThemeTrayIcon = Object.freeze({
+  auto: "auto",
+  light: "light",
+  dark: "dark",
+});
+
 export const AppUpdateStage = Object.freeze({
   NoStatus: "No update status",
   CheckingForUpdates: "Checking for app updates...",

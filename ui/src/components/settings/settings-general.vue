@@ -57,9 +57,11 @@
     </div>
 
     <div class="settingsBoldFont">View:</div>
-    <div class="flexRow paramBlock">
-      <div class="defColor paramName">Color theme:</div>
-      <select v-model="colorTheme" style="margin-left: 30px">
+    <div class="flexRow param">
+      <div class="defColor paramName" style="min-width: 102px">
+        Color theme:
+      </div>
+      <select v-model="colorTheme">
         <option :value="colorThemeEnum.system" :key="colorThemeEnum.system">
           System default
         </option>
@@ -67,6 +69,31 @@
           Light
         </option>
         <option :value="colorThemeEnum.dark" :key="colorThemeEnum.dark">
+          Dark
+        </option>
+      </select>
+    </div>
+
+    <div class="flexRow param" v-if="isCanShowTrayIconTheme">
+      <div class="defColor paramName" style="min-width: 102px">Tray icon:</div>
+      <select v-model="colorThemeTrayIcon">
+        <option
+          v-if="isCanShowTrayIconThemeAuto"
+          :value="colorThemeTrayIconEnum.auto"
+          :key="colorThemeTrayIconEnum.auto"
+        >
+          Auto
+        </option>
+        <option
+          :value="colorThemeTrayIconEnum.light"
+          :key="colorThemeTrayIconEnum.light"
+        >
+          Light
+        </option>
+        <option
+          :value="colorThemeTrayIconEnum.dark"
+          :key="colorThemeTrayIconEnum.dark"
+        >
           Dark
         </option>
       </select>
@@ -226,7 +253,7 @@
 </template>
 
 <script>
-import { ColorTheme } from "@/store/types";
+import { ColorTheme, ColorThemeTrayIcon } from "@/store/types";
 import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import ComponentDialog from "@/components/component-dialog.vue";
@@ -472,6 +499,30 @@ export default {
       set(value) {
         sender.ColorSchemeSet(value);
         this.colorScheme = value;
+      },
+    },
+    isCanShowTrayIconTheme() {
+      return (
+        Platform() === PlatformEnum.Windows || Platform() === PlatformEnum.Linux
+      );
+    },
+    isCanShowTrayIconThemeAuto() {
+      return Platform() === PlatformEnum.Windows;
+    },
+    colorThemeTrayIconEnum() {
+      return ColorThemeTrayIcon;
+    },
+    colorThemeTrayIcon: {
+      get() {
+        let ret = ColorThemeTrayIcon.auto;
+        if (this.$store.state.settings.colorThemeTrayIcon != undefined)
+          ret = this.$store.state.settings.colorThemeTrayIcon;
+        if (!this.isCanShowTrayIconThemeAuto && ret === ColorThemeTrayIcon.auto)
+          ret = ColorThemeTrayIcon.light;
+        return ret;
+      },
+      set(value) {
+        this.$store.dispatch("settings/colorThemeTrayIcon", value);
       },
     },
     diagnosticViewIsGeneral() {
