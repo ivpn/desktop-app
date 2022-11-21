@@ -789,8 +789,32 @@ func (s *Service) ResetPreferences() error {
 
 func (s *Service) SetConnectionParams(params types.ConnectionParams) error {
 	prefs := s._preferences
+
+	isOldParamsDefined := prefs.LastConnectionParams.CheckIsDefined() == nil
+
+	retErr := s.setConnectionParams(params)
+
+	if !isOldParamsDefined && prefs.LastConnectionParams.CheckIsDefined() != nil {
+		// if it is first initialization of connection parameters - run auto-connection rules
+		// (seems, it is first start after app version upgrade)
+
+		prefs := s.Preferences()
+		const checkOnlyUiClients = true
+		if prefs.Session.IsLoggedIn() && s._evtReceiver.IsClientConnected(checkOnlyUiClients) {
+			log.Info("Applying auto-connection rules (reason: first initialization of connection parameters) ...")
+			s.autoConnectIfRequired(OnUiClientConnected, nil)
+		}
+	}
+
+	return retErr
+}
+
+func (s *Service) setConnectionParams(params types.ConnectionParams) error {
+	prefs := s._preferences
+
 	prefs.LastConnectionParams = params
 	s.setPreferences(prefs)
+
 	return nil
 }
 
