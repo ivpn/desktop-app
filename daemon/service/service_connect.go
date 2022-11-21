@@ -91,7 +91,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 	}()
 
 	// keep last used connection params
-	s.SetConnectionParams(params)
+	s.setConnectionParams(params)
 
 	retManualDNS := params.ManualDNS
 
