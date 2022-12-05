@@ -87,6 +87,8 @@ func printUsageAll(short bool) {
 
 	if short {
 		commands.PrintTips([]commands.TipType{commands.TipHelpCommand, commands.TipHelpFull})
+	} else {
+		commands.PrintTips([]commands.TipType{commands.TipHelp, commands.TipHelpCommand})
 	}
 }
 
@@ -113,6 +115,8 @@ func main() {
 	addCommand(&commands.CmdLogout{})
 	addCommand(&commands.CmdAccount{})
 	addCommand(&commands.CmdParanoidMode{})
+	addCommand(&commands.CmdAutoConnect{})
+	addCommand(&commands.CmdWiFi{})
 
 	if len(os.Args) >= 2 {
 		arg1 := strings.TrimLeft(strings.ToLower(os.Args[1]), "-")
@@ -128,7 +132,7 @@ func main() {
 
 		if arg1 == "?" || arg1 == "h" || arg1 == "help" {
 			if arg2 == "full" {
-				printUsageAll(false) // detailed commans descriptions
+				printUsageAll(false) // detailed commands descriptions
 			} else {
 				printUsageAll(true) // short commands descriptions
 			}
@@ -145,13 +149,15 @@ func main() {
 	}
 
 	proto := protocol.CreateClient(port, secret)
+
+	proto.SetParanoidModeSecretRequestFunc(RequestParanoidModePassword)
+	proto.SetPrintFunc(PrintToConsoleFunc)
+
 	if err := proto.Connect(); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Failed to connect to service : %s\n", err)
 		printServStartInstructions()
 		os.Exit(1)
 	}
-
-	proto.SetParanoidModeSecretRequestFunc(RequestParanoidModePassword)
 
 	commands.Initialize(proto)
 
@@ -174,7 +180,7 @@ func main() {
 	}
 
 	// unknown command
-	if isProcessed == false {
+	if !isProcessed {
 		fmt.Fprintf(os.Stderr, "Error. Unexpected command %s\n", os.Args[1])
 		printUsageAll(true)
 		os.Exit(1)
@@ -198,11 +204,15 @@ func RequestParanoidModePassword(c *protocol.Client) (string, error) {
 	return secret, nil
 }
 
+func PrintToConsoleFunc(text string) {
+	fmt.Println(text)
+}
+
 func runCommand(c ICommand, args []string) {
 
 	funcExitErrBadParam := func(err error) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		if _, ok := err.(flags.BadParameter); ok == true {
+		if _, ok := err.(flags.BadParameter); ok {
 			c.Usage(false)
 		}
 		os.Exit(1)

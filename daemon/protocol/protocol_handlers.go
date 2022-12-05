@@ -23,7 +23,7 @@
 package protocol
 
 import (
-	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
+	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 )
@@ -48,6 +48,10 @@ func (p *Protocol) OnAccountStatus(sessionToken string, accountInfo preferences.
 
 // OnKillSwitchStateChanged - Firewall change handler
 func (p *Protocol) OnKillSwitchStateChanged() {
+	if p._service == nil {
+		return
+	}
+
 	// notify all clients about KillSwitch status
 	if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err != nil {
 		log.Error(err)
@@ -78,7 +82,7 @@ func (p *Protocol) OnPingStatus(retMap map[string]int) {
 	p.notifyClients(&types.PingServersResp{PingResults: results})
 }
 
-func (p *Protocol) OnServersUpdated(serv *apitypes.ServersInfoResponse) {
+func (p *Protocol) OnServersUpdated(serv *api_types.ServersInfoResponse) {
 	if serv == nil {
 		return
 	}

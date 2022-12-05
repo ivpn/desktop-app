@@ -37,6 +37,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -372,7 +373,7 @@ func (c *CmdConnect) Run() (retError error) {
 					vpnType = &p
 				}
 			}
-			if err := serversPing(svrs, true, false, vpnType); err != nil && c.any == false {
+			if err := serversPing(svrs, true, false, vpnType); err != nil {
 				if c.any {
 					fmt.Printf("Error: Failed to ping servers to determine fastest: %s\n", err)
 				} else {
@@ -430,7 +431,7 @@ func (c *CmdConnect) Run() (retError error) {
 	}
 
 	// Firewall for current connection
-	req.FirewallOnDuringConnection = true
+	req.Params.FirewallOnDuringConnection = true
 	if c.firewallOff {
 		// check current FW state
 		state, err := _proto.FirewallStatus()
@@ -438,7 +439,7 @@ func (c *CmdConnect) Run() (retError error) {
 			return fmt.Errorf("unable to check Firewall state: %w", err)
 		}
 		if state.IsEnabled == false {
-			req.FirewallOnDuringConnection = false
+			req.Params.FirewallOnDuringConnection = false
 		} else {
 			fmt.Println("WARNING! Firewall option ignored (Firewall already enabled manually)")
 		}
@@ -475,13 +476,13 @@ func (c *CmdConnect) Run() (retError error) {
 				entrySvrWg = &servers.WireguardServers[i]
 
 				serverFound = true
-				req.VpnType = vpn.WireGuard
-				req.WireGuardParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
-				req.IPv6 = c.isIPv6Tunnel
+				req.Params.VpnType = vpn.WireGuard
+				req.Params.WireGuardParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
+				req.Params.IPv6 = c.isIPv6Tunnel
 
 				if c.mtu > 0 {
 					fmt.Printf("[!] Using custom MTU: %d\n", c.mtu)
-					req.WireGuardParameters.Mtu = c.mtu
+					req.Params.WireGuardParameters.Mtu = c.mtu
 				}
 
 				if len(c.multihopExitSvr) == 0 {
@@ -491,7 +492,7 @@ func (c *CmdConnect) Run() (retError error) {
 						printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
 						return err
 					}
-					req.WireGuardParameters.Port.Port = p.port
+					req.Params.WireGuardParameters.Port.Port = p.port
 
 					fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s %s...\n", s.City, s.CountryCode, s.Country, s.Gateway, p.String())
 				} else {
@@ -505,8 +506,8 @@ func (c *CmdConnect) Run() (retError error) {
 						fmt.Printf("Note: port definition is ignored for WireGuard Multi-Hop connections\n")
 					}
 
-					req.WireGuardParameters.MultihopExitServer.ExitSrvID = strings.Split(exitSvrWg.Gateway, ".")[0]
-					req.WireGuardParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrWg.Hosts, customHostExitServer)
+					req.Params.WireGuardParameters.MultihopExitServer.ExitSrvID = strings.Split(exitSvrWg.Gateway, ".")[0]
+					req.Params.WireGuardParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrWg.Hosts, customHostExitServer)
 
 					fmt.Printf("[WireGuard] Connecting Multi-Hop...\n")
 					fmt.Printf("\tentry server: %s, %s (%s) %s\n", entrySvrWg.City, entrySvrWg.CountryCode, entrySvrWg.Country, entrySvrWg.Gateway)
@@ -564,8 +565,8 @@ func (c *CmdConnect) Run() (retError error) {
 				}
 
 				serverFound = true
-				req.VpnType = vpn.OpenVPN
-				req.OpenVpnParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
+				req.Params.VpnType = vpn.OpenVPN
+				req.Params.OpenVpnParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
 
 				isMultihop := exitSvrOvpn != nil && len(c.multihopExitSvr) > 0
 				if !isMultihop {
@@ -584,13 +585,13 @@ func (c *CmdConnect) Run() (retError error) {
 					}
 
 					// get Multi-Hop ID
-					req.OpenVpnParameters.MultihopExitServer.ExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
-					req.OpenVpnParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrOvpn.Hosts, customHostExitServer)
+					req.Params.OpenVpnParameters.MultihopExitServer.ExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
+					req.Params.OpenVpnParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrOvpn.Hosts, customHostExitServer)
 					destPort.port = 0 // do not use port number (port-based multihop)
 				}
 
-				req.OpenVpnParameters.Port.Port = destPort.port
-				req.OpenVpnParameters.Port.Protocol = destPort.IsTCP()
+				req.Params.OpenVpnParameters.Port.Port = destPort.port
+				req.Params.OpenVpnParameters.Port.Protocol = destPort.IsTCP()
 
 				break
 			}
@@ -650,25 +651,32 @@ func (c *CmdConnect) Run() (retError error) {
 		if err != nil {
 			return err
 		}
-		req.ManualDNS = dns.DnsSettings{DnsHost: atDNS, Encryption: dns.EncryptionNone}
+		req.Params.ManualDNS = dns.DnsSettings{DnsHost: atDNS, Encryption: dns.EncryptionNone}
 
 		if len(c.dns) > 0 {
 			fmt.Println("WARNING! Manual DNS configuration ignored due to AntiTracker")
 		}
 	}
 	// Set MANUAL DNS if defined (only in case if AntiTracker not defined)
-	if req.ManualDNS.IsEmpty() {
+	if req.Params.ManualDNS.IsEmpty() {
 		if len(c.dns) > 0 {
 			dnsIp := net.ParseIP(c.dns)
 			if dnsIp == nil {
 				return flags.BadParameter{}
 			}
-			req.ManualDNS = dns.DnsSettings{DnsHost: dnsIp.String(), Encryption: dns.EncryptionNone}
+			req.Params.ManualDNS = dns.DnsSettings{DnsHost: dnsIp.String(), Encryption: dns.EncryptionNone}
 		} else if !cfg.CustomDnsCfg.IsEmpty() {
 			// using default DNS configuration
 			printDNSConfigInfo(nil, cfg.CustomDnsCfg).Flush()
-			req.ManualDNS = cfg.CustomDnsCfg
+			req.Params.ManualDNS = cfg.CustomDnsCfg
 		}
+	}
+
+	// metadata
+	if c.fastest {
+		req.Params.Metadata.ServerSelectionEntry = service_types.Fastest
+	} else if c.any {
+		req.Params.Metadata.ServerSelectionEntry = service_types.Random
 	}
 
 	fmt.Println("Connecting...")
@@ -683,7 +691,7 @@ func (c *CmdConnect) Run() (retError error) {
 	}
 
 	if cState, stateResp, stateErr := _proto.GetVPNState(); stateErr == nil && cState == vpn.CONNECTED {
-		if !stateResp.ManualDNS.Equal(req.ManualDNS) {
+		if !stateResp.ManualDNS.Equal(req.Params.ManualDNS) {
 			fmt.Printf("Connected but failed to initialize custom DNS!\n")
 			fmt.Printf("Disconnecting...\n")
 			if err2 := _proto.DisconnectVPN(); err2 != nil {

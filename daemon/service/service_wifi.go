@@ -28,13 +28,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/wifiNotifier"
 )
 
-type wifiInfo struct {
-	ssid       string
-	isInsecure bool
-}
-
-var lastWiFiInfo *wifiInfo
-var timerDelayedNotify *time.Timer
+var timerDelayedWifiNotify *time.Timer
 
 const delayBeforeWiFiChangeNotify = time.Second * 1
 
@@ -55,25 +49,24 @@ func (s *Service) onWiFiChanged(ssid string) {
 		}
 	}()
 
+	// Stop old postponed notifier call
+	oldTimerId := timerDelayedWifiNotify
+	timerDelayedWifiNotify = nil
+	if oldTimerId != nil {
+		oldTimerId.Stop()
+	}
+
+	// check network encryption
 	isInsecure := wifiNotifier.GetCurrentNetworkIsInsecure()
 
-	lastWiFiInfo = &wifiInfo{
-		ssid,
-		isInsecure}
-
-	// do delay before processing wifi change
+	// Delay before processing wifi change
 	// (same wifi change event can occur several times in short period of time)
-	if timerDelayedNotify != nil {
-		timerDelayedNotify.Stop()
-		timerDelayedNotify = nil
-	}
-	timerDelayedNotify = time.AfterFunc(delayBeforeWiFiChangeNotify, func() {
-		if lastWiFiInfo == nil || lastWiFiInfo.ssid != ssid || lastWiFiInfo.isInsecure != isInsecure {
-			return // do nothing (new wifi info available)
-		}
-
+	timerDelayedWifiNotify = time.AfterFunc(delayBeforeWiFiChangeNotify, func() {
 		// notify clients about WiFi change
 		s._evtReceiver.OnWiFiChanged(ssid, isInsecure)
+
+		// 'trusted-wifi' functionality: auto-connect if necessary
+		s.autoConnectIfRequired(OnWifiChanged, &wifiStatus{WifiSsid: ssid, WifiIsInsecure: isInsecure})
 	})
 }
 

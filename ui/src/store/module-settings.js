@@ -25,6 +25,7 @@ import {
   NormalizedConfigPortObject,
   ServersSortTypeEnum,
   ColorTheme,
+  ColorThemeTrayIcon,
   DnsEncryption,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
@@ -68,9 +69,10 @@ const getDefaultState = () => {
     disconnectOnQuit: true,
     logging: false, // this parameter saves on the daemon's side
 
-    // this object must be received out from daemon
+    // This object received out FROM DAEMON!
     daemonSettings: {
       IsAutoconnectOnLaunch: false,
+      IsAutoconnectOnLaunchDaemon: false,
       UserDefinedOvpnFile: "",
 
       // obfsproxy configuration
@@ -85,6 +87,27 @@ const getDefaultState = () => {
         //		Here, the MTU is 1448 bytes for the Obfs4 Bridge. This means the smaller packets cannot be reassembled for analysis and censoring.
         //	2 - means splitting large packets into variable size packets. The sizes are defined in Obfs4.
         Obfs4Iat: 0,
+      },
+
+      WiFi: {
+        // canApplyInBackground:
+        //	false - means the daemon applies actions in background
+        //	true - VPN connection and Firewall status can be changed ONLY when UI client is connected to the daemon (UI app is running)
+        canApplyInBackground: false,
+
+        connectVPNOnInsecureNetwork: false,
+
+        trustedNetworksControl: true,
+        defaultTrustStatusTrusted: null, // null/true/false
+        networks: null, // []{ ssid: "" isTrusted: false }
+
+        actions: {
+          unTrustedConnectVpn: true,
+          unTrustedEnableFirewall: true,
+
+          trustedDisconnectVpn: true,
+          trustedDisableFirewall: true,
+        },
       },
 
       //UserPrefs: {
@@ -136,22 +159,6 @@ const getDefaultState = () => {
       userExceptions: "",
     },
 
-    // wifi
-    wifi: {
-      trustedNetworksControl: true,
-      defaultTrustStatusTrusted: null, // null/true/false
-      networks: null, // []{ ssid: "" isTrusted: false }
-
-      connectVPNOnInsecureNetwork: false,
-      actions: {
-        unTrustedConnectVpn: true,
-        unTrustedEnableFirewall: true,
-
-        trustedDisconnectVpn: true,
-        trustedDisableFirewall: true,
-      },
-    },
-
     // Split-Tunnel
     splitTunnel: {
       // A list of applications which was selected from apps-list
@@ -167,6 +174,7 @@ const getDefaultState = () => {
     showAppInSystemDock: false,
     serversSortType: ServersSortTypeEnum.City,
     colorTheme: ColorTheme.system,
+    colorThemeTrayIcon: ColorThemeTrayIcon.auto,
     connectSelectedMapLocation: false,
     windowRestorePosition: null, // {x=xxx, y=xxx}
     showHosts: false, //Enable selection of individual servers in server selection list
@@ -361,27 +369,6 @@ export default {
       state.firewallCfg = val;
     },
 
-    // WIFI
-    wifi(state, val) {
-      if (val != null && val.networks != null) {
-        // remove trusted wifi config duplicates (only one record for SSID)
-        val.networks = val.networks.filter(
-          (wifi, index, self) =>
-            index === self.findIndex((t) => t.ssid === wifi.ssid)
-        );
-
-        // remove networks with not defined trust level or empty ssid
-        val.networks = val.networks.filter(
-          (n) =>
-            n.ssid != "" &&
-            n.ssid != null &&
-            (n.isTrusted == true || n.isTrusted == false)
-        );
-      }
-
-      state.wifi = val;
-    },
-
     // SplitTunnel
     splitTunnel(state, val) {
       state.splitTunnel = val;
@@ -407,6 +394,9 @@ export default {
     },
     colorTheme(state, val) {
       state.colorTheme = val;
+    },
+    colorThemeTrayIcon(state, val) {
+      state.colorThemeTrayIcon = val;
     },
     windowRestorePosition(state, val) {
       state.windowRestorePosition = val;
@@ -694,11 +684,6 @@ export default {
       context.commit("firewallCfg", val);
     },
 
-    // WIFI
-    wifi(context, val) {
-      context.commit("wifi", val);
-    },
-
     // SplitTunnel
     saveAddedAppCounter(context, appBinaryPath) {
       if (!appBinaryPath) return;
@@ -765,6 +750,9 @@ export default {
     },
     colorTheme(context, val) {
       context.commit("colorTheme", val);
+    },
+    colorThemeTrayIcon(context, val) {
+      context.commit("colorThemeTrayIcon", val);
     },
     showHosts(context, val) {
       context.commit("showHosts", val);

@@ -33,3 +33,14 @@ func (e NotImplemented) Error() string {
 	}
 	return e.Message
 }
+
+type EaaEnabledOptionNotApplicable struct {
+	Message string
+}
+
+func (e EaaEnabledOptionNotApplicable) Error() string {
+	if len(e.Message) == 0 {
+		return "this option is not applicable while 'Enhanced App Authentication' enabled"
+	}
+	return e.Message
+}

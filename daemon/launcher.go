@@ -49,6 +49,11 @@ import (
 var log *logger.Logger
 var activeProtocol IProtocol
 
+// systemLog - if channel initialized, service will write there messages for system log.
+//	Channel have to be initialized in platform-specific implementation of 'main' package (e.g. doPrepareToRun()).
+//	Messages receiver (processing messages from the channel) also have to be implemented for each platform separately.
+var systemLog chan service.SystemLogMessage
+
 func init() {
 	log = logger.NewLogger("launch")
 }
@@ -277,7 +282,7 @@ func launchService(secret uint64, startedOnPort chan<- int) {
 	activeProtocol = protocol
 
 	// initialize service
-	serv, err := service.CreateService(protocol, apiObj, updater, netDetector, wgKeysMgr)
+	serv, err := service.CreateService(protocol, apiObj, updater, netDetector, wgKeysMgr, serviceEventsChan, systemLog)
 	if err != nil {
 		log.Panic("Failed to initialize service:", err)
 	}

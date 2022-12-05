@@ -27,12 +27,34 @@ import (
 	"strings"
 )
 
+// -----------------------------------------------------------
+
 type HostInfoBase struct {
 	Hostname     string  `json:"hostname"`
 	Host         string  `json:"host"`
 	MultihopPort int     `json:"multihop_port"`
 	Load         float32 `json:"load"`
 }
+
+func (h HostInfoBase) GetHostInfoBase() HostInfoBase {
+	return h
+}
+
+type ServerInfoBase struct {
+	Gateway     string `json:"gateway"`
+	CountryCode string `json:"country_code"`
+	Country     string `json:"country"`
+	City        string `json:"city"`
+
+	Latitude  float32 `json:"latitude"`
+	Longitude float32 `json:"longitude"`
+}
+
+func (s ServerInfoBase) GetServerInfoBase() ServerInfoBase {
+	return s
+}
+
+// -----------------------------------------------------------
 
 type WireGuardServerHostInfoIPv6 struct {
 	Host    string `json:"host"`
@@ -47,23 +69,26 @@ type WireGuardServerHostInfo struct {
 	IPv6      WireGuardServerHostInfoIPv6 `json:"ipv6"`
 }
 
+// WireGuardServerInfo contains all info about WG server
+type WireGuardServerInfo struct {
+	ServerInfoBase
+	Hosts []WireGuardServerHostInfo `json:"hosts"`
+}
+
+func (s WireGuardServerInfo) GetHostsInfoBase() []HostInfoBase {
+	ret := []HostInfoBase{}
+	for _, host := range s.Hosts {
+		ret = append(ret, host.HostInfoBase)
+	}
+	return ret
+}
+
+// -----------------------------------------------------------
+
 type ObfsParams struct {
 	Obfs3MultihopPort int    `json:"obfs3_multihop_port"`
 	Obfs4MultihopPort int    `json:"obfs4_multihop_port"`
 	Obfs4Key          string `json:"obfs4_key"`
-}
-
-// WireGuardServerInfo contains all info about WG server
-type WireGuardServerInfo struct {
-	Gateway     string `json:"gateway"`
-	CountryCode string `json:"country_code"`
-	Country     string `json:"country"`
-	City        string `json:"city"`
-
-	Latitude  float32 `json:"latitude"`
-	Longitude float32 `json:"longitude"`
-
-	Hosts []WireGuardServerHostInfo `json:"hosts"`
 }
 
 // OpenVPNServerHostInfo contains info about OpenVPN server host
@@ -74,16 +99,19 @@ type OpenVPNServerHostInfo struct {
 
 // OpenvpnServerInfo contains all info about OpenVPN server
 type OpenvpnServerInfo struct {
-	Gateway     string `json:"gateway"`
-	CountryCode string `json:"country_code"`
-	Country     string `json:"country"`
-	City        string `json:"city"`
-
-	Latitude  float32 `json:"latitude"`
-	Longitude float32 `json:"longitude"`
-
+	ServerInfoBase
 	Hosts []OpenVPNServerHostInfo `json:"hosts"`
 }
+
+func (s OpenvpnServerInfo) GetHostsInfoBase() []HostInfoBase {
+	ret := []HostInfoBase{}
+	for _, host := range s.Hosts {
+		ret = append(ret, host.HostInfoBase)
+	}
+	return ret
+}
+
+// -----------------------------------------------------------
 
 // DNSInfo contains info about DNS server
 type DNSInfo struct {

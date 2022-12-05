@@ -88,7 +88,7 @@ import HopButtonsBlock from "./blocks/block-hop-buttons.vue";
 
 const sender = window.ipcSender;
 import { VpnStateEnum, VpnTypeEnum, PauseStateEnum } from "@/store/types";
-import { isStrNullOrEmpty } from "@/helpers/helpers";
+import { capitalizeFirstLetter } from "@/helpers/helpers";
 
 const viewTypeEnum = Object.freeze({
   default: "default",
@@ -186,14 +186,13 @@ export default {
 
       // if disconnection reason defined
       let failureInfo = this.$store.state.vpnState.disconnectedInfo;
-      if (!failureInfo || isStrNullOrEmpty(failureInfo.ReasonDescription))
-        return;
+      if (!failureInfo || !failureInfo.ReasonDescription) return;
 
       sender.showMessageBoxSync({
         type: "error",
         buttons: ["OK"],
         message: `Failed to connect`,
-        detail: failureInfo.ReasonDescription,
+        detail: capitalizeFirstLetter(failureInfo.ReasonDescription),
       });
     },
     isMinimizedUI() {

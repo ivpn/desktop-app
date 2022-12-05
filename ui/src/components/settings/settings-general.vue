@@ -2,12 +2,15 @@
   <div>
     <div class="settingsTitle">GENERAL SETTINGS</div>
 
-    <div class="param">
+    <div class="param" :title="isLaunchAtLoginDisableBlockerInfo">
       <input
         type="checkbox"
         id="launchAtLogin"
         v-model="isLaunchAtLogin"
-        :disabled="isLaunchAtLogin == null"
+        :disabled="
+          isLaunchAtLogin == null || isLaunchAtLoginDisableBlockerInfo != ''
+        "
+        @click="isLaunchAtLoginonClick"
       />
       <label class="defColor" for="launchAtLogin">Launch at login</label>
     </div>
@@ -54,9 +57,11 @@
     </div>
 
     <div class="settingsBoldFont">View:</div>
-    <div class="flexRow paramBlock">
-      <div class="defColor paramName">Color theme:</div>
-      <select v-model="colorTheme" style="margin-left: 30px">
+    <div class="flexRow param">
+      <div class="defColor paramName" style="min-width: 102px">
+        Color theme:
+      </div>
+      <select v-model="colorTheme">
         <option :value="colorThemeEnum.system" :key="colorThemeEnum.system">
           System default
         </option>
@@ -64,6 +69,31 @@
           Light
         </option>
         <option :value="colorThemeEnum.dark" :key="colorThemeEnum.dark">
+          Dark
+        </option>
+      </select>
+    </div>
+
+    <div class="flexRow param" v-if="isCanShowTrayIconTheme">
+      <div class="defColor paramName" style="min-width: 102px">Tray icon:</div>
+      <select v-model="colorThemeTrayIcon">
+        <option
+          v-if="isCanShowTrayIconThemeAuto"
+          :value="colorThemeTrayIconEnum.auto"
+          :key="colorThemeTrayIconEnum.auto"
+        >
+          Auto
+        </option>
+        <option
+          :value="colorThemeTrayIconEnum.light"
+          :key="colorThemeTrayIconEnum.light"
+        >
+          Light
+        </option>
+        <option
+          :value="colorThemeTrayIconEnum.dark"
+          :key="colorThemeTrayIconEnum.dark"
+        >
           Dark
         </option>
       </select>
@@ -78,31 +108,52 @@
     </div> -->
 
     <div class="settingsBoldFont">Autoconnect:</div>
+    <div class="param">
+      <input
+        type="checkbox"
+        id="connectOnLaunch"
+        @click="isAutoconnectOnLaunchOnClick"
+        v-model="isAutoconnectOnLaunch"
+      />
+      <label class="defColor" for="connectOnLaunch">On launch</label>
+    </div>
+
     <div
       class="param"
       :title="
-        this.$store.state.paranoidModeStatus.IsEnabled === true
-          ? `'Autoconnect on application launch' cannot be enabled whilst 'Enhanced App Authentication' is enabled`
+        isParanoidMode
+          ? 'The option is not applicable when `Enhanced App Authentication` enabled'
           : ''
       "
     >
       <input
+        :disabled="isAutoconnectOnLaunch === false || isParanoidMode === true"
         type="checkbox"
-        id="connectOnLaunch"
-        v-model="isAutoconnectOnLaunch"
-        :disabled="this.$store.state.paranoidModeStatus.IsEnabled === true"
+        id="connectOnLaunchDaemon"
+        @click="isAutoconnectOnLaunchDaemonOnClick"
+        v-model="isAutoconnectOnLaunchDaemon"
       />
-      <label class="defColor" for="connectOnLaunch">On launch</label>
-    </div>
-    <div class="param" v-if="!isLinux">
-      <input
-        type="checkbox"
-        id="connectVPNOnInsecureNetwork"
-        v-model="connectVPNOnInsecureNetwork"
-      />
-      <label class="defColor" for="connectVPNOnInsecureNetwork"
-        >On joining WiFi networks without encryption</label
+      <label class="defColor" for="connectOnLaunchDaemon"
+        >Allow background daemon to manage autoconnect</label
       >
+
+      <button
+        class="noBordersBtn flexRow"
+        title="Help"
+        v-on:click="this.$refs.helpAutoconnectOnLaunchDaemon.showModal()"
+      >
+        <img src="@/assets/question.svg" />
+      </button>
+      <ComponentDialog ref="helpAutoconnectOnLaunchDaemon" header="Info">
+        <div>
+          <p>
+            By enabling this feature the IVPN daemon will manage the
+            auto-connection function. This enables the VPN tunnel to startup as
+            quickly as possible as the daemon is started early in the operating
+            system boot process and before the IVPN app (The GUI).
+          </p>
+        </div>
+      </ComponentDialog>
     </div>
 
     <div class="settingsBoldFont">On exit:</div>
@@ -202,15 +253,17 @@
 </template>
 
 <script>
-import { ColorTheme } from "@/store/types";
+import { ColorTheme, ColorThemeTrayIcon } from "@/store/types";
 import ComponentDiagnosticLogs from "@/components/DiagnosticLogs.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
+import ComponentDialog from "@/components/component-dialog.vue";
 const sender = window.ipcSender;
 
 // VUE component
 export default {
   components: {
     ComponentDiagnosticLogs,
+    ComponentDialog,
   },
   data: function () {
     return {
@@ -243,11 +296,66 @@ export default {
     onDiagnosticViewBeta() {
       this.diagnosticView = "beta";
     },
+
+    async isAutoconnectOnLaunchOnClick(evt) {
+      if (
+        (this.isAutoconnectOnLaunch === false) & // going to enable
+        (this.$store.state.paranoidModeStatus.IsEnabled === true) // EAA enabled
+      ) {
+        let ret = await sender.showMessageBoxSync(
+          {
+            type: "warning",
+            message: `Enhanced App Authentication enabled`,
+            detail:
+              "Warning: On application start 'Autoconnect on application launch' will not be applied until the EAA password is entered.",
+            buttons: ["Enable", "Cancel"],
+          },
+          true
+        );
+        if (ret == 1) {
+          // cancel
+          evt.returnValue = false;
+        }
+      }
+    },
+    async isAutoconnectOnLaunchDaemonOnClick(evt) {
+      if (this.isAutoconnectOnLaunchDaemon === true) return; // we are going to disable this option. No messages required
+      if (this.isLaunchAtLogin !== true) {
+        let ret = await sender.showMessageBoxSync(
+          {
+            type: "warning",
+            message: `"Launch at login" disabled`,
+            detail:
+              'This option requires "Launch at login" to be enabled.\nDo you want to enable both options?',
+            buttons: ["Enable", "Cancel"],
+          },
+          true
+        );
+        if (ret == 1) {
+          // Cancel
+          evt.returnValue = false;
+        } else {
+          this.isLaunchAtLogin = true;
+        }
+      }
+    },
+  },
+  watch: {
+    isAutoconnectOnLaunchDaemon() {
+      this.doUpdateIsLaunchAtLogin();
+    },
+    isWifiActionsInBackground() {
+      this.doUpdateIsLaunchAtLogin();
+    },
   },
   computed: {
+    isParanoidMode() {
+      return this.$store.state.paranoidModeStatus.IsEnabled === true;
+    },
     isLinux() {
       return Platform() === PlatformEnum.Linux;
     },
+
     isLaunchAtLogin: {
       get() {
         return this.isLaunchAtLoginValue;
@@ -265,22 +373,39 @@ export default {
         })();
       },
     },
+
+    isLaunchAtLoginDisableBlockerInfo() {
+      if (!this.isLaunchAtLogin) return "";
+      if (this.isWifiActionsInBackground === true)
+        return `This option can not be disabled\nbecause of 'Allow background daemon to Apply WiFi Control settings' is active`;
+      if (this.isAutoconnectOnLaunchDaemon === true)
+        return `This option can not be disabled\nbecause of 'Allow background daemon to manage autoconnect' is active`;
+      return "";
+    },
+
     isAutoconnectOnLaunch: {
       get() {
         return this.$store.state.settings.daemonSettings.IsAutoconnectOnLaunch;
       },
       set(value) {
-        sender.SetAutoconnectOnLaunch(value);
+        sender.SetAutoconnectOnLaunch(value, null);
+        if (value === false) this.isAutoconnectOnLaunchDaemon = false;
       },
     },
-    connectVPNOnInsecureNetwork: {
+    isAutoconnectOnLaunchDaemon: {
       get() {
-        return this.$store.state.settings.wifi?.connectVPNOnInsecureNetwork;
+        return this.$store.state.settings.daemonSettings
+          .IsAutoconnectOnLaunchDaemon;
       },
       set(value) {
-        let wifi = Object.assign({}, this.$store.state.settings.wifi);
-        wifi.connectVPNOnInsecureNetwork = value;
-        this.$store.dispatch("settings/wifi", wifi);
+        sender.SetAutoconnectOnLaunch(null, value);
+      },
+    },
+
+    isWifiActionsInBackground: {
+      get() {
+        return this.$store.state.settings.daemonSettings?.WiFi
+          ?.canApplyInBackground;
       },
     },
 
@@ -374,6 +499,30 @@ export default {
       set(value) {
         sender.ColorSchemeSet(value);
         this.colorScheme = value;
+      },
+    },
+    isCanShowTrayIconTheme() {
+      return (
+        Platform() === PlatformEnum.Windows || Platform() === PlatformEnum.Linux
+      );
+    },
+    isCanShowTrayIconThemeAuto() {
+      return Platform() === PlatformEnum.Windows;
+    },
+    colorThemeTrayIconEnum() {
+      return ColorThemeTrayIcon;
+    },
+    colorThemeTrayIcon: {
+      get() {
+        let ret = ColorThemeTrayIcon.auto;
+        if (this.$store.state.settings.colorThemeTrayIcon != undefined)
+          ret = this.$store.state.settings.colorThemeTrayIcon;
+        if (!this.isCanShowTrayIconThemeAuto && ret === ColorThemeTrayIcon.auto)
+          ret = ColorThemeTrayIcon.light;
+        return ret;
+      },
+      set(value) {
+        this.$store.dispatch("settings/colorThemeTrayIcon", value);
       },
     },
     diagnosticViewIsGeneral() {

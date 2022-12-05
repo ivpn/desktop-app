@@ -149,15 +149,17 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 	if err != nil {
 		return fmt.Errorf("failed to start WireGuard: %w", err)
 	}
+
+	// wait for WG initialization + logging all output
 	outPipeScanner := bufio.NewScanner(outPipe)
 	routineStopWaiter.Add(1)
 	go func() {
 		defer routineStopWaiter.Done()
 
 		isWaitingToStart := true
-		for outPipeScanner.Scan() {
+		for outPipeScanner.Scan() && wg.internals.command.ProcessState == nil {
 			text := outPipeScanner.Text()
-			logWgOut.Info(text)
+			logWgOut.Info(text) // logging the output
 
 			if isWaitingToStart && strings.Contains(text, strTriggerSuccessInit) {
 				isWaitingToStart = false
@@ -210,7 +212,11 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 
 		case <-time.After(time.Second * 5):
 			// stop process if WG not successfully started during 5 sec
-			log.Error("Start timeout.")
+			err = fmt.Errorf("WireGuard process initialization timeout")
+			if initError == nil {
+				initError = err
+			}
+			log.Error(err)
 			isHaveToBeStopped = true
 		}
 
@@ -343,17 +349,18 @@ func (wg *WireGuard) initializeConfiguration(utunName string) error {
 // example command: ipconfig set utun7 MANUAL-V6 fd00:4956:504e:ffff::ac1a:704b 96
 func (wg *WireGuard) initializeUnunInterface(utunName string) error {
 	// initialize IPv4 interface for tunnel
-	err := shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask)
-	if err != nil {
-		return err
+	if err := shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask); err != nil {
+		return fmt.Errorf("failed to set the IPv4 address for interface: %w", err)
 	}
 
 	// initialize IPv6 interface for tunnel
 	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
 	if ipv6LocalIP != nil {
-		return shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL-V6", ipv6LocalIP.String(), subnetMaskPrefixLenIPv6)
+		if err := shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL-V6", ipv6LocalIP.String(), subnetMaskPrefixLenIPv6); err != nil {
+			return fmt.Errorf("failed to set the IPv6 address for interface: %w", err)
+		}
 	}
-	return err
+	return nil
 }
 
 // WireGuard configuration

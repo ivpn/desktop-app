@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 
 	"github.com/ivpn/desktop-app/cli/flags"
+	service_types "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
@@ -65,9 +66,9 @@ func (c *CmdLogs) Run() error {
 
 func (c *CmdLogs) setSetLogging(enable bool) error {
 	if enable {
-		return _proto.SetPreferences("enable_logging", "true")
+		return _proto.SetPreferences(string(service_types.Prefs_IsEnableLogging), "true")
 	}
-	return _proto.SetPreferences("enable_logging", "false")
+	return _proto.SetPreferences(string(service_types.Prefs_IsEnableLogging), "false")
 }
 
 func (c *CmdLogs) doShow() error {

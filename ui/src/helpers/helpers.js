@@ -20,10 +20,6 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-export function isStrNullOrEmpty(str) {
-  return !str || str.length === 0;
-}
-
 export function enumValueName(theEnum, value) {
   for (var k in theEnum) if (theEnum[k] == value) return k;
   return null;
@@ -77,6 +73,10 @@ export function isValidIpOrMask(ipStr) {
     if (isIpv6 && (parsed > 128 || parsed <= 0)) return false;
   }
   return true;
+}
+
+export function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 export function dateDefaultFormat(date) {

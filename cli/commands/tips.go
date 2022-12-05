@@ -48,6 +48,9 @@ const (
 	TipLastConnection            TipType = iota
 	TipSplittunEnable            TipType = iota
 	TipEaaDisable                TipType = iota
+	TipWiFiStatus                TipType = iota
+	TipWiFiHelp                  TipType = iota
+	TipAutoconnectHelp           TipType = iota
 )
 
 func PrintTips(tips []TipType) {
@@ -73,53 +76,44 @@ func PrintTip(w *tabwriter.Writer, tip TipType) {
 	switch tip {
 	case TipHelp:
 		str = newTip("-h", "Show all commands")
-		break
 	case TipHelpFull:
 		str = newTip("-h -full", "Show detailed description about all commands")
-		break
 	case TipHelpCommand:
 		str = newTip("COMMAND -h", "Show detailed description of command")
-		break
 	case TipLogout:
 		str = newTip("logout", "Logout from this device")
-		break
 	case TipLogin:
 		str = newTip("login ACCOUNT_ID", "Log in with your Account ID")
-		break
 	case TipForceLogin:
 		str = newTip("login -force ACCOUNT_ID", "Log in with your Account ID and logout from all other devices")
-		break
 	case TipServers:
 		str = newTip("servers", "Show servers list")
-		break
 	case TipConnectHelp:
 		str = newTip("connect -h", "Show usage of 'connect' command")
-		break
 	case TipDisconnect:
 		str = newTip("disconnect", "Stop current VPN connection")
-		break
 	case TipFirewallDisable:
 		str = newTip("firewall -off", "Disable firewall (to allow connectivity outside VPN)")
-		break
 	case TipFirewallEnable:
 		str = newTip("firewall -on", "Enable firewall (to block all connectivity outside VPN)")
-		break
 	case TipFirewallDisablePersistent:
 		str = newTip("firewall -persistent_off", "Disable firewall persistency (Always-on firewall)")
-		break
 	case TipLastConnection:
 		str = newTip("connect -last", "Connect with last successful connection parameters")
-		break
 	case TipSplittunEnable:
 		str = newTip("splittun -on", "Enable Split Tunnel functionality")
-		break
 	case TipEaaDisable:
 		description := "Disable Enhanced App Authentication (use 'sudo ...' if you forgot your current EAA password)"
 		if runtime.GOOS == "windows" {
 			description = "Disable Enhanced App Authentication (start command with 'Run as Administrator' if you forgot your current EAA password)"
 		}
 		str = newTip("eaa -off", description)
-		break
+	case TipWiFiStatus:
+		str = newTip("wifi -status", "Show WiFi settings")
+	case TipWiFiHelp:
+		str = newTip("wifi -h", "Show usage of 'wifi' command")
+	case TipAutoconnectHelp:
+		str = newTip("autoconnect -h", "Show usage of 'autoconnect' command")
 	}
 
 	if len(str) > 0 {

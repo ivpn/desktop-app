@@ -139,17 +139,17 @@ export default {
       )} ${port.port}`;
     },
     isTrustedNetworksControlActive() {
-      let wifiSettings = this.$store.state.settings.wifi;
+      let wifiSettings = this.$store.state.settings.daemonSettings.WiFi;
       if (wifiSettings == null) return false;
       return wifiSettings.trustedNetworksControl;
     },
     isConnectVPNOnInsecureNetwork: function () {
-      let wifiSettings = this.$store.state.settings.wifi;
+      let wifiSettings = this.$store.state.settings.daemonSettings.WiFi;
       if (wifiSettings == null) return false;
       return wifiSettings.connectVPNOnInsecureNetwork;
     },
     defaultTrustForUndefinedNetworks() {
-      let wifiSettings = this.$store.state.settings.wifi;
+      let wifiSettings = this.$store.state.settings.daemonSettings.WiFi;
       if (wifiSettings == null) return null;
       return wifiSettings.defaultTrustStatusTrusted;
     },
@@ -220,7 +220,7 @@ export default {
       let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;
       if (curWifiInfo == null || curWifiInfo.SSID == "") return null;
 
-      let wifiSettings = this.$store.state.settings.wifi;
+      let wifiSettings = this.$store.state.settings.daemonSettings.WiFi;
       if (wifiSettings == null || wifiSettings.networks == null) return null;
 
       for (let w of wifiSettings.networks) {

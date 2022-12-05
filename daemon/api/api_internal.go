@@ -143,8 +143,8 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string,
 func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, request interface{}, timeoutMs int, timeoutDialMs int) (resp *http.Response, err error) {
 	connectivityChecker := a.connectivityChecker
 	if connectivityChecker != nil {
-		if isBlocked, reasonDescription, err := connectivityChecker.IsConnectivityBlocked(); err == nil && isBlocked {
-			return nil, fmt.Errorf("%s", reasonDescription)
+		if err := connectivityChecker.IsConnectivityBlocked(); err != nil {
+			return nil, err
 		}
 	}
 

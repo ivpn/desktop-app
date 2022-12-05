@@ -20,11 +20,7 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-import {
-  enumValueName,
-  isStrNullOrEmpty,
-  getDistanceFromLatLonInKm,
-} from "../helpers/helpers";
+import { enumValueName, getDistanceFromLatLonInKm } from "../helpers/helpers";
 import {
   VpnTypeEnum,
   VpnStateEnum,
@@ -503,7 +499,7 @@ export default {
       // Connection can be triggered outside (not by current application instance)
       // So, we should just update received data in settings (vpnType, multihop, entry\exit servers and hosts)
       // (no consistency checks should be performed)
-      const isMultiHop = !isStrNullOrEmpty(ci.ExitHostname);
+      const isMultiHop = !!ci.ExitHostname;
       context.commit("settings/vpnType", ci.VpnType, { root: true });
       context.dispatch("settings/isMultiHop", isMultiHop, { root: true });
       // it is important to read 'activeServers' only after vpnType was updated!
@@ -832,8 +828,7 @@ function updateServers(oldServers, newServers) {
 
 function isAntitrackerActive(state) {
   let dnsIP = state.dns.DnsHost;
-  if (isStrNullOrEmpty(dnsIP) || state.dns.Encryption != DnsEncryption.None)
-    return false;
+  if (!dnsIP || state.dns.Encryption != DnsEncryption.None) return false;
 
   let atConfig = state.servers.config.antitracker;
   switch (dnsIP) {
@@ -847,8 +842,7 @@ function isAntitrackerActive(state) {
 
 function isAntitrackerHardcoreActive(state) {
   let dnsIP = state.dns.DnsHost;
-  if (isStrNullOrEmpty(dnsIP) || state.dns.Encryption != DnsEncryption.None)
-    return false;
+  if (!dnsIP || state.dns.Encryption != DnsEncryption.None) return false;
 
   let atConfig = state.servers.config.antitracker;
   switch (dnsIP) {

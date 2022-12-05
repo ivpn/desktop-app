@@ -55,7 +55,7 @@ func (t Type) String() string {
 type State int
 
 // Possible VPN state values (must be applicable for all protocols)
-// Such stetes MUST be in use by ALL supportded VPN protocols:
+// Such states MUST be in use by ALL supported VPN protocols:
 //
 //	DISCONNECTED
 //	CONNECTING

@@ -346,7 +346,7 @@ func enable(isEnable bool) error {
 			return nil
 		}
 
-		_, outErrText, _, err := shell.ExecAndGetOutput(nil, 1024, "", stScriptPath, "start")
+		_, outErrText, _, _, err := shell.ExecAndGetOutput(nil, 1024, "", stScriptPath, "start")
 		if err != nil {
 			if len(outErrText) > 0 {
 				err = fmt.Errorf("(%w) %s", err, outErrText)

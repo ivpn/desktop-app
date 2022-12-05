@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.10.0 (Beta) - 2022-12-05
+
+[NEW] (Windows/Linux) UI: light/dark options for system tray icon  
+[NEW] Ability to manage ‘Autoconnect on launch’ settings from CLI  
+[NEW] Ability to manage ‘WiFi control’ settings from CLI  
+[NEW] (Linux) ‘WiFi control’ option: ‘Autoconnect on joining WiFi networks without encryption’  
+[IMPROVED] Diagnostic logs extended with additional data  
+[FIX] (Linux) Firewall fails on some versions of Raspberry Pi OS  
+
 ## Version 3.9.45 - 2022-11-09
 
 [FIX] Ability to send diagnostic logs  
@@ -43,7 +52,7 @@ SHA256: 5bae4107305c33aed8c6c657965317a0a1ba6bf026d244d5da412bc5cccf98ad
 [Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.9.43.dmg)  
 SHA256: 0e167ddc6418338b4f163008ee418eb0a3d5d6c8ff487b065fd7429b3d286b19  
 [Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.9.43-arm64.dmg)  
-SHA256: ad0d9f1eae0a42759df1f1115f8edd1c9176f8af46516d6d2ada2958409e1a1e 
+SHA256: ad0d9f1eae0a42759df1f1115f8edd1c9176f8af46516d6d2ada2958409e1a1e
 
 [Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.9.43_amd64.deb)  
 SHA256: 033564a1d2cb4c45c064036628b70f0fbefba45796f8cdbd1ab091c89af430c4  

@@ -20,6 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build !fastping
 // +build !fastping
 
 package service
@@ -39,39 +40,38 @@ import (
 // PingServers ping vpn servers.
 //
 // Pinging operation separated on few phases:
-// 1) Fast ping: ping one host for each nearest location (locations only for specified VPN type when vpnTypePrioritized==true)
-//	  Operation ends after 'timeoutMs'. Then daemon sends response PingServersResp with all data were collected.
-// 2) Full ping: Pinging all hosts for all locations. There is no time limit for this operation. It runs in background.
-//		2.1) Ping all hosts only for specified VPN type (when vpnTypePrioritized==true) or for all VPN types (when vpnTypePrioritized==false)
-//			2.1.1) Ping one host for all locations (for prioritized VPN protocol)
-//			2.1.2) Ping the rest hosts for all locations (for prioritized VPN protocol)
-//		2.2) (when vpnTypePrioritized==true) Ping all hosts for the rest protocols
+//  1. Fast ping: ping one host for each nearest location (locations only for specified VPN type when vpnTypePrioritized==true)
+//     Operation ends after 'timeoutMs'. Then daemon sends response PingServersResp with all data were collected.
+//  2. Full ping: Pinging all hosts for all locations. There is no time limit for this operation. It runs in background.
+//     2.1) Ping all hosts only for specified VPN type (when vpnTypePrioritized==true) or for all VPN types (when vpnTypePrioritized==false)
+//     2.1.1) Ping one host for all locations (for prioritized VPN protocol)
+//     2.1.2) Ping the rest hosts for all locations (for prioritized VPN protocol)
+//     2.2) (when vpnTypePrioritized==true) Ping all hosts for the rest protocols
+//
 // If pingAllHostsOnFirstPhase==true - daemon will ping all hosts for nearest locations on the phase (1)
 // If skipSecondPhase==true - phase (2) will be skipped
 //
 // Additional info:
-// 		In some cases the multiple (and simultaneous pings) are leading to OS crash on macOS and Windows.
-// 		It happens when installed some third-party 'security' software.
-// 		Therefore, we using ping algorithm which avoids simultaneous pings and doing it one-by-one
+//
+//	In some cases the multiple (and simultaneous pings) are leading to OS crash on macOS and Windows.
+//	It happens when installed some third-party 'security' software.
+//	Therefore, we using ping algorithm which avoids simultaneous pings and doing it one-by-one
 func (s *Service) PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAllHostsOnFirstPhase bool, skipSecondPhase bool) (map[string]int, error) {
 
 	if s._vpn != nil {
 		return nil, fmt.Errorf("servers pinging skipped due to connected state")
 	}
-
 	if timeoutMs <= 0 {
 		log.Debug("Servers pinging skipped: timeout argument value is 0")
 		return nil, nil
 	}
 
-	// TODO: (to discuss) do we need to block pinging when IVPNServersAccess==blocked
-	/*
-		if isBlocked, reasonDescription, err := s.IsConnectivityBlocked(); err == nil && isBlocked {
-			log.Info("Servers pinging skipped: ", reasonDescription)
-			return nil, nil
-		}
-	*/
+	// Block pinging when IVPNServersAccess==blocked
+	if err := s.IsConnectivityBlocked(); err != nil {
+		return nil, fmt.Errorf("servers pinging skipped: %v", err)
+	}
 
+	log.Info("Pinging servers...")
 	timeoutTime := time.Now().Add(time.Millisecond * time.Duration(timeoutMs))
 
 	var geoLocation *types.GeoLookupResponse = nil

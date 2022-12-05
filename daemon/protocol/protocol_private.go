@@ -23,29 +23,19 @@
 package protocol
 
 import (
-	"crypto/rand"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"math/big"
 	"net"
 	"runtime"
 	"strings"
-	"time"
 
-	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
-	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
-	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
-	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 )
 
-// connID returns connection info (required to distinguish communication between several connections in log)
-
+// ----------------------------------------------------------------------
 func getConnectionName(c net.Conn) string {
 	return strings.TrimSpace(strings.Replace(c.RemoteAddr().String(), "127.0.0.1:", "", 1))
 }
@@ -54,7 +44,6 @@ func (p *Protocol) connLogID(c net.Conn) string {
 	if c == nil {
 		return ""
 	}
-
 	return fmt.Sprintf("%s ", getConnectionName(c))
 }
 
@@ -68,10 +57,38 @@ func (p *Protocol) notifyClients(cmd types.ICommandBase) {
 }
 
 // -------------- clients connections ---------------
-func (p *Protocol) clientConnected(c net.Conn) {
+// IsClientConnected checks is any authenticated connection available of specific client type
+func (p *Protocol) IsClientConnected(checkOnlyUiClients bool) bool {
+	p._connectionsMutex.RLock()
+	defer p._connectionsMutex.RUnlock()
+
+	for _, val := range p._connections {
+		if val.IsAuthenticated {
+			if checkOnlyUiClients {
+				if val.Type == types.ClientUi {
+					return true
+				}
+			} else {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// IsCanDoBackgroundAction returns 'false' when no background action allowed (e.g. EAA enabled but no authenticated clients connected)
+func (p *Protocol) IsCanDoBackgroundAction() bool {
+	if p._eaa.IsEnabled() {
+		const checkOnlyUiClients = true
+		return p.IsClientConnected(checkOnlyUiClients)
+	}
+	return true
+}
+
+func (p *Protocol) clientConnected(c net.Conn, cType types.ClientTypeEnum) {
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
-	p._connections[c] = struct{}{}
+	p._connections[c] = connectionInfo{Type: cType}
 }
 
 func (p *Protocol) clientDisconnected(c net.Conn) {
@@ -110,7 +127,39 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 	// erasing clients connections
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
-	p._connections = make(map[net.Conn]struct{})
+	p._connections = make(map[net.Conn]connectionInfo)
+}
+
+func (p *Protocol) clientSetAuthenticated(c net.Conn) {
+	// contains information about just connected client (first authentication) or nil
+	var justConnectedClientInfo *connectionInfo
+
+	// separate anonymous function for correct mutex unlock
+	func() {
+		p._connectionsMutex.Lock()
+		defer p._connectionsMutex.Unlock()
+
+		if cInfo, ok := p._connections[c]; ok {
+			if !cInfo.IsAuthenticated {
+				cInfo.IsAuthenticated = true
+				p._connections[c] = cInfo
+
+				justConnectedClientInfo = &cInfo
+			}
+		}
+	}()
+
+	if justConnectedClientInfo != nil {
+		p._service.OnAuthenticatedClient(justConnectedClientInfo.Type)
+	}
+
+	if len(p._lastConnectionErrorToNotifyClient) > 0 {
+		log.Info("Sending delayed error to client: ", p._lastConnectionErrorToNotifyClient)
+		delayedErr := types.ErrorRespDelayed{}
+		delayedErr.ErrorMessage = p._lastConnectionErrorToNotifyClient
+		p.sendResponse(c, &delayedErr, 0)
+	}
+	p._lastConnectionErrorToNotifyClient = ""
 }
 
 // -------------- sending responses ---------------
@@ -143,35 +192,16 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd types.ICommandBase, idx int) 
 	return nil
 }
 
-// -------------- VPN connection requests counter ---------------
-func (p *Protocol) vpnConnectReqCounter() (int, time.Time) {
-	p._connectRequestsMutex.Lock()
-	defer p._connectRequestsMutex.Unlock()
-
-	return p._connectRequests, p._connectRequestLastTime
-}
-func (p *Protocol) vpnConnectReqCounterIncrease() time.Time {
-	p._connectRequestsMutex.Lock()
-	defer p._connectRequestsMutex.Unlock()
-
-	p._connectRequestLastTime = time.Now()
-	p._connectRequests++
-	return p._connectRequestLastTime
-}
-func (p *Protocol) vpnConnectReqCounterDecrease() {
-	p._connectRequestsMutex.Lock()
-	defer p._connectRequestsMutex.Unlock()
-
-	p._connectRequests--
-}
-
+// -------------- Initialize response objects ---------------
 func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 	prefs := p._service.Preferences()
 	return &types.SettingsResp{
-		IsAutoconnectOnLaunch: prefs.IsAutoconnectOnLaunch,
-		UserDefinedOvpnFile:   platform.OpenvpnUserParamsFile(),
-		ObfsproxyConfig:       prefs.Obfs4proxy,
-		UserPrefs:             prefs.UserPrefs,
+		IsAutoconnectOnLaunch:       prefs.IsAutoconnectOnLaunch,
+		IsAutoconnectOnLaunchDaemon: prefs.IsAutoconnectOnLaunchDaemon,
+		UserDefinedOvpnFile:         platform.OpenvpnUserParamsFile(),
+		ObfsproxyConfig:             prefs.Obfs4proxy,
+		UserPrefs:                   prefs.UserPrefs,
+		WiFi:                        prefs.WiFiControl,
 		// TODO: implement the rest of daemon settings
 	}
 }
@@ -225,219 +255,4 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		Mtu:             state.Mtu}
 
 	return ret
-}
-
-// -------------- processing connection request ---------------
-func (p *Protocol) processConnectRequest(messageData []byte, stateChan chan<- vpn.StateInfo) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("PANIC on connect: ", r)
-			// changing return values of main method
-			err = errors.New("panic on connect: " + fmt.Sprint(r))
-		}
-	}()
-
-	if p._disconnectRequested {
-		log.Info("Disconnection was requested. Canceling connection.")
-		return p._service.Disconnect()
-	}
-
-	var r types.Connect
-	if err := json.Unmarshal(messageData, &r); err != nil {
-		return fmt.Errorf("failed to unmarshal json 'Connect' request: %w", err)
-	}
-
-	retManualDNS := r.ManualDNS
-
-	if vpn.Type(r.VpnType) == vpn.OpenVPN {
-		// PARAMETERS VALIDATION
-		// parsing hosts
-		var hosts []net.IP
-		for _, v := range r.OpenVpnParameters.EntryVpnServer.Hosts {
-			hosts = append(hosts, net.ParseIP(v.Host))
-		}
-		if len(hosts) < 1 {
-			return fmt.Errorf("VPN host not defined")
-		}
-		// in case of multiple hosts - take random host from the list
-		host := hosts[0]
-		if len(hosts) > 1 {
-			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(hosts)))); err == nil {
-				host = hosts[rnd.Int64()]
-			}
-		}
-
-		// nothing from supported proxy types should be in this parameter
-		proxyType := r.OpenVpnParameters.ProxyType
-		if len(proxyType) > 0 && proxyType != "http" && proxyType != "socks" {
-			proxyType = ""
-		}
-
-		// Multi-Hop
-		var exitHostValue *apitypes.OpenVPNServerHostInfo
-		multihopExitHosts := r.OpenVpnParameters.MultihopExitServer.Hosts
-		if len(multihopExitHosts) > 0 {
-			exitHostValue = &multihopExitHosts[0]
-			if len(multihopExitHosts) > 1 {
-				if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(multihopExitHosts)))); err == nil {
-					exitHostValue = &multihopExitHosts[rnd.Int64()]
-				}
-			}
-		}
-
-		// only one-line parameter is allowed
-		proxyUsername := strings.Split(r.OpenVpnParameters.ProxyUsername, "\n")[0]
-		proxyPassword := strings.Split(r.OpenVpnParameters.ProxyPassword, "\n")[0]
-
-		// CONNECTION
-		// OpenVPN connection parameters
-		var connectionParams openvpn.ConnectionParams
-		if exitHostValue != nil {
-			// Check is it allowed to connect multihop
-			if mhErr := p._service.IsCanConnectMultiHop(); mhErr != nil {
-				return mhErr
-			}
-
-			// Multi-Hop
-			connectionParams = openvpn.CreateConnectionParams(
-				exitHostValue.Hostname,
-				r.OpenVpnParameters.Port.Protocol > 0, // is TCP
-				exitHostValue.MultihopPort,
-				host,
-				proxyType,
-				net.ParseIP(r.OpenVpnParameters.ProxyAddress),
-				r.OpenVpnParameters.ProxyPort,
-				proxyUsername,
-				proxyPassword)
-		} else {
-			// Single-Hop
-			connectionParams = openvpn.CreateConnectionParams(
-				"",
-				r.OpenVpnParameters.Port.Protocol > 0, // is TCP
-				r.OpenVpnParameters.Port.Port,
-				host,
-				proxyType,
-				net.ParseIP(r.OpenVpnParameters.ProxyAddress),
-				r.OpenVpnParameters.ProxyPort,
-				proxyUsername,
-				proxyPassword)
-		}
-
-		return p._service.ConnectOpenVPN(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
-
-	} else if vpn.Type(r.VpnType) == vpn.WireGuard {
-		hosts := r.WireGuardParameters.EntryVpnServer.Hosts
-		multihopExitHosts := r.WireGuardParameters.MultihopExitServer.Hosts
-
-		// filter hosts: use IPv6 hosts
-		if r.IPv6 {
-			ipv6Hosts := append(hosts[0:0], hosts...)
-			n := 0
-			for _, h := range ipv6Hosts {
-				if h.IPv6.LocalIP != "" {
-					ipv6Hosts[n] = h
-					n++
-				}
-			}
-			if n == 0 {
-				if r.IPv6Only {
-					return fmt.Errorf("unable to make IPv6 connection inside tunnel. Server does not support IPv6")
-				}
-			} else {
-				hosts = ipv6Hosts[:n]
-			}
-		}
-
-		// filter exit servers (Multi-Hop connection):
-		// 1) each exit server must have initialized 'multihop_port' field
-		// 2) (in case of IPv6Only) IPv6 local address should be defined
-		if len(multihopExitHosts) > 0 {
-			isHasMHPort := false
-			ipv6ExitHosts := append(multihopExitHosts[0:0], multihopExitHosts...)
-			n := 0
-			for _, h := range ipv6ExitHosts {
-				if h.MultihopPort == 0 {
-					continue
-				}
-				isHasMHPort = true
-				if r.IPv6 && h.IPv6.LocalIP == "" {
-					continue
-				}
-
-				ipv6ExitHosts[n] = h
-				n++
-			}
-			if n == 0 {
-				if !isHasMHPort {
-					return fmt.Errorf("unable to make Multi-Hop connection inside tunnel. Exit server does not support Multi-Hop")
-				}
-				if r.IPv6Only {
-					return fmt.Errorf("unable to make IPv6 Multi-Hop connection inside tunnel. Exit server does not support IPv6")
-				}
-			} else {
-				multihopExitHosts = ipv6ExitHosts[:n]
-			}
-		}
-
-		hostValue := hosts[0]
-		if len(hosts) > 1 {
-			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(hosts)))); err == nil {
-				hostValue = hosts[rnd.Int64()]
-			}
-		}
-
-		var exitHostValue *apitypes.WireGuardServerHostInfo
-		if len(multihopExitHosts) > 0 {
-			exitHostValue = &multihopExitHosts[0]
-			if len(multihopExitHosts) > 1 {
-				if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(multihopExitHosts)))); err == nil {
-					exitHostValue = &multihopExitHosts[rnd.Int64()]
-				}
-			}
-		}
-
-		// prevent user-defined data injection: ensure that nothing except the base64 public key will be stored in the configuration
-		if !helpers.ValidateBase64(hostValue.PublicKey) {
-			return fmt.Errorf("WG public key is not base64 string")
-		}
-
-		hostLocalIP := net.ParseIP(strings.Split(hostValue.LocalIP, "/")[0])
-		ipv6Prefix := ""
-		if r.IPv6 {
-			ipv6Prefix = strings.Split(hostValue.IPv6.LocalIP, "/")[0]
-		}
-
-		var connectionParams wireguard.ConnectionParams
-		if exitHostValue != nil {
-			// Check is it allowed to connect multihop
-			if mhErr := p._service.IsCanConnectMultiHop(); mhErr != nil {
-				return mhErr
-			}
-
-			// Multi-Hop
-			connectionParams = wireguard.CreateConnectionParams(
-				exitHostValue.Hostname,
-				exitHostValue.MultihopPort,
-				net.ParseIP(hostValue.Host),
-				exitHostValue.PublicKey,
-				hostLocalIP,
-				ipv6Prefix,
-				r.WireGuardParameters.Mtu)
-		} else {
-			// Single-Hop
-			connectionParams = wireguard.CreateConnectionParams(
-				"",
-				r.WireGuardParameters.Port.Port,
-				net.ParseIP(hostValue.Host),
-				hostValue.PublicKey,
-				hostLocalIP,
-				ipv6Prefix,
-				r.WireGuardParameters.Mtu)
-		}
-
-		return p._service.ConnectWireGuard(connectionParams, retManualDNS, r.FirewallOn, r.FirewallOnDuringConnection, stateChan)
-
-	}
-
-	return fmt.Errorf("unexpected VPN type to connect (%v)", r.VpnType)
 }
