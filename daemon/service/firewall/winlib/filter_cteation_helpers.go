@@ -261,6 +261,7 @@ func NewFilterAllowLocalIPV6(
 }
 
 // NewFilterBlockAll creates a filter to block all
+// Note: Arguments 'isPersistent' and 'isBootTime' cannot be set together!
 func NewFilterBlockAll(
 	keyProvider syscall.GUID,
 	keyLayer syscall.GUID,
@@ -268,7 +269,7 @@ func NewFilterBlockAll(
 	dispName string,
 	dispDescription string,
 	isIPv6 bool,
-	isPersistent bool) Filter {
+	isPersistent bool, isBootTime bool) Filter {
 
 	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
 	f.Weight = weightBlockAll
@@ -277,6 +278,8 @@ func NewFilterBlockAll(
 	f.Flags = FwpmFilterFlagClearActionRight
 	if isPersistent {
 		f.Flags = f.Flags | FwpmFilterFlagPersistent
+	} else if isBootTime {
+		f.Flags = f.Flags | FwpmFilterFlagBoottime
 	}
 
 	if !isIPv6 {

@@ -309,9 +309,17 @@ func doEnable() (retErr error) {
 	// IPv6 filters
 	for _, layer := range v6Layers {
 		// block all
-		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", true, isPersistant))
+		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", true, isPersistant, false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block all IPv6': %w", err)
+		}
+		if isPersistant {
+			// For 'persistant' state we have to add boot-time blocking rule
+			bootTime := true
+			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", true, false, bootTime))
+			if err != nil {
+				return fmt.Errorf("failed to add boot-time filter 'block all IPv6': %w", err)
+			}
 		}
 
 		// block DNS
@@ -358,9 +366,17 @@ func doEnable() (retErr error) {
 	// IPv4 filters
 	for _, layer := range v4Layers {
 		// block all
-		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", false, isPersistant))
+		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", false, isPersistant, false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block all': %w", err)
+		}
+		if isPersistant {
+			// For 'persistant' state we have to add boot-time blocking rule
+			bootTime := true
+			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", false, false, bootTime))
+			if err != nil {
+				return fmt.Errorf("failed to add boot-time filter 'block all': %w", err)
+			}
 		}
 
 		// block DNS
