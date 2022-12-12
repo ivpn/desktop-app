@@ -117,6 +117,12 @@ ipcMain.on("renderer-request-show-settings-connection", () => {
 ipcMain.on("renderer-request-show-settings-networks", () => {
   showSettings("networks");
 });
+ipcMain.on("renderer-request-show-settings-firewall", () => {
+  showSettings("firewall");
+});
+ipcMain.on("renderer-request-show-settings-antitracker", () => {
+  showSettings("antitracker");
+});
 ipcMain.handle("renderer-request-connect-to-daemon", async () => {
   return await connectToDaemon();
 });
