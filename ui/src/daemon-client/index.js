@@ -1740,38 +1740,32 @@ async function GetAppIcon(binaryPath) {
   }
 }
 
-async function SetDNS(antitrackerIsEnabled) {
+async function SetDNS() {
   let Dns = {
     DnsHost: "",
     Encryption: DnsEncryption.None,
     DohTemplate: "",
   };
+
+  let antiTracker = {
+    Enabled: false,
+    Hardcore: false,
+  };
+
   if (store.state.settings.dnsIsCustom) {
     Dns = store.state.settings.dnsCustomCfg;
   }
 
-  if (antitrackerIsEnabled != null) {
-    // save antitracker configuration
-    store.commit("settings/isAntitracker", antitrackerIsEnabled);
-  }
-
-  if (store.state.settings.isAntitracker) {
-    Dns = {
-      DnsHost: store.getters["vpnState/antitrackerIp"],
-      Encryption: DnsEncryption.None,
-      DohTemplate: "",
-    };
-  }
-
-  if (store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED) {
-    // no sense to send DNS-change request in disconnected state
-    return;
-  }
+  antiTracker = {
+    Enabled: store.state.settings.isAntitracker,
+    Hardcore: store.state.settings.isAntitrackerHardcore,
+  };
 
   // send change-request
   await sendRecv({
     Command: daemonRequests.SetAlternateDns,
     Dns,
+    AntiTracker: antiTracker, // anti-tracker metadata (when enabled: has higher priority than 'Dns')
   });
 }
 

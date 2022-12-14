@@ -195,12 +195,9 @@ ipcMain.handle(
   }
 );
 
-ipcMain.handle(
-  "renderer-request-set-dns",
-  async (event, antitrackerIsEnabled) => {
-    return await client.SetDNS(antitrackerIsEnabled);
-  }
-);
+ipcMain.handle("renderer-request-set-dns", async () => {
+  return await client.SetDNS();
+});
 
 ipcMain.handle("renderer-request-RequestDnsPredefinedConfigs", async () => {
   return await client.RequestDnsPredefinedConfigs();

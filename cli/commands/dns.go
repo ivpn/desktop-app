@@ -30,10 +30,10 @@ import (
 	"text/tabwriter"
 
 	"github.com/ivpn/desktop-app/cli/cliplatform"
-	"github.com/ivpn/desktop-app/cli/commands/config"
 	"github.com/ivpn/desktop-app/cli/flags"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -121,11 +121,6 @@ func (c *CmdDns) Run() error {
 		return flags.BadParameter{}
 	}
 
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return err
-	}
-
 	hr := _proto.GetHelloResponse()
 	uPrefs := hr.DaemonSettings.UserPrefs
 
@@ -160,41 +155,29 @@ func (c *CmdDns) Run() error {
 	var servers *apitypes.ServersInfoResponse
 	// do we have to change custom DNS configuration ?
 	if c.reset || len(c.dns) > 0 {
-		cfg.CustomDnsCfg = dns.DnsSettings{}
-		if len(c.dns) > 0 {
-			cfg.CustomDnsCfg.DnsHost = c.dns
-		}
-		if len(c.dohTemplate) > 0 {
-			cfg.CustomDnsCfg.Encryption = dns.EncryptionDnsOverHttps
-			cfg.CustomDnsCfg.DohTemplate = c.dohTemplate
-		}
-		if len(c.dotTemplate) > 0 {
-			cfg.CustomDnsCfg.Encryption = dns.EncryptionDnsOverTls
-			cfg.CustomDnsCfg.DohTemplate = c.dotTemplate
-		}
-
-		err = config.SaveConfig(cfg)
+		// get default connection parameters (dns, anti-tracker, ... etc.)
+		defConnCfg, err := _proto.GetDefConnectionParams()
 		if err != nil {
 			return err
 		}
+		defManualDns := defConnCfg.Params.ManualDNS
 
-		// update DNS if VPN is connected
-		state, connectedInfo, err := _proto.GetVPNState()
-		if err != nil {
-			return err
-		}
-		if state == vpn.CONNECTED {
-			svrs, _ := _proto.GetServers()
-			servers = &svrs
-			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectedInfo.ManualDNS.DnsHost, servers)
-			if c.reset && (isAntitracker || isAtHardcore) {
-				fmt.Println("Nothing to disable")
-			} else {
-				if err := _proto.SetManualDNS(cfg.CustomDnsCfg); err != nil {
-					return err
-				}
-				fmt.Println("Custom DNS successfully changed for current VPN connection")
+		if c.reset {
+			defManualDns = dns.DnsSettings{}
+		} else {
+			defManualDns.DnsHost = c.dns
+			if len(c.dohTemplate) > 0 {
+				defManualDns.Encryption = dns.EncryptionDnsOverHttps
+				defManualDns.DohTemplate = c.dohTemplate
 			}
+			if len(c.dotTemplate) > 0 {
+				defManualDns.Encryption = dns.EncryptionDnsOverTls
+				defManualDns.DohTemplate = c.dotTemplate
+			}
+		}
+
+		if err := _proto.SetManualDNS(defManualDns, service_types.AntiTrackerMetadata{}); err != nil {
+			return err
 		}
 	}
 
@@ -212,9 +195,13 @@ func (c *CmdDns) Run() error {
 			servers = &svrs
 		}
 		w = printDNSState(w, connected.ManualDNS, servers)
+	} else {
+		defConnCfg, err := _proto.GetDefConnectionParams()
+		if err != nil {
+			return err
+		}
+		w = printDNSConfigInfo(w, defConnCfg.Params.ManualDNS)
 	}
-
-	w = printDNSConfigInfo(w, cfg.CustomDnsCfg)
 	w.Flush()
 
 	return nil
@@ -241,58 +228,27 @@ func (c *CmdAntitracker) Run() error {
 		return flags.BadParameter{Message: "Not allowed to use more than one argument for this command"}
 	}
 
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return err
-	}
-
-	var servers apitypes.ServersInfoResponse
-
-	servers, err = _proto.GetServers()
-	if err != nil {
-		return err
-	}
-
-	// do we have to change antitracker configuration ?
+	// do we have to change anti-tracker configuration ?
 	if c.off || c.def || c.hardcore {
-		cfg.Antitracker = false
-		cfg.AntitrackerHardcore = false
+		// get default connection parameters (dns, anti-tracker, ... etc.)
+		defConnCfg := service_types.ConnectionParams{}
+		if ret, err := _proto.GetDefConnectionParams(); err == nil {
+			defConnCfg = ret.Params
+		}
+		newAtMetadata := defConnCfg.Metadata.AntiTracker
+
+		newAtMetadata.Enabled = false
+		newAtMetadata.Hardcore = false
 
 		if c.hardcore {
-			cfg.AntitrackerHardcore = true
+			newAtMetadata.Hardcore = true
+			newAtMetadata.Enabled = true
 		} else if c.def {
-			cfg.Antitracker = true
+			newAtMetadata.Enabled = true
 		}
 
-		err = config.SaveConfig(cfg)
-		if err != nil {
+		if err := _proto.SetManualDNS(defConnCfg.ManualDNS, newAtMetadata); err != nil {
 			return err
-		}
-
-		// update DNS if VPN is connected
-		state, connectInfo, err := _proto.GetVPNState()
-		if err != nil {
-			return err
-		}
-
-		if state == vpn.CONNECTED {
-			isAntitracker, isAtHardcore := IsAntiTrackerIP(connectInfo.ManualDNS.DnsHost, &servers)
-			if c.off && !(isAntitracker || isAtHardcore) {
-				fmt.Println("AntiTracker already disabled")
-			} else {
-				var dnsStr string
-				if cfg.Antitracker || cfg.AntitrackerHardcore {
-					dnsStr, err = GetAntitrackerIP(connectInfo.VpnType, cfg.AntitrackerHardcore, len(connectInfo.ExitHostname) > 0, &servers)
-					if err != nil {
-						return err
-					}
-				}
-				dnsCfg := dns.DnsSettings{DnsHost: dnsStr}
-				if err := _proto.SetManualDNS(dnsCfg); err != nil {
-					return err
-				}
-				fmt.Println("AntiTracker successfully updated for current VPN connection")
-			}
 		}
 	}
 
@@ -303,13 +259,17 @@ func (c *CmdAntitracker) Run() error {
 	if err != nil {
 		return err
 	}
+	defConnCfg, err := _proto.GetDefConnectionParams()
+	if err != nil {
+		return err
+	}
 
 	if state == vpn.CONNECTED {
 		servers, _ := _proto.GetServers()
 		w = printDNSState(w, connected.ManualDNS, &servers)
+	} else {
+		w = printAntitrackerConfigInfo(w, defConnCfg.Params.Metadata.AntiTracker.Enabled, defConnCfg.Params.Metadata.AntiTracker.Hardcore)
 	}
-
-	w = printAntitrackerConfigInfo(w, cfg.Antitracker, cfg.AntitrackerHardcore)
 	w.Flush()
 
 	return nil

@@ -568,26 +568,73 @@ func (s *Service) IsPaused() bool {
 	return vpn.IsPaused()
 }
 
-// SetManualDNS set dns
-func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings) error {
+// SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
+// If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
+func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error) {
+
+	// Update default metadata
+	defaultParams := s.GetConnectionParams()
+	// save DNS and AntiTracker default metadata
+	if !defaultParams.ManualDNS.Equal(dnsCfg) || !defaultParams.Metadata.AntiTracker.Equal(antiTracker) {
+		defaultParams.ManualDNS = dnsCfg
+		defaultParams.Metadata.AntiTracker = antiTracker
+		s.setConnectionParams(defaultParams)
+	}
+	// anti-tracker
+	if antiTracker.Enabled {
+		atDns, err := s.getAntiTrackerDns(antiTracker.Hardcore)
+		if err != err {
+			return dns.DnsSettings{}, err
+		}
+		dnsCfg = atDns
+	}
+
 	vpn := s._vpn
 	if vpn == nil {
-		return nil
+		// no active VPN connection
+		return dnsCfg, nil
 	}
 
 	s._manualDNS = dnsCfg
-
-	return vpn.SetManualDNS(s._manualDNS)
+	return s._manualDNS, vpn.SetManualDNS(s._manualDNS)
 }
 
 // ResetManualDNS set dns to default
 func (s *Service) ResetManualDNS() error {
+
+	// Update default metadata
+	defaultParams := s.GetConnectionParams()
+	if !defaultParams.ManualDNS.IsEmpty() || !defaultParams.Metadata.AntiTracker.Equal(types.AntiTrackerMetadata{}) {
+		defaultParams.ManualDNS = dns.DnsSettings{}
+		defaultParams.Metadata.AntiTracker = types.AntiTrackerMetadata{}
+		s.setConnectionParams(defaultParams)
+	}
+
 	vpn := s._vpn
 	if vpn == nil {
+		// no active VPN connection
 		return nil
 	}
 
 	return vpn.ResetManualDNS()
+}
+
+func (s *Service) getAntiTrackerDns(isHardcore bool) (dnsCfg dns.DnsSettings, err error) {
+	defer func() {
+		if dnsCfg.IsEmpty() && err == nil {
+			err = fmt.Errorf("unable to determine AntiTracker DNS")
+		}
+	}()
+	servers, err := s.ServersList()
+	if err != nil {
+		return dns.DnsSettings{}, fmt.Errorf("failed to determine AntiTracker parameters: %w", err)
+	}
+
+	// port-based MultiHop using the same AntiTracker DNS IP as SingleHop
+	if isHardcore {
+		return dns.DnsSettings{DnsHost: servers.Config.Antitracker.Hardcore.IP}, nil
+	}
+	return dns.DnsSettings{DnsHost: servers.Config.Antitracker.Default.IP}, nil
 }
 
 // ////////////////////////////////////////////////////////
@@ -785,6 +832,10 @@ func (s *Service) ResetPreferences() error {
 	// erase ST config
 	s.SplitTunnelling_SetConfig(false, true)
 	return nil
+}
+
+func (s *Service) GetConnectionParams() types.ConnectionParams {
+	return s._preferences.LastConnectionParams
 }
 
 func (s *Service) SetConnectionParams(params types.ConnectionParams) error {

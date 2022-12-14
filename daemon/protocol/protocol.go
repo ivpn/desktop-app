@@ -92,6 +92,7 @@ type Service interface {
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
 	SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error
 
+	GetConnectionParams() service_types.ConnectionParams
 	SetConnectionParams(params service_types.ConnectionParams) error
 	SetWiFiSettings(params preferences.WiFiParams) error
 
@@ -110,7 +111,9 @@ type Service interface {
 	SetUserPreferences(userPrefs preferences.UserPreferences) (err error)
 	ResetPreferences() error
 
-	SetManualDNS(dns dns.DnsSettings) error
+	// SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
+	// If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
+	SetManualDNS(dns dns.DnsSettings, antiTracker service_types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error)
 	ResetManualDNS() error
 
 	IsCanConnectMultiHop() error
@@ -883,15 +886,15 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				}
 				return fields[0]
 			}
-
 			req.Dns.DnsHost = getSingleField(req.Dns.DnsHost)
 			req.Dns.DohTemplate = getSingleField(req.Dns.DohTemplate)
 
+			changedDns := dns.DnsSettings{}
 			var err error
-			if req.Dns.IsEmpty() {
+			if req.Dns.IsEmpty() && !req.AntiTracker.IsEnabled() {
 				err = p._service.ResetManualDNS()
 			} else {
-				err = p._service.SetManualDNS(req.Dns)
+				changedDns, err = p._service.SetManualDNS(req.Dns, req.AntiTracker)
 
 				if err != nil {
 					// DNS set failed. Trying to reset DNS
@@ -908,9 +911,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
 			} else {
 				// notify all connected clients
-				p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns})
+				p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: changedDns})
 				// send the response to the requestor
-				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: req.Dns}, req.Idx)
+				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: changedDns}, req.Idx)
 			}
 		}
 	case "GetDnsPredefinedConfigs":
@@ -1133,6 +1136,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if err := p._service.Disconnect(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
+
+	case "ConnectSettingsGet":
+		p.sendResponse(conn, &types.ConnectSettings{Params: p._service.GetConnectionParams()}, reqCmd.Idx)
 
 	case "ConnectSettings":
 		// Similar data to 'Connect' request but this command not start the connection.

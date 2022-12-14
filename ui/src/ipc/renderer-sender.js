@@ -218,8 +218,8 @@ export default {
     );
   },
 
-  SetDNS: async (antitrackerIsEnabled) => {
-    return await invoke("renderer-request-set-dns", antitrackerIsEnabled);
+  SetDNS: async () => {
+    return await invoke("renderer-request-set-dns");
   },
 
   RequestDnsPredefinedConfigs: async () => {

@@ -45,7 +45,6 @@ const (
 	TipFirewallDisable           TipType = iota
 	TipFirewallEnable            TipType = iota
 	TipFirewallDisablePersistent TipType = iota
-	TipLastConnection            TipType = iota
 	TipSplittunEnable            TipType = iota
 	TipEaaDisable                TipType = iota
 	TipWiFiStatus                TipType = iota
@@ -98,8 +97,6 @@ func PrintTip(w *tabwriter.Writer, tip TipType) {
 		str = newTip("firewall -on", "Enable firewall (to block all connectivity outside VPN)")
 	case TipFirewallDisablePersistent:
 		str = newTip("firewall -persistent_off", "Disable firewall persistency (Always-on firewall)")
-	case TipLastConnection:
-		str = newTip("connect -last", "Connect with last successful connection parameters")
 	case TipSplittunEnable:
 		str = newTip("splittun -on", "Enable Split Tunnel functionality")
 	case TipEaaDisable:
