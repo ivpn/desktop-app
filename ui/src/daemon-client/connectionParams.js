@@ -98,18 +98,19 @@ export function InitConnectionParamsObject() {
   if (settings.dnsIsCustom) {
     manualDNS = settings.dnsCustomCfg;
   }
+
+  // AntiTracker metadata
+  let antiTrackerMetadata = { Enabled: false, Hardcore: false };
   if (settings.isAntitracker) {
-    manualDNS = {
-      DnsHost: store.getters["vpnState/antitrackerIp"],
-      Encryption: DnsEncryption.None,
-      DohTemplate: "",
-    };
+    antiTrackerMetadata.Enabled = settings.isAntitracker;
+    antiTrackerMetadata.Hardcore = settings.isAntitrackerHardcore;
   }
 
   // Metadata
   var metadata = {
     ServerSelectionEntry: ServerSelectionEnum.Default,
     ServerSelectionExit: ServerSelectionEnum.Default,
+    AntiTracker: antiTrackerMetadata,
   };
   if (store.getters["settings/isFastestServer"]) {
     metadata.ServerSelectionEntry = ServerSelectionEnum.Fastest;

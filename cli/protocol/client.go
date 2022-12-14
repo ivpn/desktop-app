@@ -41,6 +41,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"golang.org/x/crypto/pbkdf2"
@@ -681,12 +682,12 @@ func (c *Client) PingServers(pingAllHostsOnFirstPhase bool, vpnTypePrioritized *
 }
 
 // SetManualDNS - sets manual DNS for current VPN connection
-func (c *Client) SetManualDNS(dnsCfg dns.DnsSettings) error {
+func (c *Client) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker service_types.AntiTrackerMetadata) error {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
 
-	req := types.SetAlternateDns{Dns: dnsCfg}
+	req := types.SetAlternateDns{Dns: dnsCfg, AntiTracker: antiTracker}
 	var resp types.SetAlternateDNSResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
@@ -755,4 +756,26 @@ func (c *Client) SetWiFiSettings(params preferences.WiFiParams) error {
 		return err
 	}
 	return nil
+}
+
+func (c *Client) SetDefConnectionParams(params types.ConnectSettings) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	var resp types.EmptyResp
+	if _, _, err := c.sendRecvAny(&params, &resp); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) GetDefConnectionParams() (types.ConnectSettings, error) {
+	if err := c.ensureConnected(); err != nil {
+		return types.ConnectSettings{}, err
+	}
+
+	var resp types.ConnectSettings
+	_, _, err := c.sendRecvAny(&types.ConnectSettingsGet{}, &resp)
+	return resp, err
 }

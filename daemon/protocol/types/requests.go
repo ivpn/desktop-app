@@ -166,7 +166,8 @@ type SetObfsProxy struct {
 // SetAlternateDns request to set custom DNS
 type SetAlternateDns struct {
 	RequestBase
-	Dns dns.DnsSettings
+	AntiTracker service_types.AntiTrackerMetadata
+	Dns         dns.DnsSettings // If 'AntiTracker' is enabled - his parameter will be ignored
 }
 
 // GetDnsPredefinedConfigs request to get list of predefined DoH/DoT configurations (if exists)
@@ -191,11 +192,19 @@ type WiFiSettings struct {
 }
 
 // ConnectSettings contains same data as 'Connect' request but this command not start the connection.
-// UI client have to notify daemon about changes in connection settings.
-// It is required for automatic connection on daemon's side (e.g. 'Auto-connect on Launch' or 'Trusted WiFi' functionality)
+// UI/CLI client have to notify daemon about changes in connection settings.
+// It is required:
+// - for automatic connection on daemon's side (e.g. 'Auto-connect on Launch' or 'Trusted WiFi' functionality)
+// - for default configuration storage (e.g for CLI)
+// Note: this command can be sent to the client from the daemon also (as a response to ConnectSettingsGet)
 type ConnectSettings struct {
 	RequestBase
 	Params service_types.ConnectionParams
+}
+
+// ConnectSettingsGet request default connection settings
+type ConnectSettingsGet struct {
+	RequestBase
 }
 
 // Connect request to establish new VPN connection

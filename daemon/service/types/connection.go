@@ -38,11 +38,26 @@ const (
 	Random  ServerSelectionEnum = iota // Random server in use
 )
 
+type AntiTrackerMetadata struct {
+	Enabled  bool
+	Hardcore bool
+}
+
+func (a AntiTrackerMetadata) IsEnabled() bool {
+	return a.Enabled
+}
+
+func (a AntiTrackerMetadata) Equal(b AntiTrackerMetadata) bool {
+	return a.Enabled == b.Enabled && a.Hardcore == b.Hardcore
+}
+
 type ConnectMetadata struct {
 	// How the entry server was chosen
 	ServerSelectionEntry ServerSelectionEnum
 	// How the exit server was chosen ('Fastest' is not applicable for 'Exit' server)
 	ServerSelectionExit ServerSelectionEnum
+
+	AntiTracker AntiTrackerMetadata
 
 	// (only if Fastest server in use) List of fastest servers which must be ignored (only gateway ID in use: e.g."us-tx.wg.ivpn.net" => "us-tx")
 	FastestGatewaysExcludeList []string

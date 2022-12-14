@@ -291,17 +291,6 @@ export default {
     activeServers(state, getters, rootState) {
       return getActiveServers(state, rootState);
     },
-    antitrackerIp(state, getters, rootState) {
-      let atConfig = state.servers.config.antitracker;
-      if (atConfig == null) return null;
-      let atIPs = rootState.settings.isAntitrackerHardcore
-        ? atConfig.hardcore
-        : atConfig.default;
-      if (atIPs == null) return null;
-
-      // port-based MultiHop using the same DNS IP as SingleHop
-      return atIPs.ip;
-    },
     isAntitrackerEnabled: (state) => {
       return isAntitrackerActive(state);
     },

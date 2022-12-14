@@ -199,7 +199,8 @@ export default {
     async antitrackerOnChecked(antitrackerIsEnabled) {
       try {
         this.antitrackerIsProgress = true;
-        await sender.SetDNS(antitrackerIsEnabled);
+        this.$store.dispatch("settings/isAntitracker", antitrackerIsEnabled);
+        await sender.SetDNS();
       } catch (e) {
         processError(e);
       } finally {

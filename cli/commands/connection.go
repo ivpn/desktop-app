@@ -30,7 +30,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ivpn/desktop-app/cli/commands/config"
 	"github.com/ivpn/desktop-app/cli/flags"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
@@ -177,7 +176,7 @@ func (c *CmdConnect) Init() {
 
 	c.BoolVar(&c.fastest, "fastest", false, "Connect to fastest server")
 
-	c.BoolVar(&c.last, "last", false, "Connect with last successful connection parameters")
+	c.BoolVar(&c.last, "last", false, "Connect with the last used connection parameters")
 
 	c.IntVar(&c.mtu, "mtu", 0, "MTU", "Maximum transmission unit (applicable only for WireGuard connections)")
 }
@@ -294,389 +293,353 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 	}
 
-	// do we need to connect with last successful connection parameters
+	defaultConnSettings, err := _proto.GetDefConnectionParams()
+	if err != nil {
+		return err
+	}
+
+	// do we need to connect with default connection parameters
 	if c.last {
-		fmt.Println("Enabled '-last' parameter. Using parameters from last successful connection")
-		ci := config.RestoreLastConnectionInfo()
-		if ci == nil {
-			return fmt.Errorf("no information about last connection")
-		}
-
-		// reset filters
-		c.filter_proto = ""
-		c.filter_location = false
-		c.filter_city = false
-		c.filter_countryCode = false
-		c.filter_country = false
-		c.filter_invert = false
-
-		// load last connection parameters
-		c.gateway = ci.Gateway
-		c.port = ci.Port
-		c.obfsproxy = ci.Obfsproxy
-		c.firewallOff = ci.FirewallOff
-		c.dns = ci.DNS
-		c.antitracker = ci.Antitracker
-		c.antitrackerHard = ci.AntitrackerHard
-		c.multihopExitSvr = ci.MultiopExitSvr
-		c.isIPv6Tunnel = ci.IPv6Tunnel
-
-		c.mtu = ci.Mtu
-	}
-
-	// MULTI\SINGLE -HOP
-	// Check if the parameters are correct and define correct values for c.gateway and c.multihopExitSvr
-	if len(c.multihopExitSvr) > 0 {
-		// MULTI-HOP
-
-		if err := helloResp.Account.IsCanConnectMultiHop(); err != nil {
-			return err
-		}
-
-		if c.fastest {
-			return flags.BadParameter{Message: "'fastest' flag is not applicable for Multi-Hop connection [exit_svr]"}
-		}
-
-		if c.filter_location || c.filter_city || c.filter_countryCode || c.filter_country || c.filter_invert {
-			fmt.Println("WARNING: filtering flags are ignored for Multi-Hop connection [exit_svr]")
-		}
-
-		entrySvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, false, false, false, false, false)
-		if len(entrySvrs) == 0 || len(entrySvrs) > 1 {
-			return flags.BadParameter{Message: "specify correct entry server ID for multi-hop connection"}
-		}
-
-		exitSvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multihopExitSvr, c.filter_proto, false, false, false, false, false)
-		if len(exitSvrs) == 0 || len(exitSvrs) > 1 {
-			return flags.BadParameter{Message: "specify correct exit server ID for multi-hop connection"}
-		}
-		entrySvr := entrySvrs[0]
-		exitSvr := exitSvrs[0]
-
-		if entrySvr.gateway == exitSvr.gateway || entrySvr.countryCode == exitSvr.countryCode {
-			return flags.BadParameter{Message: "unable to use entry- and exit- servers from the same country for multi-hop connection"}
-		}
-
-		c.gateway = entrySvr.gateway
-		c.multihopExitSvr = exitSvr.gateway
+		fmt.Println("Enabled '-last' parameter. Using parameters from last used configuration")
+		req.Params = defaultConnSettings.Params
+		req.Params.FirewallOnDuringConnection = true
 	} else {
-		//SINGLE-HOP
-		svrs = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
+		// MULTI\SINGLE -HOP
+		// Check if the parameters are correct and define correct values for c.gateway and c.multihopExitSvr
+		if len(c.multihopExitSvr) > 0 {
+			// MULTI-HOP
 
-		srvID := ""
+			if err := helloResp.Account.IsCanConnectMultiHop(); err != nil {
+				return err
+			}
 
-		// Fastest server
-		if c.fastest && len(svrs) > 1 {
-			var vpnType *vpn.Type = nil
-			if len(c.filter_proto) > 0 {
-				if p, err := getVpnTypeByFlag(c.filter_proto); err == nil {
-					vpnType = &p
+			if c.fastest {
+				return flags.BadParameter{Message: "'fastest' flag is not applicable for Multi-Hop connection [exit_svr]"}
+			}
+
+			if c.filter_location || c.filter_city || c.filter_countryCode || c.filter_country || c.filter_invert {
+				fmt.Println("WARNING: filtering flags are ignored for Multi-Hop connection [exit_svr]")
+			}
+
+			entrySvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, false, false, false, false, false)
+			if len(entrySvrs) == 0 || len(entrySvrs) > 1 {
+				return flags.BadParameter{Message: "specify correct entry server ID for multi-hop connection"}
+			}
+
+			exitSvrs := serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.multihopExitSvr, c.filter_proto, false, false, false, false, false)
+			if len(exitSvrs) == 0 || len(exitSvrs) > 1 {
+				return flags.BadParameter{Message: "specify correct exit server ID for multi-hop connection"}
+			}
+			entrySvr := entrySvrs[0]
+			exitSvr := exitSvrs[0]
+
+			if entrySvr.gateway == exitSvr.gateway || entrySvr.countryCode == exitSvr.countryCode {
+				return flags.BadParameter{Message: "unable to use entry- and exit- servers from the same country for multi-hop connection"}
+			}
+
+			c.gateway = entrySvr.gateway
+			c.multihopExitSvr = exitSvr.gateway
+		} else { //SINGLE-HOP
+			svrs = serversFilter(isWgDisabled, isOpenVPNDisabled, svrs, c.gateway, c.filter_proto, c.filter_location, c.filter_city, c.filter_countryCode, c.filter_country, c.filter_invert)
+
+			srvID := ""
+
+			// Fastest server
+			if c.fastest && len(svrs) > 1 {
+				var vpnType *vpn.Type = nil
+				if len(c.filter_proto) > 0 {
+					if p, err := getVpnTypeByFlag(c.filter_proto); err == nil {
+						vpnType = &p
+					}
 				}
-			}
-			if err := serversPing(svrs, true, false, vpnType); err != nil {
-				if c.any {
-					fmt.Printf("Error: Failed to ping servers to determine fastest: %s\n", err)
-				} else {
-					return err
+				if err := serversPing(svrs, true, false, vpnType); err != nil {
+					if c.any {
+						fmt.Printf("Error: Failed to ping servers to determine fastest: %s\n", err)
+					} else {
+						return err
+					}
 				}
-			}
-			fastestSrv := svrs[len(svrs)-1]
-			if fastestSrv.pingMs == 0 {
-				fmt.Println("WARNING! Servers pinging problem.")
-			}
-			srvID = fastestSrv.gateway
-		}
-
-		// if we not found required server before (by 'fastest' option)
-		if len(srvID) == 0 {
-			showTipsServerFilterError := func() {
-				fmt.Println()
-
-				tips := []TipType{TipServers, TipConnectHelp}
-				if config.LastConnectionExist() {
-					tips = append(tips, TipLastConnection)
+				fastestSrv := svrs[len(svrs)-1]
+				if fastestSrv.pingMs == 0 {
+					fmt.Println("WARNING! Servers pinging problem.")
 				}
-				PrintTips(tips)
+				srvID = fastestSrv.gateway
 			}
 
-			// no servers found
-			if len(svrs) == 0 {
-				fmt.Println("No servers found by your filter")
-				fmt.Println("Please specify server more correctly")
+			// if we not found required server before (by 'fastest' option)
+			if len(srvID) == 0 {
+				showTipsServerFilterError := func() {
+					fmt.Println()
+					PrintTips([]TipType{TipServers, TipConnectHelp})
+				}
 
-				funcWarnDisabledProtocols() // print info about disabled functionality
-				showTipsServerFilterError()
-				return fmt.Errorf("no servers found by your filter")
-			}
+				// no servers found
+				if len(svrs) == 0 {
+					fmt.Println("No servers found by your filter")
+					fmt.Println("Please specify server more correctly")
 
-			// 'any' option
-			if len(svrs) > 1 {
-				fmt.Print("More than one server was found. ")
-
-				if c.any == false {
-					fmt.Println("Please specify server more correctly or use flag '-any'")
+					funcWarnDisabledProtocols() // print info about disabled functionality
 					showTipsServerFilterError()
-					return fmt.Errorf("more than one server found")
+					return fmt.Errorf("no servers found by your filter")
 				}
-				fmt.Printf("Taking one random from found servers ...\n")
-			}
 
-			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(svrs)))); err == nil {
-				srvID = svrs[rnd.Int64()].gateway
+				// 'any' option
+				if len(svrs) > 1 {
+					fmt.Print("More than one server was found. ")
+
+					if c.any == false {
+						fmt.Println("Please specify server more correctly or use flag '-any'")
+						showTipsServerFilterError()
+						return fmt.Errorf("more than one server found")
+					}
+					fmt.Printf("Taking one random from found servers ...\n")
+				}
+
+				if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(svrs)))); err == nil {
+					srvID = svrs[rnd.Int64()].gateway
+				} else {
+					srvID = svrs[0].gateway
+				}
+			}
+			c.gateway = srvID
+		}
+
+		// Firewall for current connection
+		req.Params.FirewallOnDuringConnection = true
+		if c.firewallOff {
+			// check current FW state
+			state, err := _proto.FirewallStatus()
+			if err != nil {
+				return fmt.Errorf("unable to check Firewall state: %w", err)
+			}
+			if state.IsEnabled == false {
+				req.Params.FirewallOnDuringConnection = false
 			} else {
-				srvID = svrs[0].gateway
+				fmt.Println("WARNING! Firewall option ignored (Firewall already enabled manually)")
 			}
 		}
-		c.gateway = srvID
-	}
 
-	// Firewall for current connection
-	req.Params.FirewallOnDuringConnection = true
-	if c.firewallOff {
-		// check current FW state
-		state, err := _proto.FirewallStatus()
-		if err != nil {
-			return fmt.Errorf("unable to check Firewall state: %w", err)
-		}
-		if state.IsEnabled == false {
-			req.Params.FirewallOnDuringConnection = false
-		} else {
-			fmt.Println("WARNING! Firewall option ignored (Firewall already enabled manually)")
-		}
-	}
+		// Looking for connection server
 
-	// Looking for connection server
+		// WireGuard
+		{
+			funcApplyCustomHost := func(hosts []apitypes.WireGuardServerHostInfo, hostname string) []apitypes.WireGuardServerHostInfo {
+				for _, h := range hosts {
+					if h.Hostname == hostname {
+						return []apitypes.WireGuardServerHostInfo{h}
+					}
+				}
+				return hosts
+			}
 
-	vpntype := vpn.WireGuard
-	// WireGuard
-	{
-		funcApplyCustomHost := func(hosts []apitypes.WireGuardServerHostInfo, hostname string) []apitypes.WireGuardServerHostInfo {
-			for _, h := range hosts {
-				if h.Hostname == hostname {
-					return []apitypes.WireGuardServerHostInfo{h}
+			var entrySvrWg *apitypes.WireGuardServerInfo = nil
+			var exitSvrWg *apitypes.WireGuardServerInfo = nil
+			// exit server
+			if len(c.multihopExitSvr) > 0 {
+				for i, s := range servers.WireguardServers {
+					if s.Gateway == c.multihopExitSvr {
+						exitSvrWg = &servers.WireguardServers[i]
+						break
+					}
 				}
 			}
-			return hosts
-		}
-
-		var entrySvrWg *apitypes.WireGuardServerInfo = nil
-		var exitSvrWg *apitypes.WireGuardServerInfo = nil
-		// exit server
-		if len(c.multihopExitSvr) > 0 {
+			// entry server
 			for i, s := range servers.WireguardServers {
-				if s.Gateway == c.multihopExitSvr {
-					exitSvrWg = &servers.WireguardServers[i]
+				if s.Gateway == c.gateway {
+					entrySvrWg = &servers.WireguardServers[i]
+
+					serverFound = true
+					req.Params.VpnType = vpn.WireGuard
+					req.Params.WireGuardParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
+					req.Params.IPv6 = c.isIPv6Tunnel
+
+					if c.mtu > 0 {
+						fmt.Printf("[!] Using custom MTU: %d\n", c.mtu)
+						req.Params.WireGuardParameters.Mtu = c.mtu
+					}
+
+					if len(c.multihopExitSvr) == 0 {
+						// port
+						p, err := getPort(c.port, allowedPortsWg)
+						if err != nil {
+							printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+							return err
+						}
+						req.Params.WireGuardParameters.Port.Port = p.port
+
+						fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s %s...\n", s.City, s.CountryCode, s.Country, s.Gateway, p.String())
+					} else {
+						if exitSvrWg == nil {
+							return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
+						}
+
+						// port definition is not required for WireGuard multi-hop (in use: UDP + port-based-multihop)
+						if len(c.port) > 0 {
+							// if user manually defined port for obfsproxy connection - inform that it is ignored
+							fmt.Printf("Note: port definition is ignored for WireGuard Multi-Hop connections\n")
+						}
+
+						req.Params.WireGuardParameters.MultihopExitServer.ExitSrvID = strings.Split(exitSvrWg.Gateway, ".")[0]
+						req.Params.WireGuardParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrWg.Hosts, customHostExitServer)
+
+						fmt.Printf("[WireGuard] Connecting Multi-Hop...\n")
+						fmt.Printf("\tentry server: %s, %s (%s) %s\n", entrySvrWg.City, entrySvrWg.CountryCode, entrySvrWg.Country, entrySvrWg.Gateway)
+						fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvrWg.City, exitSvrWg.CountryCode, exitSvrWg.Country, exitSvrWg.Gateway)
+					}
 					break
 				}
 			}
 		}
-		// entry server
-		for i, s := range servers.WireguardServers {
-			if s.Gateway == c.gateway {
-				entrySvrWg = &servers.WireguardServers[i]
 
-				serverFound = true
-				req.Params.VpnType = vpn.WireGuard
-				req.Params.WireGuardParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
-				req.Params.IPv6 = c.isIPv6Tunnel
-
-				if c.mtu > 0 {
-					fmt.Printf("[!] Using custom MTU: %d\n", c.mtu)
-					req.Params.WireGuardParameters.Mtu = c.mtu
-				}
-
-				if len(c.multihopExitSvr) == 0 {
-					// port
-					p, err := getPort(c.port, allowedPortsWg)
-					if err != nil {
-						printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
-						return err
-					}
-					req.Params.WireGuardParameters.Port.Port = p.port
-
-					fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s %s...\n", s.City, s.CountryCode, s.Country, s.Gateway, p.String())
-				} else {
-					if exitSvrWg == nil {
-						return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
-					}
-
-					// port definition is not required for WireGuard multi-hop (in use: UDP + port-based-multihop)
-					if len(c.port) > 0 {
-						// if user manually defined port for obfsproxy connection - inform that it is ignored
-						fmt.Printf("Note: port definition is ignored for WireGuard Multi-Hop connections\n")
-					}
-
-					req.Params.WireGuardParameters.MultihopExitServer.ExitSrvID = strings.Split(exitSvrWg.Gateway, ".")[0]
-					req.Params.WireGuardParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrWg.Hosts, customHostExitServer)
-
-					fmt.Printf("[WireGuard] Connecting Multi-Hop...\n")
-					fmt.Printf("\tentry server: %s, %s (%s) %s\n", entrySvrWg.City, entrySvrWg.CountryCode, entrySvrWg.Country, entrySvrWg.Gateway)
-					fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvrWg.City, exitSvrWg.CountryCode, exitSvrWg.Country, exitSvrWg.Gateway)
-				}
-				break
+		// OpenVPN
+		if serverFound == false {
+			if obfsproxyCfg.IsObfsproxy() && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
+				return fmt.Errorf(helloResp.DisabledFunctions.ObfsproxyError)
 			}
-		}
-	}
 
-	// OpenVPN
-	if serverFound == false {
-		if obfsproxyCfg.IsObfsproxy() && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
-			return fmt.Errorf(helloResp.DisabledFunctions.ObfsproxyError)
-		}
+			funcApplyCustomHost := func(hosts []apitypes.OpenVPNServerHostInfo, hostname string) []apitypes.OpenVPNServerHostInfo {
+				for _, h := range hosts {
+					if h.Hostname == hostname {
+						return []apitypes.OpenVPNServerHostInfo{h}
+					}
+				}
+				return hosts
+			}
 
-		vpntype = vpn.OpenVPN
+			var entrySvrOvpn *apitypes.OpenvpnServerInfo = nil
+			var exitSvrOvpn *apitypes.OpenvpnServerInfo = nil
 
-		funcApplyCustomHost := func(hosts []apitypes.OpenVPNServerHostInfo, hostname string) []apitypes.OpenVPNServerHostInfo {
-			for _, h := range hosts {
-				if h.Hostname == hostname {
-					return []apitypes.OpenVPNServerHostInfo{h}
+			// exit server
+			if len(c.multihopExitSvr) > 0 {
+				for i, s := range servers.OpenvpnServers {
+					if s.Gateway == c.multihopExitSvr {
+						exitSvrOvpn = &servers.OpenvpnServers[i]
+						break
+					}
 				}
 			}
-			return hosts
-		}
 
-		var entrySvrOvpn *apitypes.OpenvpnServerInfo = nil
-		var exitSvrOvpn *apitypes.OpenvpnServerInfo = nil
-
-		// exit server
-		if len(c.multihopExitSvr) > 0 {
+			var destPort port
+			// entry server
 			for i, s := range servers.OpenvpnServers {
-				if s.Gateway == c.multihopExitSvr {
-					exitSvrOvpn = &servers.OpenvpnServers[i]
+				if s.Gateway == c.gateway {
+					entrySvrOvpn = &servers.OpenvpnServers[i]
+
+					// set obfsproxy config
+					if !_proto.GetHelloResponse().DaemonSettings.ObfsproxyConfig.Equals(obfsproxyCfg) {
+						if err = _proto.SetObfsProxy(obfsproxyCfg); err != nil {
+							return err
+						}
+					}
+					if obfsproxyCfg.IsObfsproxy() {
+						fmt.Println("obfsproxy configuration: " + obfsproxyCfg.ToString())
+					}
+
+					serverFound = true
+					req.Params.VpnType = vpn.OpenVPN
+					req.Params.OpenVpnParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
+
+					isMultihop := exitSvrOvpn != nil && len(c.multihopExitSvr) > 0
+					if !isMultihop {
+						// port
+						destPort, err = getPort(c.port, allowedPortsOvpn)
+						if err != nil {
+							printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+							return err
+						}
+					} else {
+						// port
+						destPort, err = getPort(c.port, nil)
+						if err != nil {
+							printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+							return err
+						}
+
+						// get Multi-Hop ID
+						req.Params.OpenVpnParameters.MultihopExitServer.ExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
+						req.Params.OpenVpnParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrOvpn.Hosts, customHostExitServer)
+						destPort.port = 0 // do not use port number (port-based multihop)
+					}
+
+					req.Params.OpenVpnParameters.Port.Port = destPort.port
+					req.Params.OpenVpnParameters.Port.Protocol = destPort.IsTCP()
+
 					break
 				}
 			}
-		}
 
-		var destPort port
-		// entry server
-		for i, s := range servers.OpenvpnServers {
-			if s.Gateway == c.gateway {
-				entrySvrOvpn = &servers.OpenvpnServers[i]
+			if entrySvrOvpn == nil {
+				return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
+			}
+			if len(c.multihopExitSvr) > 0 && exitSvrOvpn == nil {
+				return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
+			}
 
-				// set obfsproxy config
-				if !_proto.GetHelloResponse().DaemonSettings.ObfsproxyConfig.Equals(obfsproxyCfg) {
-					if err = _proto.SetObfsProxy(obfsproxyCfg); err != nil {
-						return err
-					}
+			portStrInfo := destPort.String()
+			if obfsproxyCfg.IsObfsproxy() {
+				if len(c.port) > 0 {
+					// if user manually defined port for obfsproxy connection - inform that it is ignored
+					fmt.Printf("Note: port definition is ignored for the connections when the obfsproxy enabled\n")
 				}
-				if obfsproxyCfg.IsObfsproxy() {
-					fmt.Println("obfsproxy configuration: " + obfsproxyCfg.ToString())
-				}
+				portStrInfo = "TCP"
+				destPort.tcp = true
+			}
 
-				serverFound = true
-				req.Params.VpnType = vpn.OpenVPN
-				req.Params.OpenVpnParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
-
-				isMultihop := exitSvrOvpn != nil && len(c.multihopExitSvr) > 0
-				if !isMultihop {
-					// port
-					destPort, err = getPort(c.port, allowedPortsOvpn)
-					if err != nil {
-						printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
-						return err
-					}
-				} else {
-					// port
-					destPort, err = getPort(c.port, nil)
-					if err != nil {
-						printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
-						return err
-					}
-
-					// get Multi-Hop ID
-					req.Params.OpenVpnParameters.MultihopExitServer.ExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
-					req.Params.OpenVpnParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrOvpn.Hosts, customHostExitServer)
-					destPort.port = 0 // do not use port number (port-based multihop)
+			if len(c.multihopExitSvr) == 0 {
+				fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s %s...\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, portStrInfo)
+			} else {
+				portStrInfo = "UDP"
+				if destPort.tcp {
+					portStrInfo = "TCP"
 				}
 
-				req.Params.OpenVpnParameters.Port.Port = destPort.port
-				req.Params.OpenVpnParameters.Port.Protocol = destPort.IsTCP()
-
-				break
+				fmt.Printf("[OpenVPN] Connecting Multi-Hop...\n")
+				fmt.Printf("\tentry server: %s, %s (%s) %s %s\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, portStrInfo)
+				fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvrOvpn.City, exitSvrOvpn.CountryCode, exitSvrOvpn.Country, exitSvrOvpn.Gateway)
 			}
 		}
 
-		if entrySvrOvpn == nil {
+		if serverFound == false {
 			return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
 		}
-		if len(c.multihopExitSvr) > 0 && exitSvrOvpn == nil {
-			return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
-		}
 
-		portStrInfo := destPort.String()
-		if obfsproxyCfg.IsObfsproxy() {
-			if len(c.port) > 0 {
-				// if user manually defined port for obfsproxy connection - inform that it is ignored
-				fmt.Printf("Note: port definition is ignored for the connections when the obfsproxy enabled\n")
-			}
-			portStrInfo = "TCP"
-			destPort.tcp = true
-		}
-
-		if len(c.multihopExitSvr) == 0 {
-			fmt.Printf("[OpenVPN] Connecting to: %s, %s (%s) %s %s...\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, portStrInfo)
+		// SET ANTI-TRACKER parameters. It will overwrite 'custom DNS' parameter
+		if c.antitracker || c.antitrackerHard {
+			req.Params.Metadata.AntiTracker.Enabled = true
+			req.Params.Metadata.AntiTracker.Hardcore = c.antitrackerHard
 		} else {
-			portStrInfo = "UDP"
-			if destPort.tcp {
-				portStrInfo = "TCP"
+			// AntiTracker parameters not defined for current connection
+			// Taking default configuration parameters (if defined)
+			req.Params.Metadata.AntiTracker = defaultConnSettings.Params.Metadata.AntiTracker
+			if req.Params.Metadata.AntiTracker.IsEnabled() { // print default AntiTracker values
+				printAntitrackerConfigInfo(nil, req.Params.Metadata.AntiTracker.Enabled, req.Params.Metadata.AntiTracker.Hardcore).Flush()
 			}
-
-			fmt.Printf("[OpenVPN] Connecting Multi-Hop...\n")
-			fmt.Printf("\tentry server: %s, %s (%s) %s %s\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, portStrInfo)
-			fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvrOvpn.City, exitSvrOvpn.CountryCode, exitSvrOvpn.Country, exitSvrOvpn.Gateway)
 		}
-	}
 
-	if serverFound == false {
-		return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
-	}
-
-	// Get configuration
-	cfg, _ := config.GetConfig()
-	// SET ANTITRACKER DNS (if defined). It will overwrite 'custom DNS' parameter
-	if c.antitracker == false && c.antitrackerHard == false {
-		// AntiTracker parameters not defined for current connection
-		// Taking default configuration parameters (if defined)
-		if cfg.Antitracker || cfg.AntitrackerHardcore {
-			// print info
-			printAntitrackerConfigInfo(nil, cfg.Antitracker, cfg.AntitrackerHardcore).Flush()
-			// set values
-			c.antitracker = cfg.Antitracker
-			c.antitrackerHard = cfg.AntitrackerHardcore
-		}
-	}
-	if c.antitracker || c.antitrackerHard {
-		atDNS, err := GetAntitrackerIP(vpntype, c.antitrackerHard, len(c.multihopExitSvr) > 0, &servers)
-		if err != nil {
-			return err
-		}
-		req.Params.ManualDNS = dns.DnsSettings{DnsHost: atDNS, Encryption: dns.EncryptionNone}
-
+		// Set MANUAL DNS
 		if len(c.dns) > 0 {
-			fmt.Println("WARNING! Manual DNS configuration ignored due to AntiTracker")
-		}
-	}
-	// Set MANUAL DNS if defined (only in case if AntiTracker not defined)
-	if req.Params.ManualDNS.IsEmpty() {
-		if len(c.dns) > 0 {
+			if req.Params.Metadata.AntiTracker.Enabled {
+				fmt.Println("WARNING! Manual DNS configuration ignored due to AntiTracker")
+			}
 			dnsIp := net.ParseIP(c.dns)
 			if dnsIp == nil {
 				return flags.BadParameter{}
 			}
 			req.Params.ManualDNS = dns.DnsSettings{DnsHost: dnsIp.String(), Encryption: dns.EncryptionNone}
-		} else if !cfg.CustomDnsCfg.IsEmpty() {
-			// using default DNS configuration
-			printDNSConfigInfo(nil, cfg.CustomDnsCfg).Flush()
-			req.Params.ManualDNS = cfg.CustomDnsCfg
+		} else {
+			// Taking default configuration parameters
+			req.Params.ManualDNS = defaultConnSettings.Params.ManualDNS
+			if !req.Params.ManualDNS.IsEmpty() {
+				printDNSConfigInfo(nil, req.Params.ManualDNS).Flush()
+			}
 		}
-	}
 
-	// metadata
-	if c.fastest {
-		req.Params.Metadata.ServerSelectionEntry = service_types.Fastest
-	} else if c.any {
-		req.Params.Metadata.ServerSelectionEntry = service_types.Random
+		// metadata
+		if c.fastest {
+			req.Params.Metadata.ServerSelectionEntry = service_types.Fastest
+		} else if c.any {
+			req.Params.Metadata.ServerSelectionEntry = service_types.Random
+		}
 	}
 
 	fmt.Println("Connecting...")
@@ -689,30 +652,6 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 		return err
 	}
-
-	if cState, stateResp, stateErr := _proto.GetVPNState(); stateErr == nil && cState == vpn.CONNECTED {
-		if !stateResp.ManualDNS.Equal(req.Params.ManualDNS) {
-			fmt.Printf("Connected but failed to initialize custom DNS!\n")
-			fmt.Printf("Disconnecting...\n")
-			if err2 := _proto.DisconnectVPN(); err2 != nil {
-				fmt.Printf("Failed to disconnect: %v\n", err2)
-			}
-			return fmt.Errorf("failed to initialize custom DNS!")
-		}
-	}
-
-	// save last connection parameters
-	config.SaveLastConnectionInfo(config.LastConnectionInfo{
-		Gateway:         c.gateway,
-		Port:            c.port,
-		Obfsproxy:       c.obfsproxy,
-		FirewallOff:     c.firewallOff,
-		DNS:             c.dns,
-		Antitracker:     c.antitracker,
-		AntitrackerHard: c.antitrackerHard,
-		IPv6Tunnel:      c.isIPv6Tunnel,
-		MultiopExitSvr:  c.multihopExitSvr,
-		Mtu:             c.mtu})
 
 	return nil
 }

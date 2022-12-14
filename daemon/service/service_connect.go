@@ -111,8 +111,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		}
 	}
 
-	retManualDNS := params.ManualDNS
-
+	// Protocol-specific configurations
 	if vpn.Type(params.VpnType) == vpn.OpenVPN {
 		// PARAMETERS VALIDATION
 		// parsing hosts
@@ -187,7 +186,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 				proxyPassword)
 		}
 
-		return s.ConnectOpenVPN(connectionParams, retManualDNS, params.FirewallOn, params.FirewallOnDuringConnection)
+		return s.connectOpenVPN(connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection)
 
 	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
 		hosts := params.WireGuardParameters.EntryVpnServer.Hosts
@@ -299,15 +298,15 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 				params.WireGuardParameters.Mtu)
 		}
 
-		return s.ConnectWireGuard(connectionParams, retManualDNS, params.FirewallOn, params.FirewallOnDuringConnection)
+		return s.connectWireGuard(connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection)
 
 	}
 
 	return fmt.Errorf("unexpected VPN type to connect (%v)", params.VpnType)
 }
 
-// ConnectOpenVPN start OpenVPN connection
-func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
+// connectOpenVPN start OpenVPN connection
+func (s *Service) connectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) error {
 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
@@ -434,11 +433,11 @@ func (s *Service) ConnectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection)
+	return s.keepConnection(createVpnObjfunc, manualDNS, antiTracker, firewallOn, firewallDuringConnection)
 }
 
-// ConnectWireGuard start WireGuard connection
-func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
+// connectWireGuard start WireGuard connection
+func (s *Service) connectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) error {
 	// stop active connection (if exists)
 	if err := s.Disconnect(); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
@@ -491,10 +490,10 @@ func (s *Service) ConnectWireGuard(connectionParams wireguard.ConnectionParams, 
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, firewallOn, firewallDuringConnection)
+	return s.keepConnection(createVpnObjfunc, manualDNS, antiTracker, firewallOn, firewallDuringConnection)
 }
 
-func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) (retError error) {
+func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) (retError error) {
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return srverrors.ErrorNotLoggedIn{}
@@ -532,7 +531,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		lastConnectionTryTime := time.Now()
 
 		// start connection
-		connErr := s.connect(vpnObj, s._manualDNS, firewallOn, firewallDuringConnection)
+		connErr := s.connect(vpnObj, s._manualDNS, antiTracker, firewallOn, firewallDuringConnection)
 		if connErr != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", connErr))
 			if s._requiredVpnState == Connect {
@@ -588,7 +587,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 // Connect connect vpn.
 // Param 'firewallOn' - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored).
 // Param 'firewallDuringConnection' - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
-func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewallOn bool, firewallDuringConnection bool) error {
+func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) error {
 	var connectRoutinesWaiter sync.WaitGroup
 
 	// stop active connection (if exists)
@@ -895,10 +894,10 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, firewa
 	}
 
 	// set manual DNS
-	if manualDNS.IsEmpty() {
+	if manualDNS.IsEmpty() && !antiTracker.IsEnabled() {
 		err = s.ResetManualDNS()
 	} else {
-		err = s.SetManualDNS(manualDNS)
+		_, err = s.SetManualDNS(manualDNS, antiTracker)
 	}
 	if err != nil {
 		err = fmt.Errorf("failed to set DNS: %w", err)
