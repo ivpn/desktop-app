@@ -62,6 +62,8 @@
           <ConnectionDetailsBlock
             :onShowPorts="onShowPorts"
             :onShowWifiConfig="onShowWifiConfig"
+            :onShowFirewallConfig="onFirewallSettings"
+            :onShowAntiTrackerConfig="onAntiTrackerSettings"
           />
 
           <transition name="fade">
@@ -117,6 +119,8 @@ export default {
   props: {
     onConnectionSettings: Function,
     onWifiSettings: Function,
+    onFirewallSettings: Function,
+    onAntiTrackerSettings: Function,
     onDefaultView: Function,
   },
 

@@ -2,7 +2,16 @@
   <div>
     <div class="switchButton">
       <div align="left">
-        <div class="large_text">{{ text }}</div>
+        <button
+          v-if="onTextClick"
+          class="noBordersTextBtnEx"
+          v-on:click="onTextClick"
+          :title="textClickTooltip"
+        >
+          <div class="large_text">{{ text }}</div>
+        </button>
+        <div v-else class="large_text">{{ text }}</div>
+
         <div style="height: 5px" />
         <div class="small_text">
           {{ description }}
@@ -37,6 +46,8 @@ export default {
     "description",
     "checkedColor",
     "switcherOpacity",
+    "onTextClick",
+    "textClickTooltip",
   ],
   computed: {
     switcherStyle: function () {
@@ -67,5 +78,15 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+button.noBordersTextBtnEx {
+  @extend .noBordersTextBtn;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  width: 100%;
 }
 </style>

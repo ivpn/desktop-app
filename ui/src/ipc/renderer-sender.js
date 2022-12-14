@@ -317,6 +317,12 @@ export default {
   ShowWifiSettings: function () {
     ipcRenderer.send("renderer-request-show-settings-networks");
   },
+  ShowFirewallSettings: function () {
+    ipcRenderer.send("renderer-request-show-settings-firewall");
+  },
+  ShowAntitrackerSettings: function () {
+    ipcRenderer.send("renderer-request-show-settings-antitracker");
+  },
 
   // CONTEXT MENU
   ShowContextMenuCopy: function () {

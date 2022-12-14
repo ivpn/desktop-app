@@ -91,7 +91,9 @@
         </select>
       </div>
 
-      <div v-bind:class="{ disabled: connectionUseObfsproxy }">
+      <div
+        v-bind:class="{ disabled: connectionUseObfsproxy || !isDisconnected }"
+      >
         <div class="flexRow paramBlock">
           <div class="defColor paramName">Network proxy:</div>
           <div class="settingsRadioBtnProxy">
@@ -443,14 +445,24 @@ export default {
   watch: {
     async port(newValue, oldValue) {
       if (this.isPortModified === false) return;
+
+      if (newValue == null || oldValue == null) return;
+      if (newValue.port === oldValue.port && newValue.type === oldValue.type)
+        return;
+
+      await this.reconnect();
+    },
+  },
+
+  methods: {
+    async reconnect() {
       if (
         !this.$store.getters["vpnState/isConnected"] &&
         !this.$store.getters["vpnState/isConnecting"]
       )
-        return;
-      if (newValue == null || oldValue == null) return;
-      if (newValue.port === oldValue.port && newValue.type === oldValue.type)
-        return;
+        return; // not connected. Reconnection not required
+
+      // Re-connect
       try {
         await sender.Connect();
       } catch (e) {
@@ -462,34 +474,17 @@ export default {
         });
       }
     },
-  },
-  methods: {
-    isAbleToChangeVpnSettings: function () {
-      if (
-        this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
-      )
-        return true;
 
-      sender.showMessageBoxSync({
-        type: "info",
-        buttons: ["OK"],
-        message: "You are now connected to IVPN",
-        detail:
-          "You can change VPN protocol settings only when IVPN is disconnected.",
-      });
-
-      return false;
-    },
-    onVpnChange: function (e) {
-      if (this.isAbleToChangeVpnSettings() != true) {
-        e.preventDefault();
-        return;
-      }
-
+    onVpnChange: async function (e) {
       let type = VpnTypeEnum.OpenVPN;
       if (e.target.value === "wireguard") type = VpnTypeEnum.WireGuard;
       else type = VpnTypeEnum.OpenVPN;
+
+      if (type === this.$store.state.settings.vpnType) return;
+
       this.$store.dispatch("settings/vpnType", type);
+
+      await this.reconnect();
     },
     onVPNConfigFileLocation: function () {
       const file = this.userDefinedOvpnFile;
@@ -553,13 +548,11 @@ export default {
       get() {
         return this.$store.state.settings.enableIPv6InTunnel;
       },
-      set(value) {
-        let isCanChange = this.isAbleToChangeVpnSettings();
-        this.$store.dispatch("settings/enableIPv6InTunnel", value);
+      async set(value) {
+        if (value === this.$store.state.settings.enableIPv6InTunnel) return;
 
-        if (isCanChange != true) {
-          this.$store.dispatch("settings/enableIPv6InTunnel", !value);
-        }
+        this.$store.dispatch("settings/enableIPv6InTunnel", value);
+        await this.reconnect();
       },
     },
     showGatewaysWithoutIPv6: {

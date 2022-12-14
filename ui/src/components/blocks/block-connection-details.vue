@@ -15,6 +15,8 @@
     <OnOffButtonControl
       v-bind:class="{ lowOpacity: IsPaused }"
       text="Firewall"
+      :onTextClick="onShowFirewallConfig"
+      textClickTooltip="Firewall settings"
       description="Ensure that all traffic is routed through VPN"
       :onChecked="firewallOnChecked"
       :isChecked="this.$store.state.vpnState.firewallState.IsEnabled"
@@ -31,6 +33,8 @@
 
     <OnOffButtonControl
       text="AntiTracker"
+      :onTextClick="onShowAntiTrackerConfig"
+      textClickTooltip="AntiTracker settings"
       description="Block trackers whilst connected to VPN"
       :onChecked="antitrackerOnChecked"
       :isChecked="this.$store.state.settings.isAntitracker"
@@ -111,7 +115,12 @@ export default {
     SelectButtonControl,
     GeolocationInfoControl,
   },
-  props: ["onShowPorts", "onShowWifiConfig"],
+  props: [
+    "onShowPorts",
+    "onShowWifiConfig",
+    "onShowFirewallConfig",
+    "onShowAntiTrackerConfig",
+  ],
   data: function () {
     return {
       antitrackerIsProgress: false,

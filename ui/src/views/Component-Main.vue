@@ -30,6 +30,8 @@
             v-bind:is="currentViewComponent"
             :onConnectionSettings="onConnectionSettings"
             :onWifiSettings="onWifiSettings"
+            :onFirewallSettings="onFirewallSettings"
+            :onAntiTrackerSettings="onAntitrackerSettings"
             :onDefaultView="onDefaultLeftView"
             id="left"
           ></component>
@@ -130,6 +132,12 @@ export default {
     },
     onWifiSettings: function () {
       sender.ShowWifiSettings();
+    },
+    onFirewallSettings: function () {
+      sender.ShowFirewallSettings();
+    },
+    onAntitrackerSettings: function () {
+      sender.ShowAntitrackerSettings();
     },
     onDefaultLeftView: function (isDefaultView) {
       this.isCanShowMinimizedButtons = isDefaultView;
