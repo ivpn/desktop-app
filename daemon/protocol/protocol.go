@@ -58,14 +58,6 @@ func init() {
 type Service interface {
 	OnAuthenticatedClient(t types.ClientTypeEnum)
 
-	// OnControlConnectionClosed - Perform required operations when protocol (control channel with UI application) was closed
-	// (for example, we must disable firewall (if it not persistent))
-	// Must be called by protocol object
-	// Return parameters:
-	// - isServiceMustBeClosed: true informing that service have to be closed ("Stop IVPN Agent when application is not running" feature)
-	// - err: error
-	OnControlConnectionClosed() (isServiceMustBeClosed bool, err error)
-
 	// GetDisabledFunctions returns info about functions which are disabled
 	// Some functionality can be not accessible
 	// It can happen, for example, if some external binaries not installed
@@ -278,10 +270,6 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 }
 
 func (p *Protocol) processClient(conn net.Conn) {
-	// keepAlone informs daemon\service to do nothing when client disconnects
-	// 		false (default) - VPN disconnects when client disconnects from a daemon
-	// 		true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
-	keepAlone := false
 	// The first request from a client should be 'Hello' request with correct secret
 	// In case of wrong secret - the daemon drops connection
 	isAuthenticated := false
@@ -300,31 +288,15 @@ func (p *Protocol) processClient(conn net.Conn) {
 		p.clientDisconnected(conn)
 		log.Info("Client disconnected: ", conn.RemoteAddr())
 
-		if isAuthenticated && !keepAlone {
-			stopService, err := p._service.OnControlConnectionClosed()
-			if err != nil {
-				log.Error(err)
-			}
-
-			// Disconnect VPN (if connected)
+		if p._service.IsPaused() && p.clientsConnectedCount() == 0 {
+			log.Info("Connection is in paused state and no active clients available. Disconnecting ...")
 			if err := p._service.Disconnect(); err != nil {
 				log.Error(err)
 			}
-
-			if stopService {
-				log.Info("Stopping due to configuration: Stop IVPN Agent when application is not running")
-				p.Stop()
-			}
 		} else {
-			if p._service.IsPaused() && p.clientsConnectedCount() == 0 {
-				log.Info("Connection is in paused state and no active clients available. Disconnecting ...")
-				if err := p._service.Disconnect(); err != nil {
-					log.Error(err)
-				}
-			} else {
-				log.Info("Current state not changing [KeepDaemonAlone=true]")
-			}
+			log.Info("Current state not changing")
 		}
+
 	}()
 
 	reader := bufio.NewReader(conn)
@@ -366,7 +338,6 @@ func (p *Protocol) processClient(conn net.Conn) {
 			}
 
 			// AUTHENTICATED
-			keepAlone = hello.KeepDaemonAlone
 			isAuthenticated = true
 			p.clientConnected(conn, hello.ClientType)
 		}
@@ -479,7 +450,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 		}
 
-		log.Info(fmt.Sprintf("%sConnected client version: '%s' [set KeepDaemonAlone = %t]", p.connLogID(conn), req.Version, req.KeepDaemonAlone))
+		log.Info(fmt.Sprintf("%sConnected client version: '%s'", p.connLogID(conn), req.Version))
 
 		// send back Hello message with account session info
 		helloResponse := p.createHelloResponse()

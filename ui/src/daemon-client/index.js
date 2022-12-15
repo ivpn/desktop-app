@@ -661,7 +661,6 @@ function makeHelloRequest(isSimpleConnect) {
     Command: daemonRequests.Hello,
     ClientType: 0, // 0 - UI client; 1 - CLI
     Version: appVersion,
-    KeepDaemonAlone: true,
   };
 
   if (isSimpleConnect !== true) {
@@ -669,7 +668,6 @@ function makeHelloRequest(isSimpleConnect) {
       GetServersList: true,
       GetStatus: true,
       GetConfigParams: true,
-      KeepDaemonAlone: true,
       GetSplitTunnelStatus: true,
       GetWiFiCurrentState: true,
     });

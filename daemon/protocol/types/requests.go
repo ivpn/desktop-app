@@ -66,10 +66,6 @@ type Hello struct {
 
 	// GetWiFiCurrentState == true - client requests info about current WiFi
 	GetWiFiCurrentState bool
-
-	//	KeepDaemonAlone == false (default) - VPN disconnects when client disconnects from a daemon
-	//	KeepDaemonAlone == true - do nothing when client disconnects from a daemon (if VPN is connected - do not disconnect)
-	KeepDaemonAlone bool
 }
 
 // GetServers request servers list
