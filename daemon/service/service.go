@@ -701,11 +701,6 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 			prefs.IsLogging = val
 			logger.Enable(val)
 		}
-	case protocolTypes.Prefs_IsStopServerOnClientDisconnect:
-		if val, err := strconv.ParseBool(val); err == nil {
-			isChanged = val != prefs.IsStopOnClientDisconnect
-			prefs.IsStopOnClientDisconnect = val
-		}
 
 	case protocolTypes.Prefs_IsAutoconnectOnLaunch:
 		if val, err := strconv.ParseBool(val); err == nil {
