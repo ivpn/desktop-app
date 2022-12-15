@@ -57,10 +57,9 @@ type RequestBase struct {
 type ServicePreference string
 
 const (
-	Prefs_IsEnableLogging                ServicePreference = "enable_logging"
-	Prefs_IsStopServerOnClientDisconnect ServicePreference = "is_stop_server_on_client_disconnect"
-	Prefs_IsAutoconnectOnLaunch          ServicePreference = "autoconnect_on_launch"
-	Prefs_IsAutoconnectOnLaunch_Daemon   ServicePreference = "autoconnect_on_launch_daemon"
+	Prefs_IsEnableLogging              ServicePreference = "enable_logging"
+	Prefs_IsAutoconnectOnLaunch        ServicePreference = "autoconnect_on_launch"
+	Prefs_IsAutoconnectOnLaunch_Daemon ServicePreference = "autoconnect_on_launch_daemon"
 )
 
 func (sp ServicePreference) Equals(key string) bool {

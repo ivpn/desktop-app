@@ -349,22 +349,6 @@ func (s *Service) updateAPIAddrInFWExceptions() {
 	}
 }
 
-// OnControlConnectionClosed - Perform required operations when protocol (control channel with UI application) was closed
-// (for example, we must disable firewall (if it not persistent))
-// Must be called by protocol object
-// Return parameters:
-// - isServiceMustBeClosed: true informing that service have to be closed ("Stop IVPN Agent when application is not running" feature)
-// - err: error
-func (s *Service) OnControlConnectionClosed() (isServiceMustBeClosed bool, err error) {
-	isServiceMustBeClosed = s._preferences.IsStopOnClientDisconnect
-	// disable firewall if it not persistent
-	if !s._preferences.IsFwPersistant {
-		log.Info("Control connection was closed. Disabling firewall.")
-		err = s.SetKillSwitchState(false)
-	}
-	return isServiceMustBeClosed, err
-}
-
 // ServersList returns servers info
 // (if there is a cached data available - will be returned data from cache)
 func (s *Service) ServersList() (*api_types.ServersInfoResponse, error) {
@@ -763,11 +747,6 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 			isChanged = val != prefs.IsLogging
 			prefs.IsLogging = val
 			logger.Enable(val)
-		}
-	case protocolTypes.Prefs_IsStopServerOnClientDisconnect:
-		if val, err := strconv.ParseBool(val); err == nil {
-			isChanged = val != prefs.IsStopOnClientDisconnect
-			prefs.IsStopOnClientDisconnect = val
 		}
 
 	case protocolTypes.Prefs_IsAutoconnectOnLaunch:

@@ -149,7 +149,6 @@ func (c *Client) SendHelloEx(isSendResponseToAllClients bool) (helloResponse typ
 	helloReq := types.Hello{
 		Secret:                   c._secret,
 		ClientType:               types.ClientCli,
-		KeepDaemonAlone:          true,
 		GetStatus:                true,
 		Version:                  ver + ": CLI",
 		SendResponseToAllClients: isSendResponseToAllClients,
