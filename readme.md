@@ -51,7 +51,7 @@ These instructions enable you to get the project up and running on your local ma
 <a name="requirements_windows"></a>
 #### Windows
 
-[npm](https://www.npmjs.com/get-npm); [Node.js (LTS version)](https://nodejs.org/); [nsis2](https://nsis.sourceforge.io/Download); Build Tools for Visual Studio 2019 ('Windows 10 SDK 10.0.19041.0', 'Windows 11 SDK 10.0.22000.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools'); gcc compiler e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/); [Go 1.18+](https://golang.org/); Git
+[npm](https://www.npmjs.com/get-npm); [Node.js (16.15.0)](https://nodejs.org/); [nsis3](https://nsis.sourceforge.io/Download); Build Tools for Visual Studio 2019 ('Windows 10 SDK 10.0.19041.0', 'Windows 11 SDK 10.0.22000.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools'); gcc compiler e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/); [Go 1.18+](https://golang.org/); Git
 
 <a name="requirements_macos"></a>
 #### macOS
@@ -61,7 +61,7 @@ To compile the OpenVPN\OpenSSL binaries locally, additional packages are needed:
 
 <a name="requirements_linux"></a>
 #### Linux
-[npm](https://www.npmjs.com/get-npm); [Node.js (LTS version)](https://nodejs.org/); packages: [FPM](https://fpm.readthedocs.io/en/latest/installation.html), curl, rpm, libiw-dev; [Go 1.18+](https://golang.org/); Git
+[npm](https://www.npmjs.com/get-npm); [Node.js (LTS version)](https://nodejs.org/); packages: [FPM](https://fpm.readthedocs.io/en/latest/installation.html), curl, rpm, libiw-dev; [Go 1.18+](https://golang.org/); gcc; make; Git
 
 <a name="compilation"></a>
 ### Compilation
