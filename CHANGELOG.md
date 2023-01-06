@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.  
 
-## Version 3.10.0 (Beta) - 2022-12-05
+## Version 3.10.0 - 2022-12-05
 
 [NEW] (Windows/Linux) UI: light/dark options for system tray icon  
 [NEW] Ability to manage ‘Autoconnect on launch’ settings from CLI  
@@ -11,22 +11,22 @@ All notable changes to this project will be documented in this file.
 [IMPROVED] Diagnostic logs extended with additional data  
 [FIX] (Linux) Firewall fails on some versions of Raspberry Pi OS  
 
-[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.9.45.exe)  
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.10.0.exe)  
 SHA256: 13022a189ddc8608e052a60ff800cfd21ed854bdcefc1dde212a810cedadda7b  
 
-[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.9.45.dmg)  
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.10.0.dmg)  
 SHA256: d3a99cd45604e800108ecc8138cc106c4cf553743babc06a3cbb01f93fefbb68  
-[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.9.45-arm64.dmg)  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.10.0-arm64.dmg)  
 SHA256:  5acf2e20531fb3de0644bdd9fb57a27fcc7fa9628349f7b77ae095614e6b161d  
 
-[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.9.45_amd64.deb)  
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.10.0_amd64.deb)  
 SHA256: cae1e13e04dfc8c721d2adcb9712d99db443701cede02cc9b44ba349c1559cbf  
-[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.9.45-1.x86_64.rpm)  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.10.0-1.x86_64.rpm)  
 SHA256: f775da2fa3b8feff97857b23d3db5e9224dd1d7007d95a1e2c73e722ff4d28b1  
 
-[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.9.45_amd64.deb)  
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.10.0_amd64.deb)  
 SHA256: 7acf5f2bf32d0fdf0d0bfdd92b700deb4e20af54d9caab571bef86172ae7a77e  
-[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.9.45-1.x86_64.rpm)  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.10.0-1.x86_64.rpm)  
 SHA256: 899aae46263b8dec0e0681e1974c737a887afe9ffed0e5632600e9dfe287d54d  
 
 ## Version 3.9.45 - 2022-11-09
