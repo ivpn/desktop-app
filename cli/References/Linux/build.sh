@@ -111,21 +111,27 @@ WG_QUICK_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/w
 WG_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg
 DNSCRYPT_PROXY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/dnscryptproxy_inst/dnscrypt-proxy
 
-if [ "$(find ${DNSCRYPT_PROXY_BIN} -perm 755)" != "${DNSCRYPT_PROXY_BIN}" ] || [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ] || [ "$(find ${WG_QUICK_BIN} -perm 755)" != "${WG_QUICK_BIN}" ] || [ "$(find ${WG_BIN} -perm 755)" != "${WG_BIN}" ]
-then
-  echo ----------------------------------------------------------
-  echo "Going to change access mode to 755 for binaries:"
-  echo "  - ${OBFSPXY_BIN}"
-  echo "  - ${WG_QUICK_BIN}"
-  echo "  - ${WG_BIN}"
-  echo "  - ${DNSCRYPT_PROXY_BIN}"
-  echo "(you may be asked for credentials for 'sudo')"
-  sudo chmod 755 ${OBFSPXY_BIN}
-  sudo chmod 755 ${WG_QUICK_BIN}
-  sudo chmod 755 ${WG_BIN}
-  sudo chmod 755 ${DNSCRYPT_PROXY_BIN}
-  echo ----------------------------------------------------------
-fi
+#if [ "$(find ${DNSCRYPT_PROXY_BIN} -perm 755)" != "${DNSCRYPT_PROXY_BIN}" ] || [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ] || [ "$(find ${WG_QUICK_BIN} -perm 755)" != "${WG_QUICK_BIN}" ] || [ "$(find ${WG_BIN} -perm 755)" != "${WG_BIN}" ]
+#then
+#  echo ----------------------------------------------------------
+#  echo "Going to change access mode to 755 for binaries:"
+#  echo "  - ${OBFSPXY_BIN}"
+#  echo "  - ${WG_QUICK_BIN}"
+#  echo "  - ${WG_BIN}"
+#  echo "  - ${DNSCRYPT_PROXY_BIN}"
+#  echo "(you may be asked for credentials for 'sudo')"
+#  sudo chmod 755 ${OBFSPXY_BIN}
+#  sudo chmod 755 ${WG_QUICK_BIN}
+#  sudo chmod 755 ${WG_BIN}
+#  sudo chmod 755 ${DNSCRYPT_PROXY_BIN}
+#
+#  if [ "$(find ${DNSCRYPT_PROXY_BIN} -perm 755)" != "${DNSCRYPT_PROXY_BIN}" ] || [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ] || [ "$(find ${WG_QUICK_BIN} -perm 755)" != "${WG_QUICK_BIN}" ] || [ "$(find ${WG_BIN} -perm 755)" != "${WG_BIN}" ]
+#  then
+#    echo "Error: Failed to change file permissions!"
+#    exit 1
+#  fi
+#  echo ----------------------------------------------------------
+#fi
 
 CreatePackage()
 {

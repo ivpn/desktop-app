@@ -9,6 +9,7 @@ if [ "$1" = "remove" -o "$1" = "0" ]; then
 fi
 
 NEED_TO_SAVE_INSTRUCTIONS=true
+IVPN_OPT="/opt/ivpn"
 IVPN_ETC="/opt/ivpn/etc"
 IVPN_TMP="/opt/ivpn/mutable"
 INSTRUCTIONS_FILE="$IVPN_TMP/service_install.txt"
@@ -49,6 +50,10 @@ silent chmod 0700 $IVPN_ETC/*.up          # can execute only owner (root)
 silent chmod 0700 $IVPN_ETC/*.down        # can execute only owner (root)
 silent chmod 0755 /usr/bin/ivpn           # can change only owner (root)
 silent chmod 0755 /usr/bin/ivpn-service   # can change only owner (root)
+silent chmod 0755 $IVPN_OPT/obfsproxy/obfs4proxy          # can change only owner (root)
+silent chmod 0755 $IVPN_OPT/wireguard-tools/wg-quick      # can change only owner (root)
+silent chmod 0755 $IVPN_OPT/wireguard-tools/wg            # can change only owner (root)
+silent chmod 0755 $IVPN_OPT/dnscrypt-proxy/dnscrypt-proxy # can change only owner (root)
 
 echo "[+] Service install start (pleaserun) ..."
 INSTALL_OUTPUT=$(sh /usr/share/pleaserun/ivpn-service/install.sh)
