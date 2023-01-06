@@ -20,6 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build windows
 // +build windows
 
 package winlib_test
@@ -97,14 +98,14 @@ func TestBlockAll(t *testing.T) {
 		}
 
 		for _, l := range v6Layers {
-			_, err := mgr.AddFilter(winlib.NewFilterBlockAll(providerKey, l, sublayerKey, filterDName, filterDDesc, true, false))
+			_, err := mgr.AddFilter(winlib.NewFilterBlockAll(providerKey, l, sublayerKey, filterDName, filterDDesc, true, false, false))
 			if err != nil {
 				t.Error(err)
 			}
 		}
 
 		for _, l := range v4Layers {
-			_, err := mgr.AddFilter(winlib.NewFilterBlockAll(providerKey, l, sublayerKey, filterDName, filterDDesc, false, false))
+			_, err := mgr.AddFilter(winlib.NewFilterBlockAll(providerKey, l, sublayerKey, filterDName, filterDDesc, false, false, false))
 			if err != nil {
 				t.Error(err)
 			}
