@@ -153,9 +153,9 @@ function enable_firewall {
       ${IPv6BIN} -w ${LOCKWAITTIME} -I INPUT -j ${IN_IVPN}
 
       # Split Tunnel: Allow packets from/to cgroup (bypass IVPN firewall)
-      ${IPv6BIN} -w ${LOCKWAITTIME} -I OUTPUT -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add OUTPUT (cgroup) rule for split-tunnel"
-      ${IPv6BIN} -w ${LOCKWAITTIME} -I INPUT -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add INPUT (cgroup) rule for split-tunnel"  # this rule is not effective, so we use 'mark' (see the next rule)
-      ${IPv6BIN} -w ${LOCKWAITTIME} -I INPUT -m mark --mark ${_splittun_packets_fwmark_value} -m comment --comment  "${_splittun_comment}" -j ACCEPT  || echo "Failed to add INPUT (mark) rule for split-tunnel"
+      ${IPv6BIN} -w ${LOCKWAITTIME} -I ${OUT_IVPN} -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add OUTPUT (cgroup) rule for split-tunnel"
+      ${IPv6BIN} -w ${LOCKWAITTIME} -I ${IN_IVPN} -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add INPUT (cgroup) rule for split-tunnel"  # this rule is not effective, so we use 'mark' (see the next rule)
+      ${IPv6BIN} -w ${LOCKWAITTIME} -I ${IN_IVPN} -m mark --mark ${_splittun_packets_fwmark_value} -m comment --comment  "${_splittun_comment}" -j ACCEPT  || echo "Failed to add INPUT (mark) rule for split-tunnel"
 
       # exceptions
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF0}
@@ -225,9 +225,9 @@ function enable_firewall {
     ${IPv4BIN} -w ${LOCKWAITTIME} -I INPUT -j ${IN_IVPN}
 
     # Split Tunnel: Allow packets from/to cgroup (bypass IVPN firewall)
-    ${IPv4BIN} -w ${LOCKWAITTIME} -I OUTPUT -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add OUTPUT (cgroup) rule for split-tunnel"
-    ${IPv4BIN} -w ${LOCKWAITTIME} -I INPUT -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add INPUT (cgroup) rule for split-tunnel"  # this rule is not effective, so we use 'mark' (see the next rule)
-    ${IPv4BIN} -w ${LOCKWAITTIME} -I INPUT -m mark --mark ${_splittun_packets_fwmark_value} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add INPUT (mark) rule for split-tunnel"
+    ${IPv4BIN} -w ${LOCKWAITTIME} -I ${OUT_IVPN} -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add OUTPUT (cgroup) rule for split-tunnel"
+    ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IN_IVPN} -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add INPUT (cgroup) rule for split-tunnel"  # this rule is not effective, so we use 'mark' (see the next rule)
+    ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IN_IVPN} -m mark --mark ${_splittun_packets_fwmark_value} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add INPUT (mark) rule for split-tunnel"
 
     # exceptions (must be processed before OUT_IVPN_DNS!)
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF0}
