@@ -36,6 +36,7 @@ LOCKWAITTIME=2
 # main chains for IVPN firewall
 IN_IVPN=IVPN-IN
 OUT_IVPN=IVPN-OUT
+FORWARD_IVPN=IVPN-FORWARD
 # chain for DNS rules
 OUT_IVPN_DNS=IVPN-OUT-DNS
 # IVPN chains for VPN interface rules (applicable when VPN enabled)
@@ -45,6 +46,7 @@ OUT_IVPN_IF0=IVPN-OUT-VPN0
 # IVPN chains for VPN interface rules (applicable when VPN enabled)
 IN_IVPN_IF1=IVPN-IN-VPN
 OUT_IVPN_IF1=IVPN-OUT-VPN
+FORWARD_IVPN_IF=IVPN-FORWARD-VPN
 # chain for non-VPN depended exceptios (applicable all time when firewall enabled)
 # can be used, for example, for 'allow LAN' functionality
 IN_IVPN_STAT_EXP=IVPN-IN-STAT-EXP
@@ -111,6 +113,7 @@ function enable_firewall {
       # IPv6: define chains
       create_chain ${IPv6BIN} ${IN_IVPN}
       create_chain ${IPv6BIN} ${OUT_IVPN}
+      create_chain ${IPv6BIN} ${FORWARD_IVPN}
 
       create_chain ${IPv6BIN} ${IN_IVPN_IF0}
       create_chain ${IPv6BIN} ${OUT_IVPN_IF0}
@@ -119,6 +122,8 @@ function enable_firewall {
 
       create_chain ${IPv6BIN} ${IN_IVPN_IF1}
       create_chain ${IPv6BIN} ${OUT_IVPN_IF1}
+      create_chain ${IPv6BIN} ${FORWARD_IVPN_IF}
+
       create_chain ${IPv6BIN} ${IN_IVPN_STAT_USER_EXP}
       create_chain ${IPv6BIN} ${OUT_IVPN_STAT_USER_EXP}
 
@@ -151,6 +156,7 @@ function enable_firewall {
       # Note! Using "-I" parameter to add IVPN rules on the top of iptables rules sequence
       ${IPv6BIN} -w ${LOCKWAITTIME} -I OUTPUT -j ${OUT_IVPN}
       ${IPv6BIN} -w ${LOCKWAITTIME} -I INPUT -j ${IN_IVPN}
+      ${IPv6BIN} -w ${LOCKWAITTIME} -I FORWARD -j ${FORWARD_IVPN}
 
       # Split Tunnel: Allow packets from/to cgroup (bypass IVPN firewall)
       ${IPv6BIN} -w ${LOCKWAITTIME} -I ${OUT_IVPN} -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add OUTPUT (cgroup) rule for split-tunnel"
@@ -163,12 +169,14 @@ function enable_firewall {
 
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF1}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF1}
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${FORWARD_IVPN} -j ${FORWARD_IVPN_IF}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_USER_EXP}
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_STAT_USER_EXP}
 
       # IPv6: block everything by default
       ${IPv6BIN} -w ${LOCKWAITTIME} -P INPUT DROP
       ${IPv6BIN} -w ${LOCKWAITTIME} -P OUTPUT DROP
+      ${IPv6BIN} -w ${LOCKWAITTIME} -P FORWARD DROP
 
       # Aggressive block!
       # Note! If the packet does not match any IVPN rule - DROP it.
@@ -176,6 +184,7 @@ function enable_firewall {
       # This will block all user-defined firewall rules!
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j DROP
       ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN}  -j DROP
+      ${IPv6BIN} -w ${LOCKWAITTIME} -A ${FORWARD_IVPN}  -j DROP
 
     else
       echo "IPv6 disabled: skipping IPv6 rules"
@@ -186,6 +195,7 @@ function enable_firewall {
     # define chains
     create_chain ${IPv4BIN} ${IN_IVPN}
     create_chain ${IPv4BIN} ${OUT_IVPN}
+    create_chain ${IPv4BIN} ${FORWARD_IVPN}
 
     create_chain ${IPv4BIN} ${IN_IVPN_IF0}
     create_chain ${IPv4BIN} ${OUT_IVPN_IF0}
@@ -194,6 +204,7 @@ function enable_firewall {
 
     create_chain ${IPv4BIN} ${IN_IVPN_IF1}
     create_chain ${IPv4BIN} ${OUT_IVPN_IF1}
+    create_chain ${IPv4BIN} ${FORWARD_IVPN_IF}
 
     create_chain ${IPv4BIN} ${IN_IVPN_STAT_EXP}
     create_chain ${IPv4BIN} ${OUT_IVPN_STAT_EXP}
@@ -223,6 +234,7 @@ function enable_firewall {
     # Note! Using "-I" parameter to add IVPN rules on the top of iptables rules sequence
     ${IPv4BIN} -w ${LOCKWAITTIME} -I OUTPUT -j ${OUT_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -I INPUT -j ${IN_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -I FORWARD -j ${FORWARD_IVPN}
 
     # Split Tunnel: Allow packets from/to cgroup (bypass IVPN firewall)
     ${IPv4BIN} -w ${LOCKWAITTIME} -I ${OUT_IVPN} -m cgroup --cgroup ${_splittun_cgroup_classid} -m comment --comment  "${_splittun_comment}" -j ACCEPT || echo "Failed to add OUTPUT (cgroup) rule for split-tunnel"
@@ -240,6 +252,7 @@ function enable_firewall {
 
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF1}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${FORWARD_IVPN} -j ${FORWARD_IVPN_IF}
 
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
@@ -251,6 +264,7 @@ function enable_firewall {
     # block everything by default
     ${IPv4BIN} -w ${LOCKWAITTIME} -P INPUT DROP
     ${IPv4BIN} -w ${LOCKWAITTIME} -P OUTPUT DROP
+    ${IPv4BIN} -w ${LOCKWAITTIME} -P FORWARD DROP
 
     # Aggressive block!
     # Note! If the packet does not match any IVPN rule - DROP it.
@@ -258,6 +272,7 @@ function enable_firewall {
     # This will block all user-defined firewall rules!
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j DROP
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN}  -j DROP
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${FORWARD_IVPN}  -j DROP
 
     set +e
 
@@ -271,32 +286,40 @@ function disable_firewall {
     ### allow everything by default ###
     ${IPv4BIN} -w ${LOCKWAITTIME} -P INPUT ACCEPT
     ${IPv4BIN} -w ${LOCKWAITTIME} -P OUTPUT ACCEPT
+    ${IPv4BIN} -w ${LOCKWAITTIME} -P FORWARD ACCEPT
+
     ${IPv6BIN} -w ${LOCKWAITTIME} -P INPUT ACCEPT
     ${IPv6BIN} -w ${LOCKWAITTIME} -P OUTPUT ACCEPT
+    ${IPv6BIN} -w ${LOCKWAITTIME} -P FORWARD ACCEPT
 
     ### IPv4 ###
     # '-D' Delete matching rule from chain
     ${IPv4BIN} -w ${LOCKWAITTIME} -D OUTPUT -j ${OUT_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D INPUT -j ${IN_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D FORWARD -j ${FORWARD_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_IF0}
-    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF0}
-    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_DNS}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF0}    
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_DNS}    
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF1}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${FORWARD_IVPN} -j ${FORWARD_IVPN_IF}    
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_USER_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_STAT_USER_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_ICMP_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_ICMP_EXP}
+
     # '-F' Delete all rules in  chain or all chains
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF0}
-    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF0}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF0}    
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF1}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${FORWARD_IVPN_IF}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${FORWARD_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_STAT_USER_EXP}
@@ -305,12 +328,14 @@ function disable_firewall {
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_ICMP_EXP}
     # '-X' Delete a user-defined chain
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_IF0}
-    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF0}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF0}    
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF1}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${FORWARD_IVPN_IF}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${FORWARD_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_STAT_USER_EXP}
@@ -321,35 +346,41 @@ function disable_firewall {
     ### IPv6 ###
     ${IPv6BIN} -w ${LOCKWAITTIME} -D OUTPUT -j ${OUT_IVPN}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D INPUT -j ${IN_IVPN}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -D FORWARD -j ${FORWARD_IVPN}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_IF0}
-    ${IPv6BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF0}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF0}    
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_DNS}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_IF1}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF1}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -D ${FORWARD_IVPN} -j ${FORWARD_IVPN_IF}     
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_STAT_USER_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_STAT_USER_EXP}
 
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF0}
-    ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF0}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF0}    
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_DNS}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF1}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF1}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -F ${FORWARD_IVPN_IF}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -F ${FORWARD_IVPN}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_STAT_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_STAT_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_STAT_USER_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_STAT_USER_EXP}
 
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_IF0}
-    ${IPv6BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF0}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF0}    
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_DNS}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_IF1}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF1}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -X ${FORWARD_IVPN_IF}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -X ${FORWARD_IVPN}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_STAT_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_STAT_EXP}
     ${IPv6BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_STAT_USER_EXP}
@@ -363,6 +394,8 @@ function client_connected {
   # allow all packets to VPN interface
   ${IPv4BIN} -w ${LOCKWAITTIME} -C ${OUT_IVPN_IF1} -o ${IFACE} -j ACCEPT || ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_IF1} -o ${IFACE} -j ACCEPT
   ${IPv4BIN} -w ${LOCKWAITTIME} -C ${IN_IVPN_IF1} -i ${IFACE} -j ACCEPT || ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN_IF1} -i ${IFACE} -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -C ${FORWARD_IVPN_IF} -i ${IFACE} -j ACCEPT || ${IPv4BIN} -w ${LOCKWAITTIME} -A ${FORWARD_IVPN_IF} -i ${IFACE} -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -C ${FORWARD_IVPN_IF} -o ${IFACE} -j ACCEPT || ${IPv4BIN} -w ${LOCKWAITTIME} -A ${FORWARD_IVPN_IF} -o ${IFACE} -j ACCEPT
 
   if [ -f /proc/net/if_inet6 ]; then
       ### IPv6 ###
@@ -370,17 +403,21 @@ function client_connected {
       # allow all packets to VPN interface
       ${IPv6BIN} -w ${LOCKWAITTIME} -C ${OUT_IVPN_IF1} -o ${IFACE} -j ACCEPT || ${IPv6BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_IF1} -o ${IFACE} -j ACCEPT
       ${IPv6BIN} -w ${LOCKWAITTIME} -C ${IN_IVPN_IF1} -i ${IFACE} -j ACCEPT || ${IPv6BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN_IF1} -i ${IFACE} -j ACCEPT
+      ${IPv6BIN} -w ${LOCKWAITTIME} -C ${FORWARD_IVPN_IF} -i ${IFACE} -j ACCEPT || ${IPv6BIN} -w ${LOCKWAITTIME} -A ${FORWARD_IVPN_IF} -i ${IFACE} -j ACCEPT
+      ${IPv6BIN} -w ${LOCKWAITTIME} -C ${FORWARD_IVPN_IF} -o ${IFACE} -j ACCEPT || ${IPv6BIN} -w ${LOCKWAITTIME} -A ${FORWARD_IVPN_IF} -o ${IFACE} -j ACCEPT
     fi
 }
 
 function client_disconnected {
   ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF1}
   ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF1}
+  ${IPv4BIN} -w ${LOCKWAITTIME} -F ${FORWARD_IVPN_IF}
 
   if [ -f /proc/net/if_inet6 ]; then
     ### IPv6 ###
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF1}
     ${IPv6BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF1}
+    ${IPv6BIN} -w ${LOCKWAITTIME} -F ${FORWARD_IVPN_IF}
   fi
 }
 
