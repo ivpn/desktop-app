@@ -82,7 +82,11 @@ func implInitialize() error {
 }
 
 func isNeedUseOldMgmtStyle() bool {
-	return extraSettings.Linux_IsDnsMgmtOldStyle
+	if funcGetUserSettings != nil {
+		extraSettings := funcGetUserSettings()
+		return extraSettings.Linux_IsDnsMgmtOldStyle
+	}
+	return false
 }
 
 func implApplyUserSettings() error {

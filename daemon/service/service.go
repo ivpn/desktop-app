@@ -199,7 +199,10 @@ func (s *Service) init() error {
 	}
 
 	// initialize dns functionality
-	if err := dns.Initialize(firewall.OnChangeDNS, dns.DnsExtraSettings{Linux_IsDnsMgmtOldStyle: s._preferences.UserPrefs.Linux.IsDnsMgmtOldStyle}); err != nil {
+	funcGetDnsExtraSettings := func() dns.DnsExtraSettings {
+		return dns.DnsExtraSettings{Linux_IsDnsMgmtOldStyle: s._preferences.UserPrefs.Linux.IsDnsMgmtOldStyle}
+	}
+	if err := dns.Initialize(firewall.OnChangeDNS, funcGetDnsExtraSettings); err != nil {
 		log.Error(fmt.Sprintf("failed to initialize DNS : %s", err))
 	}
 

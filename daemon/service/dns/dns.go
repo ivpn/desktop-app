@@ -34,6 +34,7 @@ import (
 )
 
 type FuncDnsChangeFirewallNotify func(dns *DnsSettings) error
+type FuncGetUserSettings func() DnsExtraSettings
 
 type DnsExtraSettings struct {
 	// If true - use old style DNS management mechanism
@@ -45,7 +46,7 @@ var (
 	log                         *logger.Logger
 	lastManualDNS               DnsSettings
 	funcDnsChangeFirewallNotify FuncDnsChangeFirewallNotify
-	extraSettings               DnsExtraSettings
+	funcGetUserSettings         FuncGetUserSettings
 )
 
 func init() {
@@ -149,13 +150,16 @@ func (d DnsSettings) InfoString() string {
 
 // Initialize is doing initialization stuff
 // Must be called on application start
-func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify, exSettings DnsExtraSettings) error {
+func Initialize(fwNotifyDnsChangeFunc FuncDnsChangeFirewallNotify, getUserSettingsFunc FuncGetUserSettings) error {
 	funcDnsChangeFirewallNotify = fwNotifyDnsChangeFunc
 	if funcDnsChangeFirewallNotify == nil {
 		logger.Debug("WARNING! Firewall notification function not defined!")
 	}
 
-	extraSettings = exSettings
+	funcGetUserSettings = getUserSettingsFunc
+	if funcGetUserSettings == nil {
+		logger.Debug("WARNING! getUserSettingsFunc() function not defined!")
+	}
 
 	return wrapErrorIfFailed(implInitialize())
 }
