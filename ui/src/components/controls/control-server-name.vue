@@ -1,6 +1,6 @@
 <template>
   <div class="main">
-    <div class="flexColumn" style="min-width: 22px">
+    <div class="flexColumn" style="min-width: 24px">
       <img
         class="pic"
         v-bind:class="{
@@ -21,7 +21,7 @@
     </div>
     <div class="textBlock" v-else>
       <div class="firstLine flexRow" style="max-width: 154px">
-        <div class="text flexRowRestSpace">
+        <div class="text">
           {{ multilineFirstLine }}
         </div>
         <div>
@@ -40,10 +40,18 @@
           </button>
         </div>
       </div>
-      <div class="text secondLine">
+
+      <div class="text secondLine flexRow">
         <div v-if="isShowIPVersionBage && isIPv6" class="bage">IPv6</div>
         <!--<div v-else-if="isShowIPVersionBage && !isIPv6" class="bage">IPv4</div>-->
         {{ multilineSecondLine }} {{ selectedHostInfo }}
+        <div
+          v-show="showISPInfo"
+          style="margin-left: 4px"
+          class="text secondLine"
+        >
+          {{ isp }}
+        </div>
       </div>
     </div>
   </div>
@@ -110,6 +118,14 @@ export default {
       if (!this.serverHostName) return "";
       return "(" + this.serverHostName.split(".")[0] + ")";
     },
+    isp: function () {
+      if (!this.server || !this.server.isp) return "";
+      return "(ISP: " + this.server.isp + ")";
+    },
+    showISPInfo: function () {
+      return this.$store.state.settings.showISPInfo;
+    },
+
     multilineFirstLine: function () {
       if (!this.server) return "";
       if (this.isCountryFirst) return this.server.country;

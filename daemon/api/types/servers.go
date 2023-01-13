@@ -48,6 +48,8 @@ type ServerInfoBase struct {
 
 	Latitude  float32 `json:"latitude"`
 	Longitude float32 `json:"longitude"`
+
+	ISP string `json:"isp"`
 }
 
 func (s ServerInfoBase) GetServerInfoBase() ServerInfoBase {

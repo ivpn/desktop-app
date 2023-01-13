@@ -333,8 +333,12 @@ func (c *CmdConnect) Run() (retError error) {
 			entrySvr := entrySvrs[0]
 			exitSvr := exitSvrs[0]
 
-			if entrySvr.gateway == exitSvr.gateway || entrySvr.countryCode == exitSvr.countryCode {
-				return flags.BadParameter{Message: "unable to use entry- and exit- servers from the same country for multi-hop connection"}
+			if entrySvr.gateway == exitSvr.gateway {
+				return flags.BadParameter{Message: "unable to use same entry- and exit- servers"}
+			}
+
+			if entrySvr.countryCode == exitSvr.countryCode {
+				fmt.Println("Warning! Entry- and exit- servers located in the same country.")
 			}
 
 			c.gateway = entrySvr.gateway

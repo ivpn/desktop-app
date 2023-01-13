@@ -191,11 +191,14 @@
         <button
           class="serverSelectBtn"
           v-on:click="onServerSelected(server)"
-          v-bind:class="{ disabledButton: isInaccessibleServer(server) }"
+          v-bind:class="{
+            disabledButton: isInaccessibleServer(server) !== null,
+          }"
         >
           <div class="flexRow">
             <serverNameControl
               class="serverName"
+              style="max-width: 194px"
               :server="server"
               :isFavoriteServersView="isFavoritesView"
               :isCountryFirst="sortTypeStr === 'Country'"
@@ -315,6 +318,10 @@ import SwitchProgress from "@/components/controls/control-switch-small.vue";
 import imgArrowLeft from "@/components/images/arrow-left.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import { enumValueName, getDistanceFromLatLonInKm } from "@/helpers/helpers";
+import {
+  CheckIsInaccessibleServer,
+  CheckAndNotifyInaccessibleServer,
+} from "@/helpers/renderer";
 import { ServersSortTypeEnum } from "@/store/types";
 
 import Image_arrow_left_windows from "@/assets/arrow-left-windows.svg";
@@ -550,31 +557,33 @@ export default {
       }, 0);
     },
 
-    checkAndNotifyInaccessibleServer: function (server) {
-      if (this.isInaccessibleServer(server)) {
-        sender.showMessageBoxSync({
-          type: "info",
-          buttons: ["OK"],
-          message: "Entry and exit servers cannot be in the same country",
-          detail:
-            "When using Multi-Hop you must select entry and exit servers in different countries. Please select a different entry or exit server.",
-        });
-        return false;
-      }
+    checkAndNotifyInaccessibleServer: async function (server) {
+      return CheckAndNotifyInaccessibleServer(this.isExitServer, server);
     },
-    onServerSelected: function (server) {
+    // isInaccessibleServer returns:
+    // - null if server is acceptble
+    // - object { sameGateway: true } - servers have same gateway
+    // - object { sameCountry: true } - servers are from same country (only if this.$store.state.settings.multihopWarnSelectSameCountries === true)
+    // - objext { sameISP: true }     - servers are operated by same ISP (only if this.$store.state.settings.multihopWarnSelectSameISPs === true)
+    isInaccessibleServer: function (server) {
+      return CheckIsInaccessibleServer(this.isExitServer, server);
+    },
+
+    onServerSelected: async function (server) {
       if (server.favHost) {
         return this.onServerHostSelected(
           server.favHostParentServerObj,
           server.favHost
         );
       }
-      if (this.checkAndNotifyInaccessibleServer(server) == false) return;
+      if ((await this.checkAndNotifyInaccessibleServer(server)) == false)
+        return;
       this.onServerChanged(server, this.isExitServer != null);
       this.onBack();
     },
-    onServerHostSelected: function (server, host) {
-      if (this.checkAndNotifyInaccessibleServer(server) == false) return;
+    onServerHostSelected: async function (server, host) {
+      if ((await this.checkAndNotifyInaccessibleServer(server)) == false)
+        return;
       this.onServerChanged(server, this.isExitServer != null, host.hostname);
       this.onBack();
     },
@@ -633,28 +642,7 @@ export default {
       this.isFastestServerConfig = true;
       this.filter = "";
     },
-    isInaccessibleServer: function (server) {
-      if (this.$store.state.settings.isMultiHop === false) return false;
-      let ccSkip = "";
 
-      let connected = !this.$store.getters["vpnState/isDisconnected"];
-      if (
-        // ENTRY SERVER
-        !this.isExitServer &&
-        this.$store.state.settings.serverExit &&
-        (connected || !this.$store.state.settings.isRandomExitServer)
-      )
-        ccSkip = this.$store.state.settings.serverExit.country_code;
-      else if (
-        // EXIT SERVER
-        this.isExitServer &&
-        this.$store.state.settings.serverEntry &&
-        (connected || !this.$store.state.settings.isRandomServer)
-      )
-        ccSkip = this.$store.state.settings.serverEntry.country_code;
-      if (server.country_code === ccSkip) return true;
-      return false;
-    },
     favoriteClicked: function (evt, server, host) {
       evt.stopPropagation();
 
