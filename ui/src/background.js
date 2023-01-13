@@ -271,10 +271,12 @@ if (gotTheLock) {
     );
 
     try {
-      InitTray(menuOnShow, menuOnPreferences, menuOnAccount, () => {
-        CheckUpdates();
-        createUpdateWindow();
-      });
+      InitTray(
+        menuOnShow,
+        menuOnPreferences,
+        menuOnAccount,
+        menuOnCheckUpdates
+      );
       isTrayInitialized = true;
     } catch (e) {
       console.error(e);
@@ -829,7 +831,16 @@ function createUpdateWindow() {
 
   updateWindow.once("ready-to-show", () => {
     updateWindow.show();
+
+    if (isDevelopment) {
+      try {
+        updateWindow.webContents.openDevTools();
+      } catch (e) {
+        console.error("Failed to open dev tools:", e.toString());
+      }
+    }
   });
+
   updateWindow.on("closed", () => {
     updateWindow = null;
   });
@@ -1034,6 +1045,11 @@ function menuOnAccount() {
 function menuOnPreferences() {
   menuOnShow();
   showSettings("general");
+}
+
+function menuOnCheckUpdates() {
+  CheckUpdates();
+  createUpdateWindow();
 }
 
 // UPDATE

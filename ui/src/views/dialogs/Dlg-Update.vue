@@ -6,7 +6,7 @@
       <div class="main flexColumn">
         <div>
           <!-- CHECKING FOR UPDATE-->
-          <div v-if="isCheckingUpdate">
+          <div v-if="isCheckingUpdate || !isStoreInitialised">
             <div class="big_text">Checking for updates ...</div>
             <spinner :loading="isCheckingUpdate" />
           </div>
@@ -237,8 +237,10 @@ export default {
   },
 
   computed: {
+    isStoreInitialised: function () {
+      return this.$store.state.uiState?.appUpdateProgress?.state;
+    },
     latestVersionInfo: function () {
-      //return null;
       return this.$store.state.latestVersionInfo;
     },
     updateState: function () {
@@ -248,7 +250,6 @@ export default {
       return this.updateState == AppUpdateStage.CheckingForUpdates;
     },
     isHasUpgrade: function () {
-      //if (this != "TEST") return false;
       if (this.versionLatestGeneric) {
         return (
           IsNewVersion(this.versionDaemon, this.versionLatestGeneric) ||
