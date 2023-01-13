@@ -179,6 +179,10 @@ const getDefaultState = () => {
     windowRestorePosition: null, // {x=xxx, y=xxx}
     showHosts: false, //Enable selection of individual servers in server selection list
 
+    showISPInfo: false, // "Show ISP info in servers list"
+    multihopWarnSelectSameCountries: true, // "Warn me when selecting Multihop entry and exit servers located in the same country"
+    multihopWarnSelectSameISPs: false, // "Warn me when selecting Multihop entry and exit servers operated by the same ISP"
+
     // updates
     updates: {
       isBetaProgram: false,
@@ -410,6 +414,16 @@ export default {
       }
     },
 
+    showISPInfo(state, val) {
+      state.showISPInfo = val;
+    },
+    multihopWarnSelectSameCountries(state, val) {
+      state.multihopWarnSelectSameCountries = val;
+    },
+    multihopWarnSelectSameISPs(state, val) {
+      state.multihopWarnSelectSameISPs = val;
+    },
+
     // updates
     updates(state, val) {
       state.updates = val;
@@ -513,7 +527,8 @@ export default {
     resetToDefaults(context) {
       context.commit("resetToDefaults");
       // Necessary to initialize selected VPN servers
-      updateSelectedServers(context);
+      const denyMultihopServersFromSameCountry = true;
+      updateSelectedServers(context, denyMultihopServersFromSameCountry);
     },
 
     daemonSettings(context, val) {
@@ -758,6 +773,16 @@ export default {
       context.commit("showHosts", val);
     },
 
+    showISPInfo(context, val) {
+      context.commit("showISPInfo", val);
+    },
+    multihopWarnSelectSameCountries(context, val) {
+      context.commit("multihopWarnSelectSameCountries", val);
+    },
+    multihopWarnSelectSameISPs(context, val) {
+      context.commit("multihopWarnSelectSameISPs", val);
+    },
+
     // UPDATES
     updates(context, val) {
       context.commit("updates", val);
@@ -773,7 +798,7 @@ export default {
   },
 };
 
-function updateSelectedServers(context) {
+function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
   // - define selected servers (if not initialized)
   // - update selected servers if VPN type changed (try to use vpnType-related servers from the same location [country\city])
   // - if multi-hop entry- and exit- servers are from same country -> use first default exit server from another country
@@ -843,13 +868,24 @@ function updateSelectedServers(context) {
       );
     }
   }
-  // entry and exit servers should be from different countries
+
+  // entry and exit servers should not have same gateway
   if (
     serverEntry != null &&
     serverExit != null &&
-    serverEntry.country_code === serverExit.country_code
+    serverEntry.gateway === serverExit.gateway
   )
     serverExit = null;
+
+  if (isDenyMultihopServersFromSameCountry === true) {
+    // entry and exit servers should be from different countries
+    if (
+      serverEntry != null &&
+      serverExit != null &&
+      serverEntry.country_code === serverExit.country_code
+    )
+      serverExit = null;
+  }
 
   // init selected servers (if not initialized)
   let cnt = servers.length;
