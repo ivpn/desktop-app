@@ -1,6 +1,6 @@
 {
   "name": "ivpn-ui",
-  "version": "3.10.3",
+  "version": "3.10.4",
   "productName": "IVPN",
   "description": "IVPN Client",
   "author": "IVPN Limited",
@@ -42,7 +42,7 @@
     "@vue/cli-plugin-vuex": "5.0.8",
     "@vue/cli-service": "5.0.8",
     "@vue/eslint-config-prettier": "7.0.0",
-    "electron": "21.3.3",
+    "electron": "21.3.4",
     "eslint": "8.28.0",
     "eslint-plugin-prettier": "4.2.1",
     "eslint-plugin-vue": "9.7.0",
