@@ -19,6 +19,8 @@
 //  You should have received a copy of the GNU General Public License
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
+const sender = window.ipcSender;
+import store from "@/store";
 
 export function IsOsDarkColorScheme() {
   //matchMedia method not supported
@@ -82,7 +84,7 @@ export function GetTimeLeftText(endTime /*Date()*/) {
 // - object { sameGateway: true } - servers have same gateway
 // - object { sameCountry: true } - servers are from same country (only if store.state.settings.multihopWarnSelectSameCountries === true)
 // - objext { sameISP: true }     - servers are operated by same ISP (only if store.state.settings.multihopWarnSelectSameISPs === true)
-export function CheckIsInaccessibleServer(store, isExitServer, server) {
+export function CheckIsInaccessibleServer(isExitServer, server) {
   if (store == null || isExitServer == null || server == null) return null;
   if (store.state.settings.isMultiHop === false) return null;
   let ccSkip = "";
@@ -142,17 +144,8 @@ export function CheckIsInaccessibleServer(store, isExitServer, server) {
   return null;
 }
 
-const sender = window.ipcSender;
-export async function CheckAndNotifyInaccessibleServer(
-  store,
-  isExitServer,
-  server
-) {
-  let svrInaccessibleInfo = CheckIsInaccessibleServer(
-    store,
-    isExitServer,
-    server
-  );
+export async function CheckAndNotifyInaccessibleServer(isExitServer, server) {
+  let svrInaccessibleInfo = CheckIsInaccessibleServer(isExitServer, server);
   if (svrInaccessibleInfo !== null) {
     if (svrInaccessibleInfo.sameGateway === true) {
       await sender.showMessageBox({

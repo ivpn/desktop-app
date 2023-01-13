@@ -558,11 +558,7 @@ export default {
     },
 
     checkAndNotifyInaccessibleServer: async function (server) {
-      return CheckAndNotifyInaccessibleServer(
-        this.$store,
-        this.isExitServer,
-        server
-      );
+      return CheckAndNotifyInaccessibleServer(this.isExitServer, server);
     },
     // isInaccessibleServer returns:
     // - null if server is acceptble
@@ -570,7 +566,7 @@ export default {
     // - object { sameCountry: true } - servers are from same country (only if this.$store.state.settings.multihopWarnSelectSameCountries === true)
     // - objext { sameISP: true }     - servers are operated by same ISP (only if this.$store.state.settings.multihopWarnSelectSameISPs === true)
     isInaccessibleServer: function (server) {
-      return CheckIsInaccessibleServer(this.$store, this.isExitServer, server);
+      return CheckIsInaccessibleServer(this.isExitServer, server);
     },
 
     onServerSelected: async function (server) {

@@ -688,7 +688,6 @@ export default {
 
         if (
           (await CheckAndNotifyInaccessibleServer(
-            this.$store,
             settings.isMultiHop,
             location
           )) === true
