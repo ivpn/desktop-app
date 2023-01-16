@@ -6,7 +6,7 @@ setlocal EnableDelayedExpansion
 set SCRIPTDIR=%~dp0
 set HAS_SIGN_ERRORS=0
 
-echo [+] Verifying signature of binaries in '%SCRIPTDIR%\bin\temp' ...
+echo [+] Verifying signature of binaries in '%SCRIPTDIR%bin\temp' ...
 cd %SCRIPTDIR%\bin\temp
 for /r %%f in (.\*.exe) do (
   rem echo Checking file: "%%f"
