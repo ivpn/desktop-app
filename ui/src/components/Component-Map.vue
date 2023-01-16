@@ -194,7 +194,10 @@
 
 <script>
 import { VpnStateEnum, PauseStateEnum, ColorTheme } from "@/store/types";
-import { IsOsDarkColorScheme } from "@/helpers/renderer";
+import {
+  IsOsDarkColorScheme,
+  CheckAndNotifyInaccessibleServer,
+} from "@/helpers/renderer";
 
 const sender = window.ipcSender;
 import popupControl from "@/components/controls/control-map-popup.vue";
@@ -543,10 +546,6 @@ export default {
         // check if we can change server (for multihop)
         var settings = this.$store.state.settings;
         if (settings.isMultiHop === true) {
-          if (location.country_code === settings.serverEntry?.country_code) {
-            // Entry and exit servers cannot be in the same country
-            return;
-          }
           this.$store.dispatch("settings/isRandomExitServer", false);
           this.$store.dispatch("settings/serverExit", location);
           this.$store.dispatch("settings/serverExitHostId", null);
@@ -679,49 +678,33 @@ export default {
       }
     },
 
-    locationClicked(location) {
+    async locationClicked(location) {
       if (this.$store.getters["account/isLoggedIn"] !== true) return;
 
       // does selected VPN server location?
       if (location?.gateway) {
         let settings = this.$store.state.settings;
         let conectionState = this.$store.state.vpnState.connectionState;
-        let oldSelectedServer = this.selectedServer;
 
-        if (conectionState === VpnStateEnum.DISCONNECTED) {
-          // VPN disconnected: select cliecked server
-          if (settings.isMultiHop) {
-            // for multihop, it is not permitted to select entry- and exit- servers from the same country
-            if (location.country_code !== settings.serverEntry.country_code) {
+        if (
+          (await CheckAndNotifyInaccessibleServer(
+            settings.isMultiHop,
+            location
+          )) === true
+        ) {
+          if (conectionState === VpnStateEnum.DISCONNECTED) {
+            if (settings.isMultiHop) {
               this.$store.dispatch("settings/serverExit", location);
+              this.$store.dispatch("settings/isRandomExitServer", false);
             } else {
-              sender.showMessageBoxSync({
-                type: "info",
-                buttons: ["OK"],
-                message: "Entry and exit servers cannot be in the same country",
-                detail:
-                  "When using multihop you must select entry and exit servers in different countries. Please select a different entry or exit server.",
-              });
-              return;
+              this.$store.dispatch("settings/serverEntry", location);
+              this.$store.dispatch("settings/isRandomServer", false);
+              this.$store.dispatch("settings/isFastestServer", false);
             }
-          } else this.$store.dispatch("settings/serverEntry", location);
-
-          this.$store.dispatch("settings/isFastestServer", false);
-          this.$store.dispatch("settings/isRandomServer", false);
-          if (settings.isMultiHop)
-            this.$store.dispatch("settings/isRandomExitServer", false);
-        }
-
-        if (settings.connectSelectedMapLocation === true) {
-          // connect to a selected server
-          if (
-            (this.isConnected || this.isConnecting) &&
-            location?.gateway == oldSelectedServer?.gateway
-          ) {
-            // do not connect if we already connected to the same server
-          } else {
-            this.connect(location);
           }
+
+          if (settings.connectSelectedMapLocation === true)
+            this.connect(location);
         }
       }
 

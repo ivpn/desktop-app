@@ -43,6 +43,38 @@
         </div>
       </div>
     </div>
+    <div class="settingsBoldFont">Miscellaneous</div>
+    <div class="param">
+      <input type="checkbox" id="showISPInfo" v-model="showISPInfo" />
+      <label class="defColor" for="showISPInfo">Show server ISP info</label>
+    </div>
+
+    <div v-show="isMultihopAllowed === true">
+      <div class="settingsBoldFont">Multi-Hop</div>
+      <div class="param">
+        <input
+          type="checkbox"
+          id="multihopWarnSelectSameCountries"
+          v-model="multihopWarnSelectSameCountries"
+        />
+        <label class="defColor" for="multihopWarnSelectSameCountries"
+          >Warn me when selecting entry and exit servers located in the same
+          country</label
+        >
+      </div>
+
+      <div class="param">
+        <input
+          type="checkbox"
+          id="multihopWarnSelectSameISPs"
+          v-model="multihopWarnSelectSameISPs"
+        />
+        <label class="defColor" for="multihopWarnSelectSameISPs"
+          >Warn me when selecting entry and exit servers operated by the same
+          ISP</label
+        >
+      </div>
+    </div>
   </div>
 </template>
 
@@ -63,6 +95,34 @@ export default {
   computed: {
     IsPmEnabled: function () {
       return this.$store.state.paranoidModeStatus.IsEnabled;
+    },
+    showISPInfo: {
+      get() {
+        return this.$store.state.settings.showISPInfo;
+      },
+      set(value) {
+        this.$store.dispatch("settings/showISPInfo", value);
+      },
+    },
+    isMultihopAllowed: function () {
+      return this.$store.getters["account/isMultihopAllowed"];
+    },
+    multihopWarnSelectSameCountries: {
+      get() {
+        return this.$store.state.settings.multihopWarnSelectSameCountries;
+      },
+      set(value) {
+        this.$store.dispatch("settings/multihopWarnSelectSameCountries", value);
+      },
+    },
+    multihopWarnSelectSameISPs: {
+      get() {
+        return this.$store.state.settings.multihopWarnSelectSameISPs;
+      },
+      set(value) {
+        this.$store.dispatch("settings/multihopWarnSelectSameISPs", value);
+        if (value === true) this.showISPInfo = true;
+      },
     },
   },
 
@@ -130,6 +190,18 @@ export default {
 
 <style scoped lang="scss">
 @import "@/components/scss/constants";
+.defColor {
+  @extend .settingsDefaultTextColor;
+}
+
+div.param {
+  @extend .flexRow;
+  margin-top: 3px;
+}
+
+label {
+  margin-left: 1px;
+}
 
 div.paramName {
   min-width: 150px;
