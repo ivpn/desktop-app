@@ -874,8 +874,10 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
     serverEntry != null &&
     serverExit != null &&
     serverEntry.gateway === serverExit.gateway
-  )
-    serverExit = null;
+  ) {
+    if (state.isRandomServer) serverEntry = null;
+    else serverExit = null;
+  }
 
   if (isDenyMultihopServersFromSameCountry === true) {
     // entry and exit servers should be from different countries
@@ -883,28 +885,44 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
       serverEntry != null &&
       serverExit != null &&
       serverEntry.country_code === serverExit.country_code
-    )
-      serverExit = null;
+    ) {
+      if (state.isRandomServer) serverEntry = null;
+      else serverExit = null;
+    }
   }
 
+  //
   // init selected servers (if not initialized)
+  //
   let cnt = servers.length;
+
+  // entryServer
+  let fallbackEntryServer = null;
   for (let i = 0; serverEntry == null && i < cnt; i++) {
-    if (
-      serverExit == null ||
-      servers[i].country_code !== serverExit.country_code
-    ) {
-      serverEntry = servers[i];
+    if (serverExit == null) serverEntry = servers[i];
+    else {
+      if (servers[i].country_code !== serverExit.country_code) {
+        if (!fallbackEntryServer) fallbackEntryServer = servers[i];
+        if (servers[i].gateway !== serverExit.gateway) serverEntry = servers[i];
+      }
     }
   }
+  if (serverEntry == null) serverEntry = fallbackEntryServer; // fallback to first applicable server
+  if (serverEntry == null && cnt > 0) serverEntry = servers[0]; // fallback to first server in a list
+
+  // exitServer
+  let fallbackExitServer = null;
   for (let i = 0; serverExit == null && i < cnt; i++) {
-    if (
-      serverEntry == null ||
-      servers[i].country_code !== serverEntry.country_code
-    ) {
-      serverExit = servers[i];
+    if (serverEntry == null) serverExit = servers[i];
+    else {
+      if (servers[i].country_code !== serverEntry.country_code) {
+        if (!fallbackExitServer) fallbackExitServer = servers[i];
+        if (servers[i].gateway !== serverEntry.gateway) serverExit = servers[i];
+      }
     }
   }
+  if (serverExit == null) serverExit = fallbackExitServer; // fallback to first applicable server
+  if (serverExit == null && cnt > 0) serverExit = servers[cnt - 1]; // fallback to last server in a list
 
   //
   // Update selected servers (in necessary)
