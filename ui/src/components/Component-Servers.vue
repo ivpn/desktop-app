@@ -465,18 +465,34 @@ export default {
         }
       }
 
+      function serverToSkip() {
+        // For Multi-Hop:
+        // -skip entry-server for exit server selection
+        // -skip exit-server for entry server selection
+        if (!this.isMultihop) return null;
+        if (this.isExitServer) {
+          if (!this.$store.state.settings.isRandomServer)
+            return this.$store.state.settings.serverEntry;
+        } else {
+          if (!this.$store.state.settings.isRandomExitServer)
+            return this.$store.state.settings.serverExit;
+        }
+        return null;
+      }
+
       let servers = this.servers;
       if (this.isFavoritesView) {
         servers = this.favoriteServers;
         servers = servers.concat(this.favoriteHosts);
       }
 
-      if (this.filter == null || this.filter.length == 0)
-        return servers.slice().sort(compare);
+      let svrToSkip = serverToSkip.bind(this)();
+      //if (!svrToSkip && !this.filter) return servers.slice().sort(compare);
 
       let filter = this.filter.toLowerCase();
       let filtered = servers.filter((s) => {
-        // check if the filtered object id 'favorite host'
+        if (s.gateway === svrToSkip?.gateway) return false;
+        if (!this.filter) return true;
         return (
           (s.favHost && s.favHost.hostname.toLowerCase().includes(filter)) || // only for favorite hosts (host object extended by all properties from parent server object +favHostParentServerObj +favHost)
           (s.city && s.city.toLowerCase().includes(filter)) ||

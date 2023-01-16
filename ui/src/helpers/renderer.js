@@ -115,7 +115,7 @@ export function CheckIsInaccessibleServer(isExitServer, server) {
   if (server.gateway === gatewaySkip)
     return {
       sameGateway: true,
-      message: "Entry and exit servers are identical",
+      message: "Entry and exit servers are the same",
       detail: "Please select a different entry or exit server.",
     };
 
@@ -127,7 +127,7 @@ export function CheckIsInaccessibleServer(isExitServer, server) {
       sameCountry: true,
       message: "Entry and exit servers located in the same country",
       detail:
-        "Using Multi-Hop servers from different countries is good practice to increase anonymity.",
+        "Using Multi-Hop servers from the same country may decrease your privacy.",
     };
 
   if (
@@ -138,7 +138,7 @@ export function CheckIsInaccessibleServer(isExitServer, server) {
       sameISP: true,
       message: "Entry and exit servers are operated by the same ISP",
       detail:
-        "Using Multi-Hop servers operated by different ISPs is good practice to increase anonymity.",
+        "Using Multi-Hop servers operated by the same ISP may decrease your privacy.",
     };
 
   return null;
