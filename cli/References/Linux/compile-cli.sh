@@ -47,20 +47,25 @@ echo "Commit : $COMMIT"
 #   ldd -r -v <binary_file> # check shared libraries dependencies
 #
 # Info: CLI does not use CGO directly (and can be easily disabled manually), but we use the same build environment as a for daemon (to be able to detect same errors as with daemon binary) 
-GLIBC_VER_MAX_REQUIRED="2.31"
-GLIBC_VER=$(ldd --version | grep "ldd (" | awk '{print $(NF)}')
-if [[ "${GLIBC_VER}" > "${GLIBC_VER_MAX_REQUIRED}" ]]; 
+if [ ! -z "$GITHUB_ACTIONS" ]; 
 then
-    echo "[!] GLIBC version '${GLIBC_VER}' is greater than reqired '${GLIBC_VER_MAX_REQUIRED}'"
-    echo "[!] Compiling with the new GLIBC version will not allow the program to start on systems with the old GLIBC."
-    read -p "[?] Do you want to continue? [y\n] (N - default): " yn
-    case $yn in
-      [Yy]* ) ;;
-      * ) 
-      echo "[!] Build interrupted by user"
-      exit 1
-      ;;
-    esac
+  echo "[!] ! GITHUB_ACTIONS detected ! It is just a build test."
+else
+  GLIBC_VER_MAX_REQUIRED="2.31"
+  GLIBC_VER=$(ldd --version | grep "ldd (" | awk '{print $(NF)}')
+  if [[ "${GLIBC_VER}" > "${GLIBC_VER_MAX_REQUIRED}" ]]; 
+  then
+      echo "[!] GLIBC version '${GLIBC_VER}' is greater than reqired '${GLIBC_VER_MAX_REQUIRED}'"
+      echo "[!] Compiling with the new GLIBC version will not allow the program to start on systems with the old GLIBC."
+      read -p "[?] Do you want to continue? [y\n] (N - default): " yn
+      case $yn in
+        [Yy]* ) ;;
+        * ) 
+        echo "[!] Build interrupted by user"
+        exit 1
+        ;;
+      esac
+  fi
 fi
 
 cd $SCRIPT_DIR/../../
