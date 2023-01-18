@@ -42,6 +42,31 @@ echo "Date   : $DATE"
 echo "Commit : $COMMIT"
 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
+# Check required GLIBC version. 
+# Compiling with the new GLIBC version will not allow the program to start on systems with the old GLIBC (error example: "version 'GLIBC_2.34' not found"). 
+# Useful links:
+#   https://utcc.utoronto.ca/~cks/space/blog/programming/GoAndGlibcVersioning
+# Useful commands:
+#   ldd -r -v <binary_file> # check shared libraries dependencies
+#
+# TODO: think how to avoid using CGO
+GLIBC_VER_MAX_REQUIRED="2.31"
+GLIBC_VER=$(ldd --version | grep "ldd (" | awk '{print $(NF)}')
+if [[ "${GLIBC_VER}" > "${GLIBC_VER_MAX_REQUIRED}" ]]; 
+then
+    echo "[!] GLIBC version '${GLIBC_VER}' is greater than reqired '${GLIBC_VER_MAX_REQUIRED}'"
+    echo "[!] Compiling with the new GLIBC version will not allow the program to start on systems with the old GLIBC."
+    read -p "[?] Do you want to continue? [y\n] (N - default): " yn
+    case $yn in
+      [Yy]* ) ;;
+      * ) 
+      echo "[!] Build interrupted by user"
+      exit 1
+      ;;
+    esac
+fi
+
+# Build
 cd $SCRIPT_DIR/../../../
 
 if [[ "$@" == *"-debug"* ]]
