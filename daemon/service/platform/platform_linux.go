@@ -36,8 +36,8 @@ import (
 var (
 	firewallScript string
 	splitTunScript string
-	logDir         string = "/opt/ivpn/log"
-	tmpDir         string = "/opt/ivpn/mutable"
+	logDir         string = "/var/log/ivpn"
+	tmpDir         string = "/etc/opt/ivpn/mutable"
 
 	// path to 'resolvectl' binary
 	resolvectlBinPath string
@@ -92,6 +92,7 @@ func doInitConstants() {
 
 	// check if we are running in snap environment
 	if envs := GetSnapEnvs(); envs != nil {
+		// Note! Changing 'tmpDir' value may break upgrade compatibility with old versions (e.g. lose account login information)
 		logDir = path.Join(envs.SNAP_COMMON, "/opt/ivpn/log")
 		tmpDir = path.Join(envs.SNAP_COMMON, "/opt/ivpn/mutable")
 		openVpnBinaryPath = path.Join(envs.SNAP, openVpnBinaryPath)

@@ -11,9 +11,13 @@ fi
 NEED_TO_SAVE_INSTRUCTIONS=true
 IVPN_OPT="/opt/ivpn"
 IVPN_ETC="/opt/ivpn/etc"
-IVPN_TMP="/opt/ivpn/mutable"
-INSTRUCTIONS_FILE="$IVPN_TMP/service_install.txt"
+IVPN_TMP="/etc/opt/ivpn/mutable"
+IVPN_LOG="/var/log/ivpn"
+
+mkdir -p $IVPN_LOG
 mkdir -p $IVPN_TMP
+
+INSTRUCTIONS_FILE="$IVPN_TMP/service_install.txt"
 [ -e $INSTRUCTIONS_FILE ] && rm $INSTRUCTIONS_FILE
 
 silent() {

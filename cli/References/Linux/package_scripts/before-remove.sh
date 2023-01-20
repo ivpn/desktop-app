@@ -20,7 +20,4 @@ if [ $_IS_REMOVE = 1 ]; then
 
     echo "[+] Logging out (before-remove) ..."
     /usr/bin/ivpn logout || echo "[-] Failed to log out"
-
-    echo "[+] Service cleanup (before-remove: pleaserun) ..."
-    sh /usr/share/pleaserun/ivpn-service/generate-cleanup.sh || echo "[-] Service cleanup FAILED!"
 fi

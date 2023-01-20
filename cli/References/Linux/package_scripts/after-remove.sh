@@ -55,30 +55,41 @@ try_systemd_stop() {
 
         if [ -f "/etc/systemd/system/ivpn-service.service" ]; then
             echo "[+] Removing service"
-            silent rm /etc/systemd/system/ivpn-service.service
+            rm /etc/systemd/system/ivpn-service.service
         fi
         if [ -f "/usr/lib/systemd/system/ivpn-service.service" ]; then
             echo "[+] Removing service"
-            silent rm /usr/lib/systemd/system/ivpn-service.service
+            rm /usr/lib/systemd/system/ivpn-service.service
         fi
     fi
 }
 
-
-IVPN_DIR="/opt/ivpn"
-if [ -d $IVPN_DIR ] ; then
-  echo "[+] Removing other files ..."
-  # Normally, all files which were installed, deleted automatically.
-  # But ivpn-service also writing to 'mutable' additional temporary files (uninstaller know nothing about them).
-  # Therefore, we are completely removing all content of '/opt/ivpn/mutable'.
-  # Also, there could stay empty dirs which were not deleted automatically.
-  rm -rf $IVPN_DIR || echo "[-] Removing '$IVPN_DIR' folder failed"
-fi
-
-CLI_CONFIG_DIR="/home/${USER}/.ivpn"
-if [ -d $CLI_CONFIG_DIR ] ; then
-  echo "[+] Removing CLI config folder ..."
-  rm -rf $CLI_CONFIG_DIR || echo "[-] Removing '$CLI_CONFIG_DIR' folder failed"
-fi
-
+# stop & disable service
 try_systemd_stop
+
+PLEASERUN_DIR="/usr/share/pleaserun/ivpn-service"
+if [ -d $PLEASERUN_DIR ] ; then
+  echo "[+] Service cleanup (pleaserun) ..."
+  silent sh $PLEASERUN_DIR/cleanup.sh 
+  rm -fr $PLEASERUN_DIR
+fi 
+
+#IVPN_DIR="/opt/ivpn"
+#if [ -d $IVPN_DIR ] ; then
+#  echo "[+] Removing other files ..."
+#  # Normally, all files which were installed, deleted automatically.
+#  # But ivpn-service also writing to 'mutable' additional temporary files (uninstaller know nothing about them).
+#  # Therefore, we are completely removing all content of '/opt/ivpn/mutable'.
+#  # Also, there could stay empty dirs which were not deleted automatically.
+#  rm -rf $IVPN_DIR || echo "[-] Removing '$IVPN_DIR' folder failed"
+#fi
+
+echo "[+] Removing mutable data ..."
+IVPN_TMP="/etc/opt/ivpn"
+rm -rf $IVPN_TMP
+
+echo "[+] Removing logs ..."
+IVPN_LOG="/var/log/ivpn" 
+rm -rf $IVPN_LOG
+
+

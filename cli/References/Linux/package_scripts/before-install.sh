@@ -5,12 +5,6 @@ echo "[*] Before install (<%= version %> : <%= pkg %> : $1)"
 # Skip installation if 'ivpn' snap pachage already installed
 snap list ivpn > /dev/null 2>&1 && echo "[!] INSTALLATION CANCELED: The snap package 'ivpn' is already installed. Please, uninstall the 'ivpn' snap package first." && exit 1
 
-# When removing package: $1==0 for RPM; $1 == "remove" for DEB
-_IS_REMOVE=0
-if [ "$1" = "remove" -o "$1" = "0" ]; then
-  _IS_REMOVE=1
-fi
-
 IVPN_BIN="/usr/bin/ivpn"
 if [ ! -f ${IVPN_BIN} ] && [ -f /usr/local/bin/ivpn ]; then
   # old installation path (used till v3.3.20)
@@ -24,6 +18,24 @@ if [ -f ${IVPN_BIN} ]; then
 
   echo "[+] Trying to disconnect (before install) ..."
   ${IVPN_BIN} disconnect || echo "[-] Failed to disconnect"
+fi
+
+# ########################################################################################
+#
+# Next lines is in use only for compatibility with old package versions (v3.10.10 and older)
+#
+# ########################################################################################
+# Folders changed:
+# "/opt/ivpn/mutable" -> "/etc/opt/ivpn/mutable" 
+# "/opt/ivpn/log"     -> "/var/log/ivpn" 
+if [ -d /opt/ivpn/mutable ]; then 
+  echo "[+] Migrating old-style mutable data from the previous installation ..."
+  mkdir -p /etc/opt/ivpn
+  mv /opt/ivpn/mutable /etc/opt/ivpn/mutable
+fi
+if [ -d /opt/ivpn/log ]; then 
+  echo "[+] Migrating old-style logs from the previous installation ..." 
+  mv /opt/ivpn/log /var/log/ivpn
 fi
 
 # ########################################################################################
