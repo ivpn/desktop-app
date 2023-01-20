@@ -85,7 +85,7 @@ export function GetTimeLeftText(endTime /*Date()*/) {
 // - object { sameCountry: true } - servers are from same country (only if store.state.settings.multihopWarnSelectSameCountries === true)
 // - objext { sameISP: true }     - servers are operated by same ISP (only if store.state.settings.multihopWarnSelectSameISPs === true)
 export function CheckIsInaccessibleServer(isExitServer, server) {
-  if (store == null || isExitServer == null || server == null) return null;
+  if (store == null || server == null) return null;
   if (store.state.settings.isMultiHop === false) return null;
   let ccSkip = "";
   let ispSkip = "";
