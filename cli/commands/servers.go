@@ -131,7 +131,7 @@ func (c *CmdServers) Run() error {
 		}
 	}
 
-	fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tIPv? tunnel\t"+pingHeader+hostsHeader+hostsLoadHeader)
+	fmt.Fprintln(w, "PROTOCOL\tLOCATION\tCITY\tCOUNTRY\tISP\tIPv? tunnel\t"+pingHeader+hostsHeader+hostsLoadHeader)
 
 	helloResp := _proto.GetHelloResponse()
 	isWgDisabled := len(helloResp.DisabledFunctions.WireGuardError) > 0
@@ -167,7 +167,7 @@ func (c *CmdServers) Run() error {
 			}
 		}
 
-		str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s%s%s", s.protocol, s.gateway, s.city, s.countryCode, s.country, IPvInfo, pingStr, firstHostStr, firstHostLoadStr)
+		str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s\t%s%s%s", s.protocol, s.gateway, s.city, s.countryCode, s.country, s.isp, IPvInfo, pingStr, firstHostStr, firstHostLoadStr)
 		fmt.Fprintln(w, str)
 
 		if c.hosts && len(s.hosts) > 1 {
@@ -183,7 +183,7 @@ func (c *CmdServers) Run() error {
 				if c.load {
 					loadStr = fmt.Sprintf("%d", int(h.load+0.5)) + "%\t"
 				}
-				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s%s%s", "", "", "", "", "", "", pingStr, h.hostname+"\t", loadStr)
+				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s\t%s%s%s", "", "", "", "", "", "", "", pingStr, h.hostname+"\t", loadStr)
 				fmt.Fprintln(w, str)
 			}
 		}
@@ -244,7 +244,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 				}
 				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load})
 			}
-			ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts, isIPv6Tunnel: isIPv6Tunnel})
+			ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, isp: s.ISP, hosts: hosts, isIPv6Tunnel: isIPv6Tunnel})
 		}
 	} else {
 		ret = make([]serverDesc, 0, len(servers.OpenvpnServers))
@@ -255,7 +255,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 			for _, h := range s.Hosts {
 				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load})
 			}
-			ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, hosts: hosts})
+			ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, isp: s.ISP, hosts: hosts})
 		}
 	}
 	return ret
@@ -389,6 +389,7 @@ type serverDesc struct {
 	city         string
 	countryCode  string
 	country      string
+	isp          string
 	hosts        []hostDesc
 	pingMs       int
 	isIPv6Tunnel bool
