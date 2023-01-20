@@ -358,7 +358,10 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 
 		if entrySvr.countryCode == exitSvr.countryCode {
-			fmt.Println("Warning! Entry- and exit- servers located in the same country.")
+			fmt.Println("Warning! Entry and exit servers located in the same country.\n         Using Multi-Hop servers from the same country may decrease your privacy.")
+		}
+		if entrySvr.isp == exitSvr.isp {
+			fmt.Println("Warning! Entry and exit servers are operated by the same ISP.\n         Using Multi-Hop servers operated by the same ISP may decrease your privacy.")
 		}
 
 		c.gateway = entrySvr.gateway
