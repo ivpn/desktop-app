@@ -218,11 +218,13 @@ parts:
 
   etc:
     plugin: dump
-    source: ./daemon/References/Linux/etc
-    organize:
-      "*": opt/ivpn/etc/
+    source: ./daemon/References
     override-build: |
       snapcraftctl build
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/etc
+      cp common/etc/* $SNAPCRAFT_PART_INSTALL/opt/ivpn/etc
+      cp Linux/etc/* $SNAPCRAFT_PART_INSTALL/opt/ivpn/etc
+      cd $SNAPCRAFT_PART_INSTALL/opt/ivpn/etc
       chmod 0400 *
       chmod 0600 servers.json
       chmod 0700 *.sh
