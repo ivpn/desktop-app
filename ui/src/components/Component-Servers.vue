@@ -646,7 +646,7 @@ export default {
         return Image_star_inactive;
       } else {
         //server
-        if (settings.serversFavoriteList.includes(server.gateway))
+        if (settings.serversFavoriteList.includes(getGatewayId(server.gateway)))
           return Image_star_active;
         return Image_star_inactive;
       }
@@ -669,19 +669,17 @@ export default {
           server.favHost
         );
       }
-      let serversHashed = this.$store.state.vpnState.serversHashed;
-      let gateway = server.gateway;
 
       if (!host) {
         // favorite SERVER
+        let gatewayId = server.gateway.split(".")[0]; // only gateway ID in use for serversFavoriteList ("us-tx.wg.ivpn.net" => "us-tx")
         let favorites = this.$store.state.settings.serversFavoriteList.slice();
-        if (favorites.includes(gateway)) {
-          console.log(`Removing favorite location ${gateway}`);
-          favorites = favorites.filter((gw) => gw != gateway);
+        if (favorites.includes(gatewayId)) {
+          console.log(`Removing favorite location ${gatewayId}`);
+          favorites = favorites.filter((gw) => gw != gatewayId);
         } else {
-          console.log(`Adding favorite location ${gateway}`);
-          if (!serversHashed[gateway]) return;
-          favorites.push(gateway);
+          console.log(`Adding favorite location ${gatewayId}`);
+          favorites.push(gatewayId);
         }
 
         this.$store.dispatch("settings/serversFavoriteList", favorites);
@@ -697,7 +695,6 @@ export default {
           favoriteHosts = favoriteHosts.filter((hn) => hn != hostname);
         } else {
           // add host
-          if (!serversHashed[gateway]) return;
           console.log(`Adding favorite host ${hostname}`);
           favoriteHosts.push(hostname);
         }

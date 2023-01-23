@@ -55,6 +55,15 @@ export function InitPersistentSettings() {
         delete settings.dnsCustom;
       }
 
+      // UPGRADING from OLD SETTINGS (from v3.10.0 and older)
+      try {
+        // only gateway ID in use for serversFavoriteList ("us-tx.wg.ivpn.net" => "us-tx")
+        let favSvs = settings.serversFavoriteList.map((gw) => gw.split(".")[0]);
+        settings.serversFavoriteList = favSvs;
+      } catch (e) {
+        console.error("InitPersistentSettings (serversFavoriteList upd.): ", e);
+      }
+
       // apply settings data
       const mergedState = merge(store.state.settings, settings, {
         arrayMerge: combineMerge,

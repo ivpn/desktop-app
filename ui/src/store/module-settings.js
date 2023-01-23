@@ -57,7 +57,7 @@ const getDefaultState = () => {
     isRandomExitServer: false,
 
     // Favorite gateway's list (strings [gateway])
-    serversFavoriteList: [],
+    serversFavoriteList: [], // only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
     // Favorite hosts list (strings [hostname])
     hostsFavoriteList: [],
 
@@ -471,7 +471,15 @@ export default {
         let activeServers = rootGetters["vpnState/activeServers"];
         if (!activeServers || !favorites) return null;
 
-        return activeServers.filter((s) => favorites.includes(s.gateway));
+        console.log(
+          "settings favoriteServers: settings/favoriteServers:",
+          favorites
+        );
+        // Converting gateway name to geteway ID (if necessary)
+        // Example: "nl.gw.ivpn.net" => "nl"
+        return activeServers.filter((s) =>
+          favorites.includes(s.gateway.split(".")[0])
+        );
       } catch (e) {
         console.error("Failed to get Favorite servers: ", e);
         return null;
@@ -626,6 +634,18 @@ export default {
 
     // Favorite gateway's list (strings)
     serversFavoriteList(context, val) {
+      val = val.map((gw) => gw.split(".")[0]); // only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
+
+      // remove servers from the favorite list if they do not exist anymore
+      try {
+        if (context.rootGetters) {
+          const allGatewyIDs = context.rootGetters["vpnState/getAllGatewayIDs"];
+          val = val.filter((gwID) => allGatewyIDs.includes(gwID));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
       context.commit("serversFavoriteList", val);
     },
     hostsFavoriteList(context, val) {
@@ -940,18 +960,9 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
     context.commit("serverExitHostId", null);
 
   //
-  // Remove servers/hosts from favorite list (if they are not exists anymore)
+  // Remove hosts from favorite list (if they are not exists anymore)
   //
-  let favServersChanged = false;
   let favHostsChanged = false;
-  let favServers = state.serversFavoriteList;
-  for (const gw of state.serversFavoriteList) {
-    if (!serversHashed[gw]) {
-      favServers = favServers.filter((fGw) => gw != fGw);
-      favServersChanged = true;
-    }
-  }
-
   const hostsHashed = context.rootState.vpnState.hostsHashed;
   let favHosts = state.hostsFavoriteList;
   for (const h of state.hostsFavoriteList) {
@@ -960,8 +971,6 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
       favHostsChanged = true;
     }
   }
-
-  if (favServersChanged) context.commit("serversFavoriteList", favServers);
   if (favHostsChanged) context.commit("hostsFavoriteList", favHosts);
 
   //
