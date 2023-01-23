@@ -298,25 +298,20 @@ function updateTrayMenu() {
     ];
   } else {
     favoriteSvrsTemplate = [];
-    const serversHashed = store.state.vpnState.serversHashed;
-    const hostsHashed = store.state.vpnState.hostsHashed;
-    favSvrs.forEach((gw) => {
+
+    favSvrs.forEach((s) => {
       let host = null;
-      if (gw.favHostParentServerObj && gw.favHost) {
-        host = gw.favHost;
-        gw = gw.favHostParentServerObj;
+      if (s.favHostParentServerObj && s.favHost) {
+        host = s.favHost;
+        s = s.favHostParentServerObj;
       }
 
-      if (!gw || !gw.gateway) return;
-      const s = serversHashed[gw.gateway];
-      if (s == null) return;
-
-      if (host) host = hostsHashed[host.hostname];
+      if (!s || !s.gateway) return;
 
       var options = null;
       if (store.state.settings.isMultiHop) {
         // for multihop: do not allow to connect to the servers from same country
-        if (store.state.settings.serverEntry.country_code !== gw.country_code) {
+        if (store.state.settings.serverEntry.country_code !== s.country_code) {
           options = {
             label: serverName(null, s, null, host),
             click: () => {

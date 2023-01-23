@@ -102,8 +102,6 @@ export default {
 
     // Servers hash object: serversHashed[gateway] = server
     serversHashed: {},
-    // Hosts hash object: hostsHashed[hostname] = host
-    hostsHashed: {},
     servers: {
       wireguard: [],
       openvpn: [],
@@ -207,19 +205,13 @@ export default {
     pauseState(state, val) {
       state.pauseState = val;
     },
-    setServersData(state, serversObj /*{servers,serversHashed,hostsHashed}*/) {
-      if (
-        !serversObj ||
-        !serversObj.servers ||
-        !serversObj.serversHashed ||
-        !serversObj.hostsHashed
-      ) {
+    setServersData(state, serversObj /*{servers,serversHashed}*/) {
+      if (!serversObj || !serversObj.servers || !serversObj.serversHashed) {
         console.error("Unable to set servers data. Bad data object");
         return;
       }
       state.servers = serversObj.servers;
       state.serversHashed = serversObj.serversHashed;
-      state.hostsHashed = serversObj.hostsHashed;
     },
     isPingingServers(state, val) {
       state.isPingingServers = val;
@@ -572,7 +564,7 @@ export default {
         context.dispatch("uiState/pauseConnectionTill", null, { root: true });
     },
     servers(context, value) {
-      // Update servers data and hashes: {servers, serversHashed, hostsHashed}
+      // Update servers data and hashes: {servers, serversHashed}
       // (avoid doing all calculations in mutation to do not freeze the UI!)
       const serversInfoObj = updateServers(context.state.servers, value);
       // Apply new servers data
@@ -768,24 +760,9 @@ function updateServers(oldServers, newServers) {
 
   let hash = initNewServersAndCreateHash(null, newServers.wireguard);
   let serversHashed = initNewServersAndCreateHash(hash, newServers.openvpn);
-  let hostsHashed = null;
-  try {
-    // hashing hostnames (hostsHashed)
-    let hHosts = {};
-    for (const gw in serversHashed) {
-      const s = serversHashed[gw];
-      for (const h of s.hosts) {
-        hHosts[h.hostname] = h;
-      }
-    }
-    hostsHashed = hHosts;
-  } catch (e) {
-    console.error(e);
-    hostsHashed = {};
-  }
 
   // copy ping value from old objects
-  function copySvrsDataFromOld(oldServers, newServersHashed, newHostsHashed) {
+  function copySvrsDataFromOld(oldServers, newServersHashed) {
     for (let i = 0; i < oldServers.length; i++) {
       let oldSrv = oldServers[i];
       let newSrv = newServersHashed[oldSrv.gateway];
@@ -793,19 +770,10 @@ function updateServers(oldServers, newServers) {
 
       newSrv.ping = oldSrv.ping;
       newSrv.pingQuality = oldSrv.pingQuality;
-
-      // update gateway pings
-      for (const oldHost of oldSrv.hosts) {
-        let newHost = newHostsHashed[oldHost.hostname];
-        if (!newHost) continue;
-
-        newHost.ping = oldHost.ping;
-        newHost.pingQuality = oldHost.pingQuality;
-      }
     }
   }
-  copySvrsDataFromOld(oldServers.wireguard, serversHashed, hostsHashed);
-  copySvrsDataFromOld(oldServers.openvpn, serversHashed, hostsHashed);
+  copySvrsDataFromOld(oldServers.wireguard, serversHashed);
+  copySvrsDataFromOld(oldServers.openvpn, serversHashed);
 
   // sort new servers (by country/city)
   function compare(a, b) {
@@ -819,7 +787,6 @@ function updateServers(oldServers, newServers) {
   return {
     servers: newServers,
     serversHashed: serversHashed,
-    hostsHashed: hostsHashed,
   };
 }
 

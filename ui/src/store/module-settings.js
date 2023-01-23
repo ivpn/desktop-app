@@ -960,20 +960,6 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
     context.commit("serverExitHostId", null);
 
   //
-  // Remove hosts from favorite list (if they are not exists anymore)
-  //
-  let favHostsChanged = false;
-  const hostsHashed = context.rootState.vpnState.hostsHashed;
-  let favHosts = state.hostsFavoriteList;
-  for (const h of state.hostsFavoriteList) {
-    if (!hostsHashed[h]) {
-      favHosts = favHosts.filter((fh) => h != fh);
-      favHostsChanged = true;
-    }
-  }
-  if (favHostsChanged) context.commit("hostsFavoriteList", favHosts);
-
-  //
   // Ensure if selected ports exists in a servers configuration or port is selected correctly
   //
   ensurePortsSelectedCorrectly(context);
