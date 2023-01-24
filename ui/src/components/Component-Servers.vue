@@ -636,12 +636,14 @@ export default {
       const settings = this.$store.state.settings;
       if (server.favHost) {
         // favorite host: only for favorite hosts (host object extended by all properties from parent server object)
-        if (settings.hostsFavoriteList.includes(server.favHost.hostname))
+        if (
+          settings.hostsFavoriteListDnsNames.includes(server.favHost.dns_name)
+        )
           return Image_star_active;
         return Image_star_inactive;
       } else if (host) {
         // host
-        if (settings.hostsFavoriteList.includes(host.hostname))
+        if (settings.hostsFavoriteListDnsNames.includes(host.dns_name))
           return Image_star_active;
         return Image_star_inactive;
       } else {
@@ -681,24 +683,23 @@ export default {
           console.log(`Adding favorite location ${gatewayId}`);
           favorites.push(gatewayId);
         }
-
         this.$store.dispatch("settings/serversFavoriteList", favorites);
       } else if (host.hostname) {
         // favorite HOST
-        let favoriteHosts =
-          this.$store.state.settings.hostsFavoriteList.slice();
-        let hostname = host.hostname;
+        let favHostsDns =
+          this.$store.state.settings.hostsFavoriteListDnsNames.slice();
+        let hostDns = host.dns_name;
 
-        if (favoriteHosts.includes(hostname)) {
+        if (favHostsDns.includes(hostDns)) {
           // remove host
-          console.log(`Removing favorite host ${hostname}`);
-          favoriteHosts = favoriteHosts.filter((hn) => hn != hostname);
+          console.log(`Removing favorite host ${hostDns}`);
+          favHostsDns = favHostsDns.filter((hn) => hn != hostDns);
         } else {
           // add host
-          console.log(`Adding favorite host ${hostname}`);
-          favoriteHosts.push(hostname);
+          console.log(`Adding favorite host ${hostDns}`);
+          favHostsDns.push(hostDns);
         }
-        this.$store.dispatch("settings/hostsFavoriteList", favoriteHosts);
+        this.$store.dispatch("settings/hostsFavoriteListDnsNames", favHostsDns);
       }
     },
     configFastestSvrClicked(server, event) {

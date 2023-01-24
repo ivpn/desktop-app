@@ -195,7 +195,7 @@ export function InitTray(
         case "settings/isRandomServer":
         case "settings/isRandomExitServer":
         case "settings/serversFavoriteList":
-        case "settings/hostsFavoriteList":
+        case "settings/hostsFavoriteListDnsNames":
         case "settings/showHosts":
         case "account/session":
           updateTrayMenu();

@@ -32,6 +32,7 @@ import (
 type HostInfoBase struct {
 	Hostname     string  `json:"hostname"`
 	Host         string  `json:"host"`
+	DnsName      string  `json:"dns_name"`
 	MultihopPort int     `json:"multihop_port"`
 	Load         float32 `json:"load"`
 }

@@ -131,6 +131,7 @@ export default {
             {
               hostname: "",
               host: "",
+              dns_name: "",
               public_key: "",
               local_ip: "",
               ipv6: 
@@ -161,6 +162,7 @@ export default {
             {
               hostname: "",
               host: "",
+              dns_name: "",
               multihop_port: 0,
               load: 0.0,
               ping: ??? // property added after receiving ping info from daemon
@@ -467,14 +469,6 @@ export default {
 
     portRanges(state, getters) {
       return getters.funcGetConnectionPortRanges();
-    },
-
-    // getAllGatewayIDs() returns array of all available gateway IDs for all protocols
-    // (gateway:"us-tx.wg.ivpn.net" => gatewayID:"us-tx")
-    getAllGatewayIDs(state) {
-      const hashedServersGws = Object.keys(state.serversHashed);
-      const hashedServersGwIds = hashedServersGws.map((gw) => gw.split(".")[0]);
-      return Array.from(new Set(hashedServersGwIds)); // remove duplicates
     },
   },
 

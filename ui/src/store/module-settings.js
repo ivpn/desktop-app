@@ -56,10 +56,10 @@ const getDefaultState = () => {
     isRandomServer: false,
     isRandomExitServer: false,
 
-    // Favorite gateway's list (strings [gateway])
-    serversFavoriteList: [], // only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
-    // Favorite hosts list (strings [hostname])
-    hostsFavoriteList: [],
+    // Favorite gateway's list (strings [gatewayID of server]). Only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
+    serversFavoriteList: [],
+    //Favorite hosts list (strings [host.dns_name])
+    hostsFavoriteListDnsNames: [],
 
     // List of servers to exclude from fastest servers list (gateway, strings)
     serversFastestExcludeList: [], // only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
@@ -221,6 +221,13 @@ export default {
       Object.assign(state, getDefaultState());
     },
 
+    deleteObsoletePropertiesAfterUpgrade(state) {
+      if (state.hostsFavoriteList) {
+        // Remove obsolete property after UPGRADE (from v3.10.0 or older)
+        delete state.hostsFavoriteList;
+      }
+    },
+
     settingsSessionUUID(state, val) {
       state.SettingsSessionUUID = val;
     },
@@ -286,8 +293,8 @@ export default {
     serversFavoriteList(state, val) {
       state.serversFavoriteList = val;
     },
-    hostsFavoriteList(state, val) {
-      state.hostsFavoriteList = val;
+    hostsFavoriteListDnsNames(state, val) {
+      state.hostsFavoriteListDnsNames = val;
     },
     serversFastestExcludeList(state, val) {
       state.serversFastestExcludeList = val;
@@ -471,13 +478,9 @@ export default {
         let activeServers = rootGetters["vpnState/activeServers"];
         if (!activeServers || !favorites) return null;
 
-        console.log(
-          "settings favoriteServers: settings/favoriteServers:",
-          favorites
-        );
-        // Converting gateway name to geteway ID (if necessary)
-        // Example: "nl.gw.ivpn.net" => "nl"
+        // Filter only servers from 'favorite servers' list
         return activeServers.filter((s) =>
+          // Converting gateway name to geteway ID (if necessary). Example: "nl.gw.ivpn.net" => "nl"
           favorites.includes(s.gateway.split(".")[0])
         );
       } catch (e) {
@@ -488,30 +491,20 @@ export default {
     // Returns array of information objects about favorite hosts:
     // host object extended by all properties from parent server object +favHostParentServerObj +favHost
     favoriteHosts: (state, getters, rootState, rootGetters) => {
-      // Get favorite servers for current protocol
       try {
-        // All favorite hostnames (for all protocols)
-        let fHostnames = state.hostsFavoriteList.slice();
+        // All favorite host dns-names (for all protocols)
+        let fHostDnsNames = state.hostsFavoriteListDnsNames.slice();
+        if (!fHostDnsNames || fHostDnsNames.length <= 0) return [];
+
         // Servers for current protocol
         let activeServers = rootGetters["vpnState/activeServers"];
-        if (!activeServers || !fHostnames) return null;
-
-        // All hostnames for current protocol
-        let activeServersHostsHashed = {};
-        for (const s of activeServers) {
-          for (const h of s.hosts) {
-            activeServersHostsHashed[h.hostname] = s;
-          }
-        }
+        if (!activeServers || !fHostDnsNames) return null;
 
         // Looking for host objects for current protocol
-        let ret = []; // array: [{host{}, server{}, isFavoriteHost: true}]
-        for (const h of fHostnames) {
-          if (!activeServersHostsHashed[h]) continue;
-
-          const svr = activeServersHostsHashed[h];
+        let ret = []; // array: [ {server..., favHost{}, favHostParentServerObj{}}, ...]
+        for (const svr of activeServers) {
           for (const host of svr.hosts) {
-            if (host.hostname == h) {
+            if (fHostDnsNames.includes(host.dns_name)) {
               let favHostExInfo = Object.assign({}, svr); // copy all info about location... etc.
               favHostExInfo = Object.assign(favHostExInfo, host); // overwrite host-related properties (like ping info)
               favHostExInfo.gateway = svr.gateway + ":" + host.hostname; // to avoid duplicate keys in UI lists
@@ -636,11 +629,14 @@ export default {
     serversFavoriteList(context, val) {
       val = val.map((gw) => gw.split(".")[0]); // only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
 
-      // remove servers from the favorite list if they do not exist anymore
+      // remove servers from the favorite list if they are not exist anymore
       try {
-        if (context.rootGetters) {
-          const allGatewyIDs = context.rootGetters["vpnState/getAllGatewayIDs"];
-          val = val.filter((gwID) => allGatewyIDs.includes(gwID));
+        if (context.rootState.vpnState) {
+          const hashedSvrs = context.rootState.vpnState.serversHashed;
+          const hashedSrvGws = Object.keys(hashedSvrs);
+          const hashedServersGwIds = hashedSrvGws.map((gw) => gw.split(".")[0]); // all available gateway IDs for all protocols
+          const hashedServersGwIdsSet = new Set(hashedServersGwIds); // remove duplicates
+          val = val.filter((gwID) => hashedServersGwIdsSet.has(gwID));
         }
       } catch (e) {
         console.error(e);
@@ -648,8 +644,25 @@ export default {
 
       context.commit("serversFavoriteList", val);
     },
-    hostsFavoriteList(context, val) {
-      context.commit("hostsFavoriteList", val);
+    hostsFavoriteListDnsNames(context, val) {
+      // remove hosts from the favorite list if they are not exist anymore
+      try {
+        if (context.rootState.vpnState) {
+          let allHostsDnsNamesSet = new Set();
+          const hashedSvrs = context.rootState.vpnState.serversHashed;
+          for (const [, svr] of Object.entries(hashedSvrs)) {
+            if (!svr || !svr.hosts) continue;
+            for (const h of svr.hosts) {
+              allHostsDnsNamesSet.add(h.dns_name);
+            }
+          }
+          val = val.filter((host_dns) => allHostsDnsNamesSet.has(host_dns));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
+      context.commit("hostsFavoriteListDnsNames", val);
     },
     serversFastestExcludeList(context, val) {
       context.commit("serversFastestExcludeList", val);
@@ -814,6 +827,7 @@ export default {
     // HELPERS
     updateSelectedServers(context) {
       updateSelectedServers(context);
+      doSettingsUpgradeAfterSvrsUpdateIfRequired(context);
     },
   },
 };
@@ -963,6 +977,38 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
   // Ensure if selected ports exists in a servers configuration or port is selected correctly
   //
   ensurePortsSelectedCorrectly(context);
+}
+
+function doSettingsUpgradeAfterSvrsUpdateIfRequired(context) {
+  try {
+    const state = context.state;
+    if (state.hostsFavoriteList) {
+      // UPGRADING from OLD SETTINGS (from v3.10.0 and older)
+      // Property does not exists anymore: 'hostsFavoriteList' # Favorite hosts list (strings [host.hostname])
+      // instead we use new property: 'hostsFavoriteListDnsNames' # Favorite hosts list (strings [host.dns_name])
+      console.log("Upgrading old-style settings 'favorite hosts'...");
+
+      let hostsFavListDnsNamesSet = new Set();
+      const hashedSvrs = context.rootState.vpnState.serversHashed;
+      for (const [, svr] of Object.entries(hashedSvrs)) {
+        if (!svr || !svr.hosts) continue;
+        for (const h of svr.hosts) {
+          if (state.hostsFavoriteList.includes(h.hostname))
+            hostsFavListDnsNamesSet.add(h.dns_name);
+        }
+      }
+
+      // save converted data
+      context.commit(
+        "hostsFavoriteListDnsNames",
+        Array.from(hostsFavListDnsNamesSet)
+      );
+      // forget 'hostsFavoriteList' forever
+      context.commit("deleteObsoletePropertiesAfterUpgrade", null);
+    }
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 function isPortExists(ports, port) {

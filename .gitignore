@@ -4,3 +4,4 @@ daemon/References/Windows/OpenVPN/obfsproxy/obfs4proxy.exe
 daemon/References/Windows/dnscrypt-proxy/
 daemon/References/Windows/etc/dnscrypt-proxy/
 daemon/daemon
+daemon/daemon.exe
