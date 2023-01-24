@@ -685,12 +685,12 @@ export default {
         let conectionState = this.$store.state.vpnState.connectionState;
 
         const isMultihop = settings.isMultiHop;
+        let isSvrOk = null;
         if (conectionState === VpnStateEnum.DISCONNECTED) {
           // activate selected server
           if (isMultihop) {
-            if (
-              (await CheckAndNotifyInaccessibleServer(true, location)) === true
-            ) {
+            isSvrOk = await CheckAndNotifyInaccessibleServer(true, location);
+            if (isSvrOk === true) {
               this.$store.dispatch("settings/serverExit", location);
               this.$store.dispatch("settings/isRandomExitServer", false);
             }
@@ -701,13 +701,14 @@ export default {
           }
         }
 
-        if (
-          settings.connectSelectedMapLocation === true &&
-          (await CheckAndNotifyInaccessibleServer(isMultihop, location)) ===
-            true
-        ) {
+        if (settings.connectSelectedMapLocation === true) {
           // connect
-          this.connect(location);
+          if (isSvrOk == null && isMultihop)
+            isSvrOk = await CheckAndNotifyInaccessibleServer(true, location);
+
+          if (isSvrOk !== false) {
+            this.connect(location);
+          }
         }
       }
 
