@@ -194,10 +194,8 @@
 
 <script>
 import { VpnStateEnum, PauseStateEnum, ColorTheme } from "@/store/types";
-import {
-  IsOsDarkColorScheme,
-  CheckAndNotifyInaccessibleServer,
-} from "@/helpers/renderer";
+import { IsOsDarkColorScheme } from "@/helpers/renderer";
+import { CheckAndNotifyInaccessibleServer } from "@/helpers/helpers_servers";
 
 const sender = window.ipcSender;
 import popupControl from "@/components/controls/control-map-popup.vue";
@@ -686,25 +684,31 @@ export default {
         let settings = this.$store.state.settings;
         let conectionState = this.$store.state.vpnState.connectionState;
 
-        if (
-          (await CheckAndNotifyInaccessibleServer(
-            settings.isMultiHop,
-            location
-          )) === true
-        ) {
-          if (conectionState === VpnStateEnum.DISCONNECTED) {
-            if (settings.isMultiHop) {
+        const isMultihop = settings.isMultiHop;
+        let isSvrOk = null;
+        if (conectionState === VpnStateEnum.DISCONNECTED) {
+          // activate selected server
+          if (isMultihop) {
+            isSvrOk = await CheckAndNotifyInaccessibleServer(true, location);
+            if (isSvrOk === true) {
               this.$store.dispatch("settings/serverExit", location);
               this.$store.dispatch("settings/isRandomExitServer", false);
-            } else {
-              this.$store.dispatch("settings/serverEntry", location);
-              this.$store.dispatch("settings/isRandomServer", false);
-              this.$store.dispatch("settings/isFastestServer", false);
             }
+          } else {
+            this.$store.dispatch("settings/serverEntry", location);
+            this.$store.dispatch("settings/isRandomServer", false);
+            this.$store.dispatch("settings/isFastestServer", false);
           }
+        }
 
-          if (settings.connectSelectedMapLocation === true)
+        if (settings.connectSelectedMapLocation === true) {
+          // connect
+          if (isSvrOk == null && isMultihop)
+            isSvrOk = await CheckAndNotifyInaccessibleServer(true, location);
+
+          if (isSvrOk !== false) {
             this.connect(location);
+          }
         }
       }
 
