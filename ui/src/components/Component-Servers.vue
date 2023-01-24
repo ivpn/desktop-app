@@ -321,7 +321,7 @@ import { enumValueName, getDistanceFromLatLonInKm } from "@/helpers/helpers";
 import {
   CheckIsInaccessibleServer,
   CheckAndNotifyInaccessibleServer,
-} from "@/helpers/renderer";
+} from "@/helpers/helpers_servers";
 import { ServersSortTypeEnum } from "@/store/types";
 
 import Image_arrow_left_windows from "@/assets/arrow-left-windows.svg";

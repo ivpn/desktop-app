@@ -28,6 +28,7 @@ import {
   VpnStateEnum,
   ColorThemeTrayIcon,
 } from "@/store/types";
+import { CheckAndNotifyInaccessibleServer } from "@/helpers/helpers_servers";
 
 import daemonClient from "@/daemon-client";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -315,15 +316,12 @@ function updateTrayMenu() {
 
       var options = null;
       if (store.state.settings.isMultiHop) {
-        // for multihop: do not allow to connect to the servers from same country
-        if (store.state.settings.serverEntry.country_code !== gw.country_code) {
-          options = {
-            label: serverName(null, s, null, host),
-            click: () => {
-              menuItemConnect(null, s, null, host);
-            },
-          };
-        }
+        options = {
+          label: serverName(null, s, null, host),
+          click: async () => {
+            menuItemConnect(null, s, null, host);
+          },
+        };
       } else {
         options = {
           label: serverName(s, null, host, null),
@@ -649,6 +647,12 @@ function serverName(entryServer, exitServer, entryServerHost, exitServerHost) {
 
 async function menuItemConnect(entrySvr, exitSvr, entryHost, exitHost) {
   try {
+    if (
+      exitSvr &&
+      (await CheckAndNotifyInaccessibleServer(true, exitSvr)) !== true
+    )
+      return;
+
     if (entrySvr) {
       store.dispatch("settings/serverEntry", entrySvr);
       store.dispatch("settings/isFastestServer", false);

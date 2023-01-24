@@ -194,10 +194,8 @@
 
 <script>
 import { VpnStateEnum, PauseStateEnum, ColorTheme } from "@/store/types";
-import {
-  IsOsDarkColorScheme,
-  CheckAndNotifyInaccessibleServer,
-} from "@/helpers/renderer";
+import { IsOsDarkColorScheme } from "@/helpers/renderer";
+import { CheckAndNotifyInaccessibleServer } from "@/helpers/helpers_servers";
 
 const sender = window.ipcSender;
 import popupControl from "@/components/controls/control-map-popup.vue";
@@ -686,25 +684,30 @@ export default {
         let settings = this.$store.state.settings;
         let conectionState = this.$store.state.vpnState.connectionState;
 
-        if (
-          (await CheckAndNotifyInaccessibleServer(
-            settings.isMultiHop,
-            location
-          )) === true
-        ) {
-          if (conectionState === VpnStateEnum.DISCONNECTED) {
-            if (settings.isMultiHop) {
+        const isMultihop = settings.isMultiHop;
+        if (conectionState === VpnStateEnum.DISCONNECTED) {
+          // activate selected server
+          if (isMultihop) {
+            if (
+              (await CheckAndNotifyInaccessibleServer(true, location)) === true
+            ) {
               this.$store.dispatch("settings/serverExit", location);
               this.$store.dispatch("settings/isRandomExitServer", false);
-            } else {
-              this.$store.dispatch("settings/serverEntry", location);
-              this.$store.dispatch("settings/isRandomServer", false);
-              this.$store.dispatch("settings/isFastestServer", false);
             }
+          } else {
+            this.$store.dispatch("settings/serverEntry", location);
+            this.$store.dispatch("settings/isRandomServer", false);
+            this.$store.dispatch("settings/isFastestServer", false);
           }
+        }
 
-          if (settings.connectSelectedMapLocation === true)
-            this.connect(location);
+        if (
+          settings.connectSelectedMapLocation === true &&
+          (await CheckAndNotifyInaccessibleServer(isMultihop, location)) ===
+            true
+        ) {
+          // connect
+          this.connect(location);
         }
       }
 
