@@ -2,7 +2,7 @@
   <div id="flexview">
     <div class="flexColumn">
       <div class="leftPanelTopSpace">
-        <transition :name="minimizedButtonsTransition">
+        <transition name="smooth-display">
           <div
             v-if="isMinimizedButtonsVisible"
             class="minimizedButtonsPanel leftPanelTopMinimizedButtonsPanel"
@@ -55,7 +55,7 @@
 const sender = window.ipcSender;
 
 import { DaemonConnectionType } from "@/store/types";
-import { Platform, PlatformEnum, IsWindowHasFrame } from "@/platform/platform";
+import { IsWindowHasFrame } from "@/platform/platform";
 import Init from "@/components/Component-Init.vue";
 import Login from "@/components/Component-Login.vue";
 import Control from "@/components/Component-Control.vue";
@@ -107,10 +107,6 @@ export default {
     },
     isMinimizedUI: function () {
       return this.$store.state.settings.minimizedUI;
-    },
-    minimizedButtonsTransition: function () {
-      if (Platform() === PlatformEnum.Linux) return "smooth-display";
-      return "fade";
     },
   },
   watch: {

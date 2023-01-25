@@ -738,10 +738,18 @@ export default {
     showFavorites: function () {
       this.$store.dispatch("uiState/serversFavoriteView", true);
       this.filter = "";
+
+      setTimeout(() => {
+        this.recalcScrollButtonVisiblity();
+      }, 500);
     },
     showAll: function () {
       this.$store.dispatch("uiState/serversFavoriteView", false);
       this.filter = "";
+
+      setTimeout(() => {
+        this.recalcScrollButtonVisiblity();
+      }, 500);
     },
     recalcScrollButtonVisiblity() {
       let sa = this.$refs.scrollArea;

@@ -46,7 +46,7 @@
         <!--<div v-else-if="isShowIPVersionBage && !isIPv6" class="bage">IPv4</div>-->
         {{ multilineSecondLine }} {{ selectedHostInfo }}
         <div
-          v-show="showISPInfo"
+          v-show="showISPInfo && isFavoriteServersView === false"
           style="margin-left: 4px"
           class="text secondLine"
         >
