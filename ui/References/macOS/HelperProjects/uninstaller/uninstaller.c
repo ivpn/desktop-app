@@ -288,6 +288,16 @@ int install_helper() {
                       (AuthorizationRef) authRef,
                       &error);
 
+        // New service version may use new format of 'servers.json'. 
+        // We must be sure that new format is in use.
+        logmes(LOG_INFO, "Overwriting servers information by the data from the bundle ...");        
+        char *args[] = {"/Applications/IVPN.app/Contents/Resources/etc/servers.json", "/Library/Application Support/IVPN/servers.json", NULL};
+        OSStatus ret = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/cp", kAuthorizationFlagDefaults, args, NULL);
+        if (ret)
+        {
+          logmes(LOG_ERR, "ERROR: failed to overwrite servers information from the bundle");
+        }
+
         AuthorizationFree(authRef, kAuthorizationFlagDefaults);
 
         if (isSuccess)

@@ -14,6 +14,9 @@ IVPN_ETC="/opt/ivpn/etc"
 IVPN_TMP="/etc/opt/ivpn/mutable"
 IVPN_LOG="/var/log/ivpn"
 
+SERVERS_FILE_BUNDLED="$IVPN_ETC/servers.json"
+SERVERS_FILE_DEST="$IVPN_TMP/servers.json"
+
 mkdir -p $IVPN_LOG
 mkdir -p $IVPN_TMP
 
@@ -59,8 +62,12 @@ silent chmod 0755 $IVPN_OPT/wireguard-tools/wg-quick      # can change only owne
 silent chmod 0755 $IVPN_OPT/wireguard-tools/wg            # can change only owner (root)
 silent chmod 0755 $IVPN_OPT/dnscrypt-proxy/dnscrypt-proxy # can change only owner (root)
 
-echo "[+] Overwriting servers information by the data from the bundle ..."
-silent cp $IVPN_ETC/servers.json $IVPN_TMP  # new vaesion may use new format of 'servers.json'. We must be sure that new format is in use.
+if [ -f "${SERVERS_FILE_BUNDLED}" ] && [ -f "${SERVERS_FILE_DEST}" ]; then 
+  # New service version may use new format of 'servers.json'. 
+  # We must be sure that new format is in use.
+  echo "[+] Overwriting servers information by the data from the bundle ..."
+  silent cp "${SERVERS_FILE_BUNDLED}" "${SERVERS_FILE_DEST}"  
+fi
 
 echo "[+] Service install start (pleaserun) ..."
 INSTALL_OUTPUT=$(sh /usr/share/pleaserun/ivpn-service/install.sh)
