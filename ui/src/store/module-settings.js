@@ -653,6 +653,7 @@ export default {
           for (const [, svr] of Object.entries(hashedSvrs)) {
             if (!svr || !svr.hosts) continue;
             for (const h of svr.hosts) {
+              if (!h.dns_name) continue;
               allHostsDnsNamesSet.add(h.dns_name);
             }
           }
@@ -999,7 +1000,7 @@ function doSettingsUpgradeAfterSvrsUpdateIfRequired(context) {
       }
 
       // save converted data
-      context.commit(
+      context.dispatch(
         "hostsFavoriteListDnsNames",
         Array.from(hostsFavListDnsNamesSet)
       );
