@@ -382,12 +382,7 @@ export default {
       return this.$store.state.settings.isMultiHop;
     },
     isShowFavoriteDescriptionBlock: function () {
-      if (!this.isFavoritesView) return false;
-      let favSvrs = this.favoriteServers;
-      let favHosts = this.favoriteHosts;
-      return (
-        (!favSvrs || favSvrs.length == 0) && (!favHosts || favHosts.length == 0)
-      );
+      return this.isFavoritesView === true && this.favorites.length == 0;
     },
     servers: function () {
       return this.$store.getters["vpnState/activeServers"];
@@ -400,18 +395,9 @@ export default {
       );
     },
 
-    favoriteServers: function () {
-      // Favorite servers for current protocol
-      return this.$store.getters["settings/favoriteServers"];
-    },
-    favoriteHosts: function () {
-      // Favorite hosts for current protocol
-
-      if (this.$store.state.settings.showHosts !== true) return [];
-
-      // Returns array of information objects about favorite hosts:
-      // host object extended by all properties from parent server object +favHostParentServerObj +favHost
-      return this.$store.getters["settings/favoriteHosts"];
+    favorites: function () {
+      // Favorite servers and hosts for current protocol
+      return this.$store.getters["settings/favoriteServersAndHosts"];
     },
 
     filteredServers: function () {
@@ -481,10 +467,7 @@ export default {
       }
 
       let servers = this.servers;
-      if (this.isFavoritesView) {
-        servers = this.favoriteServers;
-        servers = servers.concat(this.favoriteHosts);
-      }
+      if (this.isFavoritesView) servers = this.favorites;
 
       let svrToSkip = serverToSkip.bind(this)();
       //if (!svrToSkip && !this.filter) return servers.slice().sort(compare);
@@ -640,18 +623,16 @@ export default {
           settings.hostsFavoriteListDnsNames.includes(server.favHost.dns_name)
         )
           return Image_star_active;
-        return Image_star_inactive;
       } else if (host) {
         // host
         if (settings.hostsFavoriteListDnsNames.includes(host.dns_name))
           return Image_star_active;
-        return Image_star_inactive;
       } else {
         //server
         if (settings.serversFavoriteList.includes(getGatewayId(server.gateway)))
           return Image_star_active;
-        return Image_star_inactive;
       }
+      return Image_star_inactive;
     },
     favoriteImageActive: function () {
       return Image_star_active;
@@ -663,6 +644,7 @@ export default {
 
     favoriteClicked: function (evt, server, host) {
       evt.stopPropagation();
+      if (!server && !host) return;
 
       if (server.favHost) {
         return this.favoriteClicked(
@@ -671,35 +653,51 @@ export default {
           server.favHost
         );
       }
+      const settings = this.$store.state.settings;
+      const store = this.$store;
 
       if (!host) {
         // favorite SERVER
         let gatewayId = server.gateway.split(".")[0]; // only gateway ID in use for serversFavoriteList ("us-tx.wg.ivpn.net" => "us-tx")
-        let favorites = this.$store.state.settings.serversFavoriteList.slice();
-        if (favorites.includes(gatewayId)) {
-          console.log(`Removing favorite location ${gatewayId}`);
-          favorites = favorites.filter((gw) => gw != gatewayId);
-        } else {
+        let favorites = settings.serversFavoriteList.slice();
+
+        if (!favorites.includes(gatewayId)) {
           console.log(`Adding favorite location ${gatewayId}`);
           favorites.push(gatewayId);
+        } else {
+          console.log(`Removing favorite location ${gatewayId}`);
+          favorites = favorites.filter((gw) => gw != gatewayId);
+
+          // If the server has only one host AND this host is in favorites -> remove host also
+          // Reason: If server and it's single host are in favorites - we showing only server to user.
+          // (refer to "settings/favoriteServersAndHosts" for details)
+          if (server.hosts.length == 1) {
+            // remove HOST also
+            let hostDns = server.hosts[0].dns_name;
+            let favHostsDns = settings.hostsFavoriteListDnsNames.slice();
+            if (favHostsDns.includes(hostDns)) {
+              console.log(`Removing favorite host ${hostDns} (single host)`);
+              favHostsDns = favHostsDns.filter((hn) => hn != hostDns);
+              store.dispatch("settings/hostsFavoriteListDnsNames", favHostsDns);
+            }
+          }
         }
-        this.$store.dispatch("settings/serversFavoriteList", favorites);
+        store.dispatch("settings/serversFavoriteList", favorites);
       } else if (host.hostname) {
         // favorite HOST
-        let favHostsDns =
-          this.$store.state.settings.hostsFavoriteListDnsNames.slice();
+        let favHostsDns = settings.hostsFavoriteListDnsNames.slice();
         let hostDns = host.dns_name;
 
-        if (favHostsDns.includes(hostDns)) {
-          // remove host
-          console.log(`Removing favorite host ${hostDns}`);
-          favHostsDns = favHostsDns.filter((hn) => hn != hostDns);
-        } else {
+        if (!favHostsDns.includes(hostDns)) {
           // add host
           console.log(`Adding favorite host ${hostDns}`);
           favHostsDns.push(hostDns);
+        } else {
+          // remove host
+          console.log(`Removing favorite host ${hostDns}`);
+          favHostsDns = favHostsDns.filter((hn) => hn != hostDns);
         }
-        this.$store.dispatch("settings/hostsFavoriteListDnsNames", favHostsDns);
+        store.dispatch("settings/hostsFavoriteListDnsNames", favHostsDns);
       }
     },
     configFastestSvrClicked(server, event) {

@@ -469,57 +469,62 @@ export default {
       return false;
     },
 
-    favoriteServers: (state, getters, rootState, rootGetters) => {
-      // Get favorite servers for current protocol
-      try {
-        // All favorite servers (for all protocols)
-        let favorites = state.serversFavoriteList;
-        // servers for current protocol
-        let activeServers = rootGetters["vpnState/activeServers"];
-        if (!activeServers || !favorites) return null;
+    favoriteServersAndHosts: (state, getters, rootState, rootGetters) => {
+      let ret = [];
 
-        // Filter only servers from 'favorite servers' list
-        return activeServers.filter((s) =>
-          // Converting gateway name to geteway ID (if necessary). Example: "nl.gw.ivpn.net" => "nl"
-          favorites.includes(s.gateway.split(".")[0])
-        );
+      // All favorite servers (for all protocols)
+      let favSvrs = state.serversFavoriteList;
+      // servers for current protocol
+      let activeServers = rootGetters["vpnState/activeServers"];
+
+      // SERVERS (locations): Get favorite servers for current protocol
+      try {
+        if (favSvrs.length > 0) {
+          // Filter only servers from 'favorite servers' list
+          ret = activeServers.filter(
+            (s) => favSvrs.includes(s.gateway.split(".")[0]) // Converting gateway name to geteway ID (if necessary). Example: "nl.gw.ivpn.net" => "nl"
+          );
+        }
       } catch (e) {
         console.error("Failed to get Favorite servers: ", e);
-        return null;
       }
-    },
-    // Returns array of information objects about favorite hosts:
-    // host object extended by all properties from parent server object +favHostParentServerObj +favHost
-    favoriteHosts: (state, getters, rootState, rootGetters) => {
+
+      if (state.showHosts !== true) return ret;
+
+      // HOSTS
       try {
         // All favorite host dns-names (for all protocols)
-        let fHostDnsNames = state.hostsFavoriteListDnsNames.slice();
-        if (!fHostDnsNames || fHostDnsNames.length <= 0) return [];
+        let fHostDnsNames = state.hostsFavoriteListDnsNames;
+        if (fHostDnsNames.length > 0) {
+          // Looking for host objects for current protocol
+          for (const svr of activeServers) {
+            // If the server has only one host - check if this server is in 'serversFavoriteList' or not.
+            // If it is already in favorite list - skip this single host for the server
+            // (If server and it's single host are in favorites - we showing only server to user)
+            if (svr.hosts.length == 1) {
+              let svrGwId = svr.gateway.split(".")[0];
+              if (favSvrs.includes(svrGwId)) continue;
+            }
+            for (const host of svr.hosts) {
+              if (fHostDnsNames.includes(host.dns_name)) {
+                // Host object extended by all properties from parent server object +favHostParentServerObj +favHost
+                // favorite Host info object: {server..., favHost{}, favHostParentServerObj{}}, ...}
+                let favHostExInfo = Object.assign({}, svr); // copy all info about location... etc.
+                favHostExInfo = Object.assign(favHostExInfo, host); // overwrite host-related properties (like ping info)
+                favHostExInfo.gateway = svr.gateway + ":" + host.hostname; // to avoid duplicate keys in UI lists
+                favHostExInfo.favHostParentServerObj = svr; // original parent server object
+                favHostExInfo.favHost = host; // original host object
 
-        // Servers for current protocol
-        let activeServers = rootGetters["vpnState/activeServers"];
-        if (!activeServers || !fHostDnsNames) return null;
-
-        // Looking for host objects for current protocol
-        let ret = []; // array: [ {server..., favHost{}, favHostParentServerObj{}}, ...]
-        for (const svr of activeServers) {
-          for (const host of svr.hosts) {
-            if (fHostDnsNames.includes(host.dns_name)) {
-              let favHostExInfo = Object.assign({}, svr); // copy all info about location... etc.
-              favHostExInfo = Object.assign(favHostExInfo, host); // overwrite host-related properties (like ping info)
-              favHostExInfo.gateway = svr.gateway + ":" + host.hostname; // to avoid duplicate keys in UI lists
-              favHostExInfo.favHostParentServerObj = svr; // original parent server object
-              favHostExInfo.favHost = host; // original host object
-
-              ret.push(favHostExInfo);
+                ret.push(favHostExInfo);
+              }
             }
           }
         }
-        return ret;
       } catch (e) {
         console.error("Failed to get Favorite hosts: ", e);
-        return null;
       }
+
+      return ret;
     },
   },
 

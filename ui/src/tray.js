@@ -286,12 +286,7 @@ function updateTrayMenu() {
   let favoriteSvrsTemplate = [];
 
   // favorite servers/hosts for current protocol
-  let favSvrs = store.getters["settings/favoriteServers"];
-  let favHosts = store.getters["settings/favoriteHosts"];
-  if (favSvrs == null) favSvrs = [];
-  if (favHosts == null || store.state.settings.showHosts !== true)
-    favHosts = [];
-  favSvrs = favSvrs.concat(favHosts);
+  let favSvrs = store.getters["settings/favoriteServersAndHosts"];
 
   if (favSvrs == null || favSvrs.length == 0) {
     favoriteSvrsTemplate = [
