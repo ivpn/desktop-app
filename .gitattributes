@@ -2,3 +2,6 @@ daemon/References/macOS/obfsproxy/**/* linguist-vendored
 daemon/References/Windows/OpenVPN/obfsproxy/**/* linguist-vendored
 
 daemon/References/Windows/OpenVPN/**/*.inf binary
+
+# Use LS line endings for all *.sh files (Linux shell scripts)
+*.sh text eol=lf
