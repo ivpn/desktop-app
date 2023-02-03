@@ -461,31 +461,7 @@ async function processResponse(response) {
       break;
     case daemonResponses.PingServersResp: {
       if (obj.PingResults == null) break;
-
-      // remember old ping values for selected servers
-      const settings = store.state.settings;
-      let entrySvrPing = 0;
-      let exitSvrPing = 0;
-      try {
-        entrySvrPing = settings.serverEntry.ping;
-        exitSvrPing = settings.serverExit.ping;
-      } catch (e) {
-        log.error(e);
-      }
-
-      // apply new ping info
-      store.commit(`vpnState/serversPingStatus`, obj.PingResults);
-
-      // Update ping time info for selected servers
-      // (Do nothing. Just trigger mechanism to update properties for 'selected servers' objects)
-      try {
-        if (entrySvrPing !== settings.serverEntry.ping)
-          store.commit("settings/serverEntry", settings.serverEntry);
-        if (exitSvrPing !== settings.serverExit.ping)
-          store.commit("settings/serverExit", settings.serverExit);
-      } catch (e) {
-        console.error(e);
-      }
+      store.dispatch(`vpnState/updatePings`, obj.PingResults);
       break;
     }
     case daemonResponses.SetAlternateDNSResp:
@@ -1302,9 +1278,10 @@ async function Connect() {
 
     // ENTRY SERVER
     if (store.getters["settings/isFastestServer"]) {
+      const funcGetPing = store.getters["vpnState/funcGetPing"];
       // looking for fastest server
       let fastest = store.getters["vpnState/fastestServer"];
-      if (fastest == null || fastest.ping == null) {
+      if (fastest == null || funcGetPing(fastest) == null) {
         // request servers ping
         console.log(
           "Connect to fastest server (fastest server not defined). Pinging servers..."
@@ -1316,7 +1293,7 @@ async function Connect() {
         // Surround 'PingServers()' in try/catch if it is necessary to continue anyway
 
         fastest = store.getters["vpnState/fastestServer"];
-        // if fastest.ping == null - it means no any ping info available (e.g. communication blocked by firewall or no internet connectivity)
+        // if fastest ping == null - it means no any ping info available (e.g. communication blocked by firewall or no internet connectivity)
         // Anyway, we have to use the server calculated by 'vpnState/fastestServer' as fastest
       }
       if (fastest != null) store.dispatch("settings/serverEntry", fastest);

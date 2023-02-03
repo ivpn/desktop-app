@@ -403,6 +403,7 @@ export default {
     filteredServers: function () {
       let store = this.$store;
       let sType = store.state.settings.serversSortType;
+      const funcGetPing = this.$store.getters["vpnState/funcGetPing"];
       function compare(a, b) {
         switch (sType) {
           case ServersSortTypeEnum.City:
@@ -420,11 +421,14 @@ export default {
             return ret;
           }
 
-          case ServersSortTypeEnum.Latency:
-            if (a.ping && b.ping) return a.ping - b.ping;
-            if (a.ping && !b.ping) return -1;
-            if (!a.ping && b.ping) return 1;
+          case ServersSortTypeEnum.Latency: {
+            const aPing = funcGetPing(a);
+            const bPing = funcGetPing(b);
+            if (aPing && bPing) return aPing - bPing;
+            if (aPing && !bPing) return -1;
+            if (!aPing && bPing) return 1;
             return 0;
+          }
 
           case ServersSortTypeEnum.Proximity: {
             const l = store.getters["getLastRealLocation"];
