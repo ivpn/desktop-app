@@ -207,12 +207,15 @@ func (s *Service) init() error {
 	}
 
 	// initialize split-tunnel functionality
-	if err := splittun.Initialize(); err != nil {
-		log.Warning(fmt.Errorf("Split-Tunnelling initialization error : %w", err))
-	} else {
-		// apply Split Tunneling configuration
-		s.splitTunnelling_ApplyConfig()
-	}
+	go func() {
+		<-_ipStackInitializationWaiter // Wait for IP stack initialization
+		if err := splittun.Initialize(); err != nil {
+			log.Warning(fmt.Errorf("Split-Tunnelling initialization error : %w", err))
+		} else {
+			// apply Split Tunneling configuration
+			s.splitTunnelling_ApplyConfig()
+		}
+	}()
 
 	// Logging mus be already initialized (by launcher). Do nothing here.
 	// Init logger (if not initialized before)
