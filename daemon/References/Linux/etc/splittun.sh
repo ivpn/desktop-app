@@ -38,6 +38,8 @@ _iptables_locktime=2
 # Backup folder name.
 # This folder contains temporary data to be able to clean everything correctly 
 _backup_folder_name=ivpn-exclude-tmp
+_mutable_folder_default=/etc/opt/ivpn/mutable   # default location of 'mutable' folder
+_mutable_folder_fallback=/opt/ivpn/mutable      # alternate location of 'mutable' folder (needed for backward compatibility and snap environment)
 
 # Info: The 'mark' value for packets coming from the Split-Tunneling environment.
 # Using here value 0xca6c. It is the same as WireGuard marking packets which were processed.
@@ -94,6 +96,8 @@ function test()
     if ! command -v ${_bin_grep} &>/dev/null ;       then echo "ERROR: Binary Not Found (${_bin_grep})" 1>&2; return 1; fi
     if ! command -v ${_bin_dirname} &>/dev/null ;    then echo "ERROR: Binary Not Found (${_bin_dirname})" 1>&2; return 1; fi
     if ! command -v ${_bin_sed} &>/dev/null ;        then echo "ERROR: Binary Not Found (${_bin_sed})" 1>&2; return 1; fi
+    
+    if ! getBackupFolderPath &>/dev/null ;           then echo "ERROR: Failed to initialize backup folder: '$( getBackupFolderPath )'" 1>&2; return 1; fi
 
     if ! command -v ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})" 1>&2; fi
     if ! command -v ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})" 1>&2; fi
@@ -317,21 +321,20 @@ function clean()
 
 function getBackupFolderPath()
 {
-    # Directory where current script is located
-    _script_dir=$(${_bin_dirname} "$0")
-
-    if [ -z "${_script_dir}" ]; then
-        return 1
+    # default location
+    local defPath="${_mutable_folder_default}/${_backup_folder_name}"
+    if [ -w "${defPath}" ]; then       
+        echo "${defPath}"  # return value in stdout        
+        return 0
+    fi
+    # fallback location
+    if [ -w "${_mutable_folder_fallback}" ]; then       
+        echo "${_mutable_folder_fallback}/${_backup_folder_name}"  # return value in stdout
+        return 0
     fi
 
-    local _tempDir="${_script_dir}/${_backup_folder_name}"
-    if [ -d "${_script_dir}/../mutable" ]; then
-        _tempDir="${_script_dir}/../mutable/${_backup_folder_name}"
-    fi
-
-    # return value in stdout
-    echo ${_tempDir}
-    return 0
+    echo "${defPath}"
+    return 1
 }
 
 function backup()
