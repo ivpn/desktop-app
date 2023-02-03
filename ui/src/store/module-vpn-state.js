@@ -21,10 +21,10 @@
 //
 
 import { enumValueName, getDistanceFromLatLonInKm } from "../helpers/helpers";
+import { IsServerSupportIPv6 } from "@/helpers/helpers_servers";
 import {
   VpnTypeEnum,
   VpnStateEnum,
-  PingQuality,
   PauseStateEnum,
   DnsEncryption,
   NormalizedConfigPortObject,
@@ -111,6 +111,9 @@ export default {
     // true when servers pinging in progress
     isPingingServers: false,
 
+    // Pings info: hostsPings[host] = latency
+    hostsPings: {},
+
     /*
     // SERVERS
     servers: {
@@ -122,10 +125,6 @@ export default {
           city: "",
           latitude: 0,
 	        longitude: 0,
-
-          ping: ??? // property added after receiving ping info from daemon
-          pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon
-          isIPv6: ??? // property calculated automatically after receiving servers data from the daemon (null - IPv6 not supported by this type of VPN)
 
           hosts: [
             {
@@ -141,8 +140,6 @@ export default {
                 multihop_port: 0
               },
               load: 0.0,
-              ping: ??? // property added after receiving ping info from daemon
-              pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon              
             }
           ]
         }
@@ -155,8 +152,6 @@ export default {
           city: "",
           latitude: 0,
 	        longitude: 0,
-          ping: ??? // property added after receiving ping info from daemon
-          pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon
           
           hosts: [
             {
@@ -165,8 +160,6 @@ export default {
               dns_name: "",
               multihop_port: 0,
               load: 0.0,
-              ping: ??? // property added after receiving ping info from daemon
-              pingQuality: ??? // PingQuality (Good, Moderate, Bad) - property calculated after receiving ping info from daemon
             }
           ]
         }
@@ -218,8 +211,8 @@ export default {
     isPingingServers(state, val) {
       state.isPingingServers = val;
     },
-    serversPingStatus(state, pingResultArray) {
-      updateServersPings(state, pingResultArray);
+    hostsPings(state, val) {
+      state.hostsPings = val;
     },
     firewallState(state, obj) {
       state.firewallState = obj;
@@ -297,6 +290,7 @@ export default {
 
       let skipSvrs = rootState.settings.serversFastestExcludeList;
       let retSvr = null;
+      let retSvrPing = null;
 
       // If there will not be any server with ping-info -
       // save the info about the first applicable server (which is not in skipSvrs)
@@ -306,6 +300,7 @@ export default {
         return gatewayName.split(".")[0];
       };
 
+      const funcGetPing = getters["funcGetPing"];
       for (let i = 0; i < servers.length; i++) {
         let curSvr = servers[i];
         if (!curSvr) continue;
@@ -315,13 +310,15 @@ export default {
         if (skipSvrs.find((ss) => curGwID == getGatewayId(ss))) continue;
 
         if (!fallbackSvr) fallbackSvr = curSvr;
+        const svrPing = funcGetPing(curSvr);
         if (
-          curSvr != null &&
-          curSvr.ping &&
-          curSvr.ping > 0 &&
-          (retSvr == null || retSvr.ping > curSvr.ping)
-        )
+          svrPing &&
+          svrPing > 0 &&
+          (retSvr == null || retSvrPing > svrPing)
+        ) {
           retSvr = curSvr;
+          retSvrPing = svrPing;
+        }
       }
 
       if (!retSvr) {
@@ -470,6 +467,27 @@ export default {
     portRanges(state, getters) {
       return getters.funcGetConnectionPortRanges();
     },
+
+    funcGetPing: (state) => (hostOrLocation) => {
+      try {
+        if (!hostOrLocation) return null;
+        if (hostOrLocation.hosts) {
+          // server (location)
+          const s = hostOrLocation;
+          let best = null;
+          for (const host of s.hosts) {
+            let ping = state.hostsPings[host.host];
+            if (!best || (ping && best > ping)) best = ping;
+          }
+          return best;
+        }
+        //host
+        return state.hostsPings[hostOrLocation.host];
+      } catch (e) {
+        console.error(e);
+        return null;
+      }
+    },
   },
 
   // can be called from renderer
@@ -567,6 +585,13 @@ export default {
       // (it is required to update selected servers, selected ports ... etc. (if necessary))
       context.dispatch("settings/updateSelectedServers", null, { root: true });
     },
+    updatePings(context, pings) {
+      let hashedPings = {};
+      for (let i = 0; i < pings.length; i++) {
+        hashedPings[pings[i].Host] = pings[i].Ping;
+      }
+      context.commit("hostsPings", hashedPings);
+    },
     // Split-Tunnelling
     splitTunnelling(state, val) {
       state.splitTunnelling = val;
@@ -629,7 +654,7 @@ function getActiveServers(state, rootState) {
   if (enableIPv6InTunnel == true && showGatewaysWithoutIPv6 != true) {
     // show only servers which support IPv6
     return wgServers.filter((s) => {
-      return s.isIPv6;
+      return IsServerSupportIPv6(s) === true;
     });
   }
 
@@ -659,64 +684,6 @@ function findServerByHostname(servers, hostname) {
   }
 }
 
-function updateServersPings(state, pings) {
-  // hash new ping result by host
-  let hashedPings = {};
-  for (let i = 0; i < pings.length; i++) {
-    hashedPings[pings[i].Host] = pings[i].Ping;
-  }
-
-  function getPingQuality(pingMs) {
-    if (pingMs < 100) return PingQuality.Good;
-    if (pingMs < 300) return PingQuality.Moderate;
-    return PingQuality.Bad;
-  }
-
-  let funcGetPing = function (s) {
-    for (let i = 0; i < s.hosts.length; i++) {
-      let pingValFoHost = hashedPings[s.hosts[i].host];
-
-      if (pingValFoHost != null) {
-        // update ping info for specific host
-        s.hosts[i].ping = pingValFoHost;
-        s.hosts[i].pingQuality = getPingQuality(s.ping);
-      }
-    }
-
-    // update ping info for location (min ping value from location hosts)
-    let bestPingForLocation = null;
-    for (let i = 0; i < s.hosts.length; i++) {
-      if (
-        !bestPingForLocation ||
-        (s.hosts[i].ping && bestPingForLocation > s.hosts[i].ping)
-      )
-        bestPingForLocation = s.hosts[i].ping;
-    }
-    if (bestPingForLocation) {
-      s.ping = bestPingForLocation;
-      s.pingQuality = getPingQuality(bestPingForLocation);
-    }
-  };
-
-  state.servers.wireguard.forEach((s) => {
-    funcGetPing(s);
-  });
-
-  state.servers.openvpn.forEach((s) => {
-    funcGetPing(s);
-  });
-}
-
-function isServerSupportIPv6(server) {
-  if (!server) return null;
-  if (!server.hosts) return null;
-
-  for (let h of server.hosts) {
-    if (h && h.ipv6 && h.ipv6.local_ip) return true;
-  }
-  return false;
-}
-
 function updateServers(oldServers, newServers) {
   if (newServers == null) return;
 
@@ -740,34 +707,13 @@ function updateServers(oldServers, newServers) {
     if (retObj == null) retObj = {};
     for (let i = 0; i < servers.length; i++) {
       let svr = servers[i];
-      svr.ping = null; // initialize 'ping' field to support VUE reactivity for it
-      svr.pingQuality = null;
-      svr.isIPv6 = isServerSupportIPv6(svr);
       retObj[svr.gateway] = svr; // hash
-      for (let hi = 0; hi < svr.hosts.length; hi++) {
-        svr.hosts[hi].ping = null; // initialize 'ping' field to support VUE reactivity for it
-        svr.hosts[hi].pingQuality = null;
-      }
     }
     return retObj;
   }
 
   let hash = initNewServersAndCreateHash(null, newServers.wireguard);
   let serversHashed = initNewServersAndCreateHash(hash, newServers.openvpn);
-
-  // copy ping value from old objects
-  function copySvrsDataFromOld(oldServers, newServersHashed) {
-    for (let i = 0; i < oldServers.length; i++) {
-      let oldSrv = oldServers[i];
-      let newSrv = newServersHashed[oldSrv.gateway];
-      if (!newSrv) continue;
-
-      newSrv.ping = oldSrv.ping;
-      newSrv.pingQuality = oldSrv.pingQuality;
-    }
-  }
-  copySvrsDataFromOld(oldServers.wireguard, serversHashed);
-  copySvrsDataFromOld(oldServers.openvpn, serversHashed);
 
   // sort new servers (by country/city)
   function compare(a, b) {

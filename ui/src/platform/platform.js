@@ -30,24 +30,28 @@ export const PlatformEnum = Object.freeze({
 
 import os from "os";
 
+let hashedCurrPlatform = null;
 export function Platform() {
-  //return PlatformEnum.macOS;
-  //return PlatformEnum.Linux;
-  //return PlatformEnum.Windows;
+  if (hashedCurrPlatform) return hashedCurrPlatform;
 
-  if (IsRenderer()) return window.ipcSender.Platform();
-
-  // main process
-  switch (os.platform()) {
-    case "win32":
-      return PlatformEnum.Windows;
-    case "linux":
-      return PlatformEnum.Linux;
-    case "darwin":
-      return PlatformEnum.macOS;
-    default:
-      return PlatformEnum.unknown;
+  if (IsRenderer()) hashedCurrPlatform = window.ipcSender.Platform();
+  else {
+    // main process
+    switch (os.platform()) {
+      case "win32":
+        hashedCurrPlatform = PlatformEnum.Windows;
+        break;
+      case "linux":
+        hashedCurrPlatform = PlatformEnum.Linux;
+        break;
+      case "darwin":
+        hashedCurrPlatform = PlatformEnum.macOS;
+        break;
+      default:
+        hashedCurrPlatform = PlatformEnum.unknown;
+    }
   }
+  return hashedCurrPlatform;
 }
 
 export function IsWindowHasFrame() {

@@ -23,6 +23,16 @@
 import store from "@/store";
 import { IsRenderer } from "@/helpers/helpers";
 
+export function IsServerSupportIPv6(server) {
+  if (!server) return null;
+  if (!server.hosts) return null;
+
+  for (let h of server.hosts) {
+    if (h && h.ipv6 && h.ipv6.local_ip) return true;
+  }
+  return false;
+}
+
 // CheckIsInaccessibleServer returns:
 // - null if server is acceptble
 // - object { sameGateway: true } - servers have same gateway

@@ -43,7 +43,6 @@
 
       <div class="text secondLine flexRow">
         <div v-if="isShowIPVersionBage && isIPv6" class="bage">IPv6</div>
-        <!--<div v-else-if="isShowIPVersionBage && !isIPv6" class="bage">IPv4</div>-->
         {{ multilineSecondLine }} {{ selectedHostInfo }}
         <div
           v-show="showISPInfo && isFavoriteServersView === false"
@@ -59,6 +58,7 @@
 
 <script>
 import { PingQuality } from "@/store/types";
+import { IsServerSupportIPv6 } from "@/helpers/helpers_servers";
 
 import Image_speedometer from "@/assets/speedometer.svg";
 import Image_shuffle from "@/assets/shuffle.svg";
@@ -155,12 +155,11 @@ export default {
       return (
         this.$store.state.settings.enableIPv6InTunnel && // IPv6 enabled
         this.$store.state.settings.showGatewaysWithoutIPv6 && // and we show both types of servers (IPv4 and IPv6)
-        this.server.isIPv6 != null &&
-        this.server.isIPv6 != undefined
+        this.isIPv6 === true
       );
     },
     isIPv6: function () {
-      return this.server.isIPv6 == true;
+      return IsServerSupportIPv6(this.server);
     },
     serverImage: function () {
       if (this.isFastestServer === true) return Image_speedometer;
