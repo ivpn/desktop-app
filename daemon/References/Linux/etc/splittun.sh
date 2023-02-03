@@ -96,8 +96,6 @@ function test()
     if ! command -v ${_bin_grep} &>/dev/null ;       then echo "ERROR: Binary Not Found (${_bin_grep})" 1>&2; return 1; fi
     if ! command -v ${_bin_dirname} &>/dev/null ;    then echo "ERROR: Binary Not Found (${_bin_dirname})" 1>&2; return 1; fi
     if ! command -v ${_bin_sed} &>/dev/null ;        then echo "ERROR: Binary Not Found (${_bin_sed})" 1>&2; return 1; fi
-    
-    if ! getBackupFolderPath &>/dev/null ;           then echo "ERROR: Failed to initialize backup folder: '$( getBackupFolderPath )'" 1>&2; return 1; fi
 
     if ! command -v ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})" 1>&2; fi
     if ! command -v ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})" 1>&2; fi
@@ -322,9 +320,8 @@ function clean()
 function getBackupFolderPath()
 {
     # default location
-    local defPath="${_mutable_folder_default}/${_backup_folder_name}"
-    if [ -w "${defPath}" ]; then       
-        echo "${defPath}"  # return value in stdout        
+    if [ -w "${_mutable_folder_default}" ]; then       
+        echo "${_mutable_folder_default}/${_backup_folder_name}"  # return value in stdout        
         return 0
     fi
     # fallback location
@@ -333,7 +330,7 @@ function getBackupFolderPath()
         return 0
     fi
 
-    echo "${defPath}"
+    echo "${_mutable_folder_default}/${_backup_folder_name}"
     return 1
 }
 
