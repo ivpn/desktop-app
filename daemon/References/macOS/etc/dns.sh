@@ -23,13 +23,14 @@ IVPN_DNS_SOURCE_PATH="State:/Network/IVPN/DNSBase"
 # Primary interface can be not detected due to switching WiFi network at current moment.
 # Here we are trying to get primary interface during 5 seconds (giving a chance to connect/disconnect WiFi)
 #
-# We are 'waiting' for primary interface only for '-update' call. All other commands are executing without delays.
-if [ "$1" = "-update" ] ; then
-  for run in {1..5}
+# We are 'waiting' for primary interface only for '-update'/'-down' calls. All other commands are executing without delays.
+if [ "$1" = "-update" ] || [ "$1" = "-down" ] ; then
+  for run in {1..10}
   do
     if [[ "${PRI_IFACE}" != "" ]]; then
         break;
     fi
+    echo "($1) Primary interface not detected. Retry in 1 second..."
     sleep 1
     PRI_IFACE=`echo 'show State:/Network/Global/IPv4' | scutil | grep PrimaryInterface | sed -e 's/.*PrimaryInterface : //'`
     PSID=`echo 'show State:/Network/Global/IPv4' | scutil | grep PrimaryService | sed -e 's/.*PrimaryService : //'`
