@@ -23,8 +23,9 @@ IVPN_DNS_SOURCE_PATH="State:/Network/IVPN/DNSBase"
 # Primary interface can be not detected due to switching WiFi network at current moment.
 # Here we are trying to get primary interface during 5 seconds (giving a chance to connect/disconnect WiFi)
 #
-# We are 'waiting' for primary interface only for '-update'/'-down' calls. All other commands are executing without delays.
-if [ "$1" = "-update" ] || [ "$1" = "-down" ] ; then
+# We are 'waiting' for primary interface only for '-update' calls. All other commands are executing without delays.
+#if [ "$1" = "-update" ] || [ "$1" = "-down" ] ; then
+if [ "$1" = "-update" ] ; then
   for run in {1..10}
   do
     if [[ "${PRI_IFACE}" != "" ]]; then
@@ -114,13 +115,23 @@ function store_user_setting {
     fi
 
     ensurePrimaryInterfaceDetected
-    
-    echo "Storing ${PREFIX}:/ dns settings"
 
+    # Save original DNS configuration for service (primary interface)
+    echo "Storing ${PREFIX}:/ dns settings"
     scutil <<_EOF
     d.init
     get ${PREFIX}:/Network/Service/${PSID}/DNS
     set State:/Network/IVPN/Original/DNS/${PREFIX}
+_EOF
+
+    # Save information about the primary interface in which DNS configuration was backed up
+    # In some situations, it is not possible to detect the primary interface.
+    # E.g.: At the moment when switching WiFi networks, we use this info to recover original DNS servings (see "-down" command)
+    scutil <<_EOF
+    d.init
+    d.add PrimaryInterface "${PRI_IFACE}"
+    d.add PrimaryService "${PSID}"    
+    set State:/Network/IVPN/PrimaryInterfaceInfo
 _EOF
 }
 
@@ -340,6 +351,11 @@ elif [ "$1" = "-down" ] ; then
         exit 0
     fi
 
+    if ! isPrimaryInterfaceDetected; then
+        echo "Warning: Primary interface not found. Restoring info from backup...."
+        PSID=`echo 'show State:/Network/IVPN/PrimaryInterfaceInfo' | scutil | grep PrimaryService | sed -e 's/.*PrimaryService : //'`
+    fi
+
     if ! is_dns_changed "State" ; then
         restore_user_setting "State"
     fi
@@ -349,9 +365,11 @@ elif [ "$1" = "-down" ] ; then
     fi
 
     # not necessary to call 'ipv6_resolver_destroy' since it's commands available in the next lines
+    echo "Removing lefovers..."
     scutil <<_EOF
         remove State:/Network/IVPN/Original/DNS/Setup
         remove State:/Network/IVPN/Original/DNS/State
+        remove State:/Network/IVPN/PrimaryInterfaceInfo
         remove State:/Network/IVPN/DNSBase
 
         remove State:/Network/Service/ivpn_tunnel/IPv6
