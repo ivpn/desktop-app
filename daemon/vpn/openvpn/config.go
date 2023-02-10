@@ -103,9 +103,10 @@ func (c *ConnectionParams) WriteConfigFile(
 	miPort int,
 	logFile string,
 	extraParameters string,
-	isCanUseV24Params bool) error {
+	isCanUseV24Params bool,
+	upDownScriptArgs string) error {
 
-	cfg, err := c.generateConfiguration(localPort, miAddr, miPort, logFile, extraParameters, isCanUseV24Params)
+	cfg, err := c.generateConfiguration(localPort, miAddr, miPort, logFile, extraParameters, isCanUseV24Params, upDownScriptArgs)
 	if err != nil {
 		return fmt.Errorf("failed to generate openvpn configuration : %w", err)
 	}
@@ -131,7 +132,8 @@ func (c *ConnectionParams) generateConfiguration(
 	miPort int,
 	logFile string,
 	extraParameters string,
-	isCanUseV24Params bool) (cfg []string, err error) {
+	isCanUseV24Params bool,
+	upDownScriptArgs string) (cfg []string, err error) {
 
 	cfg = make([]string, 0, 32)
 
@@ -240,10 +242,12 @@ func (c *ConnectionParams) generateConfiguration(
 	cfg = append(cfg, "verb 4")
 
 	if upCmd := platform.OpenvpnUpScript(); upCmd != "" {
-		cfg = append(cfg, "up \""+upCmd+" "+platform.OpenvpnUpDownScriptArg()+"\"")
+		// (Linux) info: the 'upDownScriptArgs' controls the way of changing DNS ('resolvectl' or 'resolv.conf')
+		cfg = append(cfg, "up \""+upCmd+" "+upDownScriptArgs+"\"")
 	}
 	if downCmd := platform.OpenvpnDownScript(); downCmd != "" {
-		cfg = append(cfg, "down \""+downCmd+" "+platform.OpenvpnUpDownScriptArg()+"\"")
+		// (Linux) info: the 'upDownScriptArgs' controls the way of changing DNS ('resolvectl' or 'resolv.conf')
+		cfg = append(cfg, "down \""+downCmd+" "+upDownScriptArgs+"\"")
 	}
 
 	cfg = append(cfg, "script-security 2")

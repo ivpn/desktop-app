@@ -78,3 +78,7 @@ func (o *OpenVPN) implOnResetManualDNS() error {
 	}
 	return nil
 }
+
+func (o *OpenVPN) implGetUpDownScriptArgs() string {
+	return ""
+}

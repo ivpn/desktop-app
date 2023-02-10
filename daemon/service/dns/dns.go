@@ -53,6 +53,13 @@ func init() {
 	log = logger.NewLogger("dns")
 }
 
+func GetExtraSettings() DnsExtraSettings {
+	if funcGetUserSettings != nil {
+		return funcGetUserSettings()
+	}
+	return DnsExtraSettings{}
+}
+
 type DnsError struct {
 	Err error
 }

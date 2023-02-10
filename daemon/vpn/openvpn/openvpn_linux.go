@@ -26,12 +26,12 @@ import (
 	"fmt"
 
 	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
 type platformSpecificProperties struct {
-	// no specific properties for Linux implementation
 	isCanUseParamsV24 bool
 	manualDNS         dns.DnsSettings
 }
@@ -116,4 +116,15 @@ func (o *OpenVPN) implOnResetManualDNS() error {
 	}
 
 	return dns.DeleteManual(defaultDns, o.clientIP)
+}
+
+func (o *OpenVPN) implGetUpDownScriptArgs() string {
+	resolvectlBinPath := platform.ResolvectlBinPath()
+	if len(resolvectlBinPath) > 0 {
+		extraDnsParams := dns.GetExtraSettings()
+		if !extraDnsParams.Linux_IsDnsMgmtOldStyle {
+			return "-use-resolvconf " + resolvectlBinPath
+		}
+	}
+	return ""
 }

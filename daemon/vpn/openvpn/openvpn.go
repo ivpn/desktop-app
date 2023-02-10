@@ -387,7 +387,8 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 		miIP, miPort,
 		o.logFile,
 		o.extraParameters,
-		o.implIsCanUseParamsV24())
+		o.implIsCanUseParamsV24(),
+		o.implGetUpDownScriptArgs())
 
 	if err != nil {
 		return fmt.Errorf("failed to write configuration file: %w", err)
