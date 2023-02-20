@@ -147,7 +147,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
 		// it will be applied on RESUME
-		return DnsSettings{}, nil
+		return dnsCfg, nil
 	}
 
 	// start encrypted DNS configuration (if required)
