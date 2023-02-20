@@ -538,10 +538,13 @@ export default {
               // (the port-base connection in use for MH or/and obfsproxy, so the final connection ports are not in a list)
               // For MH and obfsproxy only port type has sense. Looking for first applicable port
 
-              // anyway, try to choose the same port number which is already selected
-              let changedPort = ports.find(
-                (p) => p.port === newPort.port && p.type === newPort.type
-              );
+              let changedPort = null;
+              // check if currently selected port fits to port type requirement
+              // (do not change currently selected port if possible)
+              let currPort = context.rootGetters["settings/getPort"];
+              if (currPort && currPort.type === newPort.type)
+                changedPort = currPort;
+
               // if nothing found - try to get first applicable port by type
               if (!changedPort)
                 changedPort = ports.find((p) => p.type === newPort.type);
