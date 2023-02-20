@@ -124,7 +124,8 @@ export default {
           country: "",
           city: "",
           latitude: 0,
-	        longitude: 0,
+          longitude: 0,
+          isp: "",
 
           hosts: [
             {
@@ -151,8 +152,9 @@ export default {
           country: "",
           city: "",
           latitude: 0,
-	        longitude: 0,
-          
+          longitude: 0,
+          isp: "",
+
           hosts: [
             {
               hostname: "",

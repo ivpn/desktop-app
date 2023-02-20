@@ -1276,6 +1276,16 @@ async function Connect() {
   try {
     const isRandomExitSvr = store.getters["settings/isRandomExitServer"];
 
+    // Function to filter applicable multi-hop servers: exclude servers from same Country/ISP
+    const filterSvrsExcludeSameCountryIsp = function (servers, svr) {
+      if (!servers) return servers;
+      let tmpSvrs = servers.filter(
+        (s) => s.country_code !== svr.country_code && s.isp !== svr.isp
+      );
+      if (tmpSvrs.length == 0) return servers; // fallback (if filtered list is empty)
+      return tmpSvrs;
+    };
+
     // ENTRY SERVER
     if (store.getters["settings/isFastestServer"]) {
       const funcGetPing = store.getters["vpnState/funcGetPing"];
@@ -1301,9 +1311,7 @@ async function Connect() {
       // random server
       let servers = store.getters["vpnState/activeServers"];
       if (!isRandomExitSvr) {
-        servers = servers.filter(
-          (s) => s.country_code !== settings.serverExit.country_code
-        );
+        servers = filterSvrsExcludeSameCountryIsp(servers, settings.serverExit);
       }
       let randomIdx = Math.floor(Math.random() * Math.floor(servers.length));
       store.dispatch("settings/serverEntry", servers[randomIdx]);
@@ -1312,8 +1320,9 @@ async function Connect() {
     // EXIT SERVER
     if (isRandomExitSvr) {
       const servers = store.getters["vpnState/activeServers"];
-      const exitServers = servers.filter(
-        (s) => s.country_code !== settings.serverEntry.country_code
+      const exitServers = filterSvrsExcludeSameCountryIsp(
+        servers,
+        settings.serverEntry
       );
       const randomIdx = Math.floor(
         Math.random() * Math.floor(exitServers.length)
