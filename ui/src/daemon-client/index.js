@@ -1297,8 +1297,13 @@ async function Connect() {
           "Connect to fastest server (fastest server not defined). Pinging servers..."
         );
 
-        // Try to ping servers
-        await PingServers();
+        try {
+          // Try to ping servers
+          await PingServers();
+        } catch (e) {
+          console.error(e);
+        }
+
         // NOTE: in case if not possible to ping - we will have exception here (next line will not be executed)
         // Surround 'PingServers()' in try/catch if it is necessary to continue anyway
 
