@@ -32,7 +32,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/ivpn/desktop-app/daemon/oshelpers/linux/netlink"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
@@ -41,6 +43,7 @@ var (
 	// error describing details if functionality not available
 	funcNotAvailableError error
 	stScriptPath          string
+	isActive              bool
 )
 
 // Information about added running process to the ST (by implAddPid())
@@ -79,6 +82,38 @@ func implInitialize() error {
 
 	// Ensure that ST is disable on daemon startup
 	enable(false)
+
+	// Register network change detector
+	//
+	// The OS is erasing routing rules for ST each time when main network interface disappears
+	// (for example, when reconnecting WiFi)
+	// Therefore, we must monitor changes in network configuration and update ST routing rules.
+	if funcNotAvailableError == nil {
+		onNetChange := make(chan struct{}, 1)
+		if err := netlink.RegisterLanChangeListener(onNetChange); err != nil {
+			return err
+		}
+		// Wait for network chnages in sepatate routine
+		go func() {
+			var timerDelay *time.Timer
+			for {
+				<-onNetChange
+				if isActive {
+					if timerDelay != nil {
+						timerDelay.Stop()
+					}
+					// We can receive many 'lan change' events in a short period of time
+					// but we update routes not more often than once per 2 seconds.
+					timerDelay = time.AfterFunc(time.Second*2, func() {
+						err := shell.Exec(nil, stScriptPath, "update-routes")
+						if err != nil {
+							log.Error("failed to update routes for SplitTunneling functionality")
+						}
+					})
+				}
+			}
+		}()
+	}
 
 	return funcNotAvailableError
 }
@@ -358,6 +393,9 @@ func enable(isEnable bool) error {
 		}
 		log.Info("Split Tunneling enabled")
 	}
+
+	isActive = isEnable
+
 	return nil
 }
 

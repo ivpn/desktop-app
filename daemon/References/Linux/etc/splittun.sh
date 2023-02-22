@@ -102,14 +102,8 @@ function test()
     if ! command -v ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})" 1>&2; fi    
 }
 
-function init()
+function initDefGatewayVars() 
 {
-    # Ensure the input parameters not empty
-    if [ -z ${_def_interface_name} ]; then
-        echo "[i] Default network interface is not defined. Trying to determine it automatically..."
-        _def_interface_name=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $5 }')
-        echo "[+] Default network interface: '${_def_interface_name}'"
-    fi
     if [ -z ${_def_gateway} ]; then
         echo "[i] Default gateway is not defined. Trying to determine it automatically..."
         _def_gateway=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $3 }')
@@ -120,6 +114,20 @@ function init()
         _def_gatewayIPv6=$(${_bin_ip} -6 route | ${_bin_awk} '/default/ { print $3 }')
         echo "[+] Default IPv6 gateway: '${_def_gatewayIPv6}'"
     fi
+}
+
+function init()
+{
+    # Ensure the input parameters not empty
+    initDefGatewayVars
+   
+    if [ -z ${_def_interface_name} ]; then
+        echo "[i] Default network interface is not defined. Trying to determine it automatically..."
+        _def_interface_name=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $5 }')
+        echo "[+] Default network interface: '${_def_interface_name}'"
+    fi
+
+
     if [ -z ${_def_interface_name} ]; then
         echo "Default network interface is not defined. Please, check internet connectivity." 1>&2
         return 2
@@ -205,18 +213,18 @@ function init()
         
         # Packets with mark will use splittun table
         ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}
-        # splittun table has a default gateway to the default interface
-        ${_bin_ip} route add default via ${_def_gateway} table ${_routing_table_name}  
 
         if [ ! -z ${_def_gatewayIPv6} ]; then
             if [ -f /proc/net/if_inet6 ]; then
                 # Packets with mark will use splittun table
                 ${_bin_ip} -6 rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}
-                # splittun table has a default gateway to the default interface
-                ${_bin_ip} -6 route add default via ${_def_gatewayIPv6} dev ${_def_interface_name} table ${_routing_table_name}
             fi
         fi
-        
+
+        # The splittun table has a default gateway route to the default interface
+        #   ${_bin_ip} route add default via ${_def_gateway} table ${_routing_table_name}  
+        #   ${_bin_ip} -6 route add default via ${_def_gatewayIPv6} table ${_routing_table_name}
+        updateRoutes        
     fi
 
     ##############################################
@@ -242,6 +250,26 @@ function init()
     set +e
 
     echo "IVPN Split Tunneling enabled"
+}
+
+function updateRoutes() 
+{ 
+    # simple check if ST enabled
+    if [ ! -d ${_cgroup_folder} ]; then
+        return
+    fi
+
+    initDefGatewayVars
+
+    # splittun table has a default gateway to the default interface
+    if [ ! -z ${_def_gateway} ]; then        
+        ${_bin_ip} route replace default via ${_def_gateway} table ${_routing_table_name}  
+    fi
+    if [ -f /proc/net/if_inet6 ]; then
+        if [ ! -z ${_def_gatewayIPv6} ]; then
+            ${_bin_ip} -6 route replace default via ${_def_gatewayIPv6} table ${_routing_table_name}
+        fi
+    fi
 }
 
 function clean()
@@ -550,6 +578,11 @@ elif [[ $1 = "run" ]] ; then
     fi
     _command=$@
     execute "${_user}" "${_command}"     
+
+elif [[ $1 = "update-routes" ]] ; then
+    # Linux is erasing ST routing rules when disable/enable default network interface, so we need to restore them back
+    shift 
+    updateRoutes $@  
 
 elif [[ $1 = "info" ]] ; then
     shift 
