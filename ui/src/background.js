@@ -960,7 +960,7 @@ async function connectToDaemon(
       if (
         e.unsupportedDaemonVersion === true ||
         isCanRetry != true ||
-        retryNo > 10
+        retryNo > 15
       ) {
         setConnState(DaemonConnectionType.NotConnected);
       } else {

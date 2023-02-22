@@ -150,7 +150,9 @@ func (p *Protocol) clientSetAuthenticated(c net.Conn) {
 	}()
 
 	if justConnectedClientInfo != nil {
-		p._service.OnAuthenticatedClient(justConnectedClientInfo.Type)
+		go func() {
+			p._service.OnAuthenticatedClient(justConnectedClientInfo.Type)
+		}()
 	}
 
 	if len(p._lastConnectionErrorToNotifyClient) > 0 {
