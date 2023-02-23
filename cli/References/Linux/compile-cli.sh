@@ -47,9 +47,9 @@ echo "Commit : $COMMIT"
 #   ldd -r -v <binary_file> # check shared libraries dependencies
 #
 # Info: CLI does not use CGO directly (and can be easily disabled manually), but we use the same build environment as a for daemon (to be able to detect same errors as with daemon binary) 
-if [ ! -z "$GITHUB_ACTIONS" ]; 
+if [ ! -z "$IVPN_BUILD_SKIP_GLIBC_VER_CHECK" ] || [ ! -z "$GITHUB_ACTIONS" ]; 
 then
-  echo "[!] ! GITHUB_ACTIONS detected ! It is just a build test."
+  echo "[!] ! GLIBC version check skipped (according to env vars configuration) !"
 else
   GLIBC_VER_MAX_REQUIRED="2.31"
   GLIBC_VER=$(ldd --version | grep "ldd (" | awk '{print $(NF)}')
@@ -57,6 +57,7 @@ else
   then
       echo "[!] GLIBC version '${GLIBC_VER}' is greater than reqired '${GLIBC_VER_MAX_REQUIRED}'"
       echo "[!] Compiling with the new GLIBC version will not allow the program to start on systems with the old GLIBC."
+      echo "[ ] (you can define env var 'IVPN_BUILD_SKIP_GLIBC_VER_CHECK' to skip this check"
       read -p "[?] Do you want to continue? [y\n] (N - default): " yn
       case $yn in
         [Yy]* ) ;;
