@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.10.14 - 2023-02-24 (Beta)
+
+[NEW] Ability to open Firewall and AntiTracker settings with one click  
+[NEW] Option to prevent usage of the same provider in Multi-Hop chain  
+[NEW] (Linux) IVPN can be installed on Fedora Silverblue (using rpm-ostree)  
+[IMPROVED] The favorite servers list is common for all VPN protocols  
+[IMPROVED] Changing protocol type or MultiHop does not require disconnecting the current VPN connection  
+[IMPROVED] Various UI fixes/improvements  
+[IMPROVED] (Windows) Improved boot-time firewall rules to prevent potential leaks on system boot  
+[IMPROVED] (Linux) Installed files locations are corrected to fit the Filesystem Hierarchy Standard  
+[IMPROVED] (Linux) IVPN Firewall now also controls the FORWARD chain (no leaks anymore when using IVPN on Qubes OS as "ProxyVM")  
+[FIX] The Antitracker toggle state in the UI is consistent with actions from CLI  
+[FIX] (macOS) The wrong DNS configuration may stay after VPN is disconnected in some corner cases  
+[FIX] (Linux) "Force management of DNS using resolve.conf" does not require a reboot anymore  
+[FIX] (Linux) Bad DNS configuration after reinitiation of the main network interface  
+[FIX] (Linux) Split Tunneling stops working after reinitiation of the main network interface  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.10.14.exe)  
+SHA256: 720e31271aee95ce68907c238b88271533bc67239d5bc08871809952f8224619  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.10.14.dmg)  
+SHA256: 7736e92d6c04a41040664cf37b6b2f48ada0f46786dcd0fe8316994390b04b1e  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.10.14-arm64.dmg)  
+SHA256:  4422d251e3b5b5c97bc5b5a7b790f8e9f595a98032d3f6165c82ce18c9aefae2  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.10.14_amd64.deb)  
+SHA256: 1b0ba710ca8f1b5f369dc0d91475dc9056127bdef4fdd9f0076c3ce0ea442764  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.10.14-1.x86_64.rpm)  
+SHA256: 8b904978822fdbcaee774cc622f5b5819b324558135bb002d166263037bc72ea  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.10.14_amd64.deb)  
+SHA256: 37585671d941b946ed65b394c88e82d63cd7e0c28016ea1063db0bb5e17f95bf  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.10.14-1.x86_64.rpm)  
+SHA256: 1b0ba710ca8f1b5f369dc0d91475dc9056127bdef4fdd9f0076c3ce0ea442764  
+
 ## Version 3.10.0 - 2022-12-05
 
 [NEW] (Windows/Linux) UI: light/dark options for system tray icon  
