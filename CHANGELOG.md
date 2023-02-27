@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.  
 
-## Version 3.10.14 - 2023-02-24 (Beta)
+## Version 3.10.14 - 2023-02-24
 
 [NEW] Ability to open Firewall and AntiTracker settings with one click  
 [NEW] Option to prevent usage of the same provider in Multi-Hop chain  
