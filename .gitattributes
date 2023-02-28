@@ -3,7 +3,11 @@ daemon/References/Windows/OpenVPN/obfsproxy/**/* linguist-vendored
 
 daemon/References/Windows/OpenVPN/**/*.inf binary
 
+#*.svg binary
+
 # Use LS line endings for all *.sh files (Linux shell scripts)
 *.sh text eol=lf
 daemon/References/Linux/etc/client.down text eol=lf
 daemon/References/Linux/etc/client.up text eol=lf
+
+ui/References/Linux/ui/IVPN.desktop text eol=lf
