@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.10.15 - 2023-02-28
+
+[FIX] (Linux) Fixed application shortcut registration issue on some distributions  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.10.15_amd64.deb)  
+SHA256: 75c3f1867f9841b127d6936038bf10b6edbbe0bb27be7c2ee91b32b2def95bc3  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.10.15-1.x86_64.rpm)  
+SHA256: ea9b5719c21bd0ad2dc662acc15fa82f42beb357c31cc3e030f45b1d27467687  
+
 ## Version 3.10.14 - 2023-02-24
 
 [NEW] Ability to open Firewall and AntiTracker settings with one click  
