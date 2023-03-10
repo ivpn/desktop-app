@@ -370,7 +370,20 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		return
 	}
 
-	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command, fmt.Sprintf(" [%d]", reqCmd.Idx))
+	// Log the request info
+	cmdExtraInfo := ""
+	if reqCmd.Command == "APIRequest" {
+		var req types.APIRequest
+		if err := json.Unmarshal(messageData, &req); err == nil {
+			cmdExtraInfo = " " + req.APIPath
+			if req.IPProtocolRequired == types.IPv4 {
+				cmdExtraInfo += " (IPv4)"
+			} else if req.IPProtocolRequired == types.IPv6 {
+				cmdExtraInfo += " (IPv6)"
+			}
+		}
+	}
+	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command, fmt.Sprintf(" [%d]%s", reqCmd.Idx, cmdExtraInfo))
 
 	isDoSkipParanoidMode := func(commandName string) bool {
 

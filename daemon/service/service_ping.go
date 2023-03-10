@@ -34,6 +34,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/ping"
+	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -76,7 +77,7 @@ func (s *Service) PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAl
 
 	var geoLocation *types.GeoLookupResponse = nil
 	if timeoutMs >= 3000 {
-		l, err := s._api.GeoLookup(1500)
+		l, _, err := s._api.GeoLookup(1500, protocolTypes.IPvAny)
 		if err != nil {
 			log.Warning("(pinging) unable to obtain geo-location (fastest server detection could be not accurate):", err)
 		}
