@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/api/types"
@@ -37,6 +38,13 @@ import (
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
+
+// In some cases the multiple (and simultaneous pings) are leading to OS crash on macOS and Windows.
+// It happens when installed some third-party 'firewall' software.
+const MaxSimultaneousPingsCount = 10
+
+const MaxTimeoutMsFirstPhase = 400
+const MaxTimeoutMsSecondPhase = 1000
 
 // PingServers ping vpn servers.
 //
@@ -51,14 +59,7 @@ import (
 //
 // If pingAllHostsOnFirstPhase==true - daemon will ping all hosts for nearest locations on the phase (1)
 // If skipSecondPhase==true - phase (2) will be skipped
-//
-// Additional info:
-//
-//	In some cases the multiple (and simultaneous pings) are leading to OS crash on macOS and Windows.
-//	It happens when installed some third-party 'security' software.
-//	Therefore, we using ping algorithm which avoids simultaneous pings and doing it one-by-one
 func (s *Service) PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAllHostsOnFirstPhase bool, skipSecondPhase bool) (map[string]int, error) {
-
 	if s._vpn != nil {
 		return nil, fmt.Errorf("servers pinging skipped due to connected state")
 	}
@@ -116,8 +117,8 @@ func (s *Service) PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAl
 		log.Info("Servers ping failed: " + err.Error())
 		return nil, err
 	}
-	// First ping iteration. Doing it fast. 300ms max for each server
-	s.pingIteration(hosts, result, 300, &timeoutTime)
+	// First ping iteration. Doing it fast. 'MaxTimeoutMsFirstPhase'ms max for each server
+	s.pingIteration(hosts, result, MaxTimeoutMsFirstPhase, &timeoutTime)
 
 	if !skipSecondPhase {
 		// The first ping result already received.
@@ -147,7 +148,7 @@ func (s *Service) PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAl
 					return
 				}
 
-				s.pingIteration(hosts, result, 1000, nil)
+				s.pingIteration(hosts, result, MaxTimeoutMsSecondPhase, nil)
 				s._evtReceiver.OnPingStatus(result)
 			}
 
@@ -185,6 +186,10 @@ func (s *Service) pingIteration(hostsToPing []net.IP, pingedResult map[string]in
 		}
 	}()
 
+	resultMutex := &sync.RWMutex{}
+	wg := sync.WaitGroup{}
+	pingsLimit := make(chan struct{}, MaxSimultaneousPingsCount) // limit count of allowed simultaneous pings
+
 	lastUpdateSentTime := time.Now()
 	for _, h := range hostsToPing {
 		if s._vpn != nil {
@@ -205,33 +210,53 @@ func (s *Service) pingIteration(hostsToPing []net.IP, pingedResult map[string]in
 		}
 
 		// skip pinging twice same host
-		if _, ok := pingedResult[ipStr]; ok {
+		resultMutex.RLock()
+		_, isPinged := pingedResult[ipStr]
+		resultMutex.RUnlock()
+
+		if isPinged {
 			continue
 		}
 
-		pinger, err := ping.NewPinger(ipStr)
-		if err != nil {
-			log.Error("Pinger creation error: " + err.Error())
-			continue
-		}
+		wg.Add(1)
+		pingsLimit <- struct{}{}
 
-		pinger.SetPrivileged(true)
-		pinger.Count = 1
-		pinger.Timeout = time.Millisecond * time.Duration(onePingTimeoutMs)
-		pinger.Run()
-		stat := pinger.Statistics()
+		go func() {
+			defer func() {
+				<-pingsLimit
+				wg.Done()
+			}()
 
-		if stat.AvgRtt > 0 {
-			ttl := int(stat.AvgRtt / time.Millisecond)
-			pingedResult[ipStr] = ttl
-		}
+			pinger, err := ping.NewPinger(ipStr)
+			if err != nil {
+				log.Error("Pinger creation error: " + err.Error())
+				return
+			}
 
-		if timeout == nil && time.Now().After(lastUpdateSentTime.Add(time.Second*2)) && len(pingedResult) > 0 {
-			// periodically notify ping results when pinging in background
-			s._evtReceiver.OnPingStatus(pingedResult)
-			lastUpdateSentTime = time.Now()
-		}
+			pinger.SetPrivileged(true)
+			pinger.Count = 1
+			pinger.Timeout = time.Millisecond * time.Duration(onePingTimeoutMs)
+			pinger.Run()
+			stat := pinger.Statistics()
+
+			if stat.AvgRtt > 0 {
+				ttl := int(stat.AvgRtt / time.Millisecond)
+
+				resultMutex.Lock()
+				pingedResult[ipStr] = ttl
+				resultMutex.Unlock()
+			}
+
+			resultMutex.RLock()
+			if timeout == nil && time.Now().After(lastUpdateSentTime.Add(time.Second*2)) && len(pingedResult) > 0 {
+				// periodically notify ping results when pinging in background
+				s._evtReceiver.OnPingStatus(pingedResult)
+				lastUpdateSentTime = time.Now()
+			}
+			resultMutex.RUnlock()
+		}()
 	}
+	wg.Wait()
 }
 
 // if 'currentLocation' defined - the output hosts list will be sorted by distance to current location

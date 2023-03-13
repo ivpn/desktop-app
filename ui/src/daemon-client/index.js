@@ -875,9 +875,7 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
           // start daemon notification about connection parameters change
           startNotifyDaemonOnParamsChange();
 
-          const pingRetryCount = 5;
-          const pingTimeOutMs = 5000;
-          PingServers(pingRetryCount, pingTimeOutMs);
+          PingServers();
 
           resolve(); // RESOLVE
         } catch (e) {
@@ -1206,7 +1204,7 @@ async function ServersUpdateRequest() {
 }
 
 let pingServersPromise = null;
-async function PingServers(RetryCount, TimeOutMs) {
+async function PingServers() {
   const p = pingServersPromise;
   if (p) {
     console.debug("Pinging already in progress. Waiting...");
@@ -1219,7 +1217,7 @@ async function PingServers(RetryCount, TimeOutMs) {
     pingServersPromise = sendRecv(
       {
         Command: daemonRequests.PingServers,
-        TimeOutMs: TimeOutMs ? TimeOutMs : PingServersTimeoutMs,
+        TimeOutMs: PingServersTimeoutMs,
         VpnTypePrioritization: true,
         VpnTypePrioritized: store.state.settings.vpnType,
       },
@@ -1303,9 +1301,6 @@ async function Connect() {
         } catch (e) {
           console.error(e);
         }
-
-        // NOTE: in case if not possible to ping - we will have exception here (next line will not be executed)
-        // Surround 'PingServers()' in try/catch if it is necessary to continue anyway
 
         fastest = store.getters["vpnState/fastestServer"];
         // if fastest ping == null - it means no any ping info available (e.g. communication blocked by firewall or no internet connectivity)
