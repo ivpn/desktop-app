@@ -356,7 +356,7 @@ func (c *CmdConnect) Run() (retError error) {
 						vpnType = &p
 					}
 				}
-				if err := serversPing(svrs, true, false, vpnType); err != nil {
+				if err := serversPing(svrs, true, vpnType); err != nil {
 					if c.any {
 						fmt.Printf("Error: Failed to ping servers to determine fastest: %s\n", err)
 					} else {

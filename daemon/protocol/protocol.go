@@ -72,7 +72,7 @@ type Service interface {
 	// The cached data will be ignored in this case.
 	ServersListForceUpdate() (*api_types.ServersInfoResponse, error)
 
-	PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAllHostsOnFirstPhase bool, skipSecondPhase bool) (map[string]int, error)
+	PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, skipSecondPhase bool) (map[string]int, error)
 
 	APIRequest(apiAlias string, ipTypeRequired types.RequiredIPProtocol) (responseData []byte, err error)
 
@@ -568,7 +568,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if req.VpnTypePrioritization {
 			vpnType = req.VpnTypePrioritized
 		}
-		retMap, err := p._service.PingServers(req.TimeOutMs, vpnType, req.PingAllHostsOnFirstPhase, req.SkipSecondPhase)
+		retMap, err := p._service.PingServers(req.TimeOutMs, vpnType, req.SkipSecondPhase)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break

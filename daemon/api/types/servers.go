@@ -28,6 +28,10 @@ import (
 )
 
 // -----------------------------------------------------------
+type ServerGeneric interface {
+	GetServerInfoBase() ServerInfoBase
+	GetHostsInfoBase() []HostInfoBase
+}
 
 type HostInfoBase struct {
 	Hostname     string  `json:"hostname"`
@@ -162,6 +166,12 @@ func (pi PortInfo) IsUDP() bool {
 	return strings.TrimSpace(strings.ToLower(pi.Type)) == "udp"
 }
 
+func (pi PortInfo) Equal(x PortInfo) bool {
+	return pi.Port == x.Port &&
+		strings.TrimSpace(strings.ToLower(pi.Type)) == strings.TrimSpace(strings.ToLower(x.Type)) &&
+		pi.Range.Max == x.Range.Max && pi.Range.Min == x.Range.Min
+}
+
 type ObfsPortInfo struct {
 	Port int `json:"port"`
 }
@@ -185,4 +195,18 @@ type ServersInfoResponse struct {
 	WireguardServers []WireGuardServerInfo `json:"wireguard"`
 	OpenvpnServers   []OpenvpnServerInfo   `json:"openvpn"`
 	Config           ConfigInfo            `json:"config"`
+}
+
+func (si ServersInfoResponse) ServersGenericWireguard() (ret []ServerGeneric) {
+	for _, s := range si.WireguardServers {
+		ret = append(ret, s)
+	}
+	return
+}
+
+func (si ServersInfoResponse) ServersGenericOpenvpn() (ret []ServerGeneric) {
+	for _, s := range si.OpenvpnServers {
+		ret = append(ret, s)
+	}
+	return
 }
