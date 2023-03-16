@@ -55,6 +55,15 @@ var (
 	manualDNS DnsSettings
 )
 
+func init() {
+	err := fmt.Errorf("DNS functionality not initialised")
+	f_implInitialize = func() error { return err }
+	f_implPause = func(localInterfaceIP net.IP) error { return err }
+	f_implResume = func(localInterfaceIP net.IP) error { return err }
+	f_implSetManual = func(dnsCfg DnsSettings, localInterfaceIP net.IP) (DnsSettings, error) { return DnsSettings{}, err }
+	f_implDeleteManual = func(localInterfaceIP net.IP) error { return err }
+}
+
 // implInitialize doing initialization stuff (called on application start)
 func implInitialize() error {
 
