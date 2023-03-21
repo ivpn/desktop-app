@@ -689,6 +689,9 @@ export default {
     setPort(context, portVal) {
       context.commit("setPort", portVal);
     },
+    notifyAccessiblePortsInfo(context, accessiblePorts) {
+      updatePortAccordingToAccessibleInfo(context, accessiblePorts);
+    },
 
     ovpnProxyType(context, val) {
       context.commit("ovpnProxyType", val);
@@ -1014,6 +1017,47 @@ function doSettingsUpgradeAfterSvrsUpdateIfRequired(context) {
     }
   } catch (e) {
     console.error(e);
+  }
+}
+
+function updatePortAccordingToAccessibleInfo(context, accessiblePorts) {
+  if (!accessiblePorts || accessiblePorts.length == 0) {
+    return;
+  }
+  // do not change port info if we already logged-in
+  if (context.rootGetters["account/isLoggedIn"] !== false) return;
+
+  let portString = function (p) {
+    p = NormalizedConfigPortObject(p);
+    return `${p.port}:${p.type}`;
+  };
+
+  let accessiblePortsHashed = {};
+  for (let p of accessiblePorts) {
+    accessiblePortsHashed[portString(p)] = p;
+  }
+
+  // check if selected port is in list of accessible ports
+  let port = context.getters["getPort"];
+  if (accessiblePortsHashed[portString(port)]) {
+    return; // selected port is accessinle. Nothing to change
+  }
+
+  // get list of applicable ports
+  let applicablePorts = context.rootGetters["vpnState/connectionPorts"];
+
+  let portToApply = null;
+  // looking for applicable port which is accessible
+  for (let p of applicablePorts) {
+    if (accessiblePortsHashed[portString(p)]) {
+      portToApply = p;
+      break;
+    }
+  }
+
+  if (portToApply) {
+    // apply new port
+    context.dispatch("setPort", portToApply);
   }
 }
 

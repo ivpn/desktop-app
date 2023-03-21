@@ -23,6 +23,7 @@
 package types
 
 import (
+	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
@@ -282,4 +283,9 @@ type APIRequest struct {
 type ParanoidModeSetPasswordReq struct {
 	RequestBase
 	NewSecret string
+}
+
+type CheckAccessiblePorts struct {
+	RequestBase
+	PortsToTest []api_types.PortInfo // in case of empty - will be tested all known ports
 }
