@@ -31,7 +31,88 @@ import (
 	"github.com/ivpn/desktop-app/daemon/api/types"
 )
 
+type connTest struct {
+	locker sync.Mutex
+	done   chan struct{} // if not nil - test is running
+	result *connTestResult
+}
+
+type connTestResult struct {
+	tested    []types.PortInfo
+	result    []types.PortInfo // accessible ports list
+	resultErr error
+}
+
+// DetectAccessiblePorts runs test to detect accessible ports
 func (s *Service) DetectAccessiblePorts(portsToTest []types.PortInfo) ([]types.PortInfo, error) {
+	ct := &s._connectionTest
+
+	// Limiting to run 'doDetectAccessiblePorts()':
+	// do not allow to run multiple calls of function in parallel
+
+	func_tryStartTest := func() (waitChan chan struct{}) {
+		ct.locker.Lock()
+		defer ct.locker.Unlock()
+
+		if ct.done != nil {
+			// test is already in progress
+			return ct.done
+		} else if ct.done == nil {
+			// new test start
+			ct.done = make(chan struct{})
+			ct.result = nil
+
+			go func() {
+				defer func() {
+					ct.locker.Lock()
+					defer ct.locker.Unlock()
+
+					close(ct.done)
+					ct.done = nil
+				}()
+				ports, err := s.doDetectAccessiblePorts(portsToTest)
+				ct.result = &connTestResult{tested: portsToTest, result: ports, resultErr: err}
+			}()
+		}
+		return ct.done
+	}
+
+	// function to test unordered slices equality
+	func_isPortsEquals := func(a []types.PortInfo, b []types.PortInfo) bool {
+		if len(a) != len(b) {
+			return false
+		}
+		hashedA := make(map[types.PortInfo]struct{})
+		for _, p := range a {
+			hashedA[p] = struct{}{}
+		}
+		for _, p := range b {
+			if _, ok := hashedA[p]; !ok {
+				return false
+			}
+		}
+		return true
+	}
+
+	var ret *connTestResult
+	for i := 0; i < 10; i++ {
+		done := func_tryStartTest()
+		<-done // wait for test round finish
+
+		ct.locker.Lock()
+		ret = ct.result // get last test round result
+		ct.locker.Unlock()
+
+		// if tested ports not equals to 'portsToTest' - start new test. Otherwise - return tested values
+		if ret != nil && func_isPortsEquals(portsToTest, ret.tested) {
+			return ret.result, ret.resultErr
+		}
+	}
+	// This may happen when too much requests with different arguments received.
+	return []types.PortInfo{}, fmt.Errorf("too much iterations (too much call requests?)")
+}
+
+func (s *Service) doDetectAccessiblePorts(portsToTest []types.PortInfo) ([]types.PortInfo, error) {
 	// TODO: use real IP address of echo-server
 	const remoteEchoServerIP = ""
 
@@ -106,7 +187,7 @@ func (s *Service) DetectAccessiblePorts(portsToTest []types.PortInfo) ([]types.P
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(allPorts))
-	for k, _ := range allPorts {
+	for k := range allPorts {
 
 		limitChan <- struct{}{}
 
