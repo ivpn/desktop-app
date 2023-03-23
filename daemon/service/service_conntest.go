@@ -32,9 +32,9 @@ import (
 )
 
 type connTest struct {
-	locker sync.Mutex
-	done   chan struct{} // if not nil - test is running
-	result *connTestResult
+	locker       sync.Mutex
+	lockerResult sync.Mutex
+	result       *connTestResult
 }
 
 type connTestResult struct {
@@ -47,74 +47,46 @@ type connTestResult struct {
 func (s *Service) DetectAccessiblePorts(portsToTest []types.PortInfo) ([]types.PortInfo, error) {
 	ct := &s._connectionTest
 
-	// Limiting to run 'doDetectAccessiblePorts()':
-	// do not allow to run multiple calls of function in parallel
+	ct.lockerResult.Lock()
+	// If 'ct.result' not null - it means the previous test still running.
+	// The 'ct.result.tested' contains the info about ports currently in test
+	runningTest := ct.result
+	ct.lockerResult.Unlock()
 
-	func_tryStartTest := func() (waitChan chan struct{}) {
+	{
+		// Limiting to run 'doDetectAccessiblePorts()':
+		// do not allow to run multiple calls of function in parallel
 		ct.locker.Lock()
 		defer ct.locker.Unlock()
 
-		if ct.done != nil {
-			// test is already in progress
-			return ct.done
-		} else if ct.done == nil {
-			// new test start
-			ct.done = make(chan struct{})
-			ct.result = nil
-
-			go func() {
-				defer func() {
-					ct.locker.Lock()
-					defer ct.locker.Unlock()
-
-					close(ct.done)
-					ct.done = nil
-				}()
-				ports, err := s.doDetectAccessiblePorts(portsToTest)
-				ct.result = &connTestResult{tested: portsToTest, result: ports, resultErr: err}
-			}()
-		}
-		return ct.done
-	}
-
-	// function to test unordered slices equality
-	func_isPortsEquals := func(a []types.PortInfo, b []types.PortInfo) bool {
-		if len(a) != len(b) {
-			return false
-		}
-		hashedA := make(map[types.PortInfo]struct{})
-		for _, p := range a {
-			hashedA[p] = struct{}{}
-		}
-		for _, p := range b {
-			if _, ok := hashedA[p]; !ok {
-				return false
+		// If there were previously running test - check if the tested ports are the same as we need;
+		// if so - do not perform new round of test and take this results.
+		if runningTest != nil {
+			if isPortsEquals(portsToTest, runningTest.tested) {
+				return runningTest.result, runningTest.resultErr
 			}
 		}
-		return true
+
+		// mark "the test is running"
+		ct.lockerResult.Lock()
+		ct.result = &connTestResult{tested: portsToTest}
+		ct.lockerResult.Unlock()
+
+		// test ports
+		r, err := s.doDetectAccessiblePorts(portsToTest)
+
+		// save results ('waiting' routines will access this info over 'runningTest')
+		ct.result.result, ct.result.resultErr = r, err
+		// mark: "no tests currently running"
+		ct.result = nil
+
+		return r, err
 	}
-
-	var ret *connTestResult
-	for i := 0; i < 10; i++ {
-		done := func_tryStartTest()
-		<-done // wait for test round finish
-
-		ct.locker.Lock()
-		ret = ct.result // get last test round result
-		ct.locker.Unlock()
-
-		// if tested ports not equals to 'portsToTest' - start new test. Otherwise - return tested values
-		if ret != nil && func_isPortsEquals(portsToTest, ret.tested) {
-			return ret.result, ret.resultErr
-		}
-	}
-	// This may happen when too much requests with different arguments received.
-	return []types.PortInfo{}, fmt.Errorf("too much iterations (too much call requests?)")
 }
 
 func (s *Service) doDetectAccessiblePorts(portsToTest []types.PortInfo) ([]types.PortInfo, error) {
 	// TODO: use real IP address of echo-server
-	const remoteEchoServerIP = ""
+	const remoteEchoServerIP = "127.0.0.1"
 
 	if len(remoteEchoServerIP) == 0 {
 		return []types.PortInfo{}, nil
@@ -212,4 +184,21 @@ func (s *Service) doDetectAccessiblePorts(portsToTest []types.PortInfo) ([]types
 
 	log.Info(fmt.Sprintf("Testing accessible ports done: %d of %d is OK", len(accessiblePorts), len(allPorts)))
 	return accessiblePorts, nil
+}
+
+// Function to test unordered slices of 'types.PortInfo' on equality
+func isPortsEquals(a []types.PortInfo, b []types.PortInfo) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	hashedA := make(map[types.PortInfo]struct{})
+	for _, p := range a {
+		hashedA[p] = struct{}{}
+	}
+	for _, p := range b {
+		if _, ok := hashedA[p]; !ok {
+			return false
+		}
+	}
+	return true
 }
