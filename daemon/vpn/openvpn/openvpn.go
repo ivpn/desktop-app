@@ -131,7 +131,8 @@ type OpenVPN struct {
 	// Note: Disconnect() function will wait until VPN fully disconnects
 	runningWG sync.WaitGroup
 
-	isPaused bool
+	isPaused    bool
+	pauseLocker sync.Mutex
 }
 
 // NewOpenVpnObject creates new OpenVPN structure
@@ -473,6 +474,9 @@ func (o *OpenVPN) doDisconnect() error {
 
 // Pause doing required operation for Pause (temporary restoring default DNS)
 func (o *OpenVPN) Pause() error {
+	o.pauseLocker.Lock()
+	defer o.pauseLocker.Unlock()
+
 	o.isPaused = true
 
 	mi := o.managementInterface
@@ -517,9 +521,18 @@ func (o *OpenVPN) Pause() error {
 }
 
 // Resume doing required operation for Resume (restores DNS configuration before Pause)
-func (o *OpenVPN) Resume() error {
+func (o *OpenVPN) Resume() (retErr error) {
+	o.pauseLocker.Lock()
+	defer o.pauseLocker.Unlock()
+
 	defer func() {
 		o.isPaused = false
+
+		// OS-specific operation (if required)
+		retErr = o.implOnResume()
+		if retErr != nil {
+			log.ErrorTrace(retErr)
+		}
 	}()
 
 	mi := o.managementInterface
@@ -532,30 +545,27 @@ func (o *OpenVPN) Resume() error {
 		return errors.New("OpenVPN: no route-add commands detected")
 	}
 
-	var retErr error
-	for _, cmd := range routeAddCommands {
-		cmdCols := strings.SplitN(cmd, " ", 2)
-		if len(cmdCols) != 2 {
-			retErr = errors.New("failed to parse route-change command: " + cmd)
-			log.Error(retErr.Error())
-			continue
+	if len(routeAddCommands) == 0 {
+		log.Warning("No route commands defined for resuming")
+	} else {
+		for _, cmd := range routeAddCommands {
+			cmdCols := strings.SplitN(cmd, " ", 2)
+			if len(cmdCols) != 2 {
+				log.Error(errors.New("failed to parse route-change command: " + cmd).Error())
+				continue
+			}
+
+			arguments := strings.Split(cmdCols[1], " ")
+
+			// skip running resume commands if disconnection requested OR routing commands were erased (e.g. due to reconnecting)
+			if o.isDisconnectRequested || !mi.HasRouteAddCommands() {
+				break
+			}
+
+			if err := shell.Exec(log, cmdCols[0], arguments...); err != nil {
+				log.Error(err)
+			}
 		}
-
-		arguments := strings.Split(cmdCols[1], " ")
-		if err := shell.Exec(log, cmdCols[0], arguments...); err != nil {
-			retErr = err
-			log.Error(err)
-		}
-	}
-
-	if retErr != nil {
-		return retErr
-	}
-
-	// OS-specific operation (if required)
-	retErr = o.implOnResume()
-	if retErr != nil {
-		log.ErrorTrace(retErr)
 	}
 
 	return retErr

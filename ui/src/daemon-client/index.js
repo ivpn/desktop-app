@@ -1415,8 +1415,6 @@ async function ApplyPauseConnection() {
 
 async function ResumeConnection() {
   store.dispatch("uiState/pauseConnectionTill", null);
-
-  if (store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
   if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) return;
 
   store.dispatch("vpnState/pauseState", PauseStateEnum.Resuming);
