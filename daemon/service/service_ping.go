@@ -107,6 +107,10 @@ func (s *Service) PingServers(firstPhaseTimeoutMs int, vpnTypePrioritized vpn.Ty
 		return nil, fmt.Errorf("servers pinging skipped: ping already in progress, please try again after some delay")
 	}
 
+	s._ping._results_mutex.Lock()
+	isNoDataSaved := len(s._ping._result) == 0 // true when there is no latency result saved yet (very first ping request)
+	s._ping._results_mutex.Unlock()
+
 	// Get hosts to ping in prioritized order
 	hostsToPing, err := s.ping_getHosts(vpnTypePrioritized, skipSecondPhase)
 	if err != nil {
@@ -158,8 +162,7 @@ func (s *Service) PingServers(firstPhaseTimeoutMs int, vpnTypePrioritized vpn.Ty
 	// 1)	Fast ping: ping one host for each nearest location
 	//		Doing it fast. 'MaxTimeoutMsFirstPhase'ms max for each server
 	firstPhaseDeadline := startTime.Add(time.Millisecond * time.Duration(firstPhaseTimeoutMs))
-	s.ping_iteration(hostsToPing, Ping_MaxHostTimeoutFirstPhase, result, &firstPhaseDeadline, onGeoLookupChan)
-	log.Info(fmt.Sprintf("Fast ping finished in (%v): %d of %d pinged", time.Since(startTime), len(result), len(hostsToPing)))
+	isInterrupted := s.ping_iteration(hostsToPing, Ping_MaxHostTimeoutFirstPhase, result, &firstPhaseDeadline, onGeoLookupChan)
 
 	if !skipSecondPhase && len(result) < len(hostsToPing) {
 		// The first ping result already received.
@@ -167,16 +170,18 @@ func (s *Service) PingServers(firstPhaseTimeoutMs int, vpnTypePrioritized vpn.Ty
 
 		// 2) Full ping: Pinging all hosts for all locations. There is no time limit for this operation. It runs in background.
 		go func() {
-			defer func(start time.Time) {
-				done <- struct{}{}
-
-				log.Info(fmt.Sprintf("Full ping finished in (%v): %d of %d pinged", time.Since(start), len(result), len(hostsToPing)))
-				s._evtReceiver.OnPingStatus(result)
-			}(startTime)
-
-			s.ping_iteration(hostsToPing, Ping_MaxHostTimeoutSecondPhase, result, nil, onGeoLookupChan)
+			isInterrupted := s.ping_iteration(hostsToPing, Ping_MaxHostTimeoutSecondPhase, result, nil, onGeoLookupChan)
+			if isNoDataSaved || !isInterrupted {
+				s.ping_resultNotify(result)
+			}
+			log.Info(fmt.Sprintf("Full ping finished in (%v): %d of %d pinged", time.Since(startTime), len(result), len(hostsToPing)))
+			done <- struct{}{}
 		}()
 	} else {
+		if isNoDataSaved || !isInterrupted {
+			s.ping_resultNotify(result)
+		}
+		log.Info(fmt.Sprintf("Fast ping finished in (%v): %d of %d pinged", time.Since(startTime), len(result), len(hostsToPing)))
 		done <- struct{}{}
 	}
 
@@ -287,7 +292,7 @@ func (s *Service) ping_sortHosts(hosts []pingHost, currentLocation *types.GeoLoo
 	})
 }
 
-func (s *Service) ping_iteration(hostsToPing []pingHost, hostTimeout time.Duration, pingedResult map[string]int, phaseDeadline *time.Time, onGeolookupChan <-chan *types.GeoLookupResponse) {
+func (s *Service) ping_iteration(hostsToPing []pingHost, hostTimeout time.Duration, pingedResult map[string]int, phaseDeadline *time.Time, onGeolookupChan <-chan *types.GeoLookupResponse) (isInterrupted bool) {
 	if len(hostsToPing) == 0 {
 		return
 	}
@@ -298,18 +303,18 @@ func (s *Service) ping_iteration(hostsToPing []pingHost, hostTimeout time.Durati
 
 	lastUpdateSentTime := time.Now()
 
-	iteration := 0
 	for {
-		iteration += 1
 		needRetry := false
 		for _, h := range hostsToPing {
 			if s._vpn != nil {
 				log.Info("Servers pinging stopped due to connected state")
+				isInterrupted = true
 				break
 			}
 
 			if phaseDeadline != nil && time.Now().Add(hostTimeout).After(*phaseDeadline) {
 				log.Info("Servers pinging stopped due max-timeout for this operation")
+				isInterrupted = true
 				break
 			}
 
@@ -382,9 +387,9 @@ func (s *Service) ping_iteration(hostsToPing []pingHost, hostTimeout time.Durati
 				}
 
 				resultMutex.RLock()
-				if phaseDeadline == nil && time.Now().After(lastUpdateSentTime.Add(time.Second*2)) && len(pingedResult) > 0 {
+				if phaseDeadline == nil && time.Now().After(lastUpdateSentTime.Add(time.Second*2)) {
 					// periodically notify ping results when pinging in background
-					s._evtReceiver.OnPingStatus(pingedResult)
+					s.ping_resultNotify(pingedResult)
 					lastUpdateSentTime = time.Now()
 				}
 				resultMutex.RUnlock()
@@ -395,7 +400,13 @@ func (s *Service) ping_iteration(hostsToPing []pingHost, hostTimeout time.Durati
 		}
 	}
 	wg.Wait()
-	s.ping_saveLastResults(pingedResult)
+	return isInterrupted
+}
+func (s *Service) ping_resultNotify(retMap map[string]int) {
+	if len(retMap) > 0 {
+		s.ping_saveLastResults(retMap)
+		s._evtReceiver.OnPingStatus(retMap)
+	}
 }
 
 func (s *Service) ping_saveLastResults(r map[string]int) {
