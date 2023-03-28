@@ -82,7 +82,7 @@ func findPinnedKey(certHashes []string, certBase64hash256 string) bool {
 
 type dialer func(network, addr string) (net.Conn, error)
 
-func makeDialer(certHashes []string, skipCAVerification bool, serverName string, dialTimeout time.Duration) dialer {
+func makeDialer(certHashes []string, serverName string, dialTimeout time.Duration) dialer {
 	if len(certHashes) == 0 {
 		log.Warning("No pinned certificates for ", _apiHost)
 		return nil
@@ -102,9 +102,8 @@ func makeDialer(certHashes []string, skipCAVerification bool, serverName string,
 			// NOTE: Can't use SSLv3 because of POODLE and BEAST
 			// NOTE: Can't use TLSv1.0 because of POODLE and BEAST using CBC cipher
 			// NOTE: Can't use TLSv1.1 because of RC4 cipher usage
-			MinVersion:         tls.VersionTLS12,
-			InsecureSkipVerify: skipCAVerification,
-			ServerName:         serverName, // only have sense when skipCAVerification == false
+			MinVersion: tls.VersionTLS12,
+			ServerName: serverName,
 		}
 
 		c, err := tls.DialWithDialer(&net.Dialer{Timeout: dialTimeout}, network, addr, tlsConfig)
@@ -199,7 +198,7 @@ func (a *API) doRequestUpdateHost(urlPath string, method string, contentType str
 		},
 
 		// using certificate key pinning
-		DialTLS: makeDialer(UpdateIvpnHashes, false, _updateHost, 0),
+		DialTLS: makeDialer(UpdateIvpnHashes, _updateHost, 0),
 	}
 
 	// configure http-client with preconfigured TLS transport
@@ -261,7 +260,7 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 		},
 
 		// using certificate key pinning
-		DialTLS: makeDialer(APIIvpnHashes, false, _apiHost, timeoutDial),
+		DialTLS: makeDialer(APIIvpnHashes, _apiHost, timeoutDial),
 	}
 
 	// configure http-client with preconfigured TLS transport
