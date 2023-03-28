@@ -1001,7 +1001,7 @@ Function AddPath
 	WriteRegExpandStr ${env_hklm} PATH "$0"
 
 	; make sure windows knows about the change
-	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=200
+	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=300
 	
 	end:
 FunctionEnd
@@ -1013,8 +1013,7 @@ Function un.RemovePath
 	; IMPORTANT! ReadRegStr returns empty string if variable size > 1024
 	; In this case, we just skipping PATH update
 	StrLen $1 $0
-	${If} $1 == 0	
-		MessageBox MB_OK "SKIPPED!" /SD IDOK
+	${If} $1 == 0		
 		Goto pathEnd
 	${EndIf}  
 	; remove all references to $INSTDIR
@@ -1024,7 +1023,7 @@ Function un.RemovePath
 	${If} $1 != $0
 		WriteRegExpandStr ${env_hklm} PATH "$1"
 		; make sure windows knows about the change
-		SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=200
+		SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=300
 	${EndIf}
 	pathEnd:
 FunctionEnd
