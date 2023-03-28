@@ -970,8 +970,8 @@ Function AddPath
 
 		${if} $2 > 0
 			; the real PATH is not empty. Skip updating the PATH to avoid breaking anything.			
-			MessageBox MB_OK|MB_ICONINFORMATION  "The PATH was not updated because the original length of characters exceeds the ${NSIS_MAX_STRLEN} character limit" /SD IDOK
-			DetailPrint "The PATH was not updated because the original length of characters exceeds the ${NSIS_MAX_STRLEN} character limit"
+			MessageBox MB_OK|MB_ICONINFORMATION  "The PATH was not updated because the original length of characters exceeds the ${NSIS_MAX_STRLEN} character limit.$\r$\n$\r$\nTo facilitate quick access to the 'ivpn' command in the terminal, you can manually incorporate '${PATHDIR}' into the PATH variable within the Windows environment." /SD IDOK
+			DetailPrint "The PATH was not updated because the original length of characters exceeds the ${NSIS_MAX_STRLEN} character limit.$\r$\n$\r$\nTo facilitate quick access to the 'ivpn' command in the terminal, you can manually incorporate '${PATHDIR}' into the PATH variable within the Windows environment."
 			Goto end
 		${EndIf}
 	${EndIf}  
@@ -991,8 +991,8 @@ Function AddPath
 	StrLen $3 "${PATHDIR};"
 	IntOp $2 $2 + $3	
 	${If} $2 > ${NSIS_MAX_STRLEN}
-		MessageBox MB_OK|MB_ICONINFORMATION "The PATH was not updated because the new length of $2 characters exceeds the ${NSIS_MAX_STRLEN} character limit." /SD IDOK
-		DetailPrint "The PATH was not updated because the new length of $2 characters exceeds the ${NSIS_MAX_STRLEN} character limit."
+		MessageBox MB_OK|MB_ICONINFORMATION "The PATH was not updated because the new length of $2 characters exceeds the ${NSIS_MAX_STRLEN} character limit.$\r$\n$\r$\nTo facilitate quick access to the 'ivpn' command in the terminal, you can manually incorporate '${PATHDIR}' into the PATH variable within the Windows environment." /SD IDOK
+		DetailPrint "The PATH was not updated because the new length of $2 characters exceeds the ${NSIS_MAX_STRLEN} character limit.$\r$\n$\r$\nTo facilitate quick access to the 'ivpn' command in the terminal, you can manually incorporate '${PATHDIR}' into the PATH variable within the Windows environment."
 		Goto end
 	${EndIf}
 	  
