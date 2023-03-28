@@ -287,25 +287,9 @@ Function fin_leave
 	ReadINIStr $0 "$PLUGINSDIR\iospecial.ini" "Field 6" "State"
 	StrCmp $0 "0" end
 
-	; UPDATING %PATH% VARIABLE
-	ReadRegStr $0 ${env_hklm} "PATH"
-
-	; check if PATH already updated
-	${StrContains} $1 "${PATHDIR}" $0
-	StrCmp $1 "${PATHDIR}" end ; do nothing
-
-	; remove last symbol ';' from %PATH% (if exists)
-	StrCpy $2 $0 "" -1
-	StrCmp $2 ";" 0 +2
-	StrCpy $0 $0 -1
-
-	; set variable for local machine
-	StrCpy $0 "$0;${PATHDIR}"
-	WriteRegExpandStr ${env_hklm} PATH "$0"
-
-	; make sure windows knows about the change
-	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=100
-
+	; update PATH
+	Call AddPath
+	
 	end:
 FunctionEnd
 ;===============================
@@ -629,25 +613,8 @@ Section "Uninstall"
   DeleteRegKey /ifempty HKLM "Software\${PRODUCT_IDENTIFIER}"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_IDENTIFIER}"
 
-  ; UPDATING %PATH% VARIABLE
-  ; read PATH variable value (current user)
-  ReadRegStr $0 ${env_hkcu} "PATH"
-  ; remove all references to $INSTDIR
-  ${StrRepl} $1 $0 "${PATHDIR};" ""
-  ${StrRepl} $1 $1 ";${PATHDIR}" ""
-  ${StrRepl} $1 $1 ${PATHDIR} ""
-
-  ; read PATH variable value (all users)
-  ReadRegStr $0 ${env_hklm} "PATH"
-  ; remove all references to $INSTDIR
-  ${StrRepl} $1 $0 "${PATHDIR};" ""
-  ${StrRepl} $1 $1 ";${PATHDIR}" ""
-  ${StrRepl} $1 $1 ${PATHDIR} ""
-  ${If} $1 != $0
-  	WriteRegExpandStr ${env_hklm} PATH "$1"
-  	; make sure windows knows about the change
-  	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=100
-  ${EndIf}
+  Call un.RemovePath
+  
 SectionEnd
 
 ; ----------------
@@ -969,4 +936,95 @@ Function CheckIsWin7DriverInstalled
 				Goto end
 			${EndIf}
 	end:
+FunctionEnd
+
+Function AddPath
+    ; UPDATING %PATH% VARIABLE
+    ReadRegStr $0 ${env_hklm} "PATH"
+
+	; IMPORTANT! ReadRegStr returns an empty string if the variable size > 1024 (${NSIS_MAX_STRLEN}).
+	; In this case, we double-check that PATH is not empty by using a system call to the 'RegQueryValueEx' function.
+	; If the variable is not null, we skip updating the PATH to avoid breaking anything.
+	StrLen $1 $0
+	${If} $1 == 0		; if received data is empty. Double-check it...		
+		StrCpy $1 ""
+		StrCpy $2 ""
+		StrCpy $3 ""
+		System::Call "advapi32::RegOpenKey(i 0x80000002, t'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', *i.r3) i.r1"
+		${If} $1 != 0
+			DetailPrint "The PATH was not updated: Failed to open registry key, error code: $1"
+			MessageBox MB_OK|MB_ICONINFORMATION "The PATH was not updated: Failed to open registry key, error code: $1" /SD IDOK
+			Goto end
+		${EndIf}
+		
+		; Note! The RegQueryValueEx may return lenght in bytes for Unicode string, but NSIS seems is operating by symbols length.
+		; So, here we just checking if path length > 0 ($2 > 0).
+		System::Call "advapi32::RegQueryValueEx(i $3, t'PATH', i 0, i 0, i 0, *i.r2) i.r1" ; 
+		System::Call "advapi32::RegCloseKey(i $3)"
+				
+		${If} $1 != 0
+			DetailPrint "The PATH was not updated: Failed to query registry value, error code: $1"
+			MessageBox MB_OK|MB_ICONINFORMATION "The PATH was not updated: Failed to query registry value, error code: $1" /SD IDOK
+			Goto end
+		${EndIf}
+
+		${if} $2 > 0
+			; the real PATH is not empty. Skip updating the PATH to avoid breaking anything.			
+			MessageBox MB_OK|MB_ICONINFORMATION  "The PATH was not updated because the original length of characters exceeds the ${NSIS_MAX_STRLEN} character limit" /SD IDOK
+			DetailPrint "The PATH was not updated because the original length of characters exceeds the ${NSIS_MAX_STRLEN} character limit"
+			Goto end
+		${EndIf}
+	${EndIf}  
+	
+	
+	; check if PATH already updated
+	${StrContains} $1 "${PATHDIR}" $0
+	StrCmp $1 "${PATHDIR}" end ; do nothing
+
+	; remove last symbol ';' from %PATH% (if exists)
+	StrCpy $2 $0 "" -1	; get last symbol
+	StrCmp $2 ";" 0 +2	; check: is it ';'; if yes - skip next command
+	StrCpy $0 $0 -1		; copy $0 except last symbol
+
+	; Prevent NSIS string overflow
+	StrLen $2 $0
+	StrLen $3 "${PATHDIR};"
+	IntOp $2 $2 + $3	
+	${If} $2 > ${NSIS_MAX_STRLEN}
+		MessageBox MB_OK|MB_ICONINFORMATION "The PATH was not updated because the new length of $2 characters exceeds the ${NSIS_MAX_STRLEN} character limit." /SD IDOK
+		DetailPrint "The PATH was not updated because the new length of $2 characters exceeds the ${NSIS_MAX_STRLEN} character limit."
+		Goto end
+	${EndIf}
+	  
+	; set variable for local machine
+	StrCpy $0 "$0;${PATHDIR};"
+	WriteRegExpandStr ${env_hklm} PATH "$0"
+
+	; make sure windows knows about the change
+	SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=200
+	
+	end:
+FunctionEnd
+
+Function un.RemovePath
+	; UPDATING %PATH% VARIABLE
+	; read PATH variable value (all users)
+	ReadRegStr $0 ${env_hklm} "PATH" ; 
+	; IMPORTANT! ReadRegStr returns empty string if variable size > 1024
+	; In this case, we just skipping PATH update
+	StrLen $1 $0
+	${If} $1 == 0	
+		MessageBox MB_OK "SKIPPED!" /SD IDOK
+		Goto pathEnd
+	${EndIf}  
+	; remove all references to $INSTDIR
+	${StrRepl} $1 $0 "${PATHDIR};" ""
+	${StrRepl} $1 $1 ";${PATHDIR}" ""
+	${StrRepl} $1 $1 ${PATHDIR} ""
+	${If} $1 != $0
+		WriteRegExpandStr ${env_hklm} PATH "$1"
+		; make sure windows knows about the change
+		SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=200
+	${EndIf}
+	pathEnd:
 FunctionEnd
