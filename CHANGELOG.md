@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.10.15 - 2023-03-29
+
+[FIX] (Windows) Prevent installer from inadvertently overwriting PATH environment variable in rare cases  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.10.15.exe)  
+SHA256: a146106203baf6d5122d06a563d30d85517d8ff8d792c3b0cd4136b115858f6e  
+
 ## Version 3.10.15 - 2023-02-28
 
 [FIX] (Linux) Fixed application shortcut registration issue on some distributions  
