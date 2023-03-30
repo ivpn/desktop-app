@@ -1,0 +1,1 @@
+# Original sources: https://github.com/sparrc/go-ping
