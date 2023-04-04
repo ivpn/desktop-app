@@ -85,8 +85,15 @@ func (s *Service) DetectAccessiblePorts(portsToTest []types.PortInfo) ([]types.P
 }
 
 func (s *Service) doDetectAccessiblePorts(portsToTest []types.PortInfo) ([]types.PortInfo, error) {
-	// TODO: use real IP address of echo-server
-	const remoteEchoServerIP = "127.0.0.1"
+	serversInfo, err := s.ServersList()
+	if err != nil {
+		return []types.PortInfo{}, err
+	}
+	if len(serversInfo.Config.Ports.Test) == 0 {
+		return []types.PortInfo{}, nil
+	}
+
+	remoteEchoServerIP := serversInfo.Config.Ports.Test[0].EchoServer // use first echo-server
 
 	if len(remoteEchoServerIP) == 0 {
 		return []types.PortInfo{}, nil

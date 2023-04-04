@@ -166,11 +166,16 @@ type ObfsPortInfo struct {
 	Port int `json:"port"`
 }
 
+type EchoServer struct {
+	EchoServer string `json:"echoserver"`
+}
+
 type PortsInfo struct {
 	OpenVPN   []PortInfo   `json:"openvpn"`
 	WireGuard []PortInfo   `json:"wireguard"`
 	Obfs3     ObfsPortInfo `json:"obfs3"`
 	Obfs4     ObfsPortInfo `json:"obfs4"`
+	Test      []EchoServer `json:"test"`
 }
 
 // ConfigInfo contains different configuration info (Antitracker, API ...)
