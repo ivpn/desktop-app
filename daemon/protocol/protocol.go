@@ -75,6 +75,7 @@ type Service interface {
 	PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, skipSecondPhase bool) (map[string]int, error)
 
 	APIRequest(apiAlias string, ipTypeRequired types.RequiredIPProtocol) (responseData []byte, err error)
+	DetectAccessiblePorts(portsToTest []api_types.PortInfo) (retPorts []api_types.PortInfo, err error)
 
 	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, fwUserExceptions string, err error)
 	SetKillSwitchState(bool) error
@@ -594,6 +595,19 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 		p.sendResponse(conn, &types.APIResponse{APIPath: req.APIPath, ResponseData: string(data)}, req.Idx)
+
+	case "CheckAccessiblePorts":
+		var req types.CheckAccessiblePorts
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		accessiblePorts, err := p._service.DetectAccessiblePorts(req.PortsToTest)
+		if err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		p.sendResponse(conn, &types.CheckAccessiblePortsResponse{Ports: accessiblePorts}, req.Idx)
 
 	case "WiFiAvailableNetworks":
 		networks := p._service.GetWiFiAvailableNetworks()

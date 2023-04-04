@@ -38,6 +38,7 @@ import {
   PauseStateEnum,
   DaemonConnectionType,
   DnsEncryption,
+  PortTypeEnum,
 } from "@/store/types";
 import store from "@/store";
 
@@ -64,6 +65,7 @@ const daemonRequests = Object.freeze({
 
   PingServers: "PingServers",
   GetServers: "GetServers",
+  CheckAccessiblePorts: "CheckAccessiblePorts",
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
   AccountStatus: "AccountStatus",
@@ -124,6 +126,7 @@ const daemonResponses = Object.freeze({
   DisconnectedResp: "DisconnectedResp",
   ServerListResp: "ServerListResp",
   PingServersResp: "PingServersResp",
+  CheckAccessiblePortsResponse: "CheckAccessiblePortsResponse",
   SetAlternateDNSResp: "SetAlternateDNSResp",
   DnsPredefinedConfigsResp: "DnsPredefinedConfigsResp",
   KillSwitchStatusResp: "KillSwitchStatusResp",
@@ -413,6 +416,12 @@ async function processResponse(response) {
         }
       }
 
+      // check accessible ports
+      {
+        if (!store.getters["account/isLoggedIn"]) {
+          CheckAccessiblePorts(); // request all accessible ports
+        }
+      }
       break;
 
     case daemonResponses.SettingsResp:
@@ -459,11 +468,17 @@ async function processResponse(response) {
       if (obj.VpnServers == null) break;
       store.dispatch(`vpnState/servers`, obj.VpnServers);
       break;
+
     case daemonResponses.PingServersResp: {
       if (obj.PingResults == null) break;
       store.dispatch(`vpnState/updatePings`, obj.PingResults);
       break;
     }
+
+    case daemonResponses.CheckAccessiblePortsResponse:
+      store.dispatch(`settings/notifyAccessiblePortsInfo`, obj.Ports);
+      break;
+
     case daemonResponses.SetAlternateDNSResp:
       if (obj.IsSuccess == null) break;
       if (obj.IsSuccess !== true) {
@@ -1232,6 +1247,26 @@ async function PingServers() {
   return ret;
 }
 
+async function CheckAccessiblePorts(portsToCheck) {
+  // if ports to ckeck is not defined - test only ports applicable for current selected protocol
+  if (!portsToCheck) {
+    let portsToCheckNormalised = store.getters["vpnState/connectionPorts"];
+    portsToCheck = [];
+    // we have to convert port objects to required format
+    for (let p of portsToCheckNormalised) {
+      portsToCheck.push({
+        port: p.port,
+        type: p.type == PortTypeEnum.UDP ? "UDP" : "TCP",
+      });
+    }
+  }
+
+  await sendRecv({
+    Command: daemonRequests.CheckAccessiblePorts,
+    PortsToTest: portsToCheck,
+  });
+}
+
 async function GetDiagnosticLogs() {
   let logs = await sendRecv({ Command: daemonRequests.GenerateDiagnostics });
 
@@ -1900,6 +1935,7 @@ export default {
 
   GeoLookup,
   PingServers,
+  CheckAccessiblePorts,
   ServersUpdateRequest,
   KillSwitchGetStatus,
 

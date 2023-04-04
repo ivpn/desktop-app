@@ -118,6 +118,9 @@ type Service struct {
 		_result                      map[string]int //[host]latency
 		_singleRequestLimitSemaphore *syncSemaphore.Weighted
 	}
+
+	// variables related to connection test (e.g. ports accessibility test)
+	_connectionTest connTest
 }
 
 // VpnSessionInfo - Additional information about current VPN connection
