@@ -75,26 +75,23 @@ type GetServers struct {
 	RequestServersUpdate bool
 }
 
-// PingServers request to ping servers
+// PingServers collects VPN hosts latencies.
 //
-// Pinging operation separated on few phases:
-//  1. Fast ping:  ping one host for each nearest location (locations only for specified VPN type when VpnTypePrioritization==true)
-//     Operation ends after 'TimeOutMs'. Then daemon sends response PingServersResp with all data were collected.
-//  2. Full ping: Pinging all hosts for all locations. There is no time limit for this operation. It runs in background.
-//     2.1) Ping all hosts only for specified VPN type (when VpnTypePrioritization==true) or for all VPN types (when VpnTypePrioritization==false)
-//     2.1.1) Ping one host for all locations (for prioritized VPN protocol)
-//     2.1.2) Ping the rest hosts for all locations (for prioritized VPN protocol)
-//     2.2) (when VpnTypePrioritization==true) Ping all hosts for the rest protocols
+// The pinging operation is separated into two phases:
 //
-// If PingAllHostsOnFirstPhase==true - daemon will ping all hosts for nearest locations on the phase (1)
-// If SkipSecondPhase==true - phase (2) will be skipped
+//	phase 1:	(synchronous)  Limited by timeout 'firstPhaseTimeoutMs'
+//	phase 2:	(asynchronous) No time limitation (if SkipSecondPhase==true - phase2 will be skipped)
+//
+// Hosts priority to ping (list from higher priority to lower):
+//   - Hosts for specific VPN type has the highest priority (if vpnTypePrioritized is not defined (-1) - this prioritization is ignored)
+//   - Host priority decreases according to its position in the server's host's list (the first host has the highest priority)
+//   - Nearest hosts to the current location have higher priority (if geo-location is known)
 type PingServers struct {
 	RequestBase
-	TimeOutMs                int
-	VpnTypePrioritized       vpn.Type // hosts for this VPN type will be pinged first (only if VpnTypePrioritization == true)
-	VpnTypePrioritization    bool
-	PingAllHostsOnFirstPhase bool
-	SkipSecondPhase          bool
+	TimeOutMs             int
+	VpnTypePrioritized    vpn.Type // hosts for this VPN type will be pinged first (only if VpnTypePrioritization == true)
+	VpnTypePrioritization bool
+	SkipSecondPhase       bool
 }
 
 // KillSwitchSetAllowLANMulticast enable\disable LAN multicast acces for kill-switch

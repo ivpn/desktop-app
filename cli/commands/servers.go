@@ -111,7 +111,7 @@ func (c *CmdServers) Run() error {
 				vpnType = &p
 			}
 		}
-		if err := serversPing(slist, true, c.hosts, vpnType); err != nil {
+		if err := serversPing(slist, true, vpnType); err != nil {
 			return err
 		}
 	}
@@ -328,9 +328,9 @@ func serversFilter(isWgDisabled bool, isOvpnDisabled bool, servers []serverDesc,
 	return ret
 }
 
-func serversPing(servers []serverDesc, needSort bool, pingAllHostsOnFirstPhase bool, vpnTypePrioritized *vpn.Type) error {
+func serversPing(servers []serverDesc, needSort bool, vpnTypePrioritized *vpn.Type) error {
 	fmt.Println("Pinging servers ...")
-	pingRes, err := _proto.PingServers(pingAllHostsOnFirstPhase, vpnTypePrioritized)
+	pingRes, err := _proto.PingServers(vpnTypePrioritized)
 	if err != nil {
 		return err
 	}

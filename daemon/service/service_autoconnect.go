@@ -509,7 +509,7 @@ func getServerCountryCode[S serverBaseInterface, H hostBaseInterface](service *S
 }
 
 func getFastestServer[S serverBaseInterface](service *Service, vpnTypePrioritized vpn.Type, servers []S, excludedGateways []string) (ret S, err error) {
-	hosts, err := service.PingServers(4000, vpnTypePrioritized, false, true)
+	hosts, err := service.PingServers(4000, vpnTypePrioritized, true)
 	if err != nil {
 		return ret, err
 	}
