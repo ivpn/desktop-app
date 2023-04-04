@@ -29,15 +29,30 @@
     <div class="param">
       <input type="checkbox" id="minimizeToTray" v-model="minimizeToTray" />
       <label class="defColor" for="minimizeToTray">Minimize to tray</label>
-    </div>
-    <div v-if="isLinux">
-      <div class="description">
-        By enabling this parameter, the application will stay in memory after
-        closing the window and it will be accessible only via the tray icon.
-        <b>Caution:</b> Not all Linux desktop environments support displaying
-        the application icon in the system tray.
+      <div v-if="isLinux">
+        <button
+          class="noBordersBtn flexRow"
+          title="Help"
+          v-on:click="this.$refs.helpMinimizeToTrayLinux.showModal()"
+        >
+          <img src="@/assets/question.svg" />
+        </button>
+        <ComponentDialog ref="helpMinimizeToTrayLinux" header="Info">
+          <div>
+            <p>
+              By enabling this parameter, the application will stay in memory
+              after closing the window and it will be accessible only via the
+              tray icon.
+            </p>
+            <p>
+              <b>Caution:</b> Not all Linux desktop environments support
+              displaying the application icon in the system tray.
+            </p>
+          </div>
+        </ComponentDialog>
       </div>
     </div>
+
     <div class="param">
       <input
         type="checkbox"
