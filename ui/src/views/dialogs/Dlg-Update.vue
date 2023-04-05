@@ -30,7 +30,7 @@
               <div v-if="!isHasUpgrade">
                 <div>
                   <div class="big_text">
-                    You already have the latest version installed!
+                    You are already using the latest IVPN version!
                   </div>
                   <div class="small_text">
                     <div v-if="versionDaemon == versionUI">
@@ -49,7 +49,7 @@
               <div v-else>
                 <div class="big_text">
                   <div v-if="versionLatestIsBeta">
-                    New Beta version available
+                    New IVPN beta version available
                   </div>
                   <div v-else>New IVPN version available</div>
                 </div>
