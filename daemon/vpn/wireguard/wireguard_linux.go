@@ -76,6 +76,10 @@ func (wg *WireGuard) init() error {
 	return nil
 }
 
+func (wg *WireGuard) getTunnelName() string {
+	return strings.TrimSuffix(filepath.Base(wg.configFilePath), filepath.Ext(wg.configFilePath))
+}
+
 // connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
@@ -132,8 +136,11 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 				}
 			}
 
-			// notify connected
-			wg.notifyConnectedStat(stateChan)
+			// wait handshake and notify connected
+			err := wg.waitHandshakeAndNotifyConnected(stateChan)
+			if err != nil {
+				return err
+			}
 
 			wgInterfaceName := filepath.Base(wg.configFilePath)
 			wgInterfaceName = strings.TrimSuffix(wgInterfaceName, path.Ext(wgInterfaceName))

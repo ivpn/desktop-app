@@ -268,6 +268,11 @@ func (o *OpenVPN) Connect(stateChan chan<- vpn.StateInfo) (retErr error) {
 						o.doDisconnect()
 						break
 					}
+
+					// The INITIALISED notification always required to be sent before CONNECTED
+					stateInitialised := stateInf // it has same properties as CONNECTED
+					stateInitialised.State = vpn.INITIALISED
+					stateChan <- stateInitialised
 				} else {
 					o.clientIP = nil
 				}
