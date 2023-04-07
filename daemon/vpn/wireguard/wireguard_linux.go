@@ -160,6 +160,9 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		}()
 
 		if err != nil {
+			if derr := wg.internalDisconnect(); derr != nil {
+				log.Error("manual disconnection failed (after connection error): " + derr.Error())
+			}
 			return err
 		}
 

@@ -18,6 +18,13 @@
 #   1) Manual connection of the required interfaces:
 #     $ sudo snap connect ivpn:network-control
 #     $ sudo snap connect ivpn:firewall-control
+#
+#     (Optional) Enable the ability to manage the '/etc/resolv.conf' file.
+#     This can be useful in situations where the host machine does not use 'systemd-resolved'.
+#     In this case, the daemon may attempt to directly modify this file.
+#     Note: This is not recommended!
+#       $ sudo snap connect ivpn:etc-resolv-conf-rw
+#
 #   2) Restart daemon:
 #     $ sudo snap restart ivpn.daemon
 # **********************************************
@@ -33,6 +40,9 @@
 #     $ sudo snap logs ivpn.daemon -f
 #   See logs:
 #     $ sudo snap logs -n=all ivpn.daemon
+#   Snap shell:
+#     snap run --shell ivpn.daemon
+#     Check connection under snap shell (example): snapctl is-connected etc-resolv-conf-rw
 # **********************************************
 # To release/deploy package to SnapStore (only for IVPN developers!):
 #   $ snapcraft upload --release=<risk_level> <snap_file>
@@ -129,6 +139,15 @@ plugs:
     default-provider: gtk-common-themes
     interface: content
     target: $SNAP/data-dir/icons
+
+  etc-resolv-conf-rw:
+    interface: system-files
+    read:
+      - /etc/resolv.conf
+      - /etc/resolv.conf.ivpnsave
+    write:
+      - /etc/resolv.conf
+      - /etc/resolv.conf.ivpnsave
 
 # ToDo: uncomment bellow lines if it is required to expose mutable folder (contains port.txt) to a slot (to be able to connect slot out from external snap)
 #       When using separate snapt for UI (ivpn-ui), it will be necessary to connect daemon port interface to the ivpn-ui snap package:
