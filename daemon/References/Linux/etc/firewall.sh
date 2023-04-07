@@ -245,10 +245,6 @@ function enable_firewall {
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_IF0}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF0}
 
-    # user-defined exceptions (must be processed before OUT_IVPN_DNS!)
-    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_USER_EXP}
-    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_STAT_USER_EXP}
-
     # block DNS by default
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
@@ -260,6 +256,8 @@ function enable_firewall {
 
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_STAT_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_STAT_USER_EXP}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_STAT_USER_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_ICMP_EXP}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_ICMP_EXP}
 
