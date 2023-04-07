@@ -33,6 +33,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/ivpn/desktop-app/daemon/helpers"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 var (
@@ -121,6 +122,17 @@ func rconf_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFo
 
 	_, err := createBackupIfNotExists()
 	if err != nil {
+		// Check if we are running in snap environment
+		if platform.GetSnapEnvs() != nil {
+			// Check if snap allowed to modify resolv.conf:
+			allowed, userErrMsgIfNotAllowed, snapCheckErr := platform.IsSnapAbleManageResolvconf()
+			if snapCheckErr != nil {
+				log.Error("IsSnapAbleManageResolvconf: ", snapCheckErr)
+			}
+			if !allowed && len(userErrMsgIfNotAllowed) > 0 {
+				return DnsSettings{}, fmt.Errorf("%w\n\n%s", err, userErrMsgIfNotAllowed)
+			}
+		}
 		return DnsSettings{}, err
 	}
 
