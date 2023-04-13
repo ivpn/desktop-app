@@ -29,9 +29,7 @@
               <!-- NOTHING TO UPDATE-->
               <div v-if="!isHasUpgrade">
                 <div>
-                  <div class="big_text">
-                    You are already using the latest IVPN version!
-                  </div>
+                  <div class="big_text">You have the newest IVPN version!</div>
                   <div class="small_text">
                     <div v-if="versionDaemon == versionUI">
                       v{{ versionDaemon }}
@@ -387,7 +385,10 @@ div.releaseNotes {
 }
 
 .big_text {
-  @extend .settingsBoldFont;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: -0.08px;
+  margin-top: 25px;
   margin: 20px;
   margin-bottom: 10px;
   font-size: 24px;
