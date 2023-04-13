@@ -31,7 +31,6 @@ import (
 	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/helpers"
-	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 var (
@@ -45,15 +44,6 @@ var (
 
 	// path to the readonly servers.json file bundled into the package
 	serversFileBundled string
-)
-
-const (
-	// Optionally, user can enable the ability to manage the '/etc/resolv.conf' file from SNAP environment.
-	// This can be useful in situations where the host machine does not use 'systemd-resolved'.
-	// In this case, the daemon may attempt to directly modify this file.
-	// Note: This is not recommended!
-	// Command for user to connect required slot:   $ sudo snap connect ivpn:etc-resolv-conf-rw
-	snapPlugNameResolvconfAccess string = "etc-resolv-conf-rw"
 )
 
 // SnapEnvInfo contains values of SNAP environment variables
@@ -93,37 +83,6 @@ func GetSnapEnvs() *SnapEnvInfo {
 		SNAP_COMMON: snapCommon,
 		SNAP_DATA:   snapData,
 	}
-}
-
-func IsSnapAbleManageResolvconf() (allowed bool, userErrMsgIfNotAllowed string, err error) {
-	allowed, err = isSnapPlugConnected(snapPlugNameResolvconfAccess)
-	if err != nil {
-		return allowed, "", err
-	}
-
-	if !allowed {
-		userErrMsgIfNotAllowed = fmt.Sprintf(
-			"It appears that you are running the IVPN snap package on a host system that does not utilize the 'systemd-resolved' DNS resolver, which is required.\n\n"+
-				"As a workaround, you can grant IVPN permission to modify '/etc/resolv.conf' directly by using the command:\n'$ sudo snap connect ivpn:%s'", snapPlugNameResolvconfAccess)
-	}
-	return allowed, userErrMsgIfNotAllowed, err
-}
-
-func isSnapPlugConnected(plugName string) (bool, error) {
-	_, outErrText, exitCode, isBufferTooSmall, err := shell.ExecAndGetOutput(nil, 512, "", "snapctl", "is-connected", "etc-resolv-conf-rw")
-	if exitCode == 0 {
-		return true, nil
-	}
-	if exitCode < 0 && err != nil {
-		return false, fmt.Errorf("error checking connected snap plug: %w", err)
-	}
-	if len(outErrText) > 0 {
-		if isBufferTooSmall {
-			outErrText += "..."
-		}
-		return false, fmt.Errorf(outErrText)
-	}
-	return false, nil
 }
 
 // initialize all constant values (e.g. servicePortFile) which can be used in external projects (IVPN CLI)

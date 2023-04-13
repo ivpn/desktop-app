@@ -28,16 +28,13 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-)
 
-type LogInterface interface {
-	Info(v ...interface{})
-	Error(v ...interface{})
-}
+	"github.com/ivpn/desktop-app/daemon/logger"
+)
 
 // Exec - execute external process
 // Synchronous operation. Waits until process finished
-func Exec(logger LogInterface, name string, args ...string) error {
+func Exec(logger *logger.Logger, name string, args ...string) error {
 	if logger != nil {
 		logger.Info("Shell exec: ", append([]string{name}, args...))
 	}
@@ -83,7 +80,7 @@ func GetCmdExitCode(err error) (retCode int, retErr error) {
 
 // ExecAndProcessOutput - execute external process
 // Synchronous operation. Waits until process finished
-func ExecAndProcessOutput(logger LogInterface, outProcessFunc func(text string, isError bool), textToHideInLog string, name string, args ...string) error {
+func ExecAndProcessOutput(logger *logger.Logger, outProcessFunc func(text string, isError bool), textToHideInLog string, name string, args ...string) error {
 	outChan := make(chan string, 1)
 	errChan := make(chan string, 1)
 	var wg sync.WaitGroup
@@ -129,7 +126,7 @@ func ExecAndProcessOutput(logger LogInterface, outProcessFunc func(text string, 
 }
 
 // ExecAndGetOutput - execute external process and return it's console output
-func ExecAndGetOutput(logger LogInterface, maxRetBuffSize int, textToHideInLog string, name string, args ...string) (outText string, outErrText string, exitCode int, isBufferTooSmall bool, err error) {
+func ExecAndGetOutput(logger *logger.Logger, maxRetBuffSize int, textToHideInLog string, name string, args ...string) (outText string, outErrText string, exitCode int, isBufferTooSmall bool, err error) {
 	strOut := strings.Builder{}
 	strErr := strings.Builder{}
 	isBufferTooSmall = false
@@ -166,7 +163,7 @@ func ExecAndGetOutput(logger LogInterface, maxRetBuffSize int, textToHideInLog s
 
 // ExecEx - execute external process
 // Synchronous operation. Waits until process finished
-func ExecEx(logger LogInterface, outChan chan<- string, errChan chan<- string, textToHideInLog string, name string, args ...string) error {
+func ExecEx(logger *logger.Logger, outChan chan<- string, errChan chan<- string, textToHideInLog string, name string, args ...string) error {
 	if logger != nil {
 		logtext := strings.Join(append([]string{name}, args...), " ")
 		if len(textToHideInLog) > 0 {
