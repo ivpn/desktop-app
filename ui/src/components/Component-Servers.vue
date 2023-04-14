@@ -195,10 +195,13 @@
             disabledButton: isInaccessibleServer(server) !== null,
           }"
         >
-          <div class="flexRow">
+          <div class="flexRow" style="position: relative; overflow: hidden">
             <serverNameControl
               class="serverName"
               style="max-width: 194px"
+              :SecondLineMaxWidth="
+                isFastestServerConfig === true ? '202px' : null
+              "
               :server="server"
               :isFavoriteServersView="isFavoritesView"
               :isCountryFirst="sortTypeStr === 'Country'"
