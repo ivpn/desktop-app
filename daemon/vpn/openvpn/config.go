@@ -162,8 +162,9 @@ func (c *ConnectionParams) generateConfiguration(
 
 	// To change default connection-check time:
 	// 	pull-filter ignore "ping"
-	//	keepalive 8 30
 	cfg = append(cfg, "keepalive 8 30")
+
+	cfg = append(cfg, "connect-retry 2 6")
 
 	// proxy
 	if c.proxyType == "http" || c.proxyType == "socks" {
