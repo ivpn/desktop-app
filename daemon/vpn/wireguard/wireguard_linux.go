@@ -48,26 +48,28 @@ const (
 )
 
 type operationRequest struct {
-	op       operation
-	opResult chan error
+	op          operation
+	result      error
+	resultReady chan struct{}
+	once        sync.Once
 }
 
-func newOperationRequest(op operation) operationRequest {
-	return operationRequest{
-		op:       op,
-		opResult: make(chan error, 1),
+func newOperationRequest(op operation) *operationRequest {
+	return &operationRequest{
+		op:          op,
+		resultReady: make(chan struct{}),
 	}
 }
-func (opr *operationRequest) resultSet(r error) (result, err error) {
-	select {
-	case opr.opResult <- r:
-	default:
-		return r, fmt.Errorf("internal error: operation result channel is full")
-	}
-	return r, nil
+func (opr *operationRequest) resultSet(r error) error {
+	opr.once.Do(func() {
+		opr.result = r
+		close(opr.resultReady)
+	})
+	return r
 }
 func (opr *operationRequest) resultWait() error {
-	return <-opr.opResult
+	<-opr.resultReady
+	return opr.result
 }
 
 // internalVariables of wireguard implementation for Linux
@@ -76,12 +78,15 @@ type internalVariables struct {
 	mutex                sync.Mutex
 	isRunning            atomic.Bool
 	isPaused             atomic.Bool
-	resumeDisconnectChan chan operationRequest // control connection pause\resume or disconnect from paused state
+	resumeDisconnectChan chan *operationRequest // control connection pause\resume or disconnect from paused state
+	lastOpRequest        *operationRequest
 }
 
 func (wg *WireGuard) init() error {
-	// just to be sure that any occasional operations before connect() will not crash the app (the channel will be recteated on connect())
-	wg.internals.resumeDisconnectChan = make(chan operationRequest, 1)
+	// channel to receive any requests regarding connection (pause, disconnect ...)
+	wg.internals.mutex.Lock()
+	wg.internals.resumeDisconnectChan = make(chan *operationRequest, 1)
+	wg.internals.mutex.Unlock()
 
 	// It can happen that ivpn-daemon was not correctly stopped during WireGuard connection
 	// (e.g. process was terminated)
@@ -108,12 +113,7 @@ func (wg *WireGuard) init() error {
 
 // connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
-
-	wg.internals.mutex.Lock()
-	// channel to receive any requests regarding connection (pause, disconnect ...)
-	wg.internals.resumeDisconnectChan = make(chan operationRequest, 1)
 	wg.internals.isRunning.Store(true)
-	wg.internals.mutex.Unlock()
 
 	defer func() {
 		wg.internals.mutex.Lock()
@@ -124,9 +124,9 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		select {
 		case opr := <-wg.internals.resumeDisconnectChan:
 			if opr.op == disconnect {
-				opr.opResult <- nil // already disconnected
+				opr.resultSet(nil) // already disconnected
 			} else {
-				opr.opResult <- fmt.Errorf("already disconnected")
+				opr.resultSet(fmt.Errorf("already disconnected"))
 			}
 		default:
 		}
@@ -137,6 +137,12 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		}
 	}()
 
+	internalRestoreDNSFunc := func() {
+		// restore DNS configuration
+		if err := dns.DeleteManual(nil, wg.connectParams.clientLocalIP); err != nil {
+			log.Warning(fmt.Sprintf("failed to restore DNS configuration: %s", err))
+		}
+	}
 	internalDisconnectFunc := func() error {
 		err := shell.Exec(log, wg.binaryPath, "down", wg.configFilePath)
 		if err != nil {
@@ -149,6 +155,8 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	// on 'pause' - we stopping WG interface but not exiting this (connect) method
 	// (method 'connect' is synchronous, must NOT exit on pause)
 	for {
+		isResumeRequested := false
+
 		// generate configuration
 		err := wg.generateAndSaveConfigFile(wg.configFilePath)
 		if err != nil {
@@ -169,10 +177,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		err = func() error {
 			// do not forget to restore DNS
 			defer func() {
-				// restore DNS configuration
-				if err := dns.DeleteManual(nil, wg.connectParams.clientLocalIP); err != nil {
-					log.Warning(fmt.Sprintf("failed to restore DNS configuration: %s", err))
-				}
+				internalRestoreDNSFunc()
 			}()
 
 			// update DNS configuration
@@ -192,24 +197,70 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 			wgInterfaceName := filepath.Base(wg.configFilePath)
 			wgInterfaceName = strings.TrimSuffix(wgInterfaceName, path.Ext(wgInterfaceName))
+
 			// wait until wireguard interface is available
-			interfaceExists := true
-			for interfaceExists {
-				select {
-				case <-time.After(time.Millisecond * 200):
-					i, err := net.InterfaceByName(wgInterfaceName)
-					if i == nil {
-						if err != nil {
-							fmt.Println(err)
+			func() {
+				for {
+					select {
+					case <-time.After(time.Millisecond * 200):
+						i, err := net.InterfaceByName(wgInterfaceName)
+						if i == nil {
+							if err != nil {
+								fmt.Println(err)
+							}
+							return // exit loop
 						}
-						interfaceExists = false
-					}
-				case opr := <-wg.internals.resumeDisconnectChan:
-					if opr.op == disconnect || opr.op == pause {
-						opr.resultSet(internalDisconnectFunc())
+					case opr := <-wg.internals.resumeDisconnectChan:
+						{
+							if opr == nil {
+								break
+							}
+
+							switch opr.op {
+							case resume:
+								opr.resultSet(nil) // resumed already
+							case disconnect:
+								if opr.resultSet(internalDisconnectFunc()) == nil {
+									return
+								}
+							case pause:
+								if opr.resultSet(internalDisconnectFunc()) != nil {
+									break // pause failed
+								}
+								internalRestoreDNSFunc() // restore DNS configuration
+
+								func() { // ============= PAUSE start =============
+									wg.internals.isPaused.Store(true)
+									defer wg.internals.isPaused.Store(false)
+
+									log.Info("Paused")
+									// wait for resume/disconnect request
+									for {
+										oprResume := <-wg.internals.resumeDisconnectChan
+										if oprResume == nil {
+											continue
+										}
+
+										switch oprResume.op {
+										case pause:
+											oprResume.resultSet(nil) // paused already
+										case resume, disconnect:
+											oprResume.resultSet(nil)
+											isResumeRequested = oprResume.op == resume
+											return
+										default:
+											oprResume.resultSet(fmt.Errorf("unexpected request (paused state): %v", oprResume.op))
+										}
+									}
+								}()
+								return // ============= PAUSE end =============
+							default:
+								opr.resultSet(fmt.Errorf("unexpected request: %v", opr.op))
+							}
+						}
 					}
 				}
-			}
+			}()
 			return nil
 		}()
 
@@ -221,37 +272,47 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		}
 
 		// if connection not PAUSED - exit
-		if wg.isPaused() {
-			log.Info("Paused")
-			// wait for resume or disconnect request
-			opr := <-wg.internals.resumeDisconnectChan
-			if opr.op == disconnect {
-				opr.resultSet(internalDisconnectFunc())
-				break
-			}
-			opr.opResult <- nil
-			log.Info("Resuming...")
-		} else {
+		if !isResumeRequested {
 			break
 		}
+
+		log.Info("Resuming...")
+		wg.internals.isPaused.Store(false)
 	}
 	return nil
 }
 
 func (wg *WireGuard) doOperation(op operation) error {
-	wg.internals.mutex.Lock()
-	defer wg.internals.mutex.Unlock()
-
-	if !wg.isRunning() {
-		return fmt.Errorf("connection closed")
-	}
-
 	opr := newOperationRequest(op)
-	select {
-	case wg.internals.resumeDisconnectChan <- opr:
-	default:
-		log.Error(fmt.Sprintf("failed to send request '%v' to WG connection (channel is full)", op))
+
+	err := func() error {
+		wg.internals.mutex.Lock()
+		defer wg.internals.mutex.Unlock()
+
+		if wg.internals.resumeDisconnectChan == nil {
+			return fmt.Errorf("not ininialised")
+		}
+
+		if !wg.isRunning() {
+			return fmt.Errorf("connection not established or already closed")
+		}
+
+		select {
+		case wg.internals.resumeDisconnectChan <- opr:
+			wg.internals.lastOpRequest = opr
+		default:
+			if opr.op != wg.internals.lastOpRequest.op {
+				return fmt.Errorf("failed to send request '%v' to WG connection (channel is full)", op)
+			}
+			opr = wg.internals.lastOpRequest
+		}
+		return nil
+	}()
+
+	if err != nil {
+		return err
 	}
+
 	return opr.resultWait()
 }
 
@@ -268,23 +329,10 @@ func (wg *WireGuard) isRunning() bool {
 }
 
 func (wg *WireGuard) pause() error {
-	if !wg.isRunning() || wg.isPaused() {
-		return nil
-	}
-
-	wg.internals.isPaused.Store(true)
-	err := wg.doOperation(disconnect)
-	if err != nil {
-		wg.internals.isPaused.Store(false)
-	}
-	return err
+	return wg.doOperation(pause)
 }
 
 func (wg *WireGuard) resume() error {
-	if !wg.isPaused() || !wg.isRunning() {
-		return nil
-	}
-	wg.internals.isPaused.Store(false)
 	return wg.doOperation(resume)
 }
 
