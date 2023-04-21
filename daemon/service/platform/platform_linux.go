@@ -52,8 +52,8 @@ const (
 	// This can be useful in situations where the host machine does not use 'systemd-resolved'.
 	// In this case, the daemon may attempt to directly modify this file.
 	// Note: This is not recommended!
-	// Command for user to connect required slot:   $ sudo snap connect ivpn:etc-resolv-conf-rw
-	snapPlugNameResolvconfAccess string = "etc-resolv-conf-rw"
+	// Command for user to connect required slot:   $ sudo snap connect ivpn:etc-resolv-conf
+	snapPlugNameResolvconfAccess string = "etc-resolv-conf"
 )
 
 // SnapEnvInfo contains values of SNAP environment variables
@@ -110,7 +110,7 @@ func IsSnapAbleManageResolvconf() (allowed bool, userErrMsgIfNotAllowed string, 
 }
 
 func isSnapPlugConnected(plugName string) (bool, error) {
-	_, outErrText, exitCode, isBufferTooSmall, err := shell.ExecAndGetOutput(nil, 512, "", "snapctl", "is-connected", "etc-resolv-conf-rw")
+	_, outErrText, exitCode, isBufferTooSmall, err := shell.ExecAndGetOutput(nil, 512, "", "snapctl", "is-connected", plugName)
 	if exitCode == 0 {
 		return true, nil
 	}
