@@ -23,7 +23,7 @@
 #     This can be useful in situations where the host machine does not use 'systemd-resolved'.
 #     In this case, the daemon may attempt to directly modify this file.
 #     Note: This is not recommended!
-#       $ sudo snap connect ivpn:etc-resolv-conf-rw
+#       $ sudo snap connect ivpn:etc-resolv-conf
 #
 #   2) Restart daemon:
 #     $ sudo snap restart ivpn.daemon
@@ -42,7 +42,7 @@
 #     $ sudo snap logs -n=all ivpn.daemon
 #   Snap shell:
 #     snap run --shell ivpn.daemon
-#     Check connection under snap shell (example): snapctl is-connected etc-resolv-conf-rw
+#     Check connection under snap shell (example): snapctl is-connected etc-resolv-conf
 # **********************************************
 # To release/deploy package to SnapStore (only for IVPN developers!):
 #   $ snapcraft upload --release=<risk_level> <snap_file>
@@ -140,11 +140,8 @@ plugs:
     interface: content
     target: $SNAP/data-dir/icons
 
-  etc-resolv-conf-rw:
+  etc-resolv-conf:
     interface: system-files
-    read:
-      - /etc/resolv.conf
-      - /etc/resolv.conf.ivpnsave
     write:
       - /etc/resolv.conf
       - /etc/resolv.conf.ivpnsave
