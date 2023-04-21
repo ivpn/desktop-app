@@ -1337,9 +1337,13 @@ async function Connect() {
           console.error(e);
         }
 
+        // fastestServer returns: the server with the lowest latency
+        // (looking for the active servers that have latency info)
+        // If there is no latency info for any server:
+        // - return the nearest server (if geolocation info is known)
+        // - else: return the currently selected server (if applicable)
+        // - else: return the first server in the list (as a fallback)
         fastest = store.getters["vpnState/fastestServer"];
-        // if fastest ping == null - it means no any ping info available (e.g. communication blocked by firewall or no internet connectivity)
-        // Anyway, we have to use the server calculated by 'vpnState/fastestServer' as fastest
       }
       if (fastest != null) store.dispatch("settings/serverEntry", fastest);
     } else if (store.getters["settings/isRandomServer"]) {

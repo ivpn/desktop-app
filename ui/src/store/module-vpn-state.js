@@ -286,6 +286,13 @@ export default {
     isAntitrackerHardcoreEnabled: (state) => {
       return isAntitrackerHardcoreActive(state);
     },
+
+    // fastestServer returns: the server with the lowest latency
+    // (looking for the active servers that have latency info)
+    // If there is no latency info for any server:
+    // - return the nearest server (if geolocation info is known)
+    // - else: return the currently selected server (if applicable)
+    // - else: return the first server in the list (as a fallback)
     fastestServer(state, getters, rootState) {
       let servers = getActiveServers(state, rootState);
       if (servers == null || servers.length <= 0) return null;
@@ -302,6 +309,10 @@ export default {
         return gatewayName.split(".")[0];
       };
 
+      let selectedGwId = rootState.settings.serverEntry
+        ? getGatewayId(rootState.settings.serverEntry.gateway)
+        : null;
+
       const funcGetPing = getters["funcGetPing"];
       for (let i = 0; i < servers.length; i++) {
         let curSvr = servers[i];
@@ -311,7 +322,8 @@ export default {
         const curGwID = getGatewayId(curSvr.gateway);
         if (skipSvrs.find((ss) => curGwID == getGatewayId(ss))) continue;
 
-        if (!fallbackSvr) fallbackSvr = curSvr;
+        if (!fallbackSvr && selectedGwId === curGwID) fallbackSvr = curSvr;
+
         const svrPing = funcGetPing(curSvr);
         if (
           svrPing &&
@@ -322,6 +334,7 @@ export default {
           retSvrPing = svrPing;
         }
       }
+      if (!fallbackSvr) fallbackSvr = servers[0];
 
       if (!retSvr) {
         // No fastest server detected (due to no ping info available)
