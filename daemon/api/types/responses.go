@@ -62,9 +62,10 @@ type SessionNewResponse struct {
 	ServiceStatus ServiceStatusAPIResp `json:"service_status"`
 
 	WireGuard struct {
-		Status    int    `json:"status"`
-		Message   string `json:"message,omitempty"`
-		IPAddress string `json:"ip_address,omitempty"`
+		Status               int    `json:"status"`
+		Message              string `json:"message,omitempty"`
+		IPAddress            string `json:"ip_address,omitempty"`
+		PostQuantumKemCipher string `json:"pq_cipher_text,omitempty"`
 	} `json:"wireguard"`
 }
 
@@ -77,7 +78,8 @@ type SessionNewErrorLimitResponse struct {
 // SessionsWireGuardResponse Sessions WireGuard response
 type SessionsWireGuardResponse struct {
 	APIErrorResponse
-	IPAddress string `json:"ip_address,omitempty"`
+	IPAddress            string `json:"ip_address,omitempty"`
+	PostQuantumKemCipher string `json:"pq_cipher_text,omitempty"`
 }
 
 // SessionStatusResponse session status response

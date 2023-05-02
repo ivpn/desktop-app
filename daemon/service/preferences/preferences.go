@@ -123,7 +123,8 @@ func (p *Preferences) SetSession(accountInfo AccountStatus,
 	vpnPass string,
 	wgPublicKey string,
 	wgPrivateKey string,
-	wgLocalIP string) {
+	wgLocalIP string,
+	wgPreSharedKey string) {
 
 	if len(session) == 0 || len(accountID) == 0 {
 		p.Account = AccountStatus{}
@@ -131,7 +132,7 @@ func (p *Preferences) SetSession(accountInfo AccountStatus,
 		p.Account = accountInfo
 	}
 
-	p.setSession(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP)
+	p.setSession(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP, wgPreSharedKey)
 	p.SavePreferences()
 }
 
@@ -144,8 +145,8 @@ func (p *Preferences) UpdateAccountInfo(acc AccountStatus) {
 }
 
 // UpdateWgCredentials save wireguard credentials
-func (p *Preferences) UpdateWgCredentials(wgPublicKey string, wgPrivateKey string, wgLocalIP string) {
-	p.Session.updateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP)
+func (p *Preferences) UpdateWgCredentials(wgPublicKey string, wgPrivateKey string, wgLocalIP string, wgPresharedKey string) {
+	p.Session.updateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP, wgPresharedKey)
 	p.SavePreferences()
 }
 
@@ -216,7 +217,8 @@ func (p *Preferences) setSession(accountID string,
 	vpnPass string,
 	wgPublicKey string,
 	wgPrivateKey string,
-	wgLocalIP string) {
+	wgLocalIP string,
+	wgPreSharedKey string) {
 
 	p.Session = SessionStatus{
 		AccountID:          strings.TrimSpace(accountID),
@@ -229,5 +231,5 @@ func (p *Preferences) setSession(accountID string,
 		p.Session.WGKeysRegenInerval = DefaultWGKeysInterval
 	}
 
-	p.Session.updateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP)
+	p.Session.updateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP, wgPreSharedKey)
 }

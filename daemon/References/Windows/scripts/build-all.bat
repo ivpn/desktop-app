@@ -11,6 +11,9 @@ set DATE=""
 
 set TIMESTAMP_SERVER=http://timestamp.digicert.com
 
+rem Update this line if using another version of VisualStudio or it is installed in another location
+set _VS_VARS_BAT="C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
+
 echo ==================================================
 echo ============ BUILDING IVPN Service ===============
 echo ==================================================
@@ -33,7 +36,20 @@ WHERE msbuild >nul 2>&1
 IF %ERRORLEVEL% NEQ 0 (
 	echo [!] 'msbuild' is not recognized as an internal or external command
 	echo [!] Ensure you are running this script from Developer Cammand Prompt for Visual Studio
-	goto :error
+
+	if not defined VSCMD_VER (
+        if "%VSCMD_ARG_TGT_ARCH%" NEQ "x64" (
+            echo [*] Initialising x64 VS build environment ...
+            if not exist %_VS_VARS_BAT% (
+                echo [!] File '%_VS_VARS_BAT%' not exists! 
+                echo [!] Please install Visual Studio or update file location in '%~f0'
+                goto :error
+            )
+            call %_VS_VARS_BAT% x64 || goto :error
+        )
+    ) else (
+		goto :error
+	)
 )
 
 if "%GITHUB_ACTIONS%" == "true" (
@@ -44,6 +60,7 @@ if "%GITHUB_ACTIONS%" == "true" (
 	call :build_obfs4proxy || goto :error
 	call :build_wireguard || goto :error
 	call :build_dnscrypt_proxy || goto :error
+	call :build_kem_helper || goto :error
 )
 
 call :update_servers_info || goto :error
@@ -164,6 +181,27 @@ goto :success
 
 	goto :eof
 
+:build_kem_helper
+	if exist "%SCRIPTDIR%..\kem-helper.exe" (
+		echo [ ] KEM helper already available. Compilation skipped.
+		goto :eof
+	)
+
+	echo ### KEM-helper binaries not found ###
+	call "%SCRIPTDIR%\build-kem-helper.bat" || goto error
+
+	if NOT "%CERT_SHA1%" == "" (
+		echo.
+		echo Signing 'kem-helper.exe' binary [certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%]
+		echo.
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\kem-helper.exe" || goto :eof
+		echo.
+		echo Signing SUCCES
+		echo.
+	)
+	
+	goto :eof
+
 :success
 	echo [*] Success.
 	go version
@@ -172,12 +210,12 @@ goto :success
 :error
 	set ERR=%errorlevel%
 	echo [!] IVPN Service build script FAILED with error #%errorlevel%.
-	echo [!] Removing files:
-	echo [ ] "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe"
-	echo [ ] "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe"
-	echo [ ] "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe"
-	del "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe"
-	del "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe"
-	del "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe"
+	rem echo [!] Removing files:
+	rem echo [ ] "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe"
+	rem echo [ ] "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe"
+	rem echo [ ] "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe"
+	rem del "%SCRIPTDIR%..\OpenVPN\obfsproxy\obfs4proxy.exe"
+	rem del "%SCRIPTDIR%..\WireGuard\x86_64\wg.exe"
+	rem del "%SCRIPTDIR%..\WireGuard\x86_64\wireguard.exe"
 
 	exit /b %ERR%

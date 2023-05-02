@@ -281,7 +281,7 @@ func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.Req
 }
 
 // SessionNew - try to register new session
-func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
+func (a *API) SessionNew(accountID string, wgPublicKey string, wgKemPubKey string, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
 	*types.SessionNewResponse,
 	*types.SessionNewErrorLimitResponse,
 	*types.APIErrorResponse,
@@ -295,12 +295,13 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool, 
 	rawResponse := ""
 
 	request := &types.SessionNewRequest{
-		AccountID:       accountID,
-		PublicKey:       wgPublicKey,
-		ForceLogin:      forceLogin,
-		CaptchaID:       captchaID,
-		Captcha:         captcha,
-		Confirmation2FA: confirmation2FA}
+		AccountID:               accountID,
+		PublicKey:               wgPublicKey,
+		PostQuantumKemPublicKey: wgKemPubKey,
+		ForceLogin:              forceLogin,
+		CaptchaID:               captchaID,
+		Captcha:                 captcha,
+		Confirmation2FA:         confirmation2FA}
 
 	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, 0, 0)
 	if err != nil {
@@ -379,28 +380,30 @@ func (a *API) SessionDelete(session string) error {
 }
 
 // WireGuardKeySet - update WG key
-func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePublicWgKey string) (localIP net.IP, err error) {
+func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePublicWgKey string, postQuantumKemPublicKey string) (localIP net.IP, postQuantumKemCipher string, err error) {
 	request := &types.SessionWireGuardKeySetRequest{
-		Session:            session,
-		PublicKey:          newPublicWgKey,
-		ConnectedPublicKey: activePublicWgKey}
+		Session:                 session,
+		PublicKey:               newPublicWgKey,
+		ConnectedPublicKey:      activePublicWgKey,
+		PostQuantumKemPublicKey: postQuantumKemPublicKey,
+	}
 
 	resp := &types.SessionsWireGuardResponse{}
 
 	if err := a.request("", _wgKeySetPath, "POST", "application/json", request, resp); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if resp.Status != types.CodeSuccess {
-		return nil, types.CreateAPIError(resp.Status, resp.Message)
+		return nil, "", types.CreateAPIError(resp.Status, resp.Message)
 	}
 
 	localIP = net.ParseIP(resp.IPAddress)
 	if localIP == nil {
-		return nil, fmt.Errorf("failed to set WG key (failed to parse local IP in API response)")
+		return nil, "", fmt.Errorf("failed to set WG key (failed to parse local IP in API response)")
 	}
 
-	return localIP, nil
+	return localIP, resp.PostQuantumKemCipher, nil
 }
 
 // GeoLookup gets geolocation

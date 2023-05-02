@@ -476,7 +476,7 @@ func (s *Service) connectWireGuard(connectionParams wireguard.ConnectionParams, 
 		if localip == nil {
 			return nil, fmt.Errorf("error updating WG connection preferences (failed parsing local IP for WG connection)")
 		}
-		connectionParams.SetCredentials(session.WGPrivateKey, localip)
+		connectionParams.SetCredentials(session.WGPrivateKey, session.WGPresharedKey, localip)
 
 		vpnObj, err := wireguard.NewWireGuardObject(
 			platform.WgBinaryPath(),

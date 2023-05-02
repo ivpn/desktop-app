@@ -24,9 +24,10 @@ package types
 
 // SessionNewRequest request to create new session
 type SessionNewRequest struct {
-	AccountID  string `json:"username"`
-	PublicKey  string `json:"wg_public_key"`
-	ForceLogin bool   `json:"force"`
+	AccountID               string `json:"username"`
+	PublicKey               string `json:"wg_public_key"`
+	PostQuantumKemPublicKey string `json:"pq_public_key,omitempty"` // in use for KEM: to exchange WG PresharedKey
+	ForceLogin              bool   `json:"force"`
 
 	CaptchaID       string `json:"captcha_id,omitempty"`
 	Captcha         string `json:"captcha,omitempty"`
@@ -45,7 +46,8 @@ type SessionStatusRequest struct {
 
 // SessionWireGuardKeySetRequest request to set new WK key for a session
 type SessionWireGuardKeySetRequest struct {
-	Session            string `json:"session_token"`
-	PublicKey          string `json:"public_key"`
-	ConnectedPublicKey string `json:"connected_public_key"`
+	Session                 string `json:"session_token"`
+	PublicKey               string `json:"public_key"`
+	ConnectedPublicKey      string `json:"connected_public_key"`
+	PostQuantumKemPublicKey string `json:"pq_public_key,omitempty"`
 }

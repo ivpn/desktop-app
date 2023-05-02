@@ -46,6 +46,7 @@ func init() {
 type ConnectionParams struct {
 	clientLocalIP        net.IP
 	clientPrivateKey     string
+	presharedKey         string
 	hostPort             int
 	hostIP               net.IP
 	hostPublicKey        string
@@ -69,8 +70,9 @@ func (cp *ConnectionParams) GetIPv6HostLocalIP() net.IP {
 }
 
 // SetCredentials update WG credentials
-func (cp *ConnectionParams) SetCredentials(privateKey string, localIP net.IP) {
+func (cp *ConnectionParams) SetCredentials(privateKey string, presharedKey string, localIP net.IP) {
 	cp.clientPrivateKey = privateKey
+	cp.presharedKey = presharedKey
 	cp.clientLocalIP = localIP
 }
 
@@ -223,9 +225,13 @@ func (wg *WireGuard) generateAndSaveConfigFile(cfgFilePath string) error {
 		return fmt.Errorf("failed to save WireGuard configuration into a file: %w", err)
 	}
 
+	configToLog := strings.ReplaceAll(configText, wg.connectParams.clientPrivateKey, "***")
+	if len(wg.connectParams.presharedKey) > 0 {
+		configToLog = strings.ReplaceAll(configToLog, wg.connectParams.presharedKey, "***")
+	}
 	log.Info("WireGuard  configuration:",
 		"\n=====================\n",
-		strings.ReplaceAll(configText, wg.connectParams.clientPrivateKey, "***"),
+		configToLog,
 		"\n=====================\n")
 
 	return nil
@@ -246,6 +252,9 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 	if !helpers.ValidateBase64(wg.connectParams.clientPrivateKey) {
 		return nil, fmt.Errorf("WG private key is not base64 string")
 	}
+	if len(wg.connectParams.presharedKey) > 0 && !helpers.ValidateBase64(wg.connectParams.presharedKey) {
+		return nil, fmt.Errorf("WG PresharedKey is not base64 string")
+	}
 
 	interfaceCfg := []string{
 		"[Interface]",
@@ -258,6 +267,9 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 		"Endpoint = " + wg.connectParams.hostIP.String() + ":" + strconv.Itoa(wg.connectParams.hostPort),
 		"PersistentKeepalive = 25"}
 
+	if len(wg.connectParams.presharedKey) > 0 {
+		peerCfg = append(peerCfg, "PresharedKey = "+wg.connectParams.presharedKey)
+	}
 	// add some OS-specific configurations (if necessary)
 	iCfg, pCgf := wg.getOSSpecificConfigParams()
 	interfaceCfg = append(interfaceCfg, iCfg...)

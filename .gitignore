@@ -5,3 +5,6 @@ daemon/References/Windows/dnscrypt-proxy/
 daemon/References/Windows/etc/dnscrypt-proxy/
 daemon/daemon
 daemon/daemon.exe
+daemon/References/Windows/Native Projects/IVPN KEM Helper/.*
+daemon/References/Windows/Native Projects/IVPN KEM Helper/x64/*
+daemon/References/Windows/kem-helper.exe
