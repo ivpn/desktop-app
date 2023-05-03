@@ -367,7 +367,7 @@ export default {
             let sortedSvrs = servers.slice().sort(compare);
             // get nearest server
             for (let i = 0; i < sortedSvrs.length; i++) {
-              let curSvr = servers[i];
+              let curSvr = sortedSvrs[i];
               if (skipSvrs != null && skipSvrs.includes(curSvr.gateway))
                 continue;
               retSvr = curSvr;
