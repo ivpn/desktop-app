@@ -91,8 +91,8 @@ char* read_data_from_stdin(const size_t initial_buffer, const size_t max_buff_si
 	return buffer;
 }
 
-void remove_newlines(char* str) {
-	char* r = str, * w = str;
+void remove_newlines(unsigned char* str) {
+	unsigned char* r = str, * w = str;
 	while (*r != '\0') {
 		if (*r != '\n' && *r != '\r') {
 			*w = *r;
@@ -169,7 +169,7 @@ int encode_preshared_key(FILE* const _out_stream, const char* kem_alg_name, cons
 	uint8_t* shared_secret = NULL;
 
 	size_t	 public_key_len = 0;
-	public_key = base64_decode(public_key_base64, strlen(public_key_base64), &public_key_len);
+	public_key = base64_decode((const unsigned char*) public_key_base64, strlen(public_key_base64), &public_key_len);
 	if (!public_key) {
 		fprintf(stderr, "ERROR: base64_decode() failed!\n");
 		return ERROR;
@@ -234,8 +234,8 @@ int decode_preshared_key(FILE* const _out_stream, const char* kem_alg_name, cons
 
 	size_t	 secret_key_len = 0;
 	size_t	 ciphertext_len = 0;
-	secret_key = base64_decode(secret_key_base64, strlen(secret_key_base64), &secret_key_len);
-	ciphertext = base64_decode(ciphertext_base64, strlen(ciphertext_base64), &ciphertext_len);
+	secret_key = base64_decode((const unsigned char*) secret_key_base64, strlen(secret_key_base64), &secret_key_len);
+	ciphertext = base64_decode((const unsigned char*) ciphertext_base64, strlen(ciphertext_base64), &ciphertext_len);
 	if (!secret_key || !ciphertext) {
 		OQS_MEM_secure_free(secret_key, secret_key_len);
 		OQS_MEM_secure_free(ciphertext, ciphertext_len);
@@ -366,8 +366,8 @@ int main(int argc, char* argv[]) {
 	char* input_adata	   = NULL;
 	size_t input_adata_len = 0;
 
-	const BUF_LEN_INIT = 1024 * 10;
-	const BUF_LEN_MAX  = 1024 * 1024 * 5;
+	const int BUF_LEN_INIT = 1024 * 10;
+	const int BUF_LEN_MAX  = 1024 * 1024 * 5;
 	if (strcmp(argv[1], "list_kems") == 0) {
 		return print_supported_kems(stdout);
 	}

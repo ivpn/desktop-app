@@ -100,12 +100,12 @@ call :compile_binary || goto :error
 :compile_binary
     if not exist %_OUT_FOLDER% (
         echo [*] Creating folder '%_OUT_FOLDER%' ...        
-        mkdir "%_OUT_FOLDER%" || goto :error
-        echo Sources '%_SCRIPTDIR%' > %_OUT_FOLDER%\readme.md
+        mkdir "%_OUT_FOLDER%" || goto :error        
     ) else (
         echo [*] Erasing '%_OUT_FOLDER%\*' ...
         del /Q %_OUT_FOLDER%\*
     )
+    echo Sources '%_SCRIPTDIR%' > %_OUT_FOLDER%\readme.md
 
     rem Change the current working directory to the location of the source files
     cd %_SCRIPTDIR%

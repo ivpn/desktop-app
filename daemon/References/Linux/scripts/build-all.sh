@@ -57,6 +57,18 @@ else
   echo "dnscrypt-proxy already compiled. Skipping build."
 fi
 
+# check if we need to compile kem-helper
+if [[ ! -f "../_deps/kem-helper/kem-helper-bin/kem-helper" ]]
+then
+  echo "======================================================"
+  echo "========== Compiling kem-helper ======================"
+  echo "======================================================"
+  cd $SCRIPT_DIR
+  ./build-kem-helper.sh
+else
+  echo "kem-helper already compiled. Skipping build."
+fi
+
 echo "======================================================"
 echo "============ Compiling IVPN service =================="
 echo "======================================================"
