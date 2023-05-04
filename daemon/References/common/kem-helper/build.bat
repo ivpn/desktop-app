@@ -78,8 +78,18 @@ call :compile_binary || goto :error
     rem -= Configure & Build =-
     echo [*] liboqs: Configuring ...
     mkdir build && cd build
-    rem "KEM_kyber_768;KEM_kyber_1024;"
-    cmake -GNinja .. -DOQS_MINIMAL_BUILD="KEM_kyber_1024;" -DOQS_BUILD_ONLY_LIB=ON -DCMAKE_INSTALL_PREFIX=%_LIBOQS_INSTALL_FOLDER% -DOQS_USE_OPENSSL=OFF || goto :error
+
+    rem -DOQS_MINIMAL_BUILD="KEM_kyber_768;KEM_kyber_1024;"    
+    cmake -GNinja .. ^
+        -DCMAKE_BUILD_TYPE=Release ^
+        -DCMAKE_INSTALL_PREFIX=%_LIBOQS_INSTALL_FOLDER% ^
+        -DOQS_BUILD_ONLY_LIB=ON ^
+        -DBUILD_SHARED_LIBS=OFF ^
+        -DOQS_USE_OPENSSL=OFF ^
+        -DOQS_DIST_BUILD=ON ^
+        -DOQS_USE_CPUFEATURE_INSTRUCTIONS=OFF ^
+		^	|| goto :error	
+
     echo [*] liboqs: Compiling ...
     ninja || goto :error
     echo [*] liboqs: Installing ...
@@ -101,7 +111,8 @@ call :compile_binary || goto :error
     cd %_SCRIPTDIR%
 
     echo [*] Compiling (%_SCRIPTDIR%)...
-    cl.exe main.c base64.c /nologo /DWIN32 /D_WINDOWS /W3 /MT /O2 /Ob2 /DNDEBUG  /I "%_LIBOQS_INSTALL_FOLDER%\include" /Fo"%_OUT_FOLDER%/" /link /LIBPATH:"%_LIBOQS_INSTALL_FOLDER%\lib" oqs.lib Advapi32.lib /OUT:"%_OUT_FILE%" || goto :error    
+    rem The 'Classic-McEliece' consuming a lot of stack, so we specifying stack size manually: "/STACK:5242880"
+    cl.exe main.c base64.c /nologo /DWIN32 /D_WINDOWS /W3 /MT /O2 /Ob2 /DNDEBUG  /I "%_LIBOQS_INSTALL_FOLDER%\include" /Fo"%_OUT_FOLDER%/" /link /STACK:5242880 /LIBPATH:"%_LIBOQS_INSTALL_FOLDER%\lib" oqs.lib Advapi32.lib /OUT:"%_OUT_FILE%" || goto :error    
     goto :success
 
 :success

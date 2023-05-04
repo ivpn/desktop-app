@@ -51,6 +51,14 @@ const (
 	_geoLookupPath         = _apiPathPrefix + "/geo-lookup"
 )
 
+type IKemHelper interface {
+	GetPublicKey_Kyber1024() string
+	GetPublicKey_ClassicMcEliece348864() string
+	SetCipher_Kyber1024(c string)
+	SetCipher_ClassicMcEliece348864(c string)
+	IsNil() bool
+}
+
 // Alias - alias description of API request (can be requested by UI client)
 type Alias struct {
 	host string
@@ -281,7 +289,7 @@ func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.Req
 }
 
 // SessionNew - try to register new session
-func (a *API) SessionNew(accountID string, wgPublicKey string, wgKemPubKey string, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
+func (a *API) SessionNew(accountID string, wgPublicKey string, kemHelper IKemHelper, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
 	*types.SessionNewResponse,
 	*types.SessionNewErrorLimitResponse,
 	*types.APIErrorResponse,
@@ -294,14 +302,24 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, wgKemPubKey strin
 
 	rawResponse := ""
 
+	kem_pk_Kyber1024 := ""
+	kem_pk_ClassicMcEliece348864 := ""
+	if kemHelper != nil && !kemHelper.IsNil() {
+		kem_pk_Kyber1024 = kemHelper.GetPublicKey_Kyber1024()
+		kem_pk_ClassicMcEliece348864 = kemHelper.GetPublicKey_ClassicMcEliece348864()
+	}
+
 	request := &types.SessionNewRequest{
-		AccountID:               accountID,
-		PublicKey:               wgPublicKey,
-		PostQuantumKemPublicKey: wgKemPubKey,
-		ForceLogin:              forceLogin,
-		CaptchaID:               captchaID,
-		Captcha:                 captcha,
-		Confirmation2FA:         confirmation2FA}
+		AccountID: accountID,
+		PublicKey: wgPublicKey,
+		KemPublicKeys: types.KemPublicKeys{
+			KemPublicKey_Kyber1024:             kem_pk_Kyber1024,
+			KemPublicKey_ClassicMcEliece348864: kem_pk_ClassicMcEliece348864,
+		},
+		ForceLogin:      forceLogin,
+		CaptchaID:       captchaID,
+		Captcha:         captcha,
+		Confirmation2FA: confirmation2FA}
 
 	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, 0, 0)
 	if err != nil {
@@ -320,6 +338,12 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, wgKemPubKey strin
 		if err := json.Unmarshal(data, &successResp); err != nil {
 			return nil, nil, nil, rawResponse, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
+
+		if kemHelper != nil && !kemHelper.IsNil() {
+			kemHelper.SetCipher_Kyber1024(successResp.WireGuard.KemCipher_Kyber1024)
+			kemHelper.SetCipher_ClassicMcEliece348864(successResp.WireGuard.KemCipher_ClassicMcEliece348864)
+		}
+
 		return &successResp, nil, &apiErr, rawResponse, nil
 	}
 
@@ -380,30 +404,46 @@ func (a *API) SessionDelete(session string) error {
 }
 
 // WireGuardKeySet - update WG key
-func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePublicWgKey string, postQuantumKemPublicKey string) (localIP net.IP, postQuantumKemCipher string, err error) {
+func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePublicWgKey string, kemHelper IKemHelper) (localIP net.IP, err error) {
+
+	kem_pk_Kyber1024 := ""
+	kem_pk_ClassicMcEliece348864 := ""
+	if kemHelper != nil && !kemHelper.IsNil() {
+		kem_pk_Kyber1024 = kemHelper.GetPublicKey_Kyber1024()
+		kem_pk_ClassicMcEliece348864 = kemHelper.GetPublicKey_ClassicMcEliece348864()
+	}
+
 	request := &types.SessionWireGuardKeySetRequest{
-		Session:                 session,
-		PublicKey:               newPublicWgKey,
-		ConnectedPublicKey:      activePublicWgKey,
-		PostQuantumKemPublicKey: postQuantumKemPublicKey,
+		Session:            session,
+		PublicKey:          newPublicWgKey,
+		ConnectedPublicKey: activePublicWgKey,
+		KemPublicKeys: types.KemPublicKeys{
+			KemPublicKey_Kyber1024:             kem_pk_Kyber1024,
+			KemPublicKey_ClassicMcEliece348864: kem_pk_ClassicMcEliece348864,
+		},
 	}
 
 	resp := &types.SessionsWireGuardResponse{}
 
 	if err := a.request("", _wgKeySetPath, "POST", "application/json", request, resp); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	if resp.Status != types.CodeSuccess {
-		return nil, "", types.CreateAPIError(resp.Status, resp.Message)
+		return nil, types.CreateAPIError(resp.Status, resp.Message)
 	}
 
 	localIP = net.ParseIP(resp.IPAddress)
 	if localIP == nil {
-		return nil, "", fmt.Errorf("failed to set WG key (failed to parse local IP in API response)")
+		return nil, fmt.Errorf("failed to set WG key (failed to parse local IP in API response)")
 	}
 
-	return localIP, resp.PostQuantumKemCipher, nil
+	if kemHelper != nil && !kemHelper.IsNil() {
+		kemHelper.SetCipher_Kyber1024(resp.KemCipher_Kyber1024)
+		kemHelper.SetCipher_ClassicMcEliece348864(resp.KemCipher_ClassicMcEliece348864)
+	}
+
+	return localIP, nil
 }
 
 // GeoLookup gets geolocation

@@ -258,20 +258,18 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 	}
 
 	// Generate keys for Key Encapsulation Mechanism using post-quantum cryptographic algorithms
-	pqKemPriv, pqKemPub, err := kem.GenerateKeys(platform.KemHelperBinaryPath(), "")
+	kemHelper, err := kem.CreateHelper(platform.KemHelperBinaryPath())
 	if err != nil {
-		pqKemPriv, pqKemPub = "", ""
 		log.Error("Failed to generate KEM keys: ", err)
 	}
 
 	var (
-		presharedKey string
-		localIP      net.IP
-		pqKemCipher  string
+		wgPresharedKey string
+		localIP        net.IP
 	)
 	for {
 		// trying to update WG keys with notifying API about current active public key (if it exists)
-		localIP, pqKemCipher, err = m.api.WireGuardKeySet(session, pub, activePublicKey, pqKemPub)
+		localIP, err = m.api.WireGuardKeySet(session, pub, activePublicKey, kemHelper)
 		if err != nil {
 			if len(activePublicKey) == 0 {
 				// IMPORTANT! As soon as server receive request with empty 'activePublicKey' - it clears all keys
@@ -290,14 +288,14 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 			return false, fmt.Errorf("WG keys not updated. Please check your internet connection")
 		}
 
-		if len(pqKemPub) > 0 {
-			if len(pqKemCipher) == 0 {
-				log.Warning("Server did not respond with KEM cipher. WireGuard PresharedKey not initialized!")
+		if kemHelper != nil {
+			if err = kemHelper.CheckCiphers(); err != nil {
+				log.Warning(fmt.Sprintf("Server did not respond with KEM ciphers (%v). WireGuard PresharedKey not initialized!", err))
 			} else {
-				presharedKey, err = kem.DecodeCipher(platform.KemHelperBinaryPath(), "", pqKemPriv, pqKemCipher)
+				wgPresharedKey, err = kemHelper.CalculatePresharedKey()
 				if err != nil {
-					log.Error("Failed to decode KEM cipher! Generating new WG keys without PresharedKey...")
-					pqKemPriv, pqKemPub = "", ""
+					log.Error("Failed to decode KEM ciphers! Generating new keys without PresharedKey...")
+					kemHelper = nil
 					continue
 				}
 			}
@@ -305,7 +303,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 		break
 	}
 	// notify service about new keys
-	m.service.WireGuardSaveNewKeys(pub, priv, localIP.String(), presharedKey)
+	m.service.WireGuardSaveNewKeys(pub, priv, localIP.String(), wgPresharedKey)
 
 	log.Info(fmt.Sprintf("WG keys updated (%s:%s) ", localIP.String(), pub))
 

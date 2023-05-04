@@ -49,6 +49,12 @@ type ServiceStatusAPIResp struct {
 	Limit          int      `json:"limit"` // applicable for 'session limit' error
 }
 
+// KemCiphers in use for KEM: to exchange WG PresharedKey
+type KemCiphers struct {
+	KemCipher_Kyber1024             string `json:"kem_cipher1,omitempty"` // (Kyber-1024) in use for KEM: to exchange WG PresharedKey
+	KemCipher_ClassicMcEliece348864 string `json:"kem_cipher2,omitempty"` // (Classic-McEliece-348864) in use for KEM: to exchange WG PresharedKey
+}
+
 // SessionNewResponse information about created session
 type SessionNewResponse struct {
 	APIErrorResponse
@@ -62,10 +68,10 @@ type SessionNewResponse struct {
 	ServiceStatus ServiceStatusAPIResp `json:"service_status"`
 
 	WireGuard struct {
-		Status               int    `json:"status"`
-		Message              string `json:"message,omitempty"`
-		IPAddress            string `json:"ip_address,omitempty"`
-		PostQuantumKemCipher string `json:"pq_cipher_text,omitempty"`
+		Status    int    `json:"status"`
+		Message   string `json:"message,omitempty"`
+		IPAddress string `json:"ip_address,omitempty"`
+		KemCiphers
 	} `json:"wireguard"`
 }
 
@@ -78,8 +84,8 @@ type SessionNewErrorLimitResponse struct {
 // SessionsWireGuardResponse Sessions WireGuard response
 type SessionsWireGuardResponse struct {
 	APIErrorResponse
-	IPAddress            string `json:"ip_address,omitempty"`
-	PostQuantumKemCipher string `json:"pq_cipher_text,omitempty"`
+	IPAddress string `json:"ip_address,omitempty"`
+	KemCiphers
 }
 
 // SessionStatusResponse session status response

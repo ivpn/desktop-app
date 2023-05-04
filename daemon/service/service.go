@@ -1048,9 +1048,8 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	}
 
 	// Generate keys for Key Encapsulation Mechanism using post-quantum cryptographic algorithms
-	pqKemPriv, pqKemPub, err := kem.GenerateKeys(platform.KemHelperBinaryPath(), "")
+	kemHelper, err := kem.CreateHelper(platform.KemHelperBinaryPath())
 	if err != nil {
-		pqKemPriv, pqKemPub = "", ""
 		log.Error("Failed to generate KEM keys: ", err)
 	}
 
@@ -1073,7 +1072,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	)
 
 	for {
-		successResp, errorLimitResp, apiErr, rawRespStr, err = s._api.SessionNew(accountID, publicKey, pqKemPub, forceLogin, captchaID, captcha, confirmation2FA)
+		successResp, errorLimitResp, apiErr, rawRespStr, err = s._api.SessionNew(accountID, publicKey, kemHelper, forceLogin, captchaID, captcha, confirmation2FA)
 		rawResponse = rawRespStr
 
 		apiCode = 0
@@ -1101,14 +1100,14 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 			return apiCode, "", accountInfo, rawResponse, fmt.Errorf("unexpected error when creating a new session")
 		}
 
-		if len(pqKemPub) > 0 {
-			if len(successResp.WireGuard.PostQuantumKemCipher) == 0 {
-				log.Warning("Server did not respond with KEM cipher. WireGuard PresharedKey not initialized!")
+		if kemHelper != nil {
+			if err = kemHelper.CheckCiphers(); err != nil {
+				log.Warning(fmt.Sprintf("Server did not respond with KEM ciphers (%v). WireGuard PresharedKey not initialized!", err))
 			} else {
-				wgPresharedKey, err = kem.DecodeCipher(platform.KemHelperBinaryPath(), "", pqKemPriv, successResp.WireGuard.PostQuantumKemCipher)
+				wgPresharedKey, err = kemHelper.CalculatePresharedKey()
 				if err != nil {
-					log.Error("Failed to decode KEM cipher! Generating new keys without PresharedKey...")
-					pqKemPriv, pqKemPub = "", ""
+					log.Error("Failed to decode KEM ciphers! Generating new keys without PresharedKey...")
+					kemHelper = nil
 					if err := s.SessionDelete(true); err != nil {
 						log.Error("Creating new session (retry 2) -> Failed to delete active session: ", err)
 					}
