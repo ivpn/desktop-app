@@ -79,8 +79,8 @@ call :compile_binary || goto :error
     echo [*] liboqs: Configuring ...
     mkdir build && cd build
 
-    rem -DOQS_MINIMAL_BUILD="KEM_kyber_768;KEM_kyber_1024;"    
     cmake -GNinja .. ^
+        -DOQS_MINIMAL_BUILD="KEM_kyber_1024;KEM_classic_mceliece_348864;" ^
         -DCMAKE_BUILD_TYPE=Release ^
         -DCMAKE_INSTALL_PREFIX=%_LIBOQS_INSTALL_FOLDER% ^
         -DOQS_BUILD_ONLY_LIB=ON ^
