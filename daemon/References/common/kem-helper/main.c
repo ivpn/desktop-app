@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include <oqs/oqs.h>
 
@@ -9,6 +10,17 @@
 
 #define SUCCESS 0
 #define ERROR	-1
+
+void fprintf_stderr(const char *format, ...) {
+    va_list args;
+    fputs("{\"error\":\"", stderr);
+
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+
+    fputs("\"}\n", stderr);
+}
 
 void* secure_realloc(void* ptr, size_t old_size, size_t new_size) {
 	if (new_size == 0) {
@@ -37,7 +49,7 @@ char* read_data_from_stdin(const size_t initial_buffer, const size_t max_buff_si
 	char* buffer = (char*)malloc(buffer_size + 1);  // Allocate an extra byte for the null terminator
 
 	if (buffer == NULL) {
-		fprintf(stderr, "Error: Memory allocation failed.\n");
+		fprintf_stderr("Memory allocation failed.");
 		return NULL;
 	}
 
@@ -51,7 +63,7 @@ char* read_data_from_stdin(const size_t initial_buffer, const size_t max_buff_si
 				break;
 			}
 			else if (ferror(stdin)) {
-				fprintf(stderr, "Error: Reading from stdin failed.\n");
+				fprintf_stderr("Reading from stdin failed.");
 				OQS_MEM_secure_free(buffer, buffer_size + 1);
 				return NULL;
 			}
@@ -63,7 +75,7 @@ char* read_data_from_stdin(const size_t initial_buffer, const size_t max_buff_si
 
 			if (max_buff_size) {
 				if (buffer_size_old >= max_buff_size) {
-					fprintf(stderr, "Error: Too much data (max buffer size=%zd).\n", max_buff_size);
+					fprintf_stderr("Too much data (max buffer size=%zd).", max_buff_size);
 					OQS_MEM_secure_free(buffer, buffer_size + 1);
 					return NULL;
 				}
@@ -75,7 +87,7 @@ char* read_data_from_stdin(const size_t initial_buffer, const size_t max_buff_si
 			buffer = (char*)secure_realloc(buffer, buffer_size_old, buffer_size + 1);  // Allocate an extra byte for the null terminator
 
 			if (buffer == NULL) {
-				fprintf(stderr, "Error: Memory allocation failed.\n");
+				fprintf_stderr("Memory allocation failed.");
 				return NULL;
 			}
 		}
@@ -120,21 +132,21 @@ int generate_keys(FILE* const _out_stream, const char* kem_alg_name) {
 
 	kem = OQS_KEM_new(kem_alg_name);
 	if (kem == NULL) {
-		fprintf(stderr, "%s was not enabled at compile-time.\n", kem_alg_name);
+		fprintf_stderr("%s was not enabled at compile-time.", kem_alg_name);
 		return ERROR;
 	}
 
 	public_key = malloc(kem->length_public_key);
 	secret_key = malloc(kem->length_secret_key);
 	if (!public_key || !secret_key) {
-		fprintf(stderr, "ERROR: malloc failed!\n");
+		fprintf_stderr("malloc failed!");
 		cleanup(secret_key, NULL, public_key, NULL, kem);
 		return ERROR;
 	}
 
 	OQS_STATUS rc = OQS_KEM_keypair(kem, public_key, secret_key);
 	if (rc != OQS_SUCCESS) {
-		fprintf(stderr, "ERROR: OQS_KEM_keypair failed!\n");
+		fprintf_stderr("OQS_KEM_keypair failed!");
 		cleanup(secret_key, NULL, public_key, NULL, kem);
 		return ERROR;
 	}
@@ -144,7 +156,7 @@ int generate_keys(FILE* const _out_stream, const char* kem_alg_name) {
 	unsigned char* sec_key_base64 = base64_encode(secret_key, kem->length_secret_key, &sec_key_base_64_len);
 	unsigned char* pub_key_base64 = base64_encode(public_key, kem->length_public_key, &pub_key_base64_len);
 	if (!sec_key_base64 || !pub_key_base64) {
-		fprintf(stderr, "ERROR: base64_encode() failed!\n");
+		fprintf_stderr("base64_encode() failed!");
 		OQS_MEM_secure_free(sec_key_base64, sec_key_base_64_len);
 		OQS_MEM_secure_free(pub_key_base64, pub_key_base64_len);
 		cleanup(secret_key, NULL, public_key, NULL, kem);
@@ -171,19 +183,19 @@ int encode_preshared_key(FILE* const _out_stream, const char* kem_alg_name, cons
 	size_t	 public_key_len = 0;
 	public_key = base64_decode((const unsigned char*) public_key_base64, strlen(public_key_base64), &public_key_len);
 	if (!public_key) {
-		fprintf(stderr, "ERROR: base64_decode() failed!\n");
+		fprintf_stderr("base64_decode() failed!");
 		return ERROR;
 	}
 
 	kem = OQS_KEM_new(kem_alg_name);
 	if (kem == NULL) {
-		fprintf(stderr, "%s was not enabled at compile-time.\n", kem_alg_name);
+		fprintf_stderr("%s was not enabled at compile-time.", kem_alg_name);
 		cleanup(NULL, shared_secret, public_key, ciphertext, kem);
 		return ERROR;
 	}
 
 	if (public_key_len != kem->length_public_key) {
-		fprintf(stderr, "ERROR: unexpected length of public key for %s!\n", kem_alg_name);
+		fprintf_stderr("unexpected length of public key for %s!", kem_alg_name);
 		cleanup(NULL, shared_secret, public_key, ciphertext, kem);
 		return ERROR;
 	}
@@ -191,14 +203,14 @@ int encode_preshared_key(FILE* const _out_stream, const char* kem_alg_name, cons
 	ciphertext = malloc(kem->length_ciphertext);
 	shared_secret = malloc(kem->length_shared_secret);
 	if (!ciphertext || !shared_secret) {
-		fprintf(stderr, "ERROR: malloc failed!\n");
+		fprintf_stderr("malloc failed!");
 		cleanup(NULL, shared_secret, public_key, ciphertext, kem);
 		return ERROR;
 	}
 
 	int rc = OQS_KEM_encaps(kem, ciphertext, shared_secret, public_key);
 	if (rc != OQS_SUCCESS) {
-		fprintf(stderr, "ERROR: OQS_KEM_encaps failed!\n");
+		fprintf_stderr("OQS_KEM_encaps failed!");
 		cleanup(NULL, shared_secret, public_key, ciphertext, kem);
 		return ERROR;
 	}
@@ -208,7 +220,7 @@ int encode_preshared_key(FILE* const _out_stream, const char* kem_alg_name, cons
 	unsigned char* ciphertext_base64 = base64_encode(ciphertext, kem->length_ciphertext, &ciphertext_base_64_len);
 	unsigned char* shared_secret_base64 = base64_encode(shared_secret, kem->length_shared_secret, &shared_secret_base64_len);
 	if (!ciphertext_base64 || !shared_secret_base64) {
-		fprintf(stderr, "ERROR: base64_encode() failed!\n");
+		fprintf_stderr("base64_encode() failed!");
 		OQS_MEM_secure_free(ciphertext_base64, ciphertext_base_64_len);
 		OQS_MEM_secure_free(shared_secret_base64, shared_secret_base64_len);
 		cleanup(NULL, shared_secret, public_key, ciphertext, kem);
@@ -239,19 +251,19 @@ int decode_preshared_key(FILE* const _out_stream, const char* kem_alg_name, cons
 	if (!secret_key || !ciphertext) {
 		OQS_MEM_secure_free(secret_key, secret_key_len);
 		OQS_MEM_secure_free(ciphertext, ciphertext_len);
-		fprintf(stderr, "ERROR: base64_decode() failed!\n");
+		fprintf_stderr("base64_decode() failed!");
 		return ERROR;
 	}
 
 	kem = OQS_KEM_new(kem_alg_name);
 	if (kem == NULL) {
-		fprintf(stderr, "%s was not enabled at compile-time.\n", kem_alg_name);
+		fprintf_stderr("%s was not enabled at compile-time.", kem_alg_name);
 		cleanup(secret_key, shared_secret, NULL, ciphertext, kem);
 		return ERROR;
 	}
 
 	if (secret_key_len != kem->length_secret_key) {
-		fprintf(stderr, "ERROR: unexpected length of secret key for %s!\n", kem_alg_name);
+		fprintf_stderr("unexpected length of secret key for %s!", kem_alg_name);
 		OQS_MEM_secure_free(secret_key, secret_key_len);
 		cleanup(NULL, shared_secret, NULL, ciphertext, kem);
 		return ERROR;
@@ -259,14 +271,14 @@ int decode_preshared_key(FILE* const _out_stream, const char* kem_alg_name, cons
 
 	shared_secret = malloc(kem->length_shared_secret);
 	if (!shared_secret) {
-		fprintf(stderr, "ERROR: malloc failed!\n");
+		fprintf_stderr("malloc failed!");
 		cleanup(secret_key, shared_secret, NULL, ciphertext, kem);
 		return ERROR;
 	}
 
 	int rc = OQS_KEM_decaps(kem, shared_secret, ciphertext, secret_key);
 	if (rc != OQS_SUCCESS) {
-		fprintf(stderr, "ERROR: OQS_KEM_decaps failed!\n");
+		fprintf_stderr("OQS_KEM_decaps failed!");
 		cleanup(secret_key, shared_secret, NULL, ciphertext, kem);
 		return ERROR;
 	}
@@ -274,7 +286,7 @@ int decode_preshared_key(FILE* const _out_stream, const char* kem_alg_name, cons
 	size_t shared_secret_base64_len = 0;
 	unsigned char* shared_secret_base64 = base64_encode(shared_secret, kem->length_shared_secret, &shared_secret_base64_len);
 	if (!shared_secret_base64) {
-		fprintf(stderr, "ERROR: base64_encode() failed!\n");
+		fprintf_stderr("base64_encode() failed!");
 		OQS_MEM_secure_free(shared_secret_base64, shared_secret_base64_len);
 		cleanup(secret_key, shared_secret, NULL, ciphertext, kem);
 		return ERROR;
@@ -293,12 +305,12 @@ int parse_json(jsmn_parser *p, jsmntok_t *t, char* json_string) {
 	jsmn_init(p);
 	int r = jsmn_parse(p, json_string, strlen(json_string), t, sizeof(*t) / sizeof(t[0]));
 	if (r < 0) {
-		fprintf(stderr, "Failed to parse JSON: %d\n", r);
+		fprintf_stderr("Failed to parse JSON: %d", r);
 		return ERROR;
 	}
 	
 	if (r < 1 || t[0].type != JSMN_OBJECT) { // Assume the top-level element is an object 
-		fprintf(stderr, "Failed to parse JSON: object expected\n");
+		fprintf_stderr("Failed to parse JSON: object expected");
 		return ERROR;
 	}
 	return SUCCESS;
@@ -358,11 +370,6 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	char* kem_algorithm_name = OQS_KEM_alg_kyber_1024; // default KEM
-	if (argc > 2 && strlen(argv[2])>0) {
-		kem_algorithm_name = argv[2];
-	}
-
 	char* input_adata	   = NULL;
 	size_t input_adata_len = 0;
 
@@ -371,56 +378,67 @@ int main(int argc, char* argv[]) {
 	if (strcmp(argv[1], "list_kems") == 0) {
 		return print_supported_kems(stdout);
 	}
-	else if (strcmp(argv[1], "genkeys") == 0) {
-		return generate_keys(stdout, kem_algorithm_name);
-	}
-	else if (strcmp(argv[1], "encpsk") == 0 || strcmp(argv[1], "decpsk") == 0) {
-		// read JSON from stdin
-		input_adata = read_data_from_stdin(BUF_LEN_INIT, BUF_LEN_MAX, &input_adata_len);
-		if (input_adata == NULL) {
-			fprintf(stderr, "Input data error\n");
-			return ERROR;
-		}
-
-		// Init & parse JSON
-		int r;
-		jsmn_parser p;
-		jsmntok_t t[16]; // We expect no more than 16 tokens 
-		jsmn_init(&p);
-		r = jsmn_parse(&p, input_adata, strlen(input_adata), t,	sizeof(t) / sizeof(t[0]));
-		if (r < 0) {
-			fprintf(stderr, "Failed to parse JSON: %d\n", r);
-			return 1;
-		}		
-		if (r < 1 || t[0].type != JSMN_OBJECT) { // Assume the top-level element is an object 
-			fprintf(stderr, "Failed to parse JSON: object expected\n");
-			return 1;
-		}
-		
-		// process commands
-		if (strcmp(argv[1], "encpsk") == 0) {
-			const char* public_key = get_json_field("pub", t, r, input_adata);
-			if (!public_key) {
-				fprintf(stderr, "Error: required parameter not defined in JSON\n");
-				print_usage("");
-				return 1;
-			}
-			return encode_preshared_key(stdout, kem_algorithm_name, public_key);
-		}
-		else if (strcmp(argv[1], "decpsk") == 0) {
-			const char* ciphertext = get_json_field("cipher", t, r, input_adata);
-			const char* private_key = get_json_field("priv", t, r, input_adata);
-			if (!ciphertext || !private_key) {
-				fprintf(stderr, "Error: required parameter not defined in JSON\n");
-				print_usage("");
-				return 1;
-			}
-			return decode_preshared_key(stdout, kem_algorithm_name, private_key, ciphertext);
-		}
-	}
 	else {
-		print_usage("");
-		return 1;
+		
+		char* kem_algorithm_name = ""; 
+		if (argc <= 2 || strlen(argv[2])==0) {
+			fprintf_stderr("Input data error: kem_algorithm_name is not specified");			
+			return ERROR;		
+		}
+		kem_algorithm_name = argv[2];
+
+		if (strcmp(argv[1], "genkeys") == 0) {
+			return generate_keys(stdout, kem_algorithm_name);
+		}
+		else if (strcmp(argv[1], "encpsk") == 0 || strcmp(argv[1], "decpsk") == 0) {
+			// read JSON from stdin
+			input_adata = read_data_from_stdin(BUF_LEN_INIT, BUF_LEN_MAX, &input_adata_len);
+			if (input_adata == NULL) {
+				fprintf_stderr("Input data error");
+				return ERROR;
+			}
+			
+			// Init & parse JSON
+			int r;
+			jsmn_parser p;
+			jsmntok_t t[16]; // We expect no more than 16 tokens 
+			jsmn_init(&p);
+			r = jsmn_parse(&p, input_adata, strlen(input_adata), t,	sizeof(t) / sizeof(t[0]));
+			if (r < 0) {
+				fprintf_stderr("Failed to parse JSON: %d", r);
+				return 1;
+			}		
+			if (r < 1 || t[0].type != JSMN_OBJECT) { // Assume the top-level element is an object 
+				fprintf_stderr("Failed to parse JSON: object expected");
+				return 1;
+			}
+			
+			// process commands
+			if (strcmp(argv[1], "encpsk") == 0) {
+
+				const char* public_key = get_json_field("pub", t, r, input_adata);
+				if (!public_key) {
+					fprintf_stderr("required parameter not defined in JSON");
+					print_usage("");
+					return 1;
+				}
+				return encode_preshared_key(stdout, kem_algorithm_name, public_key);
+			}
+			else if (strcmp(argv[1], "decpsk") == 0) {
+				const char* ciphertext = get_json_field("cipher", t, r, input_adata);
+				const char* private_key = get_json_field("priv", t, r, input_adata);
+				if (!ciphertext || !private_key) {
+					fprintf_stderr("required parameter not defined in JSON");
+					print_usage("");
+					return 1;
+				}
+				return decode_preshared_key(stdout, kem_algorithm_name, private_key, ciphertext);
+			}
+		}
+		else {
+			print_usage("");
+			return 1;
+		}
 	}
 
 	OQS_MEM_secure_free(input_adata, input_adata_len);

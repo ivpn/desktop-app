@@ -11,7 +11,7 @@ rem -= when _VERSION_LIBOQS not defined - will be used latest sources from githu
 rem set _VERSION_LIBOQS=0.7.2
 
 set _SCRIPTDIR=%~dp0
-set _WORK_FOLDER=%_SCRIPTDIR%windows
+set _WORK_FOLDER=%_SCRIPTDIR%_out_windows
 
 if "%1" == "" (
     echo [i] Work folder not defined. Using '%_WORK_FOLDER%' as default work folder
