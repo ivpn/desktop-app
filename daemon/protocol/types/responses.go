@@ -166,6 +166,7 @@ type SessionResp struct {
 	WgLocalIP          string
 	WgKeyGenerated     int64 // Unix time
 	WgKeysRegenInerval int64 // seconds
+	WgUsePresharedKey  bool
 }
 
 // CreateSessionResp create new session info object to send to client
@@ -176,7 +177,8 @@ func CreateSessionResp(s preferences.SessionStatus) SessionResp {
 		WgPublicKey:        s.WGPublicKey,
 		WgLocalIP:          s.WGLocalIP,
 		WgKeyGenerated:     s.WGKeyGenerated.Unix(),
-		WgKeysRegenInerval: int64(s.WGKeysRegenInerval.Seconds())}
+		WgKeysRegenInerval: int64(s.WGKeysRegenInerval.Seconds()),
+		WgUsePresharedKey:  len(s.WGPresharedKey) > 0}
 }
 
 // SessionNewResp - information about created session (or error info)
