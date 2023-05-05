@@ -7,14 +7,24 @@
 
 _SCRIPT_DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 _WORK_FOLDER=$_SCRIPT_DIR/_out_linux
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    _WORK_FOLDER=$_SCRIPT_DIR/_out_macos
+fi
 
 set -e
 
 # Error handling function
 handle_error() {
     echo "[!] An ERROR occurred in the script!"
-    echo "    Please, note that script has dependencies (sudo apt install -y astyle git cmake gcc ninja-build libssl-dev python3-pytest python3-pytest-xdist unzip xsltproc doxygen graphviz python3-yaml valgrind)"
-    echo "    Exiting."
+    echo "    Please, note that script has dependencies"
+    echo "    (https://github.com/open-quantum-safe/liboqs/tree/main#linuxmacos)"
+    if [[ "$OSTYPE" == "darwin"* ]]; then        
+        echo "      $ brew install cmake ninja openssl@1.1 wget doxygen graphviz astyle valgrind"
+        echo "      $ pip3 install pytest pytest-xdist pyyaml"
+    else    
+        echo "      $ sudo apt install -y astyle git cmake gcc ninja-build libssl-dev python3-pytest python3-pytest-xdist unzip xsltproc doxygen graphviz python3-yaml valgrind"
+    fi
+    echo "[!] Exiting (because of error)"
     exit 1
 }
 # Set the trap to catch errors
@@ -31,7 +41,6 @@ while getopts ":d:" opt; do
     ;;    
   esac
 done
-_WORK_FOLDER=$(realpath "${_WORK_FOLDER}")
 
 echo "[i] Using work folder: $_WORK_FOLDER"
 _OUT_FOLDER=$_WORK_FOLDER/kem-helper-bin
@@ -81,7 +90,11 @@ echo "Sources '$_SCRIPT_DIR'" > $_OUT_FOLDER/readme.md
 # Change the current working directory to the location of the source files
 cd $_SCRIPT_DIR
 
-gcc main.c base64.c -o $_OUT_FOLDER/kem-helper -Wall -O2 -I$_LIBOQS_INSTALL_FOLDER/include -L$_LIBOQS_INSTALL_FOLDER/lib -loqs -Wl,-z,stack-size=5242880
+if [[ "$OSTYPE" == "darwin"* ]]; then # macOS
+    gcc main.c base64.c -o $_OUT_FOLDER/kem-helper -Wall -O2 -I$_LIBOQS_INSTALL_FOLDER/include -L$_LIBOQS_INSTALL_FOLDER/lib -loqs -Wl,-stack_size,0x500000 #0x500000 is 5MB
+else # linux
+    gcc main.c base64.c -o $_OUT_FOLDER/kem-helper -Wall -O2 -I$_LIBOQS_INSTALL_FOLDER/include -L$_LIBOQS_INSTALL_FOLDER/lib -loqs -Wl,-z,stack-size=5242880
+fi
 
 echo "[ ] SUCCESS"
 echo "    kem-helper binary: '$_OUT_FOLDER/kem-helper'"
