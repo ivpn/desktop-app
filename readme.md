@@ -57,12 +57,17 @@ These instructions enable you to get the project up and running on your local ma
 #### macOS
 
 [npm](https://www.npmjs.com/get-npm); [Node.js (LTS version)](https://nodejs.org/); Xcode Command Line Tools; [Go 1.18+](https://golang.org/); Git  
-To compile the OpenVPN\OpenSSL binaries locally, additional packages are needed: `brew install autoconf automake libtool`
+To compile the OpenVPN/OpenSSL binaries locally, additional packages are required: `brew install autoconf automake libtool`  
+To compile  [liboqs](https://github.com/open-quantum-safe/liboqs), additional packages are required:  
+``` 
+brew install cmake ninja openssl@1.1 wget doxygen graphviz astyle valgrind
+pip3 install pytest pytest-xdist pyyaml
+```
 
 <a name="requirements_linux"></a>
 #### Linux
-[npm](https://www.npmjs.com/get-npm); [Node.js (LTS version)](https://nodejs.org/); packages: [FPM](https://fpm.readthedocs.io/en/latest/installation.html), curl, rpm, libiw-dev; [Go 1.18+](https://golang.org/); gcc; make; Git
-
+[npm](https://www.npmjs.com/get-npm); [Node.js (LTS version)](https://nodejs.org/); packages: [FPM](https://fpm.readthedocs.io/en/latest/installation.html), curl, rpm, libiw-dev; [Go 1.18+](https://golang.org/); gcc; make; Git  
+To compile  [liboqs](https://github.com/open-quantum-safe/liboqs), additional packages are required:  `sudo apt install astyle cmake gcc ninja-build libssl-dev python3-pytest python3-pytest-xdist unzip xsltproc doxygen graphviz python3-yaml valgrind`
 <a name="compilation"></a>
 ### Compilation
 
