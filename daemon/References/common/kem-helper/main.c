@@ -393,10 +393,8 @@ int main(int argc, char* argv[]) {
 		else if (strcmp(argv[1], "encpsk") == 0 || strcmp(argv[1], "decpsk") == 0) {
 			// read JSON from stdin
 			input_adata = read_data_from_stdin(BUF_LEN_INIT, BUF_LEN_MAX, &input_adata_len);
-			if (input_adata == NULL) {
-				fprintf_stderr("Input data error");
-				return ERROR;
-			}
+			if (input_adata == NULL) 
+				return ERROR;			
 			
 			// Init & parse JSON
 			int r;
