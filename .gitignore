@@ -7,6 +7,6 @@ daemon/daemon
 daemon/daemon.exe
 daemon/References/Windows/Native Projects/IVPN KEM Helper/.*
 daemon/References/Windows/Native Projects/IVPN KEM Helper/x64/*
-daemon/References/Windows/kem-helper.exe
+daemon/References/Windows/kem/kem-helper.exe
 daemon/References/common/kem-helper/_out_linux/
 daemon/References/common/kem-helper/_out_macos/

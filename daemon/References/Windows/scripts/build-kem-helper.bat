@@ -10,7 +10,8 @@ PUSHD
 call %_SCRIPTDIR%..\..\common\kem-helper\build.bat %_SCRIPTDIR%..\.deps || goto :error
 POPD
 
-copy /Y %_SCRIPTDIR%..\.deps\kem-helper-bin\kem-helper.exe  %_SCRIPTDIR%.. || goto :error
+mkdir "%SCRIPTDIR%..\kem" || exit /b 1
+copy /Y %_SCRIPTDIR%..\.deps\kem-helper-bin\kem-helper.exe  %_SCRIPTDIR%..\kem || goto :error
 
 set _theResult_binary_path=%_SCRIPTDIR%..\kem-helper.exe
 for %%i in (%_theResult_binary_path%) do set _theResult_binary_path=%%~fi

@@ -182,7 +182,7 @@ goto :success
 	goto :eof
 
 :build_kem_helper
-	if exist "%SCRIPTDIR%..\kem-helper.exe" (
+	if exist "%SCRIPTDIR%..\kem\kem-helper.exe" (
 		echo [ ] KEM helper already available. Compilation skipped.
 		goto :eof
 	)
@@ -194,7 +194,7 @@ goto :success
 		echo.
 		echo Signing 'kem-helper.exe' binary [certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%]
 		echo.
-		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\kem-helper.exe" || goto :eof
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\kem\kem-helper.exe" || goto :eof
 		echo.
 		echo Signing SUCCES
 		echo.
