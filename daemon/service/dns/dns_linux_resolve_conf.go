@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
@@ -66,7 +65,7 @@ func rconf_implInitialize() error {
 }
 
 func rconf_implPause(localInterfaceIP net.IP) error {
-	if !rconf_isBackupExists(resolvBackupFile) {
+	if !rconf_isBackupExists() {
 		// The backup for the OS-defined configuration not exists.
 		// It seems, we are not connected. Nothing to pause.
 		return nil
@@ -76,9 +75,7 @@ func rconf_implPause(localInterfaceIP net.IP) error {
 	rconf_stopDNSChangeMonitoring()
 
 	// restore original OS-default DNS configuration
-	// (the backup file will not be deleted)
-	isDeleteBackup := false // do not delete backup file
-	ret := rconf_restoreBackup(resolvBackupFile, isDeleteBackup)
+	ret := rconf_restoreBackup()
 
 	return ret
 }
@@ -98,7 +95,7 @@ func rconf_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFo
 
 	createBackupIfNotExists := func() (created bool, er error) {
 		isOwerwriteIfExists := false
-		return rconf_createBackup(resolvBackupFile, isOwerwriteIfExists)
+		return rconf_createBackup(isOwerwriteIfExists)
 	}
 
 	saveNewConfig := func() error {
@@ -201,8 +198,7 @@ func rconf_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFo
 func rconf_implDeleteManual(localInterfaceIP net.IP) error {
 	// stop file change monitoring
 	rconf_stopDNSChangeMonitoring()
-	isDeleteBackup := true // delete backup file
-	return rconf_restoreBackup(resolvBackupFile, isDeleteBackup)
+	return rconf_restoreBackup()
 }
 
 func rconf_stopDNSChangeMonitoring() {
@@ -215,52 +211,39 @@ func rconf_stopDNSChangeMonitoring() {
 	}
 }
 
-func rconf_isBackupExists(backupFName string) bool {
-	_, err := os.Stat(backupFName)
+func rconf_isBackupExists() bool {
+	_, err := os.Stat(resolvBackupFile)
 	return err == nil
 }
 
-func rconf_createBackup(backupFName string, isOverwriteIfExists bool) (created bool, er error) {
+func rconf_createBackup(isOverwriteIfExists bool) (created bool, er error) {
 	if _, err := os.Stat(resolvFile); err != nil {
 		// source file not exists
 		return false, fmt.Errorf("failed to backup DNS configuration (file availability check failed): %w", err)
 	}
 
-	if _, err := os.Stat(backupFName); err == nil {
+	if _, err := os.Stat(resolvBackupFile); err == nil {
 		// backup file already exists
 		if !isOverwriteIfExists {
 			return false, nil
 		}
 	}
 
-	if err := os.Rename(resolvFile, backupFName); err != nil {
+	if err := os.Rename(resolvFile, resolvBackupFile); err != nil {
 		return false, fmt.Errorf("failed to backup DNS configuration: %w", err)
 	}
 	return true, nil
 }
 
-func rconf_restoreBackup(backupFName string, isDeleteBackup bool) error {
-	if _, err := os.Stat(backupFName); err != nil {
+func rconf_restoreBackup() error {
+	if _, err := os.Stat(resolvBackupFile); err != nil {
 		// nothing to restore
 		return nil
 	}
 
 	// restore original configuration
-	if isDeleteBackup {
-		if err := os.Rename(backupFName, resolvFile); err != nil {
-			return fmt.Errorf("failed to restore DNS configuration: %w", err)
-		}
-	} else {
-		tmpFName := resolvFile + ".tmp"
-		if err := helpers.CopyFile(backupFName, tmpFName); err != nil {
-			return fmt.Errorf("failed to restore DNS configuration: %w", err)
-		}
-		if err := os.Chmod(tmpFName, defaultFilePermissions); err != nil {
-			return fmt.Errorf("failed to restore DNS configuration: %w", err)
-		}
-		if err := os.Rename(tmpFName, resolvFile); err != nil {
-			return fmt.Errorf("failed to restore DNS configuration: %w", err)
-		}
+	if err := os.Rename(resolvBackupFile, resolvFile); err != nil {
+		return fmt.Errorf("failed to restore DNS configuration: %w", err)
 	}
 
 	return nil
