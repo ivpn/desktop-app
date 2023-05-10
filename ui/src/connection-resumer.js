@@ -24,7 +24,7 @@ import store from "@/store";
 import daemonClient from "./daemon-client";
 import { PauseStateEnum } from "@/store/types";
 
-let resumerTimer = null;
+let resumeCheckerInterval = null;
 export function InitConnectionResumer() {
   store.subscribe((mutation) => {
     try {
@@ -32,22 +32,27 @@ export function InitConnectionResumer() {
         mutation.type === "uiState/pauseConnectionTill" ||
         mutation.type === "vpnState/pauseState"
       ) {
-        if (resumerTimer != null) clearTimeout(resumerTimer);
-        resumerTimer = null;
+        if (resumeCheckerInterval != null) clearInterval(resumeCheckerInterval);
+        resumeCheckerInterval = null;
 
         if (store.state.vpnState.pauseState == PauseStateEnum.Resumed) {
           return;
         }
 
         const pauseTill = store.state.uiState.pauseConnectionTill;
-        if (pauseTill != null) {
-          const timeDiff = pauseTill - new Date();
-          if (timeDiff > 0) {
-            resumerTimer = setTimeout(() => {
-              resumeConnection();
-            }, timeDiff);
+        // We don't use 'setTimeout()' here because it doesn't function correctly when the computer goes to sleep on some systems.
+        // Instead, we are checking the time every second and resuming the connection when the time is up.
+        resumeCheckerInterval = setInterval(() => {
+          if (
+            store.state.vpnState.pauseState !== PauseStateEnum.Paused ||
+            !pauseTill ||
+            new Date() >= pauseTill
+          ) {
+            clearInterval(resumeCheckerInterval);
+            resumeCheckerInterval = null;
+            resumeConnection();
           }
-        }
+        }, 1000);
       }
     } catch (e) {
       console.error("Error in InitConnectionResumer handler", e);
