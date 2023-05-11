@@ -35,11 +35,11 @@ export function InitConnectionResumer() {
         if (resumeCheckerInterval != null) clearInterval(resumeCheckerInterval);
         resumeCheckerInterval = null;
 
-        if (store.state.vpnState.pauseState == PauseStateEnum.Resumed) {
+        const pauseTill = store.state.uiState.pauseConnectionTill;
+        if (store.state.vpnState.pauseState !== PauseStateEnum.Paused || !pauseTill) {
           return;
         }
-
-        const pauseTill = store.state.uiState.pauseConnectionTill;
+        
         // We don't use 'setTimeout()' here because it doesn't function correctly when the computer goes to sleep on some systems.
         // Instead, we are checking the time every second and resuming the connection when the time is up.
         resumeCheckerInterval = setInterval(() => {
