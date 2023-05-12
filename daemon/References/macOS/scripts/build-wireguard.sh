@@ -3,7 +3,7 @@
 # ##############################################################################
 # Define here WireGuard-Go version
 # ##############################################################################
-WG_GO_VER=0.0.20220316      # https://git.zx2c4.com/wireguard-go/
+WG_GO_VER=0.0.20230223      # https://git.zx2c4.com/wireguard-go/
 WG_TOOLS_VER=v1.0.20210914  # https://git.zx2c4.com/wireguard-tools/
 
 # Exit immediately if a command exits with a non-zero status.
