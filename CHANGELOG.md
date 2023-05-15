@@ -4,20 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## Version 3.10.23 - 2023-05-15
 
-[NEW] Ability to open Firewall and AntiTracker settings with one click  
-[NEW] Option to prevent usage of the same provider in Multi-Hop chain  
-[NEW] (Linux) IVPN can be installed on Fedora Silverblue (using rpm-ostree)  
-[IMPROVED] The favorite servers list is common for all VPN protocols  
-[IMPROVED] Changing protocol type or MultiHop does not require disconnecting the current VPN connection  
-[IMPROVED] Various UI fixes/improvements  
-[IMPROVED] (Windows) Improved boot-time firewall rules to prevent potential leaks on system boot  
-[IMPROVED] (Linux) Installed files locations are corrected to fit the Filesystem Hierarchy Standard  
-[IMPROVED] (Linux) IVPN Firewall now also controls the FORWARD chain (no leaks anymore when using IVPN on Qubes OS as "ProxyVM")  
-[FIX] The Antitracker toggle state in the UI is consistent with actions from CLI  
-[FIX] (macOS) The wrong DNS configuration may stay after VPN is disconnected in some corner cases  
-[FIX] (Linux) "Force management of DNS using resolve.conf" does not require a reboot anymore  
-[FIX] (Linux) Bad DNS configuration after reinitiation of the main network interface  
-[FIX] (Linux) Split Tunneling stops working after reinitiation of the main network interface  
+[NEW] Automatically select an accessible port before user login  
+[NEW] (Linux) IVPN SNAP now works on Linux systems that do not use systemd-resolved  
+[IMPROVED] Enhanced server latency check speed  
+[IMPROVED] Better detection of successful WireGuard connections  
+[IMPROVED] UI: Entire area of select pause period buttons is now clickable  
+[IMPROVED] (Windows/Linux) UI: Added a title to the 'update' window for clearer identification as part of the IVPN app  
+[IMPROVED] (Linux) UI: Freed up vertical space in Settings -> General  
+[FIX] Resolved issue where paused OpenVPN connection would not resume after defined timeout in some cases  
+[FIX] Resolved an issue where the fastest server option sometimes connects to a random server after switching from MultiHop  
+[FIX] UI: Addressed disappearing pause button after resuming connection  
+[FIX] (Linux) Resolved issue where WireGuard fails to disconnect from paused state  
 
 [Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.10.23.exe)  
 SHA256: c6201200ab322a9307fe2d5f5eb70d11e15c8f6d7cc21bdd17f2ecb90b1dd02f  
