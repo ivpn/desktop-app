@@ -93,7 +93,11 @@ cd $_SCRIPT_DIR
 if [[ "$OSTYPE" == "darwin"* ]]; then # macOS
     gcc main.c base64.c -o $_OUT_FOLDER/kem-helper -Wall -O2 -I$_LIBOQS_INSTALL_FOLDER/include -L$_LIBOQS_INSTALL_FOLDER/lib -loqs -Wl,-stack_size,0x500000 #0x500000 is 5MB
 else # linux
-    gcc main.c base64.c -o $_OUT_FOLDER/kem-helper -Wall -O2 -I$_LIBOQS_INSTALL_FOLDER/include -L$_LIBOQS_INSTALL_FOLDER/lib -loqs -Wl,-z,stack-size=5242880
+    _LIB_FOLDER=$_LIBOQS_INSTALL_FOLDER/lib
+    if [ -d $_LIBOQS_INSTALL_FOLDER/lib64 ]; then 
+        _LIB_FOLDER=$_LIBOQS_INSTALL_FOLDER/lib64        
+    fi
+    gcc main.c base64.c -o $_OUT_FOLDER/kem-helper -Wall -O2 -I$_LIBOQS_INSTALL_FOLDER/include -L$_LIB_FOLDER -loqs -Wl,-z,stack-size=5242880 
 fi
 
 echo "[ ] SUCCESS"
