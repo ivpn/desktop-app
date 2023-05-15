@@ -231,12 +231,15 @@ export default {
 
       if (this.onDefaultView) this.onDefaultView(false);
 
-      // request servers ping not more often than once per 30 seconds
+      // request servers ping not more often than once per 15 seconds
+      let isHasPingResuls =
+        Object.keys(this.$store.state.vpnState.hostsPings).length > 0;
       if (
+        isHasPingResuls == false ||
         this.lastServersPingRequestTime == null ||
         (new Date().getTime() - this.lastServersPingRequestTime.getTime()) /
           1000 >
-          30
+          15
       ) {
         try {
           await sender.PingServers();
@@ -244,6 +247,10 @@ export default {
           console.error(e);
         }
         this.lastServersPingRequestTime = new Date();
+      } else {
+        console.log(
+          "Server pings request blocked (due to requests per minute limitation)"
+        );
       }
     },
     onShowPorts() {

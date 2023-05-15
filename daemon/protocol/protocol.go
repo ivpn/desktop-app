@@ -72,9 +72,10 @@ type Service interface {
 	// The cached data will be ignored in this case.
 	ServersListForceUpdate() (*api_types.ServersInfoResponse, error)
 
-	PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, pingAllHostsOnFirstPhase bool, skipSecondPhase bool) (map[string]int, error)
+	PingServers(timeoutMs int, vpnTypePrioritized vpn.Type, skipSecondPhase bool) (map[string]int, error)
 
 	APIRequest(apiAlias string, ipTypeRequired types.RequiredIPProtocol) (responseData []byte, err error)
+	DetectAccessiblePorts(portsToTest []api_types.PortInfo) (retPorts []api_types.PortInfo, err error)
 
 	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, fwUserExceptions string, err error)
 	SetKillSwitchState(bool) error
@@ -370,7 +371,20 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		return
 	}
 
-	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command, fmt.Sprintf(" [%d]", reqCmd.Idx))
+	// Log the request info
+	cmdExtraInfo := ""
+	if reqCmd.Command == "APIRequest" {
+		var req types.APIRequest
+		if err := json.Unmarshal(messageData, &req); err == nil {
+			cmdExtraInfo = " " + req.APIPath
+			if req.IPProtocolRequired == types.IPv4 {
+				cmdExtraInfo += " (IPv4)"
+			} else if req.IPProtocolRequired == types.IPv6 {
+				cmdExtraInfo += " (IPv6)"
+			}
+		}
+	}
+	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command, fmt.Sprintf(" [%d]%s", reqCmd.Idx, cmdExtraInfo))
 
 	isDoSkipParanoidMode := func(commandName string) bool {
 
@@ -555,7 +569,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if req.VpnTypePrioritization {
 			vpnType = req.VpnTypePrioritized
 		}
-		retMap, err := p._service.PingServers(req.TimeOutMs, vpnType, req.PingAllHostsOnFirstPhase, req.SkipSecondPhase)
+		retMap, err := p._service.PingServers(req.TimeOutMs, vpnType, req.SkipSecondPhase)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
@@ -581,6 +595,19 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 		p.sendResponse(conn, &types.APIResponse{APIPath: req.APIPath, ResponseData: string(data)}, req.Idx)
+
+	case "CheckAccessiblePorts":
+		var req types.CheckAccessiblePorts
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		accessiblePorts, err := p._service.DetectAccessiblePorts(req.PortsToTest)
+		if err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		p.sendResponse(conn, &types.CheckAccessiblePortsResponse{Ports: accessiblePorts}, req.Idx)
 
 	case "WiFiAvailableNetworks":
 		networks := p._service.GetWiFiAvailableNetworks()

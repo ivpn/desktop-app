@@ -67,10 +67,14 @@ type Alias struct {
 // If isArcIndependent!=true: Filename construction for non-amd64 architectures: filename_<architecture>.<extensions>
 // (see 'DoRequestByAlias()' for details)
 // Example:
-//		The "updateInfo_macOS" on arm64 platform will use file "/macos/update_arm64.json" (NOT A "/macos/update.json")
+//
+//	The "updateInfo_macOS" on arm64 platform will use file "/macos/update_arm64.json" (NOT A "/macos/update.json")
+const (
+	GeoLookupApiAlias string = "geo-lookup"
+)
 
 var APIAliases = map[string]Alias{
-	"geo-lookup": {host: _apiHost, path: _geoLookupPath},
+	GeoLookupApiAlias: {host: _apiHost, path: _geoLookupPath},
 
 	"updateInfo_Linux":   {host: _updateHost, path: "/stable/_update_info/update.json"},
 	"updateSign_Linux":   {host: _updateHost, path: "/stable/_update_info/update.json.sign.sha256.base64"},
@@ -106,6 +110,16 @@ type IConnectivityInfo interface {
 	IsConnectivityBlocked() (err error)
 }
 
+type geolookup struct {
+	mutex     sync.Mutex
+	isRunning bool
+	done      chan struct{}
+
+	location types.GeoLookupResponse
+	response []byte
+	err      error
+}
+
 // API contains data about IVPN API servers
 type API struct {
 	mutex                 sync.Mutex
@@ -114,6 +128,10 @@ type API struct {
 	alternateIPsV6        []net.IP
 	lastGoodAlternateIPv6 net.IP
 	connectivityChecker   IConnectivityInfo
+
+	// last geolookups result
+	geolookupV4 geolookup
+	geolookupV6 geolookup
 }
 
 // CreateAPI creates new API object
@@ -231,6 +249,16 @@ func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 
 // DoRequestByAlias do API request (by API endpoint alias). Returns raw data of response
 func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.RequiredIPProtocol) (responseData []byte, err error) {
+	// For geolookup requests we have specific function
+	if apiAlias == GeoLookupApiAlias {
+		if ipTypeRequired != protocolTypes.IPv4 && ipTypeRequired != protocolTypes.IPv6 {
+			return nil, fmt.Errorf("geolookup request failed: IP version not defined")
+		}
+		_, responseData, err = a.GeoLookup(0, ipTypeRequired)
+		return responseData, err
+	}
+
+	// get connection info by API alias
 	alias, ok := APIAliases[apiAlias]
 	if !ok {
 		return nil, fmt.Errorf("unexpected request alias")
@@ -249,9 +277,7 @@ func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.Req
 		}
 	}
 
-	retData, retErr := a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0, 0)
-
-	return retData, retErr
+	return a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0, 0)
 }
 
 // SessionNew - try to register new session
@@ -377,13 +403,62 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 	return localIP, nil
 }
 
-// GeoLookup get geolocation
-func (a *API) GeoLookup(timeoutMs int) (location *types.GeoLookupResponse, err error) {
-	resp := &types.GeoLookupResponse{}
-
-	if err := a.requestEx("", _geoLookupPath, "GET", "", nil, resp, timeoutMs, 0); err != nil {
-		return nil, err
+// GeoLookup gets geolocation
+func (a *API) GeoLookup(timeoutMs int, ipTypeRequired protocolTypes.RequiredIPProtocol) (location *types.GeoLookupResponse, rawData []byte, retErr error) {
+	// There could be multiple Geolookup requests at the same time.
+	// It doesn't make sense to make multiple requests to the API.
+	// The internal function below reduces the number of similar API calls.
+	singletonFunc := func(ipType protocolTypes.RequiredIPProtocol) (*types.GeoLookupResponse, []byte, error) {
+		// Each IP protocol has separate request
+		var gl *geolookup
+		if ipType == protocolTypes.IPv4 {
+			gl = &a.geolookupV4
+		} else if ipType == protocolTypes.IPv6 {
+			gl = &a.geolookupV6
+		} else {
+			return nil, nil, fmt.Errorf("geolookup request failed: IP version not defined")
+		}
+		// Try to make API request (if not started yet). Only one API request allowed in the same time.
+		func() {
+			gl.mutex.Lock()
+			defer gl.mutex.Unlock()
+			// if API call is already running - do nosing, just wait for results
+			if gl.isRunning {
+				return
+			}
+			// mark: call is already running
+			gl.isRunning = true
+			gl.done = make(chan struct{})
+			// do API call in routine
+			go func() {
+				defer func() {
+					// API call finished
+					gl.isRunning = false
+					close(gl.done)
+				}()
+				gl.response, gl.err = a.requestRaw(ipType, "", _geoLookupPath, "GET", "", nil, timeoutMs, 0)
+				if err := json.Unmarshal(gl.response, &gl.location); err != nil {
+					gl.err = fmt.Errorf("failed to deserialize API response: %w", err)
+				}
+			}()
+		}()
+		// wait for API call result (for routine stop)
+		<-gl.done
+		return &gl.location, gl.response, gl.err
 	}
 
-	return resp, nil
+	// request Geolocation info
+	if ipTypeRequired != protocolTypes.IPvAny {
+		location, rawData, retErr = singletonFunc(ipTypeRequired)
+	} else {
+		location, rawData, retErr = singletonFunc(protocolTypes.IPv4)
+		if retErr != nil {
+			location, rawData, retErr = singletonFunc(protocolTypes.IPv6)
+		}
+	}
+
+	if retErr != nil {
+		return nil, nil, retErr
+	}
+	return location, rawData, nil
 }

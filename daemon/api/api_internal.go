@@ -24,7 +24,6 @@ package api
 
 import (
 	"bytes"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -33,7 +32,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/big"
 	"net"
 	"net/http"
 	"path"
@@ -159,22 +157,9 @@ func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, ur
 			if err4 != nil {
 				// checking if IPv6 connectivity exists
 				_, errIPv6 := netinfo.GetOutboundIP(true)
-				if errIPv6 != nil {
-					alIPs := a.getAlternateIPs(true)
-					if len(alIPs) > 0 {
-						rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(alIPs))))
-						if err != nil {
-							log.Warning(fmt.Errorf("failed to get random number: %w", err))
-							rnd = big.NewInt(0)
-						}
-						_, errIPv6 = netinfo.GetOutboundIPEx(alIPs[rnd.Int64()])
-					}
-				}
-
-				if errIPv6 == nil {
+				if errIPv6 == nil && len(a.getAlternateIPs(true)) >= 0 {
 					log.Info("Failed to access API server using IPv4. Trying IPv6 ...")
-					// we already tried to access using DNS. No sense to try it again
-					canUseDNS = false
+					canUseDNS = false // we already tried to access using DNS. No sense to try it again
 					resp6, err6 := a.doRequestAPIHost(types.IPv6, canUseDNS, urlPath, method, contentType, request, timeoutMs, timeoutDialMs)
 					if err6 == nil {
 						return resp6, err6

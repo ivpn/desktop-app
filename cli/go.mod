@@ -1,12 +1,12 @@
 module github.com/ivpn/desktop-app/cli
 
-go 1.18
+go 1.19
 
 require (
 	github.com/ivpn/desktop-app/daemon v0.0.0
 	golang.org/x/crypto v0.7.0
-	golang.org/x/sys v0.6.0
-	golang.org/x/term v0.6.0
+	golang.org/x/sys v0.7.0
+	golang.org/x/term v0.7.0
 )
 
 require (

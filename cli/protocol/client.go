@@ -652,7 +652,7 @@ func (c *Client) WGKeysRotationInterval(uinxTimeInterval int64) error {
 }
 
 // PingServers
-func (c *Client) PingServers(pingAllHostsOnFirstPhase bool, vpnTypePrioritized *vpn.Type) (pingResults []types.PingResultType, err error) {
+func (c *Client) PingServers(vpnTypePrioritized *vpn.Type) (pingResults []types.PingResultType, err error) {
 	if err := c.ensureConnected(); err != nil {
 		return pingResults, err
 	}
@@ -666,11 +666,10 @@ func (c *Client) PingServers(pingAllHostsOnFirstPhase bool, vpnTypePrioritized *
 	// hosts for this VPN type will be pinged first (only if VpnTypePrioritization == true)
 
 	req := types.PingServers{
-		TimeOutMs:                6000,
-		PingAllHostsOnFirstPhase: pingAllHostsOnFirstPhase,
-		SkipSecondPhase:          true,
-		VpnTypePrioritized:       vpnType,
-		VpnTypePrioritization:    vpnTypePrioritization,
+		TimeOutMs:             6000,
+		SkipSecondPhase:       true,
+		VpnTypePrioritized:    vpnType,
+		VpnTypePrioritization: vpnTypePrioritization,
 	}
 	var resp types.PingServersResp
 	if err := c.sendRecv(&req, &resp); err != nil {

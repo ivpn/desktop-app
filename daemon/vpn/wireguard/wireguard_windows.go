@@ -83,6 +83,10 @@ func (wg *WireGuard) init() error {
 	return wg.uninstallService()
 }
 
+func (wg *WireGuard) getTunnelName() string {
+	return strings.TrimSuffix(filepath.Base(wg.configFilePath), filepath.Ext(wg.configFilePath)) // IVPN
+}
+
 // connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	if wg.internals.isDisconnectRequested {
@@ -118,7 +122,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		if wg.connectParams.mtu > 0 {
 			return fmt.Errorf("failed to install windows service: %w\nThe 'Custom MTU' option may be set incorrectly, either revert to the default or try another value e.g. 1420.", err)
 		}
-		return fmt.Errorf("failed to install windows service: %w", err)
+		return err
 	}
 
 	// CONNECTED
@@ -289,10 +293,6 @@ func (wg *WireGuard) resetManualDNS() error {
 	}
 
 	return nil
-}
-
-func (wg *WireGuard) getTunnelName() string {
-	return strings.TrimSuffix(filepath.Base(wg.configFilePath), filepath.Ext(wg.configFilePath)) // IVPN
 }
 
 func (wg *WireGuard) getServiceName() string {
@@ -481,11 +481,13 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 		}
 	}
 
-	// CONNECTED
-	log.Info("Connection started")
-	// Send 'connected' notification only after 'dns' package informed about correct DNS value
-	wg.notifyConnectedStat(stateChan)
+	// Initialised
 
+	// Wait for hanshake and send 'connected' notification only after 'dns' package informed about correct DNS value
+	err = wg.waitHandshakeAndNotifyConnected(stateChan)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

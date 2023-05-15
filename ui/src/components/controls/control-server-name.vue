@@ -21,9 +21,7 @@
     </div>
     <div class="textBlock" v-else>
       <div class="firstLine flexRow" style="max-width: 154px">
-        <div class="text">
-          {{ multilineFirstLine }}
-        </div>
+        <div class="text">{{ multilineFirstLine }}</div>
         <div>
           <button
             class="noBordersBtn expandButton"
@@ -41,7 +39,10 @@
         </div>
       </div>
 
-      <div class="text secondLine flexRow">
+      <div
+        class="text secondLine flexRow"
+        :style="{ maxWidth: SecondLineMaxWidth }"
+      >
         <div v-if="isShowIPVersionBage && isIPv6" class="bage">IPv6</div>
         {{ multilineSecondLine }} {{ selectedHostInfo }}
         <div
@@ -83,6 +84,7 @@ export default {
 
     onExpandClick: Function,
     isExpanded: Boolean,
+    SecondLineMaxWidth: String,
   },
   data: () => ({
     isImgLoadError: false,

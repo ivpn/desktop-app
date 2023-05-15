@@ -38,6 +38,7 @@ import {
   PauseStateEnum,
   DaemonConnectionType,
   DnsEncryption,
+  PortTypeEnum,
 } from "@/store/types";
 import store from "@/store";
 
@@ -64,6 +65,7 @@ const daemonRequests = Object.freeze({
 
   PingServers: "PingServers",
   GetServers: "GetServers",
+  CheckAccessiblePorts: "CheckAccessiblePorts",
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
   AccountStatus: "AccountStatus",
@@ -124,6 +126,7 @@ const daemonResponses = Object.freeze({
   DisconnectedResp: "DisconnectedResp",
   ServerListResp: "ServerListResp",
   PingServersResp: "PingServersResp",
+  CheckAccessiblePortsResponse: "CheckAccessiblePortsResponse",
   SetAlternateDNSResp: "SetAlternateDNSResp",
   DnsPredefinedConfigsResp: "DnsPredefinedConfigsResp",
   KillSwitchStatusResp: "KillSwitchStatusResp",
@@ -413,6 +416,12 @@ async function processResponse(response) {
         }
       }
 
+      // check accessible ports
+      {
+        if (!store.getters["account/isLoggedIn"]) {
+          CheckAccessiblePorts(); // request all accessible ports
+        }
+      }
       break;
 
     case daemonResponses.SettingsResp:
@@ -459,11 +468,17 @@ async function processResponse(response) {
       if (obj.VpnServers == null) break;
       store.dispatch(`vpnState/servers`, obj.VpnServers);
       break;
+
     case daemonResponses.PingServersResp: {
       if (obj.PingResults == null) break;
       store.dispatch(`vpnState/updatePings`, obj.PingResults);
       break;
     }
+
+    case daemonResponses.CheckAccessiblePortsResponse:
+      store.dispatch(`settings/notifyAccessiblePortsInfo`, obj.Ports);
+      break;
+
     case daemonResponses.SetAlternateDNSResp:
       if (obj.IsSuccess == null) break;
       if (obj.IsSuccess !== true) {
@@ -875,9 +890,7 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
           // start daemon notification about connection parameters change
           startNotifyDaemonOnParamsChange();
 
-          const pingRetryCount = 5;
-          const pingTimeOutMs = 5000;
-          PingServers(pingRetryCount, pingTimeOutMs);
+          PingServers();
 
           resolve(); // RESOLVE
         } catch (e) {
@@ -1206,7 +1219,7 @@ async function ServersUpdateRequest() {
 }
 
 let pingServersPromise = null;
-async function PingServers(RetryCount, TimeOutMs) {
+async function PingServers() {
   const p = pingServersPromise;
   if (p) {
     console.debug("Pinging already in progress. Waiting...");
@@ -1219,7 +1232,7 @@ async function PingServers(RetryCount, TimeOutMs) {
     pingServersPromise = sendRecv(
       {
         Command: daemonRequests.PingServers,
-        TimeOutMs: TimeOutMs ? TimeOutMs : PingServersTimeoutMs,
+        TimeOutMs: PingServersTimeoutMs,
         VpnTypePrioritization: true,
         VpnTypePrioritized: store.state.settings.vpnType,
       },
@@ -1232,6 +1245,26 @@ async function PingServers(RetryCount, TimeOutMs) {
     store.commit("vpnState/isPingingServers", false);
   }
   return ret;
+}
+
+async function CheckAccessiblePorts(portsToCheck) {
+  // if ports to ckeck is not defined - test only ports applicable for current selected protocol
+  if (!portsToCheck) {
+    let portsToCheckNormalised = store.getters["vpnState/connectionPorts"];
+    portsToCheck = [];
+    // we have to convert port objects to required format
+    for (let p of portsToCheckNormalised) {
+      portsToCheck.push({
+        port: p.port,
+        type: p.type == PortTypeEnum.UDP ? "UDP" : "TCP",
+      });
+    }
+  }
+
+  await sendRecv({
+    Command: daemonRequests.CheckAccessiblePorts,
+    PortsToTest: portsToCheck,
+  });
 }
 
 async function GetDiagnosticLogs() {
@@ -1304,12 +1337,13 @@ async function Connect() {
           console.error(e);
         }
 
-        // NOTE: in case if not possible to ping - we will have exception here (next line will not be executed)
-        // Surround 'PingServers()' in try/catch if it is necessary to continue anyway
-
+        // fastestServer returns: the server with the lowest latency
+        // (looking for the active servers that have latency info)
+        // If there is no latency info for any server:
+        // - return the nearest server (if geolocation info is known)
+        // - else: return the currently selected server (if applicable)
+        // - else: return the first server in the list (as a fallback)
         fastest = store.getters["vpnState/fastestServer"];
-        // if fastest ping == null - it means no any ping info available (e.g. communication blocked by firewall or no internet connectivity)
-        // Anyway, we have to use the server calculated by 'vpnState/fastestServer' as fastest
       }
       if (fastest != null) store.dispatch("settings/serverEntry", fastest);
     } else if (store.getters["settings/isRandomServer"]) {
@@ -1415,8 +1449,6 @@ async function ApplyPauseConnection() {
 
 async function ResumeConnection() {
   store.dispatch("uiState/pauseConnectionTill", null);
-
-  if (store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
   if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) return;
 
   store.dispatch("vpnState/pauseState", PauseStateEnum.Resuming);
@@ -1907,6 +1939,7 @@ export default {
 
   GeoLookup,
   PingServers,
+  CheckAccessiblePorts,
   ServersUpdateRequest,
   KillSwitchGetStatus,
 

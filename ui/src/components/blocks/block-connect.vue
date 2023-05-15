@@ -38,32 +38,39 @@
                 popuptextMinShiftedRight: true,
               }"
             >
-              <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(null)">Resume now</button>
+              <div
+                class="popup_menu_block_clickable"
+                v-on:click="onPauseMenuItem(null)"
+              >
+                <button>Resume now</button>
               </div>
               <div class="popup_dividing_line" />
-              <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(5 * 60)">
-                  Resume in 5 min
-                </button>
+              <div
+                class="popup_menu_block_clickable"
+                v-on:click="onPauseMenuItem(5 * 60)"
+              >
+                <button>Resume in 5 min</button>
               </div>
               <div class="popup_dividing_line" />
-              <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(30 * 60)">
-                  Resume in 30 min
-                </button>
+              <div
+                class="popup_menu_block_clickable"
+                v-on:click="onPauseMenuItem(30 * 60)"
+              >
+                <button>Resume in 30 min</button>
               </div>
               <div class="popup_dividing_line" />
-              <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(1 * 60 * 60)">
-                  Resume in 1 hour
-                </button>
+              <div
+                class="popup_menu_block_clickable"
+                v-on:click="onPauseMenuItem(1 * 60 * 60)"
+              >
+                <button>Resume in 1 hour</button>
               </div>
               <div class="popup_dividing_line" />
-              <div class="popup_menu_block">
-                <button v-on:click="onPauseMenuItem(3 * 60 * 60)">
-                  Resume in 3 hours
-                </button>
+              <div
+                class="popup_menu_block_clickable"
+                v-on:click="onPauseMenuItem(3 * 60 * 60)"
+              >
+                <button>Resume in 3 hours</button>
               </div>
             </div>
           </div>
@@ -110,28 +117,32 @@
               popuptextMin: isMinimizedUI,
             }"
           >
-            <div class="popup_menu_block">
-              <button v-on:click="onPauseMenuItem(5 * 60)">
-                Pause for 5 min
-              </button>
+            <div
+              class="popup_menu_block_clickable"
+              v-on:click="onPauseMenuItem(5 * 60)"
+            >
+              <button>Pause for 5 min</button>
             </div>
             <div class="popup_dividing_line" />
-            <div class="popup_menu_block">
-              <button v-on:click="onPauseMenuItem(30 * 60)">
-                Pause for 30 min
-              </button>
+            <div
+              class="popup_menu_block_clickable"
+              v-on:click="onPauseMenuItem(30 * 60)"
+            >
+              <button>Pause for 30 min</button>
             </div>
             <div class="popup_dividing_line" />
-            <div class="popup_menu_block">
-              <button v-on:click="onPauseMenuItem(1 * 60 * 60)">
-                Pause for 1 hour
-              </button>
+            <div
+              class="popup_menu_block_clickable"
+              v-on:click="onPauseMenuItem(1 * 60 * 60)"
+            >
+              <button>Pause for 1 hour</button>
             </div>
             <div class="popup_dividing_line" />
-            <div class="popup_menu_block">
-              <button v-on:click="onPauseMenuItem(3 * 60 * 60)">
-                Pause for 3 hours
-              </button>
+            <div
+              class="popup_menu_block_clickable"
+              v-on:click="onPauseMenuItem(3 * 60 * 60)"
+            >
+              <button>Pause for 3 hours</button>
             </div>
           </div>
         </div>
@@ -342,5 +353,10 @@ $shadow: 0px 3px 1px rgba(0, 0, 0, 0.06),
 
 .settingsBtnResume:hover {
   background-color: #3377ff;
+}
+
+.popup_menu_block_clickable {
+  @extend .popup_menu_block;
+  cursor: pointer;
 }
 </style>

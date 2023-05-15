@@ -23,6 +23,7 @@
 package wireguard
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -102,7 +103,9 @@ type WireGuard struct {
 	configFilePath string
 	connectParams  ConnectionParams
 	localPort      int
-	isDisconnected bool
+
+	isDisconnected        bool
+	isDisconnectRequested bool
 
 	// Must be implemented (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	internals internalVariables
@@ -119,6 +122,10 @@ func NewWireGuardObject(wgBinaryPath string, wgToolBinaryPath string, wgConfigFi
 		toolBinaryPath: wgToolBinaryPath,
 		configFilePath: wgConfigFilePath,
 		connectParams:  connectionParams}, nil
+}
+
+func (wg *WireGuard) GetTunnelName() string {
+	return wg.getTunnelName()
 }
 
 // DestinationIP -  Get destination IP (VPN host server or proxy server IP address)
@@ -150,6 +157,7 @@ func (wg *WireGuard) Connect(stateChan chan<- vpn.StateInfo) error {
 
 	disconnectDescription := ""
 	wg.isDisconnected = false
+	wg.isDisconnectRequested = false
 	stateChan <- vpn.NewStateInfo(vpn.CONNECTING, "")
 	defer func() {
 		wg.isDisconnected = true
@@ -178,6 +186,7 @@ func (wg *WireGuard) Connect(stateChan chan<- vpn.StateInfo) error {
 
 // Disconnect stops the connection
 func (wg *WireGuard) Disconnect() error {
+	wg.isDisconnectRequested = true
 	return wg.disconnect()
 }
 
@@ -266,7 +275,30 @@ func (wg *WireGuard) generateConfig() ([]string, error) {
 	return append(interfaceCfg, peerCfg...), nil
 }
 
-func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
+func (wg *WireGuard) waitHandshakeAndNotifyConnected(stateChan chan<- vpn.StateInfo) error {
+	log.Info("Initialised")
+
+	// Notify: interface initialised
+	wg.notifyInitialisedStat(stateChan)
+
+	// Check connectivity: wait for first handshake
+	// No timeout defined; function returns only when handshake received or wg.isDisconnectRequested == true
+	err := WaitForWireguardFirstHanshake(wg.GetTunnelName(), 0, &wg.isDisconnectRequested, func(mes string) { log.Info(mes) })
+	if err != nil {
+		if errors.Is(err, WgHandshakeTimeoutError{}) {
+			return err
+		} else {
+			log.Error(err) // not handshake timeout. Probably internal issue with 'wgctrl'. Just print error in log
+		}
+	} else {
+		log.Info("Connected") // no errors - handshake received
+	}
+
+	wg.notifyConnectedStat(stateChan)
+	return nil
+}
+
+func (wg *WireGuard) newStateInfoConnected() vpn.StateInfo {
 	const isTCP = false
 	const isCanPause = true
 
@@ -281,7 +313,16 @@ func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
 		wg.connectParams.mtu)
 
 	si.ExitHostname = wg.connectParams.multihopExitHostname
+	return si
+}
 
+func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
+	stateChan <- wg.newStateInfoConnected()
+}
+
+func (wg *WireGuard) notifyInitialisedStat(stateChan chan<- vpn.StateInfo) {
+	si := wg.newStateInfoConnected()
+	si.State = vpn.INITIALISED
 	stateChan <- si
 }
 
