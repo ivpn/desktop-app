@@ -10,7 +10,14 @@ PUSHD
 call %_SCRIPTDIR%..\..\common\kem-helper\build.bat %_SCRIPTDIR%..\.deps || goto :error
 POPD
 
-mkdir "%SCRIPTDIR%..\kem" || exit /b 1
+SET _KEM_BIN_DIR=%SCRIPTDIR%..\kem
+    if exist "%_KEM_BIN_DIR%" (
+        echo [*] Deleting '%_KEM_BIN_DIR%\*' ...
+        rmdir /s /q "%_KEM_BIN_DIR%"
+    )
+
+mkdir "%_KEM_BIN_DIR%" || goto :error
+
 copy /Y %_SCRIPTDIR%..\.deps\kem-helper-bin\kem-helper.exe  %_SCRIPTDIR%..\kem || goto :error
 
 set _theResult_binary_path=%_SCRIPTDIR%..\kem-helper.exe
