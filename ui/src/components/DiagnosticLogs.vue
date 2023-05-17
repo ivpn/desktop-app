@@ -120,7 +120,7 @@ export default {
   },
   computed: {
     isLoggingEnabled: function () {
-      return this.$store.state.settings.logging;
+      return this.$store.state.settings.daemonSettings?.IsLogging;
     },
     viewTextLogs: function () {
       if (this.diagnosticDataObj == null) return null;

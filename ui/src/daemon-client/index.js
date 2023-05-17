@@ -407,13 +407,6 @@ async function processResponse(response) {
         store.commit("uiState/isParanoidModePasswordView", isPmPassError);
 
         if (obj.ParanoidMode.IsEnabled === false) ParanoidModeSecret = "";
-
-        // send logging configuration
-        // (apply UI settings to daemon only when HelloResp directed directly to us obj.Idx>0 )
-        // TODO: do not send logging settings, but ask for this values from the daemon
-        if (!isPmPassError) {
-          if (obj.Idx != undefined && obj.Idx !== 0) SetLogging();
-        }
       }
 
       // check accessible ports
@@ -1833,8 +1826,7 @@ async function SetAutoconnectOnLaunch(
   }
 }
 
-async function SetLogging() {
-  const enable = store.state.settings.logging;
+async function SetLogging(enable) {
   const Key = "enable_logging";
   let Value = `${enable}`;
 

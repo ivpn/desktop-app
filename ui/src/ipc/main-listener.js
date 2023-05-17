@@ -185,8 +185,8 @@ ipcMain.handle(
     );
   }
 );
-ipcMain.handle("renderer-request-set-logging", async () => {
-  return await client.SetLogging();
+ipcMain.handle("renderer-request-set-logging", async (event, enable) => {
+  return await client.SetLogging(enable);
 });
 ipcMain.handle(
   "renderer-request-set-obfsproxy",

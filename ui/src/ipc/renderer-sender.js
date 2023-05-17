@@ -207,8 +207,8 @@ export default {
       isApplicableByDaemonInBackground
     );
   },
-  SetLogging: async () => {
-    return await invoke("renderer-request-set-logging");
+  SetLogging: async (isEnabled) => {
+    return await invoke("renderer-request-set-logging", isEnabled);
   },
   SetObfsproxy: async (obfsproxyVer, obfs4Iat) => {
     return await invoke(

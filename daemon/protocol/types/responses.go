@@ -128,9 +128,9 @@ type SettingsResp struct {
 	ObfsproxyConfig             obfsproxy.Config // (for OpenVPN connections)
 	UserPrefs                   preferences.UserPreferences
 	WiFi                        preferences.WiFiParams
+	IsLogging                   bool
 
 	// TODO: implement the rest of daemon settings
-	// IsLogging             bool
 	// IsFwPersistant        bool
 	// IsFwAllowLAN          bool
 	// IsFwAllowLANMulticast bool

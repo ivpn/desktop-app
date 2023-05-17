@@ -204,6 +204,7 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 		ObfsproxyConfig:             prefs.Obfs4proxy,
 		UserPrefs:                   prefs.UserPrefs,
 		WiFi:                        prefs.WiFiControl,
+		IsLogging:                   prefs.IsLogging,
 		// TODO: implement the rest of daemon settings
 	}
 }

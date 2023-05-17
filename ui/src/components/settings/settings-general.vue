@@ -476,11 +476,10 @@ export default {
     },
     logging: {
       get() {
-        return this.$store.state.settings.logging;
+        return this.$store.state.settings.daemonSettings?.IsLogging;
       },
-      set(value) {
-        this.$store.dispatch("settings/logging", value);
-        sender.SetLogging();
+      async set(value) {
+        await sender.SetLogging(value);
       },
     },
 
@@ -496,7 +495,6 @@ export default {
         settingsUpdates.isBetaProgram = value;
 
         this.$store.dispatch("settings/updates", settingsUpdates);
-        sender.SetLogging();
       },
     },
 

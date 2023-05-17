@@ -67,13 +67,13 @@ const getDefaultState = () => {
     // general
     quitWithoutConfirmation: false,
     disconnectOnQuit: true,
-    logging: false, // this parameter saves on the daemon's side
 
     // This object received out FROM DAEMON!
     daemonSettings: {
       IsAutoconnectOnLaunch: false,
       IsAutoconnectOnLaunchDaemon: false,
       UserDefinedOvpnFile: "",
+      IsLogging: false,
 
       // obfsproxy configuration
       ObfsproxyConfig: {
@@ -306,9 +306,6 @@ export default {
     },
     quitWithoutConfirmation(state, val) {
       state.quitWithoutConfirmation = val;
-    },
-    logging(state, val) {
-      state.logging = val;
     },
     daemonSettings(state, val) {
       state.daemonSettings = val;
@@ -680,9 +677,6 @@ export default {
     },
     quitWithoutConfirmation(context, val) {
       context.commit("quitWithoutConfirmation", val);
-    },
-    logging(context, val) {
-      context.commit("logging", val);
     },
 
     // connection
