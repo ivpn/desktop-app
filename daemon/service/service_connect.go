@@ -722,6 +722,16 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTr
 						log.Error("Unable to add host to firewall exceptions:", err.Error())
 					}
 
+				case vpn.INITIALISED:
+					// start routing change detection
+					if netInterface, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
+						log.Error(fmt.Sprintf("Unable to initialize routing change detection. Failed to get interface '%s'", state.ClientIP.String()))
+					} else {
+
+						log.Info("Starting route change detection")
+						s._netChangeDetector.Start(routingChangeChan, routingUpdateChan, netInterface)
+					}
+
 				case vpn.CONNECTED:
 					// since we are connected - keep connection (reconnect if unexpected disconnection)
 					if s._requiredVpnState == Connect {
@@ -732,15 +742,6 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTr
 					// In this case we are trying to save info message into system log
 					if !s._evtReceiver.IsClientConnected(false) {
 						s.systemLog(Info, "VPN connected")
-					}
-
-					// start routing change detection
-					if netInterface, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
-						log.Error(fmt.Sprintf("Unable to initialize routing change detection. Failed to get interface '%s'", state.ClientIP.String()))
-					} else {
-
-						log.Info("Starting route change detection")
-						s._netChangeDetector.Start(routingChangeChan, routingUpdateChan, netInterface)
 					}
 
 					// Inform firewall about client local IP

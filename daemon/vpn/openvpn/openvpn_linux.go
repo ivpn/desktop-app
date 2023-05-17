@@ -72,8 +72,14 @@ func (o *OpenVPN) implOnConnected() error {
 		return dns.SetManual(o.psProps.manualDNS, o.clientIP)
 	}
 
-	// Normally, the DNS configuration performed by OpenVPN by calling script (OpenVPN config: "up client.up")
-	// But we also have to start DNS-change monitoring mechanisms. So we applying the DNS config again and starting/initializing all necessary internal DNS stuff
+	// TODO: to think: do we really need OpenVPN config `up client.up`?
+
+	// Normally, the DNS configuration is performed by OpenVPN by calling a script (OpenVPN config: "up client.up").
+	// However, we also have to start DNS-change monitoring mechanisms. So we are applying the DNS config again and starting/initializing all necessary internal DNS components.
+	//
+	// We also need to do this manually to ensure that DNS was updated correctly: the client.up script does not fail in case of an error (this is intentional, so as not to break the OpenVPN connection).
+	// In the SNAP environment (if there is no access to '/etc/resolv.conf'), OpenVPN connects, but DNS settings are not updated due to lack of access.
+	// So, here we are trying to change the DNS again and analyzing any errors (if there are any).
 	defDns := dns.DnsSettingsCreate(o.DefaultDNS())
 	return dns.SetDefault(defDns, o.clientIP)
 }

@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.10.23 - 2023-05-15
+
+[NEW] Automatically select an accessible port before user login  
+[NEW] (Linux) IVPN SNAP now works on Linux systems that do not use systemd-resolved  
+[IMPROVED] Enhanced server latency check speed  
+[IMPROVED] Better detection of successful WireGuard connections  
+[IMPROVED] UI: Entire area of select pause period buttons is now clickable  
+[IMPROVED] (Windows/Linux) UI: Added a title to the 'update' window for clearer identification as part of the IVPN app  
+[IMPROVED] (Linux) UI: Freed up vertical space in Settings -> General  
+[FIX] Resolved issue where paused OpenVPN connection would not resume after defined timeout in some cases  
+[FIX] Resolved an issue where the fastest server option sometimes connects to a random server after switching from MultiHop  
+[FIX] UI: Addressed disappearing pause button after resuming connection  
+[FIX] (Linux) Resolved issue where WireGuard fails to disconnect from paused state  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.10.23.exe)  
+SHA256: c6201200ab322a9307fe2d5f5eb70d11e15c8f6d7cc21bdd17f2ecb90b1dd02f  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.10.23.dmg)  
+SHA256: f53bb078f9c6d021dd28152b1de7c5ca63f38c8ce27a692a2f4fbf85cdfd4865  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.10.23-arm64.dmg)  
+SHA256: 690577eeaa47d8c44139dcac64acdf98c39becb4f68b191d594ca45325532507  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.10.23_amd64.deb)  
+SHA256: b81637d872ce9fae32c8aef6f10be6e5668698dbfb77847f601059c2b7c41ed0  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.10.23-1.x86_64.rpm)  
+SHA256: fd61e1de25a6b8e2ad5e7b66103054aab4a653785268fae6308646c0b091b8c4  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.10.23_amd64.deb)  
+SHA256: 3a62e55e455650c9eb33c2594936512b9e3b69532f98c274fa3cf863de57c476  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.10.23-1.x86_64.rpm)  
+SHA256: 8fdefea2f6ee26eb9af5476d7565832b09436de9f575350a331cf0f0e5f08871  
+
 ## Version 3.10.15 - 2023-03-29
 
 [FIX] (Windows) Prevent installer from inadvertently overwriting PATH environment variable in rare cases  

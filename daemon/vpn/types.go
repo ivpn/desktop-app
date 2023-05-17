@@ -73,6 +73,7 @@ const (
 	RECONNECTING State = iota // A restart has occurred.
 	TCP_CONNECT  State = iota // TCP_CONNECT
 	EXITING      State = iota // A graceful exit is in progress.
+	INITIALISED  State = iota // Interface initialised (WireGuard: but connection handshake still not detected)
 )
 
 func (s State) String() string {
@@ -91,7 +92,8 @@ func (s State) String() string {
 		"CONNECTED",
 		"RECONNECTING",
 		"TCP_CONNECT",
-		"EXITING"}[s]
+		"EXITING",
+		"INITIALISED"}[s]
 }
 
 // ParseState - Converts string representation of OpenVPN state to vpn.State
@@ -118,6 +120,8 @@ func ParseState(stateStr string) (State, error) {
 		return TCP_CONNECT, nil
 	case "EXITING":
 		return EXITING, nil
+	case "INITIALISED":
+		return INITIALISED, nil
 	default:
 		return DISCONNECTED, errors.New("unexpected state:" + stateStr)
 	}

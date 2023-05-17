@@ -103,8 +103,6 @@ type Service struct {
 	// Note: Disconnect() function will wait until VPN fully disconnects
 	_done chan struct{}
 
-	_serversPingProgressSemaphore *syncSemaphore.Weighted
-
 	// nil - when session checker stopped
 	// to stop -> write to channel (it is synchronous channel)
 	_sessionCheckerStopChn chan struct{}
@@ -115,6 +113,15 @@ type Service struct {
 	_globalEvents <-chan ServiceEventType
 
 	_systemLog chan<- SystemLogMessage
+
+	_ping struct {
+		_results_mutex               sync.RWMutex
+		_result                      map[string]int //[host]latency
+		_singleRequestLimitSemaphore *syncSemaphore.Weighted
+	}
+
+	// variables related to connection test (e.g. ports accessibility test)
+	_connectionTest connTest
 }
 
 // VpnSessionInfo - Additional information about current VPN connection
@@ -134,16 +141,17 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 	}
 
 	serv := &Service{
-		_preferences:                  *preferences.Create(),
-		_evtReceiver:                  evtReceiver,
-		_api:                          api,
-		_serversUpdater:               updater,
-		_netChangeDetector:            netChDetector,
-		_wgKeysMgr:                    wgKeysMgr,
-		_serversPingProgressSemaphore: syncSemaphore.NewWeighted(1),
-		_globalEvents:                 globalEvents,
-		_systemLog:                    systemLog,
+		_preferences:       *preferences.Create(),
+		_evtReceiver:       evtReceiver,
+		_api:               api,
+		_serversUpdater:    updater,
+		_netChangeDetector: netChDetector,
+		_wgKeysMgr:         wgKeysMgr,
+		_globalEvents:      globalEvents,
+		_systemLog:         systemLog,
 	}
+
+	serv._ping._singleRequestLimitSemaphore = syncSemaphore.NewWeighted(1)
 
 	// register the current service as a 'Connectivity checker' for API object
 	serv._api.SetConnectivityChecker(serv)

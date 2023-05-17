@@ -88,6 +88,12 @@ fi
 # Preserve the existing resolv.conf
 if [ -e /etc/resolv.conf ] ; then
   mv /etc/resolv.conf /etc/resolv.conf.ivpnsave
+  if [ $? -ne 0 ]; then
+    echo "Error: 'mv /etc/resolv.conf /etc/resolv.conf.ivpnsave' failed"
+    # Exit status 0 to give the IVPN daemon the ability to check the reason for the issue and show the appropriate error text.
+    # The error may occur when we are running under a snap environment and blocked access to /etc/resolv.conf* files.
+    exit 0 
+  fi
 fi
 
 printf "%s\n" "${out}" > /etc/resolv.conf

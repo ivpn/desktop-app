@@ -82,7 +82,7 @@ func StartManagementInterface(miSecret string, username string, password string,
 
 // StopManagementInterface - Stop management interface manually
 func (i *ManagementInterface) StopManagementInterface() error {
-	if i.isConnected == false {
+	if !i.isConnected {
 		return nil
 	}
 
@@ -145,7 +145,17 @@ func (i *ManagementInterface) GetRouteAddCommands() []string {
 	i.routeAddCmdsMutex.Lock()
 	defer i.routeAddCmdsMutex.Unlock()
 
-	return i.routeAddCmds
+	ret := make([]string, len(i.routeAddCmds))
+	copy(ret, i.routeAddCmds)
+
+	return ret
+}
+
+func (i *ManagementInterface) HasRouteAddCommands() bool {
+	i.routeAddCmdsMutex.Lock()
+	defer i.routeAddCmdsMutex.Unlock()
+
+	return len(i.routeAddCmds) > 0
 }
 
 // start - starts TCP interface to communicate with IVPN application (server to listen incoming connections)
@@ -154,7 +164,7 @@ func (i *ManagementInterface) start() error {
 		return errors.New("disconnection already requested for this MI object. To perform new connection, please, initialize new object")
 	}
 
-	adrr := fmt.Sprintf("127.0.0.1:0")
+	adrr := "127.0.0.1:0"
 	// Initializing listener
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", adrr)
 	if err != nil {
@@ -312,14 +322,10 @@ func (i *ManagementInterface) miCommunication() {
 				}
 			}
 
-			break
-
 		case "INFO":
-			break
 
 		case "HOLD":
 			i.sendResponse("state on", "log on", "hold off", "hold release")
-			break
 
 		case "PASSWORD":
 			if strings.HasPrefix(msgText, "Verification Failed: 'Auth'") {
@@ -327,7 +333,7 @@ func (i *ManagementInterface) miCommunication() {
 				break
 			}
 
-			if mesNeedPassRegexp.Match([]byte(msgText)) == false {
+			if !mesNeedPassRegexp.Match([]byte(msgText)) {
 				continue
 			}
 
@@ -343,7 +349,6 @@ func (i *ManagementInterface) miCommunication() {
 			escapedPass := strings.ReplaceAll(i.password, "\\", "\\\\")
 			escapedPass = strings.ReplaceAll(escapedPass, "\"", "\\\"")
 			i.sendResp(false, fmt.Sprintf("password \"Auth\" %s", escapedPass))
-			break
 
 		case "STATE":
 			// The output format consists of 4 comma-separated parameters:
@@ -405,7 +410,7 @@ func (i *ManagementInterface) miCommunication() {
 					ServerIP:            serverIP,
 					IsAuthError:         isAuthError,
 					StateAdditionalInfo: additionalInfo,
-					IsCanPause:          len(i.GetRouteAddCommands()) > 0}
+					IsCanPause:          i.HasRouteAddCommands()}
 
 				select {
 				case i.stateChan <- state: // notify: state was changed
@@ -414,8 +419,6 @@ func (i *ManagementInterface) miCommunication() {
 					i.stateChan <- state
 				}
 			}
-
-			break
 		}
 
 	}

@@ -38,6 +38,7 @@ import {
   PauseStateEnum,
   DaemonConnectionType,
   DnsEncryption,
+  PortTypeEnum,
 } from "@/store/types";
 import store from "@/store";
 
@@ -64,6 +65,7 @@ const daemonRequests = Object.freeze({
 
   PingServers: "PingServers",
   GetServers: "GetServers",
+  CheckAccessiblePorts: "CheckAccessiblePorts",
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
   AccountStatus: "AccountStatus",
@@ -124,6 +126,7 @@ const daemonResponses = Object.freeze({
   DisconnectedResp: "DisconnectedResp",
   ServerListResp: "ServerListResp",
   PingServersResp: "PingServersResp",
+  CheckAccessiblePortsResponse: "CheckAccessiblePortsResponse",
   SetAlternateDNSResp: "SetAlternateDNSResp",
   DnsPredefinedConfigsResp: "DnsPredefinedConfigsResp",
   KillSwitchStatusResp: "KillSwitchStatusResp",
@@ -414,6 +417,12 @@ async function processResponse(response) {
         }
       }
 
+      // check accessible ports
+      {
+        if (!store.getters["account/isLoggedIn"]) {
+          CheckAccessiblePorts(); // request all accessible ports
+        }
+      }
       break;
 
     case daemonResponses.SettingsResp:
@@ -460,11 +469,17 @@ async function processResponse(response) {
       if (obj.VpnServers == null) break;
       store.dispatch(`vpnState/servers`, obj.VpnServers);
       break;
+
     case daemonResponses.PingServersResp: {
       if (obj.PingResults == null) break;
       store.dispatch(`vpnState/updatePings`, obj.PingResults);
       break;
     }
+
+    case daemonResponses.CheckAccessiblePortsResponse:
+      store.dispatch(`settings/notifyAccessiblePortsInfo`, obj.Ports);
+      break;
+
     case daemonResponses.SetAlternateDNSResp:
       if (obj.IsSuccess == null) break;
       if (obj.IsSuccess !== true) {
@@ -876,9 +891,7 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
           // start daemon notification about connection parameters change
           startNotifyDaemonOnParamsChange();
 
-          const pingRetryCount = 5;
-          const pingTimeOutMs = 5000;
-          PingServers(pingRetryCount, pingTimeOutMs);
+          PingServers();
 
           resolve(); // RESOLVE
         } catch (e) {
@@ -1207,7 +1220,7 @@ async function ServersUpdateRequest() {
 }
 
 let pingServersPromise = null;
-async function PingServers(RetryCount, TimeOutMs) {
+async function PingServers() {
   const p = pingServersPromise;
   if (p) {
     console.debug("Pinging already in progress. Waiting...");
@@ -1220,7 +1233,7 @@ async function PingServers(RetryCount, TimeOutMs) {
     pingServersPromise = sendRecv(
       {
         Command: daemonRequests.PingServers,
-        TimeOutMs: TimeOutMs ? TimeOutMs : PingServersTimeoutMs,
+        TimeOutMs: PingServersTimeoutMs,
         VpnTypePrioritization: true,
         VpnTypePrioritized: store.state.settings.vpnType,
       },
@@ -1233,6 +1246,26 @@ async function PingServers(RetryCount, TimeOutMs) {
     store.commit("vpnState/isPingingServers", false);
   }
   return ret;
+}
+
+async function CheckAccessiblePorts(portsToCheck) {
+  // if ports to ckeck is not defined - test only ports applicable for current selected protocol
+  if (!portsToCheck) {
+    let portsToCheckNormalised = store.getters["vpnState/connectionPorts"];
+    portsToCheck = [];
+    // we have to convert port objects to required format
+    for (let p of portsToCheckNormalised) {
+      portsToCheck.push({
+        port: p.port,
+        type: p.type == PortTypeEnum.UDP ? "UDP" : "TCP",
+      });
+    }
+  }
+
+  await sendRecv({
+    Command: daemonRequests.CheckAccessiblePorts,
+    PortsToTest: portsToCheck,
+  });
 }
 
 async function GetDiagnosticLogs() {
@@ -1417,8 +1450,6 @@ async function ApplyPauseConnection() {
 
 async function ResumeConnection() {
   store.dispatch("uiState/pauseConnectionTill", null);
-
-  if (store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
   if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) return;
 
   store.dispatch("vpnState/pauseState", PauseStateEnum.Resuming);
@@ -1909,6 +1940,7 @@ export default {
 
   GeoLookup,
   PingServers,
+  CheckAccessiblePorts,
   ServersUpdateRequest,
   KillSwitchGetStatus,
 

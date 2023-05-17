@@ -57,6 +57,7 @@ type internalVariables struct {
 	command       *exec.Cmd
 	isGoingToStop bool
 	defGateway    net.IP
+	utunName      string
 
 	isPaused      bool
 	omResumedChan chan struct{} // channel for 'On Resume' events
@@ -67,6 +68,10 @@ var logWgOut *logger.Logger
 func (wg *WireGuard) init() error {
 	logWgOut = logger.NewLogger("wg_out")
 	return nil
+}
+
+func (wg *WireGuard) getTunnelName() string {
+	return wg.internals.utunName
 }
 
 // connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
@@ -135,10 +140,11 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		log.Error(err.Error())
 		return fmt.Errorf("unable to start WireGuard. Failed to obtain free utun interface: %w", err)
 	}
+	wg.internals.utunName = utunName
 
-	log.Info("Starting WireGuard in interface ", utunName)
+	log.Info("Starting WireGuard in interface ", wg.getTunnelName())
 	// LOG_LEVEL=verbose
-	wg.internals.command = exec.Command(wg.binaryPath, "-f", utunName)
+	wg.internals.command = exec.Command(wg.binaryPath, "-f", wg.getTunnelName())
 	wg.internals.command.Env = os.Environ()
 	wg.internals.command.Env = append(wg.internals.command.Env, "LOG_LEVEL=verbose")
 
@@ -200,14 +206,17 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		select {
 		case <-isStartedChannel:
 			// Process started. Perform initialization...
-			if initError = wg.initialize(utunName); initError != nil {
+			if initError = wg.initialize(); initError != nil {
 				// (return initialization error as a result of connect)
 				log.ErrorTrace(initError)
 				isHaveToBeStopped = true
 			} else {
-				log.Info("Started")
-				// CONNECTED
-				wg.notifyConnectedStat(stateChan)
+				// Initialised
+				err := wg.waitHandshakeAndNotifyConnected(stateChan)
+				if err != nil {
+					log.ErrorTrace(err)
+					isHaveToBeStopped = true
+				}
 			}
 
 		case <-time.After(time.Second * 5):
@@ -294,15 +303,15 @@ func (wg *WireGuard) resetManualDNS() error {
 	return dns.DeleteManual(wg.DefaultDNS(), nil)
 }
 
-func (wg *WireGuard) initialize(utunName string) error {
+func (wg *WireGuard) initialize() error {
 
 	// Init IPv6 DNS resolver (if necessary);
 	// It should be done before initialization of the tunnel interface
-	if err := wg.initIPv6DNSResolver(utunName); err != nil {
+	if err := wg.initIPv6DNSResolver(); err != nil {
 		log.Error(fmt.Errorf("failed to initialize IPv6 DNS resolver: %w", err))
 	}
 
-	if err := wg.initializeConfiguration(utunName); err != nil {
+	if err := wg.initializeConfiguration(); err != nil {
 		return fmt.Errorf("failed to initialize configuration: %w", err)
 	}
 
@@ -317,25 +326,25 @@ func (wg *WireGuard) initialize(utunName string) error {
 	return nil
 }
 
-func (wg *WireGuard) initializeConfiguration(utunName string) error {
-	log.Info("Configuring ", utunName, " interface...")
+func (wg *WireGuard) initializeConfiguration() error {
+	log.Info("Configuring ", wg.getTunnelName(), " interface...")
 
 	// Configure WireGuard interface
 	// example command:	ipconfig set utun7 MANUAL 10.0.0.121 255.255.255.0
 	//				 	ifconfig utun2 inet 172.26.22.146/8 172.26.22.146 alias
-	if err := wg.initializeUnunInterface(utunName); err != nil {
+	if err := wg.initializeUnunInterface(); err != nil {
 		return fmt.Errorf("failed to initialize interface: %w", err)
 	}
 
 	// WireGuard configuration
-	if err := wg.setWgConfiguration(utunName); err != nil {
+	if err := wg.setWgConfiguration(); err != nil {
 		return err
 	}
 
 	if wg.connectParams.mtu > 0 {
 		// Custom MTU
 		log.Info(fmt.Sprintf("Configuring custom MTU = %d ...", wg.connectParams.mtu))
-		err := shell.Exec(log, "/sbin/ifconfig", utunName, "mtu", strconv.Itoa(wg.connectParams.mtu))
+		err := shell.Exec(log, "/sbin/ifconfig", wg.getTunnelName(), "mtu", strconv.Itoa(wg.connectParams.mtu))
 		if err != nil {
 			return fmt.Errorf("failed to set custom MTU (%d): %w", wg.connectParams.mtu, err)
 		}
@@ -347,16 +356,16 @@ func (wg *WireGuard) initializeConfiguration(utunName string) error {
 // Configure WireGuard interface
 // example command: ipconfig set utun7 MANUAL 10.0.0.121 12
 // example command: ipconfig set utun7 MANUAL-V6 fd00:4956:504e:ffff::ac1a:704b 96
-func (wg *WireGuard) initializeUnunInterface(utunName string) error {
+func (wg *WireGuard) initializeUnunInterface() error {
 	// initialize IPv4 interface for tunnel
-	if err := shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask); err != nil {
+	if err := shell.Exec(log, "/usr/sbin/ipconfig", "set", wg.getTunnelName(), "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask); err != nil {
 		return fmt.Errorf("failed to set the IPv4 address for interface: %w", err)
 	}
 
 	// initialize IPv6 interface for tunnel
 	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
 	if ipv6LocalIP != nil {
-		if err := shell.Exec(log, "/usr/sbin/ipconfig", "set", utunName, "MANUAL-V6", ipv6LocalIP.String(), subnetMaskPrefixLenIPv6); err != nil {
+		if err := shell.Exec(log, "/usr/sbin/ipconfig", "set", wg.getTunnelName(), "MANUAL-V6", ipv6LocalIP.String(), subnetMaskPrefixLenIPv6); err != nil {
 			return fmt.Errorf("failed to set the IPv6 address for interface: %w", err)
 		}
 	}
@@ -364,7 +373,7 @@ func (wg *WireGuard) initializeUnunInterface(utunName string) error {
 }
 
 // WireGuard configuration
-func (wg *WireGuard) setWgConfiguration(utunName string) error {
+func (wg *WireGuard) setWgConfiguration() error {
 	// do not forget to remove config file after finishing configuration
 	defer os.Remove(wg.configFilePath)
 
@@ -397,7 +406,7 @@ func (wg *WireGuard) setWgConfiguration(utunName string) error {
 		// Configure WireGuard
 		// example command: wg setconf utun7 wireguard.conf
 		err = shell.ExecAndProcessOutput(log, errParse, "", wg.toolBinaryPath,
-			"setconf", utunName, wg.configFilePath)
+			"setconf", wg.getTunnelName(), wg.configFilePath)
 
 		if !isPortInUse {
 			return err
@@ -494,11 +503,11 @@ func (wg *WireGuard) setDNS() error {
 	return nil
 }
 
-func (wg *WireGuard) initIPv6DNSResolver(utunName string) error {
+func (wg *WireGuard) initIPv6DNSResolver() error {
 	// required to be able to resolve IPv6 DNS addresses by the default macOS's domain name resolver
 	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
-	if ipv6LocalIP != nil && len(utunName) > 0 {
-		err := shell.Exec(log, platform.DNSScript(), "-up_init_ipv6_resolver", ipv6LocalIP.String(), utunName)
+	if ipv6LocalIP != nil && len(wg.getTunnelName()) > 0 {
+		err := shell.Exec(log, platform.DNSScript(), "-up_init_ipv6_resolver", ipv6LocalIP.String(), wg.getTunnelName())
 		if err != nil {
 			return fmt.Errorf("failed to change DNS: %w", err)
 		}
