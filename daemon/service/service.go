@@ -1049,16 +1049,20 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 		log.Error("Creating new session -> Failed to delete active session: ", err)
 	}
 
-	// generate new keys for WireGuard
-	publicKey, privateKey, err := wireguard.GenerateKeys(platform.WgToolBinaryPath())
-	if err != nil {
-		log.Warning("Failed to generate wireguard keys for new session: %s", err)
-	}
-
 	// Generate keys for Key Encapsulation Mechanism using post-quantum cryptographic algorithms
-	kemHelper, err := kem.CreateHelper(platform.KemHelperBinaryPath())
+	var kemKeys api_types.KemPublicKeys
+	kemHelper, err := kem.CreateHelper(platform.KemHelperBinaryPath(), []kem.Kem_Algo_Name{kem.AlgName_Kyber1024, kem.AlgName_ClassicMcEliece348864})
 	if err != nil {
 		log.Error("Failed to generate KEM keys: ", err)
+	} else {
+		kemKeys.KemPublicKey_Kyber1024, err = kemHelper.GetPublicKey(kem.AlgName_Kyber1024)
+		if err != nil {
+			log.Error(err)
+		}
+		kemKeys.KemPublicKey_ClassicMcEliece348864, err = kemHelper.GetPublicKey(kem.AlgName_ClassicMcEliece348864)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	log.Info("Logging in...")
@@ -1072,6 +1076,9 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	}()
 
 	var (
+		publicKey  string
+		privateKey string
+
 		wgPresharedKey string
 		successResp    *api_types.SessionNewResponse
 		errorLimitResp *api_types.SessionNewErrorLimitResponse
@@ -1080,7 +1087,13 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	)
 
 	for {
-		successResp, errorLimitResp, apiErr, rawRespStr, err = s._api.SessionNew(accountID, publicKey, kemHelper, forceLogin, captchaID, captcha, confirmation2FA)
+		// generate new keys for WireGuard
+		publicKey, privateKey, err = wireguard.GenerateKeys(platform.WgToolBinaryPath())
+		if err != nil {
+			log.Warning("Failed to generate wireguard keys for new session: %s", err)
+		}
+
+		successResp, errorLimitResp, apiErr, rawRespStr, err = s._api.SessionNew(accountID, publicKey, kemKeys, forceLogin, captchaID, captcha, confirmation2FA)
 		rawResponse = rawRespStr
 
 		apiCode = 0
@@ -1109,13 +1122,21 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 		}
 
 		if kemHelper != nil {
-			if err = kemHelper.CheckCiphers(); err != nil {
-				log.Warning(fmt.Sprintf("Server did not respond with KEM ciphers (%v). WireGuard PresharedKey not initialized!", err))
+			if len(successResp.WireGuard.KemCipher_Kyber1024) == 0 && len(successResp.WireGuard.KemCipher_ClassicMcEliece348864) == 0 {
+				log.Warning("The server did not respond with KEM ciphers. The WireGuard PresharedKey has not been initialized!")
 			} else {
+				if err := kemHelper.SetCipher(kem.AlgName_Kyber1024, successResp.WireGuard.KemCipher_Kyber1024); err != nil {
+					log.Error(err)
+				}
+				if err := kemHelper.SetCipher(kem.AlgName_ClassicMcEliece348864, successResp.WireGuard.KemCipher_ClassicMcEliece348864); err != nil {
+					log.Error(err)
+				}
+
 				wgPresharedKey, err = kemHelper.CalculatePresharedKey()
 				if err != nil {
-					log.Error("Failed to decode KEM ciphers! Generating new keys without PresharedKey...")
+					log.Error(fmt.Sprintf("Failed to decode KEM ciphers! (%s). Retry Log-in without WireGuard PresharedKey...", err))
 					kemHelper = nil
+					kemKeys = api_types.KemPublicKeys{}
 					if err := s.SessionDelete(true); err != nil {
 						log.Error("Creating new session (retry 2) -> Failed to delete active session: ", err)
 					}
@@ -1136,6 +1157,8 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 		publicKey,
 		privateKey,
 		successResp.WireGuard.IPAddress, 0, wgPresharedKey)
+
+	log.Info(fmt.Sprintf("(logging in) WG keys updated (%s:%s; psk:%v)", successResp.WireGuard.IPAddress, publicKey, len(wgPresharedKey) > 0))
 
 	return apiCode, "", accountInfo, rawResponse, nil
 }

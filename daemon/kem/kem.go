@@ -46,7 +46,7 @@ type decpskResp struct {
 	Secret string `json:"secret"`
 }
 
-func GenerateKeys(kemHelperPath string, kemAlgorithmName kem_Algo_Name) (privateKeyBase64, publicKeyBase64 string, retErr error) {
+func GenerateKeys(kemHelperPath string, kemAlgorithmName Kem_Algo_Name) (privateKeyBase64, publicKeyBase64 string, retErr error) {
 	if string(kemAlgorithmName) == "" {
 		return "", "", fmt.Errorf("kem-helper error: bad argument")
 	}
@@ -73,7 +73,7 @@ func GenerateKeys(kemHelperPath string, kemAlgorithmName kem_Algo_Name) (private
 	return resp.Priv, resp.Pub, nil
 }
 
-func GenerateKeysMulti(kemHelperPath string, kemAlgorithmName []kem_Algo_Name) (privateKeyBase64, publicKeyBase64 []string, retErr error) {
+func GenerateKeysMulti(kemHelperPath string, kemAlgorithmName []Kem_Algo_Name) (privateKeyBase64, publicKeyBase64 []string, retErr error) {
 	if len(kemAlgorithmName) == 0 {
 		return nil, nil, fmt.Errorf("kem-helper error: bad argument")
 	}
@@ -90,7 +90,7 @@ func GenerateKeysMulti(kemHelperPath string, kemAlgorithmName []kem_Algo_Name) (
 	return privateKeyBase64, publicKeyBase64, nil
 }
 
-func DecodeCipher(kemHelperPath string, kemAlgorithmName kem_Algo_Name, privateKeyBase64 string, cipherBase64 string) (secretBase64 string, retErr error) {
+func DecodeCipher(kemHelperPath string, kemAlgorithmName Kem_Algo_Name, privateKeyBase64 string, cipherBase64 string) (secretBase64 string, retErr error) {
 	if string(kemAlgorithmName) == "" {
 		return "", fmt.Errorf("kem-helper error: bad argument")
 	}
@@ -123,7 +123,7 @@ func DecodeCipher(kemHelperPath string, kemAlgorithmName kem_Algo_Name, privateK
 	return resp.Secret, nil
 }
 
-func DecodeCipherMulti(kemHelperPath string, kemAlgorithmName []kem_Algo_Name, privateKeyBase64 []string, cipherBase64 []string) (secretBase64 []string, retErr error) {
+func DecodeCipherMulti(kemHelperPath string, kemAlgorithmName []Kem_Algo_Name, privateKeyBase64 []string, cipherBase64 []string) (secretBase64 []string, retErr error) {
 	chipersCnt := len(cipherBase64)
 	algsCnt := len(kemAlgorithmName)
 	if algsCnt == 0 || algsCnt != chipersCnt || chipersCnt != len(privateKeyBase64) {

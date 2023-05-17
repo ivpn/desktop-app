@@ -30,18 +30,19 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"strings"
 )
 
-type kem_Algo_Name string
+type Kem_Algo_Name string
 
 const (
-	kem_Algo_Name_Kyber1024             kem_Algo_Name = "Kyber1024"
-	kem_Algo_Name_ClassicMcEliece348864 kem_Algo_Name = "Classic-McEliece-348864"
+	AlgName_Kyber1024             Kem_Algo_Name = "Kyber1024"
+	AlgName_ClassicMcEliece348864 Kem_Algo_Name = "Classic-McEliece-348864"
 )
 
 type KemHelper struct {
 	kemHelperPath string
-	algorithms    []kem_Algo_Name
+	algorithms    []Kem_Algo_Name
 	privateKeys   []string // base64
 	publicKeys    []string // base64
 	ciphers       []string // base64
@@ -49,16 +50,18 @@ type KemHelper struct {
 }
 
 // Initialise KEM helper and generate Key pairs
-func CreateHelper(kemHelperBinaryPath string) (*KemHelper, error) {
+// IMPORTANT! The algorithms order in argument 'kemAlgorithms' is important! It in use for PresharedKey calculation!
+func CreateHelper(kemHelperBinaryPath string, kemAlgorithms []Kem_Algo_Name) (*KemHelper, error) {
 	if len(kemHelperBinaryPath) == 0 {
 		return nil, fmt.Errorf("kem-helper error: bad argument (kem helper binary path not defined)")
 	}
+	if len(kemAlgorithms) == 0 {
+		return nil, fmt.Errorf("kem-helper error: bad argument (kemAlgorithms not defined)")
+	}
 	helper := &KemHelper{
 		kemHelperPath: kemHelperBinaryPath,
-		ciphers:       []string{"", ""},
-		algorithms: []kem_Algo_Name{
-			kem_Algo_Name_Kyber1024,
-			kem_Algo_Name_ClassicMcEliece348864}}
+		ciphers:       make([]string, len(kemAlgorithms)),
+		algorithms:    append([]Kem_Algo_Name{}, kemAlgorithms...)}
 
 	if err := helper.generateKeys(); err != nil {
 		return nil, err
@@ -67,34 +70,25 @@ func CreateHelper(kemHelperBinaryPath string) (*KemHelper, error) {
 	return helper, nil
 }
 
-func (k KemHelper) GetPublicKey_Kyber1024() string {
-	return k.publicKeys[0]
-}
-func (k KemHelper) GetPublicKey_ClassicMcEliece348864() string {
-	return k.publicKeys[1]
-}
-func (k *KemHelper) SetCipher_Kyber1024(c string) {
-	k.ciphers[0] = c
-}
-func (k *KemHelper) SetCipher_ClassicMcEliece348864(c string) {
-	k.ciphers[1] = c
-}
-func (k *KemHelper) IsNil() bool {
-	return k == nil
+func (k KemHelper) GetPublicKey(kemAlgoName Kem_Algo_Name) (string, error) {
+	idx, err := k.getAlgoIndex(kemAlgoName)
+	if err != nil {
+		return "", err
+	}
+	return k.publicKeys[idx], nil
 }
 
-func (k *KemHelper) CheckCiphers() error {
-	hasCipher_Kyber1024 := len(k.ciphers[0]) > 0
-	hasCipher_ClassicMcEliece348864 := len(k.ciphers[1]) > 0
-	if !hasCipher_Kyber1024 || !hasCipher_ClassicMcEliece348864 {
-		return fmt.Errorf("ciphers are not defined: cipher1=%v; cipher2=%v",
-			hasCipher_Kyber1024, hasCipher_ClassicMcEliece348864)
+func (k KemHelper) SetCipher(kemAlgoName Kem_Algo_Name, cipher string) error {
+	idx, err := k.getAlgoIndex(kemAlgoName)
+	if err != nil {
+		return err
 	}
+	k.ciphers[idx] = cipher
 	return nil
 }
 
 func (k *KemHelper) CalculatePresharedKey() (presharedKeyBase64 string, retErr error) {
-	err := k.CheckCiphers()
+	err := k.checkCiphers()
 	if err != nil {
 		return "", fmt.Errorf("KemHelper error: %w", err)
 	}
@@ -120,6 +114,15 @@ func (k *KemHelper) CalculatePresharedKey() (presharedKeyBase64 string, retErr e
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
 }
 
+func (k KemHelper) getAlgoIndex(alg Kem_Algo_Name) (index int, err error) {
+	for idx, a := range k.algorithms {
+		if a == alg {
+			return idx, nil
+		}
+	}
+	return -1, fmt.Errorf("KEM algorithm `%s` not initialised", alg)
+}
+
 func (k *KemHelper) generateKeys() (retErr error) {
 	k.privateKeys, k.publicKeys, retErr = GenerateKeysMulti(k.kemHelperPath, k.algorithms)
 	return retErr
@@ -134,4 +137,17 @@ func (k *KemHelper) decodeCiphers(cipherBase64 []string) (retErr error) {
 		k.secrets = []string{}
 	}
 	return retErr
+}
+
+func (k *KemHelper) checkCiphers() error {
+	var errSb strings.Builder
+	for idx, alg := range k.algorithms {
+		if len(k.ciphers) <= idx || len(k.ciphers[idx]) <= 0 {
+			errSb.WriteString(string(alg) + ";")
+		}
+	}
+	if errSb.Len() > 0 {
+		return fmt.Errorf("ciphers are not defined: %s", errSb.String())
+	}
+	return nil
 }

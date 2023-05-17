@@ -31,7 +31,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"path"
@@ -337,7 +336,7 @@ func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, u
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get API HTTP response body: %w", err)
 	}
