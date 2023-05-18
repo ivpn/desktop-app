@@ -298,9 +298,9 @@ function commitSession(sessionRespObj) {
     Session: sessionRespObj.Session,
     WgPublicKey: sessionRespObj.WgPublicKey,
     WgLocalIP: sessionRespObj.WgLocalIP,
+    WgUsePresharedKey: sessionRespObj.WgUsePresharedKey,
     WgKeyGenerated: new Date(sessionRespObj.WgKeyGenerated * 1000),
     WgKeysRegenIntervalSec: sessionRespObj.WgKeysRegenInerval, // note! spelling error in received parameter name
-    WgUsePresharedKey: sessionRespObj.WgUsePresharedKey,
   };
   store.commit(`account/session`, session);
   if (session.Session)

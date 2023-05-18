@@ -381,16 +381,45 @@
           </div>
         </div>
         <div class="flexRow paramBlockDetailedConfig">
+          <div class="defColor paramName">Scheduled rotation date:</div>
+          <div class="detailedParamValue">
+            {{ wgKeysWillBeRegeneratedStr }}
+          </div>
+        </div>
+        <div class="flexRow paramBlockDetailedConfig">
           <div class="defColor paramName">Expiration date:</div>
           <div class="detailedParamValue">
             {{ wgKeysExpirationDateStr }}
           </div>
         </div>
         <div class="flexRow paramBlockDetailedConfig">
-          <div class="defColor paramName">Will be automatically rotated:</div>
+          <div class="defColor paramName">Quantum Resistance:</div>
           <div class="detailedParamValue">
-            {{ wgKeysWillBeRegeneratedStr }}
+            {{ wgQuantumResistanceStr }}
           </div>
+          <button
+            class="noBordersBtn flexRow"
+            title="Info"
+            v-on:click="this.$refs.infoWgQuantumResistance.showModal()"
+          >
+            <img src="@/assets/question.svg" />
+          </button>
+          <ComponentDialog ref="infoWgQuantumResistance" header="Info">
+            <div>
+              <p>
+                Quantum Resistance Status: Indicates whether your current
+                WireGuard VPN connection is using additional protection measures
+                against potential future quantum computer attacks.
+              </p>
+              <p>
+                When 'Enabled', a 'PresharedKey' has been securely exchanged
+                between your device and the server using post-quantum Key
+                Encapsulation Mechanism (KEM) algorithms. If 'Disabled', the
+                current VPN connection, while secure under today's standards,
+                does not include this extra layer of quantum resistance.
+              </p>
+            </div>
+          </ComponentDialog>
         </div>
 
         <button
@@ -753,6 +782,11 @@ export default {
         ret.push({ text: `${i} days`, seconds: i * 24 * 60 * 60 });
       }
       return ret;
+    },
+    wgQuantumResistanceStr: function () {
+      if (this.$store.state.account.session.WgUsePresharedKey === true)
+        return "Enabled";
+      return "Disabled";
     },
     isShowAddPortOption: function () {
       if (

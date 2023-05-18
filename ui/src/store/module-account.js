@@ -33,6 +33,7 @@ export default {
       Session: "",
       WgPublicKey: "",
       WgLocalIP: "",
+      WgUsePresharedKey: false,
       WgKeyGenerated: new Date(),
       WgKeysRegenIntervalSec: 0,
     },
