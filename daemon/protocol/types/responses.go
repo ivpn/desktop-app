@@ -128,9 +128,9 @@ type SettingsResp struct {
 	ObfsproxyConfig             obfsproxy.Config // (for OpenVPN connections)
 	UserPrefs                   preferences.UserPreferences
 	WiFi                        preferences.WiFiParams
+	IsLogging                   bool
 
 	// TODO: implement the rest of daemon settings
-	// IsLogging             bool
 	// IsFwPersistant        bool
 	// IsFwAllowLAN          bool
 	// IsFwAllowLANMulticast bool
@@ -251,7 +251,6 @@ type ConnectedResp struct {
 	ServerPort      int
 	ExitHostname    string // multi-hop exit hostname (e.g. "us-tx1.wg.ivpn.net")
 	ManualDNS       dns.DnsSettings
-	IsCanPause      bool
 	IsTCP           bool
 	Mtu             int // (for WireGuard connections)
 }

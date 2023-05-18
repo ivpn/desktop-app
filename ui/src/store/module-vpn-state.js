@@ -50,9 +50,9 @@ export default {
         DnsHost: "",      // string // DNS host IP address
 	      Encryption: 0,    // DnsEncryption [	EncryptionNone = 0,	EncryptionDnsOverTls = 1,	EncryptionDnsOverHttps = 2]
 	      DohTemplate: "",  // string // DoH/DoT template URI (for Encryption = DnsOverHttps or Encryption = DnsOverTls)
-      },
-      IsCanPause: null, //(true/false)
+      },      
       IsTCP: false,
+      Mtu: int  // (for WireGuard connections)	    
     }*/,
 
     disconnectedInfo: {
@@ -266,6 +266,7 @@ export default {
         case VpnStateEnum.ADDROUTES:
         case VpnStateEnum.RECONNECTING:
         case VpnStateEnum.TCP_CONNECT:
+        case VpnStateEnum.INITIALISED:
           return true;
         default:
           return false;

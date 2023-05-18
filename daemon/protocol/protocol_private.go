@@ -204,6 +204,7 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 		ObfsproxyConfig:             prefs.Obfs4proxy,
 		UserPrefs:                   prefs.UserPrefs,
 		WiFi:                        prefs.WiFiControl,
+		IsLogging:                   prefs.IsLogging,
 		// TODO: implement the rest of daemon settings
 	}
 }
@@ -252,7 +253,6 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		VpnType:         state.VpnType,
 		ExitHostname:    state.ExitHostname,
 		ManualDNS:       dns.GetLastManualDNS(),
-		IsCanPause:      state.IsCanPause,
 		IsTCP:           state.IsTCP,
 		Mtu:             state.Mtu}
 

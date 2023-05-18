@@ -52,7 +52,12 @@ export const VpnStateEnum = Object.freeze({
   RECONNECTING: 8, // A restart has occurred.
   TCP_CONNECT: 9, // TCP_CONNECT
   EXITING: 10, // A graceful exit is in progress.
-  DISCONNECTING: 11,
+  INITIALISED: 11, // Interface initialised (WireGuard: but connection handshake still not detected)
+
+  // !!! WARNING !!! The options below (e.g DISCONNECTING) are not defined on the daemon's side.
+  // This is only an internal value for the current project.
+  // TODO: Keep the state list equivalent to the states on the daemon's side. Remove 'DISCONNECTING' value from here.
+  DISCONNECTING: 12, // TODO: Keep the state list equivalent to the states on the daemon's side. Remove 'DISCONNECTING' value from here.
 });
 
 export const PingQuality = Object.freeze({ Good: 0, Moderate: 1, Bad: 2 });

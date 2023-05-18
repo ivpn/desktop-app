@@ -312,7 +312,6 @@ func (wg *WireGuard) waitHandshakeAndNotifyConnected(stateChan chan<- vpn.StateI
 
 func (wg *WireGuard) newStateInfoConnected() vpn.StateInfo {
 	const isTCP = false
-	const isCanPause = true
 
 	si := vpn.NewStateInfoConnected(
 		isTCP,
@@ -321,7 +320,6 @@ func (wg *WireGuard) newStateInfoConnected() vpn.StateInfo {
 		wg.localPort,
 		wg.connectParams.hostIP,
 		wg.connectParams.hostPort,
-		isCanPause,
 		wg.connectParams.mtu)
 
 	si.ExitHostname = wg.connectParams.multihopExitHostname
