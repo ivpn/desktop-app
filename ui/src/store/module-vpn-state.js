@@ -266,6 +266,7 @@ export default {
         case VpnStateEnum.ADDROUTES:
         case VpnStateEnum.RECONNECTING:
         case VpnStateEnum.TCP_CONNECT:
+        case VpnStateEnum.INITIALISED:
           return true;
         default:
           return false;
