@@ -77,7 +77,7 @@ const (
 )
 
 func (s State) String() string {
-	if s < DISCONNECTED || s > EXITING {
+	if s < DISCONNECTED || s > INITIALISED {
 		return "<Unknown>"
 	}
 
