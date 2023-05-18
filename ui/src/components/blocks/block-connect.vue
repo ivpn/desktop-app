@@ -217,7 +217,7 @@ export default {
       if (this.isProgress === true) return false;
 
       var connInfo = this.$store.state.vpnState.connectionInfo;
-      if (connInfo === null || connInfo.IsCanPause === false) return false;
+      if (connInfo === null) return false;
       if (this.$store.state.vpnState.pauseState === PauseStateEnum.Resumed)
         return true;
       return false;

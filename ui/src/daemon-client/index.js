@@ -436,8 +436,6 @@ async function processResponse(response) {
       {
         let connectionInfo = Object.assign({}, obj);
         connectionInfo.ConnectedSince = new Date(obj.TimeSecFrom1970 * 1000);
-        if (connectionInfo.IsCanPause == undefined)
-          connectionInfo.IsCanPause = null;
 
         store.dispatch(`vpnState/connectionInfo`, connectionInfo);
 

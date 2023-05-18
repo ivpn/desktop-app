@@ -249,7 +249,6 @@ type ConnectedResp struct {
 	ServerPort      int
 	ExitHostname    string // multi-hop exit hostname (e.g. "us-tx1.wg.ivpn.net")
 	ManualDNS       dns.DnsSettings
-	IsCanPause      bool
 	IsTCP           bool
 	Mtu             int // (for WireGuard connections)
 }
