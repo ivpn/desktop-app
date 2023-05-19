@@ -407,14 +407,14 @@
           <ComponentDialog ref="infoWgQuantumResistance" header="Info">
             <div>
               <p>
-                Quantum Resistance Status: Indicates whether your current
-                WireGuard VPN connection is using additional protection measures
-                against potential future quantum computer attacks.
+                Quantum Resistance: Indicates whether your current WireGuard VPN
+                connection is using additional protection measures against
+                potential future quantum computer attacks.
               </p>
               <p>
-                When 'Enabled', a 'PresharedKey' has been securely exchanged
+                When Enabled, a Pre-shared key has been securely exchanged
                 between your device and the server using post-quantum Key
-                Encapsulation Mechanism (KEM) algorithms. If 'Disabled', the
+                Encapsulation Mechanism (KEM) algorithms. If Disabled, the
                 current VPN connection, while secure under today's standards,
                 does not include this extra layer of quantum resistance.
               </p>
