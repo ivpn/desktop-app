@@ -4,9 +4,9 @@ go 1.19
 
 require (
 	github.com/ivpn/desktop-app/daemon v0.0.0
-	golang.org/x/crypto v0.7.0
-	golang.org/x/sys v0.7.0
-	golang.org/x/term v0.7.0
+	golang.org/x/crypto v0.9.0
+	golang.org/x/sys v0.8.0
+	golang.org/x/term v0.8.0
 )
 
 require (
@@ -18,7 +18,7 @@ require (
 	github.com/parsiya/golnk v0.0.0-20221103095132-740a4c27c4ff // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
-	github.com/stretchr/testify v1.8.2 // indirect
+	github.com/stretchr/testify v1.8.3 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"golang.zx2c4.com/wireguard/wgctrl"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 type WgHandshakeTimeoutError struct {
@@ -42,64 +41,6 @@ type WgDeviceNotFoundError struct {
 
 func (e WgDeviceNotFoundError) Error() string {
 	return "WireGuard device not found"
-}
-
-// Device retrieves a WireGuard device by its interface name.
-//
-// Purpose:
-//
-//	It similar to original "wgctrl.Client.Device(name string)" function.
-//	But the original function has bug (in Windows implementation):
-//	it hangs forever when the device does not exist anymore (https://github.com/WireGuard/wgctrl-go/issues/134)
-//	Note: This function reduces chance to get deadlock but it still can happen.
-func GetCtrlDevice(devName string, client *wgctrl.Client) (retDev *wgtypes.Device, err error) {
-	if client == nil {
-		client, err = wgctrl.New()
-		if err != nil {
-			return nil, err
-		}
-		defer client.Close()
-	}
-
-	var devs []*wgtypes.Device
-	var devsErr error
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		// Rrefresh devices.
-		// TODO: potential deadlock here!
-		devs, devsErr = client.Devices()
-		// macOS:	there is a chance to get error "connection refused" if there another WG connection available
-		//			If so, we can try to get device info directly
-		if devsErr != nil {
-			retDev, devsErr = client.Device(devName)
-		}
-	}()
-
-	select {
-	case <-done: //  client.Devices() finished
-		if devsErr != nil {
-			return nil, devsErr
-		}
-	case <-time.After(time.Second * 5): // deadlock detection timeout - 5 seconds
-		log.Error("internal error: wgctrl hung")
-		return nil, fmt.Errorf("internal error: wgctrl hung")
-	}
-
-	if retDev == nil {
-		for _, d := range devs {
-			if d.Name == devName {
-				retDev = d
-				break
-			}
-		}
-	}
-
-	if retDev == nil {
-		return nil, WgDeviceNotFoundError{}
-	}
-	return retDev, nil
 }
 
 // WaitForFirstHanshake waits for a handshake during 'timeout' time.
@@ -134,7 +75,7 @@ func WaitForWireguardFirstHanshake(tunnelName string, timeout time.Duration, isS
 			return WgHandshakeTimeoutError{} // disconnect requested
 		}
 
-		dev, err := GetCtrlDevice(tunnelName, client)
+		dev, err := client.Device(tunnelName)
 		if err != nil {
 			return fmt.Errorf("failed to check handshake info for '%s': %w", tunnelName, err)
 		}
