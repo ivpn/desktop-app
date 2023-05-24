@@ -111,8 +111,8 @@ call :compile_binary || goto :error
     cd %_SCRIPTDIR%
 
     echo [*] Compiling (%_SCRIPTDIR%)...
-    rem The 'Classic-McEliece' consuming a lot of stack, so we specifying stack size manually: "/STACK:5242880"
-    cl.exe main.c base64.c /nologo /DWIN32 /D_WINDOWS /W3 /MT /O2 /Ob2 /DNDEBUG  /I "%_LIBOQS_INSTALL_FOLDER%\include" /Fo"%_OUT_FOLDER%/" /link /STACK:5242880 /LIBPATH:"%_LIBOQS_INSTALL_FOLDER%\lib" oqs.lib Advapi32.lib /OUT:"%_OUT_FILE%" || goto :error    
+    rem The 'Classic-McEliece' consuming a lot of stack, so we specifying stack size manually: "/STACK:6291456"
+    cl.exe main.c base64.c /nologo /DWIN32 /D_WINDOWS /W3 /MT /O2 /Ob2 /DNDEBUG  /I "%_LIBOQS_INSTALL_FOLDER%\include" /Fo"%_OUT_FOLDER%/" /link /STACK:6291456 /LIBPATH:"%_LIBOQS_INSTALL_FOLDER%\lib" oqs.lib Advapi32.lib /OUT:"%_OUT_FILE%" || goto :error    
     goto :success
 
 :success
