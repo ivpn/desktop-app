@@ -58,7 +58,7 @@ func GenerateKeys(kemHelperPath string, kemAlgorithmName Kem_Algo_Name) (private
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", "", fmt.Errorf("kem-helper error: %w (%s)", err, strings.TrimSpace(stderr.String()))
+		return "", "", fmt.Errorf("kem-helper error (kem:%s): %w (%s)", kemAlgorithmName, err, strings.TrimSpace(stderr.String()))
 	}
 
 	resp := genkeysResp{}
@@ -110,12 +110,12 @@ func DecodeCipher(kemHelperPath string, kemAlgorithmName Kem_Algo_Name, privateK
 	cmd.Stdin = strings.NewReader(string(dataJsonBytes))
 
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("kem-helper error: %w (%s)", err, strings.TrimSpace(stderr.String()))
+		return "", fmt.Errorf("kem-helper error (kem:%s): %w (%s)", kemAlgorithmName, err, strings.TrimSpace(stderr.String()))
 	}
 
 	resp := decpskResp{}
 	if err := json.Unmarshal(stdout.Bytes(), &resp); err != nil {
-		return "", fmt.Errorf("kem-helper error: %w", err)
+		return "", fmt.Errorf("kem-helper error (kem:%s): %w", kemAlgorithmName, err)
 	}
 	if len(resp.Secret) == 0 {
 		return "", fmt.Errorf("kem-helper error: empty secret")

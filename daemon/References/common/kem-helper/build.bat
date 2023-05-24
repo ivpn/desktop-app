@@ -38,16 +38,22 @@ call :compile_binary || goto :error
 
 :ensure_build_environment
     if not defined VSCMD_VER (
-        if "%VSCMD_ARG_TGT_ARCH%" NEQ "x64" (
-            echo [*] Initialising x64 VS build environment ...
+        goto :init_VS64_build_env
+    )
+   if "%VSCMD_ARG_TGT_ARCH%" NEQ "x64" (
+        goto :init_VS64_build_env
+    )    
+    goto :eof
+    
+    :init_VS64_build_env
+        echo [*] Initialising x64 VS build environment ...
             if not exist %_VS_VARS_BAT% (
                 echo [!] File '%_VS_VARS_BAT%' not exists! 
                 echo [!] Please install Visual Studio or update file location in '%~f0'
                 goto :error
             )
             call %_VS_VARS_BAT% x64 || goto :error
-        )
-    ) 
+
     goto :eof
 
 :compile_or_compile_liboqs_lib
@@ -111,8 +117,15 @@ call :compile_binary || goto :error
     cd %_SCRIPTDIR%
 
     echo [*] Compiling (%_SCRIPTDIR%)...
-    rem The 'Classic-McEliece' consuming a lot of stack, so we specifying stack size manually: "/STACK:6291456"
-    cl.exe main.c base64.c /nologo /DWIN32 /D_WINDOWS /W3 /MT /O2 /Ob2 /DNDEBUG  /I "%_LIBOQS_INSTALL_FOLDER%\include" /Fo"%_OUT_FOLDER%/" /link /STACK:6291456 /LIBPATH:"%_LIBOQS_INSTALL_FOLDER%\lib" oqs.lib Advapi32.lib /OUT:"%_OUT_FILE%" || goto :error    
+    rem The 'Classic-McEliece' consuming a lot of stack, so we specifying stack size manually: "/STACK:5242880"
+    cl.exe main.c base64.c /nologo /DWIN32 /D_WINDOWS /W3 /MT /O2 /Ob2 /DNDEBUG  /I "%_LIBOQS_INSTALL_FOLDER%\include" /Fo"%_OUT_FOLDER%/" /link /STACK:5242880 /LIBPATH:"%_LIBOQS_INSTALL_FOLDER%\lib" oqs.lib Advapi32.lib /OUT:"%_OUT_FILE%" || goto :error    
+    
+    dumpbin /headers "%_OUT_FILE%" | findstr /i "machine.*x64" >nul
+    if not %errorlevel% equ 0 (
+        echo ERROR: Binary "%_OUT_FILE%" is not compiled for x64 architecture
+        goto :error    
+    ) 
+
     goto :success
 
 :success
