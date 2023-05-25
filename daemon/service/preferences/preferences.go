@@ -37,6 +37,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
+	"github.com/ivpn/desktop-app/daemon/version"
 )
 
 var log *logger.Logger
@@ -68,6 +69,9 @@ type UserPreferences struct {
 
 // Preferences - IVPN service preferences
 type Preferences struct {
+	// The daemon version that saved this data.
+	// Can be used to determine the format version (e.g., on the first app start after an upgrade).
+	Version string
 	// SettingsSessionUUID is unique for Preferences object
 	// It allow to detect situations when settings was erased (created new Preferences object)
 	SettingsSessionUUID      string
@@ -154,6 +158,8 @@ func (p *Preferences) UpdateWgCredentials(wgPublicKey string, wgPrivateKey strin
 func (p *Preferences) SavePreferences() error {
 	mutexRW.Lock()
 	defer mutexRW.Unlock()
+
+	p.Version = version.Version()
 
 	data, err := json.Marshal(p)
 	if err != nil {

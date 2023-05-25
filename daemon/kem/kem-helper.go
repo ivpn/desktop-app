@@ -49,6 +49,10 @@ type KemHelper struct {
 	secrets       []string // base64 (decoded ciphers)
 }
 
+func GetDefaultKemAlgorithms() []Kem_Algo_Name {
+	return []Kem_Algo_Name{AlgName_Kyber1024, AlgName_ClassicMcEliece348864}
+}
+
 // Initialise KEM helper and generate Key pairs
 // IMPORTANT! The algorithms order in argument 'kemAlgorithms' is important! It in use for PresharedKey calculation!
 func CreateHelper(kemHelperBinaryPath string, kemAlgorithms []Kem_Algo_Name) (*KemHelper, error) {

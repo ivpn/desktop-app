@@ -50,6 +50,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/shell"
 	"github.com/ivpn/desktop-app/daemon/splittun"
+	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 
@@ -251,8 +252,25 @@ func (s *Service) init() error {
 	if err := s._wgKeysMgr.Init(s); err != nil {
 		log.Error("Failed to initialize WG keys rotation:", err)
 	} else {
+		// save the preferences version before overwriting it with the new preferences data
+		preferencesVersion := s._preferences.Version
+
 		go func() {
 			<-_ipStackInitializationWaiter // Wait for IP stack initialization
+
+			// (UPGRADE from v3.10.23, and older versions where the PresharedKey was implemented):
+			//	if WG PresharedKey not defined - try to regenerate WG keys
+			if s._preferences.Session.IsLoggedIn() && // if Logged-in
+				len(s._preferences.Session.WGPresharedKey) == 0 && // if WG PresharedKey not defined
+				preferencesVersion != version.Version() && // if it is a first app start after upgrade
+				s._wgKeysMgr.IsCanGeneratePresharedKey() == nil { // if KEM functionality is enabled (required for PresharedKey synchronisation)
+
+				log.Info("First app start after update: regenerating WG keys (because of no PresharedKey defined)...")
+				if err := s._wgKeysMgr.GenerateKeys(); err != nil {
+					log.Warning(err)
+				}
+			}
+
 			if err := s._wgKeysMgr.StartKeysRotation(); err != nil {
 				log.Error("Failed to start WG keys rotation:", err)
 			}
@@ -1051,7 +1069,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 
 	// Generate keys for Key Encapsulation Mechanism using post-quantum cryptographic algorithms
 	var kemKeys api_types.KemPublicKeys
-	kemHelper, err := kem.CreateHelper(platform.KemHelperBinaryPath(), []kem.Kem_Algo_Name{kem.AlgName_Kyber1024, kem.AlgName_ClassicMcEliece348864})
+	kemHelper, err := kem.CreateHelper(platform.KemHelperBinaryPath(), kem.GetDefaultKemAlgorithms())
 	if err != nil {
 		log.Error("Failed to generate KEM keys: ", err)
 	} else {

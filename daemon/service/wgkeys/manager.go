@@ -186,6 +186,15 @@ func (m *KeysManager) UpdateKeysIfNecessary() (isUpdated bool, retErr error) {
 	return m.generateKeys(true)
 }
 
+func (m *KeysManager) IsCanGeneratePresharedKey() error {
+	_, err := createKemHelper()
+	return err
+}
+
+func createKemHelper() (*kem.KemHelper, error) {
+	return kem.CreateHelper(platform.KemHelperBinaryPath(), kem.GetDefaultKemAlgorithms())
+}
+
 func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, retErr error) {
 	defer func() {
 		if retErr != nil {
@@ -254,7 +263,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 
 	// Generate keys for Key Encapsulation Mechanism using post-quantum cryptographic algorithms
 	var kemKeys types.KemPublicKeys
-	kemHelper, err := kem.CreateHelper(platform.KemHelperBinaryPath(), []kem.Kem_Algo_Name{kem.AlgName_Kyber1024, kem.AlgName_ClassicMcEliece348864})
+	kemHelper, err := createKemHelper()
 	if err != nil {
 		log.Error("Failed to generate KEM keys: ", err)
 	} else {
