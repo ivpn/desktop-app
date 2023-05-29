@@ -483,7 +483,8 @@ func (s *Service) reconnect() {
 // Disconnect disconnect vpn
 func (s *Service) Disconnect() error {
 	s._requiredVpnState = Disconnect
-	if err := s.Resume(); err != nil {
+	// Resume connection (but do not notify "Connection resumed" status)
+	if err := s.resume(); err != nil {
 		log.Error("Resume failed:", err)
 	}
 	return s.disconnect()
@@ -597,17 +598,21 @@ func (s *Service) Pause(durationSeconds uint32) error {
 // Resume resume vpn connection
 func (s *Service) Resume() error {
 	defer s._evtReceiver.OnVpnPauseChanged()
+	return s.resume()
+}
 
+// Resume resume vpn connection
+func (s *Service) resume() error {
 	s._pause._mutex.Lock()
 	defer s._pause._mutex.Unlock()
 	s.erasePauseTimer()
 
 	vpn := s._vpn
 	if vpn == nil {
-		return fmt.Errorf("VPN not connected")
+		return nil
 	}
 	if !vpn.IsPaused() {
-		return fmt.Errorf("VPN not paused")
+		return nil
 	}
 
 	log.Info("Resuming...")
