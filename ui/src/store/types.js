@@ -27,12 +27,6 @@ export const DaemonConnectionType = Object.freeze({
 });
 
 export const VpnTypeEnum = Object.freeze({ OpenVPN: 0, WireGuard: 1 });
-export const PauseStateEnum = Object.freeze({
-  Resumed: 0,
-  Pausing: 1,
-  Paused: 2,
-  Resuming: 3,
-});
 
 export const DnsEncryption = Object.freeze({
   None: 0,

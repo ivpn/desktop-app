@@ -23,11 +23,7 @@
 
 const { Menu, Tray, app, nativeImage, dialog } = require("electron");
 import store from "@/store";
-import {
-  PauseStateEnum,
-  VpnStateEnum,
-  ColorThemeTrayIcon,
-} from "@/store/types";
+import { VpnStateEnum, ColorThemeTrayIcon } from "@/store/types";
 import { CheckAndNotifyInaccessibleServer } from "@/helpers/helpers_servers";
 
 import daemonClient from "@/daemon-client";
@@ -180,8 +176,7 @@ export function InitTray(
         case "uiState/isParanoidModePasswordView":
         case "vpnState/connectionState":
         case "vpnState/connectionInfo":
-        case "vpnState/disconnected":
-        case "vpnState/pauseState": {
+        case "vpnState/disconnected": {
           updateTrayMenu();
           updateTrayIcon();
           break;
@@ -254,10 +249,7 @@ function updateTrayIcon() {
 
   iconConnectingIdx = 0;
 
-  if (
-    store.state.vpnState.pauseState === PauseStateEnum.Paused &&
-    iconPaused != null
-  )
+  if (store.getters["vpnState/isPaused"] && iconPaused != null)
     tray.setImage(
       isLightIcons === false ? iconPaused_ForLightTheme : iconPaused
     );
@@ -366,7 +358,7 @@ function updateTrayMenu() {
     } else {
       // PAUSE\RESUME
       if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED) {
-        if (store.state.vpnState.pauseState === PauseStateEnum.Paused) {
+        if (store.getters["vpnState/isPaused"]) {
           mainMenu.push({
             label: "Resume",
             click: menuItemResume,
@@ -405,7 +397,7 @@ function updateTrayMenu() {
             submenu: Menu.buildFromTemplate(pauseSubMenuTemplate),
           });
           mainMenu.push({ type: "separator", id: EnumMenuId.CommonSeparator });
-        } else if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) {
+        } else if (!store.getters["vpnState/isPaused"]) {
           const pauseSubMenuTemplate = [
             {
               label: "Pause for 5 min",
@@ -533,9 +525,7 @@ function GetStatusText() {
 
   if (store.getters["vpnState/isConnected"]) {
     retStr += `Connected: ${serverName()}`;
-    if (store.state.vpnState.pauseState === PauseStateEnum.Paused) {
-      retStr += ` (connection Paused)`;
-    }
+    if (store.getters["vpnState/isPaused"]) retStr += ` (connection Paused)`;
   } else if (store.getters["vpnState/isConnecting"]) retStr += "Connecting...";
   else if (store.getters["vpnState/isDisconnecting"])
     retStr += "Disconnecting...";

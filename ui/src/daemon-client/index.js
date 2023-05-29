@@ -35,7 +35,6 @@ import { InitConnectionParamsObject } from "@/daemon-client/connectionParams.js"
 import {
   VpnTypeEnum,
   VpnStateEnum,
-  PauseStateEnum,
   DaemonConnectionType,
   DnsEncryption,
   PortTypeEnum,
@@ -438,17 +437,15 @@ async function processResponse(response) {
         connectionInfo.ConnectedSince = new Date(obj.TimeSecFrom1970 * 1000);
 
         store.dispatch(`vpnState/connectionInfo`, connectionInfo);
-
-        if (store.state.vpnState.pauseState == PauseStateEnum.Paused)
-          await ApplyPauseConnection();
-        else requestGeoLookupAsync();
+        store.commit("uiState/isPauseResumeInProgress", false);
+        requestGeoLookupAsync();
       }
       break;
 
     case daemonResponses.DisconnectedResp:
-      store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
       store.commit(`vpnState/disconnected`, obj.ReasonDescription);
       store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED); // to properly raise value-changed event
+      store.commit("uiState/isPauseResumeInProgress", false);
       if (store.state.settings.firewallDeactivateOnDisconnect === true) {
         await EnableFirewall(false);
       }
@@ -1083,7 +1080,7 @@ async function doGeoLookup(requestID, isIPv6, isRetryTry) {
   let isRealGeoLocationCheck = function () {
     return (
       store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED ||
-      store.state.vpnState.pauseState === PauseStateEnum.Paused
+      store.getters["vpnState/isPaused"]
     );
   };
 
@@ -1287,9 +1284,6 @@ async function Connect() {
 
   let settings = store.state.settings;
 
-  // we are not in paused state anymore
-  store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
-
   // Switching the UI to the 'connecting' view
   // Important! This put UI in un-synchronized state with the real state of the daemon!
   //            Normally we are updating VPN state after connection/disconnection.
@@ -1389,13 +1383,9 @@ async function Disconnect() {
   // Just to cancel current connection request (if we are preparing for connection now)
   ++connectionRequestId;
 
-  // Disconnect command will automatically 'resume' on daemon side (if necessary)
-  // Do not send 'Resume' command in case of 'Disconnect' (in order to avoid unexpected re-connections)
-  // Here we just saving 'Resumed' state
-  store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
-
   if (store.state.vpnState.connectionState === VpnStateEnum.CONNECTED)
     store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTING);
+
   await sendRecv(
     {
       Command: daemonRequests.Disconnect,
@@ -1404,60 +1394,29 @@ async function Disconnect() {
   );
 }
 
-let isFirewallEnabledBeforePause = true;
 async function PauseConnection(pauseSeconds) {
   if (pauseSeconds == null) return;
   const vpnState = store.state.vpnState;
   if (vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
 
-  if (vpnState.pauseState !== PauseStateEnum.Paused) {
-    if (!vpnState.firewallState.IsPersistent) {
-      isFirewallEnabledBeforePause = vpnState.firewallState.IsEnabled;
-    }
-    await ApplyPauseConnection();
-  }
-
-  var pauseTill = new Date();
-  pauseTill.setSeconds(pauseTill.getSeconds() + pauseSeconds);
-  store.dispatch("uiState/pauseConnectionTill", pauseTill);
-}
-
-async function ApplyPauseConnection() {
-  if (store.state.vpnState.connectionState !== VpnStateEnum.CONNECTED) return;
-
-  store.dispatch("vpnState/pauseState", PauseStateEnum.Pausing);
+  store.commit("uiState/isPauseResumeInProgress", true); // value resets to 'false' when ConnectedResp/DisconnectedResp received
   await sendRecv({
     Command: daemonRequests.PauseConnection,
+    Duration: pauseSeconds,
   });
-
-  try {
-    await EnableFirewall(false);
-  } finally {
-    store.dispatch("vpnState/pauseState", PauseStateEnum.Paused);
-    requestGeoLookupAsync();
-  }
 }
 
 async function ResumeConnection() {
-  store.dispatch("uiState/pauseConnectionTill", null);
-  if (store.state.vpnState.pauseState === PauseStateEnum.Resumed) return;
+  if (!store.getters["vpnState/isPaused"]) return;
 
-  store.dispatch("vpnState/pauseState", PauseStateEnum.Resuming);
+  store.commit("uiState/isPauseResumeInProgress", true); // value resets to 'false' when ConnectedResp/DisconnectedResp received
   await sendRecv({
     Command: daemonRequests.ResumeConnection,
   });
-  store.dispatch("vpnState/pauseState", PauseStateEnum.Resumed);
-
-  try {
-    // switch back firewall into enabled state
-    if (isFirewallEnabledBeforePause) await EnableFirewall(true);
-  } finally {
-    requestGeoLookupAsync();
-  }
 }
 
 function throwIfForbiddenToEnableFirewall() {
-  if (store.state.vpnState.pauseState !== PauseStateEnum.Resumed)
+  if (store.getters["vpnState/isPaused"])
     throw Error("Please, resume connection first to enable Firewall");
 }
 

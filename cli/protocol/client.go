@@ -651,6 +651,27 @@ func (c *Client) WGKeysRotationInterval(uinxTimeInterval int64) error {
 	return nil
 }
 
+func (c *Client) Pause(durationSec uint32) error {
+	if err := c.ensureConnected(); err != nil {
+		return err
+	}
+
+	if durationSec > 0 {
+		req := types.PauseConnection{Duration: durationSec}
+		var resp types.ConnectedResp
+		if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+			return err
+		}
+	} else {
+		req := types.ResumeConnection{}
+		var resp types.EmptyResp
+		if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // PingServers
 func (c *Client) PingServers(vpnTypePrioritized *vpn.Type) (pingResults []types.PingResultType, err error) {
 	if err := c.ensureConnected(); err != nil {

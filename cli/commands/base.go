@@ -67,7 +67,18 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
 
-	fmt.Fprintf(w, "VPN\t:\t%v\n", state)
+	stateStr := fmt.Sprintf("%v", state)
+
+	if state == vpn.CONNECTED && connected.IsPaused {
+		stateStr = "PAUSED"
+		if len(connected.PausedTill) > 0 {
+			if t, err := time.Parse(time.RFC3339, connected.PausedTill); err == nil {
+				stateStr += fmt.Sprintf(" till %v", t)
+			}
+		}
+	}
+
+	fmt.Fprintf(w, "VPN\t:\t%v\n", stateStr)
 
 	if len(serverInfo) > 0 {
 		fmt.Fprintf(w, "\t\t%v\n", serverInfo)

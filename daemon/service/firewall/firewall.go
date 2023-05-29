@@ -115,8 +115,6 @@ func GetEnabled() (bool, error) {
 	ret, err := implGetEnabled()
 	if err != nil {
 		log.Error("Status check error: ", err)
-	} else {
-		log.Info("Firewall: ", ret)
 	}
 
 	return ret, err
@@ -177,9 +175,9 @@ func ClientDisconnected() error {
 // AddHostsToExceptions - allow comminication with this hosts
 // Note: if isPersistent == false -> all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
 // Arguments:
-//	* IPs			-	list of IP addresses to ba allowed
-//	* onlyForICMP	-	(applicable only for Linux) try add rule to allow only ICMP protocol for this IP
-//	* isPersistent	-	keep rule enabled even if VPN disconnected
+//   - IPs			-	list of IP addresses to ba allowed
+//   - onlyForICMP	-	(applicable only for Linux) try add rule to allow only ICMP protocol for this IP
+//   - isPersistent	-	keep rule enabled even if VPN disconnected
 func AddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -271,7 +269,7 @@ func OnChangeDNS(newDnsCfg *dns.DnsSettings) error {
 
 // SetUserExceptions set ip/mask to be excluded from FW block
 // Parameters:
-//	- exceptions - comma separated list of IP addresses in format: x.x.x.x[/xx]
+//   - exceptions - comma separated list of IP addresses in format: x.x.x.x[/xx]
 func SetUserExceptions(exceptions string, ignoreParseErrors bool) error {
 	userExceptions = []net.IPNet{}
 

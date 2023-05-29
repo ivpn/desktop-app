@@ -200,7 +200,14 @@ func (wg *WireGuard) Pause() error {
 	// IMPORTANT! When the WG keys regenerated (see service.WireGuardSaveNewKeys()):
 	// WireGuard 'pause/resume' state is based on complete VPN disconnection and connection back (on all platforms)
 	// If this will be changed (e.g. just changing routing) - it will be necessary to implement reconnection even in 'pause' state (when keys were regenerated)
-	return wg.pause()
+	if ret := wg.pause(); ret != nil {
+		return ret
+	}
+
+	// make this method synchronous: waiting until paused (until WG connection disappear)
+	ret := <-WaitForDisconnectChan(wg.GetTunnelName())
+
+	return ret
 }
 
 // Resume doing required operation for Resume (restores DNS configuration before Pause)

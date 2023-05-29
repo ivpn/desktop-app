@@ -98,6 +98,7 @@ func main() {
 	addCommand(&stateCmd)
 	addCommand(&commands.CmdConnect{})
 	addCommand(&commands.CmdDisconnect{})
+	addCommand(&commands.CmdConnectionControl{})
 	addCommand(&commands.CmdServers{})
 	addCommand(&commands.CmdFirewall{})
 	if cliplatform.IsSplitTunSupported() {

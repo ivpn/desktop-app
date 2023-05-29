@@ -38,8 +38,7 @@ type SystemLogMessage struct {
 }
 
 func (s *Service) systemLog(mesType SystemLogMessageType, message string) bool {
-	ch := s._systemLog
-	if ch == nil {
+	syslogFallback := func() {
 		switch mesType {
 		case Info:
 			log.Info(fmt.Sprintf("(syslog not initialized) INFO: %s", message))
@@ -49,10 +48,19 @@ func (s *Service) systemLog(mesType SystemLogMessageType, message string) bool {
 			log.Info(fmt.Sprintf("(syslog not initialized) ERROR: %s", message))
 		default:
 		}
+	}
 
+	ch := s._systemLog
+	if ch == nil {
+		syslogFallback()
 		return false
 	}
 
-	ch <- SystemLogMessage{Message: message, Type: mesType}
+	select {
+	case ch <- SystemLogMessage{Message: message, Type: mesType}:
+	default:
+		syslogFallback()
+		return false
+	}
 	return true
 }

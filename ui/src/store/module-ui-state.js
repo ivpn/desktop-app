@@ -28,12 +28,12 @@ export default {
 
     // favorite servers view selected
     serversFavoriteView: false,
-    pauseConnectionTill: null, // Date()
 
     currentSettingsViewName: null, // 'account', 'general', 'version' ...
 
     isIPv6View: false,
 
+    isPauseResumeInProgress: false,
     //{
     //  state: AppUpdateStage.Downloading,
     //  error: null,
@@ -54,9 +54,6 @@ export default {
     serversFavoriteView(state, value) {
       state.serversFavoriteView = value;
     },
-    pauseConnectionTill(state, value) {
-      state.pauseConnectionTill = value;
-    },
     appUpdateProgress(state, value) {
       state.appUpdateProgress = value;
     },
@@ -65,6 +62,9 @@ export default {
     },
     isIPv6View(state, value) {
       state.isIPv6View = value;
+    },
+    isPauseResumeInProgress(state, value) {
+      state.isPauseResumeInProgress = value;
     },
   },
 
@@ -75,9 +75,6 @@ export default {
     },
     serversFavoriteView(context, value) {
       context.commit("serversFavoriteView", value);
-    },
-    pauseConnectionTill(context, value) {
-      context.commit("pauseConnectionTill", value);
     },
     currentSettingsViewName(context, value) {
       context.commit("currentSettingsViewName", value);

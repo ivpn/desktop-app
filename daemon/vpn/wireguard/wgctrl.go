@@ -108,3 +108,27 @@ func WaitForWireguardFirstHanshake(tunnelName string, timeout time.Duration, isS
 		time.Sleep(time.Millisecond * 50)
 	}
 }
+
+func WaitForDisconnectChan(tunnelName string) chan error {
+	retChan := make(chan error, 1)
+
+	client, err := wgctrl.New()
+	if err != nil {
+		close(retChan)
+	} else {
+		go func() {
+			defer func() {
+				client.Close()
+				close(retChan)
+			}()
+
+			for ; ; time.Sleep(time.Millisecond * 50) {
+				if _, err := client.Device(tunnelName); err != nil {
+					break
+				}
+			}
+		}()
+	}
+
+	return retChan
+}
