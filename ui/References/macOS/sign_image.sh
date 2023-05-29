@@ -70,6 +70,7 @@ ListCompiledBinaries=(
 "_image/IVPN.app/Contents/MacOS/IVPN"
 "_image/IVPN.app/Contents/MacOS/IVPN Agent"
 "_image/IVPN.app/Contents/MacOS/cli/ivpn"
+"_image/IVPN.app/Contents/MacOS/kem/kem-helper"
 "_image/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/MacOS/IVPN Installer"
 "_image/IVPN.app/Contents/MacOS/IVPN Installer.app"
 "_image/IVPN.app"
