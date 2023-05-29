@@ -113,7 +113,9 @@ echo "******** Configuring OpenVPN..."
 echo "************************************************"
 CFLAGS="-mmacosx-version-min=10.6 -I${INSTALL_DIR}/include" \
     LDFLAGS="-L${INSTALL_DIR}/lib" \
-    ./configure --disable-debug --disable-server --enable-password-save
+    ./configure --disable-debug --disable-server --enable-password-save \
+    --disable-lz4
+    # disabling lz4 compression algorithm (there is compilation error on macOS M1 when LZ4 enabled)
 
 echo "************************************************"
 echo "******** Compiling OpenVPN..."
