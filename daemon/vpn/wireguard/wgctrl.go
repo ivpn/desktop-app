@@ -29,106 +29,112 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl"
 )
 
-type WgHandshakeTimeoutError struct {
-}
-
-func (e WgHandshakeTimeoutError) Error() string {
-	return "WireGuard handshake timeout"
-}
-
-type WgDeviceNotFoundError struct {
-}
-
-func (e WgDeviceNotFoundError) Error() string {
-	return "WireGuard device not found"
-}
-
 // WaitForFirstHanshake waits for a handshake during 'timeout' time.
-// If no handshake occured - returns WgHandshakeTimeoutError
-// If timeout == 0 - function returns only when isStop changed to true
-func WaitForWireguardFirstHanshake(tunnelName string, timeout time.Duration, isStop *bool, logFunc func(string)) (retErr error) {
-	if timeout == 0 && isStop == nil {
-		return fmt.Errorf("internal error: bad arguments for WaitForWireguardFirstHanshake")
-	}
+// if isStopArray is defined and at lease one of it's elements == true: function stops and channel closes
+func WaitForWireguardFirstHanshakeChan(tunnelName string, isStopArray []*bool, logFunc func(string)) <-chan error {
+	retChan := make(chan error, 1)
 
-	defer func() {
-		if r := recover(); r != nil {
-			if err, ok := r.(error); ok {
-				retErr = fmt.Errorf("crash (recovered): %w", err)
+	go func() (retError error) {
+		defer func() {
+			if r := recover(); r != nil {
+				if err, ok := r.(error); ok {
+					retChan <- fmt.Errorf("crash (recovered): %w", err)
+				}
+			} else {
+				retChan <- retError
+			}
+			close(retChan)
+		}()
+
+		logTimeout := time.Second * 5
+		nexTimeToLog := time.Now().Add(logTimeout)
+
+		client, err := wgctrl.New()
+		if err != nil {
+			return fmt.Errorf("failed to check handshake info: %w", err)
+		}
+		defer client.Close()
+
+		for ; ; time.Sleep(time.Millisecond * 50) {
+			for _, isStop := range isStopArray {
+				if isStop != nil && *isStop {
+					return nil // stop requested (probably, disconnect requested or already disconnected)
+				}
+			}
+
+			dev, err := client.Device(tunnelName)
+			if err != nil {
+				return fmt.Errorf("failed to check handshake info for '%s': %w", tunnelName, err)
+			}
+
+			for _, peer := range dev.Peers {
+				if !peer.LastHandshakeTime.IsZero() {
+					return nil // handshake detected
+				}
+			}
+
+			// logging
+			if logFunc != nil {
+				if time.Now().After(nexTimeToLog) {
+					logTimeout = logTimeout * 2
+					if logTimeout > time.Second*60 {
+						logTimeout = time.Second * 60
+					}
+					logFunc("Waiting for handshake ...")
+					nexTimeToLog = time.Now().Add(logTimeout)
+				}
 			}
 		}
 	}()
-
-	endTime := time.Now().Add(timeout)
-
-	logTimeout := time.Second * 5
-	nexTimeToLog := time.Now().Add(logTimeout)
-
-	client, err := wgctrl.New()
-	if err != nil {
-		return fmt.Errorf("failed to check handshake info: %w", err)
-	}
-	defer client.Close()
-
-	for {
-		if isStop != nil && *isStop {
-			return WgHandshakeTimeoutError{} // disconnect requested
-		}
-
-		dev, err := client.Device(tunnelName)
-		if err != nil {
-			return fmt.Errorf("failed to check handshake info for '%s': %w", tunnelName, err)
-		}
-
-		for _, peer := range dev.Peers {
-			if !peer.LastHandshakeTime.IsZero() {
-				return nil // handshake detected
-			}
-		}
-
-		if timeout > 0 {
-			if time.Now().After(endTime) {
-				return WgHandshakeTimeoutError{}
-			}
-		}
-
-		// logging
-		if logFunc != nil {
-			if time.Now().After(nexTimeToLog) {
-				logTimeout = logTimeout * 2
-				if logTimeout > time.Second*60 {
-					logTimeout = time.Second * 60
-				}
-				logFunc("Waiting for handshake ...")
-				nexTimeToLog = time.Now().Add(logTimeout)
-			}
-		}
-
-		// sleep before next check
-		time.Sleep(time.Millisecond * 50)
-	}
+	return retChan
 }
 
-func WaitForDisconnectChan(tunnelName string) chan error {
+func WaitForDisconnectChan(tunnelName string, isStop []*bool) <-chan error {
+	return waitForWgInterfaceChan(tunnelName, true, isStop)
+}
+func WaitForConnectChan(tunnelName string, isStop []*bool) <-chan error {
+	return waitForWgInterfaceChan(tunnelName, false, isStop)
+}
+
+// if isStopArray is defined and at lease one of it's elements == true: function stops and channel closes
+func waitForWgInterfaceChan(tunnelName string, isWaitForDisconnect bool, isStopArray []*bool) <-chan error {
 	retChan := make(chan error, 1)
 
-	client, err := wgctrl.New()
-	if err != nil {
-		close(retChan)
-	} else {
-		go func() {
-			defer func() {
-				client.Close()
-				close(retChan)
-			}()
+	go func() (retError error) {
+		defer func() {
+			if r := recover(); r != nil {
+				if err, ok := r.(error); ok {
+					retChan <- fmt.Errorf("crash (recovered): %w", err)
+				}
+			} else {
+				retChan <- retError
+			}
+			close(retChan)
+		}()
 
-			for ; ; time.Sleep(time.Millisecond * 50) {
-				if _, err := client.Device(tunnelName); err != nil {
-					break
+		client, err := wgctrl.New()
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+
+		for ; ; time.Sleep(time.Millisecond * 50) {
+			_, err := client.Device(tunnelName)
+			if isWaitForDisconnect && err != nil {
+				break // waiting for Disconnect: return when error obtaining WG tunnel info
+			} else if !isWaitForDisconnect && err == nil {
+				break // waiting for Connect: return when NO error obtaining WG tunnel info
+			}
+
+			for _, isStop := range isStopArray {
+				if isStop != nil && *isStop {
+					return nil
 				}
 			}
-		}()
-	}
+
+		}
+		return nil
+	}()
 
 	return retChan
 }

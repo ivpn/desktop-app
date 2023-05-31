@@ -659,13 +659,13 @@ func (c *Client) Pause(durationSec uint32) error {
 	if durationSec > 0 {
 		req := types.PauseConnection{Duration: durationSec}
 		var resp types.ConnectedResp
-		if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+		if err := c.sendRecv(&req, &resp); err != nil {
 			return err
 		}
 	} else {
 		req := types.ResumeConnection{}
 		var resp types.EmptyResp
-		if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+		if err := c.sendRecv(&req, &resp); err != nil {
 			return err
 		}
 	}

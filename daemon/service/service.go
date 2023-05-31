@@ -598,6 +598,12 @@ func (s *Service) Pause(durationSeconds uint32) error {
 // Resume resume vpn connection
 func (s *Service) Resume() error {
 	defer s._evtReceiver.OnVpnPauseChanged()
+
+	vpn := s._vpn
+	if vpn == nil || !vpn.IsPaused() {
+		return fmt.Errorf("VPN not paused")
+	}
+
 	return s.resume()
 }
 
