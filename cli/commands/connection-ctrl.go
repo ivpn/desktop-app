@@ -60,26 +60,27 @@ func (c *CmdConnectionControl) Run() error {
 	} else if c.resume {
 		fmt.Println("Resuming connection...")
 		retErr = _proto.Pause(0)
-
-		// Wait for connected state
-		// After resume command, the state can be changed to different values  (RECONNECTING, INITIALISING, DISCONNECTED... etc.).
-		// It depends of VPN protocol implementation for specific platform.
-		// So here we wait some time for connected state.
-		waitDeadline := time.Now().Add(time.Second * 10)
-		disconnectedResponsesCnt := 0
-		for ; time.Now().Before(waitDeadline); time.Sleep(time.Second) {
-			state, _, err := _proto.GetVPNState()
-			if err != nil || state == vpn.CONNECTED || state == vpn.DISCONNECTED {
-				if state == vpn.DISCONNECTED {
-					// it could be a temporary state, so we wait for a few seconds
-					disconnectedResponsesCnt++
-					if disconnectedResponsesCnt <= 3 {
-						continue
+		if retErr == nil {
+			// Wait for connected state.
+			// After resume command, the state can be changed to different values  (RECONNECTING, INITIALISING, DISCONNECTED... etc.).
+			// It depends of VPN protocol implementation for specific platform.
+			// So here we wait some time for connected state.
+			waitDeadline := time.Now().Add(time.Second * 10)
+			disconnectedResponsesCnt := 0
+			for ; time.Now().Before(waitDeadline); time.Sleep(time.Second) {
+				state, _, err := _proto.GetVPNState()
+				if err != nil || state == vpn.CONNECTED || state == vpn.DISCONNECTED {
+					if state == vpn.DISCONNECTED {
+						// it could be a temporary state, so we wait for a few seconds
+						disconnectedResponsesCnt++
+						if disconnectedResponsesCnt <= 3 {
+							continue
+						}
 					}
+					break
 				}
-				break
-			}
-		} // wait for connected state
+			} // wait for connected state
+		}
 	} else {
 		return flags.BadParameter{}
 	}
