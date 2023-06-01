@@ -563,12 +563,12 @@ func (s *Service) Pause(durationSeconds uint32) error {
 	s._pause._mutex.Lock()
 	defer s._pause._mutex.Unlock()
 
-	fwIsEnabled, _, _, _, _, _, err := s.KillSwitchState()
+	fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
 	if err != nil {
 		return fmt.Errorf("failed to check KillSwitch status: %w", err)
 	}
 	s._pause._killSwitchState = fwIsEnabled
-	if fwIsEnabled {
+	if fwIsEnabled && !isPersistant {
 		if err := s.SetKillSwitchState(false); err != nil {
 			return err
 		}
@@ -626,8 +626,15 @@ func (s *Service) resume() error {
 	ret := vpn.Resume()
 
 	if ret == nil {
-		if err := s.SetKillSwitchState(s._pause._killSwitchState); err != nil {
-			log.Error("failed to restore KillSwitch status: %w", err)
+		fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+		if err != nil {
+			log.Error(fmt.Errorf("failed to check KillSwitch status: %w", err))
+		} else {
+			if !isPersistant && fwIsEnabled != s._pause._killSwitchState {
+				if err := s.SetKillSwitchState(s._pause._killSwitchState); err != nil {
+					log.Error("failed to restore KillSwitch status: %w", err)
+				}
+			}
 		}
 	}
 
