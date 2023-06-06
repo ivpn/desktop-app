@@ -268,7 +268,7 @@ func (c *CmdAntitracker) Run() error {
 		servers, _ := _proto.GetServers()
 		w = printDNSState(w, connected.ManualDNS, &servers)
 	} else {
-		w = printAntitrackerConfigInfo(w, defConnCfg.Params.Metadata.AntiTracker.Enabled, defConnCfg.Params.Metadata.AntiTracker.Hardcore)
+		w = printAntitrackerConfigInfo(w, defConnCfg.Params.Metadata.AntiTracker)
 	}
 	w.Flush()
 
@@ -298,15 +298,27 @@ func printDNSConfigInfo(w *tabwriter.Writer, customDNS dns.DnsSettings) *tabwrit
 	return w
 }
 
-func printAntitrackerConfigInfo(w *tabwriter.Writer, antitracker, antitrackerHardcore bool) *tabwriter.Writer {
+func printAntitrackerConfigInfo(w *tabwriter.Writer, antitracker service_types.AntiTrackerMetadata) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
 
-	if antitrackerHardcore {
-		fmt.Fprintf(w, "Default config\t:\tAntiTracker Enabled (Hardcore)\n")
-	} else if antitracker {
-		fmt.Fprintf(w, "Default config\t:\tAntiTracker Enabled\n")
+	if antitracker.Enabled {
+		infoText := ""
+		if antitracker.Hardcore {
+			infoText = "Hardcore"
+		}
+		if antitracker.AntiTrackerBlockListName != "" {
+			if len(infoText) > 0 {
+				infoText += "; "
+			}
+			infoText += fmt.Sprintf("block list: '%s'", antitracker.AntiTrackerBlockListName)
+		}
+		if infoText != "" {
+			infoText = fmt.Sprintf(" (%s)", infoText)
+		}
+
+		fmt.Fprintf(w, "Default config\t:\tAntiTracker Enabled%s\n", infoText)
 	} else {
 		fmt.Fprintf(w, "Default config\t:\tAntiTracker Disabled\n")
 	}

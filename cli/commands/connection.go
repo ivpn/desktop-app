@@ -616,7 +616,7 @@ func (c *CmdConnect) Run() (retError error) {
 			// Taking default configuration parameters (if defined)
 			req.Params.Metadata.AntiTracker = defaultConnSettings.Params.Metadata.AntiTracker
 			if req.Params.Metadata.AntiTracker.IsEnabled() { // print default AntiTracker values
-				printAntitrackerConfigInfo(nil, req.Params.Metadata.AntiTracker.Enabled, req.Params.Metadata.AntiTracker.Hardcore).Flush()
+				printAntitrackerConfigInfo(nil, req.Params.Metadata.AntiTracker).Flush()
 			}
 		}
 

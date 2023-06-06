@@ -9,6 +9,25 @@
       about how IVPN AntiTracker is implemented.
     </div>
 
+    <div class="flexRow paramBlock" style="margin-bottom: 12px">
+      <div class="defColor paramName">Select block list:</div>
+      <select v-model="AtPlusListNameSelected">
+        <optgroup
+          v-for="group in AtPlusLists"
+          :key="group.name"
+          :label="group.name"
+        >
+          <option
+            v-for="item in group.lists"
+            :key="item.Name"
+            :value="item.Name"
+          >
+            {{ item.Description ? item.Description : item.Name }}
+          </option>
+        </optgroup>
+      </select>
+    </div>
+
     <div class="param">
       <input
         type="checkbox"
@@ -48,11 +67,95 @@ export default {
   computed: {
     isAntitrackerHardcore: {
       get() {
-        return this.$store.state.settings.isAntitrackerHardcore;
+        return this.$store.state.settings.antiTracker?.Hardcore;
       },
       async set(value) {
-        this.$store.dispatch("settings/isAntitrackerHardcore", value);
+        let at = this.$store.state.settings.antiTracker;
+        if (!at)
+          at = {
+            Enabled: false,
+            Hardcore: value,
+            AntiTrackerBlockListName: "",
+          };
+        else at = JSON.parse(JSON.stringify(at));
+        at.Hardcore = value;
+
+        this.$store.dispatch("settings/antiTracker", at);
         await sender.SetDNS();
+      },
+    },
+    AtPlusLists: {
+      //groups: [
+      //  {
+      //    name: "Pre-defined lists",
+      //    lists: [{"Name":"Basic", "Normal":"", "Hardcore":""}, ...],
+      //  },
+      //  {
+      //    name: "Individual lists",
+      //    lists: [{"Name":"Oisdbig", "Normal":"10.0.254.2", "Hardcore":"10.0.254.3"}, ...],
+      //  },
+      //],
+      get() {
+        let atPlusSvrs =
+          this.$store.state.vpnState.servers.config?.antitracker_plus
+            ?.DnsServers;
+        if (!atPlusSvrs) {
+          return [];
+        }
+
+        let listBasic = null;
+        let listComprehensive = null;
+        let listRestrictive = null;
+        let listOisdbig = null;
+
+        let groupPredefined = { name: "Pre-defined lists", lists: [] };
+        let groupIndividual = { name: "Individual lists", lists: [] };
+
+        for (var s of atPlusSvrs) {
+          switch (s.Name) {
+            case "Basic":
+              listBasic = s;
+              break;
+            case "Comprehensive":
+              listComprehensive = s;
+              break;
+            case "Restrictive":
+              listRestrictive = s;
+              break;
+            case "Oisdbig":
+              listOisdbig = s;
+              break;
+            default:
+              groupIndividual.lists.push(s);
+              break;
+          }
+        }
+        if (listBasic) groupPredefined.lists.push(listBasic);
+        if (listComprehensive) groupPredefined.lists.push(listComprehensive);
+        if (listRestrictive) groupPredefined.lists.push(listRestrictive);
+
+        if (listOisdbig) groupIndividual.lists.unshift(listOisdbig); // add as a first element
+
+        return [groupPredefined, groupIndividual];
+      },
+    },
+    AtPlusListNameSelected: {
+      get() {
+        return this.$store.state.settings.antiTracker.AntiTrackerBlockListName;
+      },
+      set(value) {
+        let at = this.$store.state.settings.antiTracker;
+        if (!at)
+          at = {
+            Enabled: false,
+            Hardcore: false,
+            AntiTrackerBlockListName: value,
+          };
+        else at = JSON.parse(JSON.stringify(at));
+        at.AntiTrackerBlockListName = value;
+
+        this.$store.dispatch("settings/antiTracker", at);
+        sender.SetDNS();
       },
     },
   },
@@ -87,5 +190,10 @@ button.link {
 label {
   margin-left: 1px;
   font-weight: 500;
+}
+
+div.paramName {
+  min-width: 161px;
+  max-width: 161px;
 }
 </style>

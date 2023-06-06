@@ -569,7 +569,6 @@ func (s *Service) IsPaused() bool {
 // SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 // If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error) {
-
 	// Update default metadata
 	defaultParams := s.GetConnectionParams()
 	// save DNS and AntiTracker default metadata
@@ -578,9 +577,10 @@ func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTra
 		defaultParams.Metadata.AntiTracker = antiTracker
 		s.setConnectionParams(defaultParams)
 	}
+
 	// anti-tracker
 	if antiTracker.Enabled {
-		atDns, err := s.getAntiTrackerDns(antiTracker.Hardcore)
+		atDns, err := s.getAntiTrackerDns(antiTracker.Hardcore, antiTracker.AntiTrackerBlockListName)
 		if err != err {
 			return dns.DnsSettings{}, err
 		}
@@ -617,7 +617,7 @@ func (s *Service) ResetManualDNS() error {
 	return vpn.ResetManualDNS()
 }
 
-func (s *Service) getAntiTrackerDns(isHardcore bool) (dnsCfg dns.DnsSettings, err error) {
+func (s *Service) getAntiTrackerDns(isHardcore bool, antiTrackerPlusList string) (dnsCfg dns.DnsSettings, err error) {
 	defer func() {
 		if dnsCfg.IsEmpty() && err == nil {
 			err = fmt.Errorf("unable to determine AntiTracker DNS")
@@ -628,11 +628,61 @@ func (s *Service) getAntiTrackerDns(isHardcore bool) (dnsCfg dns.DnsSettings, er
 		return dns.DnsSettings{}, fmt.Errorf("failed to determine AntiTracker parameters: %w", err)
 	}
 
+	// AntiTracker Plus list
+	antiTrackerPlusList = strings.TrimSpace(antiTrackerPlusList)
+	if len(antiTrackerPlusList) > 0 {
+		for _, atp_svr := range servers.Config.AntiTrackerPlus.DnsServers {
+			if strings.TrimSpace(atp_svr.Name) == antiTrackerPlusList {
+				if isHardcore {
+					return dns.DnsSettings{DnsHost: atp_svr.Hardcore}, nil
+				}
+				return dns.DnsSettings{DnsHost: atp_svr.Normal}, nil
+			}
+		}
+		return dns.DnsSettings{}, fmt.Errorf("unknown AntiTrackerPlus list: '%s' ", antiTrackerPlusList)
+	}
+
 	// port-based MultiHop using the same AntiTracker DNS IP as SingleHop
 	if isHardcore {
 		return dns.DnsSettings{DnsHost: servers.Config.Antitracker.Hardcore.IP}, nil
 	}
 	return dns.DnsSettings{DnsHost: servers.Config.Antitracker.Default.IP}, nil
+}
+
+func (s *Service) GetAntiTrackerStatus(dnsVal dns.DnsSettings) (types.AntiTrackerMetadata, error) {
+	if dnsVal.IsEmpty() || dnsVal.Encryption != dns.EncryptionNone {
+		return types.AntiTrackerMetadata{}, nil
+	}
+
+	servers, err := s.ServersList()
+	if err != nil {
+		return types.AntiTrackerMetadata{}, fmt.Errorf("failed to determine AntiTracker parameters: %w", err)
+	}
+
+	dnsHost := strings.ToLower(strings.TrimSpace(dnsVal.DnsHost))
+	if dnsHost == "" {
+		return types.AntiTrackerMetadata{}, nil
+	}
+
+	// Check AntiTracker Plus lists
+	for _, atp_svr := range servers.Config.AntiTrackerPlus.DnsServers {
+		if strings.EqualFold(dnsHost, strings.TrimSpace(atp_svr.Normal)) {
+			return types.AntiTrackerMetadata{Enabled: true, Hardcore: false, AntiTrackerBlockListName: atp_svr.Name}, nil
+		}
+		if strings.EqualFold(dnsHost, strings.TrimSpace(atp_svr.Hardcore)) {
+			return types.AntiTrackerMetadata{Enabled: true, Hardcore: true, AntiTrackerBlockListName: atp_svr.Name}, nil
+		}
+	}
+
+	// Check AntiTracker values
+	if strings.EqualFold(dnsHost, strings.TrimSpace(servers.Config.Antitracker.Default.IP)) {
+		return types.AntiTrackerMetadata{Enabled: true, Hardcore: false}, nil
+	}
+	if strings.EqualFold(dnsHost, strings.TrimSpace(servers.Config.Antitracker.Hardcore.IP)) {
+		return types.AntiTrackerMetadata{Enabled: true, Hardcore: true}, nil
+	}
+
+	return types.AntiTrackerMetadata{}, nil
 }
 
 // ////////////////////////////////////////////////////////

@@ -244,6 +244,10 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 	if state.ClientIPv6 != nil {
 		ipv6 = state.ClientIPv6.String()
 	}
+
+	manualDns := dns.GetLastManualDNS()
+	antiTrackerStatus, _ := p._service.GetAntiTrackerStatus(manualDns)
+
 	ret := &types.ConnectedResp{
 		TimeSecFrom1970: state.Time,
 		ClientIP:        state.ClientIP.String(),
@@ -252,7 +256,7 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ServerPort:      state.ServerPort,
 		VpnType:         state.VpnType,
 		ExitHostname:    state.ExitHostname,
-		ManualDNS:       dns.GetLastManualDNS(),
+		Dns:             types.DnsStatus{Dns: manualDns, AntiTrackerStatus: antiTrackerStatus},
 		IsTCP:           state.IsTCP,
 		Mtu:             state.Mtu}
 

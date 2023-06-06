@@ -142,9 +142,11 @@ const getDefaultState = () => {
     firewallActivateOnConnect: true,
     firewallDeactivateOnDisconnect: true,
 
-    // antitracker
-    isAntitracker: false,
-    isAntitrackerHardcore: false,
+    antiTracker: {
+      Enabled: false, //bool
+      Hardcore: false, //bool
+      AntiTrackerBlockListName: "", //string
+    },
 
     // dns
     dnsIsCustom: false,
@@ -359,19 +361,32 @@ export default {
     },
 
     // antitracker
-    isAntitracker(state, val) {
-      state.isAntitracker = val;
-    },
-    isAntitrackerHardcore(state, val) {
-      state.isAntitrackerHardcore = val;
+    antiTracker(state, val) {
+      if (!val)
+        val = {
+          Enabled: false,
+          Hardcore: false,
+          AntiTrackerBlockListName: "",
+        };
+
+      state.antiTracker = val;
     },
 
     // dns
     dnsIsCustom(state, val) {
+      if (!val) val = false;
       state.dnsIsCustom = val;
     },
     dnsCustomCfg(state, val) {
-      state.dnsCustomCfg = val;
+      if (val) state.dnsCustomCfg = val;
+      else {
+        state.dnsIsCustom = false;
+        state.dnsCustomCfg = {
+          DnsHost: "",
+          Encryption: DnsEncryption.None,
+          DohTemplate: "",
+        };
+      }
     },
     firewallCfg(state, val) {
       state.firewallCfg = val;
@@ -717,11 +732,8 @@ export default {
     },
 
     // antitracker
-    isAntitracker(context, val) {
-      context.commit("isAntitracker", val);
-    },
-    isAntitrackerHardcore(context, val) {
-      context.commit("isAntitrackerHardcore", val);
+    antiTracker(context, val) {
+      context.commit("antiTracker", val);
     },
 
     // dns

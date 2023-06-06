@@ -107,6 +107,7 @@ type Service interface {
 	// SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 	// If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 	SetManualDNS(dns dns.DnsSettings, antiTracker service_types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error)
+	GetAntiTrackerStatus(dns dns.DnsSettings) (antiTrackerStatus service_types.AntiTrackerMetadata, retErr error)
 	ResetManualDNS() error
 
 	IsCanConnectMultiHop() error
@@ -888,6 +889,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			req.Dns.DohTemplate = getSingleField(req.Dns.DohTemplate)
 
 			changedDns := dns.DnsSettings{}
+			antiTrackerStatus := service_types.AntiTrackerMetadata{}
+
 			var err error
 			if req.Dns.IsEmpty() && !req.AntiTracker.IsEnabled() {
 				err = p._service.ResetManualDNS()
@@ -901,6 +904,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 						log.ErrorTrace(errReset)
 					}
 				}
+
+				// Check antitracker status according to new DNS value
+				// The DNS value can contain IP address of AntiTracker DNS (even while AntiTracker configuration is disabled)
+				antiTrackerStatus, _ = p._service.GetAntiTrackerStatus(changedDns)
 			}
 
 			if err != nil {
@@ -908,10 +915,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				// send the response to the requestor
 				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
 			} else {
+				response := types.SetAlternateDNSResp{IsSuccess: true, Dns: types.DnsStatus{Dns: changedDns, AntiTrackerStatus: antiTrackerStatus}}
 				// notify all connected clients
-				p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: changedDns})
+				p.notifyClients(&response)
 				// send the response to the requestor
-				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: changedDns}, req.Idx)
+				p.sendResponse(conn, &response, req.Idx)
 			}
 		}
 	case "GetDnsPredefinedConfigs":
