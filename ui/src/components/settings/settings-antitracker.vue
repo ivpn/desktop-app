@@ -10,7 +10,7 @@
     </div>
 
     <div class="flexRow paramBlock" style="margin-bottom: 12px">
-      <div class="defColor paramName">Select block list:</div>
+      <div class="defColor paramName">Block list:</div>
       <select v-model="AtPlusListNameSelected">
         <optgroup
           v-for="group in AtPlusLists"
@@ -27,6 +27,19 @@
         </optgroup>
       </select>
     </div>
+    <div class="fwDescription">
+      Block lists refer to DNS blocking lists used by our AntiTracker. The
+      'Basic', 'Comprehensive', and 'Restrictive' options are combinations of
+      individual lists, each offering a different level of protection. You also
+      have the freedom to select from individual lists for a more tailored
+      AntiTracker experience.
+    </div>
+    <div class="fwDescription">
+      <button class="link" v-on:click="onAntitrackerBlockListLink">
+        Lern more
+      </button>
+      about AntiTracker block lists.
+    </div>
 
     <div class="param">
       <input
@@ -36,6 +49,7 @@
       />
       <label class="defColor" for="isAntitrackerHardcore">Hardcore Mode</label>
     </div>
+
     <div class="fwDescription">
       Hardcode mode blocks the leading companies with business models relying on
       user surveillance (currently: Google and Facebook)
@@ -57,6 +71,11 @@ export default {
     return {};
   },
   methods: {
+    onAntitrackerBlockListLink: () => {
+      sender.shellOpenExternal(
+        `https://www.ivpn.net/knowledgebase/antitracker/blocklists/`
+      );
+    },
     onLearnMoreLink: () => {
       sender.shellOpenExternal(`https://www.ivpn.net/antitracker`);
     },
@@ -193,7 +212,7 @@ label {
 }
 
 div.paramName {
-  min-width: 161px;
-  max-width: 161px;
+  min-width: 100px;
+  max-width: 100px;
 }
 </style>

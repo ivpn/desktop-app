@@ -107,8 +107,7 @@ type Service interface {
 	// SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 	// If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 	SetManualDNS(dns dns.DnsSettings, antiTracker service_types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error)
-	GetAntiTrackerStatus(dns dns.DnsSettings) (antiTrackerStatus service_types.AntiTrackerMetadata, retErr error)
-	ResetManualDNS() error
+	GetAntiTrackerStatus() (antiTrackerStatus service_types.AntiTrackerMetadata, retErr error)
 
 	IsCanConnectMultiHop() error
 	Connect(params service_types.ConnectionParams) error
@@ -888,26 +887,16 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			req.Dns.DnsHost = getSingleField(req.Dns.DnsHost)
 			req.Dns.DohTemplate = getSingleField(req.Dns.DohTemplate)
 
-			changedDns := dns.DnsSettings{}
 			antiTrackerStatus := service_types.AntiTrackerMetadata{}
+			changedDns, err := p._service.SetManualDNS(req.Dns, req.AntiTracker)
 
-			var err error
-			if req.Dns.IsEmpty() && !req.AntiTracker.IsEnabled() {
-				err = p._service.ResetManualDNS()
-			} else {
-				changedDns, err = p._service.SetManualDNS(req.Dns, req.AntiTracker)
-
-				if err != nil {
-					// DNS set failed. Trying to reset DNS
-					errReset := p._service.ResetManualDNS()
-					if errReset != nil {
-						log.ErrorTrace(errReset)
-					}
+			if err != nil {
+				// DNS set failed. Trying to reset DNS
+				req.AntiTracker.Enabled = false
+				_, errReset := p._service.SetManualDNS(dns.DnsSettings{}, req.AntiTracker)
+				if errReset != nil {
+					log.ErrorTrace(errReset)
 				}
-
-				// Check antitracker status according to new DNS value
-				// The DNS value can contain IP address of AntiTracker DNS (even while AntiTracker configuration is disabled)
-				antiTrackerStatus, _ = p._service.GetAntiTrackerStatus(changedDns)
 			}
 
 			if err != nil {
@@ -915,6 +904,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				// send the response to the requestor
 				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
 			} else {
+				antiTrackerStatus, _ = p._service.GetAntiTrackerStatus()
 				response := types.SetAlternateDNSResp{IsSuccess: true, Dns: types.DnsStatus{Dns: changedDns, AntiTrackerStatus: antiTrackerStatus}}
 				// notify all connected clients
 				p.notifyClients(&response)

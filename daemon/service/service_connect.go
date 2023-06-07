@@ -895,12 +895,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTr
 	}
 
 	// set manual DNS
-	if manualDNS.IsEmpty() && !antiTracker.IsEnabled() {
-		err = s.ResetManualDNS()
-	} else {
-		_, err = s.SetManualDNS(manualDNS, antiTracker)
-	}
-	if err != nil {
+	if _, err = s.SetManualDNS(manualDNS, antiTracker); err != nil {
 		err = fmt.Errorf("failed to set DNS: %w", err)
 		log.Error(err.Error())
 		return err

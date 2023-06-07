@@ -571,50 +571,81 @@ func (s *Service) IsPaused() bool {
 func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error) {
 	// Update default metadata
 	defaultParams := s.GetConnectionParams()
+	isChanged := false
 	// save DNS and AntiTracker default metadata
-	if !defaultParams.ManualDNS.Equal(dnsCfg) || !defaultParams.Metadata.AntiTracker.Equal(antiTracker) {
+	if !defaultParams.ManualDNS.Equal(dnsCfg) {
 		defaultParams.ManualDNS = dnsCfg
-		defaultParams.Metadata.AntiTracker = antiTracker
+		isChanged = true
+	}
+	if !defaultParams.Metadata.AntiTracker.Equal(antiTracker) {
+		at, err := s.notmalizeAntiTrackerMetadata(antiTracker)
+		if err != nil {
+			return changedDns, err
+		}
+		defaultParams.Metadata.AntiTracker = at
+		isChanged = true
+	}
+	if isChanged {
 		s.setConnectionParams(defaultParams)
 	}
 
-	// anti-tracker
+	// Get anti-tracker DNS settings
+	changedDns = dnsCfg
 	if antiTracker.Enabled {
 		atDns, err := s.getAntiTrackerDns(antiTracker.Hardcore, antiTracker.AntiTrackerBlockListName)
 		if err != err {
 			return dns.DnsSettings{}, err
 		}
-		dnsCfg = atDns
+		changedDns = atDns
 	}
 
 	vpn := s._vpn
 	if vpn == nil {
 		// no active VPN connection
-		return dnsCfg, nil
+		return changedDns, nil
 	}
 
-	s._manualDNS = dnsCfg
+	s._manualDNS = changedDns
+
+	if dnsCfg.IsEmpty() && !antiTracker.Enabled {
+		return dns.DnsSettings{}, vpn.ResetManualDNS()
+	}
 	return s._manualDNS, vpn.SetManualDNS(s._manualDNS)
 }
 
-// ResetManualDNS set dns to default
-func (s *Service) ResetManualDNS() error {
+func (s *Service) GetAntiTrackerStatus() (types.AntiTrackerMetadata, error) {
+	return s.GetConnectionParams().Metadata.AntiTracker, nil
+}
 
-	// Update default metadata
-	defaultParams := s.GetConnectionParams()
-	if !defaultParams.ManualDNS.IsEmpty() || !defaultParams.Metadata.AntiTracker.Equal(types.AntiTrackerMetadata{}) {
-		defaultParams.ManualDNS = dns.DnsSettings{}
-		defaultParams.Metadata.AntiTracker = types.AntiTrackerMetadata{}
-		s.setConnectionParams(defaultParams)
+// If antiTrackerPlusList not defined - set it
+func (s *Service) notmalizeAntiTrackerMetadata(antiTracker types.AntiTrackerMetadata) (types.AntiTrackerMetadata, error) {
+	// check if block list name is known
+	if antiTracker.AntiTrackerBlockListName != "" {
+		isBlockListNameOk := false
+		servers, err := s.ServersList()
+		if err == nil {
+			for _, atp_svr := range servers.Config.AntiTrackerPlus.DnsServers {
+				if atp_svr.Name == antiTracker.AntiTrackerBlockListName {
+					isBlockListNameOk = true
+					break
+				}
+			}
+		}
+		if !isBlockListNameOk {
+			return antiTracker, fmt.Errorf("unexpected DNS block list name: '%s'", antiTracker.AntiTrackerBlockListName)
+		}
 	}
 
-	vpn := s._vpn
-	if vpn == nil {
-		// no active VPN connection
-		return nil
+	// fill block list name (if empty)
+	if antiTracker.AntiTrackerBlockListName == "" {
+		if tmpDns, err := s.getAntiTrackerDns(antiTracker.Hardcore, ""); err == nil {
+			if tmpAt, err := s.getAntiTrackerInfo(tmpDns); err == nil {
+				antiTracker.AntiTrackerBlockListName = tmpAt.AntiTrackerBlockListName
+			}
+		}
 	}
 
-	return vpn.ResetManualDNS()
+	return antiTracker, nil
 }
 
 func (s *Service) getAntiTrackerDns(isHardcore bool, antiTrackerPlusList string) (dnsCfg dns.DnsSettings, err error) {
@@ -649,7 +680,7 @@ func (s *Service) getAntiTrackerDns(isHardcore bool, antiTrackerPlusList string)
 	return dns.DnsSettings{DnsHost: servers.Config.Antitracker.Default.IP}, nil
 }
 
-func (s *Service) GetAntiTrackerStatus(dnsVal dns.DnsSettings) (types.AntiTrackerMetadata, error) {
+func (s *Service) getAntiTrackerInfo(dnsVal dns.DnsSettings) (types.AntiTrackerMetadata, error) {
 	if dnsVal.IsEmpty() || dnsVal.Encryption != dns.EncryptionNone {
 		return types.AntiTrackerMetadata{}, nil
 	}
@@ -1100,7 +1131,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	// generate new keys for WireGuard
 	publicKey, privateKey, err := wireguard.GenerateKeys(platform.WgToolBinaryPath())
 	if err != nil {
-		log.Warning("Failed to generate wireguard keys for new session: %s", err)
+		log.Warning(fmt.Sprintf("Failed to generate wireguard keys for new session: %s", err))
 	}
 
 	log.Info("Logging in...")

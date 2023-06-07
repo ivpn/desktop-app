@@ -27,7 +27,6 @@ import (
 	"os"
 	"regexp"
 	"sort"
-	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -35,7 +34,6 @@ import (
 	"github.com/ivpn/desktop-app/cli/protocol"
 	apitypes "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
-	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/splittun"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
@@ -109,31 +107,19 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 	return w
 }
 
-func printDNSState(w *tabwriter.Writer, dnsCfg dns.DnsSettings, servers *apitypes.ServersInfoResponse) *tabwriter.Writer {
+func printDNSState(w *tabwriter.Writer, dnsStatus types.DnsStatus, servers *apitypes.ServersInfoResponse) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
 
-	if dnsCfg.IsEmpty() {
-		fmt.Fprintf(w, "DNS\t:\tDefault (auto)\n")
-		return w
-	}
-
-	antitrackerText := strings.Builder{}
-
-	if dnsCfg.Encryption == dns.EncryptionNone {
-		isAntitracker, isAtHardcore := IsAntiTrackerIP(dnsCfg.DnsHost, servers)
-		if isAtHardcore {
-			antitrackerText.WriteString("Enabled (Hardcore)")
-		} else if isAntitracker {
-			antitrackerText.WriteString("Enabled")
-		}
-	}
-
-	if antitrackerText.Len() > 0 {
-		fmt.Fprintf(w, "AntiTracker\t:\t%v\n", antitrackerText.String())
+	if dnsStatus.AntiTrackerStatus.Enabled {
+		fmt.Fprintf(w, "AntiTracker\t:\t%v\n", GetAntiTrackerStatusText(dnsStatus.AntiTrackerStatus))
 	} else {
-		fmt.Fprintf(w, "DNS\t:\t%v\n", dnsCfg.InfoString())
+		if dnsStatus.Dns.IsEmpty() {
+			fmt.Fprintf(w, "DNS\t:\tDefault (auto)\n")
+		} else {
+			fmt.Fprintf(w, "DNS\t:\t%v\n", dnsStatus.Dns.InfoString())
+		}
 	}
 
 	return w

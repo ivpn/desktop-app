@@ -646,11 +646,11 @@ function saveDnsSettings(context, dnsStatus) {
   }
 
   // If AntiTracker is diabled - do not save empty AT settings (to keep current AntiTracker configuration. e.g. blocklist)
-  if (dnsStatus.AntiTrackerStatus.Enabled === true) {
-    context.dispatch("settings/antiTracker", dnsStatus.AntiTrackerStatus, {
-      root: true,
-    });
-  } else {
+  context.dispatch("settings/antiTracker", dnsStatus.AntiTrackerStatus, {
+    root: true,
+  });
+
+  if (dnsStatus.AntiTrackerStatus.Enabled !== true) {
     // Since AntiTracker has higher priority than custom DNS settings -
     // update custom DNS settings only if AntiTracker is disabled (custom DNS settings are in use)
     // This allows to keep custom DNS settings when AntiTracker is enabled/disabled

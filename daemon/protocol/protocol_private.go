@@ -246,7 +246,7 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 	}
 
 	manualDns := dns.GetLastManualDNS()
-	antiTrackerStatus, _ := p._service.GetAntiTrackerStatus(manualDns)
+	antiTrackerStatus, _ := p._service.GetAntiTrackerStatus()
 
 	ret := &types.ConnectedResp{
 		TimeSecFrom1970: state.Time,
