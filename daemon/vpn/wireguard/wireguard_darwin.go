@@ -162,10 +162,25 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 	go func() {
 		defer routineStopWaiter.Done()
 
+		// ERROR: (utun6) 2023/06/09 14:16:50 ...
+		logPrefixRegexp := regexp.MustCompile(`^[A-Z]+:\s\([a-z]+[0-9]+\)\s+\d{4}/\d\d/\d\d\s+\d\d:\d\d:\d\d\s+`)
+		lastLogStringWithoutPrefix := ""
+		lastLogTime := time.Time{}
+
 		isWaitingToStart := true
 		for outPipeScanner.Scan() && wg.internals.command.ProcessState == nil {
 			text := outPipeScanner.Text()
-			logWgOut.Info(text) // logging the output
+
+			// Logging WG output:
+			// Reduce amount of logging similar data (similar log items logs not often than once per 10 seconds)
+			// The output string can contain time in seconds. Do not use such prefix data in comparison
+			now := time.Now()
+			textWithoutPrefix := strings.TrimPrefix(text, logPrefixRegexp.FindString(text))
+			if textWithoutPrefix != lastLogStringWithoutPrefix || !lastLogTime.Add(time.Second*10).After(now) {
+				logWgOut.Info(text) // logging the output
+				lastLogStringWithoutPrefix = textWithoutPrefix
+				lastLogTime = now
+			}
 
 			if isWaitingToStart && strings.Contains(text, strTriggerSuccessInit) {
 				isWaitingToStart = false
