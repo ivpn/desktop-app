@@ -38,7 +38,7 @@ func IsDefaultRoutingInterface(interfaceName string) (bool, error) {
 	}
 
 	for _, r := range routes {
-		if strings.Compare(r.interfaceName, interfaceName) == 0 {
+		if strings.Compare(r.InterfaceName, interfaceName) == 0 {
 			return true, nil
 		}
 	}
@@ -53,15 +53,31 @@ func doDefaultGatewayIP() (defGatewayIP net.IP, err error) {
 		return nil, e
 	}
 
-	return routes[0].gatewayIP, nil
+	return routes[0].GatewayIP, nil
 }
 
-type route struct {
-	gatewayIP     net.IP
-	interfaceName string
+type Route struct {
+	Destination   string
+	GatewayIP     net.IP
+	Flags         string
+	InterfaceName string
 }
 
-func doGetDefaultRoutes(getAllDefRoutes bool) (routes []route, err error) {
+func (r Route) IsSpecified() bool {
+	return r.GatewayIP != nil && !r.GatewayIP.IsUnspecified()
+}
+
+func GetDefaultRoutes() (routes []Route, err error) {
+	return doGetDefaultRoutes(true)
+}
+
+// doGetDefaultRoutes returns all main routes
+//
+//	 getAllDefRoutes == false:
+//			returns "default" route
+//	 getAllDefRoutes == true:
+//			returns all "default" and "0/1" routes
+func doGetDefaultRoutes(getAllDefRoutes bool) (routes []Route, err error) {
 	// Expected output of "netstat -nr" command:
 	//	Routing tables
 	//	Internet:
@@ -71,7 +87,7 @@ func doGetDefaultRoutes(getAllDefRoutes bool) (routes []route, err error) {
 	//	127                127.0.0.1          UCS            lo0
 	// ...
 
-	routes = make([]route, 0, 3)
+	routes = make([]Route, 0, 3)
 
 	log.Info("Checking default getaway info ...")
 	cmd := exec.Command("/usr/sbin/netstat", "-nr", "-f", "inet")
@@ -84,23 +100,24 @@ func doGetDefaultRoutes(getAllDefRoutes bool) (routes []route, err error) {
 	}
 
 	//default            192.168.1.1        UGSc           en0
-	regExpString := "default[\t ]+([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})[\t ]*[A-Za-z]*[\t ]+([A-Za-z0-9]*)"
-	columnsOffsetIdx := 0
+	// (?m) enables multiline mode, which makes ^ and $ match the start and end of each line (not just the start and end of the entire string).
+	regExpString := `(?m)^\s*((default)|(default))\s+([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\s*([A-Za-z]*)\s+([A-Za-z0-9]*)`
 	if getAllDefRoutes {
-		regExpString = "((0/1)|(default))[\t ]+([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})[\t ]*[A-Za-z]*[\t ]+([A-Za-z0-9]*)"
-		columnsOffsetIdx = 3
+		regExpString = `(?m)^\s*((0/1)|(default))\s+([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\s*([A-Za-z]*)\s+([A-Za-z0-9]*)`
 	}
 
 	outRegexp := regexp.MustCompile(regExpString)
 
 	maches := outRegexp.FindAllStringSubmatch(string(out), -1)
 	for _, m := range maches {
-		if len(m) < 3+columnsOffsetIdx {
+		if len(m) <= 5 {
 			continue
 		}
 
-		gatewayIP := net.ParseIP(strings.Trim(m[1+columnsOffsetIdx], " \n\r\t"))
-		interfaceName := strings.Trim(m[2+columnsOffsetIdx], " \n\r\t")
+		destination := strings.Trim(m[1], " \n\r\t")
+		gatewayIP := net.ParseIP(strings.Trim(m[4], " \n\r\t"))
+		flags := strings.Trim(m[5], " \n\r\t")
+		interfaceName := strings.Trim(m[6], " \n\r\t")
 
 		if gatewayIP == nil {
 			continue
@@ -109,7 +126,7 @@ func doGetDefaultRoutes(getAllDefRoutes bool) (routes []route, err error) {
 			continue
 		}
 
-		routes = append(routes, route{gatewayIP: gatewayIP, interfaceName: interfaceName})
+		routes = append(routes, Route{Destination: destination, GatewayIP: gatewayIP, InterfaceName: interfaceName, Flags: flags})
 	}
 
 	if len(routes) <= 0 {
