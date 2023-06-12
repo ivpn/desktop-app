@@ -110,7 +110,7 @@ func doGetDefaultRoutes(getAllDefRoutes bool) (routes []Route, err error) {
 
 	maches := outRegexp.FindAllStringSubmatch(string(out), -1)
 	for _, m := range maches {
-		if len(m) <= 5 {
+		if len(m) < 7 {
 			continue
 		}
 
