@@ -40,6 +40,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 	"github.com/ivpn/desktop-app/daemon/vpn"
+	"github.com/ivpn/desktop-app/daemon/vpn/vpnhelpers"
 )
 
 // TODO: BE CAREFUL! Constant string! (can be changed after WireGuard update)
@@ -61,6 +62,8 @@ type internalVariables struct {
 
 	isPaused      bool
 	omResumedChan chan struct{} // channel for 'On Resume' events
+
+	iCloudRouteUpdater vpnhelpers.CloudSyncRouteUpdater
 }
 
 var logWgOut *logger.Logger
@@ -470,11 +473,15 @@ func (wg *WireGuard) setRoutes() error {
 		}
 	}
 
-	return nil
+	return wg.internals.iCloudRouteUpdater.Activate(wg.connectParams.hostLocalIP)
 }
 
 func (wg *WireGuard) removeRoutes() error {
 	log.Info("Restoring routing table...")
+
+	if err := wg.internals.iCloudRouteUpdater.Deactivate(); err != nil {
+		log.Debug(err)
+	}
 
 	shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "-net", "0/1", wg.connectParams.hostLocalIP.String())
 	shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "-net", wg.connectParams.hostIP.String())
@@ -492,13 +499,17 @@ func (wg *WireGuard) removeRoutes() error {
 }
 
 func (wg *WireGuard) onRoutingChanged() error {
+	if wg.internals.iCloudRouteUpdater.IsActive() {
+		return wg.internals.iCloudRouteUpdater.UpdateIfNeeded()
+	}
+
 	defGatewayIP, err := netinfo.DefaultGatewayIP()
 	if err != nil {
 		log.Warning(fmt.Sprintf("onRoutingChanged: %v", err))
 		return err
 	}
 
-	if defGatewayIP.String() != wg.internals.defGateway.String() {
+	if !defGatewayIP.Equal(wg.internals.defGateway) {
 		log.Info(fmt.Sprintf("Default gateway changed: %s -> %s. Updating routes...", wg.internals.defGateway.String(), defGatewayIP.String()))
 		wg.internals.defGateway = defGatewayIP
 		wg.removeRoutes()
