@@ -8,6 +8,8 @@
 #include "jsmn.h"
 #include "base64.h"
 
+#define APP_VERSION "1.0.1"
+
 #define SUCCESS 0
 #define ERROR	-1
 
@@ -300,7 +302,6 @@ int decode_preshared_key(FILE* const _out_stream, const char* kem_alg_name, cons
 	return SUCCESS;
 }
 
-
 int parse_json(jsmn_parser *p, jsmntok_t *t, char* json_string) {
 	jsmn_init(p);
 	int r = jsmn_parse(p, json_string, strlen(json_string), t, sizeof(*t) / sizeof(t[0]));
@@ -342,8 +343,15 @@ int print_supported_kems(FILE* const _out_stream) {
 	return 0;
 }
 
+void print_version() {
+	printf("KEM helper v%s; liboqs v%s (%s)\n", APP_VERSION, OQS_VERSION_TEXT, OQS_COMPILE_BUILD_TARGET);
+}
+
 void print_usage(const char* program_name) {
 	printf("Usage:\n");
+	printf("  %s version\n"
+		"      -  print version info\n"
+		, program_name);
 	printf(	"  %s genkeys [<kem_algorithm_name>]\n"
 			"      -  generate public and private keys\n"
 			"      -  no input data required\n"
@@ -366,6 +374,7 @@ void print_usage(const char* program_name) {
 
 int main(int argc, char* argv[]) {
 	if (argc < 2) {
+		print_version();
 		print_usage("");
 		return 1;
 	}
@@ -375,68 +384,72 @@ int main(int argc, char* argv[]) {
 
 	const int BUF_LEN_INIT = 1024 * 10;
 	const int BUF_LEN_MAX  = 1024 * 1024 * 5;
+
+	if (strcmp(argv[1], "version") == 0) {
+		print_version();
+		return 0;
+	}
+
 	if (strcmp(argv[1], "list_kems") == 0) {
 		return print_supported_kems(stdout);
 	}
-	else {
 		
-		char* kem_algorithm_name = ""; 
-		if (argc <= 2 || strlen(argv[2])==0) {
-			fprintf_stderr("Input data error: kem_algorithm_name is not specified");			
-			return ERROR;		
-		}
-		kem_algorithm_name = argv[2];
+	char* kem_algorithm_name = ""; 
+	if (argc <= 2 || strlen(argv[2])==0) {
+		fprintf_stderr("Input data error: kem_algorithm_name is not specified");			
+		return ERROR;		
+	}
+	kem_algorithm_name = argv[2];
 
-		if (strcmp(argv[1], "genkeys") == 0) {
-			return generate_keys(stdout, kem_algorithm_name);
-		}
-		else if (strcmp(argv[1], "encpsk") == 0 || strcmp(argv[1], "decpsk") == 0) {
-			// read JSON from stdin
-			input_adata = read_data_from_stdin(BUF_LEN_INIT, BUF_LEN_MAX, &input_adata_len);
-			if (input_adata == NULL) 
-				return ERROR;			
+	if (strcmp(argv[1], "genkeys") == 0) {
+		return generate_keys(stdout, kem_algorithm_name);
+	}
+	else if (strcmp(argv[1], "encpsk") == 0 || strcmp(argv[1], "decpsk") == 0) {
+		// read JSON from stdin
+		input_adata = read_data_from_stdin(BUF_LEN_INIT, BUF_LEN_MAX, &input_adata_len);
+		if (input_adata == NULL) 
+			return ERROR;			
 			
-			// Init & parse JSON
-			int r;
-			jsmn_parser p;
-			jsmntok_t t[16]; // We expect no more than 16 tokens 
-			jsmn_init(&p);
-			r = jsmn_parse(&p, input_adata, strlen(input_adata), t,	sizeof(t) / sizeof(t[0]));
-			if (r < 0) {
-				fprintf_stderr("Failed to parse JSON: %d", r);
-				return 1;
-			}		
-			if (r < 1 || t[0].type != JSMN_OBJECT) { // Assume the top-level element is an object 
-				fprintf_stderr("Failed to parse JSON: object expected");
-				return 1;
-			}
-			
-			// process commands
-			if (strcmp(argv[1], "encpsk") == 0) {
-
-				const char* public_key = get_json_field("pub", t, r, input_adata);
-				if (!public_key) {
-					fprintf_stderr("required parameter not defined in JSON");
-					print_usage("");
-					return 1;
-				}
-				return encode_preshared_key(stdout, kem_algorithm_name, public_key);
-			}
-			else if (strcmp(argv[1], "decpsk") == 0) {
-				const char* ciphertext = get_json_field("cipher", t, r, input_adata);
-				const char* private_key = get_json_field("priv", t, r, input_adata);
-				if (!ciphertext || !private_key) {
-					fprintf_stderr("required parameter not defined in JSON");
-					print_usage("");
-					return 1;
-				}
-				return decode_preshared_key(stdout, kem_algorithm_name, private_key, ciphertext);
-			}
-		}
-		else {
-			print_usage("");
+		// Init & parse JSON
+		int r;
+		jsmn_parser p;
+		jsmntok_t t[16]; // We expect no more than 16 tokens 
+		jsmn_init(&p);
+		r = jsmn_parse(&p, input_adata, strlen(input_adata), t,	sizeof(t) / sizeof(t[0]));
+		if (r < 0) {
+			fprintf_stderr("Failed to parse JSON: %d", r);
+			return 1;
+		}		
+		if (r < 1 || t[0].type != JSMN_OBJECT) { // Assume the top-level element is an object 
+			fprintf_stderr("Failed to parse JSON: object expected");
 			return 1;
 		}
+			
+		// process commands
+		if (strcmp(argv[1], "encpsk") == 0) {
+
+			const char* public_key = get_json_field("pub", t, r, input_adata);
+			if (!public_key) {
+				fprintf_stderr("required parameter not defined in JSON");
+				print_usage("");
+				return 1;
+			}
+			return encode_preshared_key(stdout, kem_algorithm_name, public_key);
+		}
+		else if (strcmp(argv[1], "decpsk") == 0) {
+			const char* ciphertext = get_json_field("cipher", t, r, input_adata);
+			const char* private_key = get_json_field("priv", t, r, input_adata);
+			if (!ciphertext || !private_key) {
+				fprintf_stderr("required parameter not defined in JSON");
+				print_usage("");
+				return 1;
+			}
+			return decode_preshared_key(stdout, kem_algorithm_name, private_key, ciphertext);
+		}
+	}
+	else {
+		print_usage("");
+		return 1;
 	}
 
 	OQS_MEM_secure_free(input_adata, input_adata_len);

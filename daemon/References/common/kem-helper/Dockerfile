@@ -32,4 +32,4 @@ WORKDIR /app
 COPY . .
 
 # Run your build script
-RUN source /etc/bashrc && ./build.sh
+RUN source /etc/bashrc && KEM_HELPER_ALL_ARGS=true ./build.sh

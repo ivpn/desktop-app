@@ -8,7 +8,7 @@ rem Update this line if using another version of VisualStudio or it is installed
 set _VS_VARS_BAT="C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
 
 rem -= when _VERSION_LIBOQS not defined - will be used latest sources from github =-
-rem set _VERSION_LIBOQS=0.7.2
+set _VERSION_LIBOQS=0.8.0
 
 set _SCRIPTDIR=%~dp0
 set _WORK_FOLDER=%_SCRIPTDIR%_out_windows

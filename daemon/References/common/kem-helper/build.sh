@@ -5,6 +5,8 @@
 # sudo apt install -y astyle cmake gcc ninja-build libssl-dev python3-pytest python3-pytest-xdist unzip xsltproc doxygen graphviz python3-yaml valgrind
 # #############################################################
 
+_LIBOQS_VERSION="0.8.0"
+
 _SCRIPT_DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 _WORK_FOLDER=$_SCRIPT_DIR/_out_linux
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -57,15 +59,27 @@ else
 fi 
 cd $_LIBOQS_FOLDER
 
-echo "[*] Gettings liboqs sources ..."
+echo "[*] Gettings liboqs v ${_LIBOQS_VERSION} sources ..."
 
-git clone --depth 1 -b main https://github.com/open-quantum-safe/liboqs.git
+git clone  --depth 1 --branch ${_LIBOQS_VERSION} https://github.com/open-quantum-safe/liboqs.git
 cd liboqs
 
 echo "[*] Configuring and compiling liboqs ..."
 mkdir build && cd build
 
-cmake -GNinja .. \
+# If KEM_HELPER_ALL_ARGS not defined - do minimal build (only kyber and mceliece KEMs)
+if [ -n "${KEM_HELPER_ALL_ARGS}" ]; then
+    echo "[*] Configuring liboqs (FULL build) ..."
+    cmake -GNinja .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=$_LIBOQS_INSTALL_FOLDER \
+        -DOQS_BUILD_ONLY_LIB=ON \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DOQS_USE_OPENSSL=OFF \
+        -DOQS_DIST_BUILD=ON 
+else
+    echo "[*] Configuring liboqs (MINIMAL build) ..."
+    cmake -GNinja .. \
         -DOQS_MINIMAL_BUILD="KEM_kyber_1024;KEM_classic_mceliece_348864;" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=$_LIBOQS_INSTALL_FOLDER \
@@ -73,6 +87,8 @@ cmake -GNinja .. \
         -DBUILD_SHARED_LIBS=OFF \
         -DOQS_USE_OPENSSL=OFF \
         -DOQS_DIST_BUILD=ON 
+fi
+
 ninja
 ninja install 
 
