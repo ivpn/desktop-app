@@ -1,3 +1,12 @@
+# Build container image:
+#   docker build --tag ivpn-kem-helper .
+#
+# (EXAMPLE) Manual copy binary from container to host:
+#   docker run --name vpn-kem-helper-container -it ivpn-kem-helper /bin/bash         # this will run interactive shell in docker container. Rune "exit" after execution of the following command to exit the container
+#   docker cp vpn-kem-helper-container:/app/_out_linux/kem-helper-bin/kem-helper .
+#   docker rm vpn-kem-helper-container
+
+
 # Use CentOS 7 as the base image
 FROM centos:7
 
