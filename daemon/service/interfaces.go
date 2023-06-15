@@ -65,7 +65,6 @@ type IWgKeysManager interface {
 	StopKeysRotation()
 	GenerateKeys() error
 	UpdateKeysIfNecessary() (isUpdated bool, retErr error)
-	IsCanGeneratePresharedKey() error // returns not nil if KEM functionality does not work
 }
 
 // IServiceEventsReceiver is the receiver for service events (normally, it is protocol object)

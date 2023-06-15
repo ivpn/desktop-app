@@ -186,11 +186,6 @@ func (m *KeysManager) UpdateKeysIfNecessary() (isUpdated bool, retErr error) {
 	return m.generateKeys(true)
 }
 
-func (m *KeysManager) IsCanGeneratePresharedKey() error {
-	_, err := createKemHelper()
-	return err
-}
-
 func createKemHelper() (*kem.KemHelper, error) {
 	return kem.CreateHelper(platform.KemHelperBinaryPath(), kem.GetDefaultKemAlgorithms())
 }
