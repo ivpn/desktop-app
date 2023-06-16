@@ -1015,8 +1015,14 @@ func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountI
 	// notify clients about session update
 	s._evtReceiver.OnServiceSessionChanged()
 
-	// success
+	// start session checker
 	s.startSessionChecker()
+
+	// start WireGuard keys rotation
+	if err := s._wgKeysMgr.StartKeysRotation(); err != nil {
+		log.Error(fmt.Sprintf("Unable to start WireGuard keys rotation: %v", err.Error()))
+	}
+
 	return nil
 }
 

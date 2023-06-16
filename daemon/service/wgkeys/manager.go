@@ -69,6 +69,7 @@ type KeysManager struct {
 	api              *api.API
 	wgToolBinPath    string
 	stopKeysRotation chan struct{}
+	activeRotationWg sync.WaitGroup
 }
 
 // Init - initialize master service
@@ -99,18 +100,20 @@ func (m *KeysManager) StartKeysRotation() error {
 		return nil
 	}
 
+	m.activeRotationWg.Add(1)
 	go func() {
 		log.Info(fmt.Sprintf("Keys rotation started (interval:%v)", interval))
-		defer log.Info("Keys rotation stopped")
+		defer func() {
+			log.Info("Keys rotation stopped")
+			m.activeRotationWg.Done()
+		}()
 
 		const maxCheckInterval = time.Minute * 5
-
-		needStop := false
 
 		isLastUpdateFailed := false
 		isLastUpdateFailedCnt := 0
 
-		for !needStop {
+		for {
 			waitInterval := maxCheckInterval
 
 			if isLastUpdateFailed {
@@ -151,7 +154,7 @@ func (m *KeysManager) StartKeysRotation() error {
 				}
 
 			case <-m.stopKeysRotation:
-				needStop = true
+				return
 			}
 		}
 	}()
@@ -165,6 +168,7 @@ func (m *KeysManager) StopKeysRotation() {
 	case m.stopKeysRotation <- struct{}{}:
 	default:
 	}
+	m.activeRotationWg.Wait()
 }
 
 // GenerateKeys generate keys
@@ -230,11 +234,6 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 		return false, err
 	}
 
-	isRotationStopped := false
-	if len(activePublicKey) == 0 {
-		isRotationStopped = true
-	}
-
 	log.Info("Updating WG keys...")
 
 	if err := m.service.IsConnectivityBlocked(); err != nil {
@@ -279,10 +278,8 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 	// notify service about new keys
 	m.service.WireGuardSaveNewKeys(pub, priv, localIP.String())
 
-	if isRotationStopped {
-		// If there was no public key defined - start keys rotation
-		m.StartKeysRotation()
-	}
+	// start keys rotation
+	m.StartKeysRotation()
 
 	return true, nil
 }
