@@ -378,6 +378,12 @@ async function processResponse(response) {
 
       if (obj.DaemonSettings) {
         store.dispatch("settings/daemonSettings", obj.DaemonSettings);
+
+        if (obj.DaemonSettings.AntiTracker)
+          store.dispatch(
+            "settings/antiTracker",
+            obj.DaemonSettings.AntiTracker
+          );
       }
 
       {

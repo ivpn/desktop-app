@@ -197,6 +197,8 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd types.ICommandBase, idx int) 
 // -------------- Initialize response objects ---------------
 func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 	prefs := p._service.Preferences()
+	at, _ := p._service.GetAntiTrackerStatus()
+
 	return &types.SettingsResp{
 		IsAutoconnectOnLaunch:       prefs.IsAutoconnectOnLaunch,
 		IsAutoconnectOnLaunchDaemon: prefs.IsAutoconnectOnLaunchDaemon,
@@ -205,6 +207,7 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 		UserPrefs:                   prefs.UserPrefs,
 		WiFi:                        prefs.WiFiControl,
 		IsLogging:                   prefs.IsLogging,
+		AntiTracker:                 at,
 		// TODO: implement the rest of daemon settings
 	}
 }

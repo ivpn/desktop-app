@@ -614,7 +614,7 @@ func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTra
 }
 
 func (s *Service) GetAntiTrackerStatus() (types.AntiTrackerMetadata, error) {
-	return s.GetConnectionParams().Metadata.AntiTracker, nil
+	return s.notmalizeAntiTrackerMetadata(s.GetConnectionParams().Metadata.AntiTracker)
 }
 
 // If antiTrackerPlusList not defined - set it

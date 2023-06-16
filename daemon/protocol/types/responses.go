@@ -130,6 +130,7 @@ type SettingsResp struct {
 	UserPrefs                   preferences.UserPreferences
 	WiFi                        preferences.WiFiParams
 	IsLogging                   bool
+	AntiTracker                 service_types.AntiTrackerMetadata
 
 	// TODO: implement the rest of daemon settings
 	// IsFwPersistant        bool
