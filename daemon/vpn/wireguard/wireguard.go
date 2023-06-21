@@ -23,7 +23,6 @@
 package wireguard
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -198,14 +197,24 @@ func (wg *WireGuard) IsPaused() bool {
 // Pause doing required operation for Pause (temporary restoring default DNS)
 func (wg *WireGuard) Pause() error {
 	// IMPORTANT! When the WG keys regenerated (see service.WireGuardSaveNewKeys()):
-	// WireGuard 'pause/resume' state is based on complete VPN disconnection and connection back (on all platforms)
+	// WireGuard 'pause/resume' state is based on complete VPN disconnection and restoring connection back (on all platforms)
 	// If this will be changed (e.g. just changing routing) - it will be necessary to implement reconnection even in 'pause' state (when keys were regenerated)
-	return wg.pause()
+	if ret := wg.pause(); ret != nil {
+		return ret
+	}
+
+	// make this method synchronous: waiting until paused (until WG connection disappear)
+	return <-WaitForDisconnectChan(wg.GetTunnelName(), []*bool{&wg.isDisconnectRequested, &wg.isDisconnected})
 }
 
 // Resume doing required operation for Resume (restores DNS configuration before Pause)
 func (wg *WireGuard) Resume() error {
-	return wg.resume()
+	if ret := wg.resume(); ret != nil {
+		return ret
+	}
+
+	// make this method synchronous: waiting until paused (until WG connection disappear)
+	return <-WaitForConnectChan(wg.GetTunnelName(), []*bool{&wg.isDisconnectRequested, &wg.isDisconnected})
 }
 
 // SetManualDNS changes DNS to manual IP
@@ -282,14 +291,10 @@ func (wg *WireGuard) waitHandshakeAndNotifyConnected(stateChan chan<- vpn.StateI
 	wg.notifyInitialisedStat(stateChan)
 
 	// Check connectivity: wait for first handshake
-	// No timeout defined; function returns only when handshake received or wg.isDisconnectRequested == true
-	err := WaitForWireguardFirstHanshake(wg.GetTunnelName(), 0, &wg.isDisconnectRequested, func(mes string) { log.Info(mes) })
+	// function returns only when handshake received or wg.isDisconnectRequested == true
+	err := <-WaitForWireguardFirstHanshakeChan(wg.GetTunnelName(), []*bool{&wg.isDisconnectRequested, &wg.isDisconnected}, func(mes string) { log.Info(mes) })
 	if err != nil {
-		if errors.Is(err, WgHandshakeTimeoutError{}) {
-			return err
-		} else {
-			log.Error(err) // not handshake timeout. Probably internal issue with 'wgctrl'. Just print error in log
-		}
+		return err
 	} else {
 		log.Info("Connected") // no errors - handshake received
 	}

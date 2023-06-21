@@ -25,7 +25,6 @@ import { IsServerSupportIPv6 } from "@/helpers/helpers_servers";
 import {
   VpnTypeEnum,
   VpnStateEnum,
-  PauseStateEnum,
   DnsEncryption,
   NormalizedConfigPortObject,
   NormalizedConfigPortRangeObject,
@@ -51,15 +50,15 @@ export default {
 	      Encryption: 0,    // DnsEncryption [	EncryptionNone = 0,	EncryptionDnsOverTls = 1,	EncryptionDnsOverHttps = 2]
 	      DohTemplate: "",  // string // DoH/DoT template URI (for Encryption = DnsOverHttps or Encryption = DnsOverTls)
       },      
-      IsTCP: false,
-      Mtu: int  // (for WireGuard connections)	    
+      IsTCP:      false,
+      Mtu:        int ,  // (for WireGuard connections)	 
+      IsPaused:   bool,  // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"   
+      PausedTill  string // pausedTill.Format(time.RFC3339)
     }*/,
 
     disconnectedInfo: {
       ReasonDescription: "",
     },
-
-    pauseState: PauseStateEnum.Resumed,
 
     firewallState: {
       IsEnabled: null,
@@ -183,24 +182,22 @@ export default {
   mutations: {
     connectionState(state, cs) {
       state.connectionState = cs;
-      if (cs == VpnStateEnum.DISCONNECTED)
-        state.pauseState = PauseStateEnum.Resumed;
     },
     connectionInfo(state, ci) {
       state.connectionInfo = ci;
       if (ci != null) {
         state.connectionState = VpnStateEnum.CONNECTED;
         state.disconnectedInfo = null;
+
+        // convert 'PausedTill' string to Date object
+        let pausedTill = state.connectionInfo.PausedTill;
+        if (pausedTill) state.connectionInfo.PausedTill = new Date(pausedTill);
       }
     },
     disconnected(state, disconnectionReason) {
       state.disconnectedInfo = { ReasonDescription: disconnectionReason };
       state.connectionState = VpnStateEnum.DISCONNECTED;
-      state.pauseState = PauseStateEnum.Resumed;
       state.connectionInfo = null;
-    },
-    pauseState(state, val) {
-      state.pauseState = val;
     },
     setServersData(state, serversObj /*{servers,serversHashed}*/) {
       if (!serversObj || !serversObj.servers || !serversObj.serversHashed) {
@@ -274,6 +271,10 @@ export default {
     },
     isConnected: (state) => {
       return state.connectionState === VpnStateEnum.CONNECTED;
+    },
+    isPaused: (state) => {
+      if (!state.connectionInfo || !state.connectionInfo.IsPaused) return false;
+      return state.connectionInfo.IsPaused;
     },
     vpnStateText: (state) => {
       return enumValueName(VpnStateEnum, state.connectionState);
@@ -587,12 +588,6 @@ export default {
         if (mtu === 0) mtu = null;
         context.commit("settings/mtu", mtu, { root: true });
       }
-    },
-    pauseState(context, val) {
-      context.commit("pauseState", val);
-
-      if (val === PauseStateEnum.Resumed || val === PauseStateEnum.Resuming)
-        context.dispatch("uiState/pauseConnectionTill", null, { root: true });
     },
     servers(context, value) {
       // Update servers data and hashes: {servers, serversHashed}

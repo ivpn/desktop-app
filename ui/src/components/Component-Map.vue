@@ -193,7 +193,7 @@
 </template>
 
 <script>
-import { VpnStateEnum, PauseStateEnum, ColorTheme } from "@/store/types";
+import { VpnStateEnum, ColorTheme } from "@/store/types";
 import { IsOsDarkColorScheme } from "@/helpers/renderer";
 import { CheckAndNotifyInaccessibleServer } from "@/helpers/helpers_servers";
 
@@ -337,7 +337,7 @@ export default {
     },
 
     isPaused: function () {
-      return this.$store.state.vpnState.pauseState === PauseStateEnum.Paused;
+      return this.$store.getters["vpnState/isPaused"];
     },
 
     connectedLocation: function () {

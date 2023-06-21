@@ -53,7 +53,6 @@ import daemonClient from "./daemon-client";
 import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
 import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
-import { InitConnectionResumer } from "./connection-resumer";
 import { IsWindowHasFrame } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
@@ -143,7 +142,6 @@ ipcMain.handle(
 
 if (gotTheLock) {
   InitPersistentSettings();
-  InitConnectionResumer();
   connectToDaemon();
 
   // INIT COLOR SCHEME

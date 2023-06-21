@@ -119,6 +119,14 @@ type Service struct {
 		_singleRequestLimitSemaphore *syncSemaphore.Weighted
 	}
 
+	// variables needed for automatic resume
+	_pause struct {
+		_mutex           sync.Mutex
+		_pauseTill       time.Time
+		_timer           *time.Timer
+		_killSwitchState bool // killswitch state before pause (to be able to restore it)
+	}
+
 	// variables related to connection test (e.g. ports accessibility test)
 	_connectionTest connTest
 }
@@ -475,7 +483,8 @@ func (s *Service) reconnect() {
 // Disconnect disconnect vpn
 func (s *Service) Disconnect() error {
 	s._requiredVpnState = Disconnect
-	if err := s.Resume(); err != nil {
+	// Resume connection (but do not notify "Connection resumed" status)
+	if err := s.resume(); err != nil {
 		log.Error("Resume failed:", err)
 	}
 	return s.disconnect()
@@ -530,20 +539,80 @@ func (s *Service) FirewallEnabled() (bool, error) {
 	return firewall.GetEnabled()
 }
 
+func (s *Service) erasePauseTimer() {
+	if s._pause._timer != nil {
+		s._pause._timer.Stop()
+		s._pause._timer = nil
+	}
+	s._pause._pauseTill = time.Time{}
+}
+
 // Pause pause vpn connection
-func (s *Service) Pause() error {
+func (s *Service) Pause(durationSeconds uint32) error {
 	vpn := s._vpn
 	if vpn == nil {
-		return nil
+		return fmt.Errorf("VPN not connected")
+	}
+
+	if durationSeconds <= 0 {
+		return fmt.Errorf("the duration of the pause has not been specified")
+	}
+
+	defer s._evtReceiver.OnVpnPauseChanged()
+
+	s._pause._mutex.Lock()
+	defer s._pause._mutex.Unlock()
+
+	fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+	if err != nil {
+		return fmt.Errorf("failed to check KillSwitch status: %w", err)
+	}
+	s._pause._killSwitchState = fwIsEnabled
+	if fwIsEnabled && !isPersistant {
+		if err := s.SetKillSwitchState(false); err != nil {
+			return err
+		}
 	}
 
 	log.Info("Pausing...")
 	firewall.ClientPaused()
-	return vpn.Pause()
+	ret := vpn.Pause()
+
+	if ret == nil {
+		s.erasePauseTimer()
+
+		s._pause._pauseTill = time.Now().Add(time.Second * time.Duration(durationSeconds))
+		log.Info(fmt.Sprintf("Paused on %v (till %v)", time.Second*time.Duration(durationSeconds), s._pause._pauseTill))
+
+		s._pause._timer = time.AfterFunc(time.Second*time.Duration(durationSeconds), func() {
+			log.Info(fmt.Sprintf("Automatic resuming after %v ...", time.Second*time.Duration(durationSeconds)))
+			if err := s.Resume(); err != nil {
+				log.Error(fmt.Errorf("Resume failed: %w", err))
+			}
+		})
+	}
+
+	return ret
 }
 
 // Resume resume vpn connection
 func (s *Service) Resume() error {
+	defer s._evtReceiver.OnVpnPauseChanged()
+
+	vpn := s._vpn
+	if vpn == nil || !vpn.IsPaused() {
+		return fmt.Errorf("VPN not paused")
+	}
+
+	return s.resume()
+}
+
+// Resume resume vpn connection
+func (s *Service) resume() error {
+	s._pause._mutex.Lock()
+	defer s._pause._mutex.Unlock()
+	s.erasePauseTimer()
+
 	vpn := s._vpn
 	if vpn == nil {
 		return nil
@@ -554,7 +623,22 @@ func (s *Service) Resume() error {
 
 	log.Info("Resuming...")
 	firewall.ClientResumed()
-	return vpn.Resume()
+	ret := vpn.Resume()
+
+	if ret == nil {
+		fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+		if err != nil {
+			log.Error(fmt.Errorf("failed to check KillSwitch status: %w", err))
+		} else {
+			if !isPersistant && fwIsEnabled != s._pause._killSwitchState {
+				if err := s.SetKillSwitchState(s._pause._killSwitchState); err != nil {
+					log.Error("failed to restore KillSwitch status: %w", err)
+				}
+			}
+		}
+	}
+
+	return ret
 }
 
 // IsPaused returns 'true' if current vpn connection is in paused state
@@ -563,7 +647,14 @@ func (s *Service) IsPaused() bool {
 	if vpn == nil {
 		return false
 	}
-	return vpn.IsPaused()
+
+	return vpn.IsPaused() && s._pause._timer != nil
+}
+
+func (s *Service) PausedTill() time.Time {
+	s._pause._mutex.Lock()
+	defer s._pause._mutex.Unlock()
+	return s._pause._pauseTill
 }
 
 // SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
@@ -653,6 +744,9 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 	if !isEnabled && s._preferences.IsFwPersistant {
 		return fmt.Errorf("unable to disable Firewall in 'Persistent' state. Please, disable 'Always-on firewall' first")
 	}
+	if s.IsPaused() {
+		return fmt.Errorf("unable to change the firewall state while connection is paused, please resume the connection first")
+	}
 
 	err := firewall.SetEnabled(isEnabled)
 	if err == nil {
@@ -679,6 +773,10 @@ func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllo
 
 // SetKillSwitchIsPersistent change kill-switch value
 func (s *Service) SetKillSwitchIsPersistent(isPersistant bool) error {
+	if s.IsPaused() {
+		return fmt.Errorf("unable to change the firewall state while connection is paused, please resume the connection first")
+	}
+
 	prefs := s._preferences
 	prefs.IsFwPersistant = isPersistant
 	s.setPreferences(prefs)

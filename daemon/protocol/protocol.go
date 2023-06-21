@@ -114,9 +114,10 @@ type Service interface {
 	Disconnect() error
 	Connected() bool
 
-	Pause() error
+	Pause(durationSeconds uint32) error
 	Resume() error
 	IsPaused() bool
+	PausedTill() time.Time
 
 	SessionNew(accountID string, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
 		apiCode int,
@@ -289,10 +290,17 @@ func (p *Protocol) processClient(conn net.Conn) {
 			}
 		}
 
-		p.clientDisconnected(conn)
+		disconnectedClientInfo := p.clientDisconnected(conn)
 		log.Info("Client disconnected: ", conn.RemoteAddr())
 
-		if p._service.IsPaused() && p.clientsConnectedCount() == 0 {
+		// if VPN Paused:
+		//	- if only UI client was connected and now it disconnected - disconnect VPN
+		//	- if only CLI client was connected - do nothing (keep VPN paused)
+		if p._service.IsPaused() &&
+			p.clientsConnectedCount() == 0 &&
+			disconnectedClientInfo != nil &&
+			disconnectedClientInfo.Type == types.ClientUi &&
+			disconnectedClientInfo.IsAuthenticated {
 			log.Info("Connection is in paused state and no active clients available. Disconnecting ...")
 			if err := p._service.Disconnect(); err != nil {
 				log.Error(err)
@@ -924,12 +932,19 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 	case "PauseConnection":
-		if err := p._service.Pause(); err != nil {
+		var req types.PauseConnection
+		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+		if err := p._service.Pause(req.Duration); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+
+		p.sendResponse(conn, p.createConnectedResponse(p._lastVPNState), reqCmd.Idx)
+		// all clients will be notified by service in OnVpnPauseChanged() handler
 
 	case "ResumeConnection":
 		if err := p._service.Resume(); err != nil {
@@ -938,6 +953,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+		// all clients will be notified by service in OnVpnPauseChanged() handler
 
 	case "SessionNew":
 		var req types.SessionNew
@@ -1244,7 +1260,7 @@ func (p *Protocol) processConnectionRequests() {
 			saveLastError := func(e error) {
 				// If no any clients connected - error notification will not be passed to user
 				// Trerefore we keep this error an pass it to the first connected client
-				if !p.IsClientConnected(false) {
+				if e != nil && !p.IsClientConnected(false) {
 					p._lastConnectionErrorToNotifyClient = fmt.Sprintf("[%v] Failed to connect VPN: %s", time.Now().Format(time.Stamp), e.Error())
 				}
 			}
@@ -1308,7 +1324,7 @@ func (p *Protocol) processConnectRequest(r service_types.ConnectionParams) (err 
 	return p._service.Connect(r)
 }
 
-func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
+func (p *Protocol) notifyVpnStateChanged(stateObj *vpn.StateInfo) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("Panic when notifying VPN status to clients! (recovered)")
@@ -1318,7 +1334,11 @@ func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
 		}
 	}()
 
-	p._lastVPNState = state
+	state := p._lastVPNState
+	if stateObj != nil {
+		p._lastVPNState = *stateObj
+		state = *stateObj
+	}
 
 	switch state.State {
 	case vpn.CONNECTED:
@@ -1328,4 +1348,12 @@ func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
 	default:
 		p.notifyClients(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo})
 	}
+}
+
+func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
+	p.notifyVpnStateChanged(&state)
+}
+
+func (p *Protocol) OnVpnPauseChanged() {
+	p.notifyVpnStateChanged(nil)
 }

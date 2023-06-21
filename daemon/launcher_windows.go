@@ -43,6 +43,7 @@ var _stopped chan struct{}
 type ivpnservice struct{}
 
 // EventType (svc.PowerEvent) info: https://learn.microsoft.com/en-us/windows/win32/power/wm-powerbroadcast
+//
 //	https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nc-winsvc-lphandler_function_ex
 //	https://learn.microsoft.com/en-us/windows/win32/power/pbt-powersettingchange
 type PowerBroadcastType uint32
@@ -65,8 +66,6 @@ const (
 
 // Prepare to start IVPN service for Windows
 func doPrepareToRun() error {
-	systemLog = make(chan service.SystemLogMessage, 1)
-
 	isService, err := svc.IsWindowsService()
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to determine if we are running in as a Windows service: %v", err))
@@ -154,6 +153,7 @@ func runWindowsService() {
 	}()
 
 	// write service messages into system log
+	systemLog = make(chan service.SystemLogMessage, 1)
 	go func() {
 		for {
 			mes := <-systemLog

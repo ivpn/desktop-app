@@ -93,12 +93,7 @@ import SelectButtonControl from "@/components/controls/control-config-to-select-
 import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
 const sender = window.ipcSender;
 import { enumValueName } from "@/helpers/helpers";
-import {
-  VpnTypeEnum,
-  PortTypeEnum,
-  PauseStateEnum,
-  VpnStateEnum,
-} from "@/store/types";
+import { VpnTypeEnum, PortTypeEnum, VpnStateEnum } from "@/store/types";
 
 function processError(e) {
   console.error(e);
@@ -195,7 +190,7 @@ export default {
       return NOTRUSTSTATUS;
     },
     IsPaused: function () {
-      return this.$store.state.vpnState.pauseState == PauseStateEnum.Paused;
+      return this.$store.getters["vpnState/isPaused"];
     },
     IsConnected: function () {
       return (

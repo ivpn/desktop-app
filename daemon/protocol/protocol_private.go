@@ -27,6 +27,7 @@ import (
 	"net"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
@@ -91,12 +92,18 @@ func (p *Protocol) clientConnected(c net.Conn, cType types.ClientTypeEnum) {
 	p._connections[c] = connectionInfo{Type: cType}
 }
 
-func (p *Protocol) clientDisconnected(c net.Conn) {
+func (p *Protocol) clientDisconnected(c net.Conn) (disconnectedClientInfo *connectionInfo) {
 	p._connectionsMutex.Lock()
 	defer p._connectionsMutex.Unlock()
 
+	if ci, ok := p._connections[c]; ok {
+		disconnectedClientInfo = &ci
+	}
+
 	delete(p._connections, c)
 	c.Close()
+
+	return disconnectedClientInfo
 }
 
 func (p *Protocol) clientsConnectedCount() int {
@@ -244,6 +251,13 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 	if state.ClientIPv6 != nil {
 		ipv6 = state.ClientIPv6.String()
 	}
+
+	pausedTill := p._service.PausedTill()
+	pausedTillStr := pausedTill.Format(time.RFC3339)
+	if pausedTill.IsZero() {
+		pausedTillStr = ""
+	}
+
 	ret := &types.ConnectedResp{
 		TimeSecFrom1970: state.Time,
 		ClientIP:        state.ClientIP.String(),
@@ -254,7 +268,10 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ExitHostname:    state.ExitHostname,
 		ManualDNS:       dns.GetLastManualDNS(),
 		IsTCP:           state.IsTCP,
-		Mtu:             state.Mtu}
+		Mtu:             state.Mtu,
+		IsPaused:        p._service.IsPaused(),
+		PausedTill:      pausedTillStr,
+	}
 
 	return ret
 }
