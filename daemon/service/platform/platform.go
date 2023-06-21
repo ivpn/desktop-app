@@ -63,6 +63,8 @@ var (
 	wgToolBinaryPath string
 	wgConfigFilePath string
 
+	kemHelperBinaryPath string
+
 	dnscryptproxyBinPath        string
 	dnscryptproxyConfigTemplate string
 	dnscryptproxyConfig         string
@@ -144,6 +146,10 @@ func Init() (warnings []string, errors []error, logInfo []string) {
 	}
 	if err := checkFileAccessRightsExecutable("wgToolBinaryPath", wgToolBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
+	}
+
+	if err := checkFileAccessRightsExecutable("kemHelperBinaryPath", kemHelperBinaryPath); err != nil {
+		warnings = append(warnings, fmt.Errorf("KEM functionality not accessible: %w", err).Error())
 	}
 
 	if err := checkFileAccessRightsExecutable("dnscryptproxyBinPath", dnscryptproxyBinPath); err != nil {
@@ -333,4 +339,8 @@ func WGConfigFilePath() string {
 
 func DnsCryptProxyInfo() (binPath, configPathTemplate, configPathMutable, logPath string) {
 	return dnscryptproxyBinPath, dnscryptproxyConfigTemplate, dnscryptproxyConfig, dnscryptproxyLog
+}
+
+func KemHelperBinaryPath() string {
+	return kemHelperBinaryPath
 }

@@ -281,7 +281,7 @@ func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.Req
 }
 
 // SessionNew - try to register new session
-func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
+func (a *API) SessionNew(accountID string, wgPublicKey string, kemKeys types.KemPublicKeys, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
 	*types.SessionNewResponse,
 	*types.SessionNewErrorLimitResponse,
 	*types.APIErrorResponse,
@@ -297,6 +297,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool, 
 	request := &types.SessionNewRequest{
 		AccountID:       accountID,
 		PublicKey:       wgPublicKey,
+		KemPublicKeys:   kemKeys,
 		ForceLogin:      forceLogin,
 		CaptchaID:       captchaID,
 		Captcha:         captcha,
@@ -319,6 +320,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, forceLogin bool, 
 		if err := json.Unmarshal(data, &successResp); err != nil {
 			return nil, nil, nil, rawResponse, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
+
 		return &successResp, nil, &apiErr, rawResponse, nil
 	}
 
@@ -379,28 +381,25 @@ func (a *API) SessionDelete(session string) error {
 }
 
 // WireGuardKeySet - update WG key
-func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePublicWgKey string) (localIP net.IP, err error) {
+func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePublicWgKey string, kemKeys types.KemPublicKeys) (responseObj types.SessionsWireGuardResponse, err error) {
 	request := &types.SessionWireGuardKeySetRequest{
 		Session:            session,
 		PublicKey:          newPublicWgKey,
-		ConnectedPublicKey: activePublicWgKey}
+		ConnectedPublicKey: activePublicWgKey,
+		KemPublicKeys:      kemKeys,
+	}
 
-	resp := &types.SessionsWireGuardResponse{}
+	resp := types.SessionsWireGuardResponse{}
 
-	if err := a.request("", _wgKeySetPath, "POST", "application/json", request, resp); err != nil {
-		return nil, err
+	if err := a.request("", _wgKeySetPath, "POST", "application/json", request, &resp); err != nil {
+		return resp, err
 	}
 
 	if resp.Status != types.CodeSuccess {
-		return nil, types.CreateAPIError(resp.Status, resp.Message)
+		return resp, types.CreateAPIError(resp.Status, resp.Message)
 	}
 
-	localIP = net.ParseIP(resp.IPAddress)
-	if localIP == nil {
-		return nil, fmt.Errorf("failed to set WG key (failed to parse local IP in API response)")
-	}
-
-	return localIP, nil
+	return resp, nil
 }
 
 // GeoLookup gets geolocation

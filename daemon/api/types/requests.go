@@ -22,11 +22,19 @@
 
 package types
 
+// KemPublicKeys in use for KEM: to exchange WG PresharedKey
+type KemPublicKeys struct {
+	KemPublicKey_Kyber1024             string `json:"kem_public_key1,omitempty"`
+	KemPublicKey_ClassicMcEliece348864 string `json:"kem_public_key2,omitempty"`
+}
+
 // SessionNewRequest request to create new session
 type SessionNewRequest struct {
 	AccountID  string `json:"username"`
-	PublicKey  string `json:"wg_public_key"`
 	ForceLogin bool   `json:"force"`
+
+	PublicKey string `json:"wg_public_key"`
+	KemPublicKeys
 
 	CaptchaID       string `json:"captcha_id,omitempty"`
 	Captcha         string `json:"captcha,omitempty"`
@@ -48,4 +56,5 @@ type SessionWireGuardKeySetRequest struct {
 	Session            string `json:"session_token"`
 	PublicKey          string `json:"public_key"`
 	ConnectedPublicKey string `json:"connected_public_key"`
+	KemPublicKeys
 }

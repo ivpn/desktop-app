@@ -59,6 +59,8 @@ func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 	dnscryptproxyConfigTemplate = path.Join(installDir, "etc/dnscrypt-proxy-template.toml")
 	dnscryptproxyConfig = path.Join(tmpDir, "dnscrypt-proxy.toml")
 
+	kemHelperBinaryPath = path.Join(installDir, "kem/kem-helper")
+
 	settingsFile = path.Join(tmpDir, "settings.json")
 	openvpnConfigFile = path.Join(tmpDir, "openvpn.cfg")
 	openvpnProxyAuthFile = path.Join(tmpDir, "proxyauth.txt")

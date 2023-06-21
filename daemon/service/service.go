@@ -35,6 +35,7 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/api"
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/kem"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
@@ -258,8 +259,10 @@ func (s *Service) init() error {
 	if err := s._wgKeysMgr.Init(s); err != nil {
 		log.Error("Failed to initialize WG keys rotation:", err)
 	} else {
+
 		go func() {
 			<-_ipStackInitializationWaiter // Wait for IP stack initialization
+
 			if err := s._wgKeysMgr.StartKeysRotation(); err != nil {
 				log.Error("Failed to start WG keys rotation:", err)
 			}
@@ -1093,7 +1096,7 @@ func (s *Service) SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecut
 // SESSIONS
 //////////////////////////////////////////////////////////
 
-func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64) error {
+func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64, wgPreSharedKey string) error {
 	// save session info
 	s._preferences.SetSession(accountInfo,
 		accountID,
@@ -1102,7 +1105,8 @@ func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountI
 		vpnPass,
 		wgPublicKey,
 		wgPrivateKey,
-		wgLocalIP)
+		wgLocalIP,
+		wgPreSharedKey)
 
 	// manually set info about WG keys timestamp
 	if wgKeyGenerated > 0 {
@@ -1151,10 +1155,20 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 		log.Error("Creating new session -> Failed to delete active session: ", err)
 	}
 
-	// generate new keys for WireGuard
-	publicKey, privateKey, err := wireguard.GenerateKeys(platform.WgToolBinaryPath())
+	// Generate keys for Key Encapsulation Mechanism using post-quantum cryptographic algorithms
+	var kemKeys api_types.KemPublicKeys
+	kemHelper, err := kem.CreateHelper(platform.KemHelperBinaryPath(), kem.GetDefaultKemAlgorithms())
 	if err != nil {
-		log.Warning("Failed to generate wireguard keys for new session: %s", err)
+		log.Error("Failed to generate KEM keys: ", err)
+	} else {
+		kemKeys.KemPublicKey_Kyber1024, err = kemHelper.GetPublicKey(kem.AlgName_Kyber1024)
+		if err != nil {
+			log.Error(err)
+		}
+		kemKeys.KemPublicKey_ClassicMcEliece348864, err = kemHelper.GetPublicKey(kem.AlgName_ClassicMcEliece348864)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	log.Info("Logging in...")
@@ -1166,34 +1180,78 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 
 		}
 	}()
-	successResp, errorLimitResp, apiErr, rawRespStr, err := s._api.SessionNew(accountID, publicKey, forceLogin, captchaID, captcha, confirmation2FA)
-	rawResponse = rawRespStr
 
-	apiCode = 0
-	if apiErr != nil {
-		apiCode = apiErr.Status
-	}
+	var (
+		publicKey  string
+		privateKey string
 
-	if err != nil {
-		// if SessionsLimit response
-		if errorLimitResp != nil {
-			accountInfo = s.createAccountStatus(errorLimitResp.SessionLimitData)
-			return apiCode, apiErr.Message, accountInfo, rawResponse, err
+		wgPresharedKey string
+		successResp    *api_types.SessionNewResponse
+		errorLimitResp *api_types.SessionNewErrorLimitResponse
+		apiErr         *api_types.APIErrorResponse
+		rawRespStr     string // RAW response
+	)
+
+	for {
+		// generate new keys for WireGuard
+		publicKey, privateKey, err = wireguard.GenerateKeys(platform.WgToolBinaryPath())
+		if err != nil {
+			log.Warning("Failed to generate wireguard keys for new session: %s", err)
 		}
 
-		// in case of other API error
+		successResp, errorLimitResp, apiErr, rawRespStr, err = s._api.SessionNew(accountID, publicKey, kemKeys, forceLogin, captchaID, captcha, confirmation2FA)
+		rawResponse = rawRespStr
+
+		apiCode = 0
 		if apiErr != nil {
-			return apiCode, apiErr.Message, accountInfo, rawResponse, err
+			apiCode = apiErr.Status
 		}
 
-		// not API error
-		return apiCode, "", accountInfo, rawResponse, err
-	}
+		if err != nil {
+			// if SessionsLimit response
+			if errorLimitResp != nil {
+				accountInfo = s.createAccountStatus(errorLimitResp.SessionLimitData)
+				return apiCode, apiErr.Message, accountInfo, rawResponse, err
+			}
 
-	if successResp == nil {
-		return apiCode, "", accountInfo, rawResponse, fmt.Errorf("unexpected error when creating a new session")
-	}
+			// in case of other API error
+			if apiErr != nil {
+				return apiCode, apiErr.Message, accountInfo, rawResponse, err
+			}
 
+			// not API error
+			return apiCode, "", accountInfo, rawResponse, err
+		}
+
+		if successResp == nil {
+			return apiCode, "", accountInfo, rawResponse, fmt.Errorf("unexpected error when creating a new session")
+		}
+
+		if kemHelper != nil {
+			if len(successResp.WireGuard.KemCipher_Kyber1024) == 0 && len(successResp.WireGuard.KemCipher_ClassicMcEliece348864) == 0 {
+				log.Warning("The server did not respond with KEM ciphers. The WireGuard PresharedKey has not been initialized!")
+			} else {
+				if err := kemHelper.SetCipher(kem.AlgName_Kyber1024, successResp.WireGuard.KemCipher_Kyber1024); err != nil {
+					log.Error(err)
+				}
+				if err := kemHelper.SetCipher(kem.AlgName_ClassicMcEliece348864, successResp.WireGuard.KemCipher_ClassicMcEliece348864); err != nil {
+					log.Error(err)
+				}
+
+				wgPresharedKey, err = kemHelper.CalculatePresharedKey()
+				if err != nil {
+					log.Error(fmt.Sprintf("Failed to decode KEM ciphers! (%s). Retry Log-in without WireGuard PresharedKey...", err))
+					kemHelper = nil
+					kemKeys = api_types.KemPublicKeys{}
+					if err := s.SessionDelete(true); err != nil {
+						log.Error("Creating new session (retry 2) -> Failed to delete active session: ", err)
+					}
+					continue
+				}
+			}
+		}
+		break
+	}
 	// get account status info
 	accountInfo = s.createAccountStatus(successResp.ServiceStatus)
 
@@ -1204,7 +1262,9 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 		successResp.VpnPassword,
 		publicKey,
 		privateKey,
-		successResp.WireGuard.IPAddress, 0)
+		successResp.WireGuard.IPAddress, 0, wgPresharedKey)
+
+	log.Info(fmt.Sprintf("(logging in) WG keys updated (%s:%s; psk:%v)", successResp.WireGuard.IPAddress, publicKey, len(wgPresharedKey) > 0))
 
 	return apiCode, "", accountInfo, rawResponse, nil
 }
@@ -1264,7 +1324,7 @@ func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLo
 		}
 	}
 
-	s._preferences.SetSession(preferences.AccountStatus{}, "", "", "", "", "", "", "")
+	s._preferences.SetSession(preferences.AccountStatus{}, "", "", "", "", "", "", "", "")
 	log.Info("Logged out locally")
 
 	// notify clients about session update
@@ -1431,8 +1491,8 @@ func (s *Service) stopSessionChecker() {
 //////////////////////////////////////////////////////////
 
 // WireGuardSaveNewKeys saves WG keys
-func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string) {
-	s._preferences.UpdateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP)
+func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string, wgPresharedKey string) {
+	s._preferences.UpdateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP, wgPresharedKey)
 
 	// notify clients about session (wg keys) update
 	s._evtReceiver.OnServiceSessionChanged()

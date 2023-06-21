@@ -232,6 +232,32 @@ parts:
       mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy
       cp _deps/obfs4proxy_inst/obfs4proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy/obfs4proxy
 
+  kemhelper:
+    plugin: nil
+    build-snaps:
+    - go
+    build-packages:
+    - git
+    - astyle 
+    - cmake 
+    - gcc 
+    - ninja-build 
+    - libssl-dev 
+    - python3-pytest 
+    - python3-pytest-xdist 
+    - unzip 
+    - xsltproc 
+    - doxygen 
+    - graphviz 
+    - python3-yaml 
+    - valgrind
+    source: ./daemon/References
+    override-build: |
+      rm -fr ./Linux/_deps/kem-helper
+      ./Linux/scripts/build-kem-helper.sh
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/kem
+      cp Linux/_deps/kem-helper/kem-helper-bin/kem-helper $SNAPCRAFT_PART_INSTALL/opt/ivpn/kem/kem-helper      
+         
   etc:
     plugin: nil
     source: ./daemon/References

@@ -36,6 +36,7 @@ type SessionStatus struct {
 	OpenVPNPass        string `json:",omitempty"`
 	WGPublicKey        string
 	WGPrivateKey       string `json:",omitempty"`
+	WGPresharedKey     string `json:",omitempty"`
 	WGLocalIP          string
 	WGKeyGenerated     time.Time
 	WGKeysRegenInerval time.Duration // syntax error in variable name. Keeping it as is for compatibility with previous versions
@@ -54,7 +55,7 @@ func (s *SessionStatus) IsWGCredentialsOk() bool {
 	return true
 }
 
-func (s *SessionStatus) updateWgCredentials(wgPublicKey string, wgPrivateKey string, wgLocalIP string) {
+func (s *SessionStatus) updateWgCredentials(wgPublicKey string, wgPrivateKey string, wgLocalIP string, wgPresharedKey string) {
 	if len(wgLocalIP) > 0 {
 		if net.ParseIP(wgLocalIP) == nil {
 			log.Error("Unable to save WG credentials (local IP has wrong format)")
@@ -64,6 +65,7 @@ func (s *SessionStatus) updateWgCredentials(wgPublicKey string, wgPrivateKey str
 
 	s.WGPublicKey = strings.TrimSpace(wgPublicKey)
 	s.WGPrivateKey = strings.TrimSpace(wgPrivateKey)
+	s.WGPresharedKey = strings.TrimSpace(wgPresharedKey)
 	s.WGLocalIP = strings.TrimSpace(wgLocalIP)
 
 	if len(s.WGPublicKey) > 0 && len(s.WGPrivateKey) > 0 && len(s.WGLocalIP) > 0 {

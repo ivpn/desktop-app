@@ -67,6 +67,8 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	dnscryptproxyConfigTemplate = "/Applications/IVPN.app/Contents/Resources/etc/dnscrypt-proxy-template.toml"
 	dnscryptproxyConfig = path.Join(settingsDir, "dnscrypt-proxy.toml")
 
+	kemHelperBinaryPath = "/Applications/IVPN.app/Contents/MacOS/kem/kem-helper"
+
 	return nil, nil
 }
 

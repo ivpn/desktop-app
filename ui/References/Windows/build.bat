@@ -8,6 +8,8 @@ set CERT_SHA1=%1
 rem ==================================================
 rem DEFINE path to NSIS binary here
 SET MAKENSIS="C:\Program Files (x86)\NSIS\makensis.exe"
+rem Update this line if using another version of VisualStudio or it is installed in another location
+set _VS_VARS_BAT="C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
 rem ==================================================
 SET INSTALLER_OUT_DIR=%SCRIPTDIR%bin
 set INSTALLER_TMP_DIR=%INSTALLER_OUT_DIR%\temp
@@ -23,7 +25,20 @@ WHERE msbuild >nul 2>&1
 IF %ERRORLEVEL% NEQ 0 (
 	echo [!] 'msbuild' is not recognized as an internal or external command
 	echo [!] Ensure you are running this script from Developer Cammand Prompt for Visual Studio
-	goto :error
+	
+	if not defined VSCMD_VER (
+        if "%VSCMD_ARG_TGT_ARCH%" NEQ "x64" (
+            echo [*] Initialising x64 VS build environment ...
+            if not exist %_VS_VARS_BAT% (
+                echo [!] File '%_VS_VARS_BAT%' not exists! 
+                echo [!] Please install Visual Studio or update file location in '%~f0'
+                goto :error
+            )
+            call %_VS_VARS_BAT% x64 || goto :error
+        )
+    ) else (
+		goto :error
+	)
 )
 
 rem Checking if NSIS  available

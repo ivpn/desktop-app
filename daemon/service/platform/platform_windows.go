@@ -111,6 +111,8 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 	dnscryptproxyConfig = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.toml")
 	dnscryptproxyLog = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.log")
 
+	kemHelperBinaryPath = path.Join(_installDir, "kem/kem-helper.exe")
+
 	if _, err := os.Stat(wfpDllPath); err != nil {
 		errors = append(errors, fmt.Errorf("file not exists: '%s'", wfpDllPath))
 	}

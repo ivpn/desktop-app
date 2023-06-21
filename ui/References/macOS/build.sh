@@ -243,6 +243,10 @@ echo "[+] Preparing DMG image: Copying 'dnscrypt-proxy' binary..."
 mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/dnscrypt-proxy"
 cp "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/dnscryptproxy_inst/dnscrypt-proxy" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/dnscrypt-proxy/dnscrypt-proxy" || CheckLastResult
 
+echo "[+] Preparing DMG image: Copying kem-helper..."
+mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/kem"
+cp "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/kem-helper/kem-helper-bin/kem-helper" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/kem/kem-helper" || CheckLastResult
+
 echo "[+] Preparing DMG image: Copying daemon..."
 cp -R "${_PATH_ABS_REPO_DAEMON}/IVPN Agent" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS" || CheckLastResult
 
