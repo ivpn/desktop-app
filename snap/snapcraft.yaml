@@ -55,7 +55,7 @@
 name: ivpn # you probably want to 'snapcraft register <name>'
 base: core20 # the base snap is the execution environment for this snap
 # TODO: Set 'version:' to the same value as in 'ui/package.json'. This value will be used to stamp version for CLI and daemon
-version: "3.10.23"
+version: "3.11.0"
 
 title: IVPN
 summary: IVPN - Secure VPN for Privacy  # 79 char long summary
@@ -238,26 +238,26 @@ parts:
     - go
     build-packages:
     - git
-    - astyle 
-    - cmake 
-    - gcc 
-    - ninja-build 
-    - libssl-dev 
-    - python3-pytest 
-    - python3-pytest-xdist 
-    - unzip 
-    - xsltproc 
-    - doxygen 
-    - graphviz 
-    - python3-yaml 
+    - astyle
+    - cmake
+    - gcc
+    - ninja-build
+    - libssl-dev
+    - python3-pytest
+    - python3-pytest-xdist
+    - unzip
+    - xsltproc
+    - doxygen
+    - graphviz
+    - python3-yaml
     - valgrind
     source: ./daemon/References
     override-build: |
       rm -fr ./Linux/_deps/kem-helper
       ./Linux/scripts/build-kem-helper.sh
       mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/kem
-      cp Linux/_deps/kem-helper/kem-helper-bin/kem-helper $SNAPCRAFT_PART_INSTALL/opt/ivpn/kem/kem-helper      
-         
+      cp Linux/_deps/kem-helper/kem-helper-bin/kem-helper $SNAPCRAFT_PART_INSTALL/opt/ivpn/kem/kem-helper
+
   etc:
     plugin: nil
     source: ./daemon/References
