@@ -64,7 +64,15 @@ then
   echo "========== Compiling kem-helper ======================"
   echo "======================================================"
   cd $SCRIPT_DIR
-  ./build-kem-helper.sh
+
+  if [ ! -z "$GITHUB_ACTIONS" ]; 
+  then
+    echo "! GITHUB_ACTIONS detected ! It is just a build test."
+    echo "! Skipped compilation of kem-helper !"
+  else
+    ./build-kem-helper.sh
+  fi
+
 else
   echo "kem-helper already compiled. Skipping build."
 fi
