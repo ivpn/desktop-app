@@ -258,6 +258,8 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		pausedTillStr = ""
 	}
 
+	_, _, dnsValue, _ := p._service.GetDefaultDnsParams()
+
 	ret := &types.ConnectedResp{
 		TimeSecFrom1970: state.Time,
 		ClientIP:        state.ClientIP.String(),
@@ -266,7 +268,7 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ServerPort:      state.ServerPort,
 		VpnType:         state.VpnType,
 		ExitHostname:    state.ExitHostname,
-		ManualDNS:       dns.GetLastManualDNS(),
+		ManualDNS:       dnsValue,
 		IsTCP:           state.IsTCP,
 		Mtu:             state.Mtu,
 		IsPaused:        p._service.IsPaused(),

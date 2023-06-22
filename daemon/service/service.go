@@ -92,9 +92,6 @@ type Service struct {
 	_vpnSessionInfo      VpnSessionInfo
 	_vpnSessionInfoMutex sync.Mutex
 
-	// manual DNS value (if not defined - nil)
-	_manualDNS dns.DnsSettings
-
 	// Required VPN state which service is going to reach (disconnect->keep connection->connect)
 	// When KeepConnection - reconnects immediately after disconnection
 	_requiredVpnState RequiredState
@@ -657,47 +654,65 @@ func (s *Service) PausedTill() time.Time {
 	return s._pause._pauseTill
 }
 
+func (s *Service) saveDefaultDnsParams(dnsCfg dns.DnsSettings, antiTrackerCfg types.AntiTrackerMetadata) (retErr error) {
+	defaultParams := s.GetConnectionParams()
+
+	if defaultParams.ManualDNS.Equal(dnsCfg) && defaultParams.Metadata.AntiTracker.Equal(antiTrackerCfg) {
+		return nil
+	}
+
+	// save DNS and AntiTracker default metadata
+	defaultParams.ManualDNS = dnsCfg
+	defaultParams.Metadata.AntiTracker = antiTrackerCfg
+
+	return s.setConnectionParams(defaultParams)
+}
+
+// GetDefaultDnsParams returns default DNS parameters
+// Returns:
+//
+//	dnsCfg - default DNS parameters
+//	antiTrackerCfg - default AntiTracker parameters
+//	realDnsValue - real DNS value (if 'antiTracker' is enabled - it will contain DNS of AntiTracker server)
+func (s *Service) GetDefaultDnsParams() (dnsCfg dns.DnsSettings, antiTrackerCfg types.AntiTrackerMetadata, realDnsValue dns.DnsSettings, err error) {
+	defaultParams := s.GetConnectionParams()
+
+	dnsCfg = defaultParams.ManualDNS
+	realDnsValue = defaultParams.ManualDNS
+	antiTrackerCfg = defaultParams.Metadata.AntiTracker
+
+	if antiTrackerCfg.Enabled {
+		realDnsValue, err = s.getAntiTrackerDns(antiTrackerCfg.Hardcore)
+	}
+
+	return dnsCfg, antiTrackerCfg, realDnsValue, err
+}
+
 // SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 // If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error) {
-
 	// Update default metadata
-	defaultParams := s.GetConnectionParams()
-	// save DNS and AntiTracker default metadata
-	if !defaultParams.ManualDNS.Equal(dnsCfg) || !defaultParams.Metadata.AntiTracker.Equal(antiTracker) {
-		defaultParams.ManualDNS = dnsCfg
-		defaultParams.Metadata.AntiTracker = antiTracker
-		s.setConnectionParams(defaultParams)
-	}
-	// anti-tracker
-	if antiTracker.Enabled {
-		atDns, err := s.getAntiTrackerDns(antiTracker.Hardcore)
-		if err != err {
-			return dns.DnsSettings{}, err
-		}
-		dnsCfg = atDns
+	s.saveDefaultDnsParams(dnsCfg, antiTracker)
+
+	// Get real DNS value (taking into account AntiTracker)
+	_, _, realDnsValue, err := s.GetDefaultDnsParams()
+	if err != nil {
+		return dns.DnsSettings{}, err
 	}
 
 	vpn := s._vpn
 	if vpn == nil {
 		// no active VPN connection
-		return dnsCfg, nil
+		return realDnsValue, nil
 	}
 
-	s._manualDNS = dnsCfg
-	return s._manualDNS, vpn.SetManualDNS(s._manualDNS)
+	return realDnsValue, vpn.SetManualDNS(realDnsValue)
 }
 
 // ResetManualDNS set dns to default
 func (s *Service) ResetManualDNS() error {
-
 	// Update default metadata
-	defaultParams := s.GetConnectionParams()
-	if !defaultParams.ManualDNS.IsEmpty() || !defaultParams.Metadata.AntiTracker.Equal(types.AntiTrackerMetadata{}) {
-		defaultParams.ManualDNS = dns.DnsSettings{}
-		defaultParams.Metadata.AntiTracker = types.AntiTrackerMetadata{}
-		s.setConnectionParams(defaultParams)
-	}
+	s.saveDefaultDnsParams(dns.DnsSettings{}, types.AntiTrackerMetadata{})
 
 	vpn := s._vpn
 	if vpn == nil {

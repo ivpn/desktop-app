@@ -108,6 +108,13 @@ type Service interface {
 	// If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 	SetManualDNS(dns dns.DnsSettings, antiTracker service_types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error)
 	ResetManualDNS() error
+	// GetDefaultDnsParams returns default DNS parameters
+	// Returns:
+	//
+	//	dnsCfg - default DNS parameters
+	//	antiTrackerCfg - default AntiTracker parameters
+	//	realDnsValue - real DNS value (if 'antiTracker' is enabled - it will contain DNS of AntiTracker server)
+	GetDefaultDnsParams() (dnsCfg dns.DnsSettings, antiTrackerCfg service_types.AntiTrackerMetadata, realDnsValue dns.DnsSettings, err error)
 
 	IsCanConnectMultiHop() error
 	Connect(params service_types.ConnectionParams) error

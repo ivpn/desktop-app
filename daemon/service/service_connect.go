@@ -493,7 +493,7 @@ func (s *Service) connectWireGuard(connectionParams wireguard.ConnectionParams, 
 	return s.keepConnection(createVpnObjfunc, manualDNS, antiTracker, firewallOn, firewallDuringConnection)
 }
 
-func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) (retError error) {
+func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), initialManualDNS dns.DnsSettings, initialAntiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) (retError error) {
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return srverrors.ErrorNotLoggedIn{}
@@ -511,7 +511,8 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 		}
 	}()
 
-	s._manualDNS = manualDNS
+	// save initial DNS configuration
+	s.saveDefaultDnsParams(initialManualDNS, initialAntiTracker)
 
 	// Not necessary to keep connection until we are not connected
 	// So just 'Connect' required for now
@@ -530,8 +531,14 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), manua
 
 		lastConnectionTryTime := time.Now()
 
+		// get actual DNS configuration
+		dns, antitracker, _, err := s.GetDefaultDnsParams()
+		if err != nil {
+			return fmt.Errorf("failed to get DNS settings: %w", err)
+		}
+
 		// start connection
-		connErr := s.connect(vpnObj, s._manualDNS, antiTracker, firewallOn, firewallDuringConnection)
+		connErr := s.connect(vpnObj, dns, antitracker, firewallOn, firewallDuringConnection)
 		if connErr != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", connErr))
 			if s._requiredVpnState == Connect {
