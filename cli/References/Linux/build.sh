@@ -222,6 +222,13 @@ CreatePackage()
     $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
 }
 
+if [ ! -z "$GITHUB_ACTIONS" ]; 
+then
+  echo "! GITHUB_ACTIONS detected ! It is just a build test."
+  echo "! Packages creation (DEB/RPM) skipped !"
+  exit 0
+fi
+
 echo '---------------------------'
 echo "DEB package..."
 # to add dependency from another packet add extra arg "-d", example: "-d obfsproxy"
