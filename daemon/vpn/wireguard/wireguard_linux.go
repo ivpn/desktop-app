@@ -231,15 +231,17 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 									return
 								}
 							case pause:
-								if opr.resultSet(internalDisconnectFunc()) != nil {
-									break // pause failed
+								discErr := internalDisconnectFunc()
+								if discErr != nil {
+									opr.resultSet(discErr) // operation result: pause failed
+									break
 								}
+								wg.internals.isPaused.Store(true)
+								opr.resultSet(nil) // operation result: paused successfully
+
 								internalRestoreDNSFunc() // restore DNS configuration
 
 								func() { // ============= PAUSE start =============
-									wg.internals.isPaused.Store(true)
-									defer wg.internals.isPaused.Store(false)
-
 									log.Info("Paused")
 									// wait for resume/disconnect request
 									for {
@@ -250,9 +252,10 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 
 										switch oprResume.op {
 										case pause:
-											oprResume.resultSet(nil) // paused already
+											oprResume.resultSet(nil) // operation result: paused already
 										case resume, disconnect:
-											oprResume.resultSet(nil)
+											wg.internals.isPaused.Store(false) // mark as resumed before applying operation result (oprResume.resultSet(nil))
+											oprResume.resultSet(nil)           // operation result: resumed successfully
 											isResumeRequested = oprResume.op == resume
 											return
 										default:
