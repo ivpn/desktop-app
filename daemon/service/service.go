@@ -119,9 +119,8 @@ type Service struct {
 	// variables needed for automatic resume
 	_pause struct {
 		_mutex           sync.Mutex
-		_pauseTill       time.Time
-		_timer           *time.Timer
-		_killSwitchState bool // killswitch state before pause (to be able to restore it)
+		_pauseTill       time.Time // time when connection will be resumed automatically (if not paused - will be zero)
+		_killSwitchState bool      // killswitch state before pause (to be able to restore it)
 	}
 
 	// variables related to connection test (e.g. ports accessibility test)
@@ -536,14 +535,6 @@ func (s *Service) FirewallEnabled() (bool, error) {
 	return firewall.GetEnabled()
 }
 
-func (s *Service) erasePauseTimer() {
-	if s._pause._timer != nil {
-		s._pause._timer.Stop()
-		s._pause._timer = nil
-	}
-	s._pause._pauseTill = time.Time{}
-}
-
 // Pause pause vpn connection
 func (s *Service) Pause(durationSeconds uint32) error {
 	vpn := s._vpn
@@ -576,17 +567,31 @@ func (s *Service) Pause(durationSeconds uint32) error {
 	ret := vpn.Pause()
 
 	if ret == nil {
-		s.erasePauseTimer()
-
 		s._pause._pauseTill = time.Now().Add(time.Second * time.Duration(durationSeconds))
 		log.Info(fmt.Sprintf("Paused on %v (till %v)", time.Second*time.Duration(durationSeconds), s._pause._pauseTill))
 
-		s._pause._timer = time.AfterFunc(time.Second*time.Duration(durationSeconds), func() {
-			log.Info(fmt.Sprintf("Automatic resuming after %v ...", time.Second*time.Duration(durationSeconds)))
-			if err := s.Resume(); err != nil {
-				log.Error(fmt.Errorf("Resume failed: %w", err))
+		go func() {
+			// Pause resumer: Every second checks if it is time to resume VPN connection.
+			// Info: We can not use 'time.AfterFunc()' because
+			// it does not take into account the time when the system was in sleep mode.
+			defer log.Info("Resumed")
+			for {
+				time.Sleep(time.Second * 1)
+
+				if !s.IsPaused() {
+					s._pause._mutex.Lock()
+					s._pause._pauseTill = time.Time{} // reset pause time (to indicate that connection is not paused, just in case)
+					s._pause._mutex.Unlock()
+					break
+				} else if time.Now().After(s.PausedTill()) {
+					log.Info(fmt.Sprintf("Automatic resuming after %v ...", time.Second*time.Duration(durationSeconds)))
+					if err := s.Resume(); err != nil {
+						log.Error(fmt.Errorf("Resume failed: %w", err))
+					}
+					break
+				}
 			}
-		})
+		}()
 	}
 
 	return ret
@@ -608,7 +613,7 @@ func (s *Service) Resume() error {
 func (s *Service) resume() error {
 	s._pause._mutex.Lock()
 	defer s._pause._mutex.Unlock()
-	s.erasePauseTimer()
+	s._pause._pauseTill = time.Time{} // reset pause time (to indicate that connection is not paused)
 
 	vpn := s._vpn
 	if vpn == nil {
@@ -645,7 +650,7 @@ func (s *Service) IsPaused() bool {
 		return false
 	}
 
-	return vpn.IsPaused() && s._pause._timer != nil
+	return vpn.IsPaused() && !s.PausedTill().IsZero()
 }
 
 func (s *Service) PausedTill() time.Time {
