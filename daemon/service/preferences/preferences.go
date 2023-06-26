@@ -207,6 +207,16 @@ func (p *Preferences) LoadPreferences() error {
 		p.Obfs4proxy = obfsproxy.Config{Version: obfsproxy.OBFS3}
 	}
 
+	// Convert parameters from v3.10.23 (and releases older than 2023-05-15)
+	// The default antitracker blocklist was "OSID Big". So keep it for old users who upgrade.
+	//
+	// We are here because the preferences file was exists, so it is not a new installation	(it is upgrade),
+	// and if the AntiTrackerBlockListName is empty - it means that it is first upgrade to version which support multiple blocklists.
+	if p.LastConnectionParams.Metadata.AntiTracker.AntiTrackerBlockListName == "" {
+		log.Info("It looks like this is the first upgrade to the version which supports AntiTracker blocklists. Keep the old default blocklist name 'Oisdbig'.")
+		p.LastConnectionParams.Metadata.AntiTracker.AntiTrackerBlockListName = "Oisdbig"
+	}
+
 	return nil
 }
 
