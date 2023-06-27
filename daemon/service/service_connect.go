@@ -44,6 +44,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/platform/filerights"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/service/types"
+	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/openvpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
@@ -111,24 +112,57 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		}
 	}
 
+	// Normalize hosts list
+	// - in case of multiple entry hosts - take one random host from the list
+	// - in case of multiple exit hosts - take one random host from the list
+	if err := params.NormalizeHosts(); err != nil {
+		return fmt.Errorf("failed to normalize hosts: %w", err)
+	}
+
+	// V2Ray
+	// params.Metadata.V2Ray = types.V2RayTransportTypeTCP // TODO: THIS IS A TEST
+
+	var v2RayWrapper *v2r.V2RayWrapper
+	if params.Metadata.V2Ray == types.V2RayTransportTypeQUIC ||
+		params.Metadata.V2Ray == types.V2RayTransportTypeTCP {
+
+		log.Info("Starting V2Ray...")
+		params, v2RayWrapper, err = s.startV2Ray(params)
+		if err != nil {
+			return fmt.Errorf("failed to start V2Ray: %w", err)
+		}
+		defer func() {
+			if v2RayWrapper != nil {
+				// remove V2Ray remote IP from firewall exceptions
+				v2RayRemoteHost, _, err := v2RayWrapper.GetRemoteEndpoint()
+				if err == nil {
+					firewall.RemoveHostsFromExceptions([]net.IP{v2RayRemoteHost}, false, true)
+				}
+				// stop V2Ray
+				if err := v2RayWrapper.Stop(); err != nil {
+					log.Error(fmt.Errorf("failed to stop V2Ray: %w", err))
+				}
+			}
+		}()
+		// Configure firewall to allow V2Ray remote IP
+		if v2RayWrapper != nil {
+			v2RayRemoteHost, _, err := v2RayWrapper.GetRemoteEndpoint()
+			if err != nil {
+				return fmt.Errorf("failed to get V2Ray remote endpoint: %w", err)
+			}
+			firewall.AddHostsToExceptions([]net.IP{v2RayRemoteHost}, false, true)
+		}
+	}
+
 	// Protocol-specific configurations
 	if vpn.Type(params.VpnType) == vpn.OpenVPN {
 		// PARAMETERS VALIDATION
-		// parsing hosts
-		var hosts []net.IP
-		for _, v := range params.OpenVpnParameters.EntryVpnServer.Hosts {
-			hosts = append(hosts, net.ParseIP(v.Host))
-		}
-		if len(hosts) < 1 {
+		if len(params.OpenVpnParameters.EntryVpnServer.Hosts) < 1 {
 			return fmt.Errorf("VPN host not defined")
 		}
-		// in case of multiple hosts - take random host from the list
-		host := hosts[0]
-		if len(hosts) > 1 {
-			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(hosts)))); err == nil {
-				host = hosts[rnd.Int64()]
-			}
-		}
+
+		// take first host from the list (if multiple hosts were defined, the random one was taken above)
+		host := net.ParseIP(params.OpenVpnParameters.EntryVpnServer.Hosts[0].Host)
 
 		// nothing from supported proxy types should be in this parameter
 		proxyType := params.OpenVpnParameters.Proxy.Type
@@ -138,14 +172,8 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 
 		// Multi-Hop
 		var exitHostValue *api_types.OpenVPNServerHostInfo
-		multihopExitHosts := params.OpenVpnParameters.MultihopExitServer.Hosts
-		if len(multihopExitHosts) > 0 {
-			exitHostValue = &multihopExitHosts[0]
-			if len(multihopExitHosts) > 1 {
-				if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(multihopExitHosts)))); err == nil {
-					exitHostValue = &multihopExitHosts[rnd.Int64()]
-				}
-			}
+		if len(params.OpenVpnParameters.MultihopExitServer.Hosts) > 0 {
+			exitHostValue = &params.OpenVpnParameters.MultihopExitServer.Hosts[0]
 		}
 
 		// only one-line parameter is allowed
@@ -186,77 +214,21 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 				proxyPassword)
 		}
 
-		return s.connectOpenVPN(connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection)
+		isCanUseObfsProxy := v2RayWrapper == nil
+		return s.connectOpenVPN(connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection, isCanUseObfsProxy)
 
 	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
-		hosts := params.WireGuardParameters.EntryVpnServer.Hosts
-		multihopExitHosts := params.WireGuardParameters.MultihopExitServer.Hosts
-
-		// filter hosts: use IPv6 hosts
-		if params.IPv6 {
-			ipv6Hosts := append(hosts[0:0], hosts...)
-			n := 0
-			for _, h := range ipv6Hosts {
-				if h.IPv6.LocalIP != "" {
-					ipv6Hosts[n] = h
-					n++
-				}
-			}
-			if n == 0 {
-				if params.IPv6Only {
-					return fmt.Errorf("unable to make IPv6 connection inside tunnel. Server does not support IPv6")
-				}
-			} else {
-				hosts = ipv6Hosts[:n]
-			}
+		if len(params.WireGuardParameters.EntryVpnServer.Hosts) < 1 {
+			return fmt.Errorf("VPN host not defined")
 		}
 
-		// filter exit servers (Multi-Hop connection):
-		// 1) each exit server must have initialized 'multihop_port' field
-		// 2) (in case of IPv6Only) IPv6 local address should be defined
-		if len(multihopExitHosts) > 0 {
-			isHasMHPort := false
-			ipv6ExitHosts := append(multihopExitHosts[0:0], multihopExitHosts...)
-			n := 0
-			for _, h := range ipv6ExitHosts {
-				if h.MultihopPort == 0 {
-					continue
-				}
-				isHasMHPort = true
-				if params.IPv6 && h.IPv6.LocalIP == "" {
-					continue
-				}
+		// take first host from the list (if multiple hosts were defined, the random one was taken above)
+		hostValue := params.WireGuardParameters.EntryVpnServer.Hosts[0]
 
-				ipv6ExitHosts[n] = h
-				n++
-			}
-			if n == 0 {
-				if !isHasMHPort {
-					return fmt.Errorf("unable to make Multi-Hop connection inside tunnel. Exit server does not support Multi-Hop")
-				}
-				if params.IPv6Only {
-					return fmt.Errorf("unable to make IPv6 Multi-Hop connection inside tunnel. Exit server does not support IPv6")
-				}
-			} else {
-				multihopExitHosts = ipv6ExitHosts[:n]
-			}
-		}
-
-		hostValue := hosts[0]
-		if len(hosts) > 1 {
-			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(hosts)))); err == nil {
-				hostValue = hosts[rnd.Int64()]
-			}
-		}
-
+		// Multi-Hop
 		var exitHostValue *api_types.WireGuardServerHostInfo
-		if len(multihopExitHosts) > 0 {
-			exitHostValue = &multihopExitHosts[0]
-			if len(multihopExitHosts) > 1 {
-				if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(multihopExitHosts)))); err == nil {
-					exitHostValue = &multihopExitHosts[rnd.Int64()]
-				}
-			}
+		if len(params.WireGuardParameters.MultihopExitServer.Hosts) > 0 {
+			exitHostValue = &params.WireGuardParameters.MultihopExitServer.Hosts[0]
 		}
 
 		// prevent user-defined data injection: ensure that nothing except the base64 public key will be stored in the configuration
@@ -299,17 +271,20 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		}
 
 		return s.connectWireGuard(connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection)
-
 	}
 
 	return fmt.Errorf("unexpected VPN type to connect (%v)", params.VpnType)
 }
 
 // connectOpenVPN start OpenVPN connection
-func (s *Service) connectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) error {
+func (s *Service) connectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool, isCanUseObfsProxy bool) error {
 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
+
+		if !isCanUseObfsProxy {
+			prefs.Obfs4proxy = obfsproxy.Config{} // reset obfsproxy config for this connection (obfsproxy connection is not allowed)
+		}
 
 		// checking if functionality accessible
 		disabledFuncs := s.GetDisabledFunctions()
@@ -359,7 +334,7 @@ func (s *Service) connectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 					}
 
 					if err := scanner.Err(); err != nil {
-						log.Error("Failed to parse '%s': %s", extraParamsFile, err)
+						log.Error(fmt.Sprintf("Failed to parse '%s': %s", extraParamsFile, err))
 						return ""
 					}
 					return allParams.String()
@@ -923,4 +898,123 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTr
 	}
 
 	return nil
+}
+
+func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types.ConnectionParams, v2RayWrapper *v2r.V2RayWrapper, err error) {
+	if params.Metadata.V2Ray != types.V2RayTransportTypeQUIC && params.Metadata.V2Ray != types.V2RayTransportTypeTCP {
+		return params, nil, nil
+	}
+
+	svrs, err := s.ServersList()
+	if err != nil {
+		return params, v2RayWrapper, err
+	}
+	vnextUserId := svrs.Config.Ports.V2Ray.ID
+
+	v2RayOutboundType := v2r.Quick
+	if params.Metadata.V2Ray == types.V2RayTransportTypeTCP {
+		v2RayOutboundType = v2r.TCP
+	}
+
+	vmessPort, isTcp := params.Port()
+	vmessIp := ""
+
+	var docodemoPorts []api_types.PortInfoBase
+	// for Single-Hop: host IP;
+	// for Multi-Hop: exit host IP
+	docodemoIp := ""
+	// for Single-Hop: internal V2Ray port
+	// for Multi-Hop: exit host port
+	docodemoPort := 0
+
+	if vpn.Type(params.VpnType) == vpn.OpenVPN {
+		vmessIp = params.OpenVpnParameters.EntryVpnServer.Hosts[0].V2RayHost
+		if len(params.OpenVpnParameters.MultihopExitServer.Hosts) > 0 {
+			return params, nil, fmt.Errorf("V2Ray is not supported: OpenVPN Multi-Hop is not supported")
+			/*
+				// OpenVPN Multi-Hop
+				docodemoIp = params.OpenVpnParameters.MultihopExitServer.Hosts[0].Host
+				docodemoPorts = []api_types.PortInfoBase{{Type: "UDP", Port: vmessPort}}
+				if isTcp {
+					docodemoPorts = []api_types.PortInfoBase{{Type: "TCP", Port: vmessPort}}
+				}
+				params.OpenVpnParameters.MultihopExitServer = types.MultiHopExitServer_OpenVpn{} // erase multihop parameters
+			*/
+		} else {
+			// OpenVPN Single-Hop
+			docodemoIp = params.OpenVpnParameters.EntryVpnServer.Hosts[0].Host
+			docodemoPorts = svrs.Config.Ports.V2Ray.OpenVPN
+		}
+	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
+		vmessIp = params.WireGuardParameters.EntryVpnServer.Hosts[0].V2RayHost
+		if len(params.WireGuardParameters.MultihopExitServer.Hosts) > 0 {
+			return params, nil, fmt.Errorf("V2Ray is not supported: WireGuard Multi-Hop is not supported")
+			/*
+				vmessPort = 2049
+				isTcp = false
+				// WireGuard Multi-Hop
+				docodemoIp = params.WireGuardParameters.MultihopExitServer.Hosts[0].Host
+				docodemoPorts = []api_types.PortInfoBase{{Type: "UDP", Port: 2049}}
+				params.WireGuardParameters.MultihopExitServer = types.MultiHopExitServer_WireGuard{} // erase multihop parameters
+			*/
+		} else {
+			// WireGuard Single-Hop
+			docodemoIp = params.WireGuardParameters.EntryVpnServer.Hosts[0].Host
+			docodemoPorts = svrs.Config.Ports.V2Ray.WireGuard
+		}
+	}
+
+	// filter ports: TCP or UDP
+	var docodemoPortsFiltered []api_types.PortInfoBase
+	requiredPortType := "tcp"
+	if !isTcp {
+		requiredPortType = "udp"
+	}
+	for _, port := range docodemoPorts {
+		pTypeStr := strings.TrimSpace(strings.ToLower(port.Type))
+		if requiredPortType == pTypeStr || (!isTcp && pTypeStr == "") {
+			docodemoPortsFiltered = append(docodemoPortsFiltered, port)
+		}
+	}
+
+	if len(docodemoPortsFiltered) == 0 {
+		return params, nil, fmt.Errorf("V2Ray is not supported: no V2Ray '%s' ports for the speified VPN type", requiredPortType)
+	}
+
+	// if there are more than one port - select random one (using crypto.rand)
+	if len(docodemoPortsFiltered) > 0 {
+		docodemoPort = docodemoPortsFiltered[0].Port
+		if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(docodemoPortsFiltered)))); err == nil {
+			docodemoPort = docodemoPortsFiltered[rnd.Int64()].Port
+		}
+	}
+
+	// start V2Ray process
+	v, err := v2r.Start(platform.V2RayBinaryPath(), platform.V2RayConfigFile(),
+		isTcp,
+		v2RayOutboundType,
+		vmessIp, vmessPort,
+		docodemoIp, docodemoPort,
+		vnextUserId)
+	if err != nil {
+		return params, nil, fmt.Errorf("failed to start v2ray: %w", err)
+	}
+
+	v2rayLocalPort, _, err := v.GetLocalPort()
+	if err != nil {
+		v.Stop()
+		return params, nil, fmt.Errorf("failed to get V2Ray local port: %w", err)
+	}
+
+	// update connection parameters
+	updatedParams = params
+	if vpn.Type(params.VpnType) == vpn.OpenVPN {
+		updatedParams.OpenVpnParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"
+		updatedParams.OpenVpnParameters.Port.Port = v2rayLocalPort
+	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
+		updatedParams.WireGuardParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"
+		updatedParams.WireGuardParameters.Port.Port = v2rayLocalPort
+	}
+
+	return updatedParams, v, nil
 }

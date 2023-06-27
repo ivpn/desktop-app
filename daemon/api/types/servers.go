@@ -39,6 +39,7 @@ type HostInfoBase struct {
 	DnsName      string  `json:"dns_name"`
 	MultihopPort int     `json:"multihop_port"`
 	Load         float32 `json:"load"`
+	V2RayHost    string  `json:"v2ray"`
 }
 
 func (h HostInfoBase) GetHostInfoBase() HostInfoBase {
@@ -142,9 +143,13 @@ type PortRange struct {
 	Max int `json:"max"`
 }
 
+type PortInfoBase struct {
+	Type string `json:"type"` // "TCP" or "UDP"
+	Port int    `json:"port"`
+}
+
 type PortInfo struct {
-	Type  string    `json:"type"` // "TCP" or "UDP"
-	Port  int       `json:"port"`
+	PortInfoBase
 	Range PortRange `json:"range"`
 }
 
@@ -180,12 +185,20 @@ type EchoServer struct {
 	EchoServer string `json:"echoserver"`
 }
 
+// V2Ray ports structure
+type V2Ray struct {
+	ID        string         `json:"id"`
+	OpenVPN   []PortInfoBase `json:"openvpn"`
+	WireGuard []PortInfoBase `json:"wireguard"`
+}
+
 type PortsInfo struct {
 	OpenVPN   []PortInfo   `json:"openvpn"`
 	WireGuard []PortInfo   `json:"wireguard"`
 	Obfs3     ObfsPortInfo `json:"obfs3"`
 	Obfs4     ObfsPortInfo `json:"obfs4"`
 	Test      []EchoServer `json:"test"`
+	V2Ray     V2Ray        `json:"v2ray"`
 }
 
 // ConfigInfo contains different configuration info (Antitracker, API ...)
