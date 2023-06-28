@@ -58,10 +58,14 @@ func Start(binary string,
 	vmessPort int,
 	DokodemoIp string,
 	DokodemoPort int,
-	vnextUserId string) (*V2RayWrapper, error) {
+	vnextUserId string,
+	quicTlsSvrName string) (*V2RayWrapper, error) {
 	var cfg *V2RayConfig
 	if outboundType == Quick {
-		cfg = CreateConfig_OutboundsQuick(vmessIp, vmessPort, DokodemoIp, DokodemoPort, vnextUserId)
+		if quicTlsSvrName == "" {
+			return nil, errors.New("TLS server name is empty")
+		}
+		cfg = CreateConfig_OutboundsQuick(vmessIp, vmessPort, DokodemoIp, DokodemoPort, vnextUserId, quicTlsSvrName)
 	} else if outboundType == TCP {
 		cfg = CreateConfig_OutboundsTcp(vmessIp, vmessPort, DokodemoIp, DokodemoPort, vnextUserId)
 	} else {

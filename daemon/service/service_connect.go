@@ -120,7 +120,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 	}
 
 	// V2Ray
-	// params.Metadata.V2Ray = types.V2RayTransportTypeTCP // TODO: THIS IS A TEST
+	// params.Metadata.V2Ray = types.V2RayTransportTypeQUIC // TODO: THIS IS A TEST
 
 	var v2RayWrapper *v2r.V2RayWrapper
 	if params.Metadata.V2Ray == types.V2RayTransportTypeQUIC ||
@@ -918,6 +918,8 @@ func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types
 
 	vmessPort, isTcp := params.Port()
 	vmessIp := ""
+	vmessTlsSvrName := ""
+	remoteSvrDnsName := ""
 
 	var docodemoPorts []api_types.PortInfoBase
 	// for Single-Hop: host IP;
@@ -942,6 +944,7 @@ func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types
 			*/
 		} else {
 			// OpenVPN Single-Hop
+			remoteSvrDnsName = params.OpenVpnParameters.EntryVpnServer.Hosts[0].DnsName
 			docodemoIp = params.OpenVpnParameters.EntryVpnServer.Hosts[0].Host
 			docodemoPorts = svrs.Config.Ports.V2Ray.OpenVPN
 		}
@@ -950,19 +953,23 @@ func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types
 		if len(params.WireGuardParameters.MultihopExitServer.Hosts) > 0 {
 			return params, nil, fmt.Errorf("V2Ray is not supported: WireGuard Multi-Hop is not supported")
 			/*
-				vmessPort = 2049
+				vmessPort = 80 //443 // params.WireGuardParameters.MultihopExitServer.Hosts[0].MultihopPort
 				isTcp = false
 				// WireGuard Multi-Hop
 				docodemoIp = params.WireGuardParameters.MultihopExitServer.Hosts[0].Host
 				docodemoPorts = []api_types.PortInfoBase{{Type: "UDP", Port: 2049}}
 				params.WireGuardParameters.MultihopExitServer = types.MultiHopExitServer_WireGuard{} // erase multihop parameters
-			*/
+				//*/
 		} else {
 			// WireGuard Single-Hop
+			remoteSvrDnsName = params.WireGuardParameters.EntryVpnServer.Hosts[0].DnsName
 			docodemoIp = params.WireGuardParameters.EntryVpnServer.Hosts[0].Host
 			docodemoPorts = svrs.Config.Ports.V2Ray.WireGuard
 		}
 	}
+
+	// TlsServerName required for QUIC connection
+	vmessTlsSvrName = strings.Replace(remoteSvrDnsName, "ivpn.net", "inet-telecom.com", 1)
 
 	// filter ports: TCP or UDP
 	var docodemoPortsFiltered []api_types.PortInfoBase
@@ -995,7 +1002,8 @@ func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types
 		v2RayOutboundType,
 		vmessIp, vmessPort,
 		docodemoIp, docodemoPort,
-		vnextUserId)
+		vnextUserId,
+		vmessTlsSvrName)
 	if err != nil {
 		return params, nil, fmt.Errorf("failed to start v2ray: %w", err)
 	}

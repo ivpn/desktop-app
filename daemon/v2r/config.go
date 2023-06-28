@@ -199,10 +199,11 @@ func createConfigFromTemplate(vmessIp string, vmessPort int, DokodemoIp string, 
 	return config
 }
 
-func CreateConfig_OutboundsQuick(vmessIp string, vmessPort int, DokodemoIp string, DokodemoPort int, vnextUserId string) *V2RayConfig {
+func CreateConfig_OutboundsQuick(vmessIp string, vmessPort int, DokodemoIp string, DokodemoPort int, vnextUserId string, tlsSrvName string) *V2RayConfig {
 	config := createConfigFromTemplate(vmessIp, vmessPort, DokodemoIp, DokodemoPort, vnextUserId)
 	config.Outbounds[0].StreamSettings.Network = "quic"
 	config.Outbounds[0].StreamSettings.TcpSettings = nil
+	config.Outbounds[0].StreamSettings.TlsSettings.ServerName = tlsSrvName
 	return config
 }
 
