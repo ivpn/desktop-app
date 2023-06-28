@@ -119,14 +119,15 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		return fmt.Errorf("failed to normalize hosts: %w", err)
 	}
 
-	// V2Ray
-	// params.Metadata.V2Ray = types.V2RayTransportTypeTCP // TODO: THIS IS A TEST
+	// ------------------------ V2RAY block start ------------------------
+	// params.Metadata.V2Ray = types.V2RayTransportTypeQUIC // TODO: THIS IS THE TEST
 
 	var v2RayWrapper *v2r.V2RayWrapper
 	if params.Metadata.V2Ray == types.V2RayTransportTypeQUIC ||
 		params.Metadata.V2Ray == types.V2RayTransportTypeTCP {
 
 		log.Info("Starting V2Ray...")
+		// Note! the startV2Ray() modifies original params!
 		params, v2RayWrapper, err = s.startV2Ray(params)
 		if err != nil {
 			return fmt.Errorf("failed to start V2Ray: %w", err)
@@ -153,6 +154,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 			firewall.AddHostsToExceptions([]net.IP{v2RayRemoteHost}, false, true)
 		}
 	}
+	// ------------------------ V2RAY block end ------------------------
 
 	// Protocol-specific configurations
 	if vpn.Type(params.VpnType) == vpn.OpenVPN {
@@ -901,6 +903,22 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTr
 }
 
 func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types.ConnectionParams, v2RayWrapper *v2r.V2RayWrapper, err error) {
+	//
+	// Info:
+	// - V2Ray data flow:
+	// 	 * for Single-Hop: 	LocalV2RayProxy -> Outbound(EntryServer:V2Ray) -> Inbound(EntryServer:WireGuard)
+	//   * for Multi-Hop:	LocalV2RayProxy -> Outbound(EntryServer:V2Ray) -> Inbound(ExitServer:WireGuard)
+	// - Outbound ports can be any ports (which applicable for the selected VPN type).
+	//   * Preferred outbound ports: 80 for HTTP/VMess/TCP and 443 for HTTPS/VMess/QUIC
+	// - Inbound ports
+	//   * Single-Hop connections use internal V2Ray ports for inbound connections: svrs.Config.Ports.V2Ray
+	//   * Multi-Hop connections can use any ports for inbound connections (which applicable for the selected VPN type).
+	//
+	// Note!
+	// - Multi-Hop:
+	//   * For V2Ray connections we ignore port-based multihop configuration. Use default ports instead.
+	//   * WireGuard: since the first WG server is the ExitServer - we have to use it's public key in the WireGuard configuration
+
 	if params.Metadata.V2Ray != types.V2RayTransportTypeQUIC && params.Metadata.V2Ray != types.V2RayTransportTypeTCP {
 		return params, nil, nil
 	}
@@ -909,95 +927,97 @@ func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types
 	if err != nil {
 		return params, v2RayWrapper, err
 	}
-	vnextUserId := svrs.Config.Ports.V2Ray.ID
+	outboundUserId := svrs.Config.Ports.V2Ray.ID
 
 	v2RayOutboundType := v2r.Quick
 	if params.Metadata.V2Ray == types.V2RayTransportTypeTCP {
 		v2RayOutboundType = v2r.TCP
 	}
 
-	vmessPort, isTcp := params.Port()
-	vmessIp := ""
-	vmessTlsSvrName := ""
 	remoteSvrDnsName := ""
 
-	var docodemoPorts []api_types.PortInfoBase
-	// for Single-Hop: host IP;
-	// for Multi-Hop: exit host IP
-	docodemoIp := ""
-	// for Single-Hop: internal V2Ray port
-	// for Multi-Hop: exit host port
-	docodemoPort := 0
+	outboundTlsSvrName := ""
+	outboundIp := ""
+	outboundPort, isTcp := params.Port()
+
+	requiredPortTypeStr := "tcp"
+	if !isTcp {
+		requiredPortTypeStr = "udp"
+	}
+
+	if outboundPort == 0 {
+		// the preferred (but not mandatory) ports for outbound connection are:
+		// - 80 for HTTP/VMess/TCP
+		// - 443 for HTTPS/VMess/QUIC
+		// (but it can be any other normal port which applicable for the selected VPN type)
+		outboundPort = 443
+		if v2RayOutboundType == v2r.TCP {
+			outboundPort = 80
+		}
+	}
+
+	var inboundPorts []api_types.PortInfoBase
+
+	inboundIp := ""  // for Single-Hop: host IP; for Multi-Hop: exit host IP
+	inboundPort := 0 // for Single-Hop: internal V2Ray port; for Multi-Hop: exit host port
 
 	if vpn.Type(params.VpnType) == vpn.OpenVPN {
-		vmessIp = params.OpenVpnParameters.EntryVpnServer.Hosts[0].V2RayHost
+		outboundIp = params.OpenVpnParameters.EntryVpnServer.Hosts[0].V2RayHost
 		remoteSvrDnsName = params.OpenVpnParameters.EntryVpnServer.Hosts[0].DnsName
 		if len(params.OpenVpnParameters.MultihopExitServer.Hosts) > 0 {
-			vmessPort = 443
 			// OpenVPN Multi-Hop
-			docodemoIp = params.OpenVpnParameters.MultihopExitServer.Hosts[0].Host
-			docodemoPorts = []api_types.PortInfoBase{{Type: "UDP", Port: vmessPort}}
-			if isTcp {
-				docodemoPorts = []api_types.PortInfoBase{{Type: "TCP", Port: vmessPort}}
-			}
+			inboundIp = params.OpenVpnParameters.MultihopExitServer.Hosts[0].Host
+			inboundPorts = []api_types.PortInfoBase{{Type: strings.ToUpper(requiredPortTypeStr), Port: outboundPort}}
 		} else {
 			// OpenVPN Single-Hop
-			remoteSvrDnsName = params.OpenVpnParameters.EntryVpnServer.Hosts[0].DnsName
-			docodemoIp = params.OpenVpnParameters.EntryVpnServer.Hosts[0].Host
-			docodemoPorts = svrs.Config.Ports.V2Ray.OpenVPN
+			inboundIp = params.OpenVpnParameters.EntryVpnServer.Hosts[0].Host
+			inboundPorts = svrs.Config.Ports.V2Ray.OpenVPN // for Single-Hop connections we use internal V2Ray ports for inbound connections
 		}
 	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
-		vmessIp = params.WireGuardParameters.EntryVpnServer.Hosts[0].V2RayHost
+		outboundIp = params.WireGuardParameters.EntryVpnServer.Hosts[0].V2RayHost
 		remoteSvrDnsName = params.WireGuardParameters.EntryVpnServer.Hosts[0].DnsName
 		if len(params.WireGuardParameters.MultihopExitServer.Hosts) > 0 {
-			vmessPort = 443
-			isTcp = false
 			// WireGuard Multi-Hop
-			docodemoIp = params.WireGuardParameters.MultihopExitServer.Hosts[0].Host
-			docodemoPorts = []api_types.PortInfoBase{{Type: "UDP", Port: vmessPort}}
+			inboundIp = params.WireGuardParameters.MultihopExitServer.Hosts[0].Host
+			inboundPorts = []api_types.PortInfoBase{{Type: strings.ToUpper(requiredPortTypeStr), Port: outboundPort}}
 		} else {
 			// WireGuard Single-Hop
-			docodemoIp = params.WireGuardParameters.EntryVpnServer.Hosts[0].Host
-			docodemoPorts = svrs.Config.Ports.V2Ray.WireGuard
+			inboundIp = params.WireGuardParameters.EntryVpnServer.Hosts[0].Host
+			inboundPorts = svrs.Config.Ports.V2Ray.WireGuard // for Single-Hop connections we use internal V2Ray ports for inbound connections
 		}
 	}
 
 	// TlsServerName required for QUIC connection
-	vmessTlsSvrName = strings.Replace(remoteSvrDnsName, "ivpn.net", "inet-telecom.com", 1)
+	outboundTlsSvrName = strings.Replace(remoteSvrDnsName, "ivpn.net", "inet-telecom.com", 1)
 
-	// filter ports: TCP or UDP
-	var docodemoPortsFiltered []api_types.PortInfoBase
-	requiredPortType := "tcp"
-	if !isTcp {
-		requiredPortType = "udp"
-	}
-	for _, port := range docodemoPorts {
+	// Filter PORTS: TCP or UDP
+	var inboundPortsFiltered []api_types.PortInfoBase
+	for _, port := range inboundPorts {
 		pTypeStr := strings.TrimSpace(strings.ToLower(port.Type))
-		if requiredPortType == pTypeStr || (!isTcp && pTypeStr == "") {
-			docodemoPortsFiltered = append(docodemoPortsFiltered, port)
+		if requiredPortTypeStr == pTypeStr || (!isTcp && pTypeStr == "") {
+			inboundPortsFiltered = append(inboundPortsFiltered, port)
+		}
+	}
+	if len(inboundPortsFiltered) == 0 {
+		return params, nil, fmt.Errorf("V2Ray is not supported: no V2Ray '%s' ports for the speified VPN type", requiredPortTypeStr)
+	}
+
+	// If there are more than one port - select random one
+	if len(inboundPortsFiltered) > 0 {
+		inboundPort = inboundPortsFiltered[0].Port
+		if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(inboundPortsFiltered)))); err == nil {
+			inboundPort = inboundPortsFiltered[rnd.Int64()].Port
 		}
 	}
 
-	if len(docodemoPortsFiltered) == 0 {
-		return params, nil, fmt.Errorf("V2Ray is not supported: no V2Ray '%s' ports for the speified VPN type", requiredPortType)
-	}
-
-	// if there are more than one port - select random one (using crypto.rand)
-	if len(docodemoPortsFiltered) > 0 {
-		docodemoPort = docodemoPortsFiltered[0].Port
-		if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(docodemoPortsFiltered)))); err == nil {
-			docodemoPort = docodemoPortsFiltered[rnd.Int64()].Port
-		}
-	}
-
-	// start V2Ray process
+	// Start V2Ray process
 	v, err := v2r.Start(platform.V2RayBinaryPath(), platform.V2RayConfigFile(),
 		isTcp,
 		v2RayOutboundType,
-		vmessIp, vmessPort,
-		docodemoIp, docodemoPort,
-		vnextUserId,
-		vmessTlsSvrName)
+		outboundIp, outboundPort,
+		inboundIp, inboundPort,
+		outboundUserId,
+		outboundTlsSvrName)
 	if err != nil {
 		return params, nil, fmt.Errorf("failed to start v2ray: %w", err)
 	}
@@ -1009,12 +1029,12 @@ func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types
 	}
 
 	// ------------------------------------------------------------
-	// Update connection parameters with local V2Ray proxy settings
+	// Update the original connection parameters with the settings required for the V2Ray connection
 	// ------------------------------------------------------------
 	updatedParams = params
 	if vpn.Type(params.VpnType) == vpn.OpenVPN {
 
-		// specify connection parameters to local V2Ray proxy
+		// Specify connection parameters to local V2Ray proxy
 		updatedParams.OpenVpnParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"
 		updatedParams.OpenVpnParameters.Port.Port = v2rayLocalPort
 
@@ -1027,14 +1047,14 @@ func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types
 
 	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
 
-		// specify connection parameters to local V2Ray proxy
+		// Specify connection parameters to local V2Ray proxy
 		updatedParams.WireGuardParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"
 		updatedParams.WireGuardParameters.Port.Port = v2rayLocalPort
 
 		// for Multi-Hop connections
 		if len(params.WireGuardParameters.MultihopExitServer.Hosts) > 0 {
 			// Data flow: Outbound(EntryServer:V2Ray) -> Inbound(ExitServer:WireGuard)
-			// Since the first WG server is the ExitServer - we have to use it's public key (applied to the Entry host)
+			// Since the first WG server is the ExitServer - we have to use it's public key in the WireGuard configuration
 			updatedParams.WireGuardParameters.EntryVpnServer.Hosts[0].PublicKey = params.WireGuardParameters.MultihopExitServer.Hosts[0].PublicKey
 			// For V2Ray connections we ignore port-based multihop configuration. Use default ports instead.
 			updatedParams.WireGuardParameters.MultihopExitServer.Hosts[0].MultihopPort = v2rayLocalPort

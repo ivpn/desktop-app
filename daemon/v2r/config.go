@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 const defaultConfigTemplate = `{
@@ -183,32 +184,32 @@ func (c *V2RayConfig) SetLocalPort(port int, isTcp bool) {
 	}
 }
 
-func createConfigFromTemplate(vmessIp string, vmessPort int, DokodemoIp string, DokodemoPort int, vnextUserId string) *V2RayConfig {
+func createConfigFromTemplate(outboundIp string, outboundPort int, inboundIp string, inboundPort int, outboundUserId string) *V2RayConfig {
 	jsonData := defaultConfigTemplate
 	config := &V2RayConfig{}
 	if err := json.Unmarshal([]byte(jsonData), config); err != nil {
 		fmt.Println(err)
 	}
 
-	config.Inbounds[0].Settings.Address = DokodemoIp
-	config.Inbounds[0].Settings.Port = DokodemoPort
-	config.Outbounds[0].Settings.Vnext[0].Address = vmessIp
-	config.Outbounds[0].Settings.Vnext[0].Port = vmessPort
-	config.Outbounds[0].Settings.Vnext[0].Users[0].Id = vnextUserId
+	config.Inbounds[0].Settings.Address = inboundIp
+	config.Inbounds[0].Settings.Port = inboundPort
+	config.Outbounds[0].Settings.Vnext[0].Address = outboundIp
+	config.Outbounds[0].Settings.Vnext[0].Port = outboundPort
+	config.Outbounds[0].Settings.Vnext[0].Users[0].Id = outboundUserId
 
 	return config
 }
 
-func CreateConfig_OutboundsQuick(vmessIp string, vmessPort int, DokodemoIp string, DokodemoPort int, vnextUserId string, tlsSrvName string) *V2RayConfig {
-	config := createConfigFromTemplate(vmessIp, vmessPort, DokodemoIp, DokodemoPort, vnextUserId)
+func CreateConfig_OutboundsQuick(outboundIp string, outboundPort int, inboundIp string, inboundPort int, outboundUserId string, tlsSrvName string) *V2RayConfig {
+	config := createConfigFromTemplate(outboundIp, outboundPort, inboundIp, inboundPort, outboundUserId)
 	config.Outbounds[0].StreamSettings.Network = "quic"
 	config.Outbounds[0].StreamSettings.TcpSettings = nil
 	config.Outbounds[0].StreamSettings.TlsSettings.ServerName = tlsSrvName
 	return config
 }
 
-func CreateConfig_OutboundsTcp(vmessIp string, vmessPort int, DokodemoIp string, DokodemoPort int, vnextUserId string) *V2RayConfig {
-	config := createConfigFromTemplate(vmessIp, vmessPort, DokodemoIp, DokodemoPort, vnextUserId)
+func CreateConfig_OutboundsTcp(outboundIp string, outboundPort int, inboundIp string, inboundPort int, outboundUserId string) *V2RayConfig {
+	config := createConfigFromTemplate(outboundIp, outboundPort, inboundIp, inboundPort, outboundUserId)
 	config.Outbounds[0].StreamSettings.Network = "tcp"
 	config.Outbounds[0].StreamSettings.Security = ""
 	config.Outbounds[0].StreamSettings.QuicSettings = nil
@@ -224,19 +225,19 @@ func (c *V2RayConfig) isValid() error {
 	if port, _ := c.GetLocalPort(); port == 0 {
 		return fmt.Errorf("config.Inbounds[0].Port or c.Inbounds[0].Settings.Network has invalid value")
 	}
-	if c.Inbounds[0].Settings.Address == "" {
+	if strings.TrimSpace(c.Inbounds[0].Settings.Address) == "" {
 		return fmt.Errorf("config.Inbounds[0].Settings.Address is empty")
 	}
 	if c.Inbounds[0].Settings.Port == 0 {
 		return fmt.Errorf("config.Inbounds[0].Settings.Port is empty")
 	}
-	if c.Outbounds[0].Settings.Vnext[0].Address == "" {
+	if strings.TrimSpace(c.Outbounds[0].Settings.Vnext[0].Address) == "" {
 		return fmt.Errorf("config.Outbounds[0].Settings.Vnext[0].Address is empty")
 	}
 	if c.Outbounds[0].Settings.Vnext[0].Port == 0 {
 		return fmt.Errorf("config.Outbounds[0].Settings.Vnext[0].Port is empty")
 	}
-	if c.Outbounds[0].Settings.Vnext[0].Users[0].Id == "" {
+	if strings.TrimSpace(c.Outbounds[0].Settings.Vnext[0].Users[0].Id) == "" {
 		return fmt.Errorf("config.Outbounds[0].Settings.Vnext[0].Users[0].Id is empty")
 	}
 	return nil

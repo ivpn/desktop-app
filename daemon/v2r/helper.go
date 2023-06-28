@@ -45,29 +45,29 @@ const (
 //	tmpConfigFile - path to temporary config file
 //	isTcpConnection - true if local port is must be TCP; false if UDP
 //	outboundType - outbound type
-//	vmessIp - IP address of VMess server
-//	vmessPort - port of VMess server
-//	DokodemoIp - IP address of Dokodemo server
-//	DokodemoPort - port of Dokodemo server
+//	outboundIp - IP address of VMess server
+//	outboundPort - port of VMess server
+//	inboundIp - IP address of Dokodemo server
+//	inboundPort - port of Dokodemo server
 //	vnextUserId - user ID
 func Start(binary string,
 	tmpConfigFile string,
 	isTcpConnection bool,
 	outboundType OutboundStreamNetwork,
-	vmessIp string,
-	vmessPort int,
-	DokodemoIp string,
-	DokodemoPort int,
-	vnextUserId string,
+	outboundIp string,
+	outboundPort int,
+	inboundIp string,
+	inboundPort int,
+	outboundUserId string,
 	quicTlsSvrName string) (*V2RayWrapper, error) {
 	var cfg *V2RayConfig
 	if outboundType == Quick {
 		if quicTlsSvrName == "" {
 			return nil, errors.New("TLS server name is empty")
 		}
-		cfg = CreateConfig_OutboundsQuick(vmessIp, vmessPort, DokodemoIp, DokodemoPort, vnextUserId, quicTlsSvrName)
+		cfg = CreateConfig_OutboundsQuick(outboundIp, outboundPort, inboundIp, inboundPort, outboundUserId, quicTlsSvrName)
 	} else if outboundType == TCP {
-		cfg = CreateConfig_OutboundsTcp(vmessIp, vmessPort, DokodemoIp, DokodemoPort, vnextUserId)
+		cfg = CreateConfig_OutboundsTcp(outboundIp, outboundPort, inboundIp, inboundPort, outboundUserId)
 	} else {
 		return nil, errors.New("unknown outbound type")
 	}
