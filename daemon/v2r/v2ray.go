@@ -44,6 +44,14 @@ func init() {
 	log = logger.NewLogger("v2ray")
 }
 
+type V2RayTransportType int
+
+const (
+	None V2RayTransportType = iota
+	QUIC V2RayTransportType = iota
+	TCP  V2RayTransportType = iota
+)
+
 type V2RayWrapper struct {
 	binary         string
 	tempConfigFile string

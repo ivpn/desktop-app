@@ -31,6 +31,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -126,6 +127,7 @@ type SettingsResp struct {
 	IsAutoconnectOnLaunchDaemon bool
 	UserDefinedOvpnFile         string
 	ObfsproxyConfig             obfsproxy.Config // (for OpenVPN connections)
+	V2RayConfig                 v2r.V2RayTransportType
 	UserPrefs                   preferences.UserPreferences
 	WiFi                        preferences.WiFiParams
 	IsLogging                   bool

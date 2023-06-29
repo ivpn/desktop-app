@@ -46,6 +46,7 @@ func init() {
 type ObfsProxyVersion int
 
 const (
+	None  ObfsProxyVersion = 0
 	OBFS3 ObfsProxyVersion = 3
 	OBFS4 ObfsProxyVersion = 4
 )

@@ -209,6 +209,7 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 		IsAutoconnectOnLaunchDaemon: prefs.IsAutoconnectOnLaunchDaemon,
 		UserDefinedOvpnFile:         platform.OpenvpnUserParamsFile(),
 		ObfsproxyConfig:             prefs.Obfs4proxy,
+		V2RayConfig:                 prefs.V2RayProxy,
 		UserPrefs:                   prefs.UserPrefs,
 		WiFi:                        prefs.WiFiControl,
 		IsLogging:                   prefs.IsLogging,

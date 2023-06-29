@@ -40,14 +40,6 @@ const (
 	Random  ServerSelectionEnum = iota // Random server in use
 )
 
-type V2RayTransportType int
-
-const (
-	V2RayTransportTypeNone V2RayTransportType = iota
-	V2RayTransportTypeQUIC V2RayTransportType = iota
-	V2RayTransportTypeTCP  V2RayTransportType = iota
-)
-
 type AntiTrackerMetadata struct {
 	Enabled  bool
 	Hardcore bool
@@ -71,9 +63,6 @@ type ConnectMetadata struct {
 
 	// (only if Fastest server in use) List of fastest servers which must be ignored (only gateway ID in use: e.g."us-tx.wg.ivpn.net" => "us-tx")
 	FastestGatewaysExcludeList []string
-
-	// if defined - use V2Ray proxy
-	V2Ray V2RayTransportType
 }
 
 // Connect request to establish new VPN connection

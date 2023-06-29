@@ -101,6 +101,7 @@ const daemonRequests = Object.freeze({
 
   SetPreference: "SetPreference",
   SetObfsProxy: "SetObfsProxy",
+  SetV2RayProxy: "SetV2RayProxy",
   SetUserPreferences: "SetUserPreferences",
 
   WiFiAvailableNetworks: "WiFiAvailableNetworks",
@@ -1805,6 +1806,13 @@ async function SetObfsproxy(obfsproxyVer, obfs4Iat) {
   });
 }
 
+async function SetV2RayProxy(v2RayType) {
+  await sendRecv({
+    Command: daemonRequests.SetV2RayProxy,
+    V2RayType: v2RayType,
+  });
+}
+
 async function WgRegenerateKeys() {
   await sendRecv({
     Command: daemonRequests.WireGuardGenerateNewKeys,
@@ -1920,6 +1928,7 @@ export default {
   SetAutoconnectOnLaunch,
   SetLogging,
   SetObfsproxy,
+  SetV2RayProxy,
   WgRegenerateKeys,
   WgSetKeysRotationInterval,
 

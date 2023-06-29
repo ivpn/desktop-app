@@ -217,6 +217,9 @@ export default {
       obfs4Iat
     );
   },
+  SetV2RayProxy: async (v2RayType) => {
+    return await invoke("renderer-request-set-SetV2RayProxy", v2RayType);
+  },
 
   SetDNS: async () => {
     return await invoke("renderer-request-set-dns");

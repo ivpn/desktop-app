@@ -29,13 +29,6 @@ import (
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 )
 
-type OutboundStreamNetwork string
-
-const (
-	Quick OutboundStreamNetwork = "quick"
-	TCP   OutboundStreamNetwork = "tcp"
-)
-
 // Start - helper function which starts V2Ray client with specified parameters
 // It tryes to start V2Ray on the free port. In case of error it tryes to start V2Ray on another port (5 attemps)
 // Note: To get local port it uses call V2RayWrapper.GetLocalPort()
@@ -53,7 +46,7 @@ const (
 func Start(binary string,
 	tmpConfigFile string,
 	isTcpConnection bool,
-	outboundType OutboundStreamNetwork,
+	outboundType V2RayTransportType,
 	outboundIp string,
 	outboundPort int,
 	inboundIp string,
@@ -61,7 +54,7 @@ func Start(binary string,
 	outboundUserId string,
 	quicTlsSvrName string) (*V2RayWrapper, error) {
 	var cfg *V2RayConfig
-	if outboundType == Quick {
+	if outboundType == QUIC {
 		if quicTlsSvrName == "" {
 			return nil, errors.New("TLS server name is empty")
 		}

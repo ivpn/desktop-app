@@ -75,7 +75,7 @@ const getDefaultState = () => {
       UserDefinedOvpnFile: "",
       IsLogging: false,
 
-      // obfsproxy configuration
+      // obfsproxy configuration (OpenVPN only)
       ObfsproxyConfig: {
         // 0 - do not use obfsproxy; obfs3 - 3; obfs4 - 4
         Version: 0,
@@ -88,6 +88,7 @@ const getDefaultState = () => {
         //	2 - means splitting large packets into variable size packets. The sizes are defined in Obfs4.
         Obfs4Iat: 0,
       },
+      V2RayConfig: 0, // None: 0, QUIC: 1, TCP: 2
 
       WiFi: {
         // canApplyInBackground:

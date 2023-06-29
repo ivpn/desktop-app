@@ -50,6 +50,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/shell"
 	"github.com/ivpn/desktop-app/daemon/splittun"
+	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 
@@ -917,6 +918,13 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 func (s *Service) SetObfsProxy(cfg obfsproxy.Config) error {
 	prefs := s._preferences
 	prefs.Obfs4proxy = cfg
+	s.setPreferences(prefs)
+	return nil
+}
+
+func (s *Service) SetV2RayProxy(v2rayType v2r.V2RayTransportType) error {
+	prefs := s._preferences
+	prefs.V2RayProxy = v2rayType
 	s.setPreferences(prefs)
 	return nil
 }

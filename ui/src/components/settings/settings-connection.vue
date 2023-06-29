@@ -166,40 +166,38 @@
 
       <div class="settingsBoldFont">Additional settings:</div>
       <div v-bind:class="{ disabled: !isDisconnected }">
-        <div class="flexRow">
-          <div class="flexRow paramName" style="padding-top: 2px">
-            <input
-              type="checkbox"
-              id="connectionUseObfsproxy"
-              v-model="connectionUseObfsproxy"
-            />
-            <label class="defColor" for="connectionUseObfsproxy"
-              >Use obfsproxy</label
-            >
+        <div class="flexRowAlignTop">
+          <div class="flexRowAlignTop paramName" style="padding-top: 2px">
+            <label class="defColor">Obfuscation:</label>
           </div>
 
-          <div v-if="connectionUseObfsproxy" class="flexRow">
-            <select v-model="obfsproxyType">
-              <option
-                v-for="item in obfsproxyTypes"
-                :value="item"
-                :key="item.text"
-              >
-                {{ item.text }}
-              </option>
-            </select>
+          <div>
+            <div class="flexRow">
+              <select v-model="obfsproxyType">
+                <option
+                  v-for="item in obfsproxyTypes"
+                  :value="item"
+                  :key="item.text"
+                >
+                  {{ item.text }}
+                </option>
+              </select>
 
-            <button
-              class="noBordersBtn flexRow"
-              title="Help"
-              v-on:click="onShowHelpObfsproxy"
-            >
-              <img src="@/assets/question.svg" />
-            </button>
+              <button
+                class="noBordersBtn flexRow"
+                title="Help"
+                v-on:click="onShowHelpObfsproxy"
+              >
+                <img src="@/assets/question.svg" />
+              </button>
+            </div>
+            <div class="description" style="margin-left: 0px">
+              Only enable if you have trouble connecting.
+            </div>
           </div>
         </div>
 
-        <ComponentDialog ref="helpDialogObfsproxy" center header="Info">
+        <ComponentDialog ref="helpDialogObfsproxy" header="Info">
           <div>
             <p>
               <b>Obfsproxy</b> attempts to circumvent censorship, by
@@ -238,10 +236,6 @@
             </p>
           </div>
         </ComponentDialog>
-
-        <div class="description">
-          Only enable if you have trouble connecting. TCP connections only
-        </div>
 
         <div class="param" v-if="userDefinedOvpnFile">
           <input
@@ -328,8 +322,39 @@
         </select>
       </div>
 
+      <div
+        class="flexRow paramBlock"
+        v-bind:class="{ disabled: !isDisconnected }"
+      >
+        <div class="flexRow paramName">
+          <label class="defColor">Obfuscation:</label>
+        </div>
+
+        <div>
+          <div class="flexRow">
+            <select v-model="obfsproxyType">
+              <option
+                v-for="item in obfsproxyTypes"
+                :value="item"
+                :key="item.text"
+              >
+                {{ item.text }}
+              </option>
+            </select>
+
+            <button
+              class="noBordersBtn flexRow"
+              title="Help"
+              v-on:click="onShowHelpObfsproxy"
+            >
+              <img src="@/assets/question.svg" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div v-bind:class="{ disabled: !isDisconnected }">
-        <div class="flexRow paramBlock" style="margin: 0px; margin-top: 3px">
+        <div class="flexRow paramBlock" style="margin: 0px; margin-top: 2px">
           <div class="defColor paramName">Custom MTU:</div>
           <div>
             <input
@@ -362,7 +387,7 @@
         <div class="settingsBoldFont">Wireguard key information:</div>
 
         <spinner :loading="isProcessing" />
-        <div class="flexRow paramBlock">
+        <div class="flexRow paramBlockDetailedConfig">
           <div class="defColor paramName">Local IP Address:</div>
           <div class="detailedParamValue">
             {{ this.$store.state.account.session.WgLocalIP }}
@@ -404,23 +429,23 @@
           >
             <img src="@/assets/question.svg" />
           </button>
-          <ComponentDialog ref="infoWgQuantumResistance" header="Info">
-            <div>
-              <p>
-                Quantum Resistance: Indicates whether your current WireGuard VPN
-                connection is using additional protection measures against
-                potential future quantum computer attacks.
-              </p>
-              <p>
-                When Enabled, a Pre-shared key has been securely exchanged
-                between your device and the server using post-quantum Key
-                Encapsulation Mechanism (KEM) algorithms. If Disabled, the
-                current VPN connection, while secure under today's standards,
-                does not include this extra layer of quantum resistance.
-              </p>
-            </div>
-          </ComponentDialog>
         </div>
+        <ComponentDialog ref="infoWgQuantumResistance" header="Info">
+          <div>
+            <p>
+              Quantum Resistance: Indicates whether your current WireGuard VPN
+              connection is using additional protection measures against
+              potential future quantum computer attacks.
+            </p>
+            <p>
+              When Enabled, a Pre-shared key has been securely exchanged between
+              your device and the server using post-quantum Key Encapsulation
+              Mechanism (KEM) algorithms. If Disabled, the current VPN
+              connection, while secure under today's standards, does not include
+              this extra layer of quantum resistance.
+            </p>
+          </div>
+        </ComponentDialog>
 
         <button
           class="settingsButton paramBlock"
@@ -442,6 +467,7 @@ import {
   PortTypeEnum,
   ObfsproxyVerEnum,
   Obfs4IatEnum,
+  V2RayObfuscationEnum,
 } from "@/store/types";
 
 import { enumValueName, dateDefaultFormat } from "@/helpers/helpers";
@@ -462,10 +488,6 @@ export default {
       isPortModified: false,
       isProcessing: false,
       openvpnManualConfig: false,
-      lastObfsproxyCfg: makeObfsproxyInfoUiObj(
-        ObfsproxyVerEnum.obfs4,
-        Obfs4IatEnum.IAT0
-      ), // Obfsproxy info UI object {obfsVer, obfs4Iat, text}
     };
   },
   mounted() {
@@ -661,44 +683,51 @@ export default {
       get() {
         return this.$store.getters["settings/isConnectionUseObfsproxy"];
       },
-      set(value) {
-        if (!value) sender.SetObfsproxy(null, null);
-        else {
-          sender.SetObfsproxy(
-            this.lastObfsproxyCfg.obfsVer,
-            this.lastObfsproxyCfg.obfs4Iat
-          );
-        }
-      },
     },
 
     obfsproxyType: {
       get() {
-        let obfsCfg = this.$store.state.settings.daemonSettings.ObfsproxyConfig;
-        if (!obfsCfg || obfsCfg.Version === 0) {
-          // if obfsproxy not enabled - use default (or last used value)
-          return makeObfsproxyInfoUiObj(
-            this.lastObfsproxyCfg.obfsVer,
-            this.lastObfsproxyCfg.Obfs4Iat
-          );
-        }
+        let obfsCfg = null;
+        if (this.isOpenVPN === true)
+          obfsCfg = this.$store.state.settings.daemonSettings.ObfsproxyConfig;
 
-        return makeObfsproxyInfoUiObj(obfsCfg.Version, obfsCfg.Obfs4Iat);
+        let v2RayCfg = this.$store.state.settings.daemonSettings.V2RayConfig;
+        if (!obfsCfg && !v2RayCfg) return makeObfsInfoUiObj();
+        return makeObfsInfoUiObj(v2RayCfg, obfsCfg?.Version, obfsCfg?.Obfs4Iat);
       },
       set(value) {
-        this.lastObfsproxyCfg = value;
-        sender.SetObfsproxy(value.obfsVer, value.obfs4Iat);
+        // erase obfuscation parameters
+        if (value.obfsVer == undefined && this.isOpenVPN === true)
+          sender.SetObfsproxy(ObfsproxyVerEnum.None, Obfs4IatEnum.IAT0); // do not chane obfsproxy parames from WireGuard settings
+        if (value.v2RayType == undefined)
+          sender.SetV2RayProxy(V2RayObfuscationEnum.None);
+
+        // set new obfuscation parameters
+        if (value.obfsVer != undefined && this.isOpenVPN === true) {
+          sender.SetObfsproxy(value.obfsVer, value.obfs4Iat); // do not chane obfsproxy parames from WireGuard settings
+        } else if (value.v2RayType != undefined)
+          sender.SetV2RayProxy(value.v2RayType);
       },
     },
 
     obfsproxyTypes: {
       get() {
-        return [
-          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT0),
-          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT1),
-          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT2),
-          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs3, Obfs4IatEnum.IAT0),
+        let ret = [makeObfsInfoUiObj()];
+        if (this.isOpenVPN === true) {
+          var obfsproxyTypes = [
+            makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT0),
+            makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT1),
+            makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT2),
+            makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs3, Obfs4IatEnum.IAT0),
+          ];
+          ret = [...ret, ...obfsproxyTypes];
+        }
+        let v2RayTypes = [
+          makeObfsInfoUiObj(V2RayObfuscationEnum.QUIC),
+          makeObfsInfoUiObj(V2RayObfuscationEnum.TCP),
         ];
+        ret = [...ret, ...v2RayTypes];
+        return ret;
       },
     },
 
@@ -857,7 +886,18 @@ export default {
   },
 };
 
-function makeObfsproxyInfoUiObj(obfsVer, obfs4Iat) {
+function makeObfsInfoUiObj(v2rayType, obfsVer, obfs4Iat) {
+  if (!v2rayType && !obfsVer) return { text: "Disabled" };
+
+  // V2Ray
+  if (v2rayType) {
+    return {
+      text: `V2Ray (${enumValueName(V2RayObfuscationEnum, v2rayType)})`,
+      v2RayType: v2rayType,
+    };
+  }
+
+  // Obfsproxy
   let iatStr = "";
   if (obfs4Iat && obfs4Iat > 0)
     iatStr = ` (${enumValueName(Obfs4IatEnum, obfs4Iat)})`;
@@ -906,8 +946,9 @@ div.paramBlockText {
 
 div.paramBlockDetailedConfig {
   @extend .flexRow;
-  margin-top: 5px;
+  margin-top: 2px;
 }
+
 div.detailedConfigBlock {
   margin-left: 22px;
   max-width: 325px;

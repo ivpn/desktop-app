@@ -120,15 +120,12 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 	}
 
 	// ------------------------ V2RAY block start ------------------------
-	// params.Metadata.V2Ray = types.V2RayTransportTypeQUIC // TODO: THIS IS THE TEST
-
 	var v2RayWrapper *v2r.V2RayWrapper
-	if params.Metadata.V2Ray == types.V2RayTransportTypeQUIC ||
-		params.Metadata.V2Ray == types.V2RayTransportTypeTCP {
+	if prefs.V2RayProxy == v2r.QUIC || prefs.V2RayProxy == v2r.TCP {
 
 		log.Info("Starting V2Ray...")
 		// Note! the startV2Ray() modifies original params!
-		params, v2RayWrapper, err = s.startV2Ray(params)
+		params, v2RayWrapper, err = s.startV2Ray(params, prefs.V2RayProxy)
 		if err != nil {
 			return fmt.Errorf("failed to start V2Ray: %w", err)
 		}
@@ -902,7 +899,7 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTr
 	return nil
 }
 
-func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types.ConnectionParams, v2RayWrapper *v2r.V2RayWrapper, err error) {
+func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayTransportType) (updatedParams types.ConnectionParams, v2RayWrapper *v2r.V2RayWrapper, err error) {
 	//
 	// Info:
 	// - V2Ray data flow:
@@ -919,7 +916,7 @@ func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types
 	//   * For V2Ray connections we ignore port-based multihop configuration. Use default ports instead.
 	//   * WireGuard: since the first WG server is the ExitServer - we have to use it's public key in the WireGuard configuration
 
-	if params.Metadata.V2Ray != types.V2RayTransportTypeQUIC && params.Metadata.V2Ray != types.V2RayTransportTypeTCP {
+	if v2RayType != v2r.QUIC && v2RayType != v2r.TCP {
 		return params, nil, nil
 	}
 
@@ -929,8 +926,8 @@ func (s *Service) startV2Ray(params types.ConnectionParams) (updatedParams types
 	}
 	outboundUserId := svrs.Config.Ports.V2Ray.ID
 
-	v2RayOutboundType := v2r.Quick
-	if params.Metadata.V2Ray == types.V2RayTransportTypeTCP {
+	v2RayOutboundType := v2r.QUIC
+	if v2RayType == v2r.TCP {
 		v2RayOutboundType = v2r.TCP
 	}
 
