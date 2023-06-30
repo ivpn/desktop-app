@@ -421,6 +421,11 @@ func doEnable() (retErr error) {
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow application - obfsproxy': %w", err)
 		}
+		// allow V2Ray
+		_, err = manager.AddFilter(winlib.NewFilterAllowApplication(providerKey, layer, sublayerKey, sublayerDName, "", platform.V2RayBinaryPath(), isPersistant))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'allow application - V2Ray': %w", err)
+		}
 		// allow dnscrypt-proxy
 		dnscryptProxyBin, _, _, _ := platform.DnsCryptProxyInfo()
 		_, err = manager.AddFilter(winlib.NewFilterAllowApplication(providerKey, layer, sublayerKey, sublayerDName, "", dnscryptProxyBin, isPersistant))

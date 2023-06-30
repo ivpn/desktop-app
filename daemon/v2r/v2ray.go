@@ -42,6 +42,7 @@ var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("v2ray")
+	implInit() // platform-specific initialisation
 }
 
 type V2RayTransportType int

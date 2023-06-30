@@ -20,11 +20,10 @@ mkdir -pv ${INSTALL_DIR}
 echo "******** Cloning V2Ray sources..."
 cd ${BUILD_DIR}
 git clone  --depth 1 --branch ${V2RAY_VER} https://github.com/v2fly/v2ray-core.git
-cd v2ray-core
-cd main
+cd v2ray-core/main
 
 echo "******** Compiling 'V2Ray'..."
-go build -o ${INSTALL_DIR}/v2ray  -trimpath -ldflags "-s -w"
+go build -o ${INSTALL_DIR}/v2ray -trimpath -ldflags "-s -w"
 
 echo "********************************"
 echo "******** BUILD COMPLETE ********"

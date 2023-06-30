@@ -24,16 +24,30 @@ package v2r
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
+var routeBinaryPath string
+
 func implInit() {
-	// nothing to do here for macOS
+	envVarSystemroot := strings.ToLower(os.Getenv("SYSTEMROOT"))
+	if len(envVarSystemroot) == 0 {
+		log.Error("!!! ERROR !!! Unable to determine 'SYSTEMROOT' environment variable!")
+	} else {
+		routeBinaryPath = strings.ReplaceAll(path.Join(envVarSystemroot, "system32", "route.exe"), "/", "\\")
+	}
 }
 
 func (v *V2RayWrapper) implSetMainRoute() error {
+	if routeBinaryPath == "" {
+		return fmt.Errorf("route.exe location not specified")
+	}
+
 	gwIp, err := netinfo.DefaultGatewayIP()
 	if err != nil {
 		return fmt.Errorf("getting default gateway ip error : %w", err)
@@ -44,8 +58,8 @@ func (v *V2RayWrapper) implSetMainRoute() error {
 		return fmt.Errorf("getting remote endpoint error : %w", err)
 	}
 
-	// ip route add 144.217.233.114/32 via 192.168.0.1 dev eth0
-	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "-net", remoteHost.String(), gwIp.String(), "255.255.255.255"); err != nil {
+	// route.exe add 144.217.233.114 mask 255.255.255.255 192.168.0.1
+	if err := shell.Exec(log, routeBinaryPath, "add", remoteHost.String(), "mask", "255.255.255.255", gwIp.String()); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 
@@ -53,11 +67,15 @@ func (v *V2RayWrapper) implSetMainRoute() error {
 }
 
 func (v *V2RayWrapper) implDeleteMainRoute() error {
+	if routeBinaryPath == "" {
+		return fmt.Errorf("route.exe location not specified")
+	}
+
 	remoteHost, _, err := v.getRemoteEndpoint()
 	if err != nil {
 		return fmt.Errorf("getting remote endpoint error : %w", err)
 	}
 
-	shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "-net", remoteHost.String())
+	shell.Exec(log, routeBinaryPath, "delete", remoteHost.String())
 	return nil
 }
