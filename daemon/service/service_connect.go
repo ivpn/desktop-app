@@ -122,6 +122,10 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 	// ------------------------ V2RAY block start ------------------------
 	var v2RayWrapper *v2r.V2RayWrapper
 	if prefs.V2RayProxy == v2r.QUIC || prefs.V2RayProxy == v2r.TCP {
+		disabledFuncs := s.GetDisabledFunctions()
+		if len(disabledFuncs.V2RayError) > 0 {
+			return fmt.Errorf(disabledFuncs.V2RayError)
+		}
 
 		log.Info("Starting V2Ray...")
 		// Note! the startV2Ray() modifies original params!

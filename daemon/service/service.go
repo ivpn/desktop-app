@@ -418,7 +418,7 @@ func (s *Service) APIRequest(apiAlias string, ipTypeRequired protocolTypes.Requi
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGuard on Linux)
 func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
-	var ovpnErr, obfspErr, wgErr, splitTunErr error
+	var ovpnErr, obfspErr, v2rayErr, wgErr, splitTunErr error
 
 	if err := filerights.CheckFileAccessRightsExecutable(platform.OpenVpnBinaryPath()); err != nil {
 		ovpnErr = fmt.Errorf("OpenVPN binary: %w", err)
@@ -426,6 +426,12 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 
 	if err := filerights.CheckFileAccessRightsExecutable(platform.ObfsproxyStartScript()); err != nil {
 		obfspErr = fmt.Errorf("obfsproxy binary: %w", err)
+	}
+
+	if err := filerights.CheckFileAccessRightsExecutable(platform.V2RayBinaryPath()); err != nil {
+		v2rayErr = fmt.Errorf("V2Ray binary: %w", err)
+	} else if platform.V2RayConfigFile() == "" {
+		v2rayErr = fmt.Errorf("V2Ray config file path not defined")
 	}
 
 	if err := filerights.CheckFileAccessRightsExecutable(platform.WgBinaryPath()); err != nil {
@@ -459,6 +465,9 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 	}
 	if obfspErr != nil {
 		ret.ObfsproxyError = obfspErr.Error()
+	}
+	if v2rayErr != nil {
+		ret.V2RayError = v2rayErr.Error()
 	}
 	if splitTunErr != nil {
 		ret.SplitTunnelError = splitTunErr.Error()

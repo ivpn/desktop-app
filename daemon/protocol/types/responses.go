@@ -105,6 +105,7 @@ type DisabledFunctionality struct {
 	WireGuardError   string
 	OpenVPNError     string
 	ObfsproxyError   string
+	V2RayError       string
 	SplitTunnelError string
 
 	// Linux specific functionality which is disabled

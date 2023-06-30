@@ -37,6 +37,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
+	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -104,6 +105,19 @@ func parseObfsproxyParam(param string) (obfsproxy.Config, error) {
 	return obfsproxy.Config{}, fmt.Errorf("unsupported obfsproxy value '%s' (acceptable values: %s)", param, AllowedObfsproxyValues)
 }
 
+func parseV2RayParam(param string) (v2r.V2RayTransportType, error) {
+	switch strings.ToLower(param) {
+	case "":
+		return v2r.None, nil
+	case "quic":
+		return v2r.QUIC, nil
+	case "tcp":
+		return v2r.TCP, nil
+	}
+
+	return v2r.None, fmt.Errorf("unsupported v2ray value '%s' (acceptable values: 'quic' or 'tcp')", param)
+}
+
 type CmdConnect struct {
 	flags.CmdInfo
 	last            bool
@@ -112,6 +126,7 @@ type CmdConnect struct {
 	portsShow       bool
 	any             bool
 	obfsproxy       string // 'obfs4' (default), 'obfs3', 'obfs4_iat' (or 'obfs4_iat1'), 'obfs4_iat_paranoid' (or 'obfs4_iat2')
+	v2rayProxy      string // `quic` or `tcp`
 	firewallOff     bool
 	dns             string
 	antitracker     bool
@@ -133,52 +148,53 @@ type CmdConnect struct {
 }
 
 func (c *CmdConnect) Init() {
+	c.KeepArgsOrderInHelp = true
 	c.SetPreParseFunc(c.preParse)
 
 	c.Initialize("connect", "Establish new VPN connection\nLOCATION can be a mask for filtering servers or full hostname (see 'servers' command)")
 	c.DefaultStringVar(&c.gateway, "LOCATION")
 
-	c.StringVar(&c.port, "port", "", "PROTOCOL:PORT", fmt.Sprintf("Port to connect to (default: '%s')\n  Note: port number ignored for Multi-Hop connections; port type only applicable (UDP/TCP)\n  Tip: use `ivpn connect -show_ports` command to show all supported ports", defaultPort()))
-	c.BoolVar(&c.portsShow, "show_ports", false, "Ports which are applicable for '-port' argument. Show all supported connection ports")
+	// Filtering flags
+	c.BoolVar(&c.filter_city, "city", false, "Apply LOCATION as a filter to city name")
+	c.BoolVar(&c.filter_countryCode, "cc", false, "Apply LOCATION as a filter to country code")
+	c.BoolVar(&c.filter_countryCode, "country_code", false, "Apply LOCATION as a filter to country code")
+	c.BoolVar(&c.filter_country, "c", false, "Apply LOCATION as a filter to country name")
+	c.BoolVar(&c.filter_country, "country", false, "Apply LOCATION as a filter to country name")
+	c.BoolVar(&c.filter_location, "l", false, "Apply LOCATION as a filter to server location (Hostname)")
+	c.BoolVar(&c.filter_location, "location", false, "Apply LOCATION as a filter to server location (Hostname)")
+	c.BoolVar(&c.filter_invert, "filter_invert", false, "Invert filtering")
 
+	// Automatic server selection flags
+	c.BoolVar(&c.fastest, "fastest", false, "Connect to fastest server")
+	c.BoolVar(&c.last, "last", false, "Connect with the last used connection parameters")
 	c.BoolVar(&c.any, "any", false, "Use a random server from the found results to connect")
 
+	// Multi-Hop
+	c.StringVar(&c.multihopExitSvr, "exit_svr", "", "LOCATION", "Exit-server for Multi-Hop connection\n  (use full serverID as a parameter, servers filtering not applicable for it)")
+
+	// Protocol flags
+	c.StringVar(&c.filter_proto, "protocol", "", "PROTOCOL", "Protocol type (OpenVPN|ovpn|WireGuard|wg)")
+	c.StringVar(&c.filter_proto, "p", "", "PROTOCOL", "Protocol type (OpenVPN|ovpn|WireGuard|wg)")
+	c.IntVar(&c.mtu, "mtu", 0, "MTU", "Maximum transmission unit (applicable only for WireGuard connections)")
+	c.BoolVar(&c.isIPv6Tunnel, "ipv6tunnel", false, "Enable IPv6 in VPN tunnel (WireGuard connections only)\n  (IPv6 addresses are preferred when a host has a dual stack IPv6/IPv4; IPv4-only hosts are unaffected)")
+
+	// Port flags
+	c.BoolVar(&c.portsShow, "show_ports", false, "Ports which are applicable for '-port' argument. Show all supported connection ports")
+	c.StringVar(&c.port, "port", "", "PROTOCOL:PORT", fmt.Sprintf("Port to connect to (default: '%s')\n  Note: port number ignored for Multi-Hop connections; port type only applicable (UDP/TCP)\n  Tip: use `ivpn connect -show_ports` command to show all supported ports", defaultPort()))
+
+	// Firewall flags
+	c.BoolVar(&c.firewallOff, "fw_off", false, "Do not enable firewall for this connection\n  (has effect only if Firewall not enabled before)")
+
+	// DNS flags
+	c.StringVar(&c.dns, "dns", "", "DNS_IP", "Use custom DNS for this connection\n  (if 'antitracker' is enabled - this parameter will be ignored)")
+	c.BoolVar(&c.antitracker, "antitracker", false, "Enable AntiTracker for this connection")
+	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'Hard Core' AntiTracker for this connection")
+
+	// Obfuscation flags
 	obfsproxyUsage := fmt.Sprintf("Use obfsproxy (OpenVPN only)\n  Acceptable values: %s", AllowedObfsproxyValues)
 	c.StringVar(&c.obfsproxy, "o", "", "TYPE", obfsproxyUsage)
 	c.StringVar(&c.obfsproxy, "obfsproxy", "", "TYPE", obfsproxyUsage)
-
-	c.StringVar(&c.multihopExitSvr, "exit_svr", "", "LOCATION", "Exit-server for Multi-Hop connection\n  (use full serverID as a parameter, servers filtering not applicable for it)")
-
-	c.BoolVar(&c.firewallOff, "fw_off", false, "Do not enable firewall for this connection\n  (has effect only if Firewall not enabled before)")
-
-	c.StringVar(&c.dns, "dns", "", "DNS_IP", "Use custom DNS for this connection\n  (if 'antitracker' is enabled - this parameter will be ignored)")
-
-	c.BoolVar(&c.antitracker, "antitracker", false, "Enable AntiTracker for this connection")
-	c.BoolVar(&c.antitrackerHard, "antitracker_hard", false, "Enable 'Hard Core' AntiTracker for this connection")
-	c.BoolVar(&c.isIPv6Tunnel, "ipv6tunnel", false, "Enable IPv6 in VPN tunnel (WireGuard connections only)\n  (IPv6 addresses are preferred when a host has a dual stack IPv6/IPv4; IPv4-only hosts are unaffected)")
-
-	// filters
-	c.StringVar(&c.filter_proto, "p", "", "PROTOCOL", "Protocol type (OpenVPN|ovpn|WireGuard|wg)")
-	c.StringVar(&c.filter_proto, "protocol", "", "PROTOCOL", "Protocol type (OpenVPN|ovpn|WireGuard|wg)")
-
-	c.BoolVar(&c.filter_location, "l", false, "Apply LOCATION as a filter to server location (Hostname)")
-	c.BoolVar(&c.filter_location, "location", false, "Apply LOCATION as a filter to server location (Hostname)")
-
-	c.BoolVar(&c.filter_country, "c", false, "Apply LOCATION as a filter to country name")
-	c.BoolVar(&c.filter_country, "country", false, "Apply LOCATION as a filter to country name")
-
-	c.BoolVar(&c.filter_countryCode, "cc", false, "Apply LOCATION as a filter to country code")
-	c.BoolVar(&c.filter_countryCode, "country_code", false, "Apply LOCATION as a filter to country code")
-
-	c.BoolVar(&c.filter_city, "city", false, "Apply LOCATION as a filter to city name")
-
-	c.BoolVar(&c.filter_invert, "filter_invert", false, "Invert filtering")
-
-	c.BoolVar(&c.fastest, "fastest", false, "Connect to fastest server")
-
-	c.BoolVar(&c.last, "last", false, "Connect with the last used connection parameters")
-
-	c.IntVar(&c.mtu, "mtu", 0, "MTU", "Maximum transmission unit (applicable only for WireGuard connections)")
+	c.StringVar(&c.v2rayProxy, "v2ray", "", "TYPE", "Use V2Ray obfuscation (this option takes precedence over the '-obfsproxy' option)\n  Acceptable values: 'quic' or 'tcp'")
 }
 
 func (c *CmdConnect) preParse(arguments []string) ([]string, error) {
@@ -227,6 +243,9 @@ func (c *CmdConnect) Run() (retError error) {
 	if len(c.gateway) == 0 && c.fastest == false && c.any == false && c.last == false && c.portsShow == false {
 		return flags.BadParameter{}
 	}
+	if c.v2rayProxy != "" && c.obfsproxy != "" {
+		return flags.BadParameter{Message: "cannot use both '-v2ray' and '-obfsproxy' options"}
+	}
 
 	// connection request
 	req := types.Connect{}
@@ -242,6 +261,11 @@ func (c *CmdConnect) Run() (retError error) {
 	customHostExitServer := c.multihopExitSvr
 
 	obfsproxyCfg, err := parseObfsproxyParam(c.obfsproxy)
+	if err != nil {
+		return flags.BadParameter{Message: err.Error()}
+	}
+
+	v2rayCfg, err := parseV2RayParam(c.v2rayProxy)
 	if err != nil {
 		return flags.BadParameter{Message: err.Error()}
 	}
@@ -605,6 +629,16 @@ func (c *CmdConnect) Run() (retError error) {
 
 		if serverFound == false {
 			return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
+		}
+
+		// Set V2Ray obfuscation parameters
+		if v2rayCfg != v2r.None && len(helloResp.DisabledFunctions.V2RayError) > 0 {
+			return fmt.Errorf(helloResp.DisabledFunctions.V2RayError)
+		}
+		if _proto.GetHelloResponse().DaemonSettings.V2RayConfig != v2rayCfg {
+			if err = _proto.SetV2RayProxy(v2rayCfg); err != nil {
+				return err
+			}
 		}
 
 		// SET ANTI-TRACKER parameters. It will overwrite 'custom DNS' parameter
