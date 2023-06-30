@@ -197,46 +197,6 @@
           </div>
         </div>
 
-        <ComponentDialog ref="helpDialogObfsproxy" header="Info">
-          <div>
-            <p>
-              <b>Obfsproxy</b> attempts to circumvent censorship, by
-              transforming the traffic between the client and the server.
-            </p>
-            <p>
-              The <i>obfs4</i> protocol is less likely to be blocked than
-              <i>obfs3</i>.
-            </p>
-            <p>
-              Inter-Arrival Time (<b>IAT</b>) parameter is applicable for
-              <i>obfs4</i>:
-            </p>
-
-            <ul>
-              <li>
-                When IAT-mode is disabled large packets will be split by the
-                network drivers which may result in network fingerprints that
-                could be detected by censors.
-              </li>
-              <li>
-                IAT1 - Large packets will be split into MTU-size packets by
-                Obfsproxy (instead the network drivers), resulting in smaller
-                packets that are more resistant to being reassembled for
-                analysis and censoring.
-              </li>
-              <li>
-                IAT2 - (paranoid mode) - Large packets will be split into
-                variable size packets by Obfsproxy.
-              </li>
-            </ul>
-
-            <p>
-              <b> Note! </b> Enabling IAT mode will affect overall VPN speed and
-              CPU load.
-            </p>
-          </div>
-        </ComponentDialog>
-
         <div class="param" v-if="userDefinedOvpnFile">
           <input
             type="checkbox"
@@ -456,6 +416,74 @@
         </button>
       </div>
     </div>
+
+    <!-- Help dialogs -->
+    <ComponentDialog ref="helpDialogObfsproxy" header="Info">
+      <div class="selectable">
+        <div v-show="isOpenVPN">
+          <p>
+            <b>Obfsproxy</b> attempts to circumvent censorship, by transforming
+            the traffic between the client and the server.
+          </p>
+          <p>
+            The <i>obfs4</i> protocol is less likely to be blocked than
+            <i>obfs3</i>.
+          </p>
+          <p>
+            Inter-Arrival Time (<b>IAT</b>) parameter is applicable for
+            <i>obfs4</i>:
+          </p>
+
+          <ul>
+            <li>
+              When IAT-mode is disabled large packets will be split by the
+              network drivers which may result in network fingerprints that
+              could be detected by censors.
+            </li>
+            <li>
+              IAT1 - Large packets will be split into MTU-size packets by
+              Obfsproxy (instead the network drivers), resulting in smaller
+              packets that are more resistant to being reassembled for analysis
+              and censoring.
+            </li>
+            <li>
+              IAT2 - (paranoid mode) - Large packets will be split into variable
+              size packets by Obfsproxy.
+            </li>
+          </ul>
+
+          <p>
+            <b> Note! </b> Enabling IAT mode will affect overall VPN speed and
+            CPU load.
+          </p>
+          <div class="horizontalLine" />
+        </div>
+        <div>
+          <p>
+            <b>V2Ray</b> is a powerful tool that helps to obfuscate your VPN
+            traffic, effectively circumventing online censorship and blocking by
+            masquerading your data as regular network traffic.
+          </p>
+
+          <p>There are two transport protocol options:</p>
+
+          <ul>
+            <li>
+              <b>QUIC</b> is a modern protocol designed to provide robust
+              security and high performance, while reducing latency compared to
+              traditional protocols. By masquerading your data as regular HTTPS
+              traffic, QUIC can help obfuscate your VPN traffic.
+            </li>
+            <li>
+              <b>TCP</b> is a traditional, widely-used protocol that guarantees
+              reliable, ordered data delivery. It makes your data appear as
+              regular HTTP traffic, improving the obfuscation of your VPN
+              traffic.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </ComponentDialog>
   </div>
 </template>
 
