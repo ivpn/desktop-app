@@ -234,6 +234,10 @@ echo "[+] Preparing DMG image: Copying 'obfsproxy' binaries..."
 mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources/obfsproxy"
 cp -R "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/obfs4proxy_inst/obfs4proxy" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources/obfsproxy/obfs4proxy" || CheckLastResult
 
+echo "[+] Preparing DMG image: Copying 'V2Ray' binaries..."
+mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/v2ray"
+cp "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/v2ray_inst/v2ray" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/v2ray/v2ray" || CheckLastResult
+
 echo "[+] Preparing DMG image: Copying 'WireGuard' binaries..."
 mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/WireGuard"
 cp "${_PATH_ABS_REPO_DAEMON}/References/macOS/_deps/wg_inst/wg" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/WireGuard/wg" || CheckLastResult
