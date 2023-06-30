@@ -312,7 +312,7 @@ _APPLICATION_NAME="IVPN.app"
 _UNINSTALL_APPLICATION_NAME="IVPN Uninstaller.app"
 _source=${_PATH_IMAGE_FOLDER}
 _title="IVPN-${_VERSION}"
-_size=256000
+_size=409600 # max disk size (KB)
 
 # creating output directory (if not exists)
 mkdir -p ${_PATH_COMPILED_FOLDER} || CheckLastResult "Failed to create '${_PATH_COMPILED_FOLDER}'"
