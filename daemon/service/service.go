@@ -118,7 +118,7 @@ type Service struct {
 
 	// variables needed for automatic resume
 	_pause struct {
-		_mutex           sync.Mutex
+		_mutex           sync.RWMutex
 		_pauseTill       time.Time // time when connection will be resumed automatically (if not paused - will be zero)
 		_killSwitchState bool      // killswitch state before pause (to be able to restore it)
 	}
@@ -564,26 +564,30 @@ func (s *Service) Pause(durationSeconds uint32) error {
 
 	log.Info("Pausing...")
 	firewall.ClientPaused()
-	ret := vpn.Pause()
 
-	if ret == nil {
-		s._pause._pauseTill = time.Now().Add(time.Second * time.Duration(durationSeconds))
-		log.Info(fmt.Sprintf("Paused on %v (till %v)", time.Second*time.Duration(durationSeconds), s._pause._pauseTill))
+	if err = vpn.Pause(); err != nil {
+		return err
+	}
 
-		go func() {
-			// Pause resumer: Every second checks if it is time to resume VPN connection.
-			// Info: We can not use 'time.AfterFunc()' because
-			// it does not take into account the time when the system was in sleep mode.
-			defer log.Info("Resumed")
-			for {
-				time.Sleep(time.Second * 1)
+	s._pause._pauseTill = time.Now().Add(time.Second * time.Duration(durationSeconds))
+	log.Info(fmt.Sprintf("Paused on %v (till %v)", time.Second*time.Duration(durationSeconds), s._pause._pauseTill.Format(time.Stamp)))
 
-				if !s.IsPaused() {
-					s._pause._mutex.Lock()
-					s._pause._pauseTill = time.Time{} // reset pause time (to indicate that connection is not paused, just in case)
-					s._pause._mutex.Unlock()
-					break
-				} else if time.Now().After(s.PausedTill()) {
+	go func() {
+		// Pause resumer: Every second checks if it is time to resume VPN connection.
+		// Info: We can not use 'time.AfterFunc()' because
+		// it does not take into account the time when the system was in sleep mode.
+		defer log.Info("Resumed")
+		for {
+			time.Sleep(time.Second * 1)
+
+			if !s.IsPaused() {
+				s._pause._mutex.RLock()
+				s._pause._pauseTill = time.Time{} // reset pause time (to indicate that connection is not paused, just in case)
+				s._pause._mutex.RUnlock()
+				break
+			} else {
+				// Note! In order to avoid any potential issues with location or changes with system clock, we must use "monotonic clock" time (Unix()).
+				if time.Now().Unix()-s.PausedTill().Unix() >= 0 {
 					log.Info(fmt.Sprintf("Automatic resuming after %v ...", time.Second*time.Duration(durationSeconds)))
 					if err := s.Resume(); err != nil {
 						log.Error(fmt.Errorf("Resume failed: %w", err))
@@ -591,10 +595,10 @@ func (s *Service) Pause(durationSeconds uint32) error {
 					break
 				}
 			}
-		}()
-	}
+		}
+	}()
 
-	return ret
+	return nil
 }
 
 // Resume resume vpn connection
@@ -625,22 +629,22 @@ func (s *Service) resume() error {
 
 	log.Info("Resuming...")
 	firewall.ClientResumed()
-	ret := vpn.Resume()
+	if err := vpn.Resume(); err != nil {
+		return err
+	}
 
-	if ret == nil {
-		fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
-		if err != nil {
-			log.Error(fmt.Errorf("failed to check KillSwitch status: %w", err))
-		} else {
-			if !isPersistant && fwIsEnabled != s._pause._killSwitchState {
-				if err := s.SetKillSwitchState(s._pause._killSwitchState); err != nil {
-					log.Error("failed to restore KillSwitch status: %w", err)
-				}
+	fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+	if err != nil {
+		log.Error(fmt.Errorf("failed to check KillSwitch status: %w", err))
+	} else {
+		if !isPersistant && fwIsEnabled != s._pause._killSwitchState {
+			if err := s.SetKillSwitchState(s._pause._killSwitchState); err != nil {
+				log.Error("failed to restore KillSwitch status: %w", err)
 			}
 		}
 	}
 
-	return ret
+	return nil
 }
 
 // IsPaused returns 'true' if current vpn connection is in paused state
@@ -654,8 +658,8 @@ func (s *Service) IsPaused() bool {
 }
 
 func (s *Service) PausedTill() time.Time {
-	s._pause._mutex.Lock()
-	defer s._pause._mutex.Unlock()
+	s._pause._mutex.RLock()
+	defer s._pause._mutex.RUnlock()
 	return s._pause._pauseTill
 }
 
