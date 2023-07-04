@@ -99,10 +99,6 @@
           <div class="i">*</div>
           Use <strong>Multi-Hop</strong> connections
         </div>
-        <div>
-          <div class="i">*</div>
-          Turn on <strong>Port forwarding</strong>
-        </div>
         <p>Login to the website to change subscription plan</p>
       </div>
     </div>

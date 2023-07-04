@@ -9,7 +9,7 @@
         id="isSTEnabled"
         v-model="isSTEnabled"
       />
-      <label class="defColor" for="isSTEnabled">Split Tunnel (Beta) </label>
+      <label class="defColor" for="isSTEnabled">Split Tunnel</label>
     </div>
     <div class="fwDescription" style="margin-bottom: 0px">
       Exclude traffic from specific applications from being routed through the

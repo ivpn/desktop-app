@@ -23,6 +23,7 @@
 package wgkeys
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -60,19 +61,20 @@ type IWgKeysChangeReceiver interface {
 // CreateKeysManager create WireGuard keys manager
 func CreateKeysManager(apiObj *api.API, wgToolBinPath string) *KeysManager {
 	return &KeysManager{
-		stopKeysRotation: make(chan struct{}),
-		wgToolBinPath:    wgToolBinPath,
-		api:              apiObj}
+		wgToolBinPath: wgToolBinPath,
+		api:           apiObj}
 }
 
 // KeysManager WireGuard keys manager
 type KeysManager struct {
-	mutex            sync.Mutex
-	service          IWgKeysChangeReceiver
-	api              *api.API
-	wgToolBinPath    string
-	stopKeysRotation chan struct{}
-	activeRotationWg sync.WaitGroup
+	mutex         sync.Mutex
+	service       IWgKeysChangeReceiver
+	api           *api.API
+	wgToolBinPath string
+
+	activeRotationInterval time.Duration
+	stop                   context.CancelFunc
+	activeRotationWg       sync.WaitGroup
 }
 
 // Init - initialize master service
@@ -103,12 +105,18 @@ func (m *KeysManager) StartKeysRotation() error {
 		return nil
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	m.mutex.Lock()
+	m.stop = cancel
+	m.activeRotationInterval = interval
+	m.mutex.Unlock()
+
 	m.activeRotationWg.Add(1)
-	go func() {
+	go func(ctx context.Context) {
 		log.Info(fmt.Sprintf("Keys rotation started (interval:%v)", interval))
 		defer func() {
 			log.Info("Keys rotation stopped")
-			m.activeRotationWg.Done()
+			m.activeRotationWg.Done() // notify routine stopped
 		}()
 
 		const maxCheckInterval = time.Minute * 5
@@ -146,47 +154,46 @@ func (m *KeysManager) StartKeysRotation() error {
 			}
 
 			select {
+			case <-ctx.Done(): // stop signal sent
+				return
 			case <-time.After(waitInterval):
-				_, err := m.UpdateKeysIfNecessary()
-				if err != nil {
+				if m.UpdateKeysIfNecessary() != nil {
 					isLastUpdateFailed = true
 					isLastUpdateFailedCnt += 1
 				} else {
 					isLastUpdateFailed = false
 					isLastUpdateFailedCnt = 0
 				}
-
-			case <-m.stopKeysRotation:
-				return
 			}
 		}
-	}()
+	}(ctx)
 
 	return nil
 }
 
 // StopKeysRotation stop keys rotation
 func (m *KeysManager) StopKeysRotation() {
-	select {
-	case m.stopKeysRotation <- struct{}{}:
-	default:
+	// send stop signal (if already running)
+	m.mutex.Lock()
+	if m.stop != nil {
+		m.stop()
+		m.stop = nil
+		m.activeRotationInterval = 0
 	}
+	m.mutex.Unlock()
+	// wait untill keys rotution goroutine stops (if running)
 	m.activeRotationWg.Wait()
 }
 
 // GenerateKeys generate keys
 func (m *KeysManager) GenerateKeys() error {
-	isUpdated, err := m.generateKeys(false)
-	if err == nil && !isUpdated {
-		err = fmt.Errorf("WG keys were not updated")
-	}
-	return err
+	return m.generateKeys(false)
 }
 
 // UpdateKeysIfNecessary generate or update keys
 // 1) If no active WG keys defined - new keys will be generated + key rotation will be started
 // 2) If active WG key defined - key will be updated only if it is a time to do it
-func (m *KeysManager) UpdateKeysIfNecessary() (isUpdated bool, retErr error) {
+func (m *KeysManager) UpdateKeysIfNecessary() (retErr error) {
 	return m.generateKeys(true)
 }
 
@@ -194,7 +201,7 @@ func createKemHelper() (*kem.KemHelper, error) {
 	return kem.CreateHelper(platform.KemHelperBinaryPath(), kem.GetDefaultKemAlgorithms())
 }
 
-func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, retErr error) {
+func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	defer func() {
 		if retErr != nil {
 			log.Error("Failed to update WG keys: ", retErr)
@@ -202,34 +209,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 	}()
 
 	if m.service == nil {
-		return false, fmt.Errorf("WG KeysManager not initialized")
-	}
-
-	// Check update configuration
-	// (not blocked by mutex because in order to return immediately if nothing to do)
-	_, activePublicKey, _, _, lastUpdate, interval := m.service.WireGuardGetKeys()
-
-	// function to check if update required
-	isNecessaryUpdate := func() (bool, error) {
-		if !onlyUpdateIfNecessary {
-			return true, nil
-		}
-		if interval <= 0 {
-			// update interval must be defined
-			return false, fmt.Errorf("unable to 'GenerateOrUpdateKeys' (update interval is not defined)")
-		}
-		if len(activePublicKey) > 0 {
-			// If active WG key defined - key will be updated only if it is a time to do it
-			if lastUpdate.Add(interval).After(time.Now()) {
-				// it is not a time to regenerate keys
-				return false, nil
-			}
-		}
-		return true, nil
-	}
-
-	if haveToUpdate, err := isNecessaryUpdate(); !haveToUpdate || err != nil {
-		return false, err
+		return fmt.Errorf("WG KeysManager not initialized")
 	}
 
 	m.mutex.Lock()
@@ -237,15 +217,23 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 
 	// Check update configuration second time (locked by mutex)
 	session, activePublicKey, _, _, lastUpdate, interval := m.service.WireGuardGetKeys()
-	if haveToUpdate, err := isNecessaryUpdate(); !haveToUpdate || err != nil {
-		return false, err
+
+	// check if update required
+	if onlyUpdateIfNecessary && len(activePublicKey) > 0 {
+		if interval <= 0 { // update interval must be defined
+			return fmt.Errorf("unable to 'GenerateOrUpdateKeys' (update interval is not defined)")
+		}
+		// If active WG key defined - key will be updated only if it is a time to do it
+		if lastUpdate.Add(interval).Unix() >= time.Now().Unix() {
+			return nil // it is not a time to regenerate keys: do nothing and return NO error
+		}
 	}
 
 	log.Info("Updating WG keys...")
 
 	if err := m.service.IsConnectivityBlocked(); err != nil {
 		// Connectivity with API servers is blocked. No sense to make API requests
-		return false, err
+		return err
 	}
 
 	isVPNConnected, connectedVpnType := m.service.ConnectedType()
@@ -282,7 +270,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 	for {
 		pub, priv, err = wireguard.GenerateKeys(m.wgToolBinPath)
 		if err != nil {
-			return false, err
+			return err
 		}
 
 		// trying to update WG keys with notifying API about current active public key (if it exists)
@@ -306,10 +294,10 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 			if errors.As(err, &e) {
 				if e.ErrorCode == types.SessionNotFound {
 					m.service.OnSessionNotFound()
-					return false, fmt.Errorf("WG keys not updated (session not found)")
+					return fmt.Errorf("WG keys not updated (session not found)")
 				}
 			}
-			return false, fmt.Errorf("WG keys not updated. Please check your internet connection")
+			return fmt.Errorf("WG keys not updated. Please check your internet connection")
 		}
 
 		if kemHelper != nil {
@@ -339,8 +327,10 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (isUpdated bool, 
 
 	log.Info(fmt.Sprintf("WG keys updated (%s:%s; psk:%v) ", localIP.String(), pub, len(wgPresharedKey) > 0))
 
-	// start keys rotation
-	m.StartKeysRotation()
+	// Keys updated. Start keys rotation only if it not started yet or keys rotation interval changed
+	if m.activeRotationInterval != interval || m.stop == nil {
+		go m.StartKeysRotation() // run in routine to avoid deadlock
+	}
 
-	return true, nil
+	return nil
 }
