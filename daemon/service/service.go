@@ -1393,7 +1393,7 @@ func (s *Service) WireGuardGenerateKeys(updateIfNecessary bool) error {
 	// Update WG keys, if necessary
 	var err error
 	if updateIfNecessary {
-		_, err = s._wgKeysMgr.UpdateKeysIfNecessary()
+		err = s._wgKeysMgr.UpdateKeysIfNecessary()
 	} else {
 		err = s._wgKeysMgr.GenerateKeys()
 	}
