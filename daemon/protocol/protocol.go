@@ -1018,15 +1018,17 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		if req.NeedToDisableFirewall {
-			p._service.SetKillSwitchIsPersistent(false)
-			p._service.SetKillSwitchState(false)
-		}
-
 		err := p._service.SessionDelete(req.IsCanDeleteSessionLocally)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
+		}
+
+		// It is important to ensure FW is disabled after SessionDelete() call.
+		// (because the SessionDelete->Disconnect->Resume restores original FW state which were before pause)
+		if req.NeedToDisableFirewall {
+			p._service.SetKillSwitchIsPersistent(false)
+			p._service.SetKillSwitchState(false)
 		}
 
 		if req.NeedToResetSettings {
