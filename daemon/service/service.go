@@ -119,7 +119,7 @@ type Service struct {
 
 	// variables needed for automatic resume
 	_pause struct {
-		_mutex           sync.RWMutex
+		_mutex           sync.Mutex
 		_pauseTill       time.Time // time when connection will be resumed automatically (if not paused - will be zero)
 		_killSwitchState bool      // killswitch state before pause (to be able to restore it)
 	}
@@ -584,9 +584,7 @@ func (s *Service) Pause(durationSeconds uint32) error {
 			time.Sleep(time.Second * 1)
 
 			if !s.IsPaused() {
-				s._pause._mutex.RLock()
 				s._pause._pauseTill = time.Time{} // reset pause time (to indicate that connection is not paused, just in case)
-				s._pause._mutex.RUnlock()
 				break
 			} else {
 				// Note! In order to avoid any potential issues with location or changes with system clock, we must use "monotonic clock" time (Unix()).
@@ -661,8 +659,6 @@ func (s *Service) IsPaused() bool {
 }
 
 func (s *Service) PausedTill() time.Time {
-	s._pause._mutex.RLock()
-	defer s._pause._mutex.RUnlock()
 	return s._pause._pauseTill
 }
 
