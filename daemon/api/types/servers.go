@@ -131,6 +131,21 @@ type AntitrackerInfo struct {
 	Hardcore DNSInfo `json:"hardcore"`
 }
 
+// -----------------------------------------------------------
+
+type AntiTrackerPlusServer struct {
+	Name        string `json:"Name"`
+	Description string `json:"Description"`
+	Normal      string `json:"Normal"`
+	Hardcore    string `json:"Hardcore"`
+}
+
+type AntiTrackerPlusInfo struct {
+	DnsServers []AntiTrackerPlusServer `json:"DnsServers"`
+}
+
+// -----------------------------------------------------------
+
 // InfoAPI contains API IP adresses
 type InfoAPI struct {
 	IPAddresses   []string `json:"ips"`
@@ -190,9 +205,10 @@ type PortsInfo struct {
 
 // ConfigInfo contains different configuration info (Antitracker, API ...)
 type ConfigInfo struct {
-	Antitracker AntitrackerInfo `json:"antitracker"`
-	API         InfoAPI         `json:"api"`
-	Ports       PortsInfo       `json:"ports"`
+	Antitracker     AntitrackerInfo     `json:"antitracker"`
+	AntiTrackerPlus AntiTrackerPlusInfo `json:"antitracker_plus"`
+	API             InfoAPI             `json:"api"`
+	Ports           PortsInfo           `json:"ports"`
 }
 
 // ServersInfoResponse all info from servers.json

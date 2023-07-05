@@ -204,6 +204,8 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd types.ICommandBase, idx int) 
 // -------------- Initialize response objects ---------------
 func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 	prefs := p._service.Preferences()
+	at, _ := p._service.GetAntiTrackerStatus()
+
 	return &types.SettingsResp{
 		IsAutoconnectOnLaunch:       prefs.IsAutoconnectOnLaunch,
 		IsAutoconnectOnLaunchDaemon: prefs.IsAutoconnectOnLaunchDaemon,
@@ -212,6 +214,7 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 		UserPrefs:                   prefs.UserPrefs,
 		WiFi:                        prefs.WiFiControl,
 		IsLogging:                   prefs.IsLogging,
+		AntiTracker:                 at,
 		// TODO: implement the rest of daemon settings
 	}
 }
@@ -258,7 +261,8 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		pausedTillStr = ""
 	}
 
-	_, _, dnsValue, _ := p._service.GetDefaultDnsParams()
+	manualDns := dns.GetLastManualDNS()
+	antiTrackerStatus, _ := p._service.GetAntiTrackerStatus()
 
 	ret := &types.ConnectedResp{
 		TimeSecFrom1970: state.Time,
@@ -268,7 +272,7 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ServerPort:      state.ServerPort,
 		VpnType:         state.VpnType,
 		ExitHostname:    state.ExitHostname,
-		ManualDNS:       dnsValue,
+		Dns:             types.DnsStatus{Dns: manualDns, AntiTrackerStatus: antiTrackerStatus},
 		IsTCP:           state.IsTCP,
 		Mtu:             state.Mtu,
 		IsPaused:        p._service.IsPaused(),

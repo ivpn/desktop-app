@@ -378,6 +378,12 @@ async function processResponse(response) {
 
       if (obj.DaemonSettings) {
         store.dispatch("settings/daemonSettings", obj.DaemonSettings);
+
+        if (obj.DaemonSettings.AntiTracker)
+          store.dispatch(
+            "settings/antiTracker",
+            obj.DaemonSettings.AntiTracker
+          );
       }
 
       {
@@ -481,8 +487,7 @@ async function processResponse(response) {
         }
         break;
       }
-      if (obj.ChangedDNS == null) break;
-      store.dispatch(`vpnState/dns`, obj.ChangedDNS);
+      store.dispatch(`vpnState/dns`, obj.Dns);
       break;
 
     case daemonResponses.DnsPredefinedConfigsResp:
@@ -734,7 +739,7 @@ async function startNotifyDaemonOnParamsChange() {
         case "settings/firewallActivateOnConnect":
         case "settings/enableIPv6InTunnel":
         case "settings/showGatewaysWithoutIPv6":
-        case "settings/isAntitracker":
+        case "settings/antiTracker":
         case "settings/dnsIsCustom":
         case "settings/dnsCustomCfg":
         case "settings/mtu":
@@ -1719,25 +1724,17 @@ async function SetDNS() {
     DohTemplate: "",
   };
 
-  let antiTracker = {
-    Enabled: false,
-    Hardcore: false,
-  };
-
   if (store.state.settings.dnsIsCustom) {
     Dns = store.state.settings.dnsCustomCfg;
   }
 
-  antiTracker = {
-    Enabled: store.state.settings.isAntitracker,
-    Hardcore: store.state.settings.isAntitrackerHardcore,
-  };
+  let at = store.state.settings.antiTracker;
 
   // send change-request
   await sendRecv({
     Command: daemonRequests.SetAlternateDns,
     Dns,
-    AntiTracker: antiTracker, // anti-tracker metadata (when enabled: has higher priority than 'Dns')
+    AntiTracker: at, // anti-tracker metadata (when enabled: has higher priority than 'Dns')
   });
 }
 

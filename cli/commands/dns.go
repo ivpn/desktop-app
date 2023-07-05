@@ -194,7 +194,7 @@ func (c *CmdDns) Run() error {
 			svrs, _ := _proto.GetServers()
 			servers = &svrs
 		}
-		w = printDNSState(w, connected.ManualDNS, servers)
+		w = printDNSState(w, connected.Dns, servers)
 	} else {
 		defConnCfg, err := _proto.GetDefConnectionParams()
 		if err != nil {
@@ -211,16 +211,34 @@ func (c *CmdDns) Run() error {
 
 type CmdAntitracker struct {
 	flags.CmdInfo
-	def      bool
-	off      bool
-	hardcore bool
+	on         string
+	off        bool
+	hardcore   string
+	blocklists bool
 }
 
+const EmptyBlockListName = "<default>"
+
 func (c *CmdAntitracker) Init() {
+	c.SetPreParseFunc(c.preParse)
 	c.Initialize("antitracker", "Default AntiTracker configuration management for VPN connection")
-	c.BoolVar(&c.def, "on", false, "Enable AntiTracker")
-	c.BoolVar(&c.hardcore, "on_hardcore", false, "Enable AntiTracker 'hardcore' mode")
+	c.StringVar(&c.on, "on", "", "[BLOCK_LIST]", "Enable AntiTracker\n BLOCK_LIST - optional parameter used to set custom DNS block list\n Tip: use `ivpn connect -show_blocklists` command to show all supported DNS block lists")
+	c.StringVar(&c.hardcore, "on_hardcore", "", "[BLOCK_LIST]", "Enable AntiTracker 'hardcore' mode\n BLOCK_LIST - optional parameter used to set custom DNS block list\n Tip: use `ivpn connect -show_blocklists` command to show all supported DNS block lists")
 	c.BoolVar(&c.off, "off", false, "Disable AntiTracker")
+	c.BoolVar(&c.blocklists, "show_blocklists", false, "Show all supported DNS block lists")
+}
+
+func (c *CmdAntitracker) preParse(arguments []string) ([]string, error) {
+	isArgRemoved := false
+	arguments, isArgRemoved = flags.RemoveArgIfNoValue(arguments, "-on")
+	if isArgRemoved {
+		c.on = EmptyBlockListName
+	}
+	arguments, isArgRemoved = flags.RemoveArgIfNoValue(arguments, "-on_hardcore")
+	if isArgRemoved {
+		c.hardcore = EmptyBlockListName
+	}
+	return arguments, nil
 }
 
 func (c *CmdAntitracker) Run() error {
@@ -228,8 +246,17 @@ func (c *CmdAntitracker) Run() error {
 		return flags.BadParameter{Message: "Not allowed to use more than one argument for this command"}
 	}
 
+	if c.blocklists {
+		svrs, err := _proto.GetServers()
+		if err != nil {
+			return err
+		}
+
+		return printBlockLists(svrs.Config.AntiTrackerPlus.DnsServers)
+	}
+
 	// do we have to change anti-tracker configuration ?
-	if c.off || c.def || c.hardcore {
+	if c.off || c.on != "" || c.hardcore != "" {
 		// get default connection parameters (dns, anti-tracker, ... etc.)
 		defConnCfg := service_types.ConnectionParams{}
 		if ret, err := _proto.GetDefConnectionParams(); err == nil {
@@ -240,11 +267,17 @@ func (c *CmdAntitracker) Run() error {
 		newAtMetadata.Enabled = false
 		newAtMetadata.Hardcore = false
 
-		if c.hardcore {
+		if c.hardcore != "" {
 			newAtMetadata.Hardcore = true
 			newAtMetadata.Enabled = true
-		} else if c.def {
+			if c.hardcore != EmptyBlockListName {
+				newAtMetadata.AntiTrackerBlockListName = c.hardcore
+			}
+		} else if c.on != "" {
 			newAtMetadata.Enabled = true
+			if c.on != EmptyBlockListName {
+				newAtMetadata.AntiTrackerBlockListName = c.on
+			}
 		}
 
 		if err := _proto.SetManualDNS(defConnCfg.ManualDNS, newAtMetadata); err != nil {
@@ -266,9 +299,9 @@ func (c *CmdAntitracker) Run() error {
 
 	if state == vpn.CONNECTED {
 		servers, _ := _proto.GetServers()
-		w = printDNSState(w, connected.ManualDNS, &servers)
+		w = printDNSState(w, connected.Dns, &servers)
 	} else {
-		w = printAntitrackerConfigInfo(w, defConnCfg.Params.Metadata.AntiTracker.Enabled, defConnCfg.Params.Metadata.AntiTracker.Hardcore)
+		w = printAntitrackerConfigInfo(w, defConnCfg.Params.Metadata.AntiTracker)
 	}
 	w.Flush()
 
@@ -298,23 +331,36 @@ func printDNSConfigInfo(w *tabwriter.Writer, customDNS dns.DnsSettings) *tabwrit
 	return w
 }
 
-func printAntitrackerConfigInfo(w *tabwriter.Writer, antitracker, antitrackerHardcore bool) *tabwriter.Writer {
+func printAntitrackerConfigInfo(w *tabwriter.Writer, antitracker service_types.AntiTrackerMetadata) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
-
-	if antitrackerHardcore {
-		fmt.Fprintf(w, "Default config\t:\tAntiTracker Enabled (Hardcore)\n")
-	} else if antitracker {
-		fmt.Fprintf(w, "Default config\t:\tAntiTracker Enabled\n")
-	} else {
-		fmt.Fprintf(w, "Default config\t:\tAntiTracker Disabled\n")
-	}
-
+	fmt.Fprintf(w, "Default config\t:\tAntiTracker %s\n", GetAntiTrackerStatusText(antitracker))
 	return w
 }
 
-//----------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------
+func GetAntiTrackerStatusText(antitracker service_types.AntiTrackerMetadata) string {
+	if !antitracker.Enabled {
+		return "Disabled"
+	}
+
+	infoText := ""
+	if antitracker.Hardcore {
+		infoText = "Hardcore"
+	}
+	if antitracker.AntiTrackerBlockListName != "" {
+		if len(infoText) > 0 {
+			infoText += "; "
+		}
+		infoText += fmt.Sprintf("block list: '%s'", antitracker.AntiTrackerBlockListName)
+	}
+	if infoText != "" {
+		infoText = fmt.Sprintf(" (%s)", infoText)
+	}
+
+	return fmt.Sprintf("Enabled%s", infoText)
+}
 
 // GetAntitrackerIP - returns IP of antitracker DNS
 func GetAntitrackerIP(vpntype vpn.Type, isHardcore, isMultihop bool, servers *apitypes.ServersInfoResponse) (string, error) {
@@ -325,22 +371,41 @@ func GetAntitrackerIP(vpntype vpn.Type, isHardcore, isMultihop bool, servers *ap
 	return servers.Config.Antitracker.Default.IP, nil
 }
 
-// IsAntiTrackerIP returns info 'is this IP equals to antitracker IP'
-func IsAntiTrackerIP(dns string, servers *apitypes.ServersInfoResponse) (antitracker, antitrackerHardcore bool) {
-	if servers == nil {
-		return false, false
+/*
+func isAcceptableDnsBlockListName(atDnsServers []apitypes.AntiTrackerPlusServer) error {
+	if len(atDnsServers) == 0 {
+		fmt.Println("No DNS block lists available")
+		return nil
 	}
 
-	dns = strings.TrimSpace(dns)
-	if len(dns) == 0 {
-		return false, false
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+
+	fmt.Fprintf(w, "|\tDNS BLOCK LIST NAME\t|\tDETAILS\t|\n")
+	fmt.Fprintf(w, "|\t\t|\t\t|\n")
+	for _, bl := range atDnsServers {
+		fmt.Fprintf(w, "|\t%s\t|\t%s\t|\n", bl.Name, bl.Description)
 	}
 
-	if dns == servers.Config.Antitracker.Default.IP {
-		return true, false
-	} else if dns == servers.Config.Antitracker.Hardcore.IP {
-		return true, true
+	w.Flush()
+
+	return nil
+}*/
+
+func printBlockLists(atDnsServers []apitypes.AntiTrackerPlusServer) error {
+	if len(atDnsServers) == 0 {
+		fmt.Println("No DNS block lists available")
+		return nil
 	}
 
-	return false, false
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+
+	fmt.Fprintf(w, "|\tDNS BLOCK LIST NAME\t|\tDETAILS\t|\n")
+	fmt.Fprintf(w, "|\t\t|\t\t|\n")
+	for _, bl := range atDnsServers {
+		fmt.Fprintf(w, "|\t%s\t|\t%s\t|\n", bl.Name, bl.Description)
+	}
+
+	w.Flush()
+
+	return nil
 }

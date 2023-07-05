@@ -37,10 +37,10 @@
       textClickTooltip="AntiTracker settings"
       description="Block trackers whilst connected to VPN"
       :onChecked="antitrackerOnChecked"
-      :isChecked="this.$store.state.settings.isAntitracker"
+      :isChecked="this.$store.state.settings.antiTracker?.Enabled"
       :switcherOpacity="!IsConnected ? 0.4 : 1"
       :checkedColor="
-        this.$store.state.settings.isAntitrackerHardcore ? '#77152a' : null
+        this.$store.state.settings.antiTracker?.Hardcore ? '#77152a' : null
       "
       :isProgress="antitrackerIsProgress"
     />
@@ -203,7 +203,18 @@ export default {
     async antitrackerOnChecked(antitrackerIsEnabled) {
       try {
         this.antitrackerIsProgress = true;
-        this.$store.dispatch("settings/isAntitracker", antitrackerIsEnabled);
+
+        let at = this.$store.state.settings.antiTracker;
+        if (!at)
+          at = {
+            Enabled: antitrackerIsEnabled,
+            Hardcore: false,
+            AntiTrackerBlockListName: "",
+          };
+        else at = JSON.parse(JSON.stringify(at));
+        at.Enabled = antitrackerIsEnabled;
+
+        this.$store.dispatch("settings/antiTracker", at);
         await sender.SetDNS();
       } catch (e) {
         processError(e);
