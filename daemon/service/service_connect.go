@@ -50,6 +50,11 @@ import (
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 )
 
+type svrConnInfo struct {
+	IP   net.IP
+	Port int
+}
+
 func (s *Service) ValidateConnectionParameters(params types.ConnectionParams, isCanFix bool) (types.ConnectionParams, error) {
 	if params.VpnType == vpn.WireGuard {
 		// WireGuard connection parameters
@@ -120,6 +125,9 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 	}
 
 	// ------------------------ V2RAY block start ------------------------
+	// 'originalEntryServerInfo' - will contain original info about EntryServer/Port (it is not 'nil' for V2Ray connections).
+	//  We need this info to notify correct data about vpn.CONNECTED state: for V2Ray connection the original parameters are overwriten by local V2Ray proxy params ('127.0.0.1:local_port')
+	var originalEntryServerInfo *svrConnInfo
 	var v2RayWrapper *v2r.V2RayWrapper
 	if prefs.V2RayProxy == v2r.QUIC || prefs.V2RayProxy == v2r.TCP {
 		disabledFuncs := s.GetDisabledFunctions()
@@ -129,7 +137,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 
 		log.Info("Starting V2Ray...")
 		// Note! the startV2Ray() modifies original params!
-		params, v2RayWrapper, err = s.startV2Ray(params, prefs.V2RayProxy)
+		params, v2RayWrapper, originalEntryServerInfo, err = s.startV2Ray(params, prefs.V2RayProxy)
 		if err != nil {
 			return fmt.Errorf("failed to start V2Ray: %w", err)
 		}
@@ -218,7 +226,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		}
 
 		isCanUseObfsProxy := v2RayWrapper == nil
-		return s.connectOpenVPN(connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection, isCanUseObfsProxy)
+		return s.connectOpenVPN(originalEntryServerInfo, connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection, isCanUseObfsProxy)
 
 	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
 		if len(params.WireGuardParameters.EntryVpnServer.Hosts) < 1 {
@@ -273,14 +281,14 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 				params.WireGuardParameters.Mtu)
 		}
 
-		return s.connectWireGuard(connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection)
+		return s.connectWireGuard(originalEntryServerInfo, connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection)
 	}
 
 	return fmt.Errorf("unexpected VPN type to connect (%v)", params.VpnType)
 }
 
 // connectOpenVPN start OpenVPN connection
-func (s *Service) connectOpenVPN(connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool, isCanUseObfsProxy bool) error {
+func (s *Service) connectOpenVPN(originalEntryServerInfo *svrConnInfo, connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool, isCanUseObfsProxy bool) error {
 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
@@ -411,11 +419,11 @@ func (s *Service) connectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, antiTracker, firewallOn, firewallDuringConnection)
+	return s.keepConnection(originalEntryServerInfo, createVpnObjfunc, manualDNS, antiTracker, firewallOn, firewallDuringConnection)
 }
 
 // connectWireGuard start WireGuard connection
-func (s *Service) connectWireGuard(connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) error {
+func (s *Service) connectWireGuard(originalEntryServerInfo *svrConnInfo, connectionParams wireguard.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) error {
 	// stop active connection (if exists)
 	if err := s.Disconnect(); err != nil {
 		return fmt.Errorf("failed to connect. Unable to stop active connection: %w", err)
@@ -468,10 +476,10 @@ func (s *Service) connectWireGuard(connectionParams wireguard.ConnectionParams, 
 		return vpnObj, nil
 	}
 
-	return s.keepConnection(createVpnObjfunc, manualDNS, antiTracker, firewallOn, firewallDuringConnection)
+	return s.keepConnection(originalEntryServerInfo, createVpnObjfunc, manualDNS, antiTracker, firewallOn, firewallDuringConnection)
 }
 
-func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), initialManualDNS dns.DnsSettings, initialAntiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) (retError error) {
+func (s *Service) keepConnection(originalEntryServerInfo *svrConnInfo, createVpnObj func() (vpn.Process, error), initialManualDNS dns.DnsSettings, initialAntiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) (retError error) {
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return srverrors.ErrorNotLoggedIn{}
@@ -516,7 +524,7 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), initi
 		}
 
 		// start connection
-		connErr := s.connect(vpnObj, dns, antitracker, firewallOn, firewallDuringConnection)
+		connErr := s.connect(originalEntryServerInfo, vpnObj, dns, antitracker, firewallOn, firewallDuringConnection)
 		if connErr != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", connErr))
 			if s._requiredVpnState == Connect {
@@ -570,9 +578,11 @@ func (s *Service) keepConnection(createVpnObj func() (vpn.Process, error), initi
 }
 
 // Connect connect vpn.
-// Param 'firewallOn' - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored).
-// Param 'firewallDuringConnection' - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
-func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) error {
+//   - Param 'originalEntryServerInfo' - contains original info about EntryServer/Port (it is not 'nil' for V2Ray connections).
+//     We need this info to notify correct data about vpn.CONNECTED state: for V2Ray connection the original parameters are overwriten by local V2Ray proxy params ('127.0.0.1:local_port')
+//   - Param 'firewallOn' - enable firewall before connection (if true - the parameter 'firewallDuringConnection' will be ignored).
+//   - Param 'firewallDuringConnection' - enable firewall before connection and disable after disconnection (has effect only if Firewall not enabled before)
+func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool) error {
 	var connectRoutinesWaiter sync.WaitGroup
 
 	// stop active connection (if exists)
@@ -684,6 +694,13 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTr
 				state.Time = time.Now().Unix()
 				// store info about VPN connection type
 				state.VpnType = vpnProc.Type()
+
+				// 'originalEntryServerInfo' contains original info about EntryServer/Port (it is not 'nil' for V2Ray connections).
+				// We need this info to notify correct data about vpn.CONNECTED state: for V2Ray connection the original parameters are overwriten by local V2Ray proxy params ('127.0.0.1:local_port')
+				if state.State == vpn.CONNECTED && originalEntryServerInfo != nil {
+					state.ServerIP = originalEntryServerInfo.IP     // because state.ServerIP contains "127.0.0.1" which is not informative for the client
+					state.ServerPort = originalEntryServerInfo.Port // because state.ServerPort contains local port (port of local V2Ray proxy)
+				}
 
 				// forward state to 'stateChan'
 				s._evtReceiver.OnVpnStateChanged(state)
@@ -903,7 +920,11 @@ func (s *Service) connect(vpnProc vpn.Process, manualDNS dns.DnsSettings, antiTr
 	return nil
 }
 
-func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayTransportType) (updatedParams types.ConnectionParams, v2RayWrapper *v2r.V2RayWrapper, err error) {
+func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayTransportType) (
+	updatedParams types.ConnectionParams,
+	v2RayWrapper *v2r.V2RayWrapper,
+	originalEntryServerInfo *svrConnInfo,
+	err error) {
 	//
 	// Info:
 	// - V2Ray data flow:
@@ -921,12 +942,12 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 	//   * WireGuard: since the first WG server is the ExitServer - we have to use it's public key in the WireGuard configuration
 
 	if v2RayType != v2r.QUIC && v2RayType != v2r.TCP {
-		return params, nil, nil
+		return params, nil, nil, nil
 	}
 
 	svrs, err := s.ServersList()
 	if err != nil {
-		return params, v2RayWrapper, err
+		return params, nil, nil, err
 	}
 	outboundUserId := svrs.Config.Ports.V2Ray.ID
 
@@ -1000,7 +1021,7 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 		}
 	}
 	if len(inboundPortsFiltered) == 0 {
-		return params, nil, fmt.Errorf("V2Ray is not supported: no V2Ray '%s' ports for the speified VPN type", requiredPortTypeStr)
+		return params, nil, nil, fmt.Errorf("V2Ray is not supported: no V2Ray '%s' ports for the speified VPN type", requiredPortTypeStr)
 	}
 
 	// If there are more than one port - select random one
@@ -1020,21 +1041,25 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 		outboundUserId,
 		outboundTlsSvrName)
 	if err != nil {
-		return params, nil, fmt.Errorf("failed to start v2ray: %w", err)
+		return params, nil, nil, fmt.Errorf("failed to start v2ray: %w", err)
 	}
 
 	v2rayLocalPort, _, err := v.GetLocalPort()
 	if err != nil {
 		v.Stop()
-		return params, nil, fmt.Errorf("failed to get V2Ray local port: %w", err)
+		return params, nil, nil, fmt.Errorf("failed to get V2Ray local port: %w", err)
 	}
 
 	// ------------------------------------------------------------
 	// Update the original connection parameters with the settings required for the V2Ray connection
 	// ------------------------------------------------------------
 	updatedParams = params
+	origEntrySvr := &svrConnInfo{}
 	if vpn.Type(params.VpnType) == vpn.OpenVPN {
 
+		// We have to return the original information about EntryServer
+		origEntrySvr.IP = net.ParseIP(updatedParams.OpenVpnParameters.EntryVpnServer.Hosts[0].Host)
+		origEntrySvr.Port = updatedParams.OpenVpnParameters.Port.Port
 		// Specify connection parameters to local V2Ray proxy
 		updatedParams.OpenVpnParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"
 		updatedParams.OpenVpnParameters.Port.Port = v2rayLocalPort
@@ -1048,6 +1073,9 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 
 	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
 
+		// We have to return the original information about EntryServer
+		origEntrySvr.IP = net.ParseIP(updatedParams.WireGuardParameters.EntryVpnServer.Hosts[0].Host)
+		origEntrySvr.Port = updatedParams.WireGuardParameters.Port.Port
 		// Specify connection parameters to local V2Ray proxy
 		updatedParams.WireGuardParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"
 		updatedParams.WireGuardParameters.Port.Port = v2rayLocalPort
@@ -1063,5 +1091,5 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 	}
 	// ------------------------------------------------------------
 
-	return updatedParams, v, nil
+	return updatedParams, v, origEntrySvr, nil
 }
