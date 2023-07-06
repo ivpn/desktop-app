@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.  
 
-## Version 3.11.5 (BETA) - 2023-06-06
+## Version 3.11.5 (BETA) - 2023-07-06
 
 [NEW] Post-Quantum Resistant WireGuard Connections  
 [NEW] Ability to Pause/Resume Connection from CLI  
