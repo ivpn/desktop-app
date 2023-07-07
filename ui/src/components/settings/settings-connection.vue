@@ -173,9 +173,9 @@
 
           <div>
             <div class="flexRow">
-              <select v-model="obfsproxyType">
+              <select v-model="obfuscationType">
                 <option
-                  v-for="item in obfsproxyTypes"
+                  v-for="item in obfuscationTypes"
                   :value="item"
                   :key="item.text"
                 >
@@ -292,9 +292,9 @@
 
         <div>
           <div class="flexRow">
-            <select v-model="obfsproxyType">
+            <select v-model="obfuscationType">
               <option
-                v-for="item in obfsproxyTypes"
+                v-for="item in obfuscationTypes"
                 :value="item"
                 :key="item.text"
               >
@@ -531,6 +531,55 @@ export default {
 
       await this.reconnect();
     },
+
+    async V2RayType(newValue) {
+      const isV2Ray = !!newValue;
+      // check if current port is applicable for selected obfuscation type
+      if (isV2Ray === true) {
+        const currPort = this.$store.getters["settings/getPort"];
+        const p = getAppropriateObfuscationPort(
+          this.prefferedPorts,
+          currPort,
+          newValue
+        );
+        if (p && (p.port !== currPort.port || p.type !== currPort.type)) {
+          console.log(
+            `Obfuscation type was changed. Port was changed from`,
+            currPort,
+            `to`,
+            p
+          );
+          this.$store.dispatch("settings/setPort", p);
+        }
+      }
+    },
+
+    async isOpenVPN() {
+      const V2RayType = this.$store.getters["settings/V2RayType"];
+      if (
+        V2RayType !== V2RayObfuscationEnum.QUIC &&
+        V2RayType !== V2RayObfuscationEnum.TCP
+      )
+        return;
+
+      // check if current port is applicable for selected obfuscation type
+      const currPort = this.$store.getters["settings/getPort"];
+      const p = getAppropriateObfuscationPort(
+        this.prefferedPorts,
+        currPort,
+        V2RayType
+      );
+      if (p && (p.port !== currPort.port || p.type !== currPort.type)) {
+        console.log(
+          `VPN type was changed. Port was changed from`,
+          currPort,
+          `to`,
+          p,
+          `due to V2Ray configuration`
+        );
+        this.$store.dispatch("settings/setPort", p);
+      }
+    },
   },
 
   methods: {
@@ -651,28 +700,6 @@ export default {
         return true;
       return this.$store.state.account?.accountStatus?.Active === true;
     },
-    port: {
-      get() {
-        return this.$store.getters["settings/getPort"];
-      },
-      set(value) {
-        this.isPortModified = true;
-
-        if (value == "valueAddCustomPort") {
-          // we need it just to update UI to show current port (except 'Add custom port...')
-          this.$store.dispatch("settings/setPort", this.port);
-
-          try {
-            this.$refs.addCustomPortDlg.showModal();
-          } catch (e) {
-            console.error(e);
-          }
-          return;
-        }
-
-        this.$store.dispatch("settings/setPort", value);
-      },
-    },
     mtu: {
       get() {
         return this.$store.state.settings.mtu;
@@ -706,14 +733,19 @@ export default {
       },
     },
 
-    //  -------- obfsproxy BEGIN ------------------
+    //  -------- obfuscation BEGIN ------------------
+    V2RayType: {
+      get() {
+        return this.$store.getters["settings/V2RayType"];
+      },
+    },
     connectionUseObfsproxy: {
       get() {
         return this.$store.getters["settings/isConnectionUseObfsproxy"];
       },
     },
 
-    obfsproxyType: {
+    obfuscationType: {
       get() {
         let obfsCfg = null;
         if (this.isOpenVPN === true)
@@ -730,25 +762,29 @@ export default {
         if (value.v2RayType == undefined)
           sender.SetV2RayProxy(V2RayObfuscationEnum.None);
 
-        // set new obfuscation parameters
-        if (value.obfsVer != undefined && this.isOpenVPN === true) {
-          sender.SetObfsproxy(value.obfsVer, value.obfs4Iat); // do not chane obfsproxy parames from WireGuard settings
-        } else if (value.v2RayType != undefined)
+        // Set new obfuscation parameters
+        // (do not chane obfsproxy parames from WireGuard settings)
+        if (value.obfsVer != undefined && this.isOpenVPN === true)
+          sender.SetObfsproxy(value.obfsVer, value.obfs4Iat);
+        else if (value.v2RayType != undefined)
           sender.SetV2RayProxy(value.v2RayType);
+
+        // Note: if v2RayType changed, it could be that port should be changed too
+        // We do it in watch { v2RayType ... }
       },
     },
 
-    obfsproxyTypes: {
+    obfuscationTypes: {
       get() {
         let ret = [makeObfsInfoUiObj()];
         if (this.isOpenVPN === true) {
-          var obfsproxyTypes = [
+          var obfuscationTypes = [
             makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT0),
             makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT1),
             makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT2),
             makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs3, Obfs4IatEnum.IAT0),
           ];
-          ret = [...ret, ...obfsproxyTypes];
+          ret = [...ret, ...obfuscationTypes];
         }
         let v2RayTypes = [
           makeObfsInfoUiObj(V2RayObfuscationEnum.QUIC),
@@ -759,7 +795,7 @@ export default {
       },
     },
 
-    //  -------- obfsproxy END ------------------
+    //  -------- obfuscation END ------------------
 
     ovpnProxyType: {
       get() {
@@ -857,6 +893,28 @@ export default {
 
       return true;
     },
+    port: {
+      get() {
+        return this.$store.getters["settings/getPort"];
+      },
+      set(value) {
+        this.isPortModified = true;
+
+        if (value == "valueAddCustomPort") {
+          // we need it just to update UI to show current port (except 'Add custom port...')
+          this.$store.dispatch("settings/setPort", this.port);
+
+          try {
+            this.$refs.addCustomPortDlg.showModal();
+          } catch (e) {
+            console.error(e);
+          }
+          return;
+        }
+
+        this.$store.dispatch("settings/setPort", value);
+      },
+    },
     prefferedPorts: function () {
       let ret = [];
       let ports = this.$store.getters["vpnState/connectionPorts"];
@@ -865,43 +923,76 @@ export default {
       const isObfsproxy =
         this.$store.getters["settings/isConnectionUseObfsproxy"];
 
-      if (isObfsproxy) {
-        // For Obfsproxy: port number is ignored. Only TCP protocol is applicable.
-        // try to use currently selected port
-        let port = ports.find((p) => p.port === this.port.port);
-        if (port) ports = [port];
-        else if (ports.length > 0) ports = [ports[0]];
-      } else if (isMH) {
-        // For Multi-Hop: port number is ignored. Only protocol has sense.
-        // So we just return one port definition for each protocol applicable for current VPN
-        // (by default, using currently selected port if it can be applied)
-        let portsByProtoHash = { udp: null, tcp: null };
+      const V2RayType = this.$store.getters["settings/V2RayType"];
 
-        // try to use currently selected port
-        let curPort = ports.find(
-          (p) => p.port === this.port.port && p.type === this.port.type
-        );
-        if (curPort) {
-          if (curPort.type === PortTypeEnum.TCP) portsByProtoHash.tcp = curPort;
-          else portsByProtoHash.udp = curPort;
+      const isV2Ray =
+        V2RayType === V2RayObfuscationEnum.QUIC ||
+        V2RayType === V2RayObfuscationEnum.TCP;
+
+      if (!isV2Ray) {
+        // Non-V2Ray
+        if (isObfsproxy) {
+          // For Obfsproxy: port number is ignored. Only TCP protocol is applicable.
+          // try to use currently selected port
+          let port = ports.find((p) => p.port === this.port.port);
+          if (port) ports = [port];
+          else if (ports.length > 0) ports = [ports[0]];
+        } else if (isMH) {
+          // For Multi-Hop: port number is ignored. Only protocol has sense.
+          // So we just return one port definition for each protocol applicable for current VPN
+          // (by default, using currently selected port if it can be applied)
+          let portsByProtoHash = { udp: null, tcp: null };
+
+          // try to use currently selected port
+          let curPort = ports.find(
+            (p) => p.port === this.port.port && p.type === this.port.type
+          );
+          if (curPort) {
+            if (curPort.type === PortTypeEnum.TCP)
+              portsByProtoHash.tcp = curPort;
+            else portsByProtoHash.udp = curPort;
+          }
+          // get first port definition for each protocol
+          if (!portsByProtoHash.tcp)
+            portsByProtoHash.tcp = ports.find(
+              (p) => p.type === PortTypeEnum.TCP
+            );
+          if (!portsByProtoHash.udp)
+            portsByProtoHash.udp = ports.find(
+              (p) => p.type === PortTypeEnum.UDP
+            );
+
+          if (portsByProtoHash.tcp || portsByProtoHash.udp) {
+            ports = [];
+            if (portsByProtoHash.udp) ports.push(portsByProtoHash.udp);
+            if (portsByProtoHash.tcp) ports.push(portsByProtoHash.tcp);
+          }
         }
-        // get first port definition for each protocol
-        if (!portsByProtoHash.tcp)
-          portsByProtoHash.tcp = ports.find((p) => p.type === PortTypeEnum.TCP);
-        if (!portsByProtoHash.udp)
-          portsByProtoHash.udp = ports.find((p) => p.type === PortTypeEnum.UDP);
-
-        if (portsByProtoHash.tcp || portsByProtoHash.udp) {
-          ports = [];
-          if (portsByProtoHash.udp) ports.push(portsByProtoHash.udp);
-          if (portsByProtoHash.tcp) ports.push(portsByProtoHash.tcp);
+      } else {
+        // V2Ray
+        if (V2RayType === V2RayObfuscationEnum.QUIC) {
+          // QUIC always uses UDP protocol
+          ports = ports.filter((p) => p.type === PortTypeEnum.UDP);
+        } else if (V2RayType === V2RayObfuscationEnum.TCP) {
+          // TCP always uses TCP protocol
+          // For WireGuard connection there will not be TCP ports defined. So we transform TCP ports to UDP ports
+          if (this.isOpenVPN === false) {
+            ports = ports.map((p) => {
+              return {
+                port: p.port,
+                type: PortTypeEnum.TCP,
+              };
+            });
+          }
+          ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
         }
       }
 
+      // create UI items for ports
       ports.forEach((p) =>
         ret.push({
           text:
-            isMH === true || isObfsproxy === true // port number ignored for multi-hop and obfsproxy
+            !isV2Ray && (isMH === true || isObfsproxy === true) // port number ignored for multi-hop and obfsproxy (but not for V2Ray!)
               ? `${enumValueName(PortTypeEnum, p.type)}`
               : `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
           key: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
@@ -934,6 +1025,73 @@ function makeObfsInfoUiObj(v2rayType, obfsVer, obfs4Iat) {
     obfsVer: obfsVer,
     obfs4Iat: obfs4Iat,
   };
+}
+
+// If V2Ray is used, then QUIC uses UDP protocol and TCP uses TCP protocol.
+// This function returns appropriate port for obfuscation.
+// If current port is not applicable for obfuscation, then returns best alternate port.
+// If current port is applicable for obfuscation, then returns current port.
+// If no ports applicable for obfuscation, then returns current port.
+// Recommended ports are: 443/UDP (QUIC) and 80/TCP (HTTP)
+function getAppropriateObfuscationPort(
+  applicablePortsUiList,
+  currentSelectedPort,
+  v2rayType
+) {
+  if (v2rayType != undefined && !v2rayType) {
+    // V2Ray is not used
+    return currentSelectedPort;
+  }
+
+  let bestAlternatePort = null; // best alternate port (443/UDP (QUIC) and 80/TCP (HTTP))
+  let alternatePort = null; // alternate port with same port number but different protocol
+
+  for (let i = 0; i < applicablePortsUiList.length; i++) {
+    const p = applicablePortsUiList[i].port;
+    if (
+      p.port === currentSelectedPort.port &&
+      p.type === currentSelectedPort.type
+    ) {
+      // current port is applicable for obfuscation
+      return p;
+    }
+
+    if (p.port === currentSelectedPort.port) {
+      // Current port is not applicable for obfuscation because of protocol.
+      // But we will use currently selected port (but with changed protocol) if there is no better alternate port.
+      alternatePort = p;
+    }
+
+    // Recommended alternate ports are: 443/UDP (QUIC) and 80/TCP (HTTP)
+    if (v2rayType != undefined) {
+      if (
+        v2rayType === V2RayObfuscationEnum.QUIC &&
+        p.port === 443 &&
+        p.type === PortTypeEnum.UDP
+      )
+        bestAlternatePort = p;
+      else if (
+        v2rayType === V2RayObfuscationEnum.TCP &&
+        p.port === 80 &&
+        p.type === PortTypeEnum.TCP
+      )
+        bestAlternatePort = p;
+    }
+  }
+
+  // If there is better alternate port, then use it
+  if (bestAlternatePort != null) return bestAlternatePort;
+
+  if (alternatePort === null && applicablePortsUiList.length > 0) {
+    // If there is no alternate port, then use first available port
+    console.log(
+      `getAppropriateObfuscationPort: no port found for ${currentSelectedPort.port} ${currentSelectedPort.type}. Taking first available port`
+    );
+    alternatePort = applicablePortsUiList[0].port;
+  }
+
+  // If there is no better alternate port, then use currently selected port (but with changed protocol) if it is applicable
+  return alternatePort;
 }
 </script>
 

@@ -51,8 +51,9 @@ import (
 )
 
 type svrConnInfo struct {
-	IP   net.IP
-	Port int
+	IP       net.IP
+	Port     int
+	PortType int // UDP(0), TCP(1)
 }
 
 func (s *Service) ValidateConnectionParameters(params types.ConnectionParams, isCanFix bool) (types.ConnectionParams, error) {
@@ -700,6 +701,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 				if state.State == vpn.CONNECTED && originalEntryServerInfo != nil {
 					state.ServerIP = originalEntryServerInfo.IP     // because state.ServerIP contains "127.0.0.1" which is not informative for the client
 					state.ServerPort = originalEntryServerInfo.Port // because state.ServerPort contains local port (port of local V2Ray proxy)
+					state.IsTCP = originalEntryServerInfo.PortType > 0
 				}
 
 				// forward state to 'stateChan'
@@ -962,6 +964,13 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 	outboundIp := ""
 	outboundPort, isTcp := params.Port()
 
+	if v2RayType == v2r.QUIC && isTcp {
+		return params, nil, nil, fmt.Errorf("not accectable port type for V2Ray-QUIC connection (UDP is expected)")
+	}
+	if v2RayType == v2r.TCP && !isTcp {
+		return params, nil, nil, fmt.Errorf("not accectable port type for V2Ray-TCP connection (TCP is expected)")
+	}
+
 	requiredPortTypeStr := "tcp"
 	if !isTcp {
 		requiredPortTypeStr = "udp"
@@ -1060,6 +1069,8 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 		// We have to return the original information about EntryServer
 		origEntrySvr.IP = net.ParseIP(updatedParams.OpenVpnParameters.EntryVpnServer.Hosts[0].Host)
 		origEntrySvr.Port = updatedParams.OpenVpnParameters.Port.Port
+		origEntrySvr.PortType = updatedParams.OpenVpnParameters.Port.Protocol
+
 		// Specify connection parameters to local V2Ray proxy
 		updatedParams.OpenVpnParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"
 		updatedParams.OpenVpnParameters.Port.Port = v2rayLocalPort
@@ -1076,6 +1087,8 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 		// We have to return the original information about EntryServer
 		origEntrySvr.IP = net.ParseIP(updatedParams.WireGuardParameters.EntryVpnServer.Hosts[0].Host)
 		origEntrySvr.Port = updatedParams.WireGuardParameters.Port.Port
+		origEntrySvr.PortType = updatedParams.WireGuardParameters.Port.Protocol
+
 		// Specify connection parameters to local V2Ray proxy
 		updatedParams.WireGuardParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"
 		updatedParams.WireGuardParameters.Port.Port = v2rayLocalPort

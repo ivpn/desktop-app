@@ -88,7 +88,8 @@ type ConnectionParams struct {
 	WireGuardParameters struct {
 		// Port in use only for Single-Hop connections
 		Port struct {
-			Port int
+			Protocol int // by default, it must be UDP (0) for WireGuard. But for V2Ray connections it can be UDP or TCP
+			Port     int
 		}
 
 		EntryVpnServer struct {
@@ -145,7 +146,7 @@ func (p ConnectionParams) CheckIsDefined() error {
 
 func (p ConnectionParams) Port() (port int, isTcp bool) {
 	if p.VpnType == vpn.WireGuard {
-		return p.WireGuardParameters.Port.Port, false
+		return p.WireGuardParameters.Port.Port, p.WireGuardParameters.Port.Protocol > 0 // is TCP
 	}
 	return p.OpenVpnParameters.Port.Port, p.OpenVpnParameters.Port.Protocol > 0 // is TCP
 }

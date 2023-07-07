@@ -27,6 +27,7 @@ import {
   ColorTheme,
   ColorThemeTrayIcon,
   DnsEncryption,
+  V2RayObfuscationEnum,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -465,6 +466,15 @@ export default {
         console.error(e);
       }
       return false;
+    },
+
+    V2RayType: (state) => {
+      try {
+        return state.daemonSettings.V2RayConfig;
+      } catch (e) {
+        console.error(e);
+      }
+      return V2RayObfuscationEnum.None;
     },
 
     favoriteServersAndHosts: (state, getters, rootState, rootGetters) => {
@@ -1073,6 +1083,12 @@ function ensurePortsSelectedCorrectly(context) {
 
   // if we still not received configuration info (servers.json) - do nothing
   if (context.rootGetters["vpnState/isConfigInitialized"] !== true) return;
+
+  if (context.getters["V2RayType"]) {
+    // skip check for V2Ray
+    // TODO: implement check for V2Ray
+    return;
+  }
 
   // clean custom ports which are not applicable anymore (range is not exists anymore)
   eraseNonAcceptableCustomPorts(context);

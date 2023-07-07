@@ -86,6 +86,7 @@ export function InitConnectionParamsObject() {
 
       Port: {
         Port: port.port,
+        Protocol: port.type, // 0 === UDP
       },
     };
 
