@@ -419,44 +419,43 @@
 
     <!-- Help dialogs -->
     <ComponentDialog ref="helpDialogObfsproxy" header="Info">
-      <div class="selectable">
+      <div>
+        <p>
+          VPN obfuscation is a technique that masks VPN traffic to make it look
+          like standard internet data, helping it evade detection and bypass
+          internet restrictions or censorship.
+        </p>
+        <!--<div class="horizontalLine" />-->
         <div v-show="isOpenVPN">
           <p>
             <b>Obfsproxy</b> attempts to circumvent censorship, by transforming
             the traffic between the client and the server.
-          </p>
-          <p>
-            The <i>obfs4</i> protocol is less likely to be blocked than
-            <i>obfs3</i>.
-          </p>
-          <p>
+            <br />
+
             Inter-Arrival Time (<b>IAT</b>) parameter is applicable for
-            <i>obfs4</i>:
+            <i>obfs4</i>, which is an improved version of obfs3. <br /><i
+              >Note! Enabling IAT mode will affect overall VPN speed and CPU
+              load.</i
+            >
           </p>
 
           <ul>
             <li>
-              When IAT-mode is disabled large packets will be split by the
-              network drivers which may result in network fingerprints that
-              could be detected by censors.
+              <b>obfs4</b> - IAT-mode is disabled. Large packets will be split
+              by the network drivers which may result in network fingerprints
+              that could be detected by censors.
             </li>
             <li>
-              IAT1 - Large packets will be split into MTU-size packets by
-              Obfsproxy (instead the network drivers), resulting in smaller
-              packets that are more resistant to being reassembled for analysis
-              and censoring.
+              <b>obfs4 (IAT1)</b> - Large packets will be split into MTU-size
+              packets by Obfsproxy (instead the network drivers), resulting in
+              smaller packets that are more resistant to being reassembled for
+              analysis and censoring.
             </li>
             <li>
-              IAT2 - (paranoid mode) - Large packets will be split into variable
-              size packets by Obfsproxy.
+              <b>obfs4 (IAT2)</b> - (paranoid mode) - Large packets will be
+              split into variable size packets by Obfsproxy.
             </li>
           </ul>
-
-          <p>
-            <b> Note! </b> Enabling IAT mode will affect overall VPN speed and
-            CPU load.
-          </p>
-          <div class="horizontalLine" />
         </div>
         <div>
           <p>
@@ -464,23 +463,32 @@
             traffic, effectively circumventing online censorship and blocking by
             masquerading your data as regular network traffic.
           </p>
-
-          <p>There are two transport protocol options:</p>
-
           <ul>
             <li>
-              <b>QUIC</b> is a modern protocol designed to provide robust
-              security and high performance, while reducing latency compared to
-              traditional protocols. By masquerading your data as regular HTTPS
-              traffic, QUIC can help obfuscate your VPN traffic.
+              <b>V2Ray (QUIC)</b> is a modern protocol designed to provide
+              robust security and high performance, while reducing latency
+              compared to traditional protocols. It makes your data appear as
+              regular HTTPS traffic.
             </li>
             <li>
-              <b>TCP</b> is a traditional, widely-used protocol that guarantees
-              reliable, ordered data delivery. It makes your data appear as
-              regular HTTP traffic, improving the obfuscation of your VPN
-              traffic.
+              <b>V2Ray (TCP)</b> is a traditional, widely-used protocol that
+              guarantees reliable, ordered data delivery. It makes your data
+              appear as regular HTTP traffic.
             </li>
           </ul>
+        </div>
+
+        <div>
+          <p v-show="isOpenVPN">
+            Choose V2Ray if you need robust performance, flexibility, and a
+            modern protocol for obfuscating your VPN traffic. Opt for obfsproxy
+            if you're dealing with high levels of internet censorship, and you
+            require a more stealthy approach that's harder to detect.
+          </p>
+          <p>
+            Your specific use-case and environmental factors should guide your
+            choice.
+          </p>
         </div>
       </div>
     </ComponentDialog>

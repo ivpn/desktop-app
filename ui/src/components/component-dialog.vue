@@ -23,8 +23,8 @@
       </div>
       <div class="horizontalLine" />
     </div>
-    <div>
-      <slot>
+    <div class="selectable">
+      <slot class="selectable">
         <!-- here will be shown content of component -->
       </slot>
     </div>

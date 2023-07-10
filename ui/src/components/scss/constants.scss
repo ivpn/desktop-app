@@ -144,8 +144,13 @@ div.arrowRightSimple {
     -webkit-transform: rotate(-45deg);
 }
 
-label.selectable {
-    -webkit-user-select: text
+.selectable {
+    -webkit-user-select: text;
+    user-select: text;
+}
+.selectable * {
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 // btnScrollDown
