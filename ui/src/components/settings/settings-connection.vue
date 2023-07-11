@@ -757,7 +757,7 @@ export default {
       get() {
         let obfsCfg = null;
         if (this.isOpenVPN === true)
-          obfsCfg = this.$store.state.settings.daemonSettings.ObfsproxyConfig;
+          obfsCfg = this.$store.state.settings.openvpnObfsproxyConfig;
 
         let v2RayCfg = this.$store.state.settings.daemonSettings.V2RayConfig;
         if (!obfsCfg && !v2RayCfg) return makeObfsInfoUiObj();
@@ -766,14 +766,20 @@ export default {
       set(value) {
         // erase obfuscation parameters
         if (value.obfsVer == undefined && this.isOpenVPN === true)
-          sender.SetObfsproxy(ObfsproxyVerEnum.None, Obfs4IatEnum.IAT0); // do not chane obfsproxy parames from WireGuard settings
+          this.$store.dispatch("settings/openvpnObfsproxyConfig", {
+            Version: ObfsproxyVerEnum.None,
+            Obfs4Iat: Obfs4IatEnum.IAT0,
+          });
         if (value.v2RayType == undefined)
           sender.SetV2RayProxy(V2RayObfuscationEnum.None);
 
         // Set new obfuscation parameters
         // (do not chane obfsproxy parames from WireGuard settings)
         if (value.obfsVer != undefined && this.isOpenVPN === true)
-          sender.SetObfsproxy(value.obfsVer, value.obfs4Iat);
+          this.$store.dispatch("settings/openvpnObfsproxyConfig", {
+            Version: value.obfsVer,
+            Obfs4Iat: value.obfs4Iat,
+          });
         else if (value.v2RayType != undefined)
           sender.SetV2RayProxy(value.v2RayType);
 

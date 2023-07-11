@@ -554,13 +554,9 @@ func (c *CmdConnect) Run() (retError error) {
 					entrySvrOvpn = &servers.OpenvpnServers[i]
 
 					// set obfsproxy config
-					if !_proto.GetHelloResponse().DaemonSettings.ObfsproxyConfig.Equals(obfsproxyCfg) {
-						if err = _proto.SetObfsProxy(obfsproxyCfg); err != nil {
-							return err
-						}
-					}
 					if obfsproxyCfg.IsObfsproxy() {
 						fmt.Println("obfsproxy configuration: " + obfsproxyCfg.ToString())
+						req.Params.OpenVpnParameters.Obfs4proxy = obfsproxyCfg
 					}
 
 					serverFound = true

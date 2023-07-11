@@ -226,8 +226,12 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 				proxyPassword)
 		}
 
-		isCanUseObfsProxy := v2RayWrapper == nil
-		return s.connectOpenVPN(originalEntryServerInfo, connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection, isCanUseObfsProxy)
+		if v2RayWrapper != nil {
+			// if V2Ray enabled - ignore obfsproxy option
+			params.OpenVpnParameters.Obfs4proxy = obfsproxy.Config{}
+		}
+
+		return s.connectOpenVPN(originalEntryServerInfo, connectionParams, params.ManualDNS, params.Metadata.AntiTracker, params.FirewallOn, params.FirewallOnDuringConnection, params.OpenVpnParameters.Obfs4proxy)
 
 	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
 		if len(params.WireGuardParameters.EntryVpnServer.Hosts) < 1 {
@@ -289,21 +293,17 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 }
 
 // connectOpenVPN start OpenVPN connection
-func (s *Service) connectOpenVPN(originalEntryServerInfo *svrConnInfo, connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool, isCanUseObfsProxy bool) error {
+func (s *Service) connectOpenVPN(originalEntryServerInfo *svrConnInfo, connectionParams openvpn.ConnectionParams, manualDNS dns.DnsSettings, antiTracker types.AntiTrackerMetadata, firewallOn bool, firewallDuringConnection bool, obfsproxyConfig obfsproxy.Config) error {
 
 	createVpnObjfunc := func() (vpn.Process, error) {
 		prefs := s.Preferences()
-
-		if !isCanUseObfsProxy {
-			prefs.Obfs4proxy = obfsproxy.Config{} // reset obfsproxy config for this connection (obfsproxy connection is not allowed)
-		}
 
 		// checking if functionality accessible
 		disabledFuncs := s.GetDisabledFunctions()
 		if len(disabledFuncs.OpenVPNError) > 0 {
 			return nil, fmt.Errorf(disabledFuncs.OpenVPNError)
 		}
-		if prefs.Obfs4proxy.IsObfsproxy() && len(disabledFuncs.ObfsproxyError) > 0 {
+		if obfsproxyConfig.IsObfsproxy() && len(disabledFuncs.ObfsproxyError) > 0 {
 			return nil, fmt.Errorf(disabledFuncs.ObfsproxyError)
 		}
 
@@ -359,9 +359,8 @@ func (s *Service) connectOpenVPN(originalEntryServerInfo *svrConnInfo, connectio
 		}
 
 		// initialize obfsproxy parameters
-		obfsParams := openvpn.ObfsParams{}
-		if prefs.Obfs4proxy.IsObfsproxy() {
-			obfsParams.Config = prefs.Obfs4proxy
+		obfsParams := openvpn.ObfsParams{Config: obfsproxyConfig}
+		if obfsParams.Config.IsObfsproxy() {
 			svrs, err := s.ServersList()
 			if err != nil {
 				return nil, fmt.Errorf("failed to initialize obfsproxy configuration: %w", err)

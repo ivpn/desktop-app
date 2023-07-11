@@ -93,7 +93,7 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 	since := time.Unix(connected.TimeSecFrom1970, 0)
 	protocol := fmt.Sprintf("%v", connected.VpnType)
 	if connected.VpnType == vpn.OpenVPN {
-		obfsCfg := helloResp.DaemonSettings.ObfsproxyConfig
+		obfsCfg := connected.Obfsproxy
 		if obfsCfg.IsObfsproxy() {
 			protocol += fmt.Sprintf(" (Obfsproxy: %s)", obfsCfg.ToString())
 		}

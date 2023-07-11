@@ -439,7 +439,7 @@ export default {
         // For Obfsproxy: only TCP protocol is applicable.
         try {
           const isUseObfsproxy =
-            rootState.settings.daemonSettings.ObfsproxyConfig.Version > 0;
+            rootState.settings.openvpnObfsproxyConfig.Version > 0;
           if (vpnType === VpnTypeEnum.OpenVPN && isUseObfsproxy === true)
             ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
         } catch (e) {
@@ -587,6 +587,12 @@ export default {
         var mtu = ci.Mtu;
         if (mtu === 0) mtu = null;
         context.commit("settings/mtu", mtu, { root: true });
+      }
+
+      if (ci.VpnType === VpnTypeEnum.OpenVPN && ci.Obfsproxy != undefined) {
+        context.dispatch("settings/openvpnObfsproxyConfig", ci.Obfsproxy, {
+          root: true,
+        });
       }
     },
     servers(context, value) {

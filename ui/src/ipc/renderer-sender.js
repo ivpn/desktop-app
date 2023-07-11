@@ -210,13 +210,6 @@ export default {
   SetLogging: async (isEnabled) => {
     return await invoke("renderer-request-set-logging", isEnabled);
   },
-  SetObfsproxy: async (obfsproxyVer, obfs4Iat) => {
-    return await invoke(
-      "renderer-request-set-obfsproxy",
-      obfsproxyVer,
-      obfs4Iat
-    );
-  },
   SetV2RayProxy: async (v2RayType) => {
     return await invoke("renderer-request-set-SetV2RayProxy", v2RayType);
   },

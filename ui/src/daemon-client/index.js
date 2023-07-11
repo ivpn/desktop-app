@@ -100,7 +100,6 @@ const daemonRequests = Object.freeze({
   WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval",
 
   SetPreference: "SetPreference",
-  SetObfsProxy: "SetObfsProxy",
   SetV2RayProxy: "SetV2RayProxy",
   SetUserPreferences: "SetUserPreferences",
 
@@ -1796,16 +1795,6 @@ async function SetLogging(enable) {
   });
 }
 
-async function SetObfsproxy(obfsproxyVer, obfs4Iat) {
-  await sendRecv({
-    Command: daemonRequests.SetObfsProxy,
-    ObfsproxyConfig: {
-      Version: obfsproxyVer,
-      Obfs4Iat: obfs4Iat,
-    },
-  });
-}
-
 async function SetV2RayProxy(v2RayType) {
   await sendRecv({
     Command: daemonRequests.SetV2RayProxy,
@@ -1927,7 +1916,6 @@ export default {
 
   SetAutoconnectOnLaunch,
   SetLogging,
-  SetObfsproxy,
   SetV2RayProxy,
   WgRegenerateKeys,
   WgSetKeysRotationInterval,

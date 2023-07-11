@@ -38,7 +38,6 @@ import (
 	"github.com/ivpn/desktop-app/daemon/kem"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
-	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
@@ -922,13 +921,6 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 	}
 
 	return isChanged, nil
-}
-
-func (s *Service) SetObfsProxy(cfg obfsproxy.Config) error {
-	prefs := s._preferences
-	prefs.Obfs4proxy = cfg
-	s.setPreferences(prefs)
-	return nil
 }
 
 func (s *Service) SetV2RayProxy(v2rayType v2r.V2RayTransportType) error {

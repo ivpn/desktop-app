@@ -189,12 +189,6 @@ ipcMain.handle("renderer-request-set-logging", async (event, enable) => {
   return await client.SetLogging(enable);
 });
 ipcMain.handle(
-  "renderer-request-set-obfsproxy",
-  async (event, obfsproxyVer, obfs4Iat) => {
-    return await client.SetObfsproxy(obfsproxyVer, obfs4Iat);
-  }
-);
-ipcMain.handle(
   "renderer-request-set-SetV2RayProxy",
   async (event, v2RayType) => {
     return await client.SetV2RayProxy(v2RayType);

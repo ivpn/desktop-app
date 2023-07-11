@@ -28,6 +28,7 @@ import (
 	"math/big"
 
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
@@ -99,6 +100,8 @@ type ConnectionParams struct {
 		MultihopExitServer MultiHopExitServer_WireGuard
 
 		Mtu int // Set 0 to use default MTU value
+
+		//V2RayProxy v2r.V2RayTransportType // V2Ray config
 	}
 
 	OpenVpnParameters struct {
@@ -121,6 +124,9 @@ type ConnectionParams struct {
 			// Port number in use only for Single-Hop connections
 			Port int
 		}
+
+		Obfs4proxy obfsproxy.Config // Obfsproxy config (ignored when 'V2RayProxy' defined)
+		//V2RayProxy v2r.V2RayTransportType // V2Ray config (this option takes precedence over the 'Obfs4proxy')
 	}
 }
 

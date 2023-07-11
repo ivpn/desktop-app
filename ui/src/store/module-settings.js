@@ -57,6 +57,19 @@ const getDefaultState = () => {
     isRandomServer: false,
     isRandomExitServer: false,
 
+    openvpnObfsproxyConfig: {
+      // 0 - do not use obfsproxy; obfs3 - 3; obfs4 - 4
+      Version: 0,
+      // Inter-Arrival Time (IAT). Applicable only for obfs4.
+      //	The values of IAT-mode can be “0”, “1”, or “2” in obfs4
+      //	0 -	means that the IAT-mode is disabled and that large packets will be split by the network drivers,
+      //		whose network fingerprints could be detected by censors.
+      //	1 - means splitting large packets into MTU-size packets instead of letting the network drivers do it.
+      //		Here, the MTU is 1448 bytes for the Obfs4 Bridge. This means the smaller packets cannot be reassembled for analysis and censoring.
+      //	2 - means splitting large packets into variable size packets. The sizes are defined in Obfs4.
+      Obfs4Iat: 0,
+    },
+
     // Favorite gateway's list (strings [gatewayID of server]). Only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
     serversFavoriteList: [],
     //Favorite hosts list (strings [host.dns_name])
@@ -76,19 +89,6 @@ const getDefaultState = () => {
       UserDefinedOvpnFile: "",
       IsLogging: false,
 
-      // obfsproxy configuration (OpenVPN only)
-      ObfsproxyConfig: {
-        // 0 - do not use obfsproxy; obfs3 - 3; obfs4 - 4
-        Version: 0,
-        // Inter-Arrival Time (IAT)
-        //	The values of IAT-mode can be “0”, “1”, or “2” in obfs4
-        //	0 -	means that the IAT-mode is disabled and that large packets will be split by the network drivers,
-        //		whose network fingerprints could be detected by censors.
-        //	1 - means splitting large packets into MTU-size packets instead of letting the network drivers do it.
-        //		Here, the MTU is 1448 bytes for the Obfs4 Bridge. This means the smaller packets cannot be reassembled for analysis and censoring.
-        //	2 - means splitting large packets into variable size packets. The sizes are defined in Obfs4.
-        Obfs4Iat: 0,
-      },
       V2RayConfig: 0, // None: 0, QUIC: 1, TCP: 2
 
       WiFi: {
@@ -291,6 +291,10 @@ export default {
       state.isRandomExitServer = val;
     },
 
+    openvpnObfsproxyConfig(state, val) {
+      state.openvpnObfsproxyConfig = val;
+    },
+
     // Favorite gateway's list (strings)
     serversFavoriteList(state, val) {
       state.serversFavoriteList = val;
@@ -461,7 +465,7 @@ export default {
     isConnectionUseObfsproxy: (state) => {
       try {
         if (state.vpnType !== VpnTypeEnum.OpenVPN) return false;
-        return state.daemonSettings.ObfsproxyConfig.Version > 0;
+        return state.openvpnObfsproxyConfig.Version > 0;
       } catch (e) {
         console.error(e);
       }
@@ -636,6 +640,10 @@ export default {
     },
     isRandomExitServer(context, val) {
       context.commit("isRandomExitServer", val);
+    },
+
+    openvpnObfsproxyConfig(context, val) {
+      context.commit("openvpnObfsproxyConfig", val);
     },
 
     // Favorite gateway's list (strings)

@@ -127,7 +127,6 @@ type SettingsResp struct {
 	IsAutoconnectOnLaunch       bool
 	IsAutoconnectOnLaunchDaemon bool
 	UserDefinedOvpnFile         string
-	ObfsproxyConfig             obfsproxy.Config // (for OpenVPN connections)
 	V2RayConfig                 v2r.V2RayTransportType
 	UserPrefs                   preferences.UserPreferences
 	WiFi                        preferences.WiFiParams
@@ -255,9 +254,10 @@ type ConnectedResp struct {
 	ExitHostname    string // multi-hop exit hostname (e.g. "us-tx1.wg.ivpn.net")
 	ManualDNS       dns.DnsSettings
 	IsTCP           bool
-	Mtu             int    // (for WireGuard connections)
-	IsPaused        bool   // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"
-	PausedTill      string // pausedTill.Format(time.RFC3339)
+	Mtu             int              // (for WireGuard connections)
+	Obfsproxy       obfsproxy.Config // applicable only for 'CONNECTED' state (OpenVPN)
+	IsPaused        bool             // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"
+	PausedTill      string           // pausedTill.Format(time.RFC3339)
 }
 
 // DisconnectionReason - disconnection reason

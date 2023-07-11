@@ -54,6 +54,8 @@ export function InitConnectionParamsObject() {
         Port: port.port,
         Protocol: port.type, // 0 === UDP
       },
+
+      Obfs4proxy: settings.openvpnObfsproxyConfig,
     };
 
     const ProxyType = settings.ovpnProxyType;

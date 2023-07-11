@@ -34,7 +34,6 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
-	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/v2r"
@@ -83,7 +82,6 @@ type Preferences struct {
 	IsFwAllowApiServers      bool
 	FwUserExceptions         string // Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
 	IsStopOnClientDisconnect bool
-	Obfs4proxy               obfsproxy.Config //Obfsproxy config (only for OpenVPN)
 	V2RayProxy               v2r.V2RayTransportType
 
 	// IsAutoconnectOnLaunch: if 'true' - daemon will perform automatic connection (see 'IsAutoconnectOnLaunchDaemon' for details)
@@ -201,19 +199,6 @@ func (p *Preferences) LoadPreferences() error {
 	if p.Session.WGKeysRegenInerval <= 0 {
 		p.Session.WGKeysRegenInerval = DefaultWGKeysInterval
 		log.Info(fmt.Sprintf("default value for preferences: WgKeysRegenIntervalDays=%v", p.Session.WGKeysRegenInerval))
-	}
-
-	// *** Compatibility with old versions ***
-
-	// Convert parameters from v3.9.14 (and releases older than 2022-08-16)
-	// If 'IsObfsproxy' is enabled  -> use use obfs3
-	type tmp_type_Settings_v3_9_14 struct {
-		IsObfsproxy bool
-	}
-	var tmp_Settings_v3_9_14 tmp_type_Settings_v3_9_14
-	err = json.Unmarshal(data, &tmp_Settings_v3_9_14)
-	if err == nil && tmp_Settings_v3_9_14.IsObfsproxy {
-		p.Obfs4proxy = obfsproxy.Config{Version: obfsproxy.OBFS3}
 	}
 
 	return nil
