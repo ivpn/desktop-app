@@ -589,7 +589,13 @@ export default {
         context.commit("settings/mtu", mtu, { root: true });
       }
 
-      if (ci.VpnType === VpnTypeEnum.OpenVPN && ci.Obfsproxy != undefined) {
+      if (ci.V2RayProxy !== undefined) {
+        context.dispatch("settings/setV2RayConfig", ci.V2RayProxy, {
+          root: true,
+        });
+      }
+
+      if (ci.VpnType === VpnTypeEnum.OpenVPN && ci.Obfsproxy) {
         context.dispatch("settings/openvpnObfsproxyConfig", ci.Obfsproxy, {
           root: true,
         });

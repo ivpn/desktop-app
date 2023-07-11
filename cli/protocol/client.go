@@ -41,7 +41,6 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
-	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/version"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"golang.org/x/crypto/pbkdf2"
@@ -233,20 +232,6 @@ func (c *Client) SetPreferences(key, value string) error {
 
 	req := types.SetPreference{Key: key, Value: value}
 
-	var resp types.EmptyResp
-	if err := c.sendRecv(&req, &resp); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *Client) SetV2RayProxy(cfg v2r.V2RayTransportType) error {
-	if err := c.ensureConnected(); err != nil {
-		return err
-	}
-
-	req := types.SetV2RayProxy{V2RayType: cfg}
 	var resp types.EmptyResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err

@@ -61,7 +61,7 @@ func (p *port) String() string {
 	if p.port != 0 {
 		return fmt.Sprintf("%s:%d", protoName, p.port)
 	}
-	return fmt.Sprintf("%s", protoName)
+	return protoName
 }
 
 func defaultPort() *port {
@@ -240,7 +240,7 @@ func (c *CmdConnect) preParse(arguments []string) ([]string, error) {
 // Run executes command
 func (c *CmdConnect) Run() (retError error) {
 
-	if len(c.gateway) == 0 && c.fastest == false && c.any == false && c.last == false && c.portsShow == false {
+	if len(c.gateway) == 0 && !c.fastest && !c.any && !c.last && !c.portsShow {
 		return flags.BadParameter{}
 	}
 	if c.v2rayProxy != "" && c.obfsproxy != "" {
@@ -415,7 +415,7 @@ func (c *CmdConnect) Run() (retError error) {
 				if len(svrs) > 1 {
 					fmt.Print("More than one server was found. ")
 
-					if c.any == false {
+					if !c.any {
 						fmt.Println("Please specify server more correctly or use flag '-any'")
 						showTipsServerFilterError()
 						return fmt.Errorf("more than one server found")
@@ -440,7 +440,7 @@ func (c *CmdConnect) Run() (retError error) {
 			if err != nil {
 				return fmt.Errorf("unable to check Firewall state: %w", err)
 			}
-			if state.IsEnabled == false {
+			if !state.IsEnabled {
 				req.Params.FirewallOnDuringConnection = false
 			} else {
 				fmt.Println("WARNING! Firewall option ignored (Firewall already enabled manually)")
@@ -477,6 +477,13 @@ func (c *CmdConnect) Run() (retError error) {
 					entrySvrWg = &servers.WireguardServers[i]
 
 					serverFound = true
+
+					// Set V2Ray obfuscation parameters
+					if v2rayCfg != v2r.None {
+						fmt.Println("V2Ray configuration: " + v2rayCfg.ToString())
+						req.Params.WireGuardParameters.V2RayProxy = v2rayCfg
+					}
+
 					req.Params.VpnType = vpn.WireGuard
 					req.Params.WireGuardParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
 					req.Params.IPv6 = c.isIPv6Tunnel
@@ -520,10 +527,7 @@ func (c *CmdConnect) Run() (retError error) {
 		}
 
 		// OpenVPN
-		if serverFound == false {
-			if obfsproxyCfg.IsObfsproxy() && len(helloResp.DisabledFunctions.ObfsproxyError) > 0 {
-				return fmt.Errorf(helloResp.DisabledFunctions.ObfsproxyError)
-			}
+		if !serverFound {
 
 			funcApplyCustomHost := func(hosts []apitypes.OpenVPNServerHostInfo, hostname string) []apitypes.OpenVPNServerHostInfo {
 				for _, h := range hosts {
@@ -553,13 +557,17 @@ func (c *CmdConnect) Run() (retError error) {
 				if s.Gateway == c.gateway {
 					entrySvrOvpn = &servers.OpenvpnServers[i]
 
-					// set obfsproxy config
-					if obfsproxyCfg.IsObfsproxy() {
+					serverFound = true
+
+					// Set V2Ray obfuscation parameters
+					if v2rayCfg != v2r.None {
+						fmt.Println("V2Ray configuration: " + v2rayCfg.ToString())
+						req.Params.OpenVpnParameters.V2RayProxy = v2rayCfg
+					} else if obfsproxyCfg.IsObfsproxy() { // Set obfsproxy config
 						fmt.Println("obfsproxy configuration: " + obfsproxyCfg.ToString())
 						req.Params.OpenVpnParameters.Obfs4proxy = obfsproxyCfg
 					}
 
-					serverFound = true
 					req.Params.VpnType = vpn.OpenVPN
 					req.Params.OpenVpnParameters.EntryVpnServer.Hosts = funcApplyCustomHost(s.Hosts, customHostEntryServer)
 
@@ -621,20 +629,11 @@ func (c *CmdConnect) Run() (retError error) {
 				fmt.Printf("\tentry server: %s, %s (%s) %s %s\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, portStrInfo)
 				fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvrOvpn.City, exitSvrOvpn.CountryCode, exitSvrOvpn.Country, exitSvrOvpn.Gateway)
 			}
+
 		}
 
-		if serverFound == false {
+		if !serverFound {
 			return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
-		}
-
-		// Set V2Ray obfuscation parameters
-		if v2rayCfg != v2r.None && len(helloResp.DisabledFunctions.V2RayError) > 0 {
-			return fmt.Errorf(helloResp.DisabledFunctions.V2RayError)
-		}
-		if _proto.GetHelloResponse().DaemonSettings.V2RayConfig != v2rayCfg {
-			if err = _proto.SetV2RayProxy(v2rayCfg); err != nil {
-				return err
-			}
 		}
 
 		// SET ANTI-TRACKER parameters. It will overwrite 'custom DNS' parameter
@@ -711,7 +710,7 @@ func getPort(portInfo string, allowedPorts []apitypes.PortInfo) (port, error) {
 	}
 
 	if len(allowedPorts) > 0 {
-		if isPortAllowed(allowedPorts[:], retPort) == false {
+		if !isPortAllowed(allowedPorts[:], retPort) {
 			return port{}, fmt.Errorf(fmt.Sprintf("not allowed port '%s'", retPort.String()))
 		}
 	}

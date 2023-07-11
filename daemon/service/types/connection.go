@@ -30,6 +30,7 @@ import (
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -101,7 +102,7 @@ type ConnectionParams struct {
 
 		Mtu int // Set 0 to use default MTU value
 
-		//V2RayProxy v2r.V2RayTransportType // V2Ray config
+		V2RayProxy v2r.V2RayTransportType // V2Ray config
 	}
 
 	OpenVpnParameters struct {
@@ -125,8 +126,8 @@ type ConnectionParams struct {
 			Port int
 		}
 
-		Obfs4proxy obfsproxy.Config // Obfsproxy config (ignored when 'V2RayProxy' defined)
-		//V2RayProxy v2r.V2RayTransportType // V2Ray config (this option takes precedence over the 'Obfs4proxy')
+		Obfs4proxy obfsproxy.Config       // Obfsproxy config (ignored when 'V2RayProxy' defined)
+		V2RayProxy v2r.V2RayTransportType // V2Ray config (this option takes precedence over the 'Obfs4proxy')
 	}
 }
 
@@ -155,6 +156,13 @@ func (p ConnectionParams) Port() (port int, isTcp bool) {
 		return p.WireGuardParameters.Port.Port, p.WireGuardParameters.Port.Protocol > 0 // is TCP
 	}
 	return p.OpenVpnParameters.Port.Port, p.OpenVpnParameters.Port.Protocol > 0 // is TCP
+}
+
+func (p ConnectionParams) V2Ray() v2r.V2RayTransportType {
+	if p.VpnType == vpn.WireGuard {
+		return p.WireGuardParameters.V2RayProxy
+	}
+	return p.OpenVpnParameters.V2RayProxy
 }
 
 // NormalizeHosts - normalize hosts list

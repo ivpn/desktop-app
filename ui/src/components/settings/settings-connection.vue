@@ -561,33 +561,6 @@ export default {
         }
       }
     },
-
-    async isOpenVPN() {
-      const V2RayType = this.$store.getters["settings/V2RayType"];
-      if (
-        V2RayType !== V2RayObfuscationEnum.QUIC &&
-        V2RayType !== V2RayObfuscationEnum.TCP
-      )
-        return;
-
-      // check if current port is applicable for selected obfuscation type
-      const currPort = this.$store.getters["settings/getPort"];
-      const p = getAppropriateObfuscationPort(
-        this.prefferedPorts,
-        currPort,
-        V2RayType
-      );
-      if (p && (p.port !== currPort.port || p.type !== currPort.type)) {
-        console.log(
-          `VPN type was changed. Port was changed from`,
-          currPort,
-          `to`,
-          p,
-          `due to V2Ray configuration`
-        );
-        this.$store.dispatch("settings/setPort", p);
-      }
-    },
   },
 
   methods: {
@@ -759,29 +732,35 @@ export default {
         if (this.isOpenVPN === true)
           obfsCfg = this.$store.state.settings.openvpnObfsproxyConfig;
 
-        let v2RayCfg = this.$store.state.settings.daemonSettings.V2RayConfig;
+        let v2RayCfg = this.$store.getters["settings/V2RayType"];
         if (!obfsCfg && !v2RayCfg) return makeObfsInfoUiObj();
         return makeObfsInfoUiObj(v2RayCfg, obfsCfg?.Version, obfsCfg?.Obfs4Iat);
       },
       set(value) {
         // erase obfuscation parameters
-        if (value.obfsVer == undefined && this.isOpenVPN === true)
+        if (value.obfsVer == undefined && this.isOpenVPN === true) {
           this.$store.dispatch("settings/openvpnObfsproxyConfig", {
             Version: ObfsproxyVerEnum.None,
             Obfs4Iat: Obfs4IatEnum.IAT0,
           });
-        if (value.v2RayType == undefined)
-          sender.SetV2RayProxy(V2RayObfuscationEnum.None);
+        }
+        if (value.v2RayType == undefined) {
+          this.$store.dispatch(
+            "settings/setV2RayConfig",
+            V2RayObfuscationEnum.None
+          );
+        }
 
         // Set new obfuscation parameters
         // (do not chane obfsproxy parames from WireGuard settings)
-        if (value.obfsVer != undefined && this.isOpenVPN === true)
+        if (value.obfsVer != undefined && this.isOpenVPN === true) {
           this.$store.dispatch("settings/openvpnObfsproxyConfig", {
             Version: value.obfsVer,
             Obfs4Iat: value.obfs4Iat,
           });
-        else if (value.v2RayType != undefined)
-          sender.SetV2RayProxy(value.v2RayType);
+        } else if (value.v2RayType != undefined) {
+          this.$store.dispatch("settings/setV2RayConfig", value.v2RayType);
+        }
 
         // Note: if v2RayType changed, it could be that port should be changed too
         // We do it in watch { v2RayType ... }

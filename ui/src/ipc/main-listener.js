@@ -188,12 +188,6 @@ ipcMain.handle(
 ipcMain.handle("renderer-request-set-logging", async (event, enable) => {
   return await client.SetLogging(enable);
 });
-ipcMain.handle(
-  "renderer-request-set-SetV2RayProxy",
-  async (event, v2RayType) => {
-    return await client.SetV2RayProxy(v2RayType);
-  }
-);
 
 ipcMain.handle("renderer-request-set-dns", async () => {
   return await client.SetDNS();

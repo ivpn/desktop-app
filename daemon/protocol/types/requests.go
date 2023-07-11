@@ -27,7 +27,6 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
-	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -149,11 +148,6 @@ type SetPreference struct {
 type SetUserPreferences struct {
 	RequestBase
 	UserPrefs preferences.UserPreferences
-}
-
-type SetV2RayProxy struct {
-	RequestBase
-	V2RayType v2r.V2RayTransportType
 }
 
 // SetAlternateDns request to set custom DNS

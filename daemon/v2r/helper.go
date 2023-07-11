@@ -36,7 +36,7 @@ import (
 //
 //	binary - path to V2Ray binary
 //	tmpConfigFile - path to temporary config file
-//	isTcpConnection - true if local port is must be TCP; false if UDP
+//	isTcpLocalPort - true if local port is must be TCP; false if UDP
 //	outboundType - outbound type
 //	outboundIp - IP address of VMess server
 //	outboundPort - port of VMess server
@@ -45,7 +45,7 @@ import (
 //	vnextUserId - user ID
 func Start(binary string,
 	tmpConfigFile string,
-	isTcpConnection bool,
+	isTcpLocalPort bool,
 	outboundType V2RayTransportType,
 	outboundIp string,
 	outboundPort int,
@@ -77,7 +77,7 @@ func Start(binary string,
 			err  error
 		)
 
-		if isTcpConnection {
+		if isTcpLocalPort {
 			port, err = netinfo.GetFreeTCPPort()
 		} else {
 			port, err = netinfo.GetFreeUDPPort()
@@ -87,7 +87,7 @@ func Start(binary string,
 			continue
 		}
 
-		cfg.SetLocalPort(port, isTcpConnection)
+		cfg.SetLocalPort(port, isTcpLocalPort)
 
 		v := CreateV2RayWrapper(binary, tmpConfigFile, cfg)
 		err = v.Start()

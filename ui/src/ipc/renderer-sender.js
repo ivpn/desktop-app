@@ -210,9 +210,6 @@ export default {
   SetLogging: async (isEnabled) => {
     return await invoke("renderer-request-set-logging", isEnabled);
   },
-  SetV2RayProxy: async (v2RayType) => {
-    return await invoke("renderer-request-set-SetV2RayProxy", v2RayType);
-  },
 
   SetDNS: async () => {
     return await invoke("renderer-request-set-dns");

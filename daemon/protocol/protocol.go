@@ -44,7 +44,6 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
-	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -100,7 +99,6 @@ type Service interface {
 
 	Preferences() preferences.Preferences
 	SetPreference(key types.ServicePreference, val string) (isChanged bool, err error)
-	SetV2RayProxy(v2rayType v2r.V2RayTransportType) error
 	SetUserPreferences(userPrefs preferences.UserPreferences) (err error)
 	ResetPreferences() error
 
@@ -752,23 +750,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			// notify 'success'
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
-
-	case "SetV2RayProxy":
-		var req types.SetV2RayProxy
-		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			break
-		}
-
-		if err := p._service.SetV2RayProxy(req.V2RayType); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			break
-		}
-
-		// notify all clients about change
-		p.notifyClients(p.createHelloResponse())
-		// send 'success' response to the requestor
-		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 
 	case "SetUserPreferences":
 		func() {

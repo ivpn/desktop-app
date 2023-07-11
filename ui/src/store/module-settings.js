@@ -70,6 +70,11 @@ const getDefaultState = () => {
       Obfs4Iat: 0,
     },
 
+    V2RayConfig: {
+      OpenVPN: V2RayObfuscationEnum.None,
+      WireGuard: V2RayObfuscationEnum.None,
+    },
+
     // Favorite gateway's list (strings [gatewayID of server]). Only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
     serversFavoriteList: [],
     //Favorite hosts list (strings [host.dns_name])
@@ -88,8 +93,6 @@ const getDefaultState = () => {
       IsAutoconnectOnLaunchDaemon: false,
       UserDefinedOvpnFile: "",
       IsLogging: false,
-
-      V2RayConfig: 0, // None: 0, QUIC: 1, TCP: 2
 
       WiFi: {
         // canApplyInBackground:
@@ -294,6 +297,9 @@ export default {
     openvpnObfsproxyConfig(state, val) {
       state.openvpnObfsproxyConfig = val;
     },
+    setV2RayConfig(state, v2rayType) {
+      state.V2RayConfig[enumValueName(VpnTypeEnum, state.vpnType)] = v2rayType; // V2RayObfuscationEnum
+    },
 
     // Favorite gateway's list (strings)
     serversFavoriteList(state, val) {
@@ -473,12 +479,7 @@ export default {
     },
 
     V2RayType: (state) => {
-      try {
-        return state.daemonSettings.V2RayConfig;
-      } catch (e) {
-        console.error(e);
-      }
-      return V2RayObfuscationEnum.None;
+      return state.V2RayConfig[enumValueName(VpnTypeEnum, state.vpnType)]; // V2RayObfuscationEnum
     },
 
     favoriteServersAndHosts: (state, getters, rootState, rootGetters) => {
@@ -644,6 +645,10 @@ export default {
 
     openvpnObfsproxyConfig(context, val) {
       context.commit("openvpnObfsproxyConfig", val);
+    },
+
+    setV2RayConfig(context, v2rayVal) {
+      context.commit("setV2RayConfig", v2rayVal); // V2RayObfuscationEnum
     },
 
     // Favorite gateway's list (strings)

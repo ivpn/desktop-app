@@ -100,7 +100,6 @@ const daemonRequests = Object.freeze({
   WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval",
 
   SetPreference: "SetPreference",
-  SetV2RayProxy: "SetV2RayProxy",
   SetUserPreferences: "SetUserPreferences",
 
   WiFiAvailableNetworks: "WiFiAvailableNetworks",
@@ -1795,13 +1794,6 @@ async function SetLogging(enable) {
   });
 }
 
-async function SetV2RayProxy(v2RayType) {
-  await sendRecv({
-    Command: daemonRequests.SetV2RayProxy,
-    V2RayType: v2RayType,
-  });
-}
-
 async function WgRegenerateKeys() {
   await sendRecv({
     Command: daemonRequests.WireGuardGenerateNewKeys,
@@ -1916,7 +1908,6 @@ export default {
 
   SetAutoconnectOnLaunch,
   SetLogging,
-  SetV2RayProxy,
   WgRegenerateKeys,
   WgSetKeysRotationInterval,
 

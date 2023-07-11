@@ -51,9 +51,10 @@ import (
 )
 
 type svrConnInfo struct {
-	IP       net.IP
-	Port     int
-	PortType int // UDP(0), TCP(1)
+	IP             net.IP
+	Port           int
+	PortType       int // UDP(0), TCP(1)
+	V2RayProxyType v2r.V2RayTransportType
 }
 
 func (s *Service) ValidateConnectionParameters(params types.ConnectionParams, isCanFix bool) (types.ConnectionParams, error) {
@@ -130,7 +131,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 	//  We need this info to notify correct data about vpn.CONNECTED state: for V2Ray connection the original parameters are overwriten by local V2Ray proxy params ('127.0.0.1:local_port')
 	var originalEntryServerInfo *svrConnInfo
 	var v2RayWrapper *v2r.V2RayWrapper
-	if prefs.V2RayProxy == v2r.QUIC || prefs.V2RayProxy == v2r.TCP {
+	if params.V2Ray() == v2r.QUIC || params.V2Ray() == v2r.TCP {
 		disabledFuncs := s.GetDisabledFunctions()
 		if len(disabledFuncs.V2RayError) > 0 {
 			return fmt.Errorf(disabledFuncs.V2RayError)
@@ -138,7 +139,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 
 		log.Info("Starting V2Ray...")
 		// Note! the startV2Ray() modifies original params!
-		params, v2RayWrapper, originalEntryServerInfo, err = s.startV2Ray(params, prefs.V2RayProxy)
+		params, v2RayWrapper, originalEntryServerInfo, err = s.startV2Ray(params, params.V2Ray())
 		if err != nil {
 			return fmt.Errorf("failed to start V2Ray: %w", err)
 		}
@@ -701,6 +702,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 					state.ServerIP = originalEntryServerInfo.IP     // because state.ServerIP contains "127.0.0.1" which is not informative for the client
 					state.ServerPort = originalEntryServerInfo.Port // because state.ServerPort contains local port (port of local V2Ray proxy)
 					state.IsTCP = originalEntryServerInfo.PortType > 0
+					state.V2RayProxy = originalEntryServerInfo.V2RayProxyType
 				}
 
 				// forward state to 'stateChan'
@@ -961,18 +963,13 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 
 	outboundTlsSvrName := ""
 	outboundIp := ""
-	outboundPort, isTcp := params.Port()
+	outboundPort, isTcpOutboundPort := params.Port()
 
-	if v2RayType == v2r.QUIC && isTcp {
+	if v2RayType == v2r.QUIC && isTcpOutboundPort {
 		return params, nil, nil, fmt.Errorf("not accectable port type for V2Ray-QUIC connection (UDP is expected)")
 	}
-	if v2RayType == v2r.TCP && !isTcp {
+	if v2RayType == v2r.TCP && !isTcpOutboundPort {
 		return params, nil, nil, fmt.Errorf("not accectable port type for V2Ray-TCP connection (TCP is expected)")
-	}
-
-	requiredPortTypeStr := "tcp"
-	if !isTcp {
-		requiredPortTypeStr = "udp"
 	}
 
 	if outboundPort == 0 {
@@ -986,64 +983,75 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 		}
 	}
 
-	var inboundPorts []api_types.PortInfoBase
+	var inboundPortsApplicable []api_types.PortInfoBase
 
 	inboundIp := ""  // for Single-Hop: host IP; for Multi-Hop: exit host IP
 	inboundPort := 0 // for Single-Hop: internal V2Ray port; for Multi-Hop: exit host port
 
-	if vpn.Type(params.VpnType) == vpn.OpenVPN {
+	isTcpLocalPort := isTcpOutboundPort
+	if params.VpnType == vpn.WireGuard {
+		isTcpLocalPort = false // WireGuard uses only UDP
+	}
+	requiredLocalPortTypeStr := "tcp"
+	if !isTcpLocalPort {
+		requiredLocalPortTypeStr = "udp"
+	}
+
+	if params.VpnType == vpn.OpenVPN {
 		outboundIp = params.OpenVpnParameters.EntryVpnServer.Hosts[0].V2RayHost
 		remoteSvrDnsName = params.OpenVpnParameters.EntryVpnServer.Hosts[0].DnsName
 		if len(params.OpenVpnParameters.MultihopExitServer.Hosts) > 0 {
 			// OpenVPN Multi-Hop
 			inboundIp = params.OpenVpnParameters.MultihopExitServer.Hosts[0].Host
-			inboundPorts = []api_types.PortInfoBase{{Type: strings.ToUpper(requiredPortTypeStr), Port: outboundPort}}
+			inboundPortsApplicable = []api_types.PortInfoBase{{Type: strings.ToUpper(requiredLocalPortTypeStr), Port: outboundPort}}
 		} else {
 			// OpenVPN Single-Hop
 			inboundIp = params.OpenVpnParameters.EntryVpnServer.Hosts[0].Host
-			inboundPorts = svrs.Config.Ports.V2Ray.OpenVPN // for Single-Hop connections we use internal V2Ray ports for inbound connections
+			inboundPortsApplicable = svrs.Config.Ports.V2Ray.OpenVPN // for Single-Hop connections we use internal V2Ray ports for inbound connections
 		}
-	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
+	} else if params.VpnType == vpn.WireGuard {
 		outboundIp = params.WireGuardParameters.EntryVpnServer.Hosts[0].V2RayHost
 		remoteSvrDnsName = params.WireGuardParameters.EntryVpnServer.Hosts[0].DnsName
 		if len(params.WireGuardParameters.MultihopExitServer.Hosts) > 0 {
 			// WireGuard Multi-Hop
 			inboundIp = params.WireGuardParameters.MultihopExitServer.Hosts[0].Host
-			inboundPorts = []api_types.PortInfoBase{{Type: strings.ToUpper(requiredPortTypeStr), Port: outboundPort}}
+			inboundPortsApplicable = []api_types.PortInfoBase{{Type: strings.ToUpper(requiredLocalPortTypeStr), Port: outboundPort}}
 		} else {
 			// WireGuard Single-Hop
 			inboundIp = params.WireGuardParameters.EntryVpnServer.Hosts[0].Host
-			inboundPorts = svrs.Config.Ports.V2Ray.WireGuard // for Single-Hop connections we use internal V2Ray ports for inbound connections
+			inboundPortsApplicable = svrs.Config.Ports.V2Ray.WireGuard // for Single-Hop connections we use internal V2Ray ports for inbound connections
 		}
 	}
 
 	// TlsServerName required for QUIC connection
 	outboundTlsSvrName = strings.Replace(remoteSvrDnsName, "ivpn.net", "inet-telecom.com", 1)
 
-	// Filter PORTS: TCP or UDP
+	// Filter PORTS: TCP or UDP: the inbound port type should be similat to the local port type
 	var inboundPortsFiltered []api_types.PortInfoBase
-	for _, port := range inboundPorts {
+	for _, port := range inboundPortsApplicable {
 		pTypeStr := strings.TrimSpace(strings.ToLower(port.Type))
-		if requiredPortTypeStr == pTypeStr || (!isTcp && pTypeStr == "") {
+		if requiredLocalPortTypeStr == pTypeStr || (!isTcpLocalPort && pTypeStr == "") {
 			inboundPortsFiltered = append(inboundPortsFiltered, port)
 		}
 	}
 	if len(inboundPortsFiltered) == 0 {
-		return params, nil, nil, fmt.Errorf("V2Ray is not supported: no V2Ray '%s' ports for the speified VPN type", requiredPortTypeStr)
+		return params, nil, nil, fmt.Errorf("failed to start: no V2Ray '%s' ports for the speified VPN type", requiredLocalPortTypeStr)
 	}
 
-	// If there are more than one port - select random one
+	// If there are more than one inbound port - select random one
 	if len(inboundPortsFiltered) > 0 {
 		inboundPort = inboundPortsFiltered[0].Port
 		if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(inboundPortsFiltered)))); err == nil {
 			inboundPort = inboundPortsFiltered[rnd.Int64()].Port
 		}
+	} else {
+		return params, nil, nil, fmt.Errorf("failed to start: no V2Ray inbound ports defined")
 	}
 
 	// Start V2Ray process
 	v, err := v2r.Start(platform.V2RayBinaryPath(), platform.V2RayConfigFile(),
-		isTcp,
-		v2RayOutboundType,
+		isTcpLocalPort,
+		v2RayOutboundType, // QUIC uses UDP outbound port; TCP uses TCP outbound port
 		outboundIp, outboundPort,
 		inboundIp, inboundPort,
 		outboundUserId,
@@ -1062,7 +1070,7 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 	// Update the original connection parameters with the settings required for the V2Ray connection
 	// ------------------------------------------------------------
 	updatedParams = params
-	origEntrySvr := &svrConnInfo{}
+	origEntrySvr := &svrConnInfo{V2RayProxyType: v2RayType}
 	if vpn.Type(params.VpnType) == vpn.OpenVPN {
 
 		// We have to return the original information about EntryServer

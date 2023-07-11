@@ -37,6 +37,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/splittun"
+	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -91,13 +92,16 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 		return w
 	}
 	since := time.Unix(connected.TimeSecFrom1970, 0)
+
 	protocol := fmt.Sprintf("%v", connected.VpnType)
-	if connected.VpnType == vpn.OpenVPN {
-		obfsCfg := connected.Obfsproxy
-		if obfsCfg.IsObfsproxy() {
-			protocol += fmt.Sprintf(" (Obfsproxy: %s)", obfsCfg.ToString())
+	if connected.V2RayProxy != v2r.None {
+		protocol += fmt.Sprintf(" (V2Ray: %s)", connected.V2RayProxy.ToString())
+	} else if connected.VpnType == vpn.OpenVPN {
+		if connected.Obfsproxy.IsObfsproxy() {
+			protocol += fmt.Sprintf(" (Obfsproxy: %s)", connected.Obfsproxy.ToString())
 		}
 	}
+
 	fmt.Fprintf(w, "    Protocol\t:\t%v\n", protocol)
 	fmt.Fprintf(w, "    Local IP\t:\t%v\n", connected.ClientIP)
 	if len(connected.ClientIPv6) > 0 {

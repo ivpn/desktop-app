@@ -53,6 +53,19 @@ const (
 	TCP  V2RayTransportType = iota
 )
 
+func (t V2RayTransportType) ToString() string {
+	switch t {
+	case None:
+		return ""
+	case QUIC:
+		return "QUIC"
+	case TCP:
+		return "TCP"
+	default:
+		return "unknown"
+	}
+}
+
 type V2RayWrapper struct {
 	binary         string
 	tempConfigFile string
@@ -153,7 +166,7 @@ func (v *V2RayWrapper) start() (retError error) {
 	// Beatify json data from cgfStr and print it to log
 	var prettyJSON bytes.Buffer
 	if e := json.Indent(&prettyJSON, cfgStr, "", "\t"); e == nil {
-		log.Debug("V2Ray configuration: ", string(prettyJSON.Bytes()))
+		log.Debug("V2Ray configuration: ", prettyJSON.String())
 	}
 
 	// Apply route to remote endpoint
@@ -235,9 +248,9 @@ func (v *V2RayWrapper) start() (retError error) {
 	select {
 	case <-initialised:
 		if localPort == 0 {
-			startError = fmt.Errorf("V2Ray start failed (port %s)", configuredPortStr)
+			startError = fmt.Errorf("V2Ray start failed (local port %s)", configuredPortStr)
 		} else if configuredPort != localPort {
-			startError = fmt.Errorf("V2Ray client started on unexpected port: %s", configuredPortStr)
+			startError = fmt.Errorf("V2Ray client started on unexpected local port: %s", configuredPortStr)
 		}
 	case <-time.After(10 * time.Second):
 		startError = fmt.Errorf("V2Ray start timeout (port %s)", configuredPortStr)
