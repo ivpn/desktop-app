@@ -966,10 +966,10 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 	outboundPort, isTcpOutboundPort := params.Port()
 
 	if v2RayType == v2r.QUIC && isTcpOutboundPort {
-		return params, nil, nil, fmt.Errorf("not accectable port type for V2Ray-QUIC connection (UDP is expected)")
+		return params, nil, nil, fmt.Errorf("not acceptable port type for V2Ray-QUIC connection (UDP is expected)")
 	}
 	if v2RayType == v2r.TCP && !isTcpOutboundPort {
-		return params, nil, nil, fmt.Errorf("not accectable port type for V2Ray-TCP connection (TCP is expected)")
+		return params, nil, nil, fmt.Errorf("not acceptable port type for V2Ray-TCP connection (TCP is expected)")
 	}
 
 	if outboundPort == 0 {

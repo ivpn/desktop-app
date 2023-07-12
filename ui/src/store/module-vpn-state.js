@@ -563,7 +563,7 @@ export default {
               // if nothing found - try to get first applicable port by type
               if (!changedPort)
                 changedPort = ports.find((p) => p.type === newPort.type);
-              newPort = changedPort;
+              if (changedPort) newPort = changedPort;
             }
           }
           context.commit("settings/setPort", newPort, { root: true });

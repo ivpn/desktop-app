@@ -194,7 +194,7 @@ func (c *CmdConnect) Init() {
 	obfsproxyUsage := fmt.Sprintf("Use obfsproxy (OpenVPN only)\n  Acceptable values: %s", AllowedObfsproxyValues)
 	c.StringVar(&c.obfsproxy, "o", "", "TYPE", obfsproxyUsage)
 	c.StringVar(&c.obfsproxy, "obfsproxy", "", "TYPE", obfsproxyUsage)
-	c.StringVar(&c.v2rayProxy, "v2ray", "", "TYPE", "Use V2Ray obfuscation (this option takes precedence over the '-obfsproxy' option)\n  Acceptable values: 'quic' or 'tcp'")
+	c.StringVar(&c.v2rayProxy, "v2ray", "", "TYPE", "Use V2Ray obfuscation (this option takes precedence over the '-obfsproxy' option)\n  Acceptable values: 'quic' (VMESS/QUIC) or 'tcp' (VMESS/TCP)")
 }
 
 func (c *CmdConnect) preParse(arguments []string) ([]string, error) {
@@ -285,14 +285,46 @@ func (c *CmdConnect) Run() (retError error) {
 
 	allowedPortsWg := servers.Config.Ports.WireGuard
 	allowedPortsOvpn := servers.Config.Ports.OpenVPN
+
+	// Modify allowed ports according to V2Ray configuration
+	if v2rayCfg == v2r.TCP {
+		if len(c.port) == 0 {
+			// If no port specified - use default V2Ray port for TCP
+			c.port = "TCP:80"
+		}
+		// "V2Ray (VMESS/TCP)" connections are always TCP. So we modify port type for WireGuard allowed ports (v2ray listens on the same ports as WireGuard but on both UDP and TCP)
+		allowedPortsWg = []apitypes.PortInfo{}
+		for _, p := range servers.Config.Ports.WireGuard {
+			p.Type = "TCP"
+			allowedPortsWg = append(allowedPortsWg, p)
+		}
+		allowedPortsOvpn = []apitypes.PortInfo{}
+		for _, p := range servers.Config.Ports.OpenVPN {
+			if p.IsTCP() {
+				allowedPortsOvpn = append(allowedPortsWg, p)
+			}
+		}
+	} else if v2rayCfg == v2r.QUIC {
+		if len(c.port) == 0 {
+			// If no port specified - use default V2Ray port for QUIC
+			c.port = "UDP:443"
+		}
+		allowedPortsOvpn = []apitypes.PortInfo{}
+		for _, p := range servers.Config.Ports.OpenVPN {
+			if p.IsUDP() {
+				allowedPortsOvpn = append(allowedPortsWg, p)
+			}
+		}
+	}
+
 	if c.portsShow {
-		printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+		printAllowedPorts(allowedPortsWg, allowedPortsOvpn, v2rayCfg)
 		return nil
 	}
 
 	if len(allowedPortsWg) <= 0 || len(allowedPortsOvpn) <= 0 {
-		fmt.Println("Internal ERROR: daemon does not provide allowed ports info !")
-		printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+		fmt.Println("Internal ERROR: daemon did not provide allowed ports info !")
+		printAllowedPorts(allowedPortsWg, allowedPortsOvpn, v2rayCfg)
 	}
 
 	// show current state after on finished
@@ -449,7 +481,7 @@ func (c *CmdConnect) Run() (retError error) {
 
 		// Looking for connection server
 
-		// WireGuard
+		// -------- WireGuard section begin ------
 		{
 			funcApplyCustomHost := func(hosts []apitypes.WireGuardServerHostInfo, hostname string) []apitypes.WireGuardServerHostInfo {
 				for _, h := range hosts {
@@ -493,16 +525,15 @@ func (c *CmdConnect) Run() (retError error) {
 						req.Params.WireGuardParameters.Mtu = c.mtu
 					}
 
+					var destPort port
 					if len(c.multihopExitSvr) == 0 {
 						// port
-						p, err := getPort(c.port, allowedPortsWg)
+						destPort, err = getPort(c.port, allowedPortsWg)
 						if err != nil {
-							printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+							printAllowedPorts(allowedPortsWg, allowedPortsOvpn, v2rayCfg)
 							return err
 						}
-						req.Params.WireGuardParameters.Port.Port = p.port
-
-						fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s %s...\n", s.City, s.CountryCode, s.Country, s.Gateway, p.String())
+						fmt.Printf("[WireGuard] Connecting to: %s, %s (%s) %s %s...\n", s.City, s.CountryCode, s.Country, s.Gateway, destPort.String())
 					} else {
 						if exitSvrWg == nil {
 							return fmt.Errorf("serverID not found in servers list (%s)", c.multihopExitSvr)
@@ -510,8 +541,17 @@ func (c *CmdConnect) Run() (retError error) {
 
 						// port definition is not required for WireGuard multi-hop (in use: UDP + port-based-multihop)
 						if len(c.port) > 0 {
-							// if user manually defined port for obfsproxy connection - inform that it is ignored
-							fmt.Printf("Note: port definition is ignored for WireGuard Multi-Hop connections\n")
+							if v2rayCfg != v2r.None {
+								// port
+								destPort, err = getPort(c.port, allowedPortsWg)
+								if err != nil {
+									printAllowedPorts(allowedPortsWg, allowedPortsOvpn, v2rayCfg)
+									return err
+								}
+							} else {
+								// if user manually defined port for  WireGuard Multi-Hop connection - inform that it is ignored
+								fmt.Printf("Note: port definition is ignored for WireGuard Multi-Hop connections\n")
+							}
 						}
 
 						req.Params.WireGuardParameters.MultihopExitServer.ExitSrvID = strings.Split(exitSvrWg.Gateway, ".")[0]
@@ -521,14 +561,17 @@ func (c *CmdConnect) Run() (retError error) {
 						fmt.Printf("\tentry server: %s, %s (%s) %s\n", entrySvrWg.City, entrySvrWg.CountryCode, entrySvrWg.Country, entrySvrWg.Gateway)
 						fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvrWg.City, exitSvrWg.CountryCode, exitSvrWg.Country, exitSvrWg.Gateway)
 					}
+					req.Params.WireGuardParameters.Port.Port = destPort.port
+					req.Params.WireGuardParameters.Port.Protocol = destPort.IsTCP()
+
 					break
 				}
 			}
 		}
+		// -------- WireGuard section end --------
 
-		// OpenVPN
+		// -------- OpenVPN section begin --------
 		if !serverFound {
-
 			funcApplyCustomHost := func(hosts []apitypes.OpenVPNServerHostInfo, hostname string) []apitypes.OpenVPNServerHostInfo {
 				for _, h := range hosts {
 					if h.Hostname == hostname {
@@ -576,21 +619,24 @@ func (c *CmdConnect) Run() (retError error) {
 						// port
 						destPort, err = getPort(c.port, allowedPortsOvpn)
 						if err != nil {
-							printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+							printAllowedPorts(allowedPortsWg, allowedPortsOvpn, v2rayCfg)
 							return err
 						}
 					} else {
 						// port
 						destPort, err = getPort(c.port, nil)
 						if err != nil {
-							printAllowedPorts(allowedPortsWg, allowedPortsOvpn)
+							printAllowedPorts(allowedPortsWg, allowedPortsOvpn, v2rayCfg)
 							return err
 						}
 
 						// get Multi-Hop ID
 						req.Params.OpenVpnParameters.MultihopExitServer.ExitSrvID = strings.Split(c.multihopExitSvr, ".")[0]
 						req.Params.OpenVpnParameters.MultihopExitServer.Hosts = funcApplyCustomHost(exitSvrOvpn.Hosts, customHostExitServer)
-						destPort.port = 0 // do not use port number (port-based multihop)
+						if v2rayCfg == v2r.None { // V2Ray connection uses port info
+							destPort.port = 0 // do not use port number (port-based multihop): set 0 to do not print port number into console
+							fmt.Printf("Note: port number is ignored for OpenVPN Multi-Hop connections\n")
+						}
 					}
 
 					req.Params.OpenVpnParameters.Port.Port = destPort.port
@@ -629,8 +675,8 @@ func (c *CmdConnect) Run() (retError error) {
 				fmt.Printf("\tentry server: %s, %s (%s) %s %s\n", entrySvrOvpn.City, entrySvrOvpn.CountryCode, entrySvrOvpn.Country, entrySvrOvpn.Gateway, portStrInfo)
 				fmt.Printf("\texit server : %s, %s (%s) %s\n", exitSvrOvpn.City, exitSvrOvpn.CountryCode, exitSvrOvpn.Country, exitSvrOvpn.Gateway)
 			}
-
 		}
+		// -------- OpenVPN section end ----------
 
 		if !serverFound {
 			return fmt.Errorf("serverID not found in servers list (%s)", c.gateway)
@@ -718,13 +764,21 @@ func getPort(portInfo string, allowedPorts []apitypes.PortInfo) (port, error) {
 	return retPort, nil
 }
 
-func printAllowedPorts(allowedPortsWg, allowedOvpnPorts []apitypes.PortInfo) {
+func printAllowedPorts(allowedPortsWg, allowedOvpnPorts []apitypes.PortInfo, v2rayType v2r.V2RayTransportType) {
 	fmt.Printf("Allowed ports:\n")
+	v2RayPrefix := ""
+	if v2rayType == v2r.QUIC {
+		v2RayPrefix = " V2Ray(VMESS/QUIC)"
+	} else if v2rayType == v2r.TCP {
+		v2RayPrefix = " V2Ray(VMESS/TCP)"
+	}
+
 	if allowedPortsWg != nil {
-		fmt.Printf("  WireGuard: %s\n", allPortsString(allowedPortsWg[:]))
+		fmt.Printf("  WireGuard%s: %s\n", v2RayPrefix, allPortsString(allowedPortsWg[:]))
+
 	}
 	if allowedOvpnPorts != nil {
-		fmt.Printf("  OpenVPN: %s\n", allPortsString(allowedOvpnPorts[:]))
+		fmt.Printf("  OpenVPN%s  : %s\n", v2RayPrefix, allPortsString(allowedOvpnPorts[:]))
 	}
 }
 

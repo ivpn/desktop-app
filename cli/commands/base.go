@@ -95,7 +95,7 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 
 	protocol := fmt.Sprintf("%v", connected.VpnType)
 	if connected.V2RayProxy != v2r.None {
-		protocol += fmt.Sprintf(" (V2Ray: %s)", connected.V2RayProxy.ToString())
+		protocol += fmt.Sprintf(" (V2Ray: VMESS/%s)", connected.V2RayProxy.ToString())
 	} else if connected.VpnType == vpn.OpenVPN {
 		if connected.Obfsproxy.IsObfsproxy() {
 			protocol += fmt.Sprintf(" (Obfsproxy: %s)", connected.Obfsproxy.ToString())
