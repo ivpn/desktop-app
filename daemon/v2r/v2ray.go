@@ -72,6 +72,7 @@ type V2RayWrapper struct {
 	config         *V2RayConfig
 	command        *exec.Cmd
 	mutex          sync.Mutex
+	stoppedChan    chan struct{}
 }
 
 func CreateV2RayWrapper(binary string, tmpConfigFile string, cfg *V2RayConfig) *V2RayWrapper {
@@ -120,7 +121,17 @@ func (v *V2RayWrapper) Stop() error {
 	if cmd == nil {
 		return nil
 	}
-	return shell.Kill(cmd)
+	err := shell.Kill(cmd)
+	if err != nil {
+		return err
+	}
+
+	// wait to stop
+	if v.stoppedChan != nil {
+		<-v.stoppedChan
+	}
+
+	return nil
 }
 
 func (v *V2RayWrapper) Start() error {
@@ -217,12 +228,15 @@ func (v *V2RayWrapper) start() (retError error) {
 		}
 	}
 
+	v.stoppedChan = make(chan struct{}, 1)
+
 	log.Info("Starting V2Ray client")
 	v.command = exec.Command(v.binary, "run", "-config", v.tempConfigFile)
 	defer func() {
 		if err != nil {
 			// in case of error - ensure process is stopped
 			shell.Kill(v.command)
+			close(v.stoppedChan) // notify as stopped
 		}
 	}()
 
@@ -268,6 +282,7 @@ func (v *V2RayWrapper) start() (retError error) {
 		// ensure route is deleted
 		v.implDeleteMainRoute()
 		log.Info(fmt.Sprintf("V2Ray client stopped (port %s)", configuredPortStr))
+		close(v.stoppedChan) // notify as stopped
 	}()
 	log.Info(fmt.Sprintf("V2Ray client started (port %s)", configuredPortStr))
 	return nil
