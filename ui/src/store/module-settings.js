@@ -478,7 +478,7 @@ export default {
       return false;
     },
 
-    V2RayType: (state) => {
+    getV2RayConfig: (state) => {
       return state.V2RayConfig[enumValueName(VpnTypeEnum, state.vpnType)]; // V2RayObfuscationEnum
     },
 
@@ -552,7 +552,6 @@ export default {
 
     daemonSettings(context, val) {
       context.commit("daemonSettings", val);
-      ensurePortsSelectedCorrectly(context);
     },
 
     isExpectedAccountToBeLoggedIn(context, val) {
@@ -645,10 +644,12 @@ export default {
 
     openvpnObfsproxyConfig(context, val) {
       context.commit("openvpnObfsproxyConfig", val);
+      ensurePortsSelectedCorrectly(context);
     },
 
     setV2RayConfig(context, v2rayVal) {
       context.commit("setV2RayConfig", v2rayVal); // V2RayObfuscationEnum
+      ensurePortsSelectedCorrectly(context);
     },
 
     // Favorite gateway's list (strings)
@@ -1088,73 +1089,78 @@ function isPortExists(ports, port) {
 }
 
 // Ensure if selected ports exists in a servers configuration or port is selected correctly
-function ensurePortsSelectedCorrectly(context) {
-  if (!context || !context.rootGetters || !context.rootState) {
+function ensurePortsSelectedCorrectly(ctx) {
+  if (!ctx || !ctx.rootGetters || !ctx.rootState) {
     console.error("ensurePortsSelectedCorrectly: failed (context not defined)");
     return;
   }
 
   // if we still not received configuration info (servers.json) - do nothing
-  if (context.rootGetters["vpnState/isConfigInitialized"] !== true) return;
-
-  if (context.getters["V2RayType"]) {
-    // skip check for V2Ray
-    // TODO: implement check for V2Ray
-    return;
-  }
+  if (ctx.rootGetters["vpnState/isConfigInitialized"] !== true) return;
 
   // clean custom ports which are not applicable anymore (range is not exists anymore)
-  eraseNonAcceptableCustomPorts(context);
+  eraseNonAcceptableCustomPorts(ctx);
 
-  const state = context.state;
+  const state = ctx.state;
 
-  let funcGetDefaultPort = function (ports) {
-    for (const configPort of ports) {
-      const p = NormalizedConfigPortObject(configPort);
-      if (p) return p;
-    }
-    return null;
-  };
-
-  // returns null - if port is ok; otherwise - port value which have to be applied
-  let funcTestPort = function (allPorts, applicablePorts, currPort) {
-    if (!allPorts) return null;
-
-    let retPort = null;
-
-    // add custom ports to base list of all ports
-    if (context.rootState.settings.customPorts)
-      allPorts = allPorts.concat(context.rootState.settings.customPorts);
-
-    if (allPorts && allPorts.length > 0 && !isPortExists(allPorts, currPort)) {
-      console.log(`Selected port does not exists anymore!`);
-      retPort = funcGetDefaultPort(allPorts);
-    }
-    // Check is port applicable (according to current settings)
-    if (
-      applicablePorts &&
-      applicablePorts.length > 0 &&
-      !isPortExists(applicablePorts, retPort ? retPort : currPort)
-    ) {
-      console.log(`Selected port not applicable!`);
-      retPort = funcGetDefaultPort(applicablePorts);
-    }
-    return retPort;
-  };
-
-  const portsCfg = context.rootState.vpnState.servers.config.ports;
   let cPort = Object.assign({}, state.port);
-
-  const funcGetPorts = context.rootGetters["vpnState/funcGetConnectionPorts"];
-  const applicableWg = funcGetPorts(VpnTypeEnum.WireGuard);
-  const applicableOvpn = funcGetPorts(VpnTypeEnum.OpenVPN);
-  let portOvpn = funcTestPort(portsCfg.openvpn, applicableOvpn, cPort.OpenVPN);
-  let portWg = funcTestPort(portsCfg.wireguard, applicableWg, cPort.WireGuard);
+  let portOvpn = TestSuitablePort(ctx, VpnTypeEnum.OpenVPN, cPort.OpenVPN);
+  let portWg = TestSuitablePort(ctx, VpnTypeEnum.WireGuard, cPort.WireGuard);
   if (portOvpn) cPort.OpenVPN = portOvpn;
   if (portWg) cPort.WireGuard = portWg;
   if (portOvpn || portWg) {
-    context.commit("port", cPort);
+    ctx.commit("port", cPort);
+    console.log(
+      "(ensurePortsSelectedCorrectly) Port was changed from:",
+      state.port,
+      "to:",
+      cPort
+    );
   }
+}
+
+// returns null - if port is ok; otherwise - port value which have to be applied
+function TestSuitablePort(context, vpnType, currPort) {
+  const funcGetPorts = context.rootGetters["vpnState/funcGetConnectionPorts"];
+  const applicablePorts = funcGetPorts(vpnType);
+  // Check is port applicable (according to current settings)
+  if (
+    applicablePorts &&
+    applicablePorts.length > 0 &&
+    !isPortExists(applicablePorts, currPort)
+  ) {
+    console.log(`Selected port `, currPort, "not applicable for VPN ", vpnType);
+
+    // get V2Ray type
+    let v2rayType = context.state.V2RayConfig.WireGuard;
+    if (vpnType === VpnTypeEnum.OpenVPN)
+      v2rayType = context.state.V2RayConfig.OpenVPN;
+
+    return GetDefaultPort(context, applicablePorts, v2rayType);
+  }
+  return null;
+}
+
+function GetDefaultPort(context, ports, v2rayType) {
+  let defPort = null;
+
+  for (const configPort of ports) {
+    const p = NormalizedConfigPortObject(configPort);
+    if (p) {
+      defPort = p;
+      if (!v2rayType) {
+        return p;
+      } else {
+        // (for V2Ray) Recommended alternate ports are: 443/UDP (QUIC) and 80/TCP (HTTP)
+        if (v2rayType === V2RayObfuscationEnum.QUIC) {
+          if (p.port == 443 && p.type == PortTypeEnum.UDP) return p;
+        } else if (v2rayType === V2RayObfuscationEnum.TCP) {
+          if (p.port == 80 && p.type == PortTypeEnum.TCP) return p;
+        }
+      }
+    }
+  }
+  return defPort;
 }
 
 function isAcceptablePortForRange(p, range) {

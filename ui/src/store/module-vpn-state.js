@@ -29,6 +29,7 @@ import {
   NormalizedConfigPortObject,
   NormalizedConfigPortRangeObject,
   PortTypeEnum,
+  V2RayObfuscationEnum,
 } from "./types";
 
 export default {
@@ -428,25 +429,50 @@ export default {
         } catch (e) {
           console.error(e);
         }
-
         if (!ports) return [];
 
         // normalize ports from configuration
         ports = ports
           .map((p) => NormalizedConfigPortObject(p))
           .filter((p) => p != null);
-
-        // For Obfsproxy: only TCP protocol is applicable.
+        // --------------------------------------------------------
+        // Update suitable ports according to current configuration
+        // V2Ray (has precendance over Obfsproxy)
+        // - V2Ray (TCP) uses only TCP ports
+        // - V2Ray (QUIC) uses only UDP ports
+        // Obfsproxy: only TCP protocol is applicable.
+        // --------------------------------------------------------
         try {
-          const isUseObfsproxy =
-            rootState.settings.openvpnObfsproxyConfig.Version > 0;
-          if (vpnType === VpnTypeEnum.OpenVPN && isUseObfsproxy === true)
-            ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+          let v2rayType = rootState.settings.V2RayConfig.WireGuard;
+          if (vpnType === VpnTypeEnum.OpenVPN)
+            v2rayType = rootState.settings.V2RayConfig.OpenVPN;
+
+          if (v2rayType === V2RayObfuscationEnum.QUIC) {
+            // V2Ray (QUIC) uses only UDP ports
+            ports = ports.filter((p) => p.type === PortTypeEnum.UDP);
+          } else if (v2rayType === V2RayObfuscationEnum.TCP) {
+            // V2Ray (TCP) uses only TCP ports
+            const portsFiltered = ports.filter(
+              (p) => p.type === PortTypeEnum.TCP
+            );
+            if (portsFiltered.length > 0) ports = portsFiltered;
+            else if (vpnType === VpnTypeEnum.WireGuard) {
+              // For WireGuard connection there will not be TCP ports defined. So we transform TCP ports to UDP ports
+              ports = ports.map((p) => {
+                return { port: p.port, type: PortTypeEnum.TCP };
+              });
+            }
+          } else {
+            // For Obfsproxy: only TCP protocol is applicable.
+            const isUseObfsproxy =
+              rootState.settings.openvpnObfsproxyConfig.Version > 0;
+            if (vpnType === VpnTypeEnum.OpenVPN && isUseObfsproxy === true)
+              ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+          }
         } catch (e) {
           console.error(e);
         }
-
-        // return
+        // --------------------------------------------------------
         return ports;
       } catch (e) {
         console.error(e);
@@ -528,6 +554,18 @@ export default {
         const exitSvr = findServerByHostname(servers, ci.ExitHostname);
         context.commit("settings/serverExit", exitSvr, { root: true });
       }
+      // v2ray
+      if (ci.V2RayProxy !== undefined) {
+        context.dispatch("settings/setV2RayConfig", ci.V2RayProxy, {
+          root: true,
+        });
+      }
+      // obfsproxy
+      if (ci.VpnType === VpnTypeEnum.OpenVPN && ci.Obfsproxy) {
+        context.dispatch("settings/openvpnObfsproxyConfig", ci.Obfsproxy, {
+          root: true,
+        });
+      }
 
       // apply port selection
       if (ci.ServerPort && ci.IsTCP != undefined) {
@@ -537,7 +575,7 @@ export default {
         });
         if (newPort) {
           // Get applicable ports for current configuration
-          // It is important to read 'connectionPorts' only after vpnType, multihop, obfsproxy was updated!
+          // It is important to read 'connectionPorts' only after vpnType, V2RayType, multihop, obfsproxy was updated!
           const ports = context.getters.connectionPorts;
           // Check if the port exists in applicable ports list
           if (!isPortExists(ports, newPort)) {
@@ -587,18 +625,6 @@ export default {
         var mtu = ci.Mtu;
         if (mtu === 0) mtu = null;
         context.commit("settings/mtu", mtu, { root: true });
-      }
-
-      if (ci.V2RayProxy !== undefined) {
-        context.dispatch("settings/setV2RayConfig", ci.V2RayProxy, {
-          root: true,
-        });
-      }
-
-      if (ci.VpnType === VpnTypeEnum.OpenVPN && ci.Obfsproxy) {
-        context.dispatch("settings/openvpnObfsproxyConfig", ci.Obfsproxy, {
-          root: true,
-        });
       }
     },
     servers(context, value) {
