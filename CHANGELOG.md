@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.11.5 (BETA) - 2023-07-06
+
+[NEW] Post-Quantum Resistant WireGuard Connections  
+[NEW] Ability to Pause/Resume Connection from CLI  
+[IMPROVED] (Windows) Updated: OpenVPN v2.6.3 (OpenSSL v3.1.0)  
+[IMPROVED] (macOS) Updated: WireGuard 0.0.20230223; OpenVPN v2.6.3 (OpenSSL v3.1.0)  
+[FIX] WireGuard Key Rotation didn't start in certain cases  
+[FIX] GUI: Switching between WireGuard servers was not possible during connection initialization  
+[FIX] Other minor issues and improvements  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.11.5.exe)  
+SHA256: db31a850ba820a075e808869cbaf00c6f11f433018504ed5ad307911d55bca10  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.11.5.dmg)  
+SHA256: acbe2af61875660b89590073624bdc4632ef4c4a48aacaf39cff2f79bfd78408  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.11.5-arm64.dmg)  
+SHA256: 458a79b5d0d906f5fa45bc9f1c869a509e669490ab1fc3a1d7549780f9aaba76  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/beta/ivpn_3.11.5_amd64.deb)  
+SHA256: dd25c25c07e60194565ab095410aa1f624b354d936a07b236ebbd0d8a9197a89  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/beta/ivpn-3.11.5-1.x86_64.rpm)  
+SHA256: 22090d170feefa9f7925cc8252bdb46aede364d6fe7ee9f45e713e652c2b7590  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/beta/ivpn-ui_3.11.5_amd64.deb)  
+SHA256: 52103e4ba268bbd6ea2858e8b33a9bfb5f681ee1501c7eb927016d1cae9bebbb  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/beta/ivpn-ui-3.11.5-1.x86_64.rpm)  
+SHA256: 3dc499453a4b3678d73959a641a5062dd41424040b153ed93b63e12788196df7  
+
 ## Version 3.10.23 - 2023-05-15
 
 [NEW] Automatically select an accessible port before user login  
