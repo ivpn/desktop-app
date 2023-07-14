@@ -18,7 +18,7 @@
       <label class="defColor" for="isAntitrackerHardcore">Hardcore Mode</label>
     </div>
     <div class="fwDescription">
-      Hardcode mode blocks the leading companies with business models relying on
+      Hardcore mode blocks the leading companies with business models relying on
       user surveillance (currently: Google and Facebook)
     </div>
     <div class="fwDescription">
