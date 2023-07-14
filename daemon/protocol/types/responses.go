@@ -269,6 +269,7 @@ type DisconnectedResp struct {
 	Failure           bool
 	Reason            DisconnectionReason //int
 	ReasonDescription string
+	IsStateInfo       bool // if 'true' - it is not an disconneection event, it is just status info "disconnected"
 }
 
 // VpnStateResp returns VPN connection state
