@@ -28,3 +28,4 @@ WireGuard\x86_64\wg.exe
 WireGuard\x86_64\wireguard.exe
 SplitTunnelDriver\x86_64\ivpn-split-tunnel.sys
 kem\kem-helper.exe
+v2ray\v2ray.exe

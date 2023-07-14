@@ -58,12 +58,14 @@ export const PingQuality = Object.freeze({ Good: 0, Moderate: 1, Bad: 2 });
 
 export const PortTypeEnum = Object.freeze({ UDP: 0, TCP: 1 });
 
-export const ObfsproxyVerEnum = Object.freeze({ obfs3: 3, obfs4: 4 });
+export const ObfsproxyVerEnum = Object.freeze({ None: 0, obfs3: 3, obfs4: 4 });
 export const Obfs4IatEnum = Object.freeze({
   IAT0: 0,
   IAT1: 1,
   IAT2: 2,
 });
+
+export const V2RayObfuscationEnum = Object.freeze({ None: 0, QUIC: 1, TCP: 2 });
 
 export const ServersSortTypeEnum = Object.freeze({
   City: 0,

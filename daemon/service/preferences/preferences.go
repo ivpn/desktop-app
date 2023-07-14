@@ -34,7 +34,6 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
-	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/version"
@@ -82,7 +81,6 @@ type Preferences struct {
 	IsFwAllowApiServers      bool
 	FwUserExceptions         string // Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
 	IsStopOnClientDisconnect bool
-	Obfs4proxy               obfsproxy.Config
 
 	// IsAutoconnectOnLaunch: if 'true' - daemon will perform automatic connection (see 'IsAutoconnectOnLaunchDaemon' for details)
 	IsAutoconnectOnLaunch bool
@@ -202,17 +200,6 @@ func (p *Preferences) LoadPreferences() error {
 	}
 
 	// *** Compatibility with old versions ***
-
-	// Convert parameters from v3.9.14 (and releases older than 2022-08-16)
-	// If 'IsObfsproxy' is enabled  -> use use obfs3
-	type tmp_type_Settings_v3_9_14 struct {
-		IsObfsproxy bool
-	}
-	var tmp_Settings_v3_9_14 tmp_type_Settings_v3_9_14
-	err = json.Unmarshal(data, &tmp_Settings_v3_9_14)
-	if err == nil && tmp_Settings_v3_9_14.IsObfsproxy {
-		p.Obfs4proxy = obfsproxy.Config{Version: obfsproxy.OBFS3}
-	}
 
 	// Convert parameters from v3.10.23 (and releases older than 2023-05-15)
 	// The default antitracker blocklist was "OSID Big". So keep it for old users who upgrade.

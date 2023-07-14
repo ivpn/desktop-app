@@ -23,10 +23,14 @@
 package types
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -87,7 +91,8 @@ type ConnectionParams struct {
 	WireGuardParameters struct {
 		// Port in use only for Single-Hop connections
 		Port struct {
-			Port int
+			Protocol int // by default, it must be UDP (0) for WireGuard. But for V2Ray connections it can be UDP or TCP
+			Port     int
 		}
 
 		EntryVpnServer struct {
@@ -97,6 +102,8 @@ type ConnectionParams struct {
 		MultihopExitServer MultiHopExitServer_WireGuard
 
 		Mtu int // Set 0 to use default MTU value
+
+		V2RayProxy v2r.V2RayTransportType // V2Ray config
 	}
 
 	OpenVpnParameters struct {
@@ -119,6 +126,9 @@ type ConnectionParams struct {
 			// Port number in use only for Single-Hop connections
 			Port int
 		}
+
+		Obfs4proxy obfsproxy.Config       // Obfsproxy config (ignored when 'V2RayProxy' defined)
+		V2RayProxy v2r.V2RayTransportType // V2Ray config (this option takes precedence over the 'Obfs4proxy')
 	}
 }
 
@@ -139,6 +149,124 @@ func (p ConnectionParams) CheckIsDefined() error {
 			return fmt.Errorf("no hosts defined for OpenVPN connection")
 		}
 	}
+	return nil
+}
+
+func (p ConnectionParams) Port() (port int, isTcp bool) {
+	if p.VpnType == vpn.WireGuard {
+		return p.WireGuardParameters.Port.Port, p.WireGuardParameters.Port.Protocol > 0 // is TCP
+	}
+	return p.OpenVpnParameters.Port.Port, p.OpenVpnParameters.Port.Protocol > 0 // is TCP
+}
+
+func (p ConnectionParams) V2Ray() v2r.V2RayTransportType {
+	if p.VpnType == vpn.WireGuard {
+		return p.WireGuardParameters.V2RayProxy
+	}
+	return p.OpenVpnParameters.V2RayProxy
+}
+
+// NormalizeHosts - normalize hosts list
+// 1) in case of multiple entry hosts - take random host from the list
+// 2) in case of multiple exit hosts - take random host from the list
+// 3) (WireGuard) filter entry hosts: use IPv6 hosts
+// 4) (WireGuard) filter exit servers (Multi-Hop connection):
+// 4.1) each exit server must have initialized 'multihop_port' field
+// 4.2) (in case of IPv6Only) IPv6 local address should be defined
+func (p *ConnectionParams) NormalizeHosts() error {
+
+	if vpn.Type(p.VpnType) == vpn.OpenVPN {
+		// in case of multiple entry hosts - take random host from the list
+		entryHosts := p.OpenVpnParameters.EntryVpnServer.Hosts
+		if len(entryHosts) > 1 {
+			rndHost := entryHosts[0]
+			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(entryHosts)))); err == nil {
+				rndHost = entryHosts[rnd.Int64()]
+			}
+			p.OpenVpnParameters.EntryVpnServer.Hosts = []api_types.OpenVPNServerHostInfo{rndHost}
+		}
+
+		// in case of multiple exit hosts - take random host from the list
+		exitHosts := p.OpenVpnParameters.MultihopExitServer.Hosts
+		if len(exitHosts) > 1 {
+			rndHost := exitHosts[0]
+			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(exitHosts)))); err == nil {
+				rndHost = exitHosts[rnd.Int64()]
+			}
+			p.OpenVpnParameters.MultihopExitServer.Hosts = []api_types.OpenVPNServerHostInfo{rndHost}
+		}
+
+	} else if vpn.Type(p.VpnType) == vpn.WireGuard {
+		// filter entry hosts: use IPv6 hosts
+		if p.IPv6 {
+			hosts := p.WireGuardParameters.EntryVpnServer.Hosts
+			var ipv6Hosts []api_types.WireGuardServerHostInfo
+			for _, h := range hosts {
+				if h.IPv6.LocalIP != "" {
+					ipv6Hosts = append(ipv6Hosts, h)
+				}
+			}
+			if len(ipv6Hosts) == 0 {
+				if p.IPv6Only {
+					return fmt.Errorf("unable to make IPv6 connection inside tunnel. Server does not support IPv6")
+				}
+			} else {
+				p.WireGuardParameters.EntryVpnServer.Hosts = ipv6Hosts
+			}
+		}
+
+		// filter exit servers (Multi-Hop connection):
+		// 1) each exit server must have initialized 'multihop_port' field
+		// 2) (in case of IPv6Only) IPv6 local address should be defined
+		multihopExitHosts := p.WireGuardParameters.MultihopExitServer.Hosts
+		if len(multihopExitHosts) > 0 {
+			isHasMHPort := false
+			//filteredExitHosts := append(multihopExitHosts[0:0], multihopExitHosts...)
+			var filteredExitHosts []api_types.WireGuardServerHostInfo
+			for _, h := range multihopExitHosts {
+				if h.MultihopPort == 0 {
+					continue
+				}
+				isHasMHPort = true
+				if p.IPv6 && h.IPv6.LocalIP == "" {
+					continue
+				}
+				filteredExitHosts = append(filteredExitHosts, h)
+			}
+			if len(filteredExitHosts) == 0 {
+				if !isHasMHPort {
+					return fmt.Errorf("unable to make Multi-Hop connection inside tunnel. Exit server does not support Multi-Hop")
+				}
+				if p.IPv6Only {
+					return fmt.Errorf("unable to make IPv6 Multi-Hop connection inside tunnel. Exit server does not support IPv6")
+				}
+			} else {
+				p.WireGuardParameters.MultihopExitServer.Hosts = filteredExitHosts
+			}
+		}
+
+		// in case of multiple entry hosts - take random host from the list
+		if len(p.WireGuardParameters.EntryVpnServer.Hosts) > 1 {
+			rndHost := p.WireGuardParameters.EntryVpnServer.Hosts[0]
+			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(p.WireGuardParameters.EntryVpnServer.Hosts)))); err == nil {
+				rndHost = p.WireGuardParameters.EntryVpnServer.Hosts[rnd.Int64()]
+			}
+			p.WireGuardParameters.EntryVpnServer.Hosts = []api_types.WireGuardServerHostInfo{rndHost}
+		}
+
+		// in case of multiple exit hosts - take random host from the list
+		if len(p.WireGuardParameters.MultihopExitServer.Hosts) > 1 {
+			rndHost := p.WireGuardParameters.MultihopExitServer.Hosts[0]
+			if rnd, err := rand.Int(rand.Reader, big.NewInt(int64(len(p.WireGuardParameters.MultihopExitServer.Hosts)))); err == nil {
+				rndHost = p.WireGuardParameters.MultihopExitServer.Hosts[rnd.Int64()]
+			}
+			p.WireGuardParameters.MultihopExitServer.Hosts = []api_types.WireGuardServerHostInfo{rndHost}
+		}
+
+	} else {
+		return fmt.Errorf("unknown VPN type: %d", p.VpnType)
+	}
+
 	return nil
 }
 

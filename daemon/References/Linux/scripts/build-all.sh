@@ -57,6 +57,18 @@ else
   echo "dnscrypt-proxy already compiled. Skipping build."
 fi
 
+# check if we need to compile v2ray
+if [[ ! -f "../_deps/v2ray_inst/v2ray" ]]
+then
+  echo "======================================================"
+  echo "========== Compiling v2ray ==========================="
+  echo "======================================================"
+  cd $SCRIPT_DIR
+  ./build-v2ray.sh
+else
+  echo "v2ray already compiled. Skipping build."
+fi
+
 # check if we need to compile kem-helper
 if [[ ! -f "../_deps/kem-helper/kem-helper-bin/kem-helper" ]]
 then

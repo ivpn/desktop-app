@@ -54,6 +54,9 @@ export function InitConnectionParamsObject() {
         Port: port.port,
         Protocol: port.type, // 0 === UDP
       },
+
+      Obfs4proxy: settings.openvpnObfsproxyConfig,
+      V2RayProxy: settings.V2RayConfig.OpenVPN,
     };
 
     const ProxyType = settings.ovpnProxyType;
@@ -86,7 +89,9 @@ export function InitConnectionParamsObject() {
 
       Port: {
         Port: port.port,
+        Protocol: port.type, // 0 === UDP
       },
+      V2RayProxy: settings.V2RayConfig.WireGuard,
     };
 
     const mtu = Number.parseInt(settings.mtu);

@@ -44,8 +44,7 @@ export function InitPersistentSettings() {
       const data = fs.readFileSync(filename);
       const settings = JSON.parse(data);
 
-      // UPGRADING FROM OLD SETTINGS
-      // v3.5.2 -> v3.6.1
+      // UPGRADING FROM OLD SETTINGS (v3.5.2 -> v3.6.1)
       if (settings.dnsCustom !== undefined) {
         settings.dnsCustomCfg = {
           DnsHost: settings.dnsCustom,
@@ -62,6 +61,21 @@ export function InitPersistentSettings() {
         settings.serversFavoriteList = favSvs;
       } catch (e) {
         console.error("InitPersistentSettings (serversFavoriteList upd.): ", e);
+      }
+
+      // UPGRADING from OLD SETTINGS (from v3.10.23 and v3.11.5)
+      try {
+        // changed location of obfsproxy configuration
+        if (
+          settings.daemonSettings &&
+          settings.daemonSettings.ObfsproxyConfig
+        ) {
+          settings.openvpnObfsproxyConfig =
+            settings.daemonSettings.ObfsproxyConfig;
+          delete settings.daemonSettings.ObfsproxyConfig;
+        }
+      } catch (e) {
+        console.error("InitPersistentSettings (obfsproxyConfig upd.): ", e);
       }
 
       // apply settings data

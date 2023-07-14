@@ -210,7 +210,6 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 		IsAutoconnectOnLaunch:       prefs.IsAutoconnectOnLaunch,
 		IsAutoconnectOnLaunchDaemon: prefs.IsAutoconnectOnLaunchDaemon,
 		UserDefinedOvpnFile:         platform.OpenvpnUserParamsFile(),
-		ObfsproxyConfig:             prefs.Obfs4proxy,
 		UserPrefs:                   prefs.UserPrefs,
 		WiFi:                        prefs.WiFiControl,
 		IsLogging:                   prefs.IsLogging,
@@ -275,6 +274,8 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		Dns:             types.DnsStatus{Dns: manualDns, AntiTrackerStatus: antiTrackerStatus},
 		IsTCP:           state.IsTCP,
 		Mtu:             state.Mtu,
+		V2RayProxy:      state.V2RayProxy,
+		Obfsproxy:       state.Obfsproxy,
 		IsPaused:        p._service.IsPaused(),
 		PausedTill:      pausedTillStr,
 	}

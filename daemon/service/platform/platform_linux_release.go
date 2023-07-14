@@ -52,6 +52,9 @@ func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 
 	obfsproxyStartScript = path.Join(installDir, "obfsproxy/obfs4proxy")
 
+	v2rayBinaryPath = path.Join(installDir, "v2ray/v2ray")
+	v2rayConfigTmpFile = path.Join(tmpDir, "v2ray.json")
+
 	wgBinaryPath = path.Join(installDir, "wireguard-tools/wg-quick")
 	wgToolBinaryPath = path.Join(installDir, "wireguard-tools/wg")
 
