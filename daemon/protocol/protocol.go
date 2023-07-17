@@ -417,7 +417,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendResponse(conn, p.createConnectedResponse(vpnState), reqIdx)
 		} else if !isOnlyIfConnected {
 			if vpnState.State == vpn.DISCONNECTED {
-				p.sendResponse(conn, &types.DisconnectedResp{Failure: false, Reason: 0, ReasonDescription: ""}, reqIdx)
+				p.sendResponse(conn, &types.DisconnectedResp{IsStateInfo: true, Failure: false, Reason: 0, ReasonDescription: ""}, reqIdx)
 			} else {
 				p.sendResponse(conn, &types.VpnStateResp{StateVal: vpnState.State, State: vpnState.State.String()}, reqIdx)
 			}
