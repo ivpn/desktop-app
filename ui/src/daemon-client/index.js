@@ -453,6 +453,11 @@ async function processResponse(response) {
       store.commit(`vpnState/disconnected`, obj.ReasonDescription);
       store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED); // to properly raise value-changed event
       store.commit("uiState/isPauseResumeInProgress", false);
+
+      // If IsStateInfo === true - it is not an disconneection event, it is just status info "disconnected"
+      // No need to disable firewall in this case
+      if (obj.IsStateInfo === true) break;
+
       if (store.state.settings.firewallDeactivateOnDisconnect === true) {
         await EnableFirewall(false);
       }
