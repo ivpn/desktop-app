@@ -36,7 +36,7 @@
     </div>
     <div class="fwDescription">
       <button class="link" v-on:click="onAntitrackerBlockListLink">
-        Lern more
+        Learn more
       </button>
       about AntiTracker block lists.
     </div>
@@ -51,8 +51,8 @@
     </div>
 
     <div class="fwDescription">
-      Hardcore mode blocks the leading companies with business models relying on
-      user surveillance (currently: Google and Facebook)
+      Adding Hardcore mode will block the leading companies with business models
+      relying on user surveillance (currently: Google and Facebook).
     </div>
     <div class="fwDescription">
       To better understand how this may impact your experience please refer to
