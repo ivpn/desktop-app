@@ -18,7 +18,7 @@
   },
   "main": "background.js",
   "dependencies": {
-    "@sentry/electron": "3.0.7",
+    "@sentry/electron": "4.8.0",
     "auto-launch": "5.0.6",
     "click-outside-vue3": "4.0.1",
     "core-js": "3.31.1",
