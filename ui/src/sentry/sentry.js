@@ -67,6 +67,13 @@ export function SentrySendDiagnosticReport(
     return str.match(new RegExp("[^]{1," + length + "}", "g"));
   }
 
+  // if AccountID is non empty string then keep only last 6 symbols, the rest replace with '*'
+  let accountIdInfo = AccountID;
+  if (accountIdInfo && accountIdInfo != "") {
+    if (accountIdInfo.length > 6)
+      accountIdInfo = `*${accountIdInfo.substr(accountIdInfo.length - 6)}`;
+  }
+
   for (var propName in eventAdditionalDataObject) {
     // ignore empty fields
     if (
@@ -76,6 +83,12 @@ export function SentrySendDiagnosticReport(
     ) {
       continue;
     }
+
+    // replace  all occrances of 'AccountID' with accountIdInfo
+    if (accountIdInfo)
+      eventAdditionalDataObject[propName] = eventAdditionalDataObject[
+        propName
+      ].replace(new RegExp(AccountID, "g"), accountIdInfo);
 
     if (eventAdditionalDataObject[propName].length <= maxFieldSize)
       objectToSend[propName] = eventAdditionalDataObject[propName];
@@ -94,7 +107,7 @@ export function SentrySendDiagnosticReport(
   try {
     // buildExtraInfo
     let tags = {
-      AccountID: AccountID,
+      AccountID: accountIdInfo,
       DaemonVersion: daemonVer,
     };
     if (buildExtraInfo) tags.BuildExInfo = buildExtraInfo;
@@ -103,8 +116,17 @@ export function SentrySendDiagnosticReport(
     Sentry.getCurrentHub().getClient().getOptions().enabled = true;
 
     const uiVer = app.getVersion();
-    let reportName = `Diagnostic report (${uiVer})`;
-    if (uiVer != daemonVer) reportName += ` [daemon:${daemonVer}]`;
+
+    // if accountIdInfo is non empty string then add it to report title
+    let accIdTitle = "";
+    if (accountIdInfo && accountIdInfo != "")
+      accIdTitle = ` - user:${accountIdInfo}`;
+
+    // if daemonVer is non empty and it does not match UI version then add it to report title
+    let dVerTitle = "";
+    if (daemonVer && daemonVer != uiVer) dVerTitle = `; daemon:${daemonVer}`;
+
+    let reportName = `Diagnostic report (${uiVer}${dVerTitle})${accIdTitle} `;
 
     return Sentry.captureEvent({
       _isAllowedToSend: true,

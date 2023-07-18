@@ -73,7 +73,7 @@ export default {
   methods: {
     onAntitrackerBlockListLink: () => {
       sender.shellOpenExternal(
-        `https://www.ivpn.net/knowledgebase/antitracker/blocklists/`
+        `https://www.ivpn.net/knowledgebase/general/antitracker-plus-lists-explained/`
       );
     },
     onLearnMoreLink: () => {
