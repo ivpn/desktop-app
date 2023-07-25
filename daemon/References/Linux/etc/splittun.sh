@@ -66,6 +66,7 @@ _bin_sed=sed
 
 #Variables vill be initialized later:
 _def_interface_name=""
+_def_interface_nameIPv6=""
 _def_gateway=""
 _def_gatewayIPv6=""
 
@@ -100,6 +101,14 @@ function test()
     if ! command -v ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})" 1>&2; fi
     if ! command -v ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})" 1>&2; fi
     if ! command -v ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})" 1>&2; fi    
+
+    echo "-= Variables =-"
+    initDefGatewayVars 
+    initDefInfNameVars
+    echo "_def_gateway            : ${_def_gateway}"
+    echo "_def_interface_name     : ${_def_interface_name}"
+    echo "_def_gatewayIPv6        : ${_def_gatewayIPv6}"
+    echo "_def_interface_nameIPv6 : ${_def_interface_nameIPv6}"
 }
 
 function initDefGatewayVars() 
@@ -109,24 +118,38 @@ function initDefGatewayVars()
         _def_gateway=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $3 }')
         echo "[+] Default gateway: '${_def_gateway}'"
     fi
-    if [ -z ${_def_gatewayIPv6} ]; then
-        echo "[i] Default IPv6 gateway is not defined. Trying to determine it automatically..."
-        _def_gatewayIPv6=$(${_bin_ip} -6 route | ${_bin_awk} '/default/ { print $3 }')
-        echo "[+] Default IPv6 gateway: '${_def_gatewayIPv6}'"
+
+    if [ -f /proc/net/if_inet6 ]; then
+        if [ -z ${_def_gatewayIPv6} ]; then
+            echo "[i] Default IPv6 gateway is not defined. Trying to determine it automatically..."
+            _def_gatewayIPv6=$(${_bin_ip} -6 route | ${_bin_awk} '/default/ { print $3 }')
+            echo "[+] Default IPv6 gateway: '${_def_gatewayIPv6}'"
+        fi
     fi
 }
 
-function init()
+function initDefInfNameVars() 
 {
-    # Ensure the input parameters not empty
-    initDefGatewayVars
-   
     if [ -z ${_def_interface_name} ]; then
         echo "[i] Default network interface is not defined. Trying to determine it automatically..."
         _def_interface_name=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $5 }')
         echo "[+] Default network interface: '${_def_interface_name}'"
     fi
 
+    if [ -f /proc/net/if_inet6 ]; then
+        if [ -z ${_def_interface_nameIPv6} ]; then
+            echo "[i] Default IPv6 network interface is not defined. Trying to determine it automatically..."
+            _def_interface_nameIPv6=$(${_bin_ip} -6 route | ${_bin_awk} '/default/ { print $5 }')
+            echo "[+] Default IPv6 network interface: '${_def_interface_nameIPv6}'"
+        fi
+    fi
+}
+
+function init()
+{
+    # Ensure the input parameters not empty
+    initDefGatewayVars   
+    initDefInfNameVars
 
     if [ -z ${_def_interface_name} ]; then
         echo "Default network interface is not defined. Please, check internet connectivity." 1>&2
@@ -138,6 +161,9 @@ function init()
     fi
     if [ -z ${_def_gatewayIPv6} ]; then
         echo "Warning: Default IPv6 gateway is not defined." 1>&2
+    fi
+    if [ -z ${_def_interface_nameIPv6} ]; then
+        echo "Warning: Default IPv6 interface is not defined." 1>&2
     fi
 
     ##############################################
@@ -186,11 +212,11 @@ function init()
     # Restore packets mark for incoming packets
     ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I PREROUTING -m comment --comment  "${_comment}" -j CONNMARK --restore-mark
 
-    if [ -f /proc/net/if_inet6 ]; then
+    if [ -f /proc/net/if_inet6 ] && [ ! -z ${_def_interface_nameIPv6} ]; then
         # Save packets mark (to be able to restore mark for incoming packets of the same connection)
         ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I POSTROUTING -m comment --comment  "${_comment}" -j CONNMARK --save-mark 
         # Force the packets to exit through default interface (eg. eth0, enp0s3 ...) with NAT
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t nat -I POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment  "${_comment}" -j MASQUERADE
+        ${_bin_ip6tables} -w ${_iptables_locktime} -t nat -I POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_nameIPv6} -m comment --comment  "${_comment}" -j MASQUERADE
         # Add mark on packets of classid ${_cgroup_classid}
         ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
         # Important! allow DNS request before setting mark rule (DNS request should not be marked)
@@ -260,15 +286,14 @@ function updateRoutes()
     fi
 
     initDefGatewayVars
+    initDefInfNameVars
 
     # splittun table has a default gateway to the default interface
     if [ ! -z ${_def_gateway} ]; then        
         ${_bin_ip} route replace default via ${_def_gateway} table ${_routing_table_name}  
     fi
-    if [ -f /proc/net/if_inet6 ]; then
-        if [ ! -z ${_def_gatewayIPv6} ]; then
-            ${_bin_ip} -6 route replace default via ${_def_gatewayIPv6} table ${_routing_table_name}
-        fi
+    if [ -f /proc/net/if_inet6 ] && [ ! -z ${_def_gatewayIPv6} ] && [ ! -z ${_def_interface_nameIPv6} ]; then
+        ${_bin_ip} -6 route replace default via ${_def_gatewayIPv6} dev ${_def_interface_nameIPv6} table ${_routing_table_name}
     fi
 }
 
@@ -281,11 +306,7 @@ function clean()
     restore
 
     # Ensure the input parameters not empty
-    if [ -z ${_def_interface_name} ]; then
-        echo "[i] Default network interface is not defined. Trying to determine it automatically..."
-        _def_interface_name=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $5 }')
-        echo "[+] Default network interface: '${_def_interface_name}'"
-    fi
+    initDefInfNameVars
 
     ##############################################
     # Move all processes from the IVPN cgroup to the main cgroup
@@ -326,8 +347,8 @@ function clean()
         ${_bin_ip6tables} -w ${_iptables_locktime} -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT
         ${_bin_ip6tables} -w ${_iptables_locktime} -D INPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
         ${_bin_ip6tables} -w ${_iptables_locktime} -D INPUT -m mark --mark ${_packets_fwmark_value} -m comment --comment "${_comment}" -j ACCEPT
-        if [ ! -z ${_def_interface_name} ]; then
-            ${_bin_ip6tables} -w ${_iptables_locktime} -t nat -D POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment "${_comment}" -j MASQUERADE
+        if [ ! -z ${_def_interface_nameIPv6} ]; then
+            ${_bin_ip6tables} -w ${_iptables_locktime} -t nat -D POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_nameIPv6} -m comment --comment "${_comment}" -j MASQUERADE
         fi
     fi
 
@@ -537,12 +558,14 @@ function info()
 
 if [[ $1 = "start" ]] ; then    
     _def_interface_name=""
+    _def_interface_nameIPv6=""
     _def_gateway=""
     _def_gatewayIPv6=""
     shift
-    while getopts ":i:g:6:" opt; do
+    while getopts ":i:s:g:6:" opt; do
         case $opt in
             i) _def_interface_name="$OPTARG"   ;;
+            s) _def_interface_nameIPv6="$OPTARG"   ;;
             g) _def_gateway="$OPTARG"    ;;
             6) _def_gatewayIPv6="$OPTARG"    ;;
         esac
@@ -613,11 +636,12 @@ else
     echo "Note! The script have to be started under privilaged user (sudo $0 ...)"
     echo "    $0 <command> [parameters]"
     echo "Parameters:"
-    echo "    start [-i <interface_name>] [-g <gateway_ip>] [-6 <gateway_IPv6_ip>]"
+    echo "    start [-i <interface_name>] [-g <gateway_ip>] [-6 <gateway_IPv6_ip>] [-s <interface_nameIPv6>]"
     echo "        Initialize split-tunneling functionality"
     echo "        - interface_name - (optional) name of network interface to be used for ST environment"
     echo "        - gateway_ip     - (optional) gateway IP to be used for ST environment"
     echo "        - gateway_IPv6_ip- (optional) IPv6 gateway IP to be used for ST environment"
+    echo "        - interface_nameIPv6- (optional) name of IPv6 network interface to be used for ST environment"
     echo "    stop"
     echo "        Uninitialize split-tunneling functionality"
     echo "    run [-u <username>] <command>"
