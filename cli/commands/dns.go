@@ -221,11 +221,18 @@ const EmptyBlockListName = "<default>"
 
 func (c *CmdAntitracker) Init() {
 	c.SetPreParseFunc(c.preParse)
-	c.Initialize("antitracker", "Default AntiTracker configuration management for VPN connection")
-	c.StringVar(&c.on, "on", "", "[BLOCK_LIST]", "Enable AntiTracker\n BLOCK_LIST - optional parameter used to set custom DNS block list\n Tip: use `ivpn connect -show_blocklists` command to show all supported DNS block lists")
-	c.StringVar(&c.hardcore, "on_hardcore", "", "[BLOCK_LIST]", "Enable AntiTracker 'hardcore' mode\n BLOCK_LIST - optional parameter used to set custom DNS block list\n Tip: use `ivpn connect -show_blocklists` command to show all supported DNS block lists")
+
+	cmdName := "antitracker"
+	argNameShowBlocklists := "show_blocklists"
+
+	c.Initialize(cmdName, "Default AntiTracker configuration management for VPN connection")
+
+	tipText := fmt.Sprintf("Tip: use 'ivpn %s -%s' command to show all supported DNS block lists", cmdName, argNameShowBlocklists)
+
+	c.StringVar(&c.on, "on", "", "[BLOCK_LIST]", "Enable AntiTracker\n BLOCK_LIST - optional parameter used to set custom DNS block list\n "+tipText)
+	c.StringVar(&c.hardcore, "on_hardcore", "", "[BLOCK_LIST]", "Enable AntiTracker 'hardcore' mode\n BLOCK_LIST - optional parameter used to set custom DNS block list\n "+tipText)
 	c.BoolVar(&c.off, "off", false, "Disable AntiTracker")
-	c.BoolVar(&c.blocklists, "show_blocklists", false, "Show all supported DNS block lists")
+	c.BoolVar(&c.blocklists, argNameShowBlocklists, false, "Show all supported DNS block lists")
 }
 
 func (c *CmdAntitracker) preParse(arguments []string) ([]string, error) {
