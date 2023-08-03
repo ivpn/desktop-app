@@ -125,7 +125,6 @@ export default {
         let listBasic = null;
         let listComprehensive = null;
         let listRestrictive = null;
-        let listOisdbig = null;
 
         let groupPredefined = { name: "Pre-defined lists", lists: [] };
         let groupIndividual = { name: "Individual lists", lists: [] };
@@ -141,9 +140,6 @@ export default {
             case "Restrictive":
               listRestrictive = s;
               break;
-            case "Oisdbig":
-              listOisdbig = s;
-              break;
             default:
               groupIndividual.lists.push(s);
               break;
@@ -152,8 +148,6 @@ export default {
         if (listBasic) groupPredefined.lists.push(listBasic);
         if (listComprehensive) groupPredefined.lists.push(listComprehensive);
         if (listRestrictive) groupPredefined.lists.push(listRestrictive);
-
-        if (listOisdbig) groupIndividual.lists.unshift(listOisdbig); // add as a first element
 
         return [groupPredefined, groupIndividual];
       },
