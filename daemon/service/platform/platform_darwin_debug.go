@@ -81,6 +81,8 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	dnscryptproxyConfigTemplate = path.Join(installDir, "References/common/etc/dnscrypt-proxy-template.toml")
 	dnscryptproxyConfig = path.Join(settingsDir, "dnscrypt-proxy.toml")
 
+	kemHelperBinaryPath = path.Join(installDir, "References/macOS/_deps/kem-helper/kem-helper-bin/kem-helper")
+
 	return nil, nil
 }
 

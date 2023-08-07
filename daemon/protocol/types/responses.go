@@ -31,6 +31,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -129,6 +130,7 @@ type SettingsResp struct {
 	UserPrefs                   preferences.UserPreferences
 	WiFi                        preferences.WiFiParams
 	IsLogging                   bool
+	AntiTracker                 service_types.AntiTrackerMetadata
 
 	// TODO: implement the rest of daemon settings
 	// IsFwPersistant        bool
@@ -167,6 +169,7 @@ type SessionResp struct {
 	WgLocalIP          string
 	WgKeyGenerated     int64 // Unix time
 	WgKeysRegenInerval int64 // seconds
+	WgUsePresharedKey  bool
 }
 
 // CreateSessionResp create new session info object to send to client
@@ -177,7 +180,8 @@ func CreateSessionResp(s preferences.SessionStatus) SessionResp {
 		WgPublicKey:        s.WGPublicKey,
 		WgLocalIP:          s.WGLocalIP,
 		WgKeyGenerated:     s.WGKeyGenerated.Unix(),
-		WgKeysRegenInerval: int64(s.WGKeysRegenInerval.Seconds())}
+		WgKeysRegenInerval: int64(s.WGKeysRegenInerval.Seconds()),
+		WgUsePresharedKey:  len(s.WGPresharedKey) > 0}
 }
 
 // SessionNewResp - information about created session (or error info)
@@ -224,11 +228,16 @@ type DiagnosticsGeneratedResp struct {
 	ExtraInfo   string // Extra info for logging (e.g. ifconfig, netstat -nr ... etc.)
 }
 
+type DnsStatus struct {
+	Dns               dns.DnsSettings
+	AntiTrackerStatus service_types.AntiTrackerMetadata
+}
+
 // SetAlternateDNSResp returns status of changing DNS
 type SetAlternateDNSResp struct {
 	CommandBase
 	IsSuccess    bool
-	ChangedDNS   dns.DnsSettings
+	Dns          DnsStatus
 	ErrorMessage string
 }
 
@@ -248,9 +257,11 @@ type ConnectedResp struct {
 	ServerIP        string
 	ServerPort      int
 	ExitHostname    string // multi-hop exit hostname (e.g. "us-tx1.wg.ivpn.net")
-	ManualDNS       dns.DnsSettings
+	Dns             DnsStatus
 	IsTCP           bool
-	Mtu             int // (for WireGuard connections)
+	Mtu             int    // (for WireGuard connections)
+	IsPaused        bool   // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"
+	PausedTill      string // pausedTill.Format(time.RFC3339)
 }
 
 // DisconnectionReason - disconnection reason

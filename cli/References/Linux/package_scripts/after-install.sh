@@ -61,6 +61,7 @@ silent chmod 0755 $IVPN_OPT/obfsproxy/obfs4proxy          # can change only owne
 silent chmod 0755 $IVPN_OPT/wireguard-tools/wg-quick      # can change only owner (root)
 silent chmod 0755 $IVPN_OPT/wireguard-tools/wg            # can change only owner (root)
 silent chmod 0755 $IVPN_OPT/dnscrypt-proxy/dnscrypt-proxy # can change only owner (root)
+silent chmod 0755 $IVPN_OPT/kem/kem-helper                # can change only owner (root)
 
 if [ -f "${SERVERS_FILE_BUNDLED}" ] && [ -f "${SERVERS_FILE_DEST}" ]; then 
   # New service version may use new format of 'servers.json'. 

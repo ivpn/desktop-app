@@ -26,12 +26,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/api"
 	"github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/kem"
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 )
@@ -46,7 +49,7 @@ func init() {
 
 // IWgKeysChangeReceiver WG key update handler
 type IWgKeysChangeReceiver interface {
-	WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string)
+	WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string, wgPreSharedKey string)
 	WireGuardGetKeys() (session, wgPublicKey, wgPrivateKey, wgLocalIP string, generatedTime time.Time, updateInterval time.Duration)
 	FirewallEnabled() (bool, error)
 	Connected() bool
@@ -194,6 +197,10 @@ func (m *KeysManager) UpdateKeysIfNecessary() (retErr error) {
 	return m.generateKeys(true)
 }
 
+func createKemHelper() (*kem.KemHelper, error) {
+	return kem.CreateHelper(platform.KemHelperBinaryPath(), kem.GetDefaultKemAlgorithms())
+}
+
 func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	defer func() {
 		if retErr != nil {
@@ -229,11 +236,6 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		return err
 	}
 
-	pub, priv, err := wireguard.GenerateKeys(m.wgToolBinPath)
-	if err != nil {
-		return err
-	}
-
 	isVPNConnected, connectedVpnType := m.service.ConnectedType()
 
 	if !isVPNConnected || connectedVpnType != vpn.WireGuard {
@@ -241,30 +243,89 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 		activePublicKey = ""
 	}
 
-	// trying to update WG keys with notifying API about current active public key (if it exists)
-	localIP, err := m.api.WireGuardKeySet(session, pub, activePublicKey)
+	// Generate keys for Key Encapsulation Mechanism using post-quantum cryptographic algorithms
+	var kemKeys types.KemPublicKeys
+	kemHelper, err := createKemHelper()
 	if err != nil {
-		if len(activePublicKey) == 0 {
-			// IMPORTANT! As soon as server receive request with empty 'activePublicKey' - it clears all keys
-			// Therefore, we have to ensure that local keys are not using anymore (we have to clear them independently from we received response or not)
-			m.service.WireGuardSaveNewKeys("", "", "")
+		log.Error("Failed to generate KEM keys: ", err)
+	} else {
+		kemKeys.KemPublicKey_Kyber1024, err = kemHelper.GetPublicKey(kem.AlgName_Kyber1024)
+		if err != nil {
+			log.Error(err)
 		}
-		log.Info("WG keys not updated: ", err)
-
-		var e types.APIError
-		if errors.As(err, &e) {
-			if e.ErrorCode == types.SessionNotFound {
-				m.service.OnSessionNotFound()
-				return fmt.Errorf("WG keys not updated (session not found)")
-			}
+		kemKeys.KemPublicKey_ClassicMcEliece348864, err = kemHelper.GetPublicKey(kem.AlgName_ClassicMcEliece348864)
+		if err != nil {
+			log.Error(err)
 		}
-		return fmt.Errorf("WG keys not updated. Please check your internet connection")
 	}
 
-	log.Info(fmt.Sprintf("WG keys updated (%s:%s) ", localIP.String(), pub))
+	var (
+		pub  string
+		priv string
 
+		wgPresharedKey string
+		localIP        net.IP
+		resp           types.SessionsWireGuardResponse
+	)
+	for {
+		pub, priv, err = wireguard.GenerateKeys(m.wgToolBinPath)
+		if err != nil {
+			return err
+		}
+
+		// trying to update WG keys with notifying API about current active public key (if it exists)
+		resp, err = m.api.WireGuardKeySet(session, pub, activePublicKey, kemKeys)
+		if err == nil {
+			localIP = net.ParseIP(resp.IPAddress)
+			if localIP == nil {
+				err = fmt.Errorf("failed to set WG key (failed to parse local IP in API response)")
+			}
+		}
+
+		if err != nil {
+			if len(activePublicKey) == 0 {
+				// IMPORTANT! As soon as server receive request with empty 'activePublicKey' - it clears all keys
+				// Therefore, we have to ensure that local keys are not using anymore (we have to clear them independently from we received response or not)
+				m.service.WireGuardSaveNewKeys("", "", "", "")
+			}
+			log.Info("WG keys not updated: ", err)
+
+			var e types.APIError
+			if errors.As(err, &e) {
+				if e.ErrorCode == types.SessionNotFound {
+					m.service.OnSessionNotFound()
+					return fmt.Errorf("WG keys not updated (session not found)")
+				}
+			}
+			return fmt.Errorf("WG keys not updated. Please check your internet connection")
+		}
+
+		if kemHelper != nil {
+			if len(resp.KemCipher_Kyber1024) == 0 && len(resp.KemCipher_ClassicMcEliece348864) == 0 {
+				log.Warning("The server did not respond with KEM ciphers. The WireGuard PresharedKey has not been initialized!")
+			} else {
+				if err := kemHelper.SetCipher(kem.AlgName_Kyber1024, resp.KemCipher_Kyber1024); err != nil {
+					log.Error(err)
+				}
+				if err := kemHelper.SetCipher(kem.AlgName_ClassicMcEliece348864, resp.KemCipher_ClassicMcEliece348864); err != nil {
+					log.Error(err)
+				}
+
+				wgPresharedKey, err = kemHelper.CalculatePresharedKey()
+				if err != nil {
+					log.Error(fmt.Sprintf("Failed to decode KEM ciphers! (%s). Generating new keys without PresharedKey...", err))
+					kemHelper = nil
+					kemKeys = types.KemPublicKeys{}
+					continue
+				}
+			}
+		}
+		break
+	}
 	// notify service about new keys
-	m.service.WireGuardSaveNewKeys(pub, priv, localIP.String())
+	m.service.WireGuardSaveNewKeys(pub, priv, localIP.String(), wgPresharedKey)
+
+	log.Info(fmt.Sprintf("WG keys updated (%s:%s; psk:%v) ", localIP.String(), pub, len(wgPresharedKey) > 0))
 
 	// Keys updated. Start keys rotation only if it not started yet or keys rotation interval changed
 	if m.activeRotationInterval != interval || m.stop == nil {

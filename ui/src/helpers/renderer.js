@@ -58,7 +58,7 @@ export function SetInputFilterNumbers(inputElement) {
 }
 
 export function GetTimeLeftText(endTime /*Date()*/) {
-  if (endTime == null) return "";
+  if (!endTime) return "";
 
   if (typeof endTime === "string" || endTime instanceof String)
     endTime = Date.parse(endTime);

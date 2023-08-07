@@ -77,6 +77,7 @@ type IServiceEventsReceiver interface {
 	OnServersUpdated(*api_types.ServersInfoResponse)
 	OnSplitTunnelStatusChanged()
 	OnVpnStateChanged(state vpn.StateInfo)
+	OnVpnPauseChanged()
 
 	// called by a service when new connection is required (e.g. requested by 'trusted-wifi' functionality or 'auto-connect' on launch)
 	RegisterConnectionRequest(params service_types.ConnectionParams) error

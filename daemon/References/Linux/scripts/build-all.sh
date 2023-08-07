@@ -57,6 +57,26 @@ else
   echo "dnscrypt-proxy already compiled. Skipping build."
 fi
 
+# check if we need to compile kem-helper
+if [[ ! -f "../_deps/kem-helper/kem-helper-bin/kem-helper" ]]
+then
+  echo "======================================================"
+  echo "========== Compiling kem-helper ======================"
+  echo "======================================================"
+  cd $SCRIPT_DIR
+
+  if [ ! -z "$GITHUB_ACTIONS" ]; 
+  then
+    echo "! GITHUB_ACTIONS detected ! It is just a build test."
+    echo "! Skipped compilation of kem-helper !"
+  else
+    ./build-kem-helper.sh
+  fi
+
+else
+  echo "kem-helper already compiled. Skipping build."
+fi
+
 echo "======================================================"
 echo "============ Compiling IVPN service =================="
 echo "======================================================"

@@ -585,6 +585,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\ui"
   RMDir /r "$INSTDIR\SplitTunnelDriver"
   RMDir /r "$INSTDIR\dnscrypt-proxy"
+  RMDir /r "$INSTDIR\kem"
 
   Delete "$INSTDIR\*.*"
 

@@ -34,7 +34,6 @@
             :isChecked="isConnected"
             :isProgress="isInProgress"
             :onPauseResume="onPauseResume"
-            :pauseState="this.$store.state.vpnState.pauseState"
           />
           <div class="horizontalLine hopButtonsSeparator" />
         </div>
@@ -89,7 +88,7 @@ import SelectedServerBlock from "@/components/blocks/block-selected-server.vue";
 import HopButtonsBlock from "./blocks/block-hop-buttons.vue";
 
 const sender = window.ipcSender;
-import { VpnStateEnum, VpnTypeEnum, PauseStateEnum } from "@/store/types";
+import { VpnStateEnum, VpnTypeEnum } from "@/store/types";
 import { capitalizeFirstLetter } from "@/helpers/helpers";
 
 const viewTypeEnum = Object.freeze({
@@ -214,7 +213,7 @@ export default {
     async onPauseResume(seconds) {
       if (seconds == null || seconds == 0) {
         // RESUME
-        if (this.$store.state.vpnState.pauseState != PauseStateEnum.Resumed)
+        if (this.$store.getters["vpnState/isPaused"])
           await sender.ResumeConnection();
       } else {
         // PAUSE

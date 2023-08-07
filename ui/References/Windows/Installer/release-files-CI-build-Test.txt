@@ -8,8 +8,9 @@ devcon\x86_64\devcon.exe
 OpenVPN\x86_64\libpkcs11-helper-1.dll
 OpenVPN\x86_64\openssl.exe
 OpenVPN\x86_64\openvpn.exe
-OpenVPN\x86_64\libssl-1_1-x64.dll
-OpenVPN\x86_64\libcrypto-1_1-x64.dll
+OpenVPN\x86_64\libssl-3-x64.dll
+OpenVPN\x86_64\libcrypto-3-x64.dll
+OpenVPN\x86_64\vcruntime140.dll
 OpenVPN\x86_64\tap\license.txt
 OpenVPN\x86_64\tap\OemVista.inf
 OpenVPN\x86_64\tap\tapivpn.cat

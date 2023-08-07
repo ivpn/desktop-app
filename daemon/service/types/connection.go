@@ -39,8 +39,9 @@ const (
 )
 
 type AntiTrackerMetadata struct {
-	Enabled  bool
-	Hardcore bool
+	Enabled                  bool
+	Hardcore                 bool
+	AntiTrackerBlockListName string
 }
 
 func (a AntiTrackerMetadata) IsEnabled() bool {
@@ -48,7 +49,7 @@ func (a AntiTrackerMetadata) IsEnabled() bool {
 }
 
 func (a AntiTrackerMetadata) Equal(b AntiTrackerMetadata) bool {
-	return a.Enabled == b.Enabled && a.Hardcore == b.Hardcore
+	return a.Enabled == b.Enabled && a.Hardcore == b.Hardcore && a.AntiTrackerBlockListName == b.AntiTrackerBlockListName
 }
 
 type ConnectMetadata struct {

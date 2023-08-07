@@ -217,6 +217,15 @@ type GetVPNState struct {
 	RequestBase
 }
 
+type PauseConnection struct {
+	RequestBase
+	Duration uint32 // seconds
+}
+
+type ResumeConnection struct {
+	RequestBase
+}
+
 // SessionNew - create new session
 //
 // When force is set to true - all active sessions will be deleted prior to creating a new one if user reached session limit.

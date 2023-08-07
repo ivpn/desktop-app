@@ -110,7 +110,7 @@ OBFSPXY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/obfs4proxy_inst/obfs4pr
 WG_QUICK_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg-quick
 WG_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg
 DNSCRYPT_PROXY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/dnscryptproxy_inst/dnscrypt-proxy
-
+KEM_HELPER_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/kem-helper/kem-helper-bin/kem-helper
 #if [ "$(find ${DNSCRYPT_PROXY_BIN} -perm 755)" != "${DNSCRYPT_PROXY_BIN}" ] || [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ] || [ "$(find ${WG_QUICK_BIN} -perm 755)" != "${WG_QUICK_BIN}" ] || [ "$(find ${WG_BIN} -perm 755)" != "${WG_BIN}" ]
 #then
 #  echo ----------------------------------------------------------
@@ -218,8 +218,16 @@ CreatePackage()
     $WG_QUICK_BIN=/opt/ivpn/wireguard-tools/wg-quick \
     $WG_BIN=/opt/ivpn/wireguard-tools/wg \
     ${DNSCRYPT_PROXY_BIN}=/opt/ivpn/dnscrypt-proxy/dnscrypt-proxy \
+    ${KEM_HELPER_BIN}=/opt/ivpn/kem/kem-helper \
     $TMPDIRSRVC/ivpn-service.dir/usr/share/pleaserun/=/usr/share/pleaserun
 }
+
+if [ ! -z "$GITHUB_ACTIONS" ]; 
+then
+  echo "! GITHUB_ACTIONS detected ! It is just a build test."
+  echo "! Packages creation (DEB/RPM) skipped !"
+  exit 0
+fi
 
 echo '---------------------------'
 echo "DEB package..."

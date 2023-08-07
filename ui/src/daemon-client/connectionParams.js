@@ -99,18 +99,11 @@ export function InitConnectionParamsObject() {
     manualDNS = settings.dnsCustomCfg;
   }
 
-  // AntiTracker metadata
-  let antiTrackerMetadata = { Enabled: false, Hardcore: false };
-  if (settings.isAntitracker) {
-    antiTrackerMetadata.Enabled = settings.isAntitracker;
-    antiTrackerMetadata.Hardcore = settings.isAntitrackerHardcore;
-  }
-
   // Metadata
   var metadata = {
     ServerSelectionEntry: ServerSelectionEnum.Default,
     ServerSelectionExit: ServerSelectionEnum.Default,
-    AntiTracker: antiTrackerMetadata,
+    AntiTracker: settings.antiTracker,
   };
   if (store.getters["settings/isFastestServer"]) {
     metadata.ServerSelectionEntry = ServerSelectionEnum.Fastest;

@@ -80,6 +80,14 @@ function BuildDnscryptProxy
   ./build-dnscrypt-proxy.sh
 }
 
+function BuildKemHelper
+{
+  echo "############################################"
+  echo "### kem-helper"
+  echo "############################################"
+  ./build-kem-helper.sh
+}
+
 if [ ! -z "$GITHUB_ACTIONS" ]; then
   echo "! GITHUB_ACTIONS detected ! It is just a build test."
   echo "! Skipped compilation of third-party dependencies: OpenVPN, WireGuard, obfs4proxy, dnscrypt-proxy !"
@@ -120,6 +128,15 @@ else
         BuildDnscryptProxy
       else
         echo "dnscrypt-proxy already compiled. Skipping build."
+      fi
+
+      # check if we need to compile kem-helper
+      if [[ ! -f "../_deps/kem-helper/kem-helper-bin/kem-helper" ]]
+      then
+        echo "kem-helper not compiled"
+        BuildKemHelper
+      else
+        echo "kem-helper already compiled. Skipping build."
       fi
 
   else

@@ -108,11 +108,17 @@ func (c *CmdWireGuard) getState() error {
 		return nil
 	}
 
+	quantumResistanceStatus := "Disabled"
+	if resp.Session.WgUsePresharedKey {
+		quantumResistanceStatus = "Enabled"
+	}
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-	fmt.Fprintln(w, fmt.Sprintf("Local IP:\t%v", resp.Session.WgLocalIP))
-	fmt.Fprintln(w, fmt.Sprintf("Public KEY:\t%v", resp.Session.WgPublicKey))
-	fmt.Fprintln(w, fmt.Sprintf("Generated:\t%v", time.Unix(resp.Session.WgKeyGenerated, 0)))
-	fmt.Fprintln(w, fmt.Sprintf("Rotation interval:\t%v", time.Duration(time.Second*time.Duration(resp.Session.WgKeysRegenInerval))))
+	fmt.Fprintf(w, "Local IP:\t%v\n", resp.Session.WgLocalIP)
+	fmt.Fprintf(w, "Public KEY:\t%v\n", resp.Session.WgPublicKey)
+	fmt.Fprintf(w, "Quantum Resistance:\t%v\n", quantumResistanceStatus)
+	fmt.Fprintf(w, "Generated:\t%v\n", time.Unix(resp.Session.WgKeyGenerated, 0))
+	fmt.Fprintf(w, "Rotation interval:\t%v\n", time.Duration(time.Second*time.Duration(resp.Session.WgKeysRegenInerval)))
 	w.Flush()
 
 	return nil

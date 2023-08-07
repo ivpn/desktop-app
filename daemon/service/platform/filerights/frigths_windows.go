@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package filerights
@@ -50,7 +51,11 @@ func CheckFileAccessRightsExecutable(file string) error {
 	// External binaries can be started only from '%SYSTEMROOT%' which is also write-accessible only for admins
 
 	file = strings.ToLower(strings.ReplaceAll(file, "/", "\\"))
-
+	if _, err := os.Stat(file); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file '%s' does not exists", file)
+		}
+	}
 	if strings.HasPrefix(file, envVarProgramFiles) {
 		return isFileInProgramFiles(file)
 	}

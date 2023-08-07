@@ -107,16 +107,17 @@ type Service interface {
 	// SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 	// If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 	SetManualDNS(dns dns.DnsSettings, antiTracker service_types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error)
-	ResetManualDNS() error
+	GetAntiTrackerStatus() (antiTrackerStatus service_types.AntiTrackerMetadata, retErr error)
 
 	IsCanConnectMultiHop() error
 	Connect(params service_types.ConnectionParams) error
 	Disconnect() error
 	Connected() bool
 
-	Pause() error
+	Pause(durationSeconds uint32) error
 	Resume() error
 	IsPaused() bool
+	PausedTill() time.Time
 
 	SessionNew(accountID string, forceLogin bool, captchaID string, captcha string, confirmation2FA string) (
 		apiCode int,
@@ -289,10 +290,17 @@ func (p *Protocol) processClient(conn net.Conn) {
 			}
 		}
 
-		p.clientDisconnected(conn)
+		disconnectedClientInfo := p.clientDisconnected(conn)
 		log.Info("Client disconnected: ", conn.RemoteAddr())
 
-		if p._service.IsPaused() && p.clientsConnectedCount() == 0 {
+		// if VPN Paused:
+		//	- if only UI client was connected and now it disconnected - disconnect VPN
+		//	- if only CLI client was connected - do nothing (keep VPN paused)
+		if p._service.IsPaused() &&
+			p.clientsConnectedCount() == 0 &&
+			disconnectedClientInfo != nil &&
+			disconnectedClientInfo.Type == types.ClientUi &&
+			disconnectedClientInfo.IsAuthenticated {
 			log.Info("Connection is in paused state and no active clients available. Disconnecting ...")
 			if err := p._service.Disconnect(); err != nil {
 				log.Error(err)
@@ -887,19 +895,15 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			req.Dns.DnsHost = getSingleField(req.Dns.DnsHost)
 			req.Dns.DohTemplate = getSingleField(req.Dns.DohTemplate)
 
-			changedDns := dns.DnsSettings{}
-			var err error
-			if req.Dns.IsEmpty() && !req.AntiTracker.IsEnabled() {
-				err = p._service.ResetManualDNS()
-			} else {
-				changedDns, err = p._service.SetManualDNS(req.Dns, req.AntiTracker)
+			antiTrackerStatus := service_types.AntiTrackerMetadata{}
+			changedDns, err := p._service.SetManualDNS(req.Dns, req.AntiTracker)
 
-				if err != nil {
-					// DNS set failed. Trying to reset DNS
-					errReset := p._service.ResetManualDNS()
-					if errReset != nil {
-						log.ErrorTrace(errReset)
-					}
+			if err != nil {
+				// DNS set failed. Trying to reset DNS
+				req.AntiTracker.Enabled = false
+				_, errReset := p._service.SetManualDNS(dns.DnsSettings{}, req.AntiTracker)
+				if errReset != nil {
+					log.ErrorTrace(errReset)
 				}
 			}
 
@@ -908,10 +912,12 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				// send the response to the requestor
 				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
 			} else {
+				antiTrackerStatus, _ = p._service.GetAntiTrackerStatus()
+				response := types.SetAlternateDNSResp{IsSuccess: true, Dns: types.DnsStatus{Dns: changedDns, AntiTrackerStatus: antiTrackerStatus}}
 				// notify all connected clients
-				p.notifyClients(&types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: changedDns})
+				p.notifyClients(&response)
 				// send the response to the requestor
-				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: true, ChangedDNS: changedDns}, req.Idx)
+				p.sendResponse(conn, &response, req.Idx)
 			}
 		}
 	case "GetDnsPredefinedConfigs":
@@ -924,12 +930,19 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 	case "PauseConnection":
-		if err := p._service.Pause(); err != nil {
+		var req types.PauseConnection
+		if err := json.Unmarshal(messageData, &req); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 
-		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+		if err := p._service.Pause(req.Duration); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+
+		p.sendResponse(conn, p.createConnectedResponse(p._lastVPNState), reqCmd.Idx)
+		// all clients will be notified by service in OnVpnPauseChanged() handler
 
 	case "ResumeConnection":
 		if err := p._service.Resume(); err != nil {
@@ -938,6 +951,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+		// all clients will be notified by service in OnVpnPauseChanged() handler
 
 	case "SessionNew":
 		var req types.SessionNew
@@ -995,15 +1009,17 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
-		if req.NeedToDisableFirewall {
-			p._service.SetKillSwitchIsPersistent(false)
-			p._service.SetKillSwitchState(false)
-		}
-
 		err := p._service.SessionDelete(req.IsCanDeleteSessionLocally)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
+		}
+
+		// It is important to ensure FW is disabled after SessionDelete() call.
+		// (because the SessionDelete->Disconnect->Resume restores original FW state which were before pause)
+		if req.NeedToDisableFirewall {
+			p._service.SetKillSwitchIsPersistent(false)
+			p._service.SetKillSwitchState(false)
 		}
 
 		if req.NeedToResetSettings {
@@ -1244,7 +1260,7 @@ func (p *Protocol) processConnectionRequests() {
 			saveLastError := func(e error) {
 				// If no any clients connected - error notification will not be passed to user
 				// Trerefore we keep this error an pass it to the first connected client
-				if !p.IsClientConnected(false) {
+				if e != nil && !p.IsClientConnected(false) {
 					p._lastConnectionErrorToNotifyClient = fmt.Sprintf("[%v] Failed to connect VPN: %s", time.Now().Format(time.Stamp), e.Error())
 				}
 			}
@@ -1308,7 +1324,7 @@ func (p *Protocol) processConnectRequest(r service_types.ConnectionParams) (err 
 	return p._service.Connect(r)
 }
 
-func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
+func (p *Protocol) notifyVpnStateChanged(stateObj *vpn.StateInfo) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("Panic when notifying VPN status to clients! (recovered)")
@@ -1318,7 +1334,11 @@ func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
 		}
 	}()
 
-	p._lastVPNState = state
+	state := p._lastVPNState
+	if stateObj != nil {
+		p._lastVPNState = *stateObj
+		state = *stateObj
+	}
 
 	switch state.State {
 	case vpn.CONNECTED:
@@ -1328,4 +1348,12 @@ func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
 	default:
 		p.notifyClients(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo})
 	}
+}
+
+func (p *Protocol) OnVpnStateChanged(state vpn.StateInfo) {
+	p.notifyVpnStateChanged(&state)
+}
+
+func (p *Protocol) OnVpnPauseChanged() {
+	p.notifyVpnStateChanged(nil)
 }

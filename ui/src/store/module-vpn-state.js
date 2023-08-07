@@ -25,8 +25,6 @@ import { IsServerSupportIPv6 } from "@/helpers/helpers_servers";
 import {
   VpnTypeEnum,
   VpnStateEnum,
-  PauseStateEnum,
-  DnsEncryption,
   NormalizedConfigPortObject,
   NormalizedConfigPortRangeObject,
   PortTypeEnum,
@@ -51,15 +49,15 @@ export default {
 	      Encryption: 0,    // DnsEncryption [	EncryptionNone = 0,	EncryptionDnsOverTls = 1,	EncryptionDnsOverHttps = 2]
 	      DohTemplate: "",  // string // DoH/DoT template URI (for Encryption = DnsOverHttps or Encryption = DnsOverTls)
       },      
-      IsTCP: false,
-      Mtu: int  // (for WireGuard connections)	    
+      IsTCP:      false,
+      Mtu:        int ,  // (for WireGuard connections)	 
+      IsPaused:   bool,  // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"   
+      PausedTill  string // pausedTill.Format(time.RFC3339)
     }*/,
 
     disconnectedInfo: {
       ReasonDescription: "",
     },
-
-    pauseState: PauseStateEnum.Resumed,
 
     firewallState: {
       IsEnabled: null,
@@ -91,14 +89,14 @@ export default {
       //                                        ExtModifiedCmdLine string
     },
 
-    dns: {
-      DnsHost: "",
-      Encryption: DnsEncryption.None,
-      DohTemplate: "",
-    },
-
     currentWiFiInfo: null, //{ SSID: "", IsInsecureNetwork: false },
     availableWiFiNetworks: null, // []{SSID: ""}
+
+    // true when servers pinging in progress
+    isPingingServers: false,
+
+    // Pings info: hostsPings[host] = latency
+    hostsPings: {},
 
     // Servers hash object: serversHashed[gateway] = server
     serversHashed: {},
@@ -107,12 +105,6 @@ export default {
       openvpn: [],
       config: { ports: { wireguard: null, openvpn: null } },
     },
-
-    // true when servers pinging in progress
-    isPingingServers: false,
-
-    // Pings info: hostsPings[host] = latency
-    hostsPings: {},
 
     /*
     // SERVERS
@@ -171,6 +163,16 @@ export default {
           default: { ip: "" },
           hardcore: { ip: "" }
         },
+        "antitracker_plus":{
+          "DnsServers":[
+            {
+               "Name":"",
+               "Description":"",
+               "Normal":"", // IP string
+               "Hardcore":"" // IP string
+            },           
+          ]
+        },
         api: { ips: [""], ipv6s:[""] }
         ports: {
          openvpn: [ {type: "UDP/TCP", port: "X", range: {min: X, max: X}}, ... ],
@@ -183,24 +185,22 @@ export default {
   mutations: {
     connectionState(state, cs) {
       state.connectionState = cs;
-      if (cs == VpnStateEnum.DISCONNECTED)
-        state.pauseState = PauseStateEnum.Resumed;
     },
     connectionInfo(state, ci) {
       state.connectionInfo = ci;
       if (ci != null) {
         state.connectionState = VpnStateEnum.CONNECTED;
         state.disconnectedInfo = null;
+
+        // convert 'PausedTill' string to Date object
+        let pausedTill = state.connectionInfo.PausedTill;
+        if (pausedTill) state.connectionInfo.PausedTill = new Date(pausedTill);
       }
     },
     disconnected(state, disconnectionReason) {
       state.disconnectedInfo = { ReasonDescription: disconnectionReason };
       state.connectionState = VpnStateEnum.DISCONNECTED;
-      state.pauseState = PauseStateEnum.Resumed;
       state.connectionInfo = null;
-    },
-    pauseState(state, val) {
-      state.pauseState = val;
     },
     setServersData(state, serversObj /*{servers,serversHashed}*/) {
       if (!serversObj || !serversObj.servers || !serversObj.serversHashed) {
@@ -222,9 +222,6 @@ export default {
     // Split-Tunnelling
     splitTunnelling(state, val) {
       state.splitTunnelling = val;
-    },
-    dns(state, dns) {
-      state.dns = dns;
     },
 
     currentWiFiInfo(state, currentWiFiInfo) {
@@ -275,17 +272,15 @@ export default {
     isConnected: (state) => {
       return state.connectionState === VpnStateEnum.CONNECTED;
     },
+    isPaused: (state) => {
+      if (!state.connectionInfo || !state.connectionInfo.IsPaused) return false;
+      return state.connectionInfo.IsPaused;
+    },
     vpnStateText: (state) => {
       return enumValueName(VpnStateEnum, state.connectionState);
     },
     activeServers(state, getters, rootState) {
       return getActiveServers(state, rootState);
-    },
-    isAntitrackerEnabled: (state) => {
-      return isAntitrackerActive(state);
-    },
-    isAntitrackerHardcoreEnabled: (state) => {
-      return isAntitrackerHardcoreActive(state);
     },
 
     // fastestServer returns: the server with the lowest latency
@@ -577,9 +572,8 @@ export default {
         root: true,
       });
 
-      // save last DNS state
-      context.commit("dns", ci.ManualDNS);
-      updateDnsSettings(context);
+      // save current state to settings
+      saveDnsSettings(context, ci.Dns);
 
       // save Mtu state (for WireGuard connections)
       if (ci.VpnType === VpnTypeEnum.WireGuard && Number.isInteger(ci.Mtu)) {
@@ -587,12 +581,6 @@ export default {
         if (mtu === 0) mtu = null;
         context.commit("settings/mtu", mtu, { root: true });
       }
-    },
-    pauseState(context, val) {
-      context.commit("pauseState", val);
-
-      if (val === PauseStateEnum.Resumed || val === PauseStateEnum.Resuming)
-        context.dispatch("uiState/pauseConnectionTill", null, { root: true });
     },
     servers(context, value) {
       // Update servers data and hashes: {servers, serversHashed}
@@ -615,10 +603,9 @@ export default {
     splitTunnelling(state, val) {
       state.splitTunnelling = val;
     },
-    dns(context, dns) {
-      context.commit("dns", dns);
+    dns(context, dnsStat) {
       // save current state to settings
-      updateDnsSettings(context);
+      saveDnsSettings(context, dnsStat);
     },
     firewallState(context, val) {
       context.commit("firewallState", val);
@@ -628,27 +615,51 @@ export default {
   },
 };
 
-function updateDnsSettings(context) {
-  // save current state to settings
-  const isAntitracker = isAntitrackerActive(context.state);
-  context.dispatch("settings/isAntitracker", isAntitracker, { root: true });
+function saveDnsSettings(context, dnsStatus) {
+  // dnsStatus:
+  //{
+  //  Dns: {
+  //    DnsHost: "",
+  //    Encryption: DnsEncryption.None,
+  //    DohTemplate: "",
+  //  },
+  //  AntiTrackerStatus: {
+  //    Enabled: false, //bool
+  //    Hardcore: false, //bool
+  //    AntiTrackerBlockListName: "", //string
+  //  }
+  //}
 
-  if (isAntitracker === true) {
-    const isAntitrackerHardcore = isAntitrackerHardcoreActive(context.state);
-    context.dispatch("settings/isAntitrackerHardcore", isAntitrackerHardcore, {
+  if (!dnsStatus) {
+    context.dispatch("settings/dnsCustomCfg", null, {
       root: true,
     });
+    context.dispatch("settings/antiTracker", null, {
+      root: true,
+    });
+    return;
   }
 
-  if (isAntitracker === false) {
-    let currDnsState = context.state.dns;
+  // If AntiTracker is diabled - do not save empty AT settings (to keep current AntiTracker configuration. e.g. blocklist)
+  context.dispatch("settings/antiTracker", dnsStatus.AntiTrackerStatus, {
+    root: true,
+  });
 
-    let isCustomDns = true;
-    if (currDnsState == null || !currDnsState.DnsHost) isCustomDns = false;
-    else
-      context.dispatch("settings/dnsCustomCfg", currDnsState, { root: true });
+  if (dnsStatus.AntiTrackerStatus.Enabled !== true) {
+    // Since AntiTracker has higher priority than custom DNS settings -
+    // update custom DNS settings only if AntiTracker is disabled (custom DNS settings are in use)
+    // This allows to keep custom DNS settings when AntiTracker is enabled/disabled
+    let isCustomDns = !!dnsStatus.Dns && !!dnsStatus.Dns.DnsHost;
 
-    context.dispatch("settings/dnsIsCustom", isCustomDns, { root: true });
+    context.dispatch("settings/dnsIsCustom", isCustomDns, {
+      root: true,
+    });
+
+    if (isCustomDns) {
+      context.dispatch("settings/dnsCustomCfg", dnsStatus.Dns, {
+        root: true,
+      });
+    }
   }
 }
 
@@ -747,33 +758,6 @@ function updateServers(oldServers, newServers) {
     servers: newServers,
     serversHashed: serversHashed,
   };
-}
-
-function isAntitrackerActive(state) {
-  let dnsIP = state.dns.DnsHost;
-  if (!dnsIP || state.dns.Encryption != DnsEncryption.None) return false;
-
-  let atConfig = state.servers.config.antitracker;
-  switch (dnsIP) {
-    case atConfig.default.ip:
-    case atConfig.hardcore.ip:
-      return true;
-    default:
-  }
-  return false;
-}
-
-function isAntitrackerHardcoreActive(state) {
-  let dnsIP = state.dns.DnsHost;
-  if (!dnsIP || state.dns.Encryption != DnsEncryption.None) return false;
-
-  let atConfig = state.servers.config.antitracker;
-  switch (dnsIP) {
-    case atConfig.hardcore.ip:
-      return true;
-    default:
-  }
-  return false;
 }
 
 function isPortInAllowedRanges(availablePortRanges, portToFind) {

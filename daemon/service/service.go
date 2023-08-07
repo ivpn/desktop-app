@@ -35,6 +35,7 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/api"
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
+	"github.com/ivpn/desktop-app/daemon/kem"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
@@ -92,9 +93,6 @@ type Service struct {
 	_vpnSessionInfo      VpnSessionInfo
 	_vpnSessionInfoMutex sync.Mutex
 
-	// manual DNS value (if not defined - nil)
-	_manualDNS dns.DnsSettings
-
 	// Required VPN state which service is going to reach (disconnect->keep connection->connect)
 	// When KeepConnection - reconnects immediately after disconnection
 	_requiredVpnState RequiredState
@@ -117,6 +115,13 @@ type Service struct {
 		_results_mutex               sync.RWMutex
 		_result                      map[string]int //[host]latency
 		_singleRequestLimitSemaphore *syncSemaphore.Weighted
+	}
+
+	// variables needed for automatic resume
+	_pause struct {
+		_mutex           sync.Mutex
+		_pauseTill       time.Time // time when connection will be resumed automatically (if not paused - will be zero)
+		_killSwitchState bool      // killswitch state before pause (to be able to restore it)
 	}
 
 	// variables related to connection test (e.g. ports accessibility test)
@@ -250,8 +255,10 @@ func (s *Service) init() error {
 	if err := s._wgKeysMgr.Init(s); err != nil {
 		log.Error("Failed to initialize WG keys rotation:", err)
 	} else {
+
 		go func() {
 			<-_ipStackInitializationWaiter // Wait for IP stack initialization
+
 			if err := s._wgKeysMgr.StartKeysRotation(); err != nil {
 				log.Error("Failed to start WG keys rotation:", err)
 			}
@@ -475,7 +482,8 @@ func (s *Service) reconnect() {
 // Disconnect disconnect vpn
 func (s *Service) Disconnect() error {
 	s._requiredVpnState = Disconnect
-	if err := s.Resume(); err != nil {
+	// Resume connection (but do not notify "Connection resumed" status)
+	if err := s.resume(); err != nil {
 		log.Error("Resume failed:", err)
 	}
 	return s.disconnect()
@@ -531,19 +539,87 @@ func (s *Service) FirewallEnabled() (bool, error) {
 }
 
 // Pause pause vpn connection
-func (s *Service) Pause() error {
+func (s *Service) Pause(durationSeconds uint32) error {
 	vpn := s._vpn
 	if vpn == nil {
-		return nil
+		return fmt.Errorf("VPN not connected")
+	}
+
+	if durationSeconds <= 0 {
+		return fmt.Errorf("the duration of the pause has not been specified")
+	}
+
+	defer s._evtReceiver.OnVpnPauseChanged()
+
+	s._pause._mutex.Lock()
+	defer s._pause._mutex.Unlock()
+
+	fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+	if err != nil {
+		return fmt.Errorf("failed to check KillSwitch status: %w", err)
+	}
+	s._pause._killSwitchState = fwIsEnabled
+	if fwIsEnabled && !isPersistant {
+		if err := s.SetKillSwitchState(false); err != nil {
+			return err
+		}
 	}
 
 	log.Info("Pausing...")
 	firewall.ClientPaused()
-	return vpn.Pause()
+
+	if err = vpn.Pause(); err != nil {
+		return err
+	}
+
+	s._pause._pauseTill = time.Now().Add(time.Second * time.Duration(durationSeconds))
+	log.Info(fmt.Sprintf("Paused on %v (till %v)", time.Second*time.Duration(durationSeconds), s._pause._pauseTill.Format(time.Stamp)))
+
+	go func() {
+		// Pause resumer: Every second checks if it is time to resume VPN connection.
+		// Info: We can not use 'time.AfterFunc()' because
+		// it does not take into account the time when the system was in sleep mode.
+		defer log.Info("Resumed")
+		for {
+			time.Sleep(time.Second * 1)
+
+			if !s.IsPaused() {
+				s._pause._pauseTill = time.Time{} // reset pause time (to indicate that connection is not paused, just in case)
+				break
+			} else {
+				// Note! In order to avoid any potential issues with location or changes with system clock, we must use "monotonic clock" time (Unix()).
+				if time.Now().Unix()-s.PausedTill().Unix() >= 0 {
+					log.Info(fmt.Sprintf("Automatic resuming after %v ...", time.Second*time.Duration(durationSeconds)))
+					if err := s.Resume(); err != nil {
+						log.Error(fmt.Errorf("Resume failed: %w", err))
+					}
+					break
+				}
+			}
+		}
+	}()
+
+	return nil
 }
 
 // Resume resume vpn connection
 func (s *Service) Resume() error {
+	defer s._evtReceiver.OnVpnPauseChanged()
+
+	vpn := s._vpn
+	if vpn == nil || !vpn.IsPaused() {
+		return fmt.Errorf("VPN not paused")
+	}
+
+	return s.resume()
+}
+
+// Resume resume vpn connection
+func (s *Service) resume() error {
+	s._pause._mutex.Lock()
+	defer s._pause._mutex.Unlock()
+	s._pause._pauseTill = time.Time{} // reset pause time (to indicate that connection is not paused)
+
 	vpn := s._vpn
 	if vpn == nil {
 		return nil
@@ -554,7 +630,22 @@ func (s *Service) Resume() error {
 
 	log.Info("Resuming...")
 	firewall.ClientResumed()
-	return vpn.Resume()
+	if err := vpn.Resume(); err != nil {
+		return err
+	}
+
+	fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+	if err != nil {
+		log.Error(fmt.Errorf("failed to check KillSwitch status: %w", err))
+	} else {
+		if !isPersistant && fwIsEnabled != s._pause._killSwitchState {
+			if err := s.SetKillSwitchState(s._pause._killSwitchState); err != nil {
+				log.Error("failed to restore KillSwitch status: %w", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // IsPaused returns 'true' if current vpn connection is in paused state
@@ -563,61 +654,137 @@ func (s *Service) IsPaused() bool {
 	if vpn == nil {
 		return false
 	}
-	return vpn.IsPaused()
+
+	return vpn.IsPaused() && !s.PausedTill().IsZero()
+}
+
+func (s *Service) PausedTill() time.Time {
+	return s._pause._pauseTill
+}
+
+func (s *Service) saveDefaultDnsParams(dnsCfg dns.DnsSettings, antiTrackerCfg types.AntiTrackerMetadata) (retErr error) {
+	defaultParams := s.GetConnectionParams()
+
+	if defaultParams.ManualDNS.Equal(dnsCfg) && defaultParams.Metadata.AntiTracker.Equal(antiTrackerCfg) {
+		return nil
+	}
+
+	// save DNS and AntiTracker default metadata
+	defaultParams.ManualDNS = dnsCfg
+	defaultParams.Metadata.AntiTracker = antiTrackerCfg
+
+	return s.setConnectionParams(defaultParams)
+}
+
+// GetDefaultDnsParams returns default DNS parameters
+// Returns:
+//
+//	dnsCfg - default DNS parameters
+//	antiTrackerCfg - default AntiTracker parameters
+//	realDnsValue - real DNS value (if 'antiTracker' is enabled - it will contain DNS of AntiTracker server)
+func (s *Service) GetDefaultDnsParams() (dnsCfg dns.DnsSettings, antiTrackerCfg types.AntiTrackerMetadata, realDnsValue dns.DnsSettings, err error) {
+	defaultParams := s.GetConnectionParams()
+
+	dnsCfg = defaultParams.ManualDNS
+	realDnsValue = defaultParams.ManualDNS
+	antiTrackerCfg = defaultParams.Metadata.AntiTracker
+
+	if antiTrackerCfg.Enabled {
+		realDnsValue, err = s.getAntiTrackerDns(antiTrackerCfg.Hardcore, antiTrackerCfg.AntiTrackerBlockListName)
+	}
+
+	return dnsCfg, antiTrackerCfg, realDnsValue, err
 }
 
 // SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 // If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error) {
-
 	// Update default metadata
 	defaultParams := s.GetConnectionParams()
+	isChanged := false
 	// save DNS and AntiTracker default metadata
-	if !defaultParams.ManualDNS.Equal(dnsCfg) || !defaultParams.Metadata.AntiTracker.Equal(antiTracker) {
+	if !defaultParams.ManualDNS.Equal(dnsCfg) {
 		defaultParams.ManualDNS = dnsCfg
-		defaultParams.Metadata.AntiTracker = antiTracker
+		isChanged = true
+	}
+	if !defaultParams.Metadata.AntiTracker.Equal(antiTracker) {
+		at, err := s.normalizeAntiTrackerBlockListName(antiTracker)
+		if err != nil {
+			return changedDns, err
+		}
+		defaultParams.Metadata.AntiTracker = at
+		isChanged = true
+	}
+	if isChanged {
 		s.setConnectionParams(defaultParams)
 	}
-	// anti-tracker
+
+	// Get anti-tracker DNS settings
+	changedDns = dnsCfg
 	if antiTracker.Enabled {
-		atDns, err := s.getAntiTrackerDns(antiTracker.Hardcore)
+		atDns, err := s.getAntiTrackerDns(antiTracker.Hardcore, antiTracker.AntiTrackerBlockListName)
 		if err != err {
 			return dns.DnsSettings{}, err
 		}
-		dnsCfg = atDns
+		changedDns = atDns
 	}
 
 	vpn := s._vpn
 	if vpn == nil {
 		// no active VPN connection
-		return dnsCfg, nil
+		return changedDns, nil
 	}
 
-	s._manualDNS = dnsCfg
-	return s._manualDNS, vpn.SetManualDNS(s._manualDNS)
+	if dnsCfg.IsEmpty() && !antiTracker.Enabled {
+		return dns.DnsSettings{}, vpn.ResetManualDNS()
+	}
+	return changedDns, vpn.SetManualDNS(changedDns)
 }
 
-// ResetManualDNS set dns to default
-func (s *Service) ResetManualDNS() error {
-
-	// Update default metadata
-	defaultParams := s.GetConnectionParams()
-	if !defaultParams.ManualDNS.IsEmpty() || !defaultParams.Metadata.AntiTracker.Equal(types.AntiTrackerMetadata{}) {
-		defaultParams.ManualDNS = dns.DnsSettings{}
-		defaultParams.Metadata.AntiTracker = types.AntiTrackerMetadata{}
-		s.setConnectionParams(defaultParams)
+func (s *Service) GetAntiTrackerStatus() (types.AntiTrackerMetadata, error) {
+	// Get AntiTracker DNS settings. If error - use default date and ignore error
+	retAtMetadata, err := s.normalizeAntiTrackerBlockListName(s.GetConnectionParams().Metadata.AntiTracker)
+	if err != nil {
+		log.Error(fmt.Sprintf("failed to normalize AntiTracker block list name: %v (using '%s')", err, retAtMetadata.AntiTrackerBlockListName))
 	}
-
-	vpn := s._vpn
-	if vpn == nil {
-		// no active VPN connection
-		return nil
-	}
-
-	return vpn.ResetManualDNS()
+	return retAtMetadata, nil
 }
 
-func (s *Service) getAntiTrackerDns(isHardcore bool) (dnsCfg dns.DnsSettings, err error) {
+// Normze AntiTracker block list name:
+// - if antiTrackerPlusList not defined - return default value
+// - if antiTrackerPlusList defined - check if it is valid; if not valid - return default value and error
+func (s *Service) normalizeAntiTrackerBlockListName(antiTracker types.AntiTrackerMetadata) (types.AntiTrackerMetadata, error) {
+	var retError error
+
+	atBlistName := strings.ToLower(strings.TrimSpace(antiTracker.AntiTrackerBlockListName))
+	// check if block list name is known
+	if atBlistName != "" {
+		servers, err := s.ServersList()
+		if err == nil {
+			for _, atp_svr := range servers.Config.AntiTrackerPlus.DnsServers {
+				if strings.ToLower(strings.TrimSpace(atp_svr.Name)) == atBlistName {
+					// Block-list name is OK. Just ensure to use correct case
+					antiTracker.AntiTrackerBlockListName = strings.TrimSpace(atp_svr.Name)
+					return antiTracker, nil
+				}
+			}
+		}
+
+		retError = fmt.Errorf("unexpected DNS block list name: '%s'", antiTracker.AntiTrackerBlockListName)
+	}
+
+	// Set default block list name (if empty)
+	if tmpDns, err := s.getAntiTrackerDns(antiTracker.Hardcore, ""); err == nil {
+		if tmpAt, err := s.getAntiTrackerInfo(tmpDns); err == nil {
+			antiTracker.AntiTrackerBlockListName = tmpAt.AntiTrackerBlockListName
+		}
+	}
+
+	return antiTracker, retError
+}
+
+// Get DNS server according to AntiTracker parameters
+func (s *Service) getAntiTrackerDns(isHardcore bool, antiTrackerPlusList string) (dnsCfg dns.DnsSettings, err error) {
 	defer func() {
 		if dnsCfg.IsEmpty() && err == nil {
 			err = fmt.Errorf("unable to determine AntiTracker DNS")
@@ -628,11 +795,66 @@ func (s *Service) getAntiTrackerDns(isHardcore bool) (dnsCfg dns.DnsSettings, er
 		return dns.DnsSettings{}, fmt.Errorf("failed to determine AntiTracker parameters: %w", err)
 	}
 
-	// port-based MultiHop using the same AntiTracker DNS IP as SingleHop
+	// AntiTracker Plus list
+	atListName := strings.ToLower(strings.TrimSpace(antiTrackerPlusList))
+	if len(atListName) == 0 {
+		// if block list name not defined - use default AntiTracker block list "Basic"
+		atListName = "basic"
+	}
+
+	if len(atListName) > 0 {
+		for _, atp_svr := range servers.Config.AntiTrackerPlus.DnsServers {
+			if strings.ToLower(strings.TrimSpace(atp_svr.Name)) == atListName {
+				if isHardcore {
+					return dns.DnsSettings{DnsHost: atp_svr.Hardcore}, nil
+				}
+				return dns.DnsSettings{DnsHost: atp_svr.Normal}, nil
+			}
+		}
+	}
+
+	// If AntiTracker Plus block list not found - ignore 'antiTrackerPlusList' and use old-style AntiTracker DNS
 	if isHardcore {
 		return dns.DnsSettings{DnsHost: servers.Config.Antitracker.Hardcore.IP}, nil
 	}
 	return dns.DnsSettings{DnsHost: servers.Config.Antitracker.Default.IP}, nil
+}
+
+// Get AntiTracker info according to DNS settings
+func (s *Service) getAntiTrackerInfo(dnsVal dns.DnsSettings) (types.AntiTrackerMetadata, error) {
+	if dnsVal.IsEmpty() || dnsVal.Encryption != dns.EncryptionNone {
+		return types.AntiTrackerMetadata{}, nil
+	}
+
+	servers, err := s.ServersList()
+	if err != nil {
+		return types.AntiTrackerMetadata{}, fmt.Errorf("failed to determine AntiTracker parameters: %w", err)
+	}
+
+	dnsHost := strings.ToLower(strings.TrimSpace(dnsVal.DnsHost))
+	if dnsHost == "" {
+		return types.AntiTrackerMetadata{}, nil
+	}
+
+	// Check AntiTracker Plus lists
+	for _, atp_svr := range servers.Config.AntiTrackerPlus.DnsServers {
+		if strings.EqualFold(dnsHost, strings.TrimSpace(atp_svr.Normal)) {
+			return types.AntiTrackerMetadata{Enabled: true, Hardcore: false, AntiTrackerBlockListName: atp_svr.Name}, nil
+		}
+		if strings.EqualFold(dnsHost, strings.TrimSpace(atp_svr.Hardcore)) {
+			return types.AntiTrackerMetadata{Enabled: true, Hardcore: true, AntiTrackerBlockListName: atp_svr.Name}, nil
+		}
+	}
+
+	// Check AntiTracker values
+	if strings.EqualFold(dnsHost, strings.TrimSpace(servers.Config.Antitracker.Default.IP)) {
+		return types.AntiTrackerMetadata{Enabled: true, Hardcore: false}, nil
+	}
+	if strings.EqualFold(dnsHost, strings.TrimSpace(servers.Config.Antitracker.Hardcore.IP)) {
+		return types.AntiTrackerMetadata{Enabled: true, Hardcore: true}, nil
+	}
+
+	return types.AntiTrackerMetadata{}, nil
 }
 
 // ////////////////////////////////////////////////////////
@@ -652,6 +874,9 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 
 	if !isEnabled && s._preferences.IsFwPersistant {
 		return fmt.Errorf("unable to disable Firewall in 'Persistent' state. Please, disable 'Always-on firewall' first")
+	}
+	if s.IsPaused() {
+		return fmt.Errorf("unable to change the firewall state while connection is paused, please resume the connection first")
 	}
 
 	err := firewall.SetEnabled(isEnabled)
@@ -679,6 +904,10 @@ func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllo
 
 // SetKillSwitchIsPersistent change kill-switch value
 func (s *Service) SetKillSwitchIsPersistent(isPersistant bool) error {
+	if s.IsPaused() {
+		return fmt.Errorf("unable to change the firewall state while connection is paused, please resume the connection first")
+	}
+
 	prefs := s._preferences
 	prefs.IsFwPersistant = isPersistant
 	s.setPreferences(prefs)
@@ -995,7 +1224,7 @@ func (s *Service) SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecut
 // SESSIONS
 //////////////////////////////////////////////////////////
 
-func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64) error {
+func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64, wgPreSharedKey string) error {
 	// save session info
 	s._preferences.SetSession(accountInfo,
 		accountID,
@@ -1004,7 +1233,8 @@ func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountI
 		vpnPass,
 		wgPublicKey,
 		wgPrivateKey,
-		wgLocalIP)
+		wgLocalIP,
+		wgPreSharedKey)
 
 	// manually set info about WG keys timestamp
 	if wgKeyGenerated > 0 {
@@ -1053,10 +1283,20 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 		log.Error("Creating new session -> Failed to delete active session: ", err)
 	}
 
-	// generate new keys for WireGuard
-	publicKey, privateKey, err := wireguard.GenerateKeys(platform.WgToolBinaryPath())
+	// Generate keys for Key Encapsulation Mechanism using post-quantum cryptographic algorithms
+	var kemKeys api_types.KemPublicKeys
+	kemHelper, err := kem.CreateHelper(platform.KemHelperBinaryPath(), kem.GetDefaultKemAlgorithms())
 	if err != nil {
-		log.Warning("Failed to generate wireguard keys for new session: %s", err)
+		log.Error("Failed to generate KEM keys: ", err)
+	} else {
+		kemKeys.KemPublicKey_Kyber1024, err = kemHelper.GetPublicKey(kem.AlgName_Kyber1024)
+		if err != nil {
+			log.Error(err)
+		}
+		kemKeys.KemPublicKey_ClassicMcEliece348864, err = kemHelper.GetPublicKey(kem.AlgName_ClassicMcEliece348864)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	log.Info("Logging in...")
@@ -1068,34 +1308,78 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 
 		}
 	}()
-	successResp, errorLimitResp, apiErr, rawRespStr, err := s._api.SessionNew(accountID, publicKey, forceLogin, captchaID, captcha, confirmation2FA)
-	rawResponse = rawRespStr
 
-	apiCode = 0
-	if apiErr != nil {
-		apiCode = apiErr.Status
-	}
+	var (
+		publicKey  string
+		privateKey string
 
-	if err != nil {
-		// if SessionsLimit response
-		if errorLimitResp != nil {
-			accountInfo = s.createAccountStatus(errorLimitResp.SessionLimitData)
-			return apiCode, apiErr.Message, accountInfo, rawResponse, err
+		wgPresharedKey string
+		successResp    *api_types.SessionNewResponse
+		errorLimitResp *api_types.SessionNewErrorLimitResponse
+		apiErr         *api_types.APIErrorResponse
+		rawRespStr     string // RAW response
+	)
+
+	for {
+		// generate new keys for WireGuard
+		publicKey, privateKey, err = wireguard.GenerateKeys(platform.WgToolBinaryPath())
+		if err != nil {
+			log.Warning("Failed to generate wireguard keys for new session: %s", err)
 		}
 
-		// in case of other API error
+		successResp, errorLimitResp, apiErr, rawRespStr, err = s._api.SessionNew(accountID, publicKey, kemKeys, forceLogin, captchaID, captcha, confirmation2FA)
+		rawResponse = rawRespStr
+
+		apiCode = 0
 		if apiErr != nil {
-			return apiCode, apiErr.Message, accountInfo, rawResponse, err
+			apiCode = apiErr.Status
 		}
 
-		// not API error
-		return apiCode, "", accountInfo, rawResponse, err
-	}
+		if err != nil {
+			// if SessionsLimit response
+			if errorLimitResp != nil {
+				accountInfo = s.createAccountStatus(errorLimitResp.SessionLimitData)
+				return apiCode, apiErr.Message, accountInfo, rawResponse, err
+			}
 
-	if successResp == nil {
-		return apiCode, "", accountInfo, rawResponse, fmt.Errorf("unexpected error when creating a new session")
-	}
+			// in case of other API error
+			if apiErr != nil {
+				return apiCode, apiErr.Message, accountInfo, rawResponse, err
+			}
 
+			// not API error
+			return apiCode, "", accountInfo, rawResponse, err
+		}
+
+		if successResp == nil {
+			return apiCode, "", accountInfo, rawResponse, fmt.Errorf("unexpected error when creating a new session")
+		}
+
+		if kemHelper != nil {
+			if len(successResp.WireGuard.KemCipher_Kyber1024) == 0 && len(successResp.WireGuard.KemCipher_ClassicMcEliece348864) == 0 {
+				log.Warning("The server did not respond with KEM ciphers. The WireGuard PresharedKey has not been initialized!")
+			} else {
+				if err := kemHelper.SetCipher(kem.AlgName_Kyber1024, successResp.WireGuard.KemCipher_Kyber1024); err != nil {
+					log.Error(err)
+				}
+				if err := kemHelper.SetCipher(kem.AlgName_ClassicMcEliece348864, successResp.WireGuard.KemCipher_ClassicMcEliece348864); err != nil {
+					log.Error(err)
+				}
+
+				wgPresharedKey, err = kemHelper.CalculatePresharedKey()
+				if err != nil {
+					log.Error(fmt.Sprintf("Failed to decode KEM ciphers! (%s). Retry Log-in without WireGuard PresharedKey...", err))
+					kemHelper = nil
+					kemKeys = api_types.KemPublicKeys{}
+					if err := s.SessionDelete(true); err != nil {
+						log.Error("Creating new session (retry 2) -> Failed to delete active session: ", err)
+					}
+					continue
+				}
+			}
+		}
+		break
+	}
 	// get account status info
 	accountInfo = s.createAccountStatus(successResp.ServiceStatus)
 
@@ -1106,7 +1390,9 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 		successResp.VpnPassword,
 		publicKey,
 		privateKey,
-		successResp.WireGuard.IPAddress, 0)
+		successResp.WireGuard.IPAddress, 0, wgPresharedKey)
+
+	log.Info(fmt.Sprintf("(logging in) WG keys updated (%s:%s; psk:%v)", successResp.WireGuard.IPAddress, publicKey, len(wgPresharedKey) > 0))
 
 	return apiCode, "", accountInfo, rawResponse, nil
 }
@@ -1166,7 +1452,7 @@ func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLo
 		}
 	}
 
-	s._preferences.SetSession(preferences.AccountStatus{}, "", "", "", "", "", "", "")
+	s._preferences.SetSession(preferences.AccountStatus{}, "", "", "", "", "", "", "", "")
 	log.Info("Logged out locally")
 
 	// notify clients about session update
@@ -1333,8 +1619,8 @@ func (s *Service) stopSessionChecker() {
 //////////////////////////////////////////////////////////
 
 // WireGuardSaveNewKeys saves WG keys
-func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string) {
-	s._preferences.UpdateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP)
+func (s *Service) WireGuardSaveNewKeys(wgPublicKey string, wgPrivateKey string, wgLocalIP string, wgPresharedKey string) {
+	s._preferences.UpdateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP, wgPresharedKey)
 
 	// notify clients about session (wg keys) update
 	s._evtReceiver.OnServiceSessionChanged()

@@ -37,10 +37,10 @@
       textClickTooltip="AntiTracker settings"
       description="Block trackers whilst connected to VPN"
       :onChecked="antitrackerOnChecked"
-      :isChecked="this.$store.state.settings.isAntitracker"
+      :isChecked="this.$store.state.settings.antiTracker?.Enabled"
       :switcherOpacity="!IsConnected ? 0.4 : 1"
       :checkedColor="
-        this.$store.state.settings.isAntitrackerHardcore ? '#77152a' : null
+        this.$store.state.settings.antiTracker?.Hardcore ? '#77152a' : null
       "
       :isProgress="antitrackerIsProgress"
     />
@@ -93,12 +93,7 @@ import SelectButtonControl from "@/components/controls/control-config-to-select-
 import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
 const sender = window.ipcSender;
 import { enumValueName } from "@/helpers/helpers";
-import {
-  VpnTypeEnum,
-  PortTypeEnum,
-  PauseStateEnum,
-  VpnStateEnum,
-} from "@/store/types";
+import { VpnTypeEnum, PortTypeEnum, VpnStateEnum } from "@/store/types";
 
 function processError(e) {
   console.error(e);
@@ -195,7 +190,7 @@ export default {
       return NOTRUSTSTATUS;
     },
     IsPaused: function () {
-      return this.$store.state.vpnState.pauseState == PauseStateEnum.Paused;
+      return this.$store.getters["vpnState/isPaused"];
     },
     IsConnected: function () {
       return (
@@ -208,7 +203,18 @@ export default {
     async antitrackerOnChecked(antitrackerIsEnabled) {
       try {
         this.antitrackerIsProgress = true;
-        this.$store.dispatch("settings/isAntitracker", antitrackerIsEnabled);
+
+        let at = this.$store.state.settings.antiTracker;
+        if (!at)
+          at = {
+            Enabled: antitrackerIsEnabled,
+            Hardcore: false,
+            AntiTrackerBlockListName: "",
+          };
+        else at = JSON.parse(JSON.stringify(at));
+        at.Enabled = antitrackerIsEnabled;
+
+        this.$store.dispatch("settings/antiTracker", at);
         await sender.SetDNS();
       } catch (e) {
         processError(e);

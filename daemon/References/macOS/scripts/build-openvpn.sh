@@ -3,8 +3,10 @@
 # ##############################################################################
 # Define here OpenSSL and OpenVPN versions
 # ##############################################################################
-OPEN_SSL_VER=1.1.1o
-OPEN_VPN_VER=v2.5.7
+OPEN_SSL_VER=3.1.0
+OPEN_VPN_VER=v2.6.3
+
+LZO_VER=2.10
 
 # This has to be installed
 echo "******** Installing xcode command lines tools..."
@@ -76,8 +78,8 @@ echo "************************************************"
 echo "******** Downloading LZO sources..."
 echo "************************************************"
 cd ${BUILD_DIR}
-curl https://www.oberhumer.com/opensource/lzo/download/lzo-2.08.tar.gz | tar zx
-cd lzo-2.08
+curl https://www.oberhumer.com/opensource/lzo/download/lzo-${LZO_VER}.tar.gz | tar zx
+cd lzo-${LZO_VER}
 
 echo "************************************************"
 echo "******** Compiling LZO..."
@@ -111,7 +113,9 @@ echo "******** Configuring OpenVPN..."
 echo "************************************************"
 CFLAGS="-mmacosx-version-min=10.6 -I${INSTALL_DIR}/include" \
     LDFLAGS="-L${INSTALL_DIR}/lib" \
-    ./configure --disable-debug --disable-server --enable-password-save
+    ./configure --disable-debug --disable-server --enable-password-save \
+    --disable-lz4
+    # disabling lz4 compression algorithm (there is compilation error on macOS M1 when LZ4 enabled)
 
 echo "************************************************"
 echo "******** Compiling OpenVPN..."
