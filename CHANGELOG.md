@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.11.14 - 2023-08-07
+
+[NEW]  AntiTracker Plus additional block lists  
+[IMPROVED] Anonymized account ID when a user sends a diagnostic report  
+[FIX] Firewall occasionally OFF after autoconnect on app launch  
+[FIX] GUI: Minor text corrections  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.11.14.exe)  
+SHA256: 3595eb719aeb1609a6451dbe4c165ada25fe9b3c49bf49cacc592c17e7b424c6  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.11.14.dmg)  
+SHA256: cfeb310e675ff125a360d295542888eca631fb195e82bd13f53deebf966ffc9f  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.11.14-arm64.dmg)  
+SHA256: 8dad7dba08befda9ae0f9929be07c41c008f559e9b10c86de25134c617ae91a6  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/beta/ivpn_3.11.14_amd64.deb)  
+SHA256: 2653816ad2f432045ce921482d17baa4acda0d46ac54742df8d5804a9f4c0d88  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/beta/ivpn-3.11.14-1.x86_64.rpm)  
+SHA256: e1652009c343611a00569ae21a441987f85695c717d2ad048167ee27f9c04576  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/beta/ivpn-ui_3.11.14_amd64.deb)  
+SHA256: 61cd6c628e7af5d3b11160392939015750b274f395d9c5b9168e897d89581428  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/beta/ivpn-ui-3.11.14-1.x86_64.rpm)  
+SHA256: 57a6b740e1f9952f4eade5ee3139b5550ccb1c8bb792652a0b5d70ffdda9cce7  
+
 ## Version 3.11.5 (BETA) - 2023-07-06
 
 [NEW] Post-Quantum Resistant WireGuard Connections  
