@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.11.15 - 2023-08-07
+
+[FIX] (Windows) App update check fails due to missing libraries  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.11.15.exe)  
+SHA256: 1e1388c66062531970dcb8534df84c6600ffba79966a18486a83a9d2695b3945 
+
 ## Version 3.11.14 - 2023-08-07
 
 [NEW]  AntiTracker Plus additional block lists  
@@ -9,7 +16,7 @@ All notable changes to this project will be documented in this file.
 [FIX] Firewall occasionally OFF after autoconnect on app launch  
 [FIX] GUI: Minor text corrections  
 
-[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.11.14.exe)  
+IVPN Client for Windows  
 SHA256: 3595eb719aeb1609a6451dbe4c165ada25fe9b3c49bf49cacc592c17e7b424c6  
 
 [Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.11.14.dmg)  
@@ -37,7 +44,7 @@ SHA256: 57a6b740e1f9952f4eade5ee3139b5550ccb1c8bb792652a0b5d70ffdda9cce7
 [FIX] GUI: Switching between WireGuard servers was not possible during connection initialization  
 [FIX] Other minor issues and improvements  
 
-[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.11.5.exe)  
+IVPN Client for Windows  
 SHA256: db31a850ba820a075e808869cbaf00c6f11f433018504ed5ad307911d55bca10  
 
 [Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.11.5.dmg)  
