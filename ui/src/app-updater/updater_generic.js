@@ -347,6 +347,9 @@ async function Download(link, onProgress) {
 
       var file = fs.createWriteStream(outFilePath);
 
+      // define timestamp variable of last time reported progress
+      let lastProgressReported = new Date().getTime();
+
       let isConnectionEstablished = false;
       DownloadRequest = https
         .get(link, (res) => {
@@ -368,6 +371,12 @@ async function Download(link, onProgress) {
           // listening for progress event
           res.on("data", (d) => {
             received += d.length;
+
+            // check if progress should be reported: we report progress every 50 ms
+            let now = new Date().getTime();
+            if (now - lastProgressReported < 50) return;
+            lastProgressReported = now;
+
             if (onProgress) onProgress(contentLength, received);
           });
 
