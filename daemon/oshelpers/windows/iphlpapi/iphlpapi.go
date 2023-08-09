@@ -20,6 +20,7 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+//go:build windows
 // +build windows
 
 package iphlpapi
@@ -48,7 +49,7 @@ var (
 	_fGetExtendedTcpTable  = _dll.NewProc("GetExtendedTcpTable")
 )
 
-// APINotifyRouteChange - The GetBestRoute function retrieves the best route to the specified destination IP address.
+// APINotifyRouteChange - The NotifyRouteChange function causes a notification to be sent to the caller whenever a change occurs in the IPv4 routing table.
 // https://docs.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-notifyroutechange
 func APINotifyRouteChange(handle *syscall.Handle, overlapped *syscall.Overlapped) (err error) {
 	defer catchPanic(&err)
@@ -70,7 +71,7 @@ func CancelIPChangeNotify(overlapped *syscall.Overlapped) (err error) {
 	return checkDefaultAPIResp(retval, err)
 }
 
-// APIGetBestRoute - The NotifyRouteChange function causes a notification to be sent to the caller whenever a change occurs in the IPv4 routing table.
+// APIGetBestRoute - The GetBestRoute function retrieves the best route to the specified destination IP address.
 // https://docs.microsoft.com/en-us/windows/win32/api/iphlpapi/nf-iphlpapi-getbestroute
 func APIGetBestRoute(dwDestAddr net.IP, dwSourceAddr net.IP, bestRoute *APIMibIPForwardRow) (err error) {
 	defer catchPanic(&err)

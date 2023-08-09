@@ -93,8 +93,9 @@ type Preferences struct {
 	IsAutoconnectOnLaunchDaemon bool
 
 	// split-tunnelling
-	IsSplitTunnel   bool
-	SplitTunnelApps []string
+	IsSplitTunnel       bool
+	SplitTunnelApps     []string
+	SplitTunnelInversed bool // inversed split-tunneling (only 'splitted' apps use VPN tunnel)
 
 	// last known account status
 	Session SessionStatus
@@ -115,6 +116,17 @@ func Create() *Preferences {
 		SettingsSessionUUID: uuid.New().String(),
 		IsFwAllowApiServers: true,
 	}
+}
+
+// IsInverseSplitTunneling returns:
+// 'true' (default behavior) - when the VPN connection should be configured as the default route on a system,
+// 'false' - when the default route should remain unchanged	(e.g., for inverse split-tunneling,	when the VPN tunnel is used only by 'split' apps).
+func (p *Preferences) IsInverseSplitTunneling() bool {
+	if !p.IsSplitTunnel {
+		return false
+	}
+
+	return p.SplitTunnelInversed
 }
 
 // SetSession save account credentials

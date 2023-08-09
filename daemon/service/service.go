@@ -416,7 +416,7 @@ func (s *Service) APIRequest(apiAlias string, ipTypeRequired protocolTypes.Requi
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGuard on Linux)
 func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
-	var ovpnErr, obfspErr, v2rayErr, wgErr, splitTunErr error
+	var ovpnErr, obfspErr, v2rayErr, wgErr, splitTunErr, splitTunInversedErr error
 
 	if err := filerights.CheckFileAccessRightsExecutable(platform.OpenVpnBinaryPath()); err != nil {
 		ovpnErr = fmt.Errorf("OpenVPN binary: %w", err)
@@ -441,7 +441,7 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 	}
 
 	// returns non-nil error object if Split-Tunneling functionality not available
-	splitTunErr = splittun.GetFuncNotAvailableError()
+	splitTunErr, splitTunInversedErr = splittun.GetFuncNotAvailableError()
 
 	if errors.Is(ovpnErr, os.ErrNotExist) {
 		ovpnErr = fmt.Errorf("%w. Please install OpenVPN", ovpnErr)
@@ -469,6 +469,7 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 	}
 	if splitTunErr != nil {
 		ret.SplitTunnelError = splitTunErr.Error()
+		ret.SplitTunnelInverseError = splitTunInversedErr.Error()
 	}
 
 	ret.Platform = s.implGetDisabledFuncForPlatform()
@@ -1053,7 +1054,7 @@ func (s *Service) ResetPreferences() error {
 	s._preferences = *preferences.Create()
 
 	// erase ST config
-	s.SplitTunnelling_SetConfig(false, true)
+	s.SplitTunnelling_SetConfig(false, false, true)
 	return nil
 }
 
@@ -1140,9 +1141,11 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 		runningProcesses = []splittun.RunningApp{}
 	}
 
+	stErr, _ := splittun.GetFuncNotAvailableError()
 	ret := protocolTypes.SplitTunnelStatus{
-		IsFunctionalityNotAvailable: splittun.GetFuncNotAvailableError() != nil,
+		IsFunctionalityNotAvailable: stErr != nil,
 		IsEnabled:                   prefs.IsSplitTunnel,
+		IsInversed:                  prefs.SplitTunnelInversed,
 		IsCanGetAppIconForBinary:    oshelpers.IsCanGetAppIconForBinary(),
 		SplitTunnelApps:             prefs.SplitTunnelApps,
 		RunningApps:                 runningProcesses}
@@ -1150,13 +1153,18 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 	return ret, nil
 }
 
-func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, reset bool) error {
-	if reset || splittun.GetFuncNotAvailableError() != nil {
+func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, reset bool) error {
+	if reset {
+		return s.splitTunnelling_Reset()
+	}
+	stErr, stInverseErr := splittun.GetFuncNotAvailableError()
+	if stErr != nil || (isInversed && stInverseErr != nil) {
 		return s.splitTunnelling_Reset()
 	}
 
 	prefs := s._preferences
 	prefs.IsSplitTunnel = isEnabled
+	prefs.SplitTunnelInversed = isInversed
 	s.setPreferences(prefs)
 
 	return s.splitTunnelling_ApplyConfig()
@@ -1164,6 +1172,7 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, reset bool) error {
 func (s *Service) splitTunnelling_Reset() error {
 	prefs := s._preferences
 	prefs.IsSplitTunnel = false
+	prefs.SplitTunnelInversed = false
 	prefs.SplitTunnelApps = make([]string, 0)
 	s.setPreferences(prefs)
 
@@ -1175,7 +1184,7 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 	// notify changed ST configuration status (even if functionality not available)
 	defer s._evtReceiver.OnSplitTunnelStatusChanged()
 
-	if splittun.GetFuncNotAvailableError() != nil {
+	if stErr, _ := splittun.GetFuncNotAvailableError(); stErr != nil {
 		// Split-Tunneling not accessible (not able to connect to a driver or not implemented for current platform)
 		return nil
 	}
@@ -1189,7 +1198,7 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 		IPv6Tunnel: sInf.VpnLocalIPv6,
 		IPv6Public: sInf.OutboundIPv6}
 
-	return splittun.ApplyConfig(prefs.IsSplitTunnel, s.Connected(), addressesCfg, prefs.SplitTunnelApps)
+	return splittun.ApplyConfig(prefs.IsSplitTunnel, prefs.IsInverseSplitTunneling(), s.Connected(), addressesCfg, prefs.SplitTunnelApps)
 }
 
 func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error) {
@@ -1325,7 +1334,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 		// generate new keys for WireGuard
 		publicKey, privateKey, err = wireguard.GenerateKeys(platform.WgToolBinaryPath())
 		if err != nil {
-			log.Warning("Failed to generate wireguard keys for new session: %s", err)
+			log.Warning(fmt.Sprintf("Failed to generate wireguard keys for new session: %s", err.Error()))
 		}
 
 		successResp, errorLimitResp, apiErr, rawRespStr, err = s._api.SessionNew(accountID, publicKey, kemKeys, forceLogin, captchaID, captcha, confirmation2FA)

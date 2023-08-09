@@ -1495,11 +1495,12 @@ async function SplitTunnelGetStatus() {
   );
   return ret;
 }
-async function SplitTunnelSetConfig(IsEnabled, doReset) {
+async function SplitTunnelSetConfig(IsEnabled, IsInversed, doReset) {
   await sendRecv(
     {
       Command: daemonRequests.SplitTunnelSetConfig,
       IsEnabled,
+      IsInversed,
       Reset: doReset === true,
     },
     [daemonResponses.SplitTunnelStatus]

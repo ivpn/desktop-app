@@ -81,7 +81,7 @@ func implInitialize() error {
 	}
 
 	// Ensure that ST is disable on daemon startup
-	enable(false)
+	enable(false, false)
 
 	// Register network change detector
 	//
@@ -118,8 +118,8 @@ func implInitialize() error {
 	return funcNotAvailableError
 }
 
-func implFuncNotAvailableError() error {
-	return funcNotAvailableError
+func implFuncNotAvailableError() (generalStError, inversedStError error) {
+	return funcNotAvailableError, funcNotAvailableError
 }
 
 func implReset() error {
@@ -128,8 +128,8 @@ func implReset() error {
 	return shell.Exec(nil, stScriptPath, "reset")
 }
 
-func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	err := enable(isStEnabled)
+func implApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
+	err := enable(isStEnabled, isStInversed)
 	if err != nil {
 		log.Error(err)
 	}
@@ -358,7 +358,7 @@ func isEnabled() (bool, error) {
 	return true, nil
 }
 
-func enable(isEnable bool) error {
+func enable(isEnable, isStInversed bool) error {
 
 	if !isEnable {
 
@@ -366,22 +366,18 @@ func enable(isEnable bool) error {
 		if err == nil && !enabled {
 			return nil
 		}
-		err = shell.Exec(nil, stScriptPath, "stop")
+		err = shell.Exec(log, stScriptPath, "stop")
 		if err != nil {
 			return fmt.Errorf("failed to disable Split Tunneling: %w", err)
 		}
 		log.Info("Split Tunneling disabled")
 	} else {
-		enabled, err := isEnabled()
-		if err != nil {
-			return fmt.Errorf("failed to enable Split Tunneling (unable to obtain ST status): %w", err)
+		inversedArg := ""
+		if isStInversed {
+			inversedArg = "-inverse"
 		}
 
-		if enabled {
-			return nil
-		}
-
-		_, outErrText, _, _, err := shell.ExecAndGetOutput(nil, 1024, "", stScriptPath, "start")
+		_, outErrText, _, _, err := shell.ExecAndGetOutput(log, 1024, "", stScriptPath, "start", inversedArg)
 		if err != nil {
 			if len(outErrText) > 0 {
 				err = fmt.Errorf("(%w) %s", err, outErrText)

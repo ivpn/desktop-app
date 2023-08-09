@@ -66,8 +66,9 @@ type AppIconResp struct {
 // SplitTunnelSet (request) sets the split-tunnelling configuration
 type SplitTunnelSetConfig struct {
 	RequestBase
-	IsEnabled bool // is ST enabled
-	Reset     bool // disable ST and erase all ST config
+	IsEnabled  bool // is ST enabled
+	IsInversed bool // when inversed - only apps added to ST will use VPN connection, all other apps will use direct unencrypted connection
+	Reset      bool // disable ST and erase all ST config (if enabled - all the rest paremeters are ignored)
 }
 
 // GetSplitTunnelStatus (request) requests the Split-Tunnelling configuration
@@ -78,9 +79,10 @@ type SplitTunnelGetStatus struct {
 // SplitTunnelStatus (response) returns the split-tunnelling configuration
 type SplitTunnelStatus struct {
 	CommandBase
-	// is ST enabled
-	IsEnabled                   bool
-	IsFunctionalityNotAvailable bool
+
+	IsEnabled                   bool // is ST enabled
+	IsInversed                  bool // inversed split-tunneling (only 'splitted' apps use VPN tunnel)
+	IsFunctionalityNotAvailable bool // TODO: this is redundant, remove it. Use daemon disabled functions info instead (Note: it is in use by CLI project)
 	// This parameter informs availability of the functionality to get icon for particular binary
 	// (true - if commands GetAppIcon/AppIconResp  applicable for this platform)
 	IsCanGetAppIconForBinary bool
@@ -94,18 +96,20 @@ type SplitTunnelStatus struct {
 
 // SplitTunnelAddApp (request) add application to SplitTunneling
 // Expected response:
-// 		Windows	- types.EmptyResp (success)
-//  	Linux	- SplitTunnelAddAppCmdResp -> contains shell command which have to be executed in user space environment
+//
+//			Windows	- types.EmptyResp (success)
+//	 	Linux	- SplitTunnelAddAppCmdResp -> contains shell command which have to be executed in user space environment
 //
 // Description of Split Tunneling commands sequence to run the application:
-//	[client]					[daemon]
-//	SplitTunnelAddApp		->
-//							<-	windows:	types.EmptyResp (success)
-//							<-	linux:		types.SplitTunnelAddAppCmdResp (some operations required on client side)
-//	<windows: done>
-// 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
-//  SplitTunnelAddedPidInfo	->
-// 							<-	types.EmptyResp (success)
+//
+//		[client]					[daemon]
+//		SplitTunnelAddApp		->
+//								<-	windows:	types.EmptyResp (success)
+//								<-	linux:		types.SplitTunnelAddAppCmdResp (some operations required on client side)
+//		<windows: done>
+//		<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
+//	 SplitTunnelAddedPidInfo	->
+//								<-	types.EmptyResp (success)
 type SplitTunnelAddApp struct {
 	RequestBase
 	// Windows: full path to the app binary

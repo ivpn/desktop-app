@@ -100,8 +100,8 @@ func implInitialize() error {
 	return funcNotAvailableError
 }
 
-func implFuncNotAvailableError() error {
-	return funcNotAvailableError
+func implFuncNotAvailableError() (generalStError, inversedStError error) {
+	return funcNotAvailableError, fmt.Errorf("Inversed Split-Tunnelling is not implemented for this platform")
 }
 
 func implReset() error {
@@ -109,7 +109,7 @@ func implReset() error {
 	return nil
 }
 
-func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
+func implApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	if GetFuncNotAvailableError() != nil {
 		// Split-Tunneling not accessable (not able to connect to a driver or not implemented for current platform)
 		return nil

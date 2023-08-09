@@ -58,6 +58,7 @@ export default createStore({
       OpenVPNError: "",
       ObfsproxyError: "",
       SplitTunnelError: "",
+      SplitTunnelInverseError: "",
       Platform: {
         Linux: {
           DnsMgmtOldResolvconfError: "",
@@ -191,6 +192,8 @@ export default createStore({
     isOpenVPNEnabled: (state) => !state.disabledFunctions.OpenVPNError,
     isObfsproxyEnabled: (state) => !state.disabledFunctions.ObfsproxyError,
     isSplitTunnelEnabled: (state) => !state.disabledFunctions.SplitTunnelError,
+    isSplitTunnelInverseEnabled: (state) =>
+      !state.disabledFunctions.SplitTunnelInverseError,
 
     getDnsAbilities: (state) => {
       return state.dnsAbilities;

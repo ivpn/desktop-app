@@ -75,19 +75,19 @@ func Initialize() error {
 
 // IsFuncNotAvailableError returns non-nil error object if Split-Tunneling functionality not available
 // The return value is the same as Initialize()
-func GetFuncNotAvailableError() error {
+func GetFuncNotAvailableError() (generalStError, inversedStError error) {
 	return implFuncNotAvailableError()
 }
 
 func Reset() error {
 	mutex.Lock()
 	defer mutex.Unlock()
-	
+
 	return implReset()
 }
 
 // ApplyConfig control split-tunnel functionality
-func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
+func ApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -96,7 +96,7 @@ func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses
 		addrConfig.IPv6Tunnel = nil
 	}
 
-	return implApplyConfig(isStEnabled, isVpnEnabled, addrConfig, splitTunnelApps)
+	return implApplyConfig(isStEnabled, isStInversed, isVpnEnabled, addrConfig, splitTunnelApps)
 }
 
 // AddPid add process to Split-Tunnel environment

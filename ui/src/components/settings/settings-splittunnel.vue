@@ -11,6 +11,7 @@
       />
       <label class="defColor" for="isSTEnabled">Split Tunnel</label>
     </div>
+
     <div class="fwDescription" style="margin-bottom: 0px">
       Exclude traffic from specific applications from being routed through the
       VPN
@@ -53,6 +54,26 @@
       </div>
     </div>
 
+    <div v-show="isSplitTunnelInverseSupported">
+      <div class="param">
+        <input
+          ref="checkboxIsSTInversed"
+          type="checkbox"
+          id="isSTInversed"
+          v-model="isSTInversed"
+        />
+        <label class="defColor" for="isSTInversed">Inverse mode</label>
+      </div>
+      <div class="fwDescription" style="margin-top: 0px; margin-bottom: 0px">
+        When activated alongside the
+        <b class="settingsGrayLongDescriptionFont">Split Tunnel</b> option, it
+        reverses the split tunneling behavior. Specified applications utilize
+        the VPN connection, while all other traffic circumvents the VPN, using
+        the default connection. Note: This mode requires the Split Tunnel option
+        to be active.
+      </div>
+    </div>
+
     <!-- APPS -->
     <div style="height: 100%">
       <!-- HEADER: Applications -->
@@ -88,7 +109,7 @@
           style="
             text-align: center;
             width: 100%;
-            margin-top: 50px;
+            margin-top: 35px;
             padding: 50px;
           "
         >
@@ -605,7 +626,7 @@ export default {
       if (actionNo == 1) return;
 
       this.resetFilters();
-      await sender.SplitTunnelSetConfig(false, true);
+      await sender.SplitTunnelSetConfig(false, false, true);
     },
 
     resetFilters: function () {
@@ -656,14 +677,25 @@ export default {
       return Platform() === PlatformEnum.Linux;
     },
 
+    isSplitTunnelInverseSupported() {
+      return this.$store.getters["isSplitTunnelInverseEnabled"];
+    },
+
     isSTEnabled: {
       get() {
-        return this.$store.state.vpnState.splitTunnelling.IsEnabled;
+        return this.$store.state.vpnState.splitTunnelling?.IsEnabled;
       },
-      set(value) {
-        (async function () {
-          await sender.SplitTunnelSetConfig(value);
-        })();
+      async set(value) {
+        await sender.SplitTunnelSetConfig(value, this.isSTInversed);
+      },
+    },
+
+    isSTInversed: {
+      get() {
+        return this.$store.state.vpnState.splitTunnelling?.IsInversed;
+      },
+      async set(value) {
+        await sender.SplitTunnelSetConfig(this.isSTEnabled, value);
       },
     },
 
@@ -862,6 +894,15 @@ button:disabled + label {
   cursor: not-allowed;
 }
 
+input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+input:disabled + label {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 $popup-background: var(--background-color);
 $shadow: 0px 3px 12px rgba(var(--shadow-color-rgb), var(--shadow-opacity));
 .appsSelectionPopup {
@@ -872,10 +913,10 @@ $shadow: 0px 3px 12px rgba(var(--shadow-color-rgb), var(--shadow-opacity));
   width: 100%;
 
   padding: 15px;
-  height: 435px; //calc(100% + 140px);
+  height: 445px; //calc(100% + 140px);
   width: calc(100% + 10px);
   left: -20px;
-  top: -180px;
+  top: -250px;
 
   border-width: 1px;
   border-style: solid;

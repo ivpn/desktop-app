@@ -71,10 +71,12 @@ export default {
 
     // The split-tunnelling configuration
     splitTunnelling: {
-      IsEnabled: false,
+      IsEnabled: false, // is ST enabled
+      IsInversed: false, // inversed split-tunneling (only 'splitted' apps use VPN tunnel)
       IsCanGetAppIconForBinary: false,
       // Split-Tunnelling (SplitTunnelStatus)
       // IsEnabled bool                     - Is ST enabled
+      // IsInversed bool                    - Inversed split-tunneling (only 'splitted' apps use VPN tunnel)
       // IsCanGetAppIconForBinary bool      - This parameter informs availability of the functionality to get icon for particular binary
       //                                      (true - if commands GetAppIcon/AppIconResp  applicable for this platform)
       // SplitTunnelApps []string           - Information about applications added to ST configuration

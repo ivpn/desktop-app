@@ -26,30 +26,34 @@ import (
 	"fmt"
 )
 
+const (
+	notImplementedError = fmt.Errorf("Split-Tunnelling is not implemented for this platform")
+)
+
 func implInitialize() error {
-	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+	return notImplementedError
 }
 
-func implFuncNotAvailableError() error {
-	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+func implFuncNotAvailableError() (generalStError, inversedStError error) {
+	return notImplementedError, fmt.Errorf("Inversed Split-Tunnelling is not implemented for this platform")
 }
 
 func implReset() error {
-	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+	return notImplementedError
 }
 
-func implApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+func implApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
+	return notImplementedError
 }
 
 func implAddPid(pid int, commandToExecute string) error {
-	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+	return notImplementedError
 }
 
 func implRemovePid(pid int) error {
-	return fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+	return notImplementedError
 }
 
 func implGetRunningApps() ([]RunningApp, error) {
-	return nil, fmt.Errorf("Split-Tunnelling is not implemented for macOS")
+	return nil, notImplementedError
 }

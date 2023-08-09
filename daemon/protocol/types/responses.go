@@ -103,11 +103,12 @@ type DisabledFunctionalityForPlatform struct {
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGaurd on Linux)
 type DisabledFunctionality struct {
-	WireGuardError   string
-	OpenVPNError     string
-	ObfsproxyError   string
-	V2RayError       string
-	SplitTunnelError string
+	WireGuardError          string // WireGuard is not supported on this platform
+	OpenVPNError            string // OpenVPN is not supported on this platform
+	ObfsproxyError          string // Obfsproxy is not supported on this platform
+	V2RayError              string // V2Ray is not supported on this platform
+	SplitTunnelError        string // SplitTunneling is not supported on this platform
+	SplitTunnelInverseError string // Inversed SplitTunneling is not supported on this platform
 
 	// Linux specific functionality which is disabled
 	Platform DisabledFunctionalityForPlatform

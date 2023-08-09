@@ -47,7 +47,7 @@ type Detector struct {
 
 	// Signaling when the default routing is NOT over the 'interfaceToProtect' anymore
 	routingChangeNotifyChan chan<- struct{}
-	// Signaling when there were some routing changes but 'interfaceToProtect' is still is the default route
+	// Signaling when there were some routing changes but 'interfaceToProtect' is still is the default route or 'interfaceToProtect' not defined
 	routingUpdateNotifyChan chan<- struct{}
 
 	// Must be implemented (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
@@ -74,8 +74,9 @@ func Create() *Detector {
 }
 
 // Start - start route change detector (asynchronous)
-//    'routingChangeChan' is the channel for notifying when the default routing is NOT over the 'interfaceToProtect' anymore
-//    'routingUpdateChan' is the channel for notifying when there were some routing changes but 'interfaceToProtect' is still is the default route
+//
+//	'routingChangeChan' is the channel for notifying when the default routing is NOT over the 'interfaceToProtect' anymore
+//	'routingUpdateChan' is the channel for notifying when there were some routing changes (but 'interfaceToProtect' is still is the default route or 'interfaceToProtect' not defined)
 func (d *Detector) Start(routingChangeChan chan<- struct{}, routingUpdateChan chan<- struct{}, currentDefaultInterface *net.Interface) {
 	// Ensure that detector is stopped
 	d.Stop()
@@ -86,6 +87,11 @@ func (d *Detector) Start(routingChangeChan chan<- struct{}, routingUpdateChan ch
 
 	// save current default interface
 	d.interfaceToProtect = currentDefaultInterface
+	if d.interfaceToProtect == nil {
+		// If 'interfaceToProtect' not defined - we do not notify to 'routingChangeChan' channel
+		// only general routing chnages will be notified (using 'routingUpdateChan')
+		log.Info("initialisation: 'interface to protect' not specified!")
+	}
 
 	// method should be implemented in platform-specific file
 	go d.doStart()
@@ -118,10 +124,12 @@ func (d *Detector) notifyRoutingChange() {
 	var changed bool = false
 	var err error = nil
 
-	// method should be implemented in platform-specific file
-	// It shell compare current routing configuration with configuration which was when 'doStart()' called
-	if changed, err = d.isRoutingChanged(); err != nil {
-		return
+	if d.interfaceToProtect != nil {
+		// Method should be implemented in platform-specific file
+		// It must compare current routing configuration with configuration which was when 'doStart()' called
+		if changed, err = d.isRoutingChanged(); err != nil {
+			return
+		}
 	}
 
 	channelToNotify := d.routingUpdateNotifyChan // there were some routing changes but 'interfaceToProtect' is still is the default route

@@ -72,11 +72,16 @@ _bin_grep=grep
 _bin_dirname=dirname
 _bin_sed=sed
 
+#
 #Variables vill be initialized later:
+#
 _def_interface_name=""
 _def_interface_nameIPv6=""
 _def_gateway=""
 _def_gatewayIPv6=""
+# When inversed - only apps added to ST will use VPN connection, 
+# all other apps will use direct unencrypted connection
+_is_inversed=0 
 
 function test()
 {
@@ -130,6 +135,12 @@ function detectDefRouteVars()
 function init_iptables() 
 {    
     local bin_iptables=$1
+
+    local inverseOption=""
+    echo ${_is_inversed}
+    if [ ${_is_inversed} -eq 1 ]; then
+        inverseOption=" ! "
+    fi
     ##############################################
     # Firewall rules for packets coming from cgroup
     ##############################################    
@@ -146,15 +157,15 @@ function init_iptables()
     # Save packets mark (to be able to restore mark for incoming packets of the same connection)
     ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_mangle} -m comment --comment  "${_comment}" -j CONNMARK --save-mark    
     # Change the source IP address of packets to the IP address of the interface they're going out on
-    ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_nat} -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment  "${_comment}" -j MASQUERADE
+    ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_nat} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment  "${_comment}" -j MASQUERADE
     # Add mark on packets of classid ${_cgroup_classid}
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
     # Important! allow DNS request before setting mark rule (DNS request should not be marked)
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
     # Allow packets from/to cgroup (bypass IVPN firewall)
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
-    ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
+    ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
     ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j ACCEPT
     # Restore packets mark for incoming packets
     ${bin_iptables} -w ${_iptables_locktime} -I ${PREROUTING_mangle} -m comment --comment  "${_comment}" -j CONNMARK --restore-mark
@@ -496,20 +507,6 @@ function status()
     return 1
 }
 
-function parseInputArgs()
-{
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            -interface) _def_interface_name="$2"; shift;;
-            -gateway) _def_gateway="$2"; shift;;
-            -interface6) _def_interface_nameIPv6="$2"; shift;;
-            -gateway6) _def_gatewayIPv6="$2"; shift;;
-            *) echo "Unknown parameter: $1" 1>&2; exit 1;;
-        esac
-        shift
-    done
-}
-
 function info()
 {
     #echo "[*] Interfaces (${_bin_ip} link):"
@@ -590,6 +587,27 @@ function info()
     status
 }
 
+function parseInputArgs()
+{
+    while [ $# -gt 0 ]; do
+        # Check for empty parameter and shift if found
+        if [ -z "$1" ]; then
+            shift
+            continue
+        fi
+
+        case "$1" in
+            -interface) _def_interface_name="$2"; shift;;
+            -gateway) _def_gateway="$2"; shift;;
+            -interface6) _def_interface_nameIPv6="$2"; shift;;
+            -gateway6) _def_gatewayIPv6="$2"; shift;;
+            -inverse) _is_inversed=1; echo "'-inverse' flag defined!";;
+            *) echo "Unknown parameter: '$1'" 1>&2; exit 1;;
+        esac
+        shift
+    done
+}
+
 if [[ $1 = "start" ]] ; then    
     shift    
     parseInputArgs "$@"    
@@ -663,12 +681,14 @@ else
     echo "Note! The script have to be started under privilaged user (sudo $0 ...)"
     echo "    $0 <command> [parameters]"
     echo "Parameters:"
-    echo "    start [-interface <inf_name>] [-gateway <gateway>] [-interface6 <inf_name_IPv6>] [-gateway6 <gateway_IPv6>]"
+    echo "    start [-interface <inf_name>] [-gateway <gateway>] [-interface6 <inf_name_IPv6>] [-gateway6 <gateway_IPv6>] [-inverse]"
     echo "        Initialize split-tunneling functionality"
     echo "        - interface      - (optional) name of IPv4 network interface to be used for ST environment"
     echo "        - gateway        - (optional) IPv4 gateway IP to be used for ST environment"
     echo "        - interface6     - (optional) name of IPv6 network interface to be used for ST environment"
     echo "        - gateway6       - (optional) IPv6 gateway IP to be used for ST environment"
+    echo "        - Inverse        - (optional) When defined - route specified applications exclusively through the VPN."
+    echo "                                      All other traffic will bypass the VPN and use the default connection."
     echo "    stop"
     echo "        Uninitialize split-tunneling functionality"
     echo "    run [-u <username>] <command>"
