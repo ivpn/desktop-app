@@ -46,7 +46,6 @@ var (
 	curStateAllowLanMulticast bool
 	curStateEnabled           bool
 	allowedForICMP            map[string]struct{}
-	connectedVpnLocalIP       string
 
 	isPersistant bool = false
 
@@ -168,7 +167,6 @@ func ensurePersistant(secondsToWait int) {
 
 // ClientConnected - allow communication for local vpn/client IP address
 func implClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) error {
-	connectedVpnLocalIP = clientLocalIPAddress.String()
 	inf, err := netinfo.InterfaceByIPAddr(clientLocalIPAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get local interface by IP: %w", err)
@@ -197,7 +195,6 @@ func implClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net
 
 // ClientDisconnected - Disable communication for local vpn/client IP address
 func implClientDisconnected() error {
-	connectedVpnLocalIP = ""
 	// remove all exceptions related to current connection (all non-persistant exceptions)
 	err := removeAllHostsFromExceptions()
 	if err != nil {
@@ -299,9 +296,9 @@ func doAllowLAN(isAllowLAN, isAllowLanMulticast, isTriggeredByLanChangeMonitor b
 // implAddHostsToExceptions - allow communication with this hosts
 // Note: if isPersistent == false -> all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
 // Arguments:
-//	* IPs			-	list of IP addresses to ba allowed
-//	* onlyForICMP	-	try add rule to allow only ICMP protocol for this IP
-//	* isPersistent	-	keep rule enabled even if VPN disconnected
+//   - IPs			-	list of IP addresses to ba allowed
+//   - onlyForICMP	-	try add rule to allow only ICMP protocol for this IP
+//   - isPersistent	-	keep rule enabled even if VPN disconnected
 func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
 	IPsStr := make([]string, 0, len(IPs))
 	for _, ip := range IPs {
@@ -561,7 +558,8 @@ func removeHostsFromExceptions(IPs []string, isPersistant bool, onlyForICMP bool
 
 // removeAllHostsFromExceptions - Remove hosts (which are related to a current connection) from exceptions
 // Note: some exceptions should stay without changes, they are marked as 'persistant'
-//		(has 'true' value in allowedHosts; eg.: LAN and Multicast connectivity)
+//
+//	(has 'true' value in allowedHosts; eg.: LAN and Multicast connectivity)
 func removeAllHostsFromExceptions() error {
 	toRemoveIPs := make([]string, 0, len(allowedHosts))
 	for ipStr := range allowedHosts {
@@ -572,29 +570,6 @@ func removeAllHostsFromExceptions() error {
 }
 
 //---------------------------------------------------------------------
-
-// getLanIPs - returns list of local IPs
-func getLanIPs() ([]string, error) {
-
-	ipnetList, err := netinfo.GetAllLocalV4Addresses()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get network interfaces: %w", err)
-	}
-
-	retIps := make([]string, 0, 4)
-	for _, ifs := range ipnetList {
-		// Skip localhost interface - we have separate rules for local iface
-		if ifs.IP.String() == "127.0.0.1" {
-			continue
-		}
-		if len(connectedVpnLocalIP) > 0 && ifs.IP.String() == connectedVpnLocalIP {
-			continue
-		}
-		retIps = append(retIps, ifs.String())
-	}
-
-	return retIps, nil
-}
 
 func getUserExceptions(ipv4, ipv6 bool) []net.IPNet {
 	ret := []net.IPNet{}

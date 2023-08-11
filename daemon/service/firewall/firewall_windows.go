@@ -29,7 +29,6 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/service/firewall/winlib"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
@@ -269,11 +268,11 @@ func doEnable() (retErr error) {
 		return nil
 	}
 
-	localAddressesV6, err := netinfo.GetAllLocalV6Addresses()
+	localAddressesV6, err := getLocalIPAddresses(true) // IPv6
 	if err != nil {
 		return fmt.Errorf("failed to get all local IPv6 addresses: %w", err)
 	}
-	localAddressesV4, err := netinfo.GetAllLocalV4Addresses()
+	localAddressesV4, err := getLocalIPAddresses(false) // IPv4
 	if err != nil {
 		return fmt.Errorf("failed to get all local IPv4 addresses: %w", err)
 	}
