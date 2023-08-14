@@ -1,11 +1,12 @@
-//+build linux
+//go:build linux
+// +build linux
 
 //
 //  Daemon for IVPN Client Desktop
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2021 Privatus Limited.
+//  Copyright (c) 2021 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -55,7 +56,7 @@ func GetAppsList(evXDG_DATA_DIRS string, evXDG_CURRENT_DESKTOP string, evHOME st
 	// parse arguments
 	HOME = evHOME
 	XDG_DATA_DIRS = strings.Split(evXDG_DATA_DIRS, ":")
-	if len(XDG_DATA_DIRS)==1 && XDG_DATA_DIRS[0]=="" {
+	if len(XDG_DATA_DIRS) == 1 && XDG_DATA_DIRS[0] == "" {
 		XDG_DATA_DIRS = []string{}
 	}
 
