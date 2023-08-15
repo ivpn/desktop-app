@@ -1,11 +1,12 @@
-//+build linux
+//go:build linux
+// +build linux
 
 //
 //  Daemon for IVPN Client Desktop
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2021 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -42,9 +43,11 @@ type DesktopEntry struct {
 
 // GetAppsList returns list of DesktopEntry with an information about installed apps in the system
 // Arguments:
-// 		vXDG_DATA_DIRS		- environment variable $XDG_DATA_DIRS (e.g. '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop')
-//		vXDG_CURRENT_DESKTOP- environment variable $XDG_CURRENT_DESKTOP (e.g. 'ubuntu:GNOME')
-//		vHOME				- environment variable $HOME (e.g. '/home/user')
+//
+//	vXDG_DATA_DIRS		- environment variable $XDG_DATA_DIRS (e.g. '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop')
+//	vXDG_CURRENT_DESKTOP- environment variable $XDG_CURRENT_DESKTOP (e.g. 'ubuntu:GNOME')
+//	vHOME				- environment variable $HOME (e.g. '/home/user')
+//
 // Specification:
 // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html
 func GetAppsList(evXDG_DATA_DIRS string, evXDG_CURRENT_DESKTOP string, evHOME string, excludeApps map[string]struct{}) []DesktopEntry {
@@ -55,7 +58,7 @@ func GetAppsList(evXDG_DATA_DIRS string, evXDG_CURRENT_DESKTOP string, evHOME st
 	// parse arguments
 	HOME = evHOME
 	XDG_DATA_DIRS = strings.Split(evXDG_DATA_DIRS, ":")
-	if len(XDG_DATA_DIRS)==1 && XDG_DATA_DIRS[0]=="" {
+	if len(XDG_DATA_DIRS) == 1 && XDG_DATA_DIRS[0] == "" {
 		XDG_DATA_DIRS = []string{}
 	}
 

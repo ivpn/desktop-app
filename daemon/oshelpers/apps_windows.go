@@ -1,11 +1,12 @@
-//+build windows
+//go:build windows
+// +build windows
 
 //
 //  Daemon for IVPN Client Desktop
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2021 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -55,11 +56,12 @@ type extraArgsGetInstalledApps struct {
 
 // implGetInstalledApps - the Windows implementation of GetInstalledApps(). Returns a list of installed applications on the system
 // Parameters:
-// 	extraArgsJSON - (optional) Platform-depended: extra parameters (in JSON)
-// 	For Windows:
+//
+//	extraArgsJSON - (optional) Platform-depended: extra parameters (in JSON)
+//	For Windows:
 //		{ "WindowsEnvAppdata": "..." }
-// 		Applicable only for Windows: APPDATA environment variable
-// 		Needed to know path of current user's (not root) StartMenu folder location
+//		Applicable only for Windows: APPDATA environment variable
+//		Needed to know path of current user's (not root) StartMenu folder location
 func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 	//startTime := time.Now()
 	//defer func() {

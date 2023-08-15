@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2021 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -82,7 +82,7 @@ func GetFuncNotAvailableError() error {
 func Reset() error {
 	mutex.Lock()
 	defer mutex.Unlock()
-	
+
 	return implReset()
 }
 

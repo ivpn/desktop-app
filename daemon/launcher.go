@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -50,6 +50,7 @@ var log *logger.Logger
 var activeProtocol IProtocol
 
 // systemLog - if channel initialized, service will write there messages for system log.
+//
 //	Channel have to be initialized in platform-specific implementation of 'main' package (e.g. doPrepareToRun()).
 //	Messages receiver (processing messages from the channel) also have to be implemented for each platform separately.
 var systemLog chan service.SystemLogMessage
