@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -94,18 +94,20 @@ type SplitTunnelStatus struct {
 
 // SplitTunnelAddApp (request) add application to SplitTunneling
 // Expected response:
-// 		Windows	- types.EmptyResp (success)
-//  	Linux	- SplitTunnelAddAppCmdResp -> contains shell command which have to be executed in user space environment
+//
+//			Windows	- types.EmptyResp (success)
+//	 	Linux	- SplitTunnelAddAppCmdResp -> contains shell command which have to be executed in user space environment
 //
 // Description of Split Tunneling commands sequence to run the application:
-//	[client]					[daemon]
-//	SplitTunnelAddApp		->
-//							<-	windows:	types.EmptyResp (success)
-//							<-	linux:		types.SplitTunnelAddAppCmdResp (some operations required on client side)
-//	<windows: done>
-// 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
-//  SplitTunnelAddedPidInfo	->
-// 							<-	types.EmptyResp (success)
+//
+//		[client]					[daemon]
+//		SplitTunnelAddApp		->
+//								<-	windows:	types.EmptyResp (success)
+//								<-	linux:		types.SplitTunnelAddAppCmdResp (some operations required on client side)
+//		<windows: done>
+//		<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
+//	 SplitTunnelAddedPidInfo	->
+//								<-	types.EmptyResp (success)
 type SplitTunnelAddApp struct {
 	RequestBase
 	// Windows: full path to the app binary

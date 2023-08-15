@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -222,9 +222,9 @@ func delayedAllowLAN(isAllowLanMulticast bool) {
 // implAddHostsToExceptions - allow comminication with this hosts
 // Note: if isPersistent == false -> all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
 // Arguments:
-//	* IPs			-	list of IP addresses to ba allowed
-//	* onlyForICMP	-	(not in use for macOS) try add rule to allow only ICMP protocol for this IP
-//	* isPersistent	-	keep rule enabled even if VPN disconnected
+//   - IPs			-	list of IP addresses to ba allowed
+//   - onlyForICMP	-	(not in use for macOS) try add rule to allow only ICMP protocol for this IP
+//   - isPersistent	-	keep rule enabled even if VPN disconnected
 func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
 	IPsStr := make([]string, 0, len(IPs))
 	for _, ip := range IPs {
@@ -399,7 +399,8 @@ func removeHostsFromExceptions(IPs []string, isPersistant bool) error {
 
 // removeAllHostsFromExceptions - Remove hosts (which are related to a current connection) from exceptions
 // Note: some exceptions should stay without changes, they are marked as 'persistant'
-//		(has 'true' value in allowedHosts; eg.: LAN and Multicast connectivity)
+//
+//	(has 'true' value in allowedHosts; eg.: LAN and Multicast connectivity)
 func removeAllHostsFromExceptions() error {
 	toRemoveIPs := make([]string, 0, len(allowedHosts))
 	for ipStr := range allowedHosts {

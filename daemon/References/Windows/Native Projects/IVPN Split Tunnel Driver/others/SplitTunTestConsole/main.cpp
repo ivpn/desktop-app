@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app/daemon/References/Windows/Native%20Projects/IVPN%20Split%20Tunnel%20Driver
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2021 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 // 
 //  This file is part of the IVPN Client Desktop project.
 //  https://github.com/ivpn/desktop-app
