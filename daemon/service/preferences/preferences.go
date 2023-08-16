@@ -116,6 +116,7 @@ func Create() *Preferences {
 		// It allow to detect situations when settings was erased (created new Preferences object)
 		SettingsSessionUUID: uuid.New().String(),
 		IsFwAllowApiServers: true,
+		WiFiControl:         WiFiParamsCreate(),
 	}
 }
 
