@@ -935,11 +935,23 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 	prefs.IsFwAllowLANMulticast = isAllowLanMulticast
 	s.setPreferences(prefs)
 
-	err := firewall.AllowLAN(prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast)
+	err := s.applyKillSwitchAllowLAN(nil)
 	if err == nil {
 		s.onKillSwitchStateChanged()
 	}
 	return err
+}
+
+func (s *Service) applyKillSwitchAllowLAN(wifiInfoPtr *wifiStatus) error {
+	prefs := s._preferences
+
+	isAllowLAN := prefs.IsFwAllowLAN
+	if isAllowLAN && s.isTrustedWifiForcingToBlockLan(wifiInfoPtr) {
+		log.Info("Firewall (block LAN): according to configuration for Untrusted WiFi")
+		isAllowLAN = false
+	}
+
+	return firewall.AllowLAN(isAllowLAN, prefs.IsFwAllowLANMulticast)
 }
 
 func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
@@ -1110,7 +1122,7 @@ func (s *Service) SetWiFiSettings(params preferences.WiFiParams) error {
 	}
 	params.Networks = newNets
 
-	// save settings
+	// Save settings
 	prefs := s._preferences
 	prefs.WiFiControl = params
 	s.setPreferences(prefs)

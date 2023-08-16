@@ -359,7 +359,7 @@ func (s *Service) connectOpenVPN(connectionParams openvpn.ConnectionParams, manu
 					}
 
 					if err := scanner.Err(); err != nil {
-						log.Error("Failed to parse '%s': %s", extraParamsFile, err)
+						log.Error(fmt.Sprintf("Failed to parse '%s': %s", extraParamsFile, err))
 						return ""
 					}
 					return allParams.String()

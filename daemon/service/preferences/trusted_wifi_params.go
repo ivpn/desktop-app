@@ -42,6 +42,7 @@ type WiFiParams struct {
 	Actions struct {
 		UnTrustedConnectVpn     bool `json:"unTrustedConnectVpn"`
 		UnTrustedEnableFirewall bool `json:"unTrustedEnableFirewall"`
+		UnTrustedBlockLan       bool `json:"unTrustedBlockLan"`
 		TrustedDisconnectVpn    bool `json:"trustedDisconnectVpn"`
 		TrustedDisableFirewall  bool `json:"trustedDisableFirewall"`
 	} `json:"actions"`
@@ -51,6 +52,7 @@ func WiFiParamsCreate() WiFiParams {
 	p := WiFiParams{}
 	p.Actions.UnTrustedConnectVpn = true
 	p.Actions.UnTrustedEnableFirewall = true
+	p.Actions.UnTrustedBlockLan = true
 	p.Actions.TrustedDisconnectVpn = true
 	p.Actions.TrustedDisableFirewall = true
 	return p

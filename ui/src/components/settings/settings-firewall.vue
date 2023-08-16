@@ -128,6 +128,10 @@
                 This includes traffic to all private address spaces in RFC 1918,
                 3927, 4291, 4193.
               </p>
+              <div class="settingsGrayLongDescriptionFont">
+                'WiFi control' actions for untrusted networks will override this
+                option.
+              </div>
             </div>
           </ComponentDialog>
         </div>
