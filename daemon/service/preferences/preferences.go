@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -114,6 +114,7 @@ func Create() *Preferences {
 		// It allow to detect situations when settings was erased (created new Preferences object)
 		SettingsSessionUUID: uuid.New().String(),
 		IsFwAllowApiServers: true,
+		WiFiControl:         WiFiParamsCreate(),
 	}
 }
 

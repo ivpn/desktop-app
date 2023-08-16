@@ -1,11 +1,12 @@
-//+build linux
+//go:build linux
+// +build linux
 
 //
 //  Daemon for IVPN Client Desktop
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2021 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -51,10 +52,11 @@ type Theme struct {
 
 // GetTheme initializes Theme object.
 // Parameters:
-// 		themeName 		- name of the theme
-//						  (can be obtained by terminal command: "gsettings get org.gnome.desktop.interface icon-theme")
-// 		HOME 			- environment variavle $HOME (e.g. '/home/user')
-// 		XDG_DATA_DIRS 	- environment variable $XDG_DATA_DIRS (e.g. '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop')
+//
+//	themeName 		- name of the theme
+//					  (can be obtained by terminal command: "gsettings get org.gnome.desktop.interface icon-theme")
+//	HOME 			- environment variavle $HOME (e.g. '/home/user')
+//	XDG_DATA_DIRS 	- environment variable $XDG_DATA_DIRS (e.g. '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop')
 func GetTheme(themeName string, evHOME string, evXDG_DATA_DIRS string) (Theme, error) {
 	// parse arguments
 	XDG_DATA_DIRS := strings.Split(evXDG_DATA_DIRS, ":")
@@ -247,9 +249,10 @@ func (c Theme) IsInitialized() bool {
 
 // FindIcon searching for the icon file in the current theme
 // Parameters:
-// 		name - icon name
-// 		desiredSize - expected icon sizes (E.g. [24, 32, 48]; first element - higher priority)
-// 		desiredSize - expected icon format (E.g. ["png", "svg"]; first element - higher priority)
+//
+//	name - icon name
+//	desiredSize - expected icon sizes (E.g. [24, 32, 48]; first element - higher priority)
+//	desiredSize - expected icon format (E.g. ["png", "svg"]; first element - higher priority)
 func (c Theme) FindIcon(name string, desiredSize []int, formats []string) (string, error) {
 	if _, err := os.Stat(name); err == nil {
 		return name, nil
