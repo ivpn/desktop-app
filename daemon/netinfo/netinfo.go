@@ -38,13 +38,18 @@ func init() {
 
 var (
 	// Define the non-routable address ranges
-	_localNonRoutableRanges []*net.IPNet = []*net.IPNet{
+	_localNonRoutableRanges []net.IPNet = []net.IPNet{
 		{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(8, 32)},     // IPv4 private range (RFC 1918)
 		{IP: net.ParseIP("172.16.0.0"), Mask: net.CIDRMask(12, 32)},  // IPv4 private range (RFC 1918)
 		{IP: net.ParseIP("192.168.0.0"), Mask: net.CIDRMask(16, 32)}, // IPv4 private range (RFC 1918)
 		{IP: net.ParseIP("169.254.0.0"), Mask: net.CIDRMask(16, 32)}, // IPv4 auto-IP range (RFC 3927)
 		{IP: net.ParseIP("fc00::"), Mask: net.CIDRMask(7, 128)},      // IPv6 Unique Local Address (ULA) (RFC 4193)
 		{IP: net.ParseIP("fe80::"), Mask: net.CIDRMask(10, 128)},     // IPv6 Link-Local Address (RFC 4291)
+	}
+
+	_multicastAddresses []net.IPNet = []net.IPNet{
+		{IP: net.ParseIP("240.0.0.0"), Mask: net.CIDRMask(4, 32)}, //IPv4 Multicast Addresses
+		{IP: net.ParseIP("ff::"), Mask: net.CIDRMask(8, 128)},     //IPv6 Multicast Addresses
 	}
 )
 
@@ -56,6 +61,16 @@ func IsLocalNonRoutableIP(ip net.IP) bool {
 		}
 	}
 	return false
+}
+
+// GetNonRoutableLocalAddrRanges retrieves all the non-routable address ranges.
+func GetNonRoutableLocalAddrRanges() []net.IPNet {
+	return append([]net.IPNet{}, _localNonRoutableRanges...)
+}
+
+// GetMulticastAddresses retrieves all the multicast address ranges.
+func GetMulticastAddresses() []net.IPNet {
+	return append([]net.IPNet{}, _multicastAddresses...)
 }
 
 // DefaultGatewayIP - returns: default gatewat IP
@@ -195,9 +210,9 @@ func GetAllLocalV6Addresses() ([]net.IPNet, error) {
 }
 
 // getAllLocalAddresses - returns all local addresses of all available interfaces.
-// Note: it returns only non-routable local addresses!
 //
-//	(this prevents potential vulnerabilities when attacker can manipulate with routing table)
+// Note: it returns only non-routable local addresses!
+// (this prevents potential vulnerabilities when attacker can manipulate with routing table)
 //
 // * ifaces - list of interfaces to check, if nil then all available interfaces will be checked;
 // * if isIPv6 is true, then IPv6 addresses will be returned, otherwise IPv4;

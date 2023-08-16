@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ master, beta, development ]
   push:
-    branches: [ master, beta, development, fix/s136_TunnelCrack_fixes ]
+    branches: [ master, beta, development ]
 jobs:
   win:
     runs-on: windows-latest

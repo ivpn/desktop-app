@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -43,19 +42,6 @@ var (
 	// key: is a string representation of allowed IP
 	// value: true - if exception rule is persistant (persistant, means will stay available even client is disconnected)
 	allowedHosts map[string]bool
-
-	delayedAllowLanAllowed bool = true
-	delayedAllowLanStarted bool = false
-)
-
-const (
-	multicastIP = "224.0.0.0/4"
-
-	// An IPv6 local addresses
-	// Apple services is using IPv6 addressing (AirDrop, UniversalClipboard, HandOff, CallForwarding iPhone<->Mac ...)
-	// AirDrop is using 'awdl0' interface
-	// Rest Apple services are using 'utun0', 'utun1'... 'utunX'...
-	localhostIPv6 = "fe80::/64"
 )
 
 func init() {
@@ -147,76 +133,24 @@ func implClientDisconnected() error {
 }
 
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
-	localIPs, err := getLanIPs()
-	if err != nil {
-		return fmt.Errorf("failed to get local IPs: %w", err)
-	}
-
 	// the rule should stay unchanged independently from VPN connection state
 	isPersistent := true
+	localRanges := ipNetListToStrings(netinfo.GetNonRoutableLocalAddrRanges())
+	multicastRanges := ipNetListToStrings(netinfo.GetMulticastAddresses())
 
 	if !isAllowLAN {
-		// LAN NOT ALLOWED
-		delayedAllowLanAllowed = false
-		// disallow everything (LAN + multicast)
-		return removeHostsFromExceptions(append(localIPs, multicastIP), isPersistent)
+		// LAN NOT ALLOWED: disallow everything (LAN + multicast)
+		return removeHostsFromExceptions(append(localRanges, multicastRanges...), isPersistent)
 	}
 
 	// LAN ALLOWED
-	if len(localIPs) > 0 {
-		delayedAllowLanAllowed = false
-	} else {
-		// this can happen, for example, on system boot (when no network interfaces initialized)
-		log.Info("Local LAN addresses not detected: no data to apply the 'Allow LAN' rule")
-		go delayedAllowLAN(isAllowLanMulticast)
-		return nil
-	}
-
-	// An IPv6 local addresses
-	// Apple services is using IPv6 addressing (AirDrop, UniversalClipboard, HandOff, CallForwarding iPhone<->Mac ...)
-	// AirDrop is using 'awdl0' interface
-	// Rest Apple services are using 'utun0', 'utun1'... 'utunX'...
-	localIPs = append(localIPs, localhostIPv6)
-
+	rangesToAllow := localRanges
 	if isAllowLanMulticast {
-		// allow LAN + multicast
-		return addHostsToExceptions(append(localIPs, multicastIP), isPersistent)
+		rangesToAllow = append(rangesToAllow, multicastRanges...)
+	} else {
+		removeHostsFromExceptions(multicastRanges, isPersistent) // disallow Multicast
 	}
-
-	// disallow Multicast
-	removeHostsFromExceptions([]string{multicastIP}, isPersistent)
-	// allow LAN
-	return addHostsToExceptions(localIPs, isPersistent)
-}
-
-func delayedAllowLAN(isAllowLanMulticast bool) {
-	if delayedAllowLanStarted || !delayedAllowLanAllowed {
-		return
-	}
-	log.Info("Delayed 'Allow LAN': Will try to apply this rule few seconds later...")
-	delayedAllowLanStarted = true
-
-	defer func() { delayedAllowLanAllowed = false }()
-	for i := 0; i < 25 && delayedAllowLanAllowed; i++ {
-		time.Sleep(time.Second)
-		ipList, err := getLanIPs()
-		if err != nil {
-			log.Warning(fmt.Errorf("delayed 'Allow LAN': failed to get local IPs: %w", err))
-			return
-		}
-		if len(ipList) > 0 {
-			time.Sleep(time.Second) // just to ensure that everything initialized
-			if delayedAllowLanAllowed {
-				log.Info("Delayed 'Allow LAN': apply ...")
-				err := implAllowLAN(true, isAllowLanMulticast)
-				if err != nil {
-					log.Warning(fmt.Errorf("delayed 'Allow LAN' error: %w", err))
-				}
-			}
-			return
-		}
-	}
-	log.Info("Delayed 'Allow LAN': no LAN interfaces detected")
+	return addHostsToExceptions(rangesToAllow, isPersistent)
 }
 
 // implAddHostsToExceptions - allow comminication with this hosts

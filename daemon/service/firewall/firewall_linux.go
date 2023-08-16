@@ -29,9 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
-	"github.com/ivpn/desktop-app/daemon/oshelpers/linux/netlink"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
@@ -39,21 +37,15 @@ import (
 var (
 	// key: is a string representation of allowed IP
 	// value: true - if exception rule is persistant (persistant, means will stay available even client is disconnected)
-	allowedHosts map[string]bool
-	// IP addresses of local interfaces (using for 'allow LAN' functionality)
-	curAllowedLanIPs          []string
-	curStateAllowLAN          bool
-	curStateAllowLanMulticast bool
-	curStateEnabled           bool
-	allowedForICMP            map[string]struct{}
+	allowedHosts   map[string]bool
+	allowedForICMP map[string]struct{} // IP addresses allowed for ICMP
 
-	isPersistant bool = false
-
-	mutexInternal sync.Mutex
-)
-
-const (
-	multicastIP = "224.0.0.0/4"
+	curAllowedLanIPs          []string // IP addresses allowed for LAN
+	curStateAllowLAN          bool     // Allow LAN is enabled
+	curStateAllowLanMulticast bool     // Allow Multicast is enabled
+	curStateEnabled           bool     // Firewall is enabled
+	isPersistant              bool     // Firewall is persistant
+	mutexInternal             sync.Mutex
 )
 
 func init() {
@@ -61,26 +53,7 @@ func init() {
 }
 
 func implInitialize() error {
-	startLanChangeMonitor := func() error {
-		onNetChange := make(chan struct{}, 1)
-
-		if err := netlink.RegisterLanChangeListener(onNetChange); err != nil {
-			return err
-		}
-
-		go func() {
-			for {
-				<-onNetChange
-				if err := doAllowLAN(curStateAllowLAN, curStateAllowLanMulticast, true); err != nil {
-					log.Error(err)
-				}
-			}
-		}()
-
-		return nil
-	}
-
-	return startLanChangeMonitor()
+	return nil
 }
 
 func implGetEnabled() (bool, error) {
@@ -205,10 +178,10 @@ func implClientDisconnected() error {
 }
 
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
-	return doAllowLAN(isAllowLAN, isAllowLanMulticast, false)
+	return doAllowLAN(isAllowLAN, isAllowLanMulticast)
 }
 
-func doAllowLAN(isAllowLAN, isAllowLanMulticast, isTriggeredByLanChangeMonitor bool) error {
+func doAllowLAN(isAllowLAN, isAllowLanMulticast bool) error {
 	mutexInternal.Lock()
 	defer mutexInternal.Unlock()
 
@@ -216,79 +189,39 @@ func doAllowLAN(isAllowLAN, isAllowLanMulticast, isTriggeredByLanChangeMonitor b
 	curStateAllowLAN = isAllowLAN
 	curStateAllowLanMulticast = isAllowLanMulticast
 
+	if isAllowLAN && !curStateEnabled {
+		return nil // do nothing if firewall disabled
+	}
+
+	// constants
 	const persistant = true
 	const notOnlyForICMP = false
 
-	logLanChangeLogged := false
-	logLanChange := func() {
-		if isTriggeredByLanChangeMonitor && !logLanChangeLogged {
-			logLanChangeLogged = true
-			log.Info("LAN: network configuration change detected")
-		}
-	}
-
-	if isAllowLAN && !curStateEnabled {
-		// do nothing if firewall disabled
-		return nil
-	}
-
-	if isAllowLAN && curStateAllowLAN && isAllowLanMulticast == curStateAllowLanMulticast {
-		// Allow LAN is already enabled
-		// Check is there any changes in LAN configuration. If no changes - do nothing
-		localIPs, err := getLanIPs()
-		if err != nil {
-			return fmt.Errorf("failed to get local IPs: %w", err)
-		}
-		if isAllowLanMulticast && localIPs != nil {
-			// allow LAN + multicast
-			localIPs = append(localIPs, multicastIP)
-		}
-		if (len(localIPs) == 0 && len(curAllowedLanIPs) == 0) || helpers.SliceElementsMatch(localIPs, curAllowedLanIPs) {
-			// Check is there any changes in LAN configuration. If no changes - do nothing
-			return nil
-		}
-	}
-
 	// disallow everything (LAN + multicast)
-	toRemove := curAllowedLanIPs
-	curAllowedLanIPs = nil
-	if len(toRemove) > 0 {
-		logLanChange()
-		if err := removeHostsFromExceptions(toRemove, persistant, notOnlyForICMP); err != nil {
-			return fmt.Errorf("failed to erase 'Allow LAN' rules")
+	if len(curAllowedLanIPs) > 0 {
+		if err := removeHostsFromExceptions(curAllowedLanIPs, persistant, notOnlyForICMP); err != nil {
+			log.Warning("failed to erase 'Allow LAN' rules")
 		}
 	}
-	if !isAllowLAN {
-		return nil
-	}
+	curAllowedLanIPs = nil
 
-	logLanChange()
+	if !isAllowLAN {
+		return nil // LAN NOT ALLOWED
+	}
 
 	// LAN ALLOWED
-	localIPs, err := getLanIPs()
-	if err != nil {
-		return fmt.Errorf("failed to get local IPs: %w", err)
-	}
 
-	if len(localIPs) == 0 && !isTriggeredByLanChangeMonitor {
-		// this can happen, for example, on system boot (when no network interfaces initialized)
-		log.Info("Local LAN addresses not detected: no data to apply the 'Allow LAN' rule")
-		return nil
-	}
+	// TODO: implement LAN access also for IPv6 addresses
+	const ipV4 = false
+	localRanges := ipNetListToStrings(filterIPNetList(netinfo.GetNonRoutableLocalAddrRanges(), ipV4))
+	multicastRanges := ipNetListToStrings(filterIPNetList(netinfo.GetMulticastAddresses(), ipV4))
 
-	if len(curAllowedLanIPs) > 0 {
-		removeHostsFromExceptions(curAllowedLanIPs, persistant, notOnlyForICMP)
-	}
-
-	curAllowedLanIPs = localIPs
+	curAllowedLanIPs = localRanges
 	if isAllowLanMulticast {
 		// allow LAN + multicast
-		curAllowedLanIPs = append(curAllowedLanIPs, multicastIP)
-		return addHostsToExceptions(curAllowedLanIPs, persistant, notOnlyForICMP)
+		curAllowedLanIPs = append(curAllowedLanIPs, multicastRanges...)
 	}
 
-	// disallow Multicast
-	removeHostsFromExceptions([]string{multicastIP}, persistant, notOnlyForICMP)
 	// allow LAN
 	return addHostsToExceptions(curAllowedLanIPs, persistant, notOnlyForICMP)
 }
