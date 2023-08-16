@@ -41,6 +41,7 @@ const (
 	action_trusted_firewall_off  actionType = "trusted_disable_firewall"
 	action_untrusted_vpn_on      actionType = "untrusted_connect_vpn"
 	action_untrusted_firewall_on actionType = "untrusted_enable_firewall"
+	action_untrusted_block_lan   actionType = "untrusted_block_lan"
 )
 
 type trustType string
@@ -57,7 +58,7 @@ type CmdWiFi struct {
 	connect_on_insecure  string //[on/off]
 	trusted_control      string //[on/off]
 	default_trust_status string //[none/trusted/untrusted]
-	set_trusted_action   string // [action:value] // actions: 'trusted_vpn_off:[true/false]', 'trusted_firewall_off', 'untrusted_vpn_on', 'untrusted_firewall_on'
+	set_trusted_action   string // [action:value] // actions: 'trusted_vpn_off:[true/false]', 'trusted_firewall_off', 'untrusted_vpn_on', 'untrusted_firewall_on', untrusted_block_lan
 	set_trusted_network  string // [network:status] (status: none/trusted/untrusted; e.g. 'my_home_wifi':trusted)
 	reset_settings       bool
 }
@@ -87,6 +88,7 @@ func (c *CmdWiFi) Init() {
 				Actions for Untrusted WiFi
 					* untrusted_connect_vpn     - Connect to VPN
 					* untrusted_enable_firewall - Enable firewall
+					* untrusted_block_lan       - Block LAN traffic
 				Actions for Trusted WiFi
 					* trusted_disconnect_vpn    - Disconnect from VPN
 					* trusted_disable_firewall  - Disable firewall
@@ -182,6 +184,14 @@ func (c *CmdWiFi) Run() error {
 			wifiSettings.Actions.UnTrustedConnectVpn = val
 		case action_untrusted_firewall_on:
 			wifiSettings.Actions.UnTrustedEnableFirewall = val
+			if !val {
+				wifiSettings.Actions.UnTrustedBlockLan = false
+			}
+		case action_untrusted_block_lan:
+			wifiSettings.Actions.UnTrustedBlockLan = val
+			if val {
+				wifiSettings.Actions.UnTrustedEnableFirewall = true
+			}
 		default:
 			return flags.BadParameter{
 				Message: fmt.Sprintf("not supported action name '%s' (acceptable actions: %s, %s, %s, %s)", actionTypeStr,
@@ -330,6 +340,7 @@ func (c *CmdWiFi) printStatus(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintf(w, "    Actions for Untrusted WiFi:\t\n")
 	fmt.Fprintf(w, "        Connect to VPN\t:\t%v\n", boolToStr(wifiSettings.Actions.UnTrustedConnectVpn))
 	fmt.Fprintf(w, "        Enable firewall\t:\t%v\n", boolToStr(wifiSettings.Actions.UnTrustedEnableFirewall))
+	fmt.Fprintf(w, "        Block LAN traffic\t:\t%v\n", boolToStr(wifiSettings.Actions.UnTrustedBlockLan))
 	fmt.Fprintf(w, "    Actions for Trusted WiFi:\t\n")
 	fmt.Fprintf(w, "        Disconnect from VPN\t:\t%v\n", boolToStr(wifiSettings.Actions.TrustedDisconnectVpn))
 	fmt.Fprintf(w, "        Disable firewall\t:\t%v\n", boolToStr(wifiSettings.Actions.TrustedDisableFirewall))

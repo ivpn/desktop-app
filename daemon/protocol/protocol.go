@@ -76,7 +76,7 @@ type Service interface {
 	APIRequest(apiAlias string, ipTypeRequired types.RequiredIPProtocol) (responseData []byte, err error)
 	DetectAccessiblePorts(portsToTest []api_types.PortInfo) (retPorts []api_types.PortInfo, err error)
 
-	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, fwUserExceptions string, err error)
+	KillSwitchState() (status service_types.KillSwitchStatus, err error)
 	SetKillSwitchState(bool) error
 	SetKillSwitchIsPersistent(isPersistant bool) error
 	SetKillSwitchAllowLANMulticast(isAllowLanMulticast bool) error
@@ -494,15 +494,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			sendState(req.Idx, false)
 
 			// send Firewall state
-			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err == nil {
+			if status, err := p._service.KillSwitchState(); err == nil {
 				p.sendResponse(conn,
-					&types.KillSwitchStatusResp{
-						IsEnabled:         isEnabled,
-						IsPersistent:      isPersistant,
-						IsAllowLAN:        isAllowLAN,
-						IsAllowMulticast:  isAllowLanMulticast,
-						IsAllowApiServers: isAllowApiServers,
-						UserExceptions:    fwUserExceptions}, reqCmd.Idx)
+					&types.KillSwitchStatusResp{KillSwitchStatus: status}, reqCmd.Idx)
 			}
 		}
 
@@ -626,17 +620,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	case "KillSwitchGetStatus":
-		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err != nil {
+		if status, err := p._service.KillSwitchState(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
 			p.sendResponse(conn,
-				&types.KillSwitchStatusResp{
-					IsEnabled:         isEnabled,
-					IsPersistent:      isPersistant,
-					IsAllowLAN:        isAllowLAN,
-					IsAllowMulticast:  isAllowLanMulticast,
-					IsAllowApiServers: isAllowApiServers,
-					UserExceptions:    fwUserExceptions}, reqCmd.Idx)
+				&types.KillSwitchStatusResp{KillSwitchStatus: status}, reqCmd.Idx)
 		}
 
 	case "KillSwitchSetEnabled":
