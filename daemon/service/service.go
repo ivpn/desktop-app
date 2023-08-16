@@ -554,12 +554,12 @@ func (s *Service) Pause(durationSeconds uint32) error {
 	s._pause._mutex.Lock()
 	defer s._pause._mutex.Unlock()
 
-	fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+	fwStatus, err := s.KillSwitchState()
 	if err != nil {
 		return fmt.Errorf("failed to check KillSwitch status: %w", err)
 	}
-	s._pause._killSwitchState = fwIsEnabled
-	if fwIsEnabled && !isPersistant {
+	s._pause._killSwitchState = fwStatus.IsEnabled
+	if fwStatus.IsEnabled && !fwStatus.IsPersistent {
 		if err := s.SetKillSwitchState(false); err != nil {
 			return err
 		}
@@ -634,11 +634,11 @@ func (s *Service) resume() error {
 		return err
 	}
 
-	fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+	fwStatus, err := s.KillSwitchState()
 	if err != nil {
 		log.Error(fmt.Errorf("failed to check KillSwitch status: %w", err))
 	} else {
-		if !isPersistant && fwIsEnabled != s._pause._killSwitchState {
+		if !fwStatus.IsPersistent && fwStatus.IsEnabled != s._pause._killSwitchState {
 			if err := s.SetKillSwitchState(s._pause._killSwitchState); err != nil {
 				log.Error("failed to restore KillSwitch status: %w", err)
 			}
@@ -896,10 +896,19 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 }
 
 // KillSwitchState returns kill-switch state
-func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, fwUserExceptions string, err error) {
+func (s *Service) KillSwitchState() (status types.KillSwitchStatus, err error) {
 	prefs := s._preferences
-	enabled, err := firewall.GetEnabled()
-	return enabled, prefs.IsFwPersistant, prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast, prefs.IsFwAllowApiServers, prefs.FwUserExceptions, err
+	enabled, isLanAllowed, _, err := firewall.GetState()
+
+	return types.KillSwitchStatus{
+		IsEnabled:         enabled,
+		IsPersistent:      prefs.IsFwPersistant,
+		IsAllowLAN:        prefs.IsFwAllowLAN,
+		IsAllowMulticast:  prefs.IsFwAllowLANMulticast,
+		IsAllowApiServers: prefs.IsFwAllowApiServers,
+		UserExceptions:    prefs.FwUserExceptions,
+		StateLanAllowed:   isLanAllowed,
+	}, err
 }
 
 // SetKillSwitchIsPersistent change kill-switch value
@@ -1278,12 +1287,12 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 
 	// Temporary allow API server access (If Firewall is enabled)
 	// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
-	fwIsEnabled, _, _, _, fwIsAllowApiServers, _, _ := s.KillSwitchState()
-	if fwIsEnabled && !fwIsAllowApiServers {
+	fwStatus, _ := s.KillSwitchState()
+	if fwStatus.IsEnabled && !fwStatus.IsAllowApiServers {
 		s.SetKillSwitchAllowAPIServers(true)
 	}
 	defer func() {
-		if fwIsEnabled && !fwIsAllowApiServers {
+		if fwStatus.IsEnabled && !fwStatus.IsAllowApiServers {
 			// restore state for 'AllowAPIServers' configuration (previously, was enabled)
 			s.SetKillSwitchAllowAPIServers(false)
 		}
@@ -1438,12 +1447,12 @@ func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLo
 
 		// Temporary allow API server access (If Firewall is enabled)
 		// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
-		fwIsEnabled, _, _, _, fwIsAllowApiServers, _, _ := s.KillSwitchState()
-		if fwIsEnabled && !fwIsAllowApiServers {
+		fwStatus, _ := s.KillSwitchState()
+		if fwStatus.IsEnabled && !fwStatus.IsAllowApiServers {
 			s.SetKillSwitchAllowAPIServers(true)
 		}
 		defer func() {
-			if fwIsEnabled && !fwIsAllowApiServers {
+			if fwStatus.IsEnabled && !fwStatus.IsAllowApiServers {
 				// restore state for 'AllowAPIServers' configuration (previously, was enabled)
 				s.SetKillSwitchAllowAPIServers(false)
 			}
