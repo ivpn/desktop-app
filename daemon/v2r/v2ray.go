@@ -75,6 +75,8 @@ type V2RayWrapper struct {
 	stoppedChan    chan struct{}
 }
 
+// CreateV2RayWrapper - creates new V2RayWrapper object
+// Please refer to the v2r.V2RayConfig (in v2r/config.go) struct for more information about the V2Ray data flow and configuration
 func CreateV2RayWrapper(binary string, tmpConfigFile string, cfg *V2RayConfig) *V2RayWrapper {
 	return &V2RayWrapper{
 		binary:         binary,
