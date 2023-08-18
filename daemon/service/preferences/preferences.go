@@ -34,6 +34,7 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/version"
@@ -197,6 +198,25 @@ func (p *Preferences) LoadPreferences() error {
 	if p.Session.WGKeysRegenInerval <= 0 {
 		p.Session.WGKeysRegenInerval = DefaultWGKeysInterval
 		log.Info(fmt.Sprintf("default value for preferences: WgKeysRegenIntervalDays=%v", p.Session.WGKeysRegenInerval))
+	}
+
+	// *** Compatibility with old versions ***
+
+	// Convert parameters from v3.11.15 (and releases older than 2023-08-07)
+	// Obfsproxy configuration was moved to 'LastConnectionParams->OpenVpnParameters' section
+	type tmp_type_Settings_v3_11_15 struct {
+		Obfs4proxy struct {
+			Obfs4Iat obfsproxy.Obfs4IatMode
+			Version  obfsproxy.ObfsProxyVersion
+		}
+	}
+	var tmp_Settings_v3_11_15 tmp_type_Settings_v3_11_15
+	err = json.Unmarshal(data, &tmp_Settings_v3_11_15)
+	if err == nil && tmp_Settings_v3_11_15.Obfs4proxy.Version > obfsproxy.None {
+		p.LastConnectionParams.OpenVpnParameters.Obfs4proxy = obfsproxy.Config{
+			Version:  tmp_Settings_v3_11_15.Obfs4proxy.Version,
+			Obfs4Iat: tmp_Settings_v3_11_15.Obfs4proxy.Obfs4Iat,
+		}
 	}
 
 	return nil
