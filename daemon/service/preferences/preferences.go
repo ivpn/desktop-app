@@ -35,6 +35,7 @@ import (
 
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/version"
@@ -214,12 +215,30 @@ func (p *Preferences) LoadPreferences() error {
 	}
 
 	// Convert parameters from v3.11.15 (and releases older than 2023-08-07)
-	// A new option, WiFiControl.Actions.UnTrustedBlockLan, was introduced.
-	// It is 'true' by default. However, older versions did not have this functionality.
-	// Therefore, for users upgrading from v3.11.15, it must be disabled.
 	if compareVersions(p.Version, "3.11.15") <= 0 {
 		// if upgrading from "3.11.15" or older version
+
+		// A new option, WiFiControl.Actions.UnTrustedBlockLan, was introduced.
+		// It is 'true' by default. However, older versions did not have this functionality.
+		// Therefore, for users upgrading from v3.11.15, it must be disabled.
 		p.WiFiControl.Actions.UnTrustedBlockLan = false
+
+		// Obfsproxy configuration was moved to 'LastConnectionParams->OpenVpnParameters' section
+		type tmp_type_Settings_v3_11_15 struct {
+			Obfs4proxy struct {
+				Obfs4Iat obfsproxy.Obfs4IatMode
+				Version  obfsproxy.ObfsProxyVersion
+			}
+		}
+		var tmp_Settings_v3_11_15 tmp_type_Settings_v3_11_15
+		err = json.Unmarshal(data, &tmp_Settings_v3_11_15)
+		if err == nil && tmp_Settings_v3_11_15.Obfs4proxy.Version > obfsproxy.None {
+			p.LastConnectionParams.OpenVpnParameters.Obfs4proxy = obfsproxy.Config{
+				Version:  tmp_Settings_v3_11_15.Obfs4proxy.Version,
+				Obfs4Iat: tmp_Settings_v3_11_15.Obfs4proxy.Obfs4Iat,
+			}
+
+		}
 	}
 
 	return nil

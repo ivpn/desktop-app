@@ -918,26 +918,13 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 	return nil
 }
 
+// startV2Ray start V2Ray connection
+// Please refer to the v2r.V2RayConfig (in v2r/config.go) struct for more information about the V2Ray data flow and configuration
 func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayTransportType) (
 	updatedParams types.ConnectionParams,
 	v2RayWrapper *v2r.V2RayWrapper,
 	originalEntryServerInfo *svrConnInfo,
 	err error) {
-	//
-	// Info:
-	// - V2Ray data flow:
-	// 	 * for Single-Hop: 	LocalV2RayProxy -> Outbound(EntryServer:V2Ray) -> Inbound(EntryServer:WireGuard)
-	//   * for Multi-Hop:	LocalV2RayProxy -> Outbound(EntryServer:V2Ray) -> Inbound(ExitServer:WireGuard)
-	// - Outbound ports can be any ports (which applicable for the selected VPN type).
-	//   * Preferred outbound ports: 80 for HTTP/VMess/TCP and 443 for HTTPS/VMess/QUIC
-	// - Inbound ports
-	//   * Single-Hop connections use internal V2Ray ports for inbound connections: svrs.Config.Ports.V2Ray
-	//   * Multi-Hop connections can use any ports for inbound connections (which applicable for the selected VPN type).
-	//
-	// Note!
-	// - Multi-Hop:
-	//   * For V2Ray connections we ignore port-based multihop configuration. Use default ports instead.
-	//   * WireGuard: since the first WG server is the ExitServer - we have to use it's public key in the WireGuard configuration
 
 	if v2RayType != v2r.QUIC && v2RayType != v2r.TCP {
 		return params, nil, nil, nil
@@ -983,10 +970,12 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 	inboundIp := ""  // for Single-Hop: host IP; for Multi-Hop: exit host IP
 	inboundPort := 0 // for Single-Hop: internal V2Ray port; for Multi-Hop: exit host port
 
-	isTcpLocalPort := isTcpOutboundPort
-	if params.VpnType == vpn.WireGuard {
-		isTcpLocalPort = false // WireGuard uses only UDP
-	}
+	// isTcpLocalPort - is the local port type (TCP or UDP) of local V2Ray proxy: the inbound port type  ([VPN-server PROTOCOL]) should be similar to the local port type.
+	// In fact, it is VPN connection type:
+	// -	WireGuard uses only UDP;
+	// -	for OpenVPN we use UDP because it is preffered (but TCP is also acceptable)
+	isTcpLocalPort := false // use UDP for all VPN types
+
 	requiredLocalPortTypeStr := "tcp"
 	if !isTcpLocalPort {
 		requiredLocalPortTypeStr = "udp"
@@ -1068,10 +1057,16 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 	origEntrySvr := &svrConnInfo{V2RayProxyType: v2RayType}
 	if vpn.Type(params.VpnType) == vpn.OpenVPN {
 
+		// set OpenVPN protocol (udp/tcp) according to the local V2Ray port type
+		updatedParams.OpenVpnParameters.Port.Protocol = 0
+		if isTcpLocalPort {
+			updatedParams.OpenVpnParameters.Port.Protocol = 1
+		}
+
 		// We have to return the original information about EntryServer
-		origEntrySvr.IP = net.ParseIP(updatedParams.OpenVpnParameters.EntryVpnServer.Hosts[0].Host)
-		origEntrySvr.Port = updatedParams.OpenVpnParameters.Port.Port
-		origEntrySvr.PortType = updatedParams.OpenVpnParameters.Port.Protocol
+		origEntrySvr.IP = net.ParseIP(params.OpenVpnParameters.EntryVpnServer.Hosts[0].Host)
+		origEntrySvr.Port = params.OpenVpnParameters.Port.Port
+		origEntrySvr.PortType = params.OpenVpnParameters.Port.Protocol
 
 		// Specify connection parameters to local V2Ray proxy
 		updatedParams.OpenVpnParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"
@@ -1087,9 +1082,9 @@ func (s *Service) startV2Ray(params types.ConnectionParams, v2RayType v2r.V2RayT
 	} else if vpn.Type(params.VpnType) == vpn.WireGuard {
 
 		// We have to return the original information about EntryServer
-		origEntrySvr.IP = net.ParseIP(updatedParams.WireGuardParameters.EntryVpnServer.Hosts[0].Host)
-		origEntrySvr.Port = updatedParams.WireGuardParameters.Port.Port
-		origEntrySvr.PortType = updatedParams.WireGuardParameters.Port.Protocol
+		origEntrySvr.IP = net.ParseIP(params.WireGuardParameters.EntryVpnServer.Hosts[0].Host)
+		origEntrySvr.Port = params.WireGuardParameters.Port.Port
+		origEntrySvr.PortType = params.WireGuardParameters.Port.Protocol
 
 		// Specify connection parameters to local V2Ray proxy
 		updatedParams.WireGuardParameters.EntryVpnServer.Hosts[0].Host = "127.0.0.1"

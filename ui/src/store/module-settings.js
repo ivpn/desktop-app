@@ -133,6 +133,10 @@ const getDefaultState = () => {
       OpenVPN: defaultPort,
       WireGuard: defaultPort,
     },
+    // portWireGuardBackup - the original port value for WireGuard (before it was changed to V2Ray-specific TCP port).
+    // WireGuard port can be changed to V2Ray-specific TCP port if V2Ray obfuscation is enabled.
+    // In this case, we need to remember original WireGuard port to be able to restore it back when V2Ray obfuscation is disabled.
+    portWireGuardBackup: defaultPort,
 
     // custom ports defined by user (based on the applicable port range)
     customPorts: [], // [ {type: "UDP/TCP", port: "X", range: {min: X, max: X}}, ... ],
@@ -331,16 +335,20 @@ export default {
         console.log("Warning! setPort() unable to set port. Port not defined.");
         return;
       }
-      state.port[enumValueName(VpnTypeEnum, state.vpnType)] = portVal;
+
+      let newPort = Object.assign({}, state.port);
+
+      if (state.vpnType === VpnTypeEnum.WireGuard) newPort.WireGuard = portVal;
+      else if (state.vpnType === VpnTypeEnum.OpenVPN) newPort.OpenVPN = portVal;
+      else {
+        console.log("Warning! setPort() unable to set port. Unknown VPN type.");
+        return;
+      }
+
+      doSetPortLogic(state, newPort);
     },
     port(state, val) {
-      if (!val || !val.OpenVPN || !val.WireGuard) {
-        {
-          console.log("Warning! port: unable to change port. Bad object.");
-          return;
-        }
-      }
-      state.port = val;
+      doSetPortLogic(state, val);
     },
 
     customPorts(state, val) {
@@ -872,6 +880,23 @@ export default {
   },
 };
 
+function doSetPortLogic(state, val) {
+  if (!val || !val.OpenVPN || !val.WireGuard) {
+    {
+      console.log("Warning! port: unable to change port. Bad object.");
+      return;
+    }
+  }
+
+  // Save last good UDP port for WireGuard (since WireGuard supports only UDP)
+  // It can happen than WireGuard port was changed to TCP port (if V2Ray obfuscation is enabled)
+  // Keeping last good UDP port allows us to restore it back when V2Ray obfuscation is disabled
+  if (val.WireGuard.type === PortTypeEnum.UDP)
+    state.portWireGuardBackup = val.WireGuard;
+
+  state.port = val;
+}
+
 function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
   // - define selected servers (if not initialized)
   // - update selected servers if VPN type changed (try to use vpnType-related servers from the same location [country\city])
@@ -1115,9 +1140,10 @@ function ensurePortsSelectedCorrectly(ctx) {
 
   const state = ctx.state;
 
+  let portOvpn = TestSuitablePort(ctx, VpnTypeEnum.OpenVPN);
+  let portWg = TestSuitablePort(ctx, VpnTypeEnum.WireGuard);
+
   let cPort = Object.assign({}, state.port);
-  let portOvpn = TestSuitablePort(ctx, VpnTypeEnum.OpenVPN, cPort.OpenVPN);
-  let portWg = TestSuitablePort(ctx, VpnTypeEnum.WireGuard, cPort.WireGuard);
   if (portOvpn) cPort.OpenVPN = portOvpn;
   if (portWg) cPort.WireGuard = portWg;
   if (portOvpn || portWg) {
@@ -1132,7 +1158,12 @@ function ensurePortsSelectedCorrectly(ctx) {
 }
 
 // returns null - if port is ok; otherwise - port value which have to be applied
-function TestSuitablePort(context, vpnType, currPort) {
+function TestSuitablePort(context, vpnType) {
+  var currPort =
+    vpnType === VpnTypeEnum.OpenVPN
+      ? context.state.port.OpenVPN
+      : context.state.port.WireGuard;
+
   const funcGetPorts = context.rootGetters["vpnState/funcGetConnectionPorts"];
   const applicablePorts = funcGetPorts(vpnType);
   // Check is port applicable (according to current settings)
@@ -1142,19 +1173,23 @@ function TestSuitablePort(context, vpnType, currPort) {
     !isPortExists(applicablePorts, currPort)
   ) {
     console.log(`Selected port `, currPort, "not applicable for VPN ", vpnType);
-
-    // get V2Ray type
-    let v2rayType = context.state.V2RayConfig.WireGuard;
-    if (vpnType === VpnTypeEnum.OpenVPN)
-      v2rayType = context.state.V2RayConfig.OpenVPN;
-
-    return GetDefaultPort(context, applicablePorts, v2rayType);
+    return GetDefaultPort(context, applicablePorts, vpnType);
   }
   return null;
 }
 
-function GetDefaultPort(context, ports, v2rayType) {
+function GetDefaultPort(context, ports, vpnType) {
   let defPort = null;
+
+  if (vpnType === VpnTypeEnum.WireGuard) {
+    let alternatePort = context.state.portWireGuardBackup;
+    if (isPortExists(ports, alternatePort)) return alternatePort;
+  }
+
+  // get V2Ray type
+  let v2rayType = context.state.V2RayConfig.WireGuard;
+  if (vpnType === VpnTypeEnum.OpenVPN)
+    v2rayType = context.state.V2RayConfig.OpenVPN;
 
   for (const configPort of ports) {
     const p = NormalizedConfigPortObject(configPort);
