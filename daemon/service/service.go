@@ -469,6 +469,8 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 	}
 	if splitTunErr != nil {
 		ret.SplitTunnelError = splitTunErr.Error()
+	}
+	if splitTunInversedErr != nil {
 		ret.SplitTunnelInverseError = splitTunInversedErr.Error()
 	}
 
@@ -1141,11 +1143,20 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 		runningProcesses = []splittun.RunningApp{}
 	}
 
-	stErr, _ := splittun.GetFuncNotAvailableError()
+	stErr, stInverseErr := splittun.GetFuncNotAvailableError()
+	isEnabled := prefs.IsSplitTunnel
+	if stErr != nil {
+		isEnabled = false
+	}
+	isInversed := prefs.SplitTunnelInversed
+	if stInverseErr != nil {
+		isInversed = false
+	}
+
 	ret := protocolTypes.SplitTunnelStatus{
 		IsFunctionalityNotAvailable: stErr != nil,
-		IsEnabled:                   prefs.IsSplitTunnel,
-		IsInversed:                  prefs.SplitTunnelInversed,
+		IsEnabled:                   isEnabled,
+		IsInversed:                  isInversed,
 		IsCanGetAppIconForBinary:    oshelpers.IsCanGetAppIconForBinary(),
 		SplitTunnelApps:             prefs.SplitTunnelApps,
 		RunningApps:                 runningProcesses}
@@ -1158,8 +1169,11 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, reset bool) e
 		return s.splitTunnelling_Reset()
 	}
 	stErr, stInverseErr := splittun.GetFuncNotAvailableError()
-	if stErr != nil || (isInversed && stInverseErr != nil) {
-		return s.splitTunnelling_Reset()
+	if stErr != nil {
+		return stErr
+	}
+	if isInversed && stInverseErr != nil {
+		return stInverseErr
 	}
 
 	prefs := s._preferences

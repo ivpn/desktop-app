@@ -100,7 +100,7 @@
       </div>
 
       <div class="horizontalLine" />
-      <div class="flexRow" style="position: relative">
+      <div ref="appsListParent" class="flexRow" style="position: relative">
         <!-- Configured apps view -->
 
         <!-- No applications in Split Tunnel configuration -->
@@ -121,7 +121,9 @@
         <!-- Configured apps list -->
         <div
           v-if="!isShowAppAddPopup && !isNoConfiguredApps"
-          :style="appsListStyle"
+          :style="`overflow: auto; width: 100%; height: ${
+            $refs.footer.offsetTop - $refs.appsListParent.offsetTop
+          }px;`"
         >
           <spinner
             :loading="isLoadingAllApps"
@@ -271,7 +273,7 @@
 
     <!-- FOOTER -->
 
-    <div style="position: sticky; bottom: 20px">
+    <div ref="footer" style="position: sticky; bottom: 20px">
       <div class="horizontalLine" />
 
       <div class="flexRow" style="margin-top: 15px">
@@ -659,20 +661,6 @@ export default {
       return "Add application manually ...";
     },
 
-    appsListStyle: function () {
-      // TODO: avoid hardcoding element height.
-      let height = 244;
-      if (Platform() === PlatformEnum.Linux) height = 268;
-
-      return `\
-            overflow: auto;\
-            width: 100%;\
-            position: relative;\
-            height: ${height}px;\
-            min-height: ${height}px;\
-            max-height: ${height}px;\
-          `;
-    },
     isLinux: function () {
       return Platform() === PlatformEnum.Linux;
     },
@@ -686,7 +674,11 @@ export default {
         return this.$store.state.vpnState.splitTunnelling?.IsEnabled;
       },
       async set(value) {
-        await sender.SplitTunnelSetConfig(value, this.isSTInversed);
+        try {
+          await sender.SplitTunnelSetConfig(value, this.isSTInversed);
+        } catch (e) {
+          processError(e);
+        }
       },
     },
 
@@ -695,7 +687,11 @@ export default {
         return this.$store.state.vpnState.splitTunnelling?.IsInversed;
       },
       async set(value) {
-        await sender.SplitTunnelSetConfig(this.isSTEnabled, value);
+        try {
+          await sender.SplitTunnelSetConfig(this.isSTEnabled, value);
+        } catch (e) {
+          processError(e);
+        }
       },
     },
 

@@ -174,7 +174,7 @@
             margin-top: 8px;
             margin-bottom: 8px;
             max-height: 235px;
-            height: 235px;
+            height: 225px;
           "
         >
           <div v-for="wifi of networks" v-bind:key="wifi.SSID">

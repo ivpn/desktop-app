@@ -110,7 +110,8 @@ func implReset() error {
 }
 
 func implApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	if GetFuncNotAvailableError() != nil {
+	splitTunErr, splitTunInversedErr := GetFuncNotAvailableError()
+	if splitTunErr != nil || (isStInversed && splitTunInversedErr != nil) {
 		// Split-Tunneling not accessable (not able to connect to a driver or not implemented for current platform)
 		return nil
 	}
@@ -149,6 +150,17 @@ func implApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, add
 		if err := stopAndClean(); err != nil {
 			return log.ErrorE(fmt.Errorf("failed to clean split-tunnelling state: %w", err), 0)
 		}
+	}
+
+	// For inversed split-tunnel we just inverse IP addresses in driver configuration (defaultPublicInterfaceIP <=> tunnelInterfaceIP)
+	if isStInversed {
+		p4 := addrConfig.IPv4Public
+		addrConfig.IPv4Public = addrConfig.IPv4Tunnel
+		addrConfig.IPv4Tunnel = p4
+
+		p6 := addrConfig.IPv6Public
+		addrConfig.IPv6Public = addrConfig.IPv6Tunnel
+		addrConfig.IPv6Tunnel = p6
 	}
 
 	// Set new configuration
