@@ -631,7 +631,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 		}
 
 		// Ensure that routing-change detector is stopped (we do not need it when VPN disconnected)
-		s._netChangeDetector.Stop()
+		s._netChangeDetector.UnInit()
 
 		// ensure firewall removed rules for DNS
 		firewall.OnChangeDNS(nil)
@@ -665,6 +665,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 		s._vpn = nil
 
 		// Notify Split-Tunneling module about disconnected VPN status
+		// It is important to call it only after 's._vpn = nil' (so ST functionality will be correctly notifies about VPN disconnected state)
 		s.splitTunnelling_ApplyConfig()
 
 		log.Info("VPN process stopped")
@@ -715,7 +716,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 
 				case vpn.RECONNECTING:
 					// Disable routing-change detector when reconnecting
-					s._netChangeDetector.Stop()
+					s._netChangeDetector.UnInit()
 
 					// Add host IP to firewall exceptions
 					// Some OS-specific implementations (e.g. macOS) can remove server host from firewall rules after connection established
@@ -732,9 +733,19 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 					if netInterface, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
 						log.Error(fmt.Sprintf("Unable to initialize routing change detection. Failed to get interface '%s'", state.ClientIP.String()))
 					} else {
-
-						log.Info("Starting route change detection")
-						s._netChangeDetector.Start(routingChangeChan, routingUpdateChan, netInterface)
+						if err := s._netChangeDetector.Init(routingChangeChan, routingUpdateChan, netInterface); err != nil {
+							log.Error(fmt.Errorf("failed to init route change detection: %w", err))
+						}
+						if s._preferences.IsInverseSplitTunneling() {
+							// Inversed split-tunneling: disable monitoring of the default route to the VPN server.
+							// Note: the monitoring must be enabled as soon as the inverse split-tunneling is disabled!
+							log.Info("Disabled the monitoring of the default route to the VPN server due to Inverse Split-Tunneling")
+						} else {
+							log.Info("Starting route change detection")
+							if err := s._netChangeDetector.Start(); err != nil {
+								log.Error(fmt.Errorf("failed to start route change detection: %w", err))
+							}
+						}
 					}
 
 				case vpn.CONNECTED:
@@ -771,6 +782,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 					s.SetVpnSessionInfo(sInfo)
 
 					// Notify Split-Tunneling module about connected VPN status
+					// It is important to call it after 's._vpn' initialised. So ST functionality will be correctly informed about 'VPN connected' status
 					s.splitTunnelling_ApplyConfig()
 				default:
 				}

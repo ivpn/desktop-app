@@ -24,7 +24,6 @@ package service
 
 import (
 	"net"
-	"time"
 
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
@@ -50,12 +49,13 @@ type IServersUpdater interface {
 
 // INetChangeDetector - object is detecting routing changes on a PC
 type INetChangeDetector interface {
-	// Start - start route change detector (asynchronous)
+	// Init - Initialise route change detector
 	//    'routingChangeChan' is the channel for notifying when the default routing is NOT over the 'interfaceToProtect' anymore
 	//    'routingUpdateChan' is the channel for notifying when there were some routing changes but 'interfaceToProtect' is still is the default route
-	Start(routingChangeChan chan<- struct{}, routingUpdateChan chan<- struct{}, currentDefaultInterface *net.Interface)
-	Stop()
-	DelayBeforeNotify() time.Duration
+	Init(routingChangeChan chan<- struct{}, routingUpdateChan chan<- struct{}, currentDefaultInterface *net.Interface) error
+	UnInit() error
+	Start() error // Start - Starts route change detector (asynchronous)
+	Stop() error
 }
 
 // IWgKeysManager - WireGuard keys manager

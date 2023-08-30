@@ -23,7 +23,9 @@
 package netchange
 
 import (
+	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
@@ -35,6 +37,8 @@ func init() {
 	log = logger.NewLogger("NetChD")
 }
 
+// delayBeforeNotify - To avoid multiple notifications of multiple changes - the  'DelayBeforeNotify' is in use
+// (notification will occur after 'DelayBeforeNotify' elapsed since last detected change)
 const delayBeforeNotify = time.Second * 3
 
 // Detector - object is detecting routing changes on a PC.
@@ -44,6 +48,10 @@ type Detector struct {
 	delayBeforeNotify     time.Duration
 	timerNotifyAfterDelay *time.Timer
 	interfaceToProtect    *net.Interface
+
+	isInitialised bool
+	isStarted     bool
+	locker        sync.Mutex
 
 	// Signaling when the default routing is NOT over the 'interfaceToProtect' anymore
 	routingChangeNotifyChan chan<- struct{}
@@ -77,9 +85,12 @@ func Create() *Detector {
 //
 //	'routingChangeChan' is the channel for notifying when the default routing is NOT over the 'interfaceToProtect' anymore
 //	'routingUpdateChan' is the channel for notifying when there were some routing changes (but 'interfaceToProtect' is still is the default route or 'interfaceToProtect' not defined)
-func (d *Detector) Start(routingChangeChan chan<- struct{}, routingUpdateChan chan<- struct{}, currentDefaultInterface *net.Interface) {
+func (d *Detector) Init(routingChangeChan chan<- struct{}, routingUpdateChan chan<- struct{}, currentDefaultInterface *net.Interface) error {
 	// Ensure that detector is stopped
 	d.Stop()
+
+	d.locker.Lock()
+	defer d.locker.Unlock()
 
 	// set notification channel (it is important to do it after we are ensure that timer is stopped)
 	d.routingChangeNotifyChan = routingChangeChan
@@ -93,27 +104,54 @@ func (d *Detector) Start(routingChangeChan chan<- struct{}, routingUpdateChan ch
 		log.Info("initialisation: 'interface to protect' not specified!")
 	}
 
+	d.isInitialised = true
+	return nil
+}
+
+func (d *Detector) UnInit() error {
+	d.locker.Lock()
+	d.isInitialised = false
+	d.locker.Unlock()
+
+	d.Stop()
+
+	return nil
+}
+
+func (d *Detector) Start() error {
+	d.locker.Lock()
+	defer d.locker.Unlock()
+
+	if !d.isInitialised {
+		return fmt.Errorf("not initialised")
+	}
+
+	if d.isStarted {
+		return nil
+	}
+	d.isStarted = true
+
 	// method should be implemented in platform-specific file
 	go d.doStart()
+	return nil
 }
 
 // Stop - stop route change detector
-func (d *Detector) Stop() {
+func (d *Detector) Stop() error {
+	d.locker.Lock()
+	defer d.locker.Unlock()
+
+	d.isStarted = false
 	// stop timer
 	d.timerNotifyAfterDelay.Stop()
 	// method should be implemented in platform-specific file
 	d.doStop()
-}
-
-// DelayBeforeNotify - To avoid multiple notifications of multiple changes - the  'DelayBeforeNotify' is in use
-// (notification will occur after 'DelayBeforeNotify' elapsed since last detected change)
-func (d *Detector) DelayBeforeNotify() time.Duration {
-	return d.delayBeforeNotify
+	return nil
 }
 
 // must be called when routing change detected (called from platform-specific sources)
 func (d *Detector) routingChangeDetected() {
-	d.timerNotifyAfterDelay.Reset(d.DelayBeforeNotify())
+	d.timerNotifyAfterDelay.Reset(d.delayBeforeNotify)
 }
 
 func (d *Detector) notifyRoutingChange() {
@@ -144,5 +182,4 @@ func (d *Detector) notifyRoutingChange() {
 	default:
 		// channel is full
 	}
-
 }

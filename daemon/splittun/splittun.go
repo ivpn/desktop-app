@@ -46,6 +46,10 @@ type ConfigAddresses struct {
 	IPv6Tunnel net.IP // VpnLocalIPv6
 }
 
+func (c ConfigAddresses) IsEmpty() bool {
+	return (len(c.IPv4Public) == 0 || len(c.IPv4Tunnel) == 0) && (len(c.IPv6Public) == 0 || len(c.IPv6Tunnel) == 0)
+}
+
 // Information about running application
 // https://man7.org/linux/man-pages/man5/proc.5.html
 type RunningApp struct {

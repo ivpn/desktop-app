@@ -61,6 +61,7 @@
           type="checkbox"
           id="isSTInversed"
           v-model="isSTInversed"
+          :disabled="isSTEnabled !== true"
         />
         <label class="defColor" for="isSTInversed">Inverse mode</label>
       </div>
@@ -69,8 +70,7 @@
         <b class="settingsGrayLongDescriptionFont">Split Tunnel</b> option, it
         reverses the split tunneling behavior. Specified applications utilize
         the VPN connection, while all other traffic circumvents the VPN, using
-        the default connection. Note: This mode requires the Split Tunnel option
-        to be active.
+        the default connection.
       </div>
     </div>
 

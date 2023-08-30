@@ -87,7 +87,7 @@ type Service struct {
 	_preferences       preferences.Preferences
 	_connectMutex      sync.Mutex
 
-	// Additional information about current VPN connection
+	// Additional information about current VPN connection: outbound IP addresses, local VPN addresses
 	// Use GetVpnSessionInfo()/SetVpnSessionInfo() to access this data
 	_vpnSessionInfo      VpnSessionInfo
 	_vpnSessionInfoMutex sync.Mutex
@@ -180,6 +180,13 @@ func (s *Service) init() error {
 			ipv6, err6 := netinfo.GetOutboundIP(true)
 			if (!ipv4.IsUnspecified() && err4 == nil) || (!ipv6.IsUnspecified() && err6 == nil) {
 				log.Info("IP stack initializaed")
+
+				// Save IP addresses of the current outbound interface (can be used, for example, for Split-Tunneling)
+				ipInfo := s.GetVpnSessionInfo()
+				ipInfo.OutboundIPv4 = ipv4
+				ipInfo.OutboundIPv6 = ipv6
+				s.SetVpnSessionInfo(ipInfo)
+
 				return
 			}
 			if time.Now().After(endTime) {
@@ -514,7 +521,7 @@ func (s *Service) disconnect() error {
 	}
 
 	// stop detections for routing changes
-	s._netChangeDetector.Stop()
+	s._netChangeDetector.UnInit()
 
 	// stop VPN
 	if err := vpn.Disconnect(); err != nil {
@@ -889,6 +896,9 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 	if s.IsPaused() {
 		return fmt.Errorf("unable to change the firewall state while connection is paused, please resume the connection first")
 	}
+	if isEnabled && s._preferences.IsInverseSplitTunneling() {
+		return fmt.Errorf("firewall cannot be enabled while Inverse Split Tunneling is active; please disable Inverse Split Tunneling first")
+	}
 
 	err := firewall.SetEnabled(isEnabled)
 	if err == nil {
@@ -917,6 +927,10 @@ func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllo
 func (s *Service) SetKillSwitchIsPersistent(isPersistant bool) error {
 	if s.IsPaused() {
 		return fmt.Errorf("unable to change the firewall state while connection is paused, please resume the connection first")
+	}
+
+	if isPersistant && s._preferences.IsInverseSplitTunneling() {
+		return fmt.Errorf("firewall cannot be enabled while Inverse Split Tunneling is active; please disable Inverse Split Tunneling first")
 	}
 
 	prefs := s._preferences
@@ -1176,6 +1190,13 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, reset bool) e
 		return stInverseErr
 	}
 
+	if isEnabled && isInversed {
+		// if we are going to enable INVERSE SplitTunneling - ensure that Firewall is disabled
+		if enabled, _ := s.FirewallEnabled(); enabled {
+			return fmt.Errorf("unable to enable Inverse Split Tunneling: Firewall is enabled")
+		}
+	}
+
 	prefs := s._preferences
 	prefs.IsSplitTunnel = isEnabled
 	prefs.SplitTunnelInversed = isInversed
@@ -1194,6 +1215,11 @@ func (s *Service) splitTunnelling_Reset() error {
 
 	return s.splitTunnelling_ApplyConfig()
 }
+
+// splitTunnelling_ApplyConfig() applies the required SplitTunnel configuration base on:
+// - current VPN connection state
+// - current SplitTunnel configuration (VPN and default interfaces addresses; Inverse SplitTunneling configuration and list of applications to be splitted)
+// It is important to call this function after VPN connection state changed or SplitTunnel configuration changed.
 func (s *Service) splitTunnelling_ApplyConfig() error {
 	// notify changed ST configuration status (even if functionality not available)
 	defer s._evtReceiver.OnSplitTunnelStatusChanged()
@@ -1204,8 +1230,24 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 	}
 
 	prefs := s.Preferences()
-	sInf := s.GetVpnSessionInfo()
 
+	// Network changes detection must be disabled for Inverse SplitTunneling
+	if prefs.IsInverseSplitTunneling() {
+		// If inverse SplitTunneling is enabled - stop detection of network changes (if it already started)
+		if err := s._netChangeDetector.Stop(); err != nil {
+			log.Error(fmt.Sprintf("Unable to stop network changes detection: %v", err.Error()))
+		}
+	} else {
+		defer func() {
+			// If inverse SplitTunneling is disabled - start detection of network changes (if it is not already started)
+			// Info: Network changes detection will not be started if VPN is not connected
+			if err := s._netChangeDetector.Start(); err != nil {
+				log.Error(fmt.Sprintf("Unable to start network changes detection: %v", err.Error()))
+			}
+		}()
+	}
+
+	sInf := s.GetVpnSessionInfo()
 	addressesCfg := splittun.ConfigAddresses{
 		IPv4Tunnel: sInf.VpnLocalIPv4,
 		IPv4Public: sInf.OutboundIPv4,
