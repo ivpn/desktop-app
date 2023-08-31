@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.12.0 - 2023-08-31
+
+[NEW] Added V2Ray as an optional obfuscation type for WireGuard and OpenVPN connections  
+[NEW] Added a new action for ‘WiFi control’: Block LAN Traffic (for untrusted WiFi networks)  
+[IMPROVED] Refactored firewall rules for LAN access  
+[IMPROVED] (Linux) DEB/RPM packages now have a dependency on ‘iptables’  
+[FIX] ‘WiFi control’ actions are now enabled by default  
+[FIX] Fixed slow speed and high CPU usage during the downloading of application updates  
+[FIX] (Linux) It was not possible to enable Split Tunnel on some Linux distributions  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.12.0.exe)  
+SHA256: 2425f3e339eeb8bb8ac11734b2db918083eea6d2cd9172109e0748b2fcd62f19  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.12.0.dmg)  
+SHA256: a5d53be80054db17a46498a46f5327a89484f6cf4b5c6795a08db4cbe5137269  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.12.0-arm64.dmg)  
+SHA256: 9a08e5455e1c14475a22d22b698509dcfa184909321f51624495a204c6fbe961  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.12.0_amd64.deb)  
+SHA256: a46245e28ec9f7b98c389bda9c6d7e64378625f87c3af589b615effb383e69d4  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.12.0-1.x86_64.rpm)  
+SHA256: a5f01bfa1cdcc0e4b3f398d4bfd2c0e05e5b1bcbfd7616960b71e5796c2e843e  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.12.0_amd64.deb)  
+SHA256: b2712d46371bac392c36e077bbac12ff6139c78f622e51c6b5549127f84b7aa3  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.12.0-1.x86_64.rpm)  
+SHA256: dc888967650f370f82ed2acdc06f01104ac786e4bdaef7132c1ca4ab123d9d2c  
+
 ## Version 3.11.15 - 2023-08-07
 
 [FIX] (Windows) App update check fails due to missing libraries  
