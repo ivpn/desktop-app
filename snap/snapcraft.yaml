@@ -7,6 +7,15 @@
 #     $ snapcraft
 #   or
 #     $ snapcraft --debug --use-lxd
+#   
+# **********************************************
+# List of multipass\LXD containers:
+#   multipass list
+#   lxc list
+# Delete multipass\LXD container:
+#   multipass delete $vm --purge  # eg: multipass delete snapcraft-ivpn --purge
+#   lxc delete $vm --force        # eg: lxc delete snapcraft-ivpn --force
+#
 # **********************************************
 # Installation:
 #     $ sudo snap install <filename>.snap --danderous
@@ -160,7 +169,7 @@ parts:
   daemon:
     plugin: nil
     build-snaps:
-      - go
+      - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
     build-packages:
       - libiw30           # libiw for wifiNotifier functionality
       - libiw-dev         # libiw for wifiNotifier functionality
@@ -182,7 +191,7 @@ parts:
   cli:
     plugin: nil
     build-snaps:
-      - go
+      - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
     build-packages:
       - git
     source: .
@@ -195,7 +204,7 @@ parts:
   wireguard-tools:
     plugin: nil
     build-snaps:
-    - go
+    - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
     build-packages:
     - git
     source: ./daemon/References/Linux
@@ -209,7 +218,7 @@ parts:
   dnscrypt-proxy:
     plugin: nil
     build-snaps:
-    - go
+    - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
     build-packages:
     - git
     source: ./daemon/References/Linux
@@ -222,7 +231,7 @@ parts:
   obfs4proxy:
     plugin: nil
     build-snaps:
-    - go
+    - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
     build-packages:
     - git
     source: ./daemon/References/Linux
@@ -232,10 +241,23 @@ parts:
       mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy
       cp _deps/obfs4proxy_inst/obfs4proxy $SNAPCRAFT_PART_INSTALL/opt/ivpn/obfsproxy/obfs4proxy
 
+  v2ray:
+    plugin: nil
+    build-snaps:
+    - go/1.20/stable # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
+    build-packages:
+    - git
+    source: ./daemon/References/Linux
+    override-build: |
+      rm -fr ./_deps/v2ray*
+      ./scripts/build-v2ray.sh
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/v2ray
+      cp _deps/v2ray_inst/v2ray $SNAPCRAFT_PART_INSTALL/opt/ivpn/v2ray/v2ray      
+
   kemhelper:
     plugin: nil
     build-snaps:
-    - go
+    - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
     build-packages:
     - git
     - astyle
