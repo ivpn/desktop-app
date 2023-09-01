@@ -84,6 +84,7 @@ ListThirdPartyBinaries=(
 "_image/IVPN.app/Contents/MacOS/WireGuard/wg"
 "_image/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"
 "_image/IVPN.app/Contents/Resources/obfsproxy/obfs4proxy"
+"_image/IVPN.app/Contents/MacOS/v2ray/v2ray"
 "_image/IVPN.app/Contents/MacOS/dnscrypt-proxy/dnscrypt-proxy"
 )
 

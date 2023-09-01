@@ -100,7 +100,6 @@ const daemonRequests = Object.freeze({
   WireGuardSetKeysRotationInterval: "WireGuardSetKeysRotationInterval",
 
   SetPreference: "SetPreference",
-  SetObfsProxy: "SetObfsProxy",
   SetUserPreferences: "SetUserPreferences",
 
   WiFiAvailableNetworks: "WiFiAvailableNetworks",
@@ -1797,16 +1796,6 @@ async function SetLogging(enable) {
   });
 }
 
-async function SetObfsproxy(obfsproxyVer, obfs4Iat) {
-  await sendRecv({
-    Command: daemonRequests.SetObfsProxy,
-    ObfsproxyConfig: {
-      Version: obfsproxyVer,
-      Obfs4Iat: obfs4Iat,
-    },
-  });
-}
-
 async function WgRegenerateKeys() {
   await sendRecv({
     Command: daemonRequests.WireGuardGenerateNewKeys,
@@ -1921,7 +1910,6 @@ export default {
 
   SetAutoconnectOnLaunch,
   SetLogging,
-  SetObfsproxy,
   WgRegenerateKeys,
   WgSetKeysRotationInterval,
 

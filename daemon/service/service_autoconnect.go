@@ -46,8 +46,8 @@ type autoConnectReason int
 const (
 	OnDaemonStarted     autoConnectReason = iota
 	OnUiClientConnected autoConnectReason = iota
-	OnWifiChanged       autoConnectReason = iota
 	OnSessionLogon      autoConnectReason = iota
+	OnWifiChanged       autoConnectReason = iota
 )
 
 func (cr autoConnectReason) ToString() string {
@@ -65,17 +65,26 @@ func (cr autoConnectReason) ToString() string {
 	}
 }
 
-type trustedWiFiActionType int
+type actionTypeVpn int
 
 const (
-	NoAction trustedWiFiActionType = iota
-	On       trustedWiFiActionType = iota
-	Off      trustedWiFiActionType = iota
+	VPN_NoAction actionTypeVpn = iota
+	VPN_On       actionTypeVpn = iota
+	VPN_Off      actionTypeVpn = iota
+)
+
+type actionTypeFirewall int
+
+const (
+	FW_NoAction        actionTypeFirewall = iota
+	FW_On              actionTypeFirewall = iota
+	FW_Off             actionTypeFirewall = iota
+	FW_On_and_blockLan actionTypeFirewall = iota
 )
 
 type automaticAction struct {
-	Vpn      trustedWiFiActionType
-	Firewall trustedWiFiActionType
+	Vpn      actionTypeVpn
+	Firewall actionTypeFirewall
 }
 
 type lastProcessedWiFiInfo struct {
@@ -86,7 +95,7 @@ type lastProcessedWiFiInfo struct {
 var autoconnectLastProcessedWifi lastProcessedWiFiInfo
 
 func (a automaticAction) IsHasAction() bool {
-	return a.Firewall != NoAction || a.Vpn != NoAction
+	return a.Firewall != FW_NoAction || a.Vpn != VPN_NoAction
 }
 
 func (s *Service) OnAuthenticatedClient(t protocolTypes.ClientTypeEnum) {
@@ -95,6 +104,30 @@ func (s *Service) OnAuthenticatedClient(t protocolTypes.ClientTypeEnum) {
 		return
 	}
 	s.autoConnectIfRequired(OnUiClientConnected, nil)
+}
+
+func (s *Service) isTrustedWifiForcingToBlockLan(wifiInfoPtr *wifiStatus) bool {
+	prefs := s.Preferences()
+	if !prefs.Session.IsLoggedIn() {
+		return false
+	}
+
+	if !s._evtReceiver.IsCanDoBackgroundAction() {
+		return false
+	}
+
+	var wifiInfo wifiStatus
+	// Check WiFi status (if not defined)
+	if wifiInfoPtr == nil {
+		ssid, isInsecure := s.GetWiFiCurrentState()
+		wifiInfo = wifiStatus{WifiSsid: ssid, WifiIsInsecure: isInsecure}
+	} else {
+		wifiInfo = *wifiInfoPtr
+	}
+
+	action := s.getActionForWifiNetwork(wifiInfo)
+
+	return action.Firewall == FW_On_and_blockLan
 }
 
 // autoConnectIfRequired - checks if automatic connection required
@@ -137,6 +170,22 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 	}
 	autoconnectLastProcessedWifi = currWiFi
 
+	isLanActionsProcessed := false
+	defer func() {
+		if isLanActionsProcessed {
+			return
+		}
+		// Check if the untrusted WiFi settings were forced to block LAN.
+		// We have to restore LAN connectivity if there is not required to block LAN for current network
+		prevSettingsBlockLan := lastWifi.params.TrustedNetworksControl && lastWifi.params.Actions.UnTrustedBlockLan
+		currSettingsBlockLan := prefs.WiFiControl.TrustedNetworksControl && prefs.WiFiControl.Actions.UnTrustedBlockLan
+		if prefs.IsFwAllowLAN && (prevSettingsBlockLan || currSettingsBlockLan) {
+			if err := s.applyKillSwitchAllowLAN(&wifiInfo); err != nil {
+				log.Info(fmt.Sprintf("Automatic connection manager: failed to restore Firewall rules to allow LAN: %s", err.Error()))
+			}
+		}
+	}()
+
 	//
 	// Checking if new connection required
 	//
@@ -148,7 +197,7 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 	if isWifiProcessedAlready {
 		// For already processed networks - keep only 'vpn-off' action (it works in combination with 'IsAutoconnectOnLaunch')
 		// Clean other actions for this network (because they were applied already)
-		isVpnOffRequired = action.Vpn == Off
+		isVpnOffRequired = action.Vpn == VPN_Off
 		action = automaticAction{}
 	}
 
@@ -159,26 +208,26 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 	// Check "Auto-connect on APP/daemon launch" action
 	// (skip when we are connected to a trusted network with "Disconnect VPN" action)
 	if prefs.IsAutoconnectOnLaunch && !isVpnOffRequired {
-		if !s.Connected() && action.Vpn != On {
+		if !s.Connected() && action.Vpn != VPN_On {
 			if (reason == OnDaemonStarted || reason == OnSessionLogon) && prefs.IsAutoconnectOnLaunchDaemon {
 				log.Info(fmt.Sprintf("Automatic connection manager: applying Auto-Connect action on '%s' ...", reason.ToString()))
-				action.Vpn = On
+				action.Vpn = VPN_On
 			} else if reason == OnUiClientConnected {
 				log.Info(fmt.Sprintf("Automatic connection manager: applying Auto-Connect action on '%s' ...", reason.ToString()))
-				action.Vpn = On
+				action.Vpn = VPN_On
 			}
 		}
 	}
 
 	// Check Auto-connect 'On joining WiFi networks without encryption'
 	if !isWifiProcessedAlready &&
-		action.Vpn == NoAction &&
+		action.Vpn == VPN_NoAction &&
 		prefs.WiFiControl.ConnectVPNOnInsecureNetwork &&
 		wifiInfo.WifiIsInsecure {
 
 		if s.isCanApplyWiFiActions() {
 			log.Info("Automatic connection manager: applying Auto-Connect 'On joining WiFi networks without encryption' action...")
-			action.Vpn = On
+			action.Vpn = VPN_On
 		}
 	}
 
@@ -196,32 +245,43 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 
 	// Firewall
 	switch action.Firewall {
-	case Off:
+	case FW_Off:
 		log.Info("Automatic connection manager: disabling Firewall")
 		if retErr = s.SetKillSwitchState(false); retErr != nil {
 			log.Error("Auto connection: disabling Firewall: ", retErr)
 		}
 		connParams.FirewallOn = false // Ensure Firewall connection params is the same as in action
 		connParams.FirewallOnDuringConnection = false
-	case On:
+	case FW_On:
 		log.Info("Automatic connection manager: enabling Firewall")
 		if retErr = s.SetKillSwitchState(true); retErr != nil {
 			log.Error("Auto connection: enabling Firewall: ", retErr)
 		}
 		connParams.FirewallOn = true // Ensure Firewall connection params is the same as in action
+	case FW_On_and_blockLan:
+		log.Info("Automatic connection manager: enabling Firewall and block LAN")
+		if retErr = s.SetKillSwitchState(true); retErr != nil {
+			log.Error("Auto connection: enabling Firewall: ", retErr)
+		}
+		if retErr = s.applyKillSwitchAllowLAN(&wifiInfo); retErr != nil {
+			log.Error("Auto connection: Firewall (block LAN): ", retErr)
+		}
+		connParams.FirewallOn = true // Ensure Firewall connection params is the same as in action
+		isLanActionsProcessed = true // for defferred function: to not re-appy LAN settings
+
 	default:
 	}
 
 	// Vpn
 	switch action.Vpn {
-	case Off:
+	case VPN_Off:
 		if s.Connected() {
 			log.Info("Automatic connection manager: disconnecting VPN")
 			if retErr = s.Disconnect(); retErr != nil {
 				log.Error("Auto connection: disconnecting: ", retErr)
 			}
 		}
-	case On:
+	case VPN_On:
 		if !s.Connected() {
 			log.Info("Automatic connection manager: connecting VPN")
 
@@ -296,18 +356,21 @@ func (s *Service) getActionForWifiNetwork(wifiInfo wifiStatus) (retAction automa
 	if !*isNetworkTrusted {
 		// UnTrusted
 		if wifiParams.Actions.UnTrustedConnectVpn {
-			retAction.Vpn = On
+			retAction.Vpn = VPN_On
 		}
 		if wifiParams.Actions.UnTrustedEnableFirewall {
-			retAction.Firewall = On
+			retAction.Firewall = FW_On
+		}
+		if wifiParams.Actions.UnTrustedBlockLan {
+			retAction.Firewall = FW_On_and_blockLan
 		}
 	} else {
 		// Trusted
 		if wifiParams.Actions.TrustedDisconnectVpn {
-			retAction.Vpn = Off
+			retAction.Vpn = VPN_Off
 		}
 		if wifiParams.Actions.TrustedDisableFirewall {
-			retAction.Firewall = Off
+			retAction.Firewall = FW_Off
 		}
 	}
 

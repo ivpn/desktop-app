@@ -32,6 +32,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
+	"github.com/ivpn/desktop-app/daemon/v2r"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 )
 
@@ -105,6 +106,7 @@ type DisabledFunctionality struct {
 	WireGuardError   string
 	OpenVPNError     string
 	ObfsproxyError   string
+	V2RayError       string
 	SplitTunnelError string
 
 	// Linux specific functionality which is disabled
@@ -126,7 +128,6 @@ type SettingsResp struct {
 	IsAutoconnectOnLaunch       bool
 	IsAutoconnectOnLaunchDaemon bool
 	UserDefinedOvpnFile         string
-	ObfsproxyConfig             obfsproxy.Config // (for OpenVPN connections)
 	UserPrefs                   preferences.UserPreferences
 	WiFi                        preferences.WiFiParams
 	IsLogging                   bool
@@ -206,12 +207,7 @@ type AccountStatusResp struct {
 // KillSwitchStatusResp returns kill-switch status
 type KillSwitchStatusResp struct {
 	CommandBase
-	IsEnabled         bool
-	IsPersistent      bool
-	IsAllowLAN        bool
-	IsAllowMulticast  bool
-	IsAllowApiServers bool
-	UserExceptions    string // Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
+	service_types.KillSwitchStatus
 }
 
 // KillSwitchGetIsPestistentResp returns kill-switch persistance status
@@ -259,9 +255,11 @@ type ConnectedResp struct {
 	ExitHostname    string // multi-hop exit hostname (e.g. "us-tx1.wg.ivpn.net")
 	Dns             DnsStatus
 	IsTCP           bool
-	Mtu             int    // (for WireGuard connections)
-	IsPaused        bool   // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"
-	PausedTill      string // pausedTill.Format(time.RFC3339)
+	Mtu             int                    // (for WireGuard connections)
+	V2RayProxy      v2r.V2RayTransportType // applicable only for 'CONNECTED' state
+	Obfsproxy       obfsproxy.Config       // applicable only for 'CONNECTED' state (OpenVPN)
+	IsPaused        bool                   // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"
+	PausedTill      string                 // pausedTill.Format(time.RFC3339)
 }
 
 // DisconnectionReason - disconnection reason

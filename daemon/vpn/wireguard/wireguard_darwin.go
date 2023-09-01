@@ -432,10 +432,6 @@ func (wg *WireGuard) setWgConfiguration() error {
 func (wg *WireGuard) setRoutes() error {
 	log.Info("Modifying routing table...")
 
-	if net.IPv4(127, 0, 0, 1).Equal(wg.connectParams.hostIP) {
-		return fmt.Errorf("WG server IP error (unable to use '127.0.0.1' as WG server IP)")
-	}
-
 	// Update main route
 	// example command:	route	-n	add	-net	0/1			10.0.0.1
 	// 					route	-n	add	-inet	0.0.0.0/1	-interface utun2
@@ -446,8 +442,11 @@ func (wg *WireGuard) setRoutes() error {
 	// Update routing to remote server (remote_server default_router 255.255.255)
 	// example command:	route	-n	add	-net	145.239.239.55	192.168.1.1	255.255.255.255
 	//					route	-n	add	-inet	51.77.91.106	-gateway	192.168.1.1
-	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "-net", wg.connectParams.hostIP.String(), wg.internals.defGateway.String(), "255.255.255.255"); err != nil {
-		return fmt.Errorf("adding route shell comand error : %w", err)
+	if !net.IPv4(127, 0, 0, 1).Equal(wg.connectParams.hostIP) {
+		// do not create route for 'hostIP' if it is '127.0.0.1'
+		if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "-net", wg.connectParams.hostIP.String(), wg.internals.defGateway.String(), "255.255.255.255"); err != nil {
+			return fmt.Errorf("adding route shell comand error : %w", err)
+		}
 	}
 
 	// Update routing table

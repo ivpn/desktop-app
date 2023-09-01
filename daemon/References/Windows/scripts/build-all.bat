@@ -58,6 +58,7 @@ if "%GITHUB_ACTIONS%" == "true" (
 ) else (
 	call :build_native_libs || goto :error
 	call :build_obfs4proxy || goto :error
+	call :build_v2ray || goto :error
 	call :build_wireguard || goto :error
 	call :build_dnscrypt_proxy || goto :error
 	call :build_kem_helper || goto :error
@@ -134,6 +135,26 @@ goto :success
 	)
 
 	goto :eof
+
+:build_v2ray
+	if exist "%SCRIPTDIR%..\v2ray\v2ray.exe" (
+		echo [ ] v2ray binaries already available. Compilation skipped.
+		goto :eof
+	)
+
+	echo ### v2ray binary not found ###
+	echo ### Buildind v2ray         ###
+	call "%SCRIPTDIR%\build-v2ray.bat" || goto error
+
+	if NOT "%CERT_SHA1%" == "" (
+		echo.
+		echo Signing 'v2ray.exe' binary [certificate:  %CERT_SHA1% timestamp: %TIMESTAMP_SERVER%]
+		echo.
+		signtool.exe sign /tr %TIMESTAMP_SERVER% /td sha256 /fd sha256 /sha1 %CERT_SHA1% /v "%SCRIPTDIR%..\v2ray\v2ray.exe" || goto :eof
+		echo.
+		echo Signing SUCCES
+		echo.
+	)	
 
 :build_dnscrypt_proxy
 	if exist "%SCRIPTDIR%..\dnscrypt-proxy\dnscrypt-proxy.exe" (

@@ -72,6 +72,14 @@ function BuildObfs4proxy
   ./build-obfs4proxy.sh
 }
 
+function BuildV2Ray
+{
+  echo "############################################"
+  echo "### V2Ray"
+  echo "############################################"
+  ./build-v2ray.sh
+}
+
 function BuildDnscryptProxy
 {
   echo "############################################"
@@ -90,7 +98,7 @@ function BuildKemHelper
 
 if [ ! -z "$GITHUB_ACTIONS" ]; then
   echo "! GITHUB_ACTIONS detected ! It is just a build test."
-  echo "! Skipped compilation of third-party dependencies: OpenVPN, WireGuard, obfs4proxy, dnscrypt-proxy !"
+  echo "! Skipped compilation of third-party dependencies: OpenVPN, WireGuard, obfs4proxy, dnscrypt-proxy ..."
 else
   if [[ "$@" == *"-norebuild"* ]]
   then
@@ -121,6 +129,15 @@ else
         echo "obfs4proxy already compiled. Skipping build."
       fi
 
+      # check if we need to compile v2ray
+      if [[ ! -f "../_deps/v2ray_inst/v2ray" ]]
+      then
+        echo "V2Ray not compiled"
+        BuildV2Ray
+      else
+        echo "V2Ray already compiled. Skipping build."
+      fi
+
       # check if we need to compile dnscrypt-proxy
       if [[ ! -f "../_deps/dnscryptproxy_inst/dnscrypt-proxy" ]]
       then
@@ -140,11 +157,13 @@ else
       fi
 
   else
-    # recompile openvpn, WireGuard, obfs4proxy, dnscrypt-proxy
+    # recompile openvpn, WireGuard, obfs4proxy, dnscrypt-proxy ...
     BuildOpenVPN
     BuildWireGuard
     BuildObfs4proxy
+    BuildV2Ray
     BuildDnscryptProxy
+    BuildKemHelper
   fi
 fi
 # updating servers.json

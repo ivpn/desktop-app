@@ -57,6 +57,9 @@ var (
 
 	obfsproxyStartScript string
 
+	v2rayBinaryPath    string
+	v2rayConfigTmpFile string
+
 	routeCommand string // Example: "/sbin/route" - for macOS, "/sbin/ip route" - for Linux, "C:\\Windows\\System32\\ROUTE.EXE" - for Windows
 
 	wgBinaryPath     string
@@ -140,6 +143,10 @@ func Init() (warnings []string, errors []error, logInfo []string) {
 	if err := checkFileAccessRightsExecutable("obfsproxyStartScript", obfsproxyStartScript); err != nil {
 		warnings = append(warnings, fmt.Errorf("obfsproxy functionality not accessible: %w", err).Error())
 	}
+	if err := checkFileAccessRightsExecutable("v2rayBinaryPath", v2rayBinaryPath); err != nil {
+		warnings = append(warnings, fmt.Errorf("v2ray functionality not accessible: %w", err).Error())
+	}
+
 	// checling availability of WireGuard binaries
 	if err := checkFileAccessRightsExecutable("wgBinaryPath", wgBinaryPath); err != nil {
 		warnings = append(warnings, fmt.Errorf("WireGuard functionality not accessible: %w", err).Error())
@@ -314,6 +321,13 @@ func OpenvpnUserParamsFile() string {
 // ObfsproxyStartScript path to obfsproxy binary
 func ObfsproxyStartScript() string {
 	return obfsproxyStartScript
+}
+
+func V2RayBinaryPath() string {
+	return v2rayBinaryPath
+}
+func V2RayConfigFile() string {
+	return v2rayConfigTmpFile
 }
 
 // RouteCommand shell command to update routing table

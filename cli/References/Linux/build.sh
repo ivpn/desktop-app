@@ -110,7 +110,9 @@ OBFSPXY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/obfs4proxy_inst/obfs4pr
 WG_QUICK_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg-quick
 WG_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/wireguard-tools_inst/wg
 DNSCRYPT_PROXY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/dnscryptproxy_inst/dnscrypt-proxy
+V2RAY_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/v2ray_inst/v2ray
 KEM_HELPER_BIN=$DAEMON_REPO_ABS_PATH/References/Linux/_deps/kem-helper/kem-helper-bin/kem-helper
+
 #if [ "$(find ${DNSCRYPT_PROXY_BIN} -perm 755)" != "${DNSCRYPT_PROXY_BIN}" ] || [ "$(find ${OBFSPXY_BIN} -perm 755)" != "${OBFSPXY_BIN}" ] || [ "$(find ${WG_QUICK_BIN} -perm 755)" != "${WG_QUICK_BIN}" ] || [ "$(find ${WG_BIN} -perm 755)" != "${WG_BIN}" ]
 #then
 #  echo ----------------------------------------------------------
@@ -200,7 +202,7 @@ CreatePackage()
   #   [*] Before remove (3.3.30 : rpm : 0)
   #   [*] After remove (3.3.30 : rpm : 0)
 
-  fpm -d openvpn $EXTRA_ARGS \
+  fpm -d openvpn -d iptables $EXTRA_ARGS \
     --rpm-rpmbuild-define "_build_id_links none" \
     --deb-no-default-config-files -s dir -t $PKG_TYPE -n ivpn -v $VERSION --url https://www.ivpn.net --license "GNU GPL3" \
     --template-scripts --template-value pkg=$PKG_TYPE \
@@ -215,6 +217,7 @@ CreatePackage()
     $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/bin/ \
     $OUT_DIR/ivpn=/usr/bin/ \
     $OBFSPXY_BIN=/opt/ivpn/obfsproxy/obfs4proxy \
+    $V2RAY_BIN=/opt/ivpn/v2ray/v2ray \
     $WG_QUICK_BIN=/opt/ivpn/wireguard-tools/wg-quick \
     $WG_BIN=/opt/ivpn/wireguard-tools/wg \
     ${DNSCRYPT_PROXY_BIN}=/opt/ivpn/dnscrypt-proxy/dnscrypt-proxy \

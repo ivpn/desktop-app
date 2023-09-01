@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -82,7 +83,6 @@ type Preferences struct {
 	IsFwAllowApiServers      bool
 	FwUserExceptions         string // Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
 	IsStopOnClientDisconnect bool
-	Obfs4proxy               obfsproxy.Config
 
 	// IsAutoconnectOnLaunch: if 'true' - daemon will perform automatic connection (see 'IsAutoconnectOnLaunchDaemon' for details)
 	IsAutoconnectOnLaunch bool
@@ -204,17 +204,6 @@ func (p *Preferences) LoadPreferences() error {
 
 	// *** Compatibility with old versions ***
 
-	// Convert parameters from v3.9.14 (and releases older than 2022-08-16)
-	// If 'IsObfsproxy' is enabled  -> use use obfs3
-	type tmp_type_Settings_v3_9_14 struct {
-		IsObfsproxy bool
-	}
-	var tmp_Settings_v3_9_14 tmp_type_Settings_v3_9_14
-	err = json.Unmarshal(data, &tmp_Settings_v3_9_14)
-	if err == nil && tmp_Settings_v3_9_14.IsObfsproxy {
-		p.Obfs4proxy = obfsproxy.Config{Version: obfsproxy.OBFS3}
-	}
-
 	// Convert parameters from v3.10.23 (and releases older than 2023-05-15)
 	// The default antitracker blocklist was "OSID Big". So keep it for old users who upgrade.
 	//
@@ -223,6 +212,33 @@ func (p *Preferences) LoadPreferences() error {
 	if p.LastConnectionParams.Metadata.AntiTracker.AntiTrackerBlockListName == "" {
 		log.Info("It looks like this is the first upgrade to the version which supports AntiTracker blocklists. Keep the old default blocklist name 'Oisdbig'.")
 		p.LastConnectionParams.Metadata.AntiTracker.AntiTrackerBlockListName = "Oisdbig"
+	}
+
+	// Convert parameters from v3.11.15 (and releases older than 2023-08-07)
+	if compareVersions(p.Version, "3.11.15") <= 0 {
+		// if upgrading from "3.11.15" or older version
+
+		// A new option, WiFiControl.Actions.UnTrustedBlockLan, was introduced.
+		// It is 'true' by default. However, older versions did not have this functionality.
+		// Therefore, for users upgrading from v3.11.15, it must be disabled.
+		p.WiFiControl.Actions.UnTrustedBlockLan = false
+
+		// Obfsproxy configuration was moved to 'LastConnectionParams->OpenVpnParameters' section
+		type tmp_type_Settings_v3_11_15 struct {
+			Obfs4proxy struct {
+				Obfs4Iat obfsproxy.Obfs4IatMode
+				Version  obfsproxy.ObfsProxyVersion
+			}
+		}
+		var tmp_Settings_v3_11_15 tmp_type_Settings_v3_11_15
+		err = json.Unmarshal(data, &tmp_Settings_v3_11_15)
+		if err == nil && tmp_Settings_v3_11_15.Obfs4proxy.Version > obfsproxy.None {
+			p.LastConnectionParams.OpenVpnParameters.Obfs4proxy = obfsproxy.Config{
+				Version:  tmp_Settings_v3_11_15.Obfs4proxy.Version,
+				Obfs4Iat: tmp_Settings_v3_11_15.Obfs4proxy.Obfs4Iat,
+			}
+
+		}
 	}
 
 	return nil
@@ -249,4 +265,31 @@ func (p *Preferences) setSession(accountID string,
 	}
 
 	p.Session.updateWgCredentials(wgPublicKey, wgPrivateKey, wgLocalIP, wgPreSharedKey)
+}
+
+// compareVersions compares two version strings in the format "XX.XX.XX..."
+// and returns -1 if version1 is older, 1 if version1 is newer,
+// and 0 if both versions are equal.
+func compareVersions(version1, version2 string) int {
+	v1Parts := strings.Split(version1, ".")
+	v2Parts := strings.Split(version2, ".")
+
+	for i := 0; i < len(v1Parts) && i < len(v2Parts); i++ {
+		v1Part, _ := strconv.Atoi(v1Parts[i])
+		v2Part, _ := strconv.Atoi(v2Parts[i])
+
+		if v1Part < v2Part {
+			return -1
+		} else if v1Part > v2Part {
+			return 1
+		}
+	}
+
+	if len(v1Parts) < len(v2Parts) {
+		return -1
+	} else if len(v1Parts) > len(v2Parts) {
+		return 1
+	}
+
+	return 0
 }

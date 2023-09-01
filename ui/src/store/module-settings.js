@@ -27,6 +27,7 @@ import {
   ColorTheme,
   ColorThemeTrayIcon,
   DnsEncryption,
+  V2RayObfuscationEnum,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -56,6 +57,24 @@ const getDefaultState = () => {
     isRandomServer: false,
     isRandomExitServer: false,
 
+    openvpnObfsproxyConfig: {
+      // 0 - do not use obfsproxy; obfs3 - 3; obfs4 - 4
+      Version: 0,
+      // Inter-Arrival Time (IAT). Applicable only for obfs4.
+      //	The values of IAT-mode can be “0”, “1”, or “2” in obfs4
+      //	0 -	means that the IAT-mode is disabled and that large packets will be split by the network drivers,
+      //		whose network fingerprints could be detected by censors.
+      //	1 - means splitting large packets into MTU-size packets instead of letting the network drivers do it.
+      //		Here, the MTU is 1448 bytes for the Obfs4 Bridge. This means the smaller packets cannot be reassembled for analysis and censoring.
+      //	2 - means splitting large packets into variable size packets. The sizes are defined in Obfs4.
+      Obfs4Iat: 0,
+    },
+
+    V2RayConfig: {
+      OpenVPN: V2RayObfuscationEnum.None,
+      WireGuard: V2RayObfuscationEnum.None,
+    },
+
     // Favorite gateway's list (strings [gatewayID of server]). Only gateway ID in use ("us-tx.wg.ivpn.net" => "us-tx")
     serversFavoriteList: [],
     //Favorite hosts list (strings [host.dns_name])
@@ -74,20 +93,6 @@ const getDefaultState = () => {
       IsAutoconnectOnLaunchDaemon: false,
       UserDefinedOvpnFile: "",
       IsLogging: false,
-
-      // obfsproxy configuration
-      ObfsproxyConfig: {
-        // 0 - do not use obfsproxy; obfs3 - 3; obfs4 - 4
-        Version: 0,
-        // Inter-Arrival Time (IAT)
-        //	The values of IAT-mode can be “0”, “1”, or “2” in obfs4
-        //	0 -	means that the IAT-mode is disabled and that large packets will be split by the network drivers,
-        //		whose network fingerprints could be detected by censors.
-        //	1 - means splitting large packets into MTU-size packets instead of letting the network drivers do it.
-        //		Here, the MTU is 1448 bytes for the Obfs4 Bridge. This means the smaller packets cannot be reassembled for analysis and censoring.
-        //	2 - means splitting large packets into variable size packets. The sizes are defined in Obfs4.
-        Obfs4Iat: 0,
-      },
 
       WiFi: {
         // canApplyInBackground:
@@ -128,6 +133,10 @@ const getDefaultState = () => {
       OpenVPN: defaultPort,
       WireGuard: defaultPort,
     },
+    // portWireGuardBackup - the original port value for WireGuard (before it was changed to V2Ray-specific TCP port).
+    // WireGuard port can be changed to V2Ray-specific TCP port if V2Ray obfuscation is enabled.
+    // In this case, we need to remember original WireGuard port to be able to restore it back when V2Ray obfuscation is disabled.
+    portWireGuardBackup: defaultPort,
 
     // custom ports defined by user (based on the applicable port range)
     customPorts: [], // [ {type: "UDP/TCP", port: "X", range: {min: X, max: X}}, ... ],
@@ -291,6 +300,13 @@ export default {
       state.isRandomExitServer = val;
     },
 
+    openvpnObfsproxyConfig(state, val) {
+      state.openvpnObfsproxyConfig = val;
+    },
+    setV2RayConfig(state, v2rayType) {
+      state.V2RayConfig[enumValueName(VpnTypeEnum, state.vpnType)] = v2rayType; // V2RayObfuscationEnum
+    },
+
     // Favorite gateway's list (strings)
     serversFavoriteList(state, val) {
       state.serversFavoriteList = val;
@@ -319,16 +335,20 @@ export default {
         console.log("Warning! setPort() unable to set port. Port not defined.");
         return;
       }
-      state.port[enumValueName(VpnTypeEnum, state.vpnType)] = portVal;
+
+      let newPort = Object.assign({}, state.port);
+
+      if (state.vpnType === VpnTypeEnum.WireGuard) newPort.WireGuard = portVal;
+      else if (state.vpnType === VpnTypeEnum.OpenVPN) newPort.OpenVPN = portVal;
+      else {
+        console.log("Warning! setPort() unable to set port. Unknown VPN type.");
+        return;
+      }
+
+      doSetPortLogic(state, newPort);
     },
     port(state, val) {
-      if (!val || !val.OpenVPN || !val.WireGuard) {
-        {
-          console.log("Warning! port: unable to change port. Bad object.");
-          return;
-        }
-      }
-      state.port = val;
+      doSetPortLogic(state, val);
     },
 
     customPorts(state, val) {
@@ -474,11 +494,15 @@ export default {
     isConnectionUseObfsproxy: (state) => {
       try {
         if (state.vpnType !== VpnTypeEnum.OpenVPN) return false;
-        return state.daemonSettings.ObfsproxyConfig.Version > 0;
+        return state.openvpnObfsproxyConfig.Version > 0;
       } catch (e) {
         console.error(e);
       }
       return false;
+    },
+
+    getV2RayConfig: (state) => {
+      return state.V2RayConfig[enumValueName(VpnTypeEnum, state.vpnType)]; // V2RayObfuscationEnum
     },
 
     favoriteServersAndHosts: (state, getters, rootState, rootGetters) => {
@@ -551,7 +575,6 @@ export default {
 
     daemonSettings(context, val) {
       context.commit("daemonSettings", val);
-      ensurePortsSelectedCorrectly(context);
     },
 
     isExpectedAccountToBeLoggedIn(context, val) {
@@ -640,6 +663,16 @@ export default {
     },
     isRandomExitServer(context, val) {
       context.commit("isRandomExitServer", val);
+    },
+
+    openvpnObfsproxyConfig(context, val) {
+      context.commit("openvpnObfsproxyConfig", val);
+      ensurePortsSelectedCorrectly(context);
+    },
+
+    setV2RayConfig(context, v2rayVal) {
+      context.commit("setV2RayConfig", v2rayVal); // V2RayObfuscationEnum
+      ensurePortsSelectedCorrectly(context);
     },
 
     // Favorite gateway's list (strings)
@@ -846,6 +879,23 @@ export default {
     },
   },
 };
+
+function doSetPortLogic(state, val) {
+  if (!val || !val.OpenVPN || !val.WireGuard) {
+    {
+      console.log("Warning! port: unable to change port. Bad object.");
+      return;
+    }
+  }
+
+  // Save last good UDP port for WireGuard (since WireGuard supports only UDP)
+  // It can happen than WireGuard port was changed to TCP port (if V2Ray obfuscation is enabled)
+  // Keeping last good UDP port allows us to restore it back when V2Ray obfuscation is disabled
+  if (val.WireGuard.type === PortTypeEnum.UDP)
+    state.portWireGuardBackup = val.WireGuard;
+
+  state.port = val;
+}
 
 function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
   // - define selected servers (if not initialized)
@@ -1076,67 +1126,88 @@ function isPortExists(ports, port) {
 }
 
 // Ensure if selected ports exists in a servers configuration or port is selected correctly
-function ensurePortsSelectedCorrectly(context) {
-  if (!context || !context.rootGetters || !context.rootState) {
+function ensurePortsSelectedCorrectly(ctx) {
+  if (!ctx || !ctx.rootGetters || !ctx.rootState) {
     console.error("ensurePortsSelectedCorrectly: failed (context not defined)");
     return;
   }
 
   // if we still not received configuration info (servers.json) - do nothing
-  if (context.rootGetters["vpnState/isConfigInitialized"] !== true) return;
+  if (ctx.rootGetters["vpnState/isConfigInitialized"] !== true) return;
 
   // clean custom ports which are not applicable anymore (range is not exists anymore)
-  eraseNonAcceptableCustomPorts(context);
+  eraseNonAcceptableCustomPorts(ctx);
 
-  const state = context.state;
+  const state = ctx.state;
 
-  let funcGetDefaultPort = function (ports) {
-    for (const configPort of ports) {
-      const p = NormalizedConfigPortObject(configPort);
-      if (p) return p;
-    }
-    return null;
-  };
+  let portOvpn = TestSuitablePort(ctx, VpnTypeEnum.OpenVPN);
+  let portWg = TestSuitablePort(ctx, VpnTypeEnum.WireGuard);
 
-  // returns null - if port is ok; otherwise - port value which have to be applied
-  let funcTestPort = function (allPorts, applicablePorts, currPort) {
-    if (!allPorts) return null;
-
-    let retPort = null;
-
-    // add custom ports to base list of all ports
-    if (context.rootState.settings.customPorts)
-      allPorts = allPorts.concat(context.rootState.settings.customPorts);
-
-    if (allPorts && allPorts.length > 0 && !isPortExists(allPorts, currPort)) {
-      console.log(`Selected port does not exists anymore!`);
-      retPort = funcGetDefaultPort(allPorts);
-    }
-    // Check is port applicable (according to current settings)
-    if (
-      applicablePorts &&
-      applicablePorts.length > 0 &&
-      !isPortExists(applicablePorts, retPort ? retPort : currPort)
-    ) {
-      console.log(`Selected port not applicable!`);
-      retPort = funcGetDefaultPort(applicablePorts);
-    }
-    return retPort;
-  };
-
-  const portsCfg = context.rootState.vpnState.servers.config.ports;
   let cPort = Object.assign({}, state.port);
-
-  const funcGetPorts = context.rootGetters["vpnState/funcGetConnectionPorts"];
-  const applicableWg = funcGetPorts(VpnTypeEnum.WireGuard);
-  const applicableOvpn = funcGetPorts(VpnTypeEnum.OpenVPN);
-  let portOvpn = funcTestPort(portsCfg.openvpn, applicableOvpn, cPort.OpenVPN);
-  let portWg = funcTestPort(portsCfg.wireguard, applicableWg, cPort.WireGuard);
   if (portOvpn) cPort.OpenVPN = portOvpn;
   if (portWg) cPort.WireGuard = portWg;
   if (portOvpn || portWg) {
-    context.commit("port", cPort);
+    ctx.commit("port", cPort);
+    console.log(
+      "(ensurePortsSelectedCorrectly) Port was changed from:",
+      state.port,
+      "to:",
+      cPort
+    );
   }
+}
+
+// returns null - if port is ok; otherwise - port value which have to be applied
+function TestSuitablePort(context, vpnType) {
+  var currPort =
+    vpnType === VpnTypeEnum.OpenVPN
+      ? context.state.port.OpenVPN
+      : context.state.port.WireGuard;
+
+  const funcGetPorts = context.rootGetters["vpnState/funcGetConnectionPorts"];
+  const applicablePorts = funcGetPorts(vpnType);
+  // Check is port applicable (according to current settings)
+  if (
+    applicablePorts &&
+    applicablePorts.length > 0 &&
+    !isPortExists(applicablePorts, currPort)
+  ) {
+    console.log(`Selected port `, currPort, "not applicable for VPN ", vpnType);
+    return GetDefaultPort(context, applicablePorts, vpnType);
+  }
+  return null;
+}
+
+function GetDefaultPort(context, ports, vpnType) {
+  let defPort = null;
+
+  if (vpnType === VpnTypeEnum.WireGuard) {
+    let alternatePort = context.state.portWireGuardBackup;
+    if (isPortExists(ports, alternatePort)) return alternatePort;
+  }
+
+  // get V2Ray type
+  let v2rayType = context.state.V2RayConfig.WireGuard;
+  if (vpnType === VpnTypeEnum.OpenVPN)
+    v2rayType = context.state.V2RayConfig.OpenVPN;
+
+  for (const configPort of ports) {
+    const p = NormalizedConfigPortObject(configPort);
+    if (p) {
+      defPort = p;
+      if (!v2rayType) {
+        return p;
+      } else {
+        // (for V2Ray) Recommended alternate ports are: 443/UDP (QUIC) and 80/TCP (HTTP)
+        if (v2rayType === V2RayObfuscationEnum.QUIC) {
+          if (p.port == 443 && p.type == PortTypeEnum.UDP) return p;
+        } else if (v2rayType === V2RayObfuscationEnum.TCP) {
+          if (p.port == 80 && p.type == PortTypeEnum.TCP) return p;
+        }
+      }
+    }
+  }
+  return defPort;
 }
 
 function isAcceptablePortForRange(p, range) {

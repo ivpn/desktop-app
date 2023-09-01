@@ -92,7 +92,10 @@
       </div>
 
       <div
-        v-bind:class="{ disabled: connectionUseObfsproxy || !isDisconnected }"
+        v-bind:class="{
+          disabled:
+            connectionUseObfsproxy || V2RayType !== 0 || !isDisconnected,
+        }"
       >
         <div class="flexRow paramBlock">
           <div class="defColor paramName">Network proxy:</div>
@@ -166,81 +169,35 @@
 
       <div class="settingsBoldFont">Additional settings:</div>
       <div v-bind:class="{ disabled: !isDisconnected }">
-        <div class="flexRow">
-          <div class="flexRow paramName" style="padding-top: 2px">
-            <input
-              type="checkbox"
-              id="connectionUseObfsproxy"
-              v-model="connectionUseObfsproxy"
-            />
-            <label class="defColor" for="connectionUseObfsproxy"
-              >Use obfsproxy</label
-            >
+        <div class="flexRowAlignTop">
+          <div class="flexRowAlignTop paramName" style="padding-top: 2px">
+            <label class="defColor">Obfuscation:</label>
           </div>
 
-          <div v-if="connectionUseObfsproxy" class="flexRow">
-            <select v-model="obfsproxyType">
-              <option
-                v-for="item in obfsproxyTypes"
-                :value="item"
-                :key="item.text"
-              >
-                {{ item.text }}
-              </option>
-            </select>
-
-            <button
-              class="noBordersBtn flexRow"
-              title="Help"
-              v-on:click="onShowHelpObfsproxy"
-            >
-              <img src="@/assets/question.svg" />
-            </button>
-          </div>
-        </div>
-
-        <ComponentDialog ref="helpDialogObfsproxy" center header="Info">
           <div>
-            <p>
-              <b>Obfsproxy</b> attempts to circumvent censorship, by
-              transforming the traffic between the client and the server.
-            </p>
-            <p>
-              The <i>obfs4</i> protocol is less likely to be blocked than
-              <i>obfs3</i>.
-            </p>
-            <p>
-              Inter-Arrival Time (<b>IAT</b>) parameter is applicable for
-              <i>obfs4</i>:
-            </p>
+            <div class="flexRow">
+              <select v-model="obfuscationType">
+                <option
+                  v-for="item in obfuscationTypes"
+                  :value="item"
+                  :key="item.text"
+                >
+                  {{ item.text }}
+                </option>
+              </select>
 
-            <ul>
-              <li>
-                When IAT-mode is disabled large packets will be split by the
-                network drivers which may result in network fingerprints that
-                could be detected by censors.
-              </li>
-              <li>
-                IAT1 - Large packets will be split into MTU-size packets by
-                Obfsproxy (instead the network drivers), resulting in smaller
-                packets that are more resistant to being reassembled for
-                analysis and censoring.
-              </li>
-              <li>
-                IAT2 - (paranoid mode) - Large packets will be split into
-                variable size packets by Obfsproxy.
-              </li>
-            </ul>
-
-            <p>
-              <b> Note! </b> Enabling IAT mode will affect overall VPN speed and
-              CPU load.
-            </p>
+              <button
+                class="noBordersBtn flexRow"
+                title="Help"
+                v-on:click="onShowHelpObfsproxy"
+              >
+                <img src="@/assets/question.svg" />
+              </button>
+            </div>
+            <div class="description" style="margin-left: 0px">
+              Only enable if you have trouble connecting.
+            </div>
           </div>
-        </ComponentDialog>
-
-        <div class="description">
-          Only enable if you have trouble connecting. TCP connections only
         </div>
 
         <div class="param" v-if="userDefinedOvpnFile">
@@ -328,8 +285,39 @@
         </select>
       </div>
 
+      <div
+        class="flexRow paramBlock"
+        v-bind:class="{ disabled: !isDisconnected }"
+      >
+        <div class="flexRow paramName">
+          <label class="defColor">Obfuscation:</label>
+        </div>
+
+        <div>
+          <div class="flexRow">
+            <select v-model="obfuscationType">
+              <option
+                v-for="item in obfuscationTypes"
+                :value="item"
+                :key="item.text"
+              >
+                {{ item.text }}
+              </option>
+            </select>
+
+            <button
+              class="noBordersBtn flexRow"
+              title="Help"
+              v-on:click="onShowHelpObfsproxy"
+            >
+              <img src="@/assets/question.svg" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div v-bind:class="{ disabled: !isDisconnected }">
-        <div class="flexRow paramBlock" style="margin: 0px; margin-top: 3px">
+        <div class="flexRow paramBlock" style="margin: 0px; margin-top: 2px">
           <div class="defColor paramName">Custom MTU:</div>
           <div>
             <input
@@ -362,7 +350,7 @@
         <div class="settingsBoldFont">Wireguard key information:</div>
 
         <spinner :loading="isProcessing" />
-        <div class="flexRow paramBlock">
+        <div class="flexRow paramBlockDetailedConfig">
           <div class="defColor paramName">Local IP Address:</div>
           <div class="detailedParamValue">
             {{ this.$store.state.account.session.WgLocalIP }}
@@ -404,23 +392,23 @@
           >
             <img src="@/assets/question.svg" />
           </button>
-          <ComponentDialog ref="infoWgQuantumResistance" header="Info">
-            <div>
-              <p>
-                Quantum Resistance: Indicates whether your current WireGuard VPN
-                connection is using additional protection measures against
-                potential future quantum computer attacks.
-              </p>
-              <p>
-                When Enabled, a Pre-shared key has been securely exchanged
-                between your device and the server using post-quantum Key
-                Encapsulation Mechanism (KEM) algorithms. If Disabled, the
-                current VPN connection, while secure under today's standards,
-                does not include this extra layer of quantum resistance.
-              </p>
-            </div>
-          </ComponentDialog>
         </div>
+        <ComponentDialog ref="infoWgQuantumResistance" header="Info">
+          <div>
+            <p>
+              Quantum Resistance: Indicates whether your current WireGuard VPN
+              connection is using additional protection measures against
+              potential future quantum computer attacks.
+            </p>
+            <p>
+              When Enabled, a Pre-shared key has been securely exchanged between
+              your device and the server using post-quantum Key Encapsulation
+              Mechanism (KEM) algorithms. If Disabled, the current VPN
+              connection, while secure under today's standards, does not include
+              this extra layer of quantum resistance.
+            </p>
+          </div>
+        </ComponentDialog>
 
         <button
           class="settingsButton paramBlock"
@@ -431,6 +419,76 @@
         </button>
       </div>
     </div>
+
+    <!-- Help dialogs -->
+    <ComponentDialog ref="helpDialogObfsproxy" header="Info">
+      <div>
+        <p>
+          VPN obfuscation is a technique that masks VPN traffic to make it
+          appear like standard internet traffic, helping to evade detection and
+          bypass internet restrictions or censorship.
+        </p>
+        <p v-if="isOpenVPN">
+          When using OpenVPN we offer two solutions, V2Ray and Obfsproxy. Both
+          solutions generally work well but you may find one solution is more
+          performant and/or reliable depending on multiple variables relating to
+          your location and the path your traffic takes to the VPN server. We
+          recommend experimenting with both Obfsproxy and V2Ray options.
+        </p>
+        <p v-else>
+          When using WireGuard we offer the powerful V2Ray proxy protocol. It is
+          available in two variants, you may find one is more performant and/or
+          reliable depending on multiple variables relating to your location and
+          the path your traffic takes to the VPN server. We recommend
+          experimenting with both variants.
+        </p>
+        <!--<div class="horizontalLine" />-->
+        <div v-show="isOpenVPN">
+          <p>
+            <b>Obfsproxy options</b><br /><b>Note:</b> The Inter-Arrival Time
+            (<b>IAT</b>) parameter in <b>obfs4</b> will negatively affect
+            overall VPN speed and CPU load. The options below are listed in
+            order from highest performance and least stealthy to lowest
+            performance and most stealthy.
+          </p>
+          <ul>
+            <li>
+              <b>obfs4</b> - The IAT-mode is disabled. Large packets will be
+              split by the network drivers which may result in network
+              fingerprints that could be detected by censors.
+            </li>
+            <li>
+              <b>obfs4 (IAT1)</b> - Large packets will be split into MTU-size
+              packets by Obfsproxy (instead the network drivers), resulting in
+              smaller packets that are more resistant to being reassembled for
+              analysis and censoring.
+            </li>
+            <li>
+              <b>obfs4 (IAT2)</b> - (paranoid mode) - Large packets will be
+              split into variable size packets by Obfsproxy.
+            </li>
+          </ul>
+        </div>
+        <div>
+          <p>
+            <b>V2Ray</b>
+          </p>
+          <ul>
+            <li>
+              <b>V2Ray (VMESS/QUIC)</b> is a modern protocol designed to provide
+              robust security and high performance, while reducing latency
+              compared to traditional protocols. It makes your data appear as
+              regular HTTPS traffic.
+            </li>
+            <li>
+              <b>V2Ray (VMESS/TCP)</b> is a traditional, widely-used protocol
+              that guarantees reliable, ordered data delivery. It makes your
+              data appear as regular HTTP traffic.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </ComponentDialog>
   </div>
 </template>
 
@@ -442,6 +500,7 @@ import {
   PortTypeEnum,
   ObfsproxyVerEnum,
   Obfs4IatEnum,
+  V2RayObfuscationEnum,
 } from "@/store/types";
 
 import { enumValueName, dateDefaultFormat } from "@/helpers/helpers";
@@ -462,23 +521,18 @@ export default {
       isPortModified: false,
       isProcessing: false,
       openvpnManualConfig: false,
-      lastObfsproxyCfg: makeObfsproxyInfoUiObj(
-        ObfsproxyVerEnum.obfs4,
-        Obfs4IatEnum.IAT0
-      ), // Obfsproxy info UI object {obfsVer, obfs4Iat, text}
     };
   },
   mounted() {
     SetInputFilterNumbers(this.$refs.mtuInput);
   },
   watch: {
+    // If port was changed in conneted state - reconnect
     async port(newValue, oldValue) {
       if (this.isPortModified === false) return;
-
       if (newValue == null || oldValue == null) return;
       if (newValue.port === oldValue.port && newValue.type === oldValue.type)
         return;
-
       await this.reconnect();
     },
   },
@@ -601,28 +655,6 @@ export default {
         return true;
       return this.$store.state.account?.accountStatus?.Active === true;
     },
-    port: {
-      get() {
-        return this.$store.getters["settings/getPort"];
-      },
-      set(value) {
-        this.isPortModified = true;
-
-        if (value == "valueAddCustomPort") {
-          // we need it just to update UI to show current port (except 'Add custom port...')
-          this.$store.dispatch("settings/setPort", this.port);
-
-          try {
-            this.$refs.addCustomPortDlg.showModal();
-          } catch (e) {
-            console.error(e);
-          }
-          return;
-        }
-
-        this.$store.dispatch("settings/setPort", value);
-      },
-    },
     mtu: {
       get() {
         return this.$store.state.settings.mtu;
@@ -656,53 +688,73 @@ export default {
       },
     },
 
-    //  -------- obfsproxy BEGIN ------------------
+    //  -------- obfuscation BEGIN ------------------
+    V2RayType: {
+      get() {
+        return this.$store.getters["settings/getV2RayConfig"];
+      },
+    },
     connectionUseObfsproxy: {
       get() {
         return this.$store.getters["settings/isConnectionUseObfsproxy"];
       },
+    },
+
+    obfuscationType: {
+      get() {
+        let obfsCfg = null;
+        if (this.isOpenVPN === true)
+          obfsCfg = this.$store.state.settings.openvpnObfsproxyConfig;
+
+        let v2RayCfg = this.$store.getters["settings/getV2RayConfig"];
+        if (!obfsCfg && !v2RayCfg) return makeObfsInfoUiObj();
+        return makeObfsInfoUiObj(v2RayCfg, obfsCfg?.Version, obfsCfg?.Obfs4Iat);
+      },
       set(value) {
-        if (!value) sender.SetObfsproxy(null, null);
-        else {
-          sender.SetObfsproxy(
-            this.lastObfsproxyCfg.obfsVer,
-            this.lastObfsproxyCfg.obfs4Iat
-          );
+        let v2RayCfg = V2RayObfuscationEnum.None;
+        let obfsCfg = {
+          Version: ObfsproxyVerEnum.None,
+          Obfs4Iat: Obfs4IatEnum.IAT0,
+        };
+
+        // Set new obfuscation parameters
+        // (do not chane obfsproxy parames from WireGuard settings)
+        if (value.obfsVer != undefined && this.isOpenVPN === true) {
+          obfsCfg = {
+            Version: value.obfsVer,
+            Obfs4Iat: value.obfs4Iat,
+          };
+        } else if (value.v2RayType != undefined) {
+          v2RayCfg = value.v2RayType;
         }
+
+        this.$store.dispatch("settings/openvpnObfsproxyConfig", obfsCfg);
+        this.$store.dispatch("settings/setV2RayConfig", v2RayCfg);
       },
     },
 
-    obfsproxyType: {
+    obfuscationTypes: {
       get() {
-        let obfsCfg = this.$store.state.settings.daemonSettings.ObfsproxyConfig;
-        if (!obfsCfg || obfsCfg.Version === 0) {
-          // if obfsproxy not enabled - use default (or last used value)
-          return makeObfsproxyInfoUiObj(
-            this.lastObfsproxyCfg.obfsVer,
-            this.lastObfsproxyCfg.Obfs4Iat
-          );
+        let ret = [makeObfsInfoUiObj()];
+        if (this.isOpenVPN === true) {
+          var obfuscationTypes = [
+            makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT0),
+            makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT1),
+            makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT2),
+            makeObfsInfoUiObj(null, ObfsproxyVerEnum.obfs3, Obfs4IatEnum.IAT0),
+          ];
+          ret = [...ret, ...obfuscationTypes];
         }
-
-        return makeObfsproxyInfoUiObj(obfsCfg.Version, obfsCfg.Obfs4Iat);
-      },
-      set(value) {
-        this.lastObfsproxyCfg = value;
-        sender.SetObfsproxy(value.obfsVer, value.obfs4Iat);
-      },
-    },
-
-    obfsproxyTypes: {
-      get() {
-        return [
-          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT0),
-          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT1),
-          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs4, Obfs4IatEnum.IAT2),
-          makeObfsproxyInfoUiObj(ObfsproxyVerEnum.obfs3, Obfs4IatEnum.IAT0),
+        let v2RayTypes = [
+          makeObfsInfoUiObj(V2RayObfuscationEnum.QUIC),
+          makeObfsInfoUiObj(V2RayObfuscationEnum.TCP),
         ];
+        ret = [...ret, ...v2RayTypes];
+        return ret;
       },
     },
 
-    //  -------- obfsproxy END ------------------
+    //  -------- obfuscation END ------------------
 
     ovpnProxyType: {
       get() {
@@ -791,7 +843,8 @@ export default {
     isShowAddPortOption: function () {
       if (
         this.$store.state.settings.isMultiHop === true ||
-        this.$store.getters["settings/isConnectionUseObfsproxy"]
+        this.$store.getters["settings/isConnectionUseObfsproxy"] ||
+        this.$store.getters["settings/getV2RayConfig"]
       )
         return false;
 
@@ -800,6 +853,34 @@ export default {
 
       return true;
     },
+    port: {
+      get() {
+        return this.$store.getters["settings/getPort"];
+      },
+      set(value) {
+        this.isPortModified = true;
+
+        if (value == "valueAddCustomPort") {
+          // we need it just to update UI to show current port (except 'Add custom port...')
+          this.$store.dispatch("settings/setPort", this.port);
+
+          try {
+            this.$refs.addCustomPortDlg.showModal();
+          } catch (e) {
+            console.error(e);
+          }
+          return;
+        }
+
+        this.$store.dispatch("settings/setPort", value);
+      },
+    },
+
+    // Return suitable ports for current connection type.
+    // If Obfuscation is enabled - the ports can differ from the default ports:
+    // - Obfsproxy uses only TCP ports
+    // - V2Ray (TCP) uses only TCP ports
+    // - V2Ray (QUIC) uses only UDP ports
     prefferedPorts: function () {
       let ret = [];
       let ports = this.$store.getters["vpnState/connectionPorts"];
@@ -808,56 +889,82 @@ export default {
       const isObfsproxy =
         this.$store.getters["settings/isConnectionUseObfsproxy"];
 
-      if (isObfsproxy) {
-        // For Obfsproxy: port number is ignored. Only TCP protocol is applicable.
-        // try to use currently selected port
-        let port = ports.find((p) => p.port === this.port.port);
-        if (port) ports = [port];
-        else if (ports.length > 0) ports = [ports[0]];
-      } else if (isMH) {
-        // For Multi-Hop: port number is ignored. Only protocol has sense.
-        // So we just return one port definition for each protocol applicable for current VPN
-        // (by default, using currently selected port if it can be applied)
-        let portsByProtoHash = { udp: null, tcp: null };
+      const V2RayType = this.$store.getters["settings/getV2RayConfig"];
 
-        // try to use currently selected port
-        let curPort = ports.find(
-          (p) => p.port === this.port.port && p.type === this.port.type
-        );
-        if (curPort) {
-          if (curPort.type === PortTypeEnum.TCP) portsByProtoHash.tcp = curPort;
-          else portsByProtoHash.udp = curPort;
-        }
-        // get first port definition for each protocol
-        if (!portsByProtoHash.tcp)
-          portsByProtoHash.tcp = ports.find((p) => p.type === PortTypeEnum.TCP);
-        if (!portsByProtoHash.udp)
-          portsByProtoHash.udp = ports.find((p) => p.type === PortTypeEnum.UDP);
+      const isV2Ray =
+        V2RayType === V2RayObfuscationEnum.QUIC ||
+        V2RayType === V2RayObfuscationEnum.TCP;
 
-        if (portsByProtoHash.tcp || portsByProtoHash.udp) {
-          ports = [];
-          if (portsByProtoHash.udp) ports.push(portsByProtoHash.udp);
-          if (portsByProtoHash.tcp) ports.push(portsByProtoHash.tcp);
+      if (!isV2Ray) {
+        // Non-V2Ray
+        if (isObfsproxy) {
+          // For Obfsproxy: port number is ignored. Only TCP protocol is applicable.
+          // So we keep only one port (of required type; port number will not be shown)
+          // (try to use currently selected port number)
+          let port = ports.find((p) => p.port === this.port.port);
+          if (port) ports = [port];
+          else if (ports.length > 0) ports = [ports[0]];
+        } else if (isMH) {
+          // For Multi-Hop: port number is ignored. Only protocol has sense.
+          // So we just return one port definition for each protocol applicable for current VPN
+          // (by default, using currently selected port if it can be applied)
+          let portsByProtoHash = { udp: null, tcp: null };
+
+          // try to use currently selected port
+          let curPort = ports.find(
+            (p) => p.port === this.port.port && p.type === this.port.type
+          );
+          if (curPort) {
+            if (curPort.type === PortTypeEnum.TCP)
+              portsByProtoHash.tcp = curPort;
+            else portsByProtoHash.udp = curPort;
+          }
+          // get first port definition for each protocol
+          if (!portsByProtoHash.tcp)
+            portsByProtoHash.tcp = ports.find(
+              (p) => p.type === PortTypeEnum.TCP
+            );
+          if (!portsByProtoHash.udp)
+            portsByProtoHash.udp = ports.find(
+              (p) => p.type === PortTypeEnum.UDP
+            );
+
+          if (portsByProtoHash.tcp || portsByProtoHash.udp) {
+            ports = [];
+            if (portsByProtoHash.udp) ports.push(portsByProtoHash.udp);
+            if (portsByProtoHash.tcp) ports.push(portsByProtoHash.tcp);
+          }
         }
       }
 
+      // create UI items for ports
       ports.forEach((p) =>
         ret.push({
           text:
-            isMH === true || isObfsproxy === true // port number ignored for multi-hop and obfsproxy
+            !isV2Ray && (isMH === true || isObfsproxy === true) // port number ignored for multi-hop and obfsproxy (but not for V2Ray!)
               ? `${enumValueName(PortTypeEnum, p.type)}`
               : `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
           key: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
           port: p,
         })
       );
-
       return ret;
     },
   },
 };
 
-function makeObfsproxyInfoUiObj(obfsVer, obfs4Iat) {
+function makeObfsInfoUiObj(v2rayType, obfsVer, obfs4Iat) {
+  if (!v2rayType && !obfsVer) return { text: "Disabled" };
+
+  // V2Ray
+  if (v2rayType) {
+    return {
+      text: `V2Ray (VMESS/${enumValueName(V2RayObfuscationEnum, v2rayType)})`,
+      v2RayType: v2rayType,
+    };
+  }
+
+  // Obfsproxy
   let iatStr = "";
   if (obfs4Iat && obfs4Iat > 0)
     iatStr = ` (${enumValueName(Obfs4IatEnum, obfs4Iat)})`;
@@ -906,8 +1013,9 @@ div.paramBlockText {
 
 div.paramBlockDetailedConfig {
   @extend .flexRow;
-  margin-top: 5px;
+  margin-top: 2px;
 }
+
 div.detailedConfigBlock {
   margin-left: 22px;
   max-width: 325px;

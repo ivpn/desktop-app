@@ -96,6 +96,9 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 
 	obfsproxyStartScript = path.Join(_installDir, "OpenVPN", "obfsproxy", "obfs4proxy.exe")
 
+	v2rayBinaryPath = path.Join(_installDir, "v2ray", "v2ray.exe")
+	v2rayConfigTmpFile = path.Join(settingsDir, "v2ray.json")
+
 	_wgArchDir := "x86_64"
 	if _, err := os.Stat(path.Join(_installDir, "WireGuard", _wgArchDir, "wireguard.exe")); err != nil {
 		_wgArchDir = "x86"

@@ -38,7 +38,6 @@ import (
 	"github.com/ivpn/desktop-app/daemon/kem"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
-	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
@@ -417,7 +416,7 @@ func (s *Service) APIRequest(apiAlias string, ipTypeRequired protocolTypes.Requi
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGuard on Linux)
 func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
-	var ovpnErr, obfspErr, wgErr, splitTunErr error
+	var ovpnErr, obfspErr, v2rayErr, wgErr, splitTunErr error
 
 	if err := filerights.CheckFileAccessRightsExecutable(platform.OpenVpnBinaryPath()); err != nil {
 		ovpnErr = fmt.Errorf("OpenVPN binary: %w", err)
@@ -425,6 +424,12 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 
 	if err := filerights.CheckFileAccessRightsExecutable(platform.ObfsproxyStartScript()); err != nil {
 		obfspErr = fmt.Errorf("obfsproxy binary: %w", err)
+	}
+
+	if err := filerights.CheckFileAccessRightsExecutable(platform.V2RayBinaryPath()); err != nil {
+		v2rayErr = fmt.Errorf("V2Ray binary: %w", err)
+	} else if platform.V2RayConfigFile() == "" {
+		v2rayErr = fmt.Errorf("V2Ray config file path not defined")
 	}
 
 	if err := filerights.CheckFileAccessRightsExecutable(platform.WgBinaryPath()); err != nil {
@@ -458,6 +463,9 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 	}
 	if obfspErr != nil {
 		ret.ObfsproxyError = obfspErr.Error()
+	}
+	if v2rayErr != nil {
+		ret.V2RayError = v2rayErr.Error()
 	}
 	if splitTunErr != nil {
 		ret.SplitTunnelError = splitTunErr.Error()
@@ -554,12 +562,12 @@ func (s *Service) Pause(durationSeconds uint32) error {
 	s._pause._mutex.Lock()
 	defer s._pause._mutex.Unlock()
 
-	fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+	fwStatus, err := s.KillSwitchState()
 	if err != nil {
 		return fmt.Errorf("failed to check KillSwitch status: %w", err)
 	}
-	s._pause._killSwitchState = fwIsEnabled
-	if fwIsEnabled && !isPersistant {
+	s._pause._killSwitchState = fwStatus.IsEnabled
+	if fwStatus.IsEnabled && !fwStatus.IsPersistent {
 		if err := s.SetKillSwitchState(false); err != nil {
 			return err
 		}
@@ -634,11 +642,11 @@ func (s *Service) resume() error {
 		return err
 	}
 
-	fwIsEnabled, isPersistant, _, _, _, _, err := s.KillSwitchState()
+	fwStatus, err := s.KillSwitchState()
 	if err != nil {
 		log.Error(fmt.Errorf("failed to check KillSwitch status: %w", err))
 	} else {
-		if !isPersistant && fwIsEnabled != s._pause._killSwitchState {
+		if !fwStatus.IsPersistent && fwStatus.IsEnabled != s._pause._killSwitchState {
 			if err := s.SetKillSwitchState(s._pause._killSwitchState); err != nil {
 				log.Error("failed to restore KillSwitch status: %w", err)
 			}
@@ -896,10 +904,19 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 }
 
 // KillSwitchState returns kill-switch state
-func (s *Service) KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, fwUserExceptions string, err error) {
+func (s *Service) KillSwitchState() (status types.KillSwitchStatus, err error) {
 	prefs := s._preferences
-	enabled, err := firewall.GetEnabled()
-	return enabled, prefs.IsFwPersistant, prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast, prefs.IsFwAllowApiServers, prefs.FwUserExceptions, err
+	enabled, isLanAllowed, _, err := firewall.GetState()
+
+	return types.KillSwitchStatus{
+		IsEnabled:         enabled,
+		IsPersistent:      prefs.IsFwPersistant,
+		IsAllowLAN:        prefs.IsFwAllowLAN,
+		IsAllowMulticast:  prefs.IsFwAllowLANMulticast,
+		IsAllowApiServers: prefs.IsFwAllowApiServers,
+		UserExceptions:    prefs.FwUserExceptions,
+		StateLanAllowed:   isLanAllowed,
+	}, err
 }
 
 // SetKillSwitchIsPersistent change kill-switch value
@@ -935,11 +952,23 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 	prefs.IsFwAllowLANMulticast = isAllowLanMulticast
 	s.setPreferences(prefs)
 
-	err := firewall.AllowLAN(prefs.IsFwAllowLAN, prefs.IsFwAllowLANMulticast)
+	err := s.applyKillSwitchAllowLAN(nil)
 	if err == nil {
 		s.onKillSwitchStateChanged()
 	}
 	return err
+}
+
+func (s *Service) applyKillSwitchAllowLAN(wifiInfoPtr *wifiStatus) error {
+	prefs := s._preferences
+
+	isAllowLAN := prefs.IsFwAllowLAN
+	if isAllowLAN && s.isTrustedWifiForcingToBlockLan(wifiInfoPtr) {
+		log.Info("Firewall (block LAN): according to configuration for Untrusted WiFi")
+		isAllowLAN = false
+	}
+
+	return firewall.AllowLAN(isAllowLAN, prefs.IsFwAllowLANMulticast)
 }
 
 func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
@@ -1020,13 +1049,6 @@ func (s *Service) SetPreference(key protocolTypes.ServicePreference, val string)
 	}
 
 	return isChanged, nil
-}
-
-func (s *Service) SetObfsProxy(cfg obfsproxy.Config) error {
-	prefs := s._preferences
-	prefs.Obfs4proxy = cfg
-	s.setPreferences(prefs)
-	return nil
 }
 
 // SetPreference set preference value
@@ -1110,7 +1132,7 @@ func (s *Service) SetWiFiSettings(params preferences.WiFiParams) error {
 	}
 	params.Networks = newNets
 
-	// save settings
+	// Save settings
 	prefs := s._preferences
 	prefs.WiFiControl = params
 	s.setPreferences(prefs)
@@ -1266,12 +1288,12 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 
 	// Temporary allow API server access (If Firewall is enabled)
 	// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
-	fwIsEnabled, _, _, _, fwIsAllowApiServers, _, _ := s.KillSwitchState()
-	if fwIsEnabled && !fwIsAllowApiServers {
+	fwStatus, _ := s.KillSwitchState()
+	if fwStatus.IsEnabled && !fwStatus.IsAllowApiServers {
 		s.SetKillSwitchAllowAPIServers(true)
 	}
 	defer func() {
-		if fwIsEnabled && !fwIsAllowApiServers {
+		if fwStatus.IsEnabled && !fwStatus.IsAllowApiServers {
 			// restore state for 'AllowAPIServers' configuration (previously, was enabled)
 			s.SetKillSwitchAllowAPIServers(false)
 		}
@@ -1426,12 +1448,12 @@ func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLo
 
 		// Temporary allow API server access (If Firewall is enabled)
 		// Otherwise, there will not be any possibility to Login (because all connectivity is blocked)
-		fwIsEnabled, _, _, _, fwIsAllowApiServers, _, _ := s.KillSwitchState()
-		if fwIsEnabled && !fwIsAllowApiServers {
+		fwStatus, _ := s.KillSwitchState()
+		if fwStatus.IsEnabled && !fwStatus.IsAllowApiServers {
 			s.SetKillSwitchAllowAPIServers(true)
 		}
 		defer func() {
-			if fwIsEnabled && !fwIsAllowApiServers {
+			if fwStatus.IsEnabled && !fwStatus.IsAllowApiServers {
 				// restore state for 'AllowAPIServers' configuration (previously, was enabled)
 				s.SetKillSwitchAllowAPIServers(false)
 			}

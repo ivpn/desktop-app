@@ -210,13 +210,6 @@ export default {
   SetLogging: async (isEnabled) => {
     return await invoke("renderer-request-set-logging", isEnabled);
   },
-  SetObfsproxy: async (obfsproxyVer, obfs4Iat) => {
-    return await invoke(
-      "renderer-request-set-obfsproxy",
-      obfsproxyVer,
-      obfs4Iat
-    );
-  },
 
   SetDNS: async () => {
     return await invoke("renderer-request-set-dns");

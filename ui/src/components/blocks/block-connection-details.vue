@@ -128,9 +128,10 @@ export default {
       let port = this.$store.getters["settings/getPort"];
       let protocol = this.$store.getters["settings/vpnType"];
       const isMH = this.$store.state.settings.isMultiHop;
+      const isV2Ray = !!this.$store.getters["settings/getV2RayConfig"];
       const isObfsProxy =
         this.$store.getters["settings/isConnectionUseObfsproxy"];
-      if (isMH === true || isObfsProxy) {
+      if (!isV2Ray && (isMH === true || isObfsProxy)) {
         // do not show port number for multi-hop connections
         return `${enumValueName(VpnTypeEnum, protocol)}/${enumValueName(
           PortTypeEnum,

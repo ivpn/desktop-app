@@ -60,6 +60,9 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 
 	obfsproxyStartScript = "/Applications/IVPN.app/Contents/Resources/obfsproxy/obfs4proxy"
 
+	v2rayBinaryPath = "/Applications/IVPN.app/Contents/MacOS/v2ray/v2ray"
+	v2rayConfigTmpFile = path.Join(settingsDir, "v2ray.json")
+
 	wgBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"
 	wgToolBinaryPath = "/Applications/IVPN.app/Contents/MacOS/WireGuard/wg"
 

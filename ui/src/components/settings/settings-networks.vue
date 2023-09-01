@@ -118,6 +118,32 @@
             >Enable firewall</label
           >
         </div>
+        <div class="param">
+          <input
+            type="checkbox"
+            id="unTrustedBlockLan"
+            v-model="unTrustedBlockLan"
+          />
+          <label class="defColor" for="unTrustedBlockLan"
+            >Block LAN traffic</label
+          >
+          <button
+            class="noBordersBtn flexRow"
+            title="Help"
+            v-on:click="$refs.helpUnTrustedBlockLan.showModal()"
+          >
+            <img src="@/assets/question.svg" />
+          </button>
+
+          <ComponentDialog ref="helpUnTrustedBlockLan" header="Info">
+            <div>
+              <p>
+                When enabled, it overrides the IVPN Firewall option 'Allow LAN
+                traffic' when connected to an untrusted network.
+              </p>
+            </div>
+          </ComponentDialog>
+        </div>
 
         <div class="settingsBoldFont">Actions for Trusted WiFi</div>
         <div class="param">
@@ -298,6 +324,7 @@ export default {
       wifi.actions = {
         unTrustedConnectVpn: true,
         unTrustedEnableFirewall: true,
+        unTrustedBlockLan: true,
 
         trustedDisconnectVpn: true,
         trustedDisableFirewall: true,
@@ -518,7 +545,25 @@ export default {
       set(value) {
         let wifi = JSON.parse(JSON.stringify(this.wifiSettings));
         if (wifi.actions == null) wifi.actions = {};
+
         wifi.actions.unTrustedEnableFirewall = value;
+        if (wifi.actions.unTrustedEnableFirewall == false)
+          wifi.actions.unTrustedBlockLan = false;
+
+        sender.SetWiFiSettings(wifi);
+      },
+    },
+    unTrustedBlockLan: {
+      get() {
+        return this.wifiSettings?.actions?.unTrustedBlockLan;
+      },
+      set(value) {
+        let wifi = JSON.parse(JSON.stringify(this.wifiSettings));
+        if (wifi.actions == null) wifi.actions = {};
+
+        wifi.actions.unTrustedBlockLan = value;
+        if (wifi.actions.unTrustedBlockLan == true)
+          wifi.actions.unTrustedEnableFirewall = true;
 
         sender.SetWiFiSettings(wifi);
       },

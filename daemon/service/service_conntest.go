@@ -118,8 +118,8 @@ func (s *Service) doDetectAccessiblePorts(portsToTest []types.PortInfo) ([]types
 		}
 		funcAddAllPorts(svrs.Config.Ports.WireGuard)
 		funcAddAllPorts(svrs.Config.Ports.OpenVPN)
-		allPorts[types.PortInfo{Port: svrs.Config.Ports.Obfs3.Port, Type: "TCP"}] = struct{}{}
-		allPorts[types.PortInfo{Port: svrs.Config.Ports.Obfs4.Port, Type: "TCP"}] = struct{}{}
+		allPorts[types.PortInfo{PortInfoBase: types.PortInfoBase{Port: svrs.Config.Ports.Obfs3.Port, Type: "TCP"}}] = struct{}{}
+		allPorts[types.PortInfo{PortInfoBase: types.PortInfoBase{Port: svrs.Config.Ports.Obfs4.Port, Type: "TCP"}}] = struct{}{}
 	}
 	if len(allPorts) == 0 {
 		return []types.PortInfo{}, nil

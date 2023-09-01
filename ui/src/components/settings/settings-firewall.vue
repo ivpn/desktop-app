@@ -114,6 +114,26 @@
           <label class="defColor" for="firewallAllowLan"
             >Allow LAN traffic when IVPN Firewall is enabled</label
           >
+
+          <button
+            class="noBordersBtn flexRow"
+            title="Help"
+            v-on:click="$refs.helpAllowLAN.showModal()"
+          >
+            <img src="@/assets/question.svg" />
+          </button>
+          <ComponentDialog ref="helpAllowLAN" header="Info">
+            <div>
+              <p>
+                This includes traffic to all private address spaces in RFC 1918,
+                3927, 4291, 4193.
+              </p>
+              <div class="settingsGrayLongDescriptionFont">
+                'WiFi control' actions for untrusted networks will override this
+                option.
+              </div>
+            </div>
+          </ComponentDialog>
         </div>
         <div class="param">
           <input
@@ -149,6 +169,7 @@
 
 <script>
 import { isValidIpOrMask } from "@/helpers/helpers";
+import ComponentDialog from "@/components/component-dialog.vue";
 
 const sender = window.ipcSender;
 
@@ -162,6 +183,9 @@ function processError(e) {
 }
 
 export default {
+  components: {
+    ComponentDialog,
+  },
   props: { registerBeforeCloseHandler: Function },
   created() {
     // We have to call applyChanges() even when Settings window was closed by user

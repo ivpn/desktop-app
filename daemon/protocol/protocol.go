@@ -37,7 +37,6 @@ import (
 
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/logger"
-	"github.com/ivpn/desktop-app/daemon/obfsproxy"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -77,7 +76,7 @@ type Service interface {
 	APIRequest(apiAlias string, ipTypeRequired types.RequiredIPProtocol) (responseData []byte, err error)
 	DetectAccessiblePorts(portsToTest []api_types.PortInfo) (retPorts []api_types.PortInfo, err error)
 
-	KillSwitchState() (isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers bool, fwUserExceptions string, err error)
+	KillSwitchState() (status service_types.KillSwitchStatus, err error)
 	SetKillSwitchState(bool) error
 	SetKillSwitchIsPersistent(isPersistant bool) error
 	SetKillSwitchAllowLANMulticast(isAllowLanMulticast bool) error
@@ -100,7 +99,6 @@ type Service interface {
 
 	Preferences() preferences.Preferences
 	SetPreference(key types.ServicePreference, val string) (isChanged bool, err error)
-	SetObfsProxy(cfg obfsproxy.Config) error
 	SetUserPreferences(userPrefs preferences.UserPreferences) (err error)
 	ResetPreferences() error
 
@@ -496,15 +494,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			sendState(req.Idx, false)
 
 			// send Firewall state
-			if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err == nil {
+			if status, err := p._service.KillSwitchState(); err == nil {
 				p.sendResponse(conn,
-					&types.KillSwitchStatusResp{
-						IsEnabled:         isEnabled,
-						IsPersistent:      isPersistant,
-						IsAllowLAN:        isAllowLAN,
-						IsAllowMulticast:  isAllowLanMulticast,
-						IsAllowApiServers: isAllowApiServers,
-						UserExceptions:    fwUserExceptions}, reqCmd.Idx)
+					&types.KillSwitchStatusResp{KillSwitchStatus: status}, reqCmd.Idx)
 			}
 		}
 
@@ -628,17 +620,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	case "KillSwitchGetStatus":
-		if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err != nil {
+		if status, err := p._service.KillSwitchState(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 		} else {
 			p.sendResponse(conn,
-				&types.KillSwitchStatusResp{
-					IsEnabled:         isEnabled,
-					IsPersistent:      isPersistant,
-					IsAllowLAN:        isAllowLAN,
-					IsAllowMulticast:  isAllowLanMulticast,
-					IsAllowApiServers: isAllowApiServers,
-					UserExceptions:    fwUserExceptions}, reqCmd.Idx)
+				&types.KillSwitchStatusResp{KillSwitchStatus: status}, reqCmd.Idx)
 		}
 
 	case "KillSwitchSetEnabled":
@@ -745,23 +731,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			// notify 'success'
 			p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		}
-
-	case "SetObfsProxy":
-		var req types.SetObfsProxy
-		if err := json.Unmarshal(messageData, &req); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			break
-		}
-
-		if err := p._service.SetObfsProxy(req.ObfsproxyConfig); err != nil {
-			p.sendErrorResponse(conn, reqCmd, err)
-			break
-		}
-
-		// notify all clients about change
-		p.notifyClients(p.createHelloResponse())
-		// send 'success' response to the requestor
-		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 
 	case "SetUserPreferences":
 		func() {
