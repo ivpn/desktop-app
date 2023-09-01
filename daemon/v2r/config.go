@@ -101,6 +101,75 @@ const defaultConfigTemplate = `{
     ]
   }`
 
+// V2Ray configuration explanation
+//
+// V2Ray data flow:
+//
+//	[LOCAL-V2Ray-proxy] → (internet) →  [VMESS-server] → (IVPN-backend-infrastructure) → [VPN-server]
+//
+// Simplified V2Ray configuration:
+//
+//	{
+//	    "inbounds": [
+//	        {
+//	            "port": "61554",                            // [LOCAL-V2Ray-proxy LOCAL-PORT]
+//	            "settings": {
+//	                "address": "169.150.252.110",           // [VPN-server IP]
+//	                "port": 1443,                           // [VPN-server PORT]
+//	                "network": "udp"                        // [VPN-server PROTOCOL]
+//	            },
+//	        }
+//	    ],
+//	    "outbounds": [
+//	        {
+//	            "settings": {
+//	                "vnext": [
+//	                    {
+//	                        "address": "169.150.252.115",   // [VMESS-server IP]
+//	                        "port": 2049,                   // [VMESS-server PORT]
+//	                    }
+//	                ]
+//	            },
+//	            "streamSettings": {
+//	                "network": "tcp",                       // [ VMESS-PROTOCOL ]
+//	            }
+//	        }
+//	    ]
+//	}
+//
+// Fields explanation:
+// * [VPN-server IP] - standard IP address of the VPN server.
+// * [VPN-server PORT] and [VPN-server PROTOCOL] -  the port:protocol definition of the VPN server
+//   - Multi-Hop: can be used any standard port:protocol applicable for VPN connection
+//   - Single-Hop: (applicable V2Ray ports info available in servers.json under config->ports->v2ray)
+//     -- WireGuard: can be 15351:UDP only
+//     -- OpenVPN  : can be 20501,20502,20503,20504:UDP and 1443:TCP
+//
+// * [VMESS-server IP] - IP address of VMESS server, taken from v2ray field in host description in servers.json
+// * [VMESS-server PORT] - PORT number of VMESS server. Can be ANY standard port from config->ports->openvpn/wireguard (limited only by [ VMESS-PROTOCOL ]):
+//   - when VMESS/TCP is in use - Can be ANY standard TCP port (UDP ports not supported)
+//   - when VMESS/QUIC is in use - Can be ANY standard UDP port (TCP ports not supported)
+//
+// * [ VMESS-PROTOCOL ] - protocol/obfuscation type
+//   - quick for VMESS/QUICK
+//   - tcp for VMESS/TCP
+//
+// Additional info:
+// * V2Ray data flow:
+//   - for Single-Hop: 	LocalV2RayProxy -> Outbound(EntryServer:V2Ray) -> Inbound(EntryServer:WireGuard)
+//   - for Multi-Hop:	LocalV2RayProxy -> Outbound(EntryServer:V2Ray) -> Inbound(ExitServer:WireGuard)
+//
+// * Outbound ports can be any ports (which applicable for the selected VPN type).
+//   - Preferred outbound ports: 80 for HTTP/VMess/TCP and 443 for HTTPS/VMess/QUIC
+//
+// * Inbound ports
+//   - Single-Hop connections use internal V2Ray ports for inbound connections: svrs.Config.Ports.V2Ray
+//   - Multi-Hop connections can use any ports for inbound connections (which applicable for the selected VPN type).
+//
+// Note!
+// * Multi-Hop:
+//   - For V2Ray connections we ignore port-based multihop configuration. Use default ports instead.
+//   - WireGuard: since the first WG server is the ExitServer - we have to use it's public key in the WireGuard configuration
 type V2RayConfig struct {
 	Log struct {
 		Loglevel string `json:"loglevel"`

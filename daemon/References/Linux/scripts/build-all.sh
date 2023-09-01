@@ -64,7 +64,15 @@ then
   echo "========== Compiling v2ray ==========================="
   echo "======================================================"
   cd $SCRIPT_DIR
-  ./build-v2ray.sh
+
+  if [ ! -z "$GITHUB_ACTIONS" ]; 
+  then
+    echo "! GITHUB_ACTIONS detected ! It is just a build test."
+    echo "! Skipped compilation of V2Ray !"
+  else
+    ./build-v2ray.sh
+  fi
+
 else
   echo "v2ray already compiled. Skipping build."
 fi

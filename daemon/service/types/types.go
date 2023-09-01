@@ -20,45 +20,15 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-package openvpn
+package types
 
-import (
-	"github.com/ivpn/desktop-app/daemon/service/dns"
-)
+type KillSwitchStatus struct {
+	IsEnabled         bool   // FW state
+	IsPersistent      bool   // configuration: true - when persistent
+	IsAllowLAN        bool   // configuration: 'Allow LAN'
+	IsAllowMulticast  bool   // configuration: 'Allow multicast'
+	IsAllowApiServers bool   // configuration: 'Allow API servers'
+	UserExceptions    string // configuration: Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
 
-type platformSpecificProperties struct {
-	// no specific properties for macOS implementation
-}
-
-func (o *OpenVPN) implInit() error             { return nil }
-func (o *OpenVPN) implIsCanUseParamsV24() bool { return true }
-
-func (o *OpenVPN) implOnConnected() error {
-	// not in use in macOS implementation
-	return nil
-}
-
-func (o *OpenVPN) implOnDisconnected() error {
-	// not in use in macOS implementation
-	return nil
-}
-
-func (o *OpenVPN) implOnPause() error {
-	return dns.Pause(o.clientIP)
-}
-
-func (o *OpenVPN) implOnResume() error {
-	return dns.Resume(dns.DnsSettings{}, o.clientIP)
-}
-
-func (o *OpenVPN) implOnSetManualDNS(dnsCfg dns.DnsSettings) error {
-	return dns.SetManual(dnsCfg, nil)
-}
-
-func (o *OpenVPN) implOnResetManualDNS() error {
-	return dns.DeleteManual(o.DefaultDNS(), nil)
-}
-
-func (o *OpenVPN) implGetUpDownScriptArgs() string {
-	return ""
+	StateLanAllowed bool // real state of 'Allow LAN'
 }

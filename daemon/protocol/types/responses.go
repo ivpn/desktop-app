@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -208,12 +208,7 @@ type AccountStatusResp struct {
 // KillSwitchStatusResp returns kill-switch status
 type KillSwitchStatusResp struct {
 	CommandBase
-	IsEnabled         bool
-	IsPersistent      bool
-	IsAllowLAN        bool
-	IsAllowMulticast  bool
-	IsAllowApiServers bool
-	UserExceptions    string // Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
+	service_types.KillSwitchStatus
 }
 
 // KillSwitchGetIsPestistentResp returns kill-switch persistance status

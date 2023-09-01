@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -34,6 +34,43 @@ var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("netinf")
+}
+
+var (
+	// Define the non-routable address ranges
+	_localNonRoutableRanges []net.IPNet = []net.IPNet{
+		{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(8, 32)},     // IPv4 private range (RFC 1918)
+		{IP: net.ParseIP("172.16.0.0"), Mask: net.CIDRMask(12, 32)},  // IPv4 private range (RFC 1918)
+		{IP: net.ParseIP("192.168.0.0"), Mask: net.CIDRMask(16, 32)}, // IPv4 private range (RFC 1918)
+		{IP: net.ParseIP("169.254.0.0"), Mask: net.CIDRMask(16, 32)}, // IPv4 auto-IP range (RFC 3927)
+		{IP: net.ParseIP("fc00::"), Mask: net.CIDRMask(7, 128)},      // IPv6 Unique Local Address (ULA) (RFC 4193)
+		{IP: net.ParseIP("fe80::"), Mask: net.CIDRMask(10, 128)},     // IPv6 Link-Local Address (RFC 4291)
+	}
+
+	_multicastAddresses []net.IPNet = []net.IPNet{
+		{IP: net.ParseIP("240.0.0.0"), Mask: net.CIDRMask(4, 32)}, //IPv4 Multicast Addresses
+		{IP: net.ParseIP("ff::"), Mask: net.CIDRMask(8, 128)},     //IPv6 Multicast Addresses
+	}
+)
+
+// IsLocalNonRoutableIP checks if an 'ip' address is within one of the local non-routable ranges.
+func IsLocalNonRoutableIP(ip net.IP) bool {
+	for _, localRange := range _localNonRoutableRanges {
+		if localRange.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetNonRoutableLocalAddrRanges retrieves all the non-routable address ranges.
+func GetNonRoutableLocalAddrRanges() []net.IPNet {
+	return append([]net.IPNet{}, _localNonRoutableRanges...)
+}
+
+// GetMulticastAddresses retrieves all the multicast address ranges.
+func GetMulticastAddresses() []net.IPNet {
+	return append([]net.IPNet{}, _multicastAddresses...)
 }
 
 // DefaultGatewayIP - returns: default gatewat IP
@@ -161,26 +198,24 @@ func GetInterfaceByIndex(index int) (*net.Interface, error) {
 }
 
 // GetAllLocalV4Addresses - returns IPv4 addresses of all local interfaces
+// Note: it returns only non-routable local addresses!
 func GetAllLocalV4Addresses() ([]net.IPNet, error) {
 	return getAllLocalAddresses(nil, false)
 }
 
 // GetAllLocalV6Addresses - returns IPv6 addresses of all local interfaces
+// Note: it returns only non-routable local addresses!
 func GetAllLocalV6Addresses() ([]net.IPNet, error) {
 	return getAllLocalAddresses(nil, true)
 }
 
-/*
-// GetInterfaceV4Addresses - returns IPv4 addresses of the local interface
-func GetInterfaceV4Addresses(inf net.Interface) ([]net.IPNet, error) {
-	return getAllLocalAddresses([]net.Interface{inf}, false)
-}
-
-// GetInterfaceV6Addresses - returns IPv6 addresses of the local interfaces
-func GetInterfaceV6Addresses(inf net.Interface) ([]net.IPNet, error) {
-	return getAllLocalAddresses([]net.Interface{inf}, true)
-}*/
-
+// getAllLocalAddresses - returns all local addresses of all available interfaces.
+//
+// Note: it returns only non-routable local addresses!
+// (this prevents potential vulnerabilities when attacker can manipulate with routing table)
+//
+// * ifaces - list of interfaces to check, if nil then all available interfaces will be checked;
+// * if isIPv6 is true, then IPv6 addresses will be returned, otherwise IPv4;
 func getAllLocalAddresses(ifaces []net.Interface, isIPv6 bool) ([]net.IPNet, error) {
 	ret := make([]net.IPNet, 0, 8)
 
@@ -197,10 +232,6 @@ func getAllLocalAddresses(ifaces []net.Interface, isIPv6 bool) ([]net.IPNet, err
 			continue
 		}
 
-		//if (ifs.Flags & net.FlagLoopback) > 0 {
-		//	continue
-		//}
-
 		addrs, _ := ifs.Addrs()
 		if addrs == nil {
 			continue
@@ -214,7 +245,13 @@ func getAllLocalAddresses(ifaces []net.Interface, isIPv6 bool) ([]net.IPNet, err
 				ip = v
 			}
 
-			if ip == nil {
+			if ip == nil || ip.IP.IsUnspecified() {
+				continue
+			}
+
+			// Ensure that IP is local NON-routable address
+			// This prevents potential vulnerability when attacker can manipulate with routing table
+			if !IsLocalNonRoutableIP(ip.IP) {
 				continue
 			}
 

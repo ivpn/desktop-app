@@ -4,7 +4,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the UI for IVPN Client Desktop.
 //

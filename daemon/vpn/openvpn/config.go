@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -25,7 +25,6 @@ package openvpn
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -179,7 +178,7 @@ func (c *ConnectionParams) generateConfiguration(
 
 		if len(proxyAuthFileData) > 0 {
 			proxyAuthFile = "\"" + platform.OpenvpnProxyAuthFile() + "\""
-			err := ioutil.WriteFile(platform.OpenvpnProxyAuthFile(), []byte(proxyAuthFileData), 0600)
+			err := os.WriteFile(platform.OpenvpnProxyAuthFile(), []byte(proxyAuthFileData), 0600)
 			if err != nil {
 				log.Error(err)
 				return nil, fmt.Errorf("failed to save file with proxy credentials: %w", err)

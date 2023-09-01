@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -53,16 +53,10 @@ func (p *Protocol) OnKillSwitchStateChanged() {
 	}
 
 	// notify all clients about KillSwitch status
-	if isEnabled, isPersistant, isAllowLAN, isAllowLanMulticast, isAllowApiServers, fwUserExceptions, err := p._service.KillSwitchState(); err != nil {
+	if status, err := p._service.KillSwitchState(); err != nil {
 		log.Error(err)
 	} else {
-		p.notifyClients(&types.KillSwitchStatusResp{
-			IsEnabled:         isEnabled,
-			IsPersistent:      isPersistant,
-			IsAllowLAN:        isAllowLAN,
-			IsAllowMulticast:  isAllowLanMulticast,
-			IsAllowApiServers: isAllowApiServers,
-			UserExceptions:    fwUserExceptions})
+		p.notifyClients(&types.KillSwitchStatusResp{KillSwitchStatus: status})
 	}
 }
 

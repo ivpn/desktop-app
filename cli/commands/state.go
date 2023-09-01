@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the IVPN command line interface.
 //
@@ -81,7 +81,7 @@ func showState() error {
 	if !stStatus.IsFunctionalityNotAvailable {
 		printSplitTunState(w, true, false, stStatus.IsEnabled, stStatus.SplitTunnelApps, stStatus.RunningApps)
 	}
-	printFirewallState(w, fwstate.IsEnabled, fwstate.IsPersistent, fwstate.IsAllowLAN, fwstate.IsAllowMulticast, fwstate.IsAllowApiServers, fwstate.UserExceptions, &state)
+	printFirewallState(w, fwstate.IsEnabled, fwstate.IsPersistent, fwstate.StateLanAllowed, fwstate.IsAllowMulticast, fwstate.IsAllowApiServers, fwstate.UserExceptions, &state)
 	w.Flush()
 
 	// TIPS

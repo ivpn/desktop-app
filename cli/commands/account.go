@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the IVPN command line interface.
 //
@@ -54,7 +54,7 @@ func (c *CmdLogout) Run() error {
 	return doLogout(c.disableFirewall, c.resetAppSettingsToDefaults)
 }
 
-//----------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------
 type CmdLogin struct {
 	flags.CmdInfo
 	accountID string

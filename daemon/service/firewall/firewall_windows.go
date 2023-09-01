@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -269,14 +269,10 @@ func doEnable() (retErr error) {
 		return nil
 	}
 
-	localAddressesV6, err := netinfo.GetAllLocalV6Addresses()
-	if err != nil {
-		return fmt.Errorf("failed to get all local IPv6 addresses: %w", err)
-	}
-	localAddressesV4, err := netinfo.GetAllLocalV4Addresses()
-	if err != nil {
-		return fmt.Errorf("failed to get all local IPv4 addresses: %w", err)
-	}
+	localAddressesV6 := filterIPNetList(netinfo.GetNonRoutableLocalAddrRanges(), true)
+	localAddressesV4 := filterIPNetList(netinfo.GetNonRoutableLocalAddrRanges(), false)
+	multicastAddressesV6 := filterIPNetList(netinfo.GetMulticastAddresses(), true)
+	multicastAddressesV4 := filterIPNetList(netinfo.GetMulticastAddresses(), false)
 
 	provider := winlib.CreateProvider(providerKey, providerDName, "", isPersistant)
 	sublayer := winlib.CreateSubLayer(sublayerKey, providerKey,
@@ -329,9 +325,8 @@ func doEnable() (retErr error) {
 		}
 
 		ipv6loopback := net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}     // LOOPBACK 		::1/128
-		ipv6llocal := net.IP{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // LINKLOCAL		fe80::/10
-		// ipv6slocal := net.IP{0xfe, 0xc0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // SITELOCAL	fec0::/10
-		// ipv6ulocal := net.IP{0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}    // UNIQUELOCAL	fd00::/8
+		ipv6llocal := net.IP{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // LINKLOCAL		fe80::/10 // TODO: "fe80::/10" is already part of localAddressesV6. To think: do we need it here?
+
 		_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ipv6loopback, 128, isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow remote IP' for ipv6loopback: %w", err)
@@ -348,6 +343,17 @@ func doEnable() (retErr error) {
 				_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ip.IP, byte(prefixLen), isPersistant))
 				if err != nil {
 					return fmt.Errorf("failed to add filter 'allow lan IPv6': %w", err)
+				}
+			}
+
+			// Multicast
+			if isAllowLANMulticast {
+				for _, ip := range multicastAddressesV6 {
+					prefixLen, _ := ip.Mask.Size()
+					_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIPV6(providerKey, layer, sublayerKey, filterDName, "", ip.IP, byte(prefixLen), isPersistant))
+					if err != nil {
+						return fmt.Errorf("failed to add filter 'allow LAN multicast IPv6': %w", err)
+					}
 				}
 			}
 		}
@@ -446,14 +452,15 @@ func doEnable() (retErr error) {
 					return fmt.Errorf("failed to add filter 'allow LAN': %w", err)
 				}
 			}
-		}
 
-		// Multicast
-		if isAllowLANMulticast {
-			_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIP(providerKey, layer, sublayerKey, filterDName, "",
-				net.IPv4(224, 0, 0, 0), net.IPv4(240, 0, 0, 0), isPersistant))
-			if err != nil {
-				return fmt.Errorf("failed to add filter 'allow lan-multicast': %w", err)
+			// Multicast
+			if isAllowLANMulticast {
+				for _, ip := range multicastAddressesV4 {
+					_, err = manager.AddFilter(winlib.NewFilterAllowRemoteIP(providerKey, layer, sublayerKey, filterDName, "", ip.IP, net.IP(ip.Mask), isPersistant))
+					if err != nil {
+						return fmt.Errorf("failed to add filter 'allow LAN': %w", err)
+					}
+				}
 			}
 		}
 

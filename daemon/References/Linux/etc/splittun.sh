@@ -6,7 +6,7 @@
 #  https://github.com/ivpn/desktop-app/daemon
 #
 #  Created by Stelnykovych Alexandr.
-#  Copyright (c) 2021 Privatus Limited.
+#  Copyright (c) 2023 IVPN Limited.
 #
 #  This file is part of the Daemon for IVPN Client Desktop.
 #
@@ -675,7 +675,7 @@ else
     echo "It is a part of Daemon for IVPN Client Desktop."
     echo "https://github.com/ivpn/desktop-app/daemon"
     echo "Created by Stelnykovych Alexandr."
-    echo "Copyright (c) 2021 Privatus Limited."
+    echo "Copyright (c) 2023 IVPN Limited."
     echo ""
     echo "Usage:"
     echo "Note! The script have to be started under privilaged user (sudo $0 ...)"

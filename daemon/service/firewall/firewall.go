@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -52,6 +52,9 @@ var (
 
 	// List of IP masks that are allowed for any communication
 	userExceptions []net.IPNet
+
+	stateAllowLan          bool
+	stateAllowLanMulticast bool
 )
 
 // Initialize is doing initialization stuff
@@ -107,7 +110,7 @@ func SetPersistant(persistant bool) error {
 	return err
 }
 
-// GetEnabled - get firewall state
+// GetEnabled - get firewall status enabled/disabled
 func GetEnabled() (bool, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -118,6 +121,18 @@ func GetEnabled() (bool, error) {
 	}
 
 	return ret, err
+}
+
+func GetState() (isEnabled, isLanAllowed, isMulticatsAllowed bool, err error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	ret, err := implGetEnabled()
+	if err != nil {
+		log.Error("Status check error: ", err)
+	}
+
+	return ret, stateAllowLan, stateAllowLanMulticast, err
 }
 
 // ClientPaused saves info about paused state of vpn
@@ -206,6 +221,9 @@ func RemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool
 func AllowLAN(allowLan bool, allowLanMulticast bool) error {
 	mutex.Lock()
 	defer mutex.Unlock()
+
+	stateAllowLan = allowLan
+	stateAllowLanMulticast = allowLanMulticast
 
 	log.Info(fmt.Sprintf("allowLan:%t allowMulticast:%t", allowLan, allowLanMulticast))
 

@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2020 Privatus Limited.
+//  Copyright (c) 2023 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -43,19 +42,6 @@ var (
 	// key: is a string representation of allowed IP
 	// value: true - if exception rule is persistant (persistant, means will stay available even client is disconnected)
 	allowedHosts map[string]bool
-
-	delayedAllowLanAllowed bool = true
-	delayedAllowLanStarted bool = false
-)
-
-const (
-	multicastIP = "224.0.0.0/4"
-
-	// An IPv6 local addresses
-	// Apple services is using IPv6 addressing (AirDrop, UniversalClipboard, HandOff, CallForwarding iPhone<->Mac ...)
-	// AirDrop is using 'awdl0' interface
-	// Rest Apple services are using 'utun0', 'utun1'... 'utunX'...
-	localhostIPv6 = "fe80::/64"
 )
 
 func init() {
@@ -147,84 +133,32 @@ func implClientDisconnected() error {
 }
 
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
-	localIPs, err := getLanIPs()
-	if err != nil {
-		return fmt.Errorf("failed to get local IPs: %w", err)
-	}
-
 	// the rule should stay unchanged independently from VPN connection state
 	isPersistent := true
+	localRanges := ipNetListToStrings(netinfo.GetNonRoutableLocalAddrRanges())
+	multicastRanges := ipNetListToStrings(netinfo.GetMulticastAddresses())
 
 	if !isAllowLAN {
-		// LAN NOT ALLOWED
-		delayedAllowLanAllowed = false
-		// disallow everything (LAN + multicast)
-		return removeHostsFromExceptions(append(localIPs, multicastIP), isPersistent)
+		// LAN NOT ALLOWED: disallow everything (LAN + multicast)
+		return removeHostsFromExceptions(append(localRanges, multicastRanges...), isPersistent)
 	}
 
 	// LAN ALLOWED
-	if len(localIPs) > 0 {
-		delayedAllowLanAllowed = false
-	} else {
-		// this can happen, for example, on system boot (when no network interfaces initialized)
-		log.Info("Local LAN addresses not detected: no data to apply the 'Allow LAN' rule")
-		go delayedAllowLAN(isAllowLanMulticast)
-		return nil
-	}
-
-	// An IPv6 local addresses
-	// Apple services is using IPv6 addressing (AirDrop, UniversalClipboard, HandOff, CallForwarding iPhone<->Mac ...)
-	// AirDrop is using 'awdl0' interface
-	// Rest Apple services are using 'utun0', 'utun1'... 'utunX'...
-	localIPs = append(localIPs, localhostIPv6)
-
+	rangesToAllow := localRanges
 	if isAllowLanMulticast {
-		// allow LAN + multicast
-		return addHostsToExceptions(append(localIPs, multicastIP), isPersistent)
+		rangesToAllow = append(rangesToAllow, multicastRanges...)
+	} else {
+		removeHostsFromExceptions(multicastRanges, isPersistent) // disallow Multicast
 	}
-
-	// disallow Multicast
-	removeHostsFromExceptions([]string{multicastIP}, isPersistent)
-	// allow LAN
-	return addHostsToExceptions(localIPs, isPersistent)
-}
-
-func delayedAllowLAN(isAllowLanMulticast bool) {
-	if delayedAllowLanStarted || !delayedAllowLanAllowed {
-		return
-	}
-	log.Info("Delayed 'Allow LAN': Will try to apply this rule few seconds later...")
-	delayedAllowLanStarted = true
-
-	defer func() { delayedAllowLanAllowed = false }()
-	for i := 0; i < 25 && delayedAllowLanAllowed; i++ {
-		time.Sleep(time.Second)
-		ipList, err := getLanIPs()
-		if err != nil {
-			log.Warning(fmt.Errorf("delayed 'Allow LAN': failed to get local IPs: %w", err))
-			return
-		}
-		if len(ipList) > 0 {
-			time.Sleep(time.Second) // just to ensure that everything initialized
-			if delayedAllowLanAllowed {
-				log.Info("Delayed 'Allow LAN': apply ...")
-				err := implAllowLAN(true, isAllowLanMulticast)
-				if err != nil {
-					log.Warning(fmt.Errorf("delayed 'Allow LAN' error: %w", err))
-				}
-			}
-			return
-		}
-	}
-	log.Info("Delayed 'Allow LAN': no LAN interfaces detected")
+	return addHostsToExceptions(rangesToAllow, isPersistent)
 }
 
 // implAddHostsToExceptions - allow comminication with this hosts
 // Note: if isPersistent == false -> all added hosts will be removed from exceptions after client disconnection (after call 'ClientDisconnected()')
 // Arguments:
-//	* IPs			-	list of IP addresses to ba allowed
-//	* onlyForICMP	-	(not in use for macOS) try add rule to allow only ICMP protocol for this IP
-//	* isPersistent	-	keep rule enabled even if VPN disconnected
+//   - IPs			-	list of IP addresses to ba allowed
+//   - onlyForICMP	-	(not in use for macOS) try add rule to allow only ICMP protocol for this IP
+//   - isPersistent	-	keep rule enabled even if VPN disconnected
 func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
 	IPsStr := make([]string, 0, len(IPs))
 	for _, ip := range IPs {
@@ -399,7 +333,8 @@ func removeHostsFromExceptions(IPs []string, isPersistant bool) error {
 
 // removeAllHostsFromExceptions - Remove hosts (which are related to a current connection) from exceptions
 // Note: some exceptions should stay without changes, they are marked as 'persistant'
-//		(has 'true' value in allowedHosts; eg.: LAN and Multicast connectivity)
+//
+//	(has 'true' value in allowedHosts; eg.: LAN and Multicast connectivity)
 func removeAllHostsFromExceptions() error {
 	toRemoveIPs := make([]string, 0, len(allowedHosts))
 	for ipStr := range allowedHosts {
@@ -407,53 +342,4 @@ func removeAllHostsFromExceptions() error {
 	}
 	isPersistant := false
 	return removeHostsFromExceptions(toRemoveIPs, isPersistant)
-}
-
-//---------------------------------------------------------------------
-
-// getLanIPs - returns list of local IPs
-func getLanIPs() ([]string, error) {
-
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get network interfaces: %w", err)
-	}
-
-	retIps := make([]string, 0, 4)
-
-	for _, ifs := range ifaces {
-		addrs, _ := ifs.Addrs()
-		if addrs == nil {
-			continue
-		}
-
-		// Skip local tunnel addresses as they are not a real LAN addresses
-		if strings.Contains(ifs.Name, "tun") {
-			continue
-		}
-
-		for _, addr := range addrs {
-			addrStr := addr.String()
-			if addrStr == "" {
-				continue
-			}
-
-			// Skip local interface - we have separate rules for local iface
-			if strings.HasPrefix(addrStr, "127.") {
-				continue
-			}
-
-			// ensure IP is IPv4
-			ipaddrStr := strings.Split(addrStr, "/")[0] // 192.168.1.106/24 => 192.168.1.106
-			ip := net.ParseIP(ipaddrStr)
-			if ip.To4() == nil {
-				// skip non IPv4
-				continue
-			}
-
-			retIps = append(retIps, addrStr)
-		}
-	}
-
-	return retIps, nil
 }

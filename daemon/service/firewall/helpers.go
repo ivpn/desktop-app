@@ -20,45 +20,28 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-package openvpn
+package firewall
 
-import (
-	"github.com/ivpn/desktop-app/daemon/service/dns"
-)
+import "net"
 
-type platformSpecificProperties struct {
-	// no specific properties for macOS implementation
+// ipNetListToStrings - convert list of net.IPNet to list of strings (IPNet.String())
+func ipNetListToStrings(ipnetList []net.IPNet) []string {
+	result := make([]string, 0, len(ipnetList))
+	for _, ipnet := range ipnetList {
+		result = append(result, ipnet.String())
+	}
+	return result
 }
 
-func (o *OpenVPN) implInit() error             { return nil }
-func (o *OpenVPN) implIsCanUseParamsV24() bool { return true }
-
-func (o *OpenVPN) implOnConnected() error {
-	// not in use in macOS implementation
-	return nil
-}
-
-func (o *OpenVPN) implOnDisconnected() error {
-	// not in use in macOS implementation
-	return nil
-}
-
-func (o *OpenVPN) implOnPause() error {
-	return dns.Pause(o.clientIP)
-}
-
-func (o *OpenVPN) implOnResume() error {
-	return dns.Resume(dns.DnsSettings{}, o.clientIP)
-}
-
-func (o *OpenVPN) implOnSetManualDNS(dnsCfg dns.DnsSettings) error {
-	return dns.SetManual(dnsCfg, nil)
-}
-
-func (o *OpenVPN) implOnResetManualDNS() error {
-	return dns.DeleteManual(o.DefaultDNS(), nil)
-}
-
-func (o *OpenVPN) implGetUpDownScriptArgs() string {
-	return ""
+// Function filters list of net.IPNet accorting to IPv4/IPv6
+func filterIPNetList(ipnetList []net.IPNet, isIPv6 bool) []net.IPNet {
+	result := make([]net.IPNet, 0, len(ipnetList))
+	for _, ipnet := range ipnetList {
+		if isIPv6 && ipnet.IP.To4() == nil {
+			result = append(result, ipnet)
+		} else if !isIPv6 && ipnet.IP.To4() != nil {
+			result = append(result, ipnet)
+		}
+	}
+	return result
 }
