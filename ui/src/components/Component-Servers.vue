@@ -884,4 +884,18 @@ div.sortSelectedImg {
   left: 0px;
   min-width: 13px;
 }
+
+//------------------------------------------------------
+// in use for minimalistic UI
+// (reduced width and position shifted left)
+.popupMinShifted .popuptextMinShifted {
+  min-width: 160px;
+  max-width: 160px;
+  margin-left: -125px;
+}
+// in use for minimalistic UI (arrow location shifted right)
+.popupMinShifted .popuptextMinShifted::after {
+  margin-left: 32px;
+}
+//------------------------------------------------------
 </style>
