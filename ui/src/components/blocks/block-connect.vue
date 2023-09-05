@@ -76,6 +76,18 @@
           </div>
         </div>
       </div>
+      <button
+        class="noBordersTextBtn"
+        style="display: flex"
+        v-on:click="onSplitTunnelInfoClick"
+      >
+        <div
+          class="small_text_warning"
+          v-show="this.$store.getters['vpnState/isInverseSplitTunnel']"
+        >
+          Inverse Split Tunnel mode is active
+        </div>
+      </button>
     </div>
 
     <div class="buttons">
@@ -161,6 +173,8 @@
 </template>
 
 <script>
+const sender = window.ipcSender;
+
 import SwitchProgress from "@/components/controls/control-switch.vue";
 import imgPause from "@/components/images/img-pause.vue";
 import { GetTimeLeftText } from "@/helpers/renderer";
@@ -233,6 +247,9 @@ export default {
     },
   },
   methods: {
+    onSplitTunnelInfoClick() {
+      sender.ShowSplitTunnelSettings();
+    },
     onPauseMenuClickOutside() {
       this.isPauseExtendMenuShow = false;
       this.isPauseMenuAllowed = false;
@@ -308,6 +325,12 @@ $shadow: 0px 3px 1px rgba(0, 0, 0, 0.06),
   line-height: 17px;
   letter-spacing: -0.3px;
   color: var(--text-color-details);
+}
+
+.small_text_warning {
+  font-size: 12px;
+  letter-spacing: -0.3px;
+  color: var(--warning-color);
 }
 
 .settingsBtn {

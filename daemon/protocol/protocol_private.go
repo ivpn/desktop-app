@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -179,7 +180,7 @@ func (p *Protocol) sendError(conn net.Conn, errorText string, cmdIdx int) {
 
 func (p *Protocol) sendErrorResponse(conn net.Conn, request types.RequestBase, err error) {
 	log.Error(fmt.Sprintf("%sError processing request '%s': %s", p.connLogID(conn), request.Command, err))
-	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: err.Error()}, request.Idx)
+	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: helpers.CapitalizeFirstLetter(err.Error())}, request.Idx)
 }
 
 func (p *Protocol) sendResponse(conn net.Conn, cmd types.ICommandBase, idx int) (retErr error) {

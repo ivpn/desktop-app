@@ -317,6 +317,9 @@ export default {
   ShowAntitrackerSettings: function () {
     ipcRenderer.send("renderer-request-show-settings-antitracker");
   },
+  ShowSplitTunnelSettings: function () {
+    ipcRenderer.send("renderer-request-show-settings-SplitTunnel");
+  },
 
   // CONTEXT MENU
   ShowContextMenuCopy: function () {

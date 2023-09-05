@@ -20,6 +20,9 @@
       description="Ensure that all traffic is routed through VPN"
       :onChecked="firewallOnChecked"
       :isChecked="this.$store.state.vpnState.firewallState.IsEnabled"
+      :switcherOpacity="
+        this.$store.getters['vpnState/isInverseSplitTunnel'] ? 0.4 : 1
+      "
       :checkedColor="
         this.$store.state.vpnState.firewallState.IsPersistent
           ? '#77152a77'
@@ -179,7 +182,7 @@ export default {
     WiFiMarkerColor: function () {
       if (this.wifiSSID == "") return null;
       const TRUSTED = "#64ad07";
-      const UNTRUSTED = "#FF6258";
+      const UNTRUSTED = "var(--warning-color)";
       const INSECURE = "darkorange";
       const NOTRUSTSTATUS = "var(--background-color-alternate)"; //"#BBBBBB";
       const trustState = this.getTrustInfoForCurrentWifi();

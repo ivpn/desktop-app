@@ -279,6 +279,12 @@ export default {
       if (!state.connectionInfo || !state.connectionInfo.IsPaused) return false;
       return state.connectionInfo.IsPaused;
     },
+    isInverseSplitTunnel: (state) => {
+      if (!state.splitTunnelling) return false;
+      return (
+        state.splitTunnelling.IsInversed && state.splitTunnelling.IsEnabled
+      );
+    },
     vpnStateText: (state) => {
       return enumValueName(VpnStateEnum, state.connectionState);
     },

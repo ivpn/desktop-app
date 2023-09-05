@@ -81,7 +81,7 @@ func (s *Service) implPingServersStopped(hosts []net.IP) error {
 
 func (s *Service) implSplitTunnelling_AddApp(execCmd string) (requiredCmdToExec string, isAlreadyRunning bool, err error) {
 	if !s._preferences.IsSplitTunnel {
-		return "", false, fmt.Errorf("unable to run application in Split Tunneling environment: Split Tunneling is disabled")
+		return "", false, fmt.Errorf("unable to run application in Split Tunnel environment: Split Tunnel is disabled")
 	}
 	execCmd = strings.TrimSpace(execCmd)
 	if len(execCmd) <= 0 {

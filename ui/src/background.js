@@ -122,6 +122,9 @@ ipcMain.on("renderer-request-show-settings-firewall", () => {
 ipcMain.on("renderer-request-show-settings-antitracker", () => {
   showSettings("antitracker");
 });
+ipcMain.on("renderer-request-show-settings-SplitTunnel", () => {
+  showSettings("splittunnel");
+});
 ipcMain.handle("renderer-request-connect-to-daemon", async () => {
   return await connectToDaemon();
 });

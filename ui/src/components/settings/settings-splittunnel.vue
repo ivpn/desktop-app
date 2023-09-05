@@ -60,17 +60,21 @@
           ref="checkboxIsSTInversed"
           type="checkbox"
           id="isSTInversed"
-          v-model="isSTInversed"
-          :disabled="isSTEnabled !== true"
+          v-model="stInversedLocal"
+          @change="onSTInversedChange"
         />
-        <label class="defColor" for="isSTInversed">Inverse mode</label>
+        <label class="defColor" for="isSTInversed">Inverse mode (BETA)</label>
       </div>
       <div class="fwDescription" style="margin-top: 0px; margin-bottom: 0px">
-        When activated alongside the
-        <b class="settingsGrayLongDescriptionFont">Split Tunnel</b> option, it
-        reverses the split tunneling behavior. Specified applications utilize
-        the VPN connection, while all other traffic circumvents the VPN, using
-        the default connection.
+        When activated (alongside the Split Tunnel option), it reverses the
+        split tunneling behavior. Specified applications utilize the VPN
+        connection, while
+        <b class="settingsGrayLongDescriptionFont"
+          >all other traffic circumvents the VPN, using the default connection </b
+        >.
+        <br />
+        <b class="settingsGrayLongDescriptionFont">Warning:</b>
+        The IVPN Firewall is not functional when this feature is enabled.
       </div>
     </div>
 
@@ -328,6 +332,8 @@ export default {
 
   data: function () {
     return {
+      stInversedLocal: false,
+
       isLoadingAllApps: false,
       isShowAppAddPopup: false,
 
@@ -359,6 +365,8 @@ export default {
   },
 
   async mounted() {
+    this.stInversedLocal = this.isSTInversed;
+
     // show base information about splitted apps immediately
     //this.updateAppsToShow();
 
@@ -386,6 +394,10 @@ export default {
   },
 
   watch: {
+    isSTInversed() {
+      this.stInversedLocal = this.isSTInversed;
+    },
+
     STConfig() {
       if (this.$refs.checkboxIsSTEnabled) {
         // we have to update checkbox manually
@@ -401,6 +413,41 @@ export default {
   },
 
   methods: {
+    async onSTInversedChange() {
+      let cancel = false;
+
+      if (this.isSTInversed === false) {
+        // going to enable
+        let ret = await sender.showMessageBoxSync(
+          {
+            type: "warning",
+            message: `Enabling Inverse mode for Split Tunnel`,
+            detail:
+              "By enabling Inverse Split Tunnel, only specified apps will use the VPN tunnel while the rest of your system will keep using the default connection, bypassing the VPN tunnel.\n\
+Note! The IVPN Firewall is not functional when this feature is enabled.\n\n\
+Do you want to enable Inverse mode for Split Tunnel?",
+            buttons: ["Enable", "Cancel"],
+          },
+          true
+        );
+        if (ret == 1) cancel = true; // cancel
+      }
+
+      if (!cancel) {
+        try {
+          await sender.SplitTunnelSetConfig(
+            this.isSTEnabled,
+            !this.isSTInversed
+          );
+        } catch (e) {
+          processError(e);
+        }
+      }
+
+      // ensure local value is sunced with data from storage
+      // AND ensure the that UI state of check box updated!
+      this.stInversedLocal = this.isSTInversed;
+    },
     isRunningAppsAvailable() {
       let stStatus = this.$store.state.vpnState.splitTunnelling;
       return (
@@ -682,19 +729,10 @@ export default {
       },
     },
 
-    isSTInversed: {
-      get() {
-        return this.$store.state.vpnState.splitTunnelling?.IsInversed;
-      },
-      async set(value) {
-        try {
-          await sender.SplitTunnelSetConfig(this.isSTEnabled, value);
-        } catch (e) {
-          processError(e);
-        }
-      },
+    // needed for 'watch'
+    isSTInversed: function () {
+      return this.$store.state.vpnState.splitTunnelling?.IsInversed;
     },
-
     // needed for 'watch'
     STConfig: function () {
       return this.$store.state.vpnState.splitTunnelling;

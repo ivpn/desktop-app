@@ -70,9 +70,9 @@ func implInitialize() error {
 	// check if ST functionality accessible
 	outProcessFunc := func(text string, isError bool) {
 		if isError {
-			log.Error("Split Tunneling test: " + text)
+			log.Error("Split Tunnel test: " + text)
 		} else {
-			log.Info("Split Tunneling test: " + text)
+			log.Info("Split Tunnel test: " + text)
 		}
 	}
 	err := shell.ExecAndProcessOutput(nil, outProcessFunc, "", stScriptPath, "test")
@@ -144,10 +144,10 @@ func implAddPid(pid int, commandToExecute string) error {
 
 	enabled, err := isEnabled()
 	if err != nil {
-		return fmt.Errorf("unable to check Split Tunneling status")
+		return fmt.Errorf("unable to check Split Tunnel status")
 	}
 	if !enabled {
-		return fmt.Errorf("the Split Tunneling is disabled")
+		return fmt.Errorf("the Split Tunnel is disabled")
 	}
 
 	err = shell.Exec(nil, stScriptPath, "addpid", strconv.Itoa(pid))
@@ -368,9 +368,9 @@ func enable(isEnable, isStInversed bool) error {
 		}
 		err = shell.Exec(log, stScriptPath, "stop")
 		if err != nil {
-			return fmt.Errorf("failed to disable Split Tunneling: %w", err)
+			return fmt.Errorf("failed to disable Split Tunnel: %w", err)
 		}
-		log.Info("Split Tunneling disabled")
+		log.Info("Split Tunnel disabled")
 	} else {
 		inversedArg := ""
 		if isStInversed {
@@ -385,9 +385,9 @@ func enable(isEnable, isStInversed bool) error {
 			// if ST start failed - clean everything (by command 'stop')
 			shell.Exec(nil, stScriptPath, "stop")
 
-			return fmt.Errorf("failed to enable Split Tunneling: %w", err)
+			return fmt.Errorf("failed to enable Split Tunnel: %w", err)
 		}
-		log.Info("Split Tunneling enabled")
+		log.Info("Split Tunnel enabled")
 	}
 
 	isActive = isEnable

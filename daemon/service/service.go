@@ -897,7 +897,7 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 		return fmt.Errorf("unable to change the firewall state while connection is paused, please resume the connection first")
 	}
 	if isEnabled && s._preferences.IsInverseSplitTunneling() {
-		return fmt.Errorf("firewall cannot be enabled while Inverse Split Tunneling is active; please disable Inverse Split Tunneling first")
+		return fmt.Errorf("firewall cannot be enabled while Inverse Split Tunnel is active; please disable Inverse Split Tunnel first")
 	}
 
 	err := firewall.SetEnabled(isEnabled)
@@ -939,7 +939,7 @@ func (s *Service) SetKillSwitchIsPersistent(isPersistant bool) error {
 	}
 
 	if isPersistant && s._preferences.IsInverseSplitTunneling() {
-		return fmt.Errorf("firewall cannot be enabled while Inverse Split Tunneling is active; please disable Inverse Split Tunneling first")
+		return fmt.Errorf("firewall cannot be enabled while Inverse Split Tunnel is active; please disable Inverse Split Tunnel first")
 	}
 
 	prefs := s._preferences
@@ -1214,7 +1214,7 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, reset bool) e
 	if isEnabled && isInversed {
 		// if we are going to enable INVERSE SplitTunneling - ensure that Firewall is disabled
 		if enabled, _ := s.FirewallEnabled(); enabled {
-			return fmt.Errorf("unable to enable Inverse Split Tunneling: Firewall is enabled")
+			return fmt.Errorf("unable to activate Inverse Split Tunnel: the Firewall is enabled; please, disable IVPN Firewall first")
 		}
 	}
 
@@ -1280,7 +1280,7 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 
 func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error) {
 	if !s._preferences.IsSplitTunnel {
-		return "", false, fmt.Errorf("unable to run application in Split Tunneling environment: Split Tunneling is disabled")
+		return "", false, fmt.Errorf("unable to run application in Split Tunnel environment: Split Tunnel is disabled")
 	}
 	// apply ST configuration after function ends
 	defer s.splitTunnelling_ApplyConfig()

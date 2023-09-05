@@ -739,7 +739,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 						if s._preferences.IsInverseSplitTunneling() {
 							// Inversed split-tunneling: disable monitoring of the default route to the VPN server.
 							// Note: the monitoring must be enabled as soon as the inverse split-tunneling is disabled!
-							log.Info("Disabled the monitoring of the default route to the VPN server due to Inverse Split-Tunneling")
+							log.Info("Disabled the monitoring of the default route to the VPN server due to Inverse Split-Tunnel")
 						} else {
 							log.Info("Starting route change detection")
 							if err := s._netChangeDetector.Start(); err != nil {
