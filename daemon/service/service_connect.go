@@ -519,13 +519,13 @@ func (s *Service) keepConnection(originalEntryServerInfo *svrConnInfo, createVpn
 		lastConnectionTryTime := time.Now()
 
 		// get actual DNS configuration
-		dns, antitracker, _, err := s.GetDefaultDnsParams()
+		manualDns, antitracker, _, err := s.GetDefaultManualDnsParams()
 		if err != nil {
 			return fmt.Errorf("failed to get DNS settings: %w", err)
 		}
 
 		// start connection
-		connErr := s.connect(originalEntryServerInfo, vpnObj, dns, antitracker, firewallOn, firewallDuringConnection)
+		connErr := s.connect(originalEntryServerInfo, vpnObj, manualDns, antitracker, firewallOn, firewallDuringConnection)
 		if connErr != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", connErr))
 			if s._requiredVpnState == Connect {

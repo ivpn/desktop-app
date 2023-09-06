@@ -7,7 +7,8 @@
         ref="checkboxIsSTEnabled"
         type="checkbox"
         id="isSTEnabled"
-        v-model="isSTEnabled"
+        v-model="isSTEnabledLocal"
+        @change="onSTEnabledChange"
       />
       <label class="defColor" for="isSTEnabled">Split Tunnel</label>
     </div>
@@ -332,6 +333,7 @@ export default {
 
   data: function () {
     return {
+      isSTEnabledLocal: false,
       stInversedLocal: false,
 
       isLoadingAllApps: false,
@@ -365,6 +367,7 @@ export default {
   },
 
   async mounted() {
+    this.isSTEnabledLocal = this.isSTEnabled;
     this.stInversedLocal = this.isSTInversed;
 
     // show base information about splitted apps immediately
@@ -394,6 +397,9 @@ export default {
   },
 
   watch: {
+    isSTEnabled() {
+      this.isSTEnabledLocal = this.isSTEnabled;
+    },
     isSTInversed() {
       this.stInversedLocal = this.isSTInversed;
     },
@@ -413,6 +419,18 @@ export default {
   },
 
   methods: {
+    async onSTEnabledChange() {
+      try {
+        await sender.SplitTunnelSetConfig(!this.isSTEnabled, this.isSTInversed);
+      } catch (e) {
+        processError(e);
+      }
+
+      // ensure local value is sunced with data from storage
+      // AND ensure the that UI state of check box updated!
+      this.isSTEnabledLocal = this.isSTEnabled;
+    },
+
     async onSTInversedChange() {
       let cancel = false;
 
@@ -716,19 +734,10 @@ Do you want to enable Inverse mode for Split Tunnel?",
       return this.$store.getters["isSplitTunnelInverseEnabled"];
     },
 
-    isSTEnabled: {
-      get() {
-        return this.$store.state.vpnState.splitTunnelling?.IsEnabled;
-      },
-      async set(value) {
-        try {
-          await sender.SplitTunnelSetConfig(value, this.isSTInversed);
-        } catch (e) {
-          processError(e);
-        }
-      },
+    // needed for 'watch'
+    isSTEnabled: function () {
+      return this.$store.state.vpnState.splitTunnelling?.IsEnabled;
     },
-
     // needed for 'watch'
     isSTInversed: function () {
       return this.$store.state.vpnState.splitTunnelling?.IsInversed;

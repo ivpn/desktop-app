@@ -65,8 +65,8 @@ var (
 
 // 'blackhole' IP addresses. Used for forwarding all traffic of split-tunnel apps to 'nowhere' (in fact, to block traffic)
 const (
-	BlackHoleIPv4 = "192.0.2.255"
-	BlackHoleIPv6 = "::/96"
+	BlackHoleIPv4 = "192.0.2.255" // RFC 5737 - IPv4 Address Blocks Reserved for Documentation
+	BlackHoleIPv6 = "0100::1"     // RFC 6666 - A Discard Prefix for IPv6
 )
 
 type ConfigApps struct {

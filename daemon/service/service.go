@@ -694,16 +694,38 @@ func (s *Service) saveDefaultDnsParams(dnsCfg dns.DnsSettings, antiTrackerCfg ty
 	return s.setConnectionParams(defaultParams)
 }
 
-// GetDefaultDnsParams returns default DNS parameters
+// GetActiveDNS() eeturns DNS active settings for current VPN connection:
+// - if 'antiTracker' is enabled - returns DNS of AntiTracker server
+// - else if manual DNS is defined - returns manual DNS
+// - else returns default DNS configuration for current VPN connection
+// *Note! If VPN disconnected - returns empty data
+func (s *Service) GetActiveDNS() (dnsCfg dns.DnsSettings, err error) {
+	vpnObj := s._vpn
+	if vpnObj == nil {
+		return dns.DnsSettings{}, nil //VPN DISCONNECTED
+	}
+
+	_, _, manualDns, err := s.GetDefaultManualDnsParams()
+	if err != nil {
+		return dns.DnsSettings{}, err
+	}
+	if !manualDns.IsEmpty() {
+		return manualDns, nil
+	}
+
+	return dns.DnsSettingsCreate(vpnObj.DefaultDNS()), nil
+}
+
+// GetDefaultManualDnsParams returns default manual DNS parameters
 // Returns:
 //
-//	dnsCfg - default DNS parameters
+//	manualDnsCfg - default manual DNS parameters
 //	antiTrackerCfg - default AntiTracker parameters
 //	realDnsValue - real DNS value (if 'antiTracker' is enabled - it will contain DNS of AntiTracker server)
-func (s *Service) GetDefaultDnsParams() (dnsCfg dns.DnsSettings, antiTrackerCfg types.AntiTrackerMetadata, realDnsValue dns.DnsSettings, err error) {
+func (s *Service) GetDefaultManualDnsParams() (manualDnsCfg dns.DnsSettings, antiTrackerCfg types.AntiTrackerMetadata, realDnsValue dns.DnsSettings, err error) {
 	defaultParams := s.GetConnectionParams()
 
-	dnsCfg = defaultParams.ManualDNS
+	manualDnsCfg = defaultParams.ManualDNS
 	realDnsValue = defaultParams.ManualDNS
 	antiTrackerCfg = defaultParams.Metadata.AntiTracker
 
@@ -711,12 +733,19 @@ func (s *Service) GetDefaultDnsParams() (dnsCfg dns.DnsSettings, antiTrackerCfg 
 		realDnsValue, err = s.getAntiTrackerDns(antiTrackerCfg.Hardcore, antiTrackerCfg.AntiTrackerBlockListName)
 	}
 
-	return dnsCfg, antiTrackerCfg, realDnsValue, err
+	return manualDnsCfg, antiTrackerCfg, realDnsValue, err
 }
 
 // SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 // If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error) {
+	defer func() {
+		// Apply Firewall rule (for Inverse Split Tunnel): allow DNS requests only to IVPN servrers or to manually defined server
+		if err := s.splitTunnelling_ApplyConfig(); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	// Update default metadata
 	defaultParams := s.GetConnectionParams()
 	isChanged := false
@@ -1237,10 +1266,14 @@ func (s *Service) splitTunnelling_Reset() error {
 	return s.splitTunnelling_ApplyConfig()
 }
 
-// splitTunnelling_ApplyConfig() applies the required SplitTunnel configuration base on:
+// splitTunnelling_ApplyConfig() applies the required SplitTunnel configuration based on:
 // - current VPN connection state
-// - current SplitTunnel configuration (VPN and default interfaces addresses; Inverse SplitTunneling configuration and list of applications to be splitted)
-// It is important to call this function after VPN connection state changed or SplitTunnel configuration changed.
+// - current SplitTunnel config (VPN and default interfaces; InverseSplitTunneling config and splitted apps list)
+//
+// It is important to call this function after:
+// - VPN connection state changed
+// - SplitTunnel configuration changed
+// - DNS configuration changed (needed for updating Inverse Split Tunnel firewal rule)
 func (s *Service) splitTunnelling_ApplyConfig() error {
 	// notify changed ST configuration status (even if functionality not available)
 	defer s._evtReceiver.OnSplitTunnelStatusChanged()
@@ -1261,9 +1294,10 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 	} else {
 		defer func() {
 			// If inverse SplitTunneling is disabled - start detection of network changes (if it is not already started)
-			// Info: Network changes detection will not be started if VPN is not connected
-			if err := s._netChangeDetector.Start(); err != nil {
-				log.Error(fmt.Sprintf("Unable to start network changes detection: %v", err.Error()))
+			if s.Connected() {
+				if err := s._netChangeDetector.Start(); err != nil {
+					log.Error(fmt.Sprintf("Unable to start network changes detection: %v", err.Error()))
+				}
 			}
 		}()
 	}
@@ -1275,6 +1309,23 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 		IPv6Tunnel: sInf.VpnLocalIPv6,
 		IPv6Public: sInf.OutboundIPv6}
 
+	// Apply Firewall rule (for Inverse Split Tunnel): allow DNS requests only to IVPN servrers or to manually defined server
+	if err := firewall.SingleDnsRuleOff(); err != nil { // disable custom DNS rule (if exists)
+		log.Error(err)
+	}
+	if prefs.IsInverseSplitTunneling() {
+		dnsCfg, err := s.GetActiveDNS() // returns nil when VPN not connected
+		if err != nil {
+			return fmt.Errorf("failed to apply the firewall rule to allow DNS requests only to the IVPN server: %w", err)
+		}
+		if !dnsCfg.IsEmpty() {
+			if err := firewall.SingleDnsRuleOn(dnsCfg.Ip()); err != nil {
+				return fmt.Errorf("failed to apply the firewall rule to allow DNS requests only to the IVPN server: %w", err)
+			}
+		}
+	}
+
+	// Apply Split-Tun config
 	return splittun.ApplyConfig(prefs.IsSplitTunnel, prefs.IsInverseSplitTunneling(), s.Connected(), addressesCfg, prefs.SplitTunnelApps)
 }
 

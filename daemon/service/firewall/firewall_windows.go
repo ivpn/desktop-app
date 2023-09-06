@@ -35,8 +35,10 @@ import (
 )
 
 var (
-	providerKey = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x01}}
-	sublayerKey = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x02}}
+	providerKey          = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x01}}
+	sublayerKey          = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x02}}
+	providerKeySingleDns = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x03}}
+	sublayerKeySingleDns = syscall.GUID{Data1: 0xfed0afd4, Data2: 0x98d4, Data3: 0x4233, Data4: [8]byte{0xa4, 0xf3, 0x8b, 0x7c, 0x02, 0x44, 0x50, 0x04}}
 
 	v4Layers = []syscall.GUID{winlib.FwpmLayerAleAuthConnectV4, winlib.FwpmLayerAleAuthRecvAcceptV4}
 	v6Layers = []syscall.GUID{winlib.FwpmLayerAleAuthConnectV6, winlib.FwpmLayerAleAuthRecvAcceptV6}
@@ -51,9 +53,12 @@ var (
 )
 
 const (
-	providerDName = "IVPN Kill Switch"
-	sublayerDName = "IVPN Kill Switch Sub-Layer"
-	filterDName   = "IVPN Kill Switch filter"
+	providerDName          = "IVPN Kill Switch Provider"
+	sublayerDName          = "IVPN Kill Switch Sub-Layer"
+	filterDName            = "IVPN Kill Switch Filter"
+	providerDNameSingleDns = "IVPN Kill Switch Provider single DNS"
+	sublayerDNameSingleDns = "IVPN Kill Switch Sub-Layer single DNS"
+	filterDNameSingleDns   = "IVPN Kill Switch Filter single DNS"
 )
 
 // implInitialize doing initialization stuff (called on application start)
@@ -261,6 +266,8 @@ func reEnable() (retErr error) {
 }
 
 func doEnable() (retErr error) {
+	implSingleDnsRuleOff()
+
 	enabled, err := implGetEnabled()
 	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
@@ -305,21 +312,21 @@ func doEnable() (retErr error) {
 	// IPv6 filters
 	for _, layer := range v6Layers {
 		// block all
-		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", true, isPersistant, false))
+		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all", true, isPersistant, false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block all IPv6': %w", err)
 		}
 		if isPersistant {
 			// For 'persistant' state we have to add boot-time blocking rule
 			bootTime := true
-			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", true, false, bootTime))
+			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all (boot time)", true, false, bootTime))
 			if err != nil {
 				return fmt.Errorf("failed to add boot-time filter 'block all IPv6': %w", err)
 			}
 		}
 
 		// block DNS
-		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "", nil, isPersistant))
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "Block DNS", nil, isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
 		}
@@ -372,28 +379,28 @@ func doEnable() (retErr error) {
 	// IPv4 filters
 	for _, layer := range v4Layers {
 		// block all
-		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", false, isPersistant, false))
+		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all", false, isPersistant, false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block all': %w", err)
 		}
 		if isPersistant {
 			// For 'persistant' state we have to add boot-time blocking rule
 			bootTime := true
-			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "", false, false, bootTime))
+			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all (boot time)", false, false, bootTime))
 			if err != nil {
 				return fmt.Errorf("failed to add boot-time filter 'block all': %w", err)
 			}
 		}
 
 		// block DNS
-		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "", customDNS, isPersistant))
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "Block DNS", customDNS, isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
 		}
 		// allow DNS requests to 127.0.0.1:53
 		_, err = manager.AddFilter(winlib.AllowRemoteLocalhostDNS(providerKey, layer, sublayerKey, sublayerDName, "", isPersistant))
 		if err != nil {
-			return fmt.Errorf("failed to add filter 'block dns': %w", err)
+			return fmt.Errorf("failed to add filter 'allow localhost dns': %w", err)
 		}
 
 		// allow DHCP port
@@ -478,6 +485,8 @@ func doEnable() (retErr error) {
 }
 
 func doDisable() error {
+	implSingleDnsRuleOff()
+
 	enabled, err := implGetEnabled()
 	if err != nil {
 		return fmt.Errorf("failed to get info if firewall is on: %w", err)
@@ -604,4 +613,137 @@ func getUserExceptions(ipv4, ipv6 bool) []net.IPNet {
 		ret = append(ret, e)
 	}
 	return ret
+}
+
+func implSingleDnsRuleOff() (retErr error) {
+	pInfo, err := manager.GetProviderInfo(providerKeySingleDns)
+	if err != nil {
+		return fmt.Errorf("failed to get provider info: %w", err)
+	}
+	if !pInfo.IsInstalled {
+		return nil
+	}
+
+	// delete filters
+	for _, l := range v6Layers {
+		// delete filters and callouts registered for the provider+layer
+		if err := manager.DeleteFilterByProviderKey(providerKeySingleDns, l); err != nil {
+			return fmt.Errorf("failed to delete filter : %w", err)
+		}
+	}
+
+	for _, l := range v4Layers {
+		// delete filters and callouts registered for the provider+layer
+		if err := manager.DeleteFilterByProviderKey(providerKeySingleDns, l); err != nil {
+			return fmt.Errorf("failed to delete filter : %w", err)
+		}
+	}
+
+	// delete sublayer
+	installed, err := manager.IsSubLayerInstalled(sublayerKeySingleDns)
+	if err != nil {
+		return fmt.Errorf("failed to check is sublayer installed : %w", err)
+	}
+	if installed {
+		if err := manager.DeleteSubLayer(sublayerKeySingleDns); err != nil {
+			return fmt.Errorf("failed to delete sublayer : %w", err)
+		}
+	}
+
+	// delete provider
+	if err := manager.DeleteProvider(providerKeySingleDns); err != nil {
+		return fmt.Errorf("failed to delete provider : %w", err)
+	}
+	return nil
+}
+
+func implSingleDnsRuleOn(dnsAddr net.IP) (retErr error) {
+	if enabled, err := implGetEnabled(); err != err {
+		return err
+	} else if enabled {
+		return fmt.Errorf("failed to apply specific DNS rule: Firewall alredy enabled")
+	}
+
+	if dnsAddr == nil {
+		return fmt.Errorf("DNS address not defined")
+	}
+
+	if err := manager.TransactionStart(); err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	// do not forget to stop transaction
+	defer func() {
+		if r := recover(); r == nil {
+			manager.TransactionCommit() // commit WFP transaction
+		} else {
+			manager.TransactionAbort() // abort WFPtransaction
+
+			log.Error("PANIC (recovered): ", r)
+			if e, ok := r.(error); ok {
+				retErr = e
+			} else {
+				retErr = errors.New(fmt.Sprint(r))
+			}
+		}
+	}()
+
+	provider := winlib.CreateProvider(providerKeySingleDns, providerDNameSingleDns, "", false)
+	sublayer := winlib.CreateSubLayer(sublayerKeySingleDns, providerKeySingleDns,
+		sublayerDNameSingleDns, "",
+		0xFFF0, // The weight of current layer should be smaller than 0xFFFF (The layer of split-tunneling driver using weight 0xFFFF)
+		false)
+
+	// add provider
+	pinfo, err := manager.GetProviderInfo(providerKeySingleDns)
+	if err != nil {
+		return fmt.Errorf("failed to get provider info: %w", err)
+	}
+	if !pinfo.IsInstalled {
+		if err = manager.AddProvider(provider); err != nil {
+			return fmt.Errorf("failed to add provider : %w", err)
+		}
+	}
+
+	// add sublayer
+	installed, err := manager.IsSubLayerInstalled(sublayerKeySingleDns)
+	if err != nil {
+		return fmt.Errorf("failed to check sublayer is installed: %w", err)
+	}
+	if !installed {
+		if err = manager.AddSubLayer(sublayer); err != nil {
+			return fmt.Errorf("failed to add sublayer: %w", err)
+		}
+	}
+
+	var ipv6DnsIpException net.IP = nil
+	var ipv4DnsIpException net.IP = nil
+	if dnsAddr.To4() == nil {
+		ipv6DnsIpException = dnsAddr
+	} else {
+		ipv4DnsIpException = dnsAddr
+	}
+
+	// IPv6 filters
+	for _, layer := range v6Layers {
+		// block DNS
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", ipv6DnsIpException, false))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'block dns': %w", err)
+		}
+	}
+
+	// IPv4 filters
+	for _, layer := range v4Layers {
+		// block DNS
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", ipv4DnsIpException, false))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'block dns': %w", err)
+		}
+		// allow DNS requests to 127.0.0.1:53
+		_, err = manager.AddFilter(winlib.AllowRemoteLocalhostDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "", false))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'allow localhost dns': %w", err)
+		}
+	}
+	return nil
 }

@@ -518,3 +518,11 @@ func getUserExceptions(ipv4, ipv6 bool) []net.IPNet {
 	}
 	return ret
 }
+
+func implSingleDnsRuleOff() (retErr error) {
+	return nil // nothing to do for this platform
+}
+
+func implSingleDnsRuleOn() (retErr error) {
+	return nil // nothing to do for this platform
+}
