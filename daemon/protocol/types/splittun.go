@@ -68,6 +68,7 @@ type SplitTunnelSetConfig struct {
 	RequestBase
 	IsEnabled  bool // is ST enabled
 	IsInversed bool // when inversed - only apps added to ST will use VPN connection, all other apps will use direct unencrypted connection
+	IsAnyDns   bool // (only for Inverse Split Tunnel) When false: Allow only DNS servers specified by the IVPN application
 	Reset      bool // disable ST and erase all ST config (if enabled - all the rest paremeters are ignored)
 }
 
@@ -81,7 +82,8 @@ type SplitTunnelStatus struct {
 	CommandBase
 
 	IsEnabled                   bool // is ST enabled
-	IsInversed                  bool // inversed split-tunneling (only 'splitted' apps use VPN tunnel)
+	IsInversed                  bool // Inverse Split Tunnel (only 'splitted' apps use VPN tunnel)
+	IsAnyDns                    bool // (only for Inverse Split Tunnel) When false: Allow only DNS servers specified by the IVPN application
 	IsFunctionalityNotAvailable bool // TODO: this is redundant, remove it. Use daemon disabled functions info instead (Note: it is in use by CLI project)
 	// This parameter informs availability of the functionality to get icon for particular binary
 	// (true - if commands GetAppIcon/AppIconResp  applicable for this platform)

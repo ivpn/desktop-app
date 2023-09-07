@@ -1120,7 +1120,7 @@ func (s *Service) ResetPreferences() error {
 	s._preferences = *preferences.Create()
 
 	// erase ST config
-	s.SplitTunnelling_SetConfig(false, false, true)
+	s.SplitTunnelling_SetConfig(false, false, false, true)
 	return nil
 }
 
@@ -1213,14 +1213,17 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 		isEnabled = false
 	}
 	isInversed := prefs.SplitTunnelInversed
+	isAnyDns := prefs.SplitTunnelAnyDns
 	if stInverseErr != nil {
 		isInversed = false
+		isAnyDns = false
 	}
 
 	ret := protocolTypes.SplitTunnelStatus{
 		IsFunctionalityNotAvailable: stErr != nil,
 		IsEnabled:                   isEnabled,
 		IsInversed:                  isInversed,
+		IsAnyDns:                    isAnyDns,
 		IsCanGetAppIconForBinary:    oshelpers.IsCanGetAppIconForBinary(),
 		SplitTunnelApps:             prefs.SplitTunnelApps,
 		RunningApps:                 runningProcesses}
@@ -1228,7 +1231,7 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 	return ret, nil
 }
 
-func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, reset bool) error {
+func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, reset bool) error {
 	if reset {
 		return s.splitTunnelling_Reset()
 	}
@@ -1250,6 +1253,7 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, reset bool) e
 	prefs := s._preferences
 	prefs.IsSplitTunnel = isEnabled
 	prefs.SplitTunnelInversed = isInversed
+	prefs.SplitTunnelAnyDns = isAnyDns
 	s.setPreferences(prefs)
 
 	return s.splitTunnelling_ApplyConfig()
@@ -1258,6 +1262,7 @@ func (s *Service) splitTunnelling_Reset() error {
 	prefs := s._preferences
 	prefs.IsSplitTunnel = false
 	prefs.SplitTunnelInversed = false
+	prefs.SplitTunnelAnyDns = false
 	prefs.SplitTunnelApps = make([]string, 0)
 	s.setPreferences(prefs)
 
@@ -1313,7 +1318,7 @@ func (s *Service) splitTunnelling_ApplyConfig() error {
 	if err := firewall.SingleDnsRuleOff(); err != nil { // disable custom DNS rule (if exists)
 		log.Error(err)
 	}
-	if prefs.IsInverseSplitTunneling() {
+	if prefs.IsInverseSplitTunneling() && !prefs.SplitTunnelAnyDns {
 		dnsCfg, err := s.GetActiveDNS() // returns nil when VPN not connected
 		if err != nil {
 			return fmt.Errorf("failed to apply the firewall rule to allow DNS requests only to the IVPN server: %w", err)

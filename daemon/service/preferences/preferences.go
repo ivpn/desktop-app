@@ -95,9 +95,10 @@ type Preferences struct {
 	IsAutoconnectOnLaunchDaemon bool
 
 	// split-tunnelling
-	IsSplitTunnel       bool
+	IsSplitTunnel       bool // Split Tunnel on/off
 	SplitTunnelApps     []string
-	SplitTunnelInversed bool // inversed split-tunneling (only 'splitted' apps use VPN tunnel)
+	SplitTunnelInversed bool // Inverse Split Tunnel: only 'splitted' apps use VPN tunnel (applicable only when IsSplitTunnel=true)
+	SplitTunnelAnyDns   bool // (only for Inverse Split Tunnel) When false: Allow only DNS servers specified by the IVPN application
 
 	// last known account status
 	Session SessionStatus

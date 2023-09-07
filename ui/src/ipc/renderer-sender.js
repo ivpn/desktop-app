@@ -175,11 +175,12 @@ export default {
   SplitTunnelGetStatus: async () => {
     return await invoke("renderer-request-SplitTunnelGetStatus");
   },
-  SplitTunnelSetConfig: async (enabled, inversed, doReset) => {
+  SplitTunnelSetConfig: async (enabled, inversed, IsAnyDns, doReset) => {
     return await invoke(
       "renderer-request-SplitTunnelSetConfig",
       enabled,
       inversed,
+      IsAnyDns,
       doReset
     );
   },
