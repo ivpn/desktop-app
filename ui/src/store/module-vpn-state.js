@@ -687,7 +687,7 @@ function saveDnsSettings(context, dnsStatus) {
     return;
   }
 
-  // If AntiTracker is diabled - do not save empty AT settings (to keep current AntiTracker configuration. e.g. blocklist)
+  // If AntiTracker is disabled - do not save empty AT settings (to keep current AntiTracker configuration. e.g. blocklist)
   context.dispatch("settings/antiTracker", dnsStatus.AntiTrackerStatus, {
     root: true,
   });

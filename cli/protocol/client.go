@@ -692,17 +692,9 @@ func (c *Client) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker service_types.
 	}
 
 	req := types.SetAlternateDns{Dns: dnsCfg, AntiTracker: antiTracker}
-	var resp types.SetAlternateDNSResp
+	var resp types.EmptyResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
-	}
-
-	if !resp.IsSuccess {
-		if len(resp.ErrorMessage) > 0 {
-			return fmt.Errorf("DNS not changed: " + resp.ErrorMessage)
-		} else {
-			return fmt.Errorf("DNS not changed")
-		}
 	}
 
 	return nil

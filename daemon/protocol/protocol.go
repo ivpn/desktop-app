@@ -105,7 +105,8 @@ type Service interface {
 	// SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 	// If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 	SetManualDNS(dns dns.DnsSettings, antiTracker service_types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error)
-	GetAntiTrackerStatus() (antiTrackerStatus service_types.AntiTrackerMetadata, retErr error)
+	GetManualDNSStatus() dns.DnsSettings
+	GetAntiTrackerStatus() service_types.AntiTrackerMetadata
 
 	IsCanConnectMultiHop() error
 	Connect(params service_types.ConnectionParams) error
@@ -864,30 +865,15 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			req.Dns.DnsHost = getSingleField(req.Dns.DnsHost)
 			req.Dns.DohTemplate = getSingleField(req.Dns.DohTemplate)
 
-			antiTrackerStatus := service_types.AntiTrackerMetadata{}
-			changedDns, err := p._service.SetManualDNS(req.Dns, req.AntiTracker)
-
-			if err != nil {
-				// DNS set failed. Trying to reset DNS
-				req.AntiTracker.Enabled = false
-				_, errReset := p._service.SetManualDNS(dns.DnsSettings{}, req.AntiTracker)
-				if errReset != nil {
-					log.ErrorTrace(errReset)
-				}
-			}
-
+			_, err := p._service.SetManualDNS(req.Dns, req.AntiTracker)
 			if err != nil {
 				log.ErrorTrace(err)
-				// send the response to the requestor
-				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
+				p.sendErrorResponse(conn, reqCmd, err)
 			} else {
-				antiTrackerStatus, _ = p._service.GetAntiTrackerStatus()
-				response := types.SetAlternateDNSResp{IsSuccess: true, Dns: types.DnsStatus{Dns: changedDns, AntiTrackerStatus: antiTrackerStatus}}
-				// notify all connected clients
-				p.notifyClients(&response)
-				// send the response to the requestor
-				p.sendResponse(conn, &response, req.Idx)
+				p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx) // notify: request processed
 			}
+			// notify current DNS status
+			p.notifyClients(&types.SetAlternateDNSResp{Dns: types.DnsStatus{Dns: p._service.GetManualDNSStatus(), AntiTrackerStatus: p._service.GetAntiTrackerStatus()}})
 		}
 	case "GetDnsPredefinedConfigs":
 		cfgs, err := dns.GetPredefinedDnsConfigurations()

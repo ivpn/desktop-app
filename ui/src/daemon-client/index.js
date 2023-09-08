@@ -479,19 +479,7 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.SetAlternateDNSResp:
-      if (obj.IsSuccess == null) break;
-      if (obj.IsSuccess !== true) {
-        if (obj.ErrorMessage) {
-          await messageBox({
-            type: "error",
-            buttons: ["OK"],
-            message: `Failed to change DNS`,
-            detail: obj.ErrorMessage,
-          });
-        }
-        break;
-      }
-      store.dispatch(`vpnState/dns`, obj.Dns);
+      if (obj.Dns) store.dispatch(`vpnState/dns`, obj.Dns);
       break;
 
     case daemonResponses.DnsPredefinedConfigsResp:

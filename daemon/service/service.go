@@ -739,16 +739,25 @@ func (s *Service) GetDefaultManualDnsParams() (manualDnsCfg dns.DnsSettings, ant
 // SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 // If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error) {
+	prefs := s.Preferences()
+	if !dnsCfg.IsEmpty() || antiTracker.Enabled {
+		if prefs.IsInverseSplitTunneling() && prefs.SplitTunnelAnyDns {
+			return dns.DnsSettings{}, fmt.Errorf("custom DNS or AntiTracker cannot be enabled while allowing all DNS for Inverse Split Tunnel mode; please block non-IVPN DNS first in the Inverse Split Tunnel configuration")
+		}
+	}
+
+	isChanged := false
 	defer func() {
-		// Apply Firewall rule (for Inverse Split Tunnel): allow DNS requests only to IVPN servrers or to manually defined server
-		if err := s.splitTunnelling_ApplyConfig(); err != nil {
-			log.Error(err)
+		if isChanged {
+			// Apply Firewall rule (for Inverse Split Tunnel): allow DNS requests only to IVPN servrers or to manually defined server
+			if err := s.splitTunnelling_ApplyConfig(); err != nil {
+				log.Error(err)
+			}
 		}
 	}()
 
 	// Update default metadata
 	defaultParams := s.GetConnectionParams()
-	isChanged := false
 	// save DNS and AntiTracker default metadata
 	if !defaultParams.ManualDNS.Equal(dnsCfg) {
 		defaultParams.ManualDNS = dnsCfg
@@ -788,13 +797,17 @@ func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTra
 	return changedDns, vpn.SetManualDNS(changedDns)
 }
 
-func (s *Service) GetAntiTrackerStatus() (types.AntiTrackerMetadata, error) {
+func (s *Service) GetManualDNSStatus() dns.DnsSettings {
+	return s.GetConnectionParams().ManualDNS
+}
+
+func (s *Service) GetAntiTrackerStatus() types.AntiTrackerMetadata {
 	// Get AntiTracker DNS settings. If error - use default date and ignore error
 	retAtMetadata, err := s.normalizeAntiTrackerBlockListName(s.GetConnectionParams().Metadata.AntiTracker)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to normalize AntiTracker block list name: %v (using '%s')", err, retAtMetadata.AntiTrackerBlockListName))
 	}
-	return retAtMetadata, nil
+	return retAtMetadata
 }
 
 // Normze AntiTracker block list name:
@@ -1247,6 +1260,17 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, res
 		// if we are going to enable INVERSE SplitTunneling - ensure that Firewall is disabled
 		if enabled, _ := s.FirewallEnabled(); enabled {
 			return fmt.Errorf("unable to activate Inverse Split Tunnel: the Firewall is enabled; please, disable IVPN Firewall first")
+		}
+
+		// if we are going to allow any DNS in INVERSE SplitTunneling mode - ensure that custom DNS and AntiTracker is disabled
+		if isAnyDns {
+			defaultParams := s.GetConnectionParams()
+			if defaultParams.Metadata.AntiTracker.Enabled {
+				return fmt.Errorf("unable to disable the non-IVPN DNS blocking feature for Inverse Split Tunnel mode: AntiTracker is currently enabled; please disable both AntiTracker and manually configured DNS settings first")
+			}
+			if !defaultParams.ManualDNS.IsEmpty() {
+				return fmt.Errorf("unable to disable the non-IVPN DNS blocking feature for Inverse Split Tunnel mode: AntiTracker is currently enabled; please disable manually configured DNS settings first")
+			}
 		}
 	}
 

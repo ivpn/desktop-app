@@ -233,9 +233,7 @@ type DnsStatus struct {
 // SetAlternateDNSResp returns status of changing DNS
 type SetAlternateDNSResp struct {
 	CommandBase
-	IsSuccess    bool
-	Dns          DnsStatus
-	ErrorMessage string
+	Dns DnsStatus
 }
 
 // DnsPredefinedConfigsResp list of predefined DoH/DoT configurations (if exists)
