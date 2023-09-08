@@ -61,6 +61,10 @@ var (
 	// If defined, route rules were applied for inverse split tunneling.
 	// This variable contains the IP address of the default gateway used in routing rules.
 	defGatewayForInverseSpliTunRoutes net.IP
+
+	// This variable stores information about successfully applied routing rules for Inverse Split Tunnel.
+	// It is essential to prevent the possibility of disrupting user configurations (in cases where the system already has identical rules), so we will not overwrite user configurations.
+	appliedRouteRulesForInverseSplitTun [][]string // list of route add commands like: {"add", destAddr, "MASK", "192.0.0.0", currDefGateway.String()}, ...
 )
 
 // 'blackhole' IP addresses. Used for forwarding all traffic of split-tunnel apps to 'nowhere' (in fact, to block traffic)
@@ -243,17 +247,16 @@ func applyInverseSplitTunRoutingRules(isVpnConnected bool) error {
 
 	// function to erase already applied rules (if any)
 	funcEraseAppliedRules := func() {
-		if len(defGatewayForInverseSpliTunRoutes) == 0 {
-			return // nothing to do
-		}
-
-		// erase already applied rules
-		for _, destAddr := range destAddresses {
-			if err := shell.Exec(log, "route", "delete", destAddr, "MASK", "192.0.0.0", defGatewayForInverseSpliTunRoutes.String()); err != nil {
+		// erase already applied rules: remove only routes that were successfully added by us!
+		for _, cmd := range appliedRouteRulesForInverseSplitTun {
+			cmd[0] = "delete" // changing to "delete", because first field here is "add" (like "route add ...")
+			if err := shell.Exec(log, "route", cmd...); err != nil {
 				log.Error(fmt.Errorf("failed to apply inverse split-tunnelling routing rules: %w", err))
 			}
 		}
+
 		// reset info about applied rules (erase gateway IP address)
+		appliedRouteRulesForInverseSplitTun = [][]string{}
 		defGatewayForInverseSpliTunRoutes = net.IP{}
 	}
 
@@ -284,12 +287,16 @@ func applyInverseSplitTunRoutingRules(isVpnConnected bool) error {
 	// save info about applied rules (keep gateway IP address)
 	defGatewayForInverseSpliTunRoutes = currDefGateway
 	// apply rules
+	appliedRouteRulesForInverseSplitTun = [][]string{} // erase
 	for _, destAddr := range destAddresses {
-		if err := shell.Exec(log, "route", "add", destAddr, "MASK", "192.0.0.0", currDefGateway.String()); err != nil {
-			// erase already applied rules (if any)
+
+		cmd := []string{"add", destAddr, "MASK", "192.0.0.0", currDefGateway.String()}
+		if err := shell.Exec(log, "route", cmd...); err != nil {
+			// erase already applied rules: erase only successfully applied rules (from 'appliedRouteRulesForInverseSplitTun')
 			funcEraseAppliedRules()
 			return log.ErrorE(fmt.Errorf("failed to apply inverse split-tunnelling routing rules: %w", err), 0)
 		}
+		appliedRouteRulesForInverseSplitTun = append(appliedRouteRulesForInverseSplitTun, cmd)
 	}
 
 	return nil
