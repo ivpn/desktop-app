@@ -1269,7 +1269,7 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, res
 				return fmt.Errorf("unable to disable the non-IVPN DNS blocking feature for Inverse Split Tunnel mode: AntiTracker is currently enabled; please disable both AntiTracker and manually configured DNS settings first")
 			}
 			if !defaultParams.ManualDNS.IsEmpty() {
-				return fmt.Errorf("unable to disable the non-IVPN DNS blocking feature for Inverse Split Tunnel mode: AntiTracker is currently enabled; please disable manually configured DNS settings first")
+				return fmt.Errorf("unable to disable the non-IVPN DNS blocking feature for Inverse Split Tunnel mode: manual DNS is currently enabled; please disable manually configured DNS settings first")
 			}
 		}
 	}

@@ -58,6 +58,10 @@ OUT_IVPN_STAT_USER_EXP=IVPN-OUT-STAT-USER-EXP
 IN_IVPN_ICMP_EXP=IVPN-IN-ICMP-EXP
 OUT_IVPN_ICMP_EXP=IVPN-OUT-ICMP-EXP
 
+# Chain to allow only specific DNS IP
+# (chain rules can be applied when the general "firewall" disabled, for example for Inverse Split Tunnel mode )
+IVPN_OUT_DNSONLY=IVPN-OUT-DNSONLY
+
 # ### Split Tunnel ###
 # Info: The 'mark' value for packets coming from the Split-Tunneling environment.
 # Using here value 0xca6c. It is the same as WireGuard marking packets which were processed.
@@ -96,6 +100,44 @@ function get_firewall_enabled {
   chain_exists ${IPv4BIN} ${OUT_IVPN}
 }
 
+# allow only specific DNS address: in use by Inverse Split Tunnel mode
+# Inverse Split Tunnel mode does not allow to enable "firewall" but have to block unwanted DNS requests anyway
+
+function only_dns {  
+  # We can not apply this rules when firewall enabled
+  get_firewall_enabled
+  if (( $? == 0 )); then
+    echo "failed to apply specific DNS rule: Firewall alredy enabled" >&2
+    return 24
+  fi
+
+  only_dns_off
+
+  set -e
+
+  DNSIP=$1
+
+  create_chain ${IPv4BIN} ${IVPN_OUT_DNSONLY}
+  ${IPv4BIN} -w ${LOCKWAITTIME} -I OUTPUT -j ${IVPN_OUT_DNSONLY}
+  ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IVPN_OUT_DNSONLY} -p tcp --dport 53 -j DROP
+  ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IVPN_OUT_DNSONLY} -p udp --dport 53 -j DROP
+  ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IVPN_OUT_DNSONLY} -d ${DNSIP},127.0.0.0/8 -p tcp --dport 53 -j ACCEPT
+  ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IVPN_OUT_DNSONLY} -d ${DNSIP},127.0.0.0/8 -p udp --dport 53 -j ACCEPT
+
+  set +e
+}
+
+function only_dns_off {  
+  chain_exists ${IPv4BIN} ${IVPN_OUT_DNSONLY}   
+  if [ $? -ne 0 ]; then
+      return 0
+  fi  
+
+  ${IPv4BIN} -w ${LOCKWAITTIME} -D OUTPUT -j ${IVPN_OUT_DNSONLY}  # disconnect from OUTPUT chain
+  ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IVPN_OUT_DNSONLY}            # erasing all rules in a chain
+  ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IVPN_OUT_DNSONLY}            # delete chain
+}
+
 # Load rules
 function enable_firewall {
     get_firewall_enabled
@@ -104,6 +146,8 @@ function enable_firewall {
       echo "Firewall is already enabled. Please disable it first" >&2
       return 0
     fi
+    
+    only_dns_off
 
     set -e
 
@@ -281,6 +325,9 @@ function enable_firewall {
 
 # Remove all rules
 function disable_firewall {
+    
+    only_dns_off
+
     # Flush rules and delete custom chains
 
     ### allow everything by default ###
@@ -611,6 +658,17 @@ function main {
 
         clean_chain ${IPv4BIN} ${OUT_IVPN_IF0}
         clean_chain ${IPv4BIN} ${IN_IVPN_IF0}
+    elif [[ $1 = "-only_dns" ]]; then
+      # allow only specific DNS address: in use by Inverse Split Tunnel mode
+      # Inverse Split Tunnel mode does not allow to enable "firewall" but have to block unwanted DNS requests anyway
+
+      DNSIP=$2
+
+      only_dns ${DNSIP}
+    
+    elif [[ $1 = "-only_dns_off" ]]; then
+      only_dns_off
+
     else
         echo "Unknown command"
         return 2

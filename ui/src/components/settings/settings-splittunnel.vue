@@ -475,6 +475,11 @@ export default {
   },
 
   methods: {
+    updateLocals() {
+      this.isSTEnabledLocal = this.IsEnabled;
+      this.stInversedLocal = this.IsInversed;
+      this.stBlockNonVpnDnsLocal = !this.IsAnyDns;
+    },
     async applyChanges() {
       try {
         await sender.SplitTunnelSetConfig(
@@ -485,11 +490,9 @@ export default {
       } catch (e) {
         processError(e);
       }
-      // ensure local value is sunced with data from storage
-      // AND ensure the that UI state of check box updated!
-      this.isSTEnabledLocal = this.IsEnabled;
-      this.stInversedLocal = this.IsInversed;
-      this.stBlockNonVpnDnsLocal = !this.IsAnyDns;
+      // ensure local value synced with data from storage
+      // AND ensure that UI state of checkboxes updated!
+      this.updateLocals();
     },
 
     async onSTInversedChange() {
@@ -514,6 +517,10 @@ Do you want to enable Inverse mode for Split Tunnel?",
 
       if (!cancel) {
         await this.applyChanges();
+      } else {
+        // ensure local value synced with data from storage
+        // AND ensure that UI state of checkboxes updated!
+        this.updateLocals();
       }
     },
     isRunningAppsAvailable() {

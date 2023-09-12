@@ -41,7 +41,12 @@
       description="Block trackers whilst connected to VPN"
       :onChecked="antitrackerOnChecked"
       :isChecked="this.$store.state.settings.antiTracker?.Enabled"
-      :switcherOpacity="!IsConnected ? 0.4 : 1"
+      :switcherOpacity="
+        !IsConnected ||
+        this.$store.getters['vpnState/isInverseSplitTunnelAnyDns']
+          ? 0.4
+          : 1
+      "
       :checkedColor="
         this.$store.state.settings.antiTracker?.Hardcore ? '#77152a' : null
       "

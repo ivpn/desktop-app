@@ -81,7 +81,7 @@ func implInitialize() error {
 	}
 
 	// Ensure that ST is disable on daemon startup
-	enable(false, false)
+	enable(false, false, false)
 
 	// Register network change detector
 	//
@@ -129,7 +129,7 @@ func implReset() error {
 }
 
 func implApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	err := enable(isStEnabled, isStInversed)
+	err := enable(isStEnabled, isStInversed, isVpnEnabled)
 	if err != nil {
 		log.Error(err)
 	}
@@ -358,7 +358,7 @@ func isEnabled() (bool, error) {
 	return true, nil
 }
 
-func enable(isEnable, isStInversed bool) error {
+func enable(isEnable, isStInversed, isVpnConnected bool) error {
 
 	if !isEnable {
 
@@ -376,8 +376,12 @@ func enable(isEnable, isStInversed bool) error {
 		if isStInversed {
 			inversedArg = "-inverse"
 		}
+		vpnConnectedArg := ""
+		if isVpnConnected {
+			vpnConnectedArg = "-connected"
+		}
 
-		_, outErrText, _, _, err := shell.ExecAndGetOutput(log, 1024, "", stScriptPath, "start", inversedArg)
+		_, outErrText, _, _, err := shell.ExecAndGetOutput(log, 1024, "", stScriptPath, "start", inversedArg, vpnConnectedArg)
 		if err != nil {
 			if len(outErrText) > 0 {
 				err = fmt.Errorf("(%w) %s", err, outErrText)

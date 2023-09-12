@@ -299,6 +299,14 @@ func implOnUserExceptionsUpdated() error {
 	return err
 }
 
+func implSingleDnsRuleOff() (retErr error) {
+	return shell.Exec(log, platform.FirewallScript(), "-only_dns_off")
+}
+
+func implSingleDnsRuleOn(dnsAddr net.IP) (retErr error) {
+	return shell.Exec(log, platform.FirewallScript(), "-only_dns", dnsAddr.String())
+}
+
 //---------------------------------------------------------------------
 
 func applyAddHostsToExceptions(hostsIPs []string, isPersistant bool, onlyForICMP bool) error {
@@ -517,12 +525,4 @@ func getUserExceptions(ipv4, ipv6 bool) []net.IPNet {
 		ret = append(ret, e)
 	}
 	return ret
-}
-
-func implSingleDnsRuleOff() (retErr error) {
-	return nil // nothing to do for this platform
-}
-
-func implSingleDnsRuleOn() (retErr error) {
-	return nil // nothing to do for this platform
 }

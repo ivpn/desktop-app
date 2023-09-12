@@ -286,6 +286,11 @@ export default {
         state.splitTunnelling.IsInversed && state.splitTunnelling.IsEnabled
       );
     },
+    isInverseSplitTunnelAnyDns: (state, getters) => {
+      return getters.isInverseSplitTunnel && state.splitTunnelling.IsAnyDns;
+    },
+
+    // IsAnyDns
     vpnStateText: (state) => {
       return enumValueName(VpnStateEnum, state.connectionState);
     },
