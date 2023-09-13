@@ -823,61 +823,27 @@ Do you want to enable Inverse mode for Split Tunnel?",
     },
 
     filteredAppsToAdd: function () {
-      let retInstalledApps = [];
-      if (this.allInstalledApps)
-        retInstalledApps = Object.assign(
-          retInstalledApps,
-          this.allInstalledApps
-        );
-
-      // Add extra parameter 'LastUsedDate' to each element in app list (if exists in settings.splitTunnel.favoriteAppsList)
-      // And add apps from 'favorite list' which are not present in common app list
-      const s = this.$store.state.settings;
-      if (s.splitTunnel && s.splitTunnel.favoriteAppsList) {
-        const favApps = s.splitTunnel.favoriteAppsList;
-        let favAppsHashed = {};
-        favApps.forEach((appInfo) => {
-          favAppsHashed[appInfo.AppBinaryPath] = Object.assign({}, appInfo);
-        });
-
-        // add LastUsedDate info
-        retInstalledApps.forEach(function (element, index, theArray) {
-          const knownAppInfo = favAppsHashed[element.AppBinaryPath];
-          if (!knownAppInfo) return;
-          knownAppInfo.isManual = false;
-          theArray[index].LastUsedDate = knownAppInfo.LastUsedDate;
-        });
-
-        // add apps from 'favorite list' which are not present in common app list
-        for (const favAppBinaryPath in favAppsHashed) {
-          const favApp = favAppsHashed[favAppBinaryPath];
-
-          if (!favApp || favApp.isManual === false) continue;
-          if (!favApp.AppName) {
-            favApp.AppName = getFileName(favApp.AppBinaryPath);
-            favApp.AppGroup = getFileFolder(favApp.AppBinaryPath);
-          }
-
-          retInstalledApps.push(favApp);
-        }
-      }
+      let getApps = this.$store.getters["settings/FuncGetAppsToSplitTunnel"];
+      if (!getApps) return null;
+      let retInstalledApps = getApps(this.allInstalledApps);
 
       // filter: exclude already configured apps (not a running apps)
       // from the list installed apps
-      let confAppsHashed = {};
-      this.appsToShow.forEach((appInfo) => {
-        confAppsHashed[appInfo.AppBinaryPath.toLowerCase()] = appInfo;
-      });
-
-      let funcFilter = function (appInfo) {
-        let confApp = confAppsHashed[appInfo.AppBinaryPath.toLowerCase()];
-        if (confApp && (!confApp.RunningApp || !confApp.RunningApp.Pid))
-          return false;
-        return true;
-      };
-      retInstalledApps = retInstalledApps.filter((appInfo) =>
-        funcFilter(appInfo)
-      );
+      if (!this.isLinux) {
+        let confAppsHashed = {};
+        this.appsToShow.forEach((appInfo) => {
+          confAppsHashed[appInfo.AppBinaryPath.toLowerCase()] = appInfo;
+        });
+        let funcFilter = function (appInfo) {
+          let confApp = confAppsHashed[appInfo.AppBinaryPath.toLowerCase()];
+          if (confApp && (!confApp.RunningApp || !confApp.RunningApp.Pid))
+            return false;
+          return true;
+        };
+        retInstalledApps = retInstalledApps.filter((appInfo) =>
+          funcFilter(appInfo)
+        );
+      }
 
       // filter: default (filtering apps according to user input)
       let filter = this.filterAppsToAdd.toLowerCase();
@@ -888,24 +854,10 @@ Do you want to enable Inverse mode for Split Tunnel?",
             appInfo.AppGroup.toLowerCase().includes(filter)
           );
         };
-
         retInstalledApps = retInstalledApps.filter((appInfo) =>
           funcFilter(appInfo)
         );
       }
-
-      // sort applications: LastUsedDate + appName
-      retInstalledApps.sort(function (a, b) {
-        if (b.LastUsedDate && a.LastUsedDate)
-          return new Date(b.LastUsedDate) - new Date(a.LastUsedDate);
-        if (b.LastUsedDate && !a.LastUsedDate) return 1;
-        if (!b.LastUsedDate && a.LastUsedDate) return -1;
-        let aName = a.AppName;
-        let bName = b.AppName;
-        if (!aName) aName = "";
-        if (!bName) bName = "";
-        return aName.localeCompare(bName);
-      });
 
       return retInstalledApps;
     },

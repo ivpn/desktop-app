@@ -562,6 +562,66 @@ export default {
 
       return ret;
     },
+
+    // Function returns list of applications for launching in split-tunnel mode
+    // Taking into account 'favorite apps' list and 'installed apps' list
+    // Resulted list is sorted by 'LastUsedDate' and 'AppName'
+    FuncGetAppsToSplitTunnel: (state) => {
+      return function (installedApps) {
+        let getFileName = function (appBinPath) {
+          return appBinPath.split("\\").pop().split("/").pop();
+        };
+        let getFileFolder = function (appBinPath) {
+          const fname = getFileName(appBinPath);
+          return appBinPath.substring(0, appBinPath.length - fname.length);
+        };
+
+        let retApps = [];
+        if (installedApps) retApps = Object.assign(retApps, installedApps);
+
+        // Add extra parameter 'LastUsedDate' to each element in app list (if exists in settings.splitTunnel.favoriteAppsList)
+        // And add apps from 'favorite list' which are not present in common app list
+        if (state.splitTunnel && state.splitTunnel.favoriteAppsList) {
+          const favApps = state.splitTunnel.favoriteAppsList;
+          let favAppsHashed = {};
+          favApps.forEach((app) => {
+            favAppsHashed[app.AppBinaryPath] = Object.assign({}, app);
+          });
+          // add LastUsedDate info
+          retApps.forEach(function (element, index, theArray) {
+            const knownAppInfo = favAppsHashed[element.AppBinaryPath];
+            if (!knownAppInfo) return;
+            knownAppInfo.isManual = false;
+            theArray[index].LastUsedDate = knownAppInfo.LastUsedDate;
+          });
+          // add apps from 'favorite list' which are not present in common app list
+          for (const favAppBinaryPath in favAppsHashed) {
+            const favApp = favAppsHashed[favAppBinaryPath];
+            if (!favApp || favApp.isManual === false) continue;
+            if (!favApp.AppName) {
+              favApp.AppName = getFileName(favApp.AppBinaryPath);
+              favApp.AppGroup = getFileFolder(favApp.AppBinaryPath);
+            }
+            retApps.push(favApp);
+          }
+        }
+
+        // sort applications: LastUsedDate + appName
+        retApps.sort(function (a, b) {
+          if (b.LastUsedDate && a.LastUsedDate)
+            return new Date(b.LastUsedDate) - new Date(a.LastUsedDate);
+          if (b.LastUsedDate && !a.LastUsedDate) return 1;
+          if (!b.LastUsedDate && a.LastUsedDate) return -1;
+          let aName = a.AppName;
+          let bName = b.AppName;
+          if (!aName) aName = "";
+          if (!bName) bName = "";
+          return aName.localeCompare(bName);
+        });
+
+        return retApps;
+      };
+    },
   },
 
   // can be called from renderer

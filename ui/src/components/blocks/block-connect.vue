@@ -163,15 +163,17 @@
         </div>
       </div>
       <!-- PAUSE BUTTON end-->
-
-      <button class="noBordersTextBtn" v-on:click="onSplitTunnelInfoClick">
-        <div
-          class="small_text_warning"
+      <transition name="fade">
+        <button
           v-show="this.$store.getters['vpnState/isInverseSplitTunnel']"
+          class="noBordersTextBtn"
+          v-on:click="onSplitTunnelInfoClick"
         >
-          Inverse Split Tunnel mode is active
-        </div>
-      </button>
+          <div class="small_text_warning">
+            Inverse Split Tunnel mode is active
+          </div>
+        </button>
+      </transition>
     </div>
     <!-- SECIND LINE end-->
   </div>

@@ -63,6 +63,14 @@
       description="Protocol/Port"
     />
 
+    <!-- SPLIT TUNNEL -->
+    <transition name="fade">
+      <div v-if="isLinux && IsSplitTunnelEnabled">
+        <div class="horizontalLine" />
+        <SplitTunnelControl class="leftPanelBlock" />
+      </div>
+    </transition>
+
     <!-- WIFI -->
     <transition name="fade">
       <div
@@ -96,9 +104,13 @@
 </template>
 
 <script>
+import { Platform, PlatformEnum } from "@/platform/platform";
+
 import OnOffButtonControl from "@/components/controls/control-config-on-off-button.vue";
 import SelectButtonControl from "@/components/controls/control-config-to-select-button.vue";
 import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
+import SplitTunnelControl from "@/components/controls/control-split-tunnel.vue";
+
 const sender = window.ipcSender;
 import { enumValueName } from "@/helpers/helpers";
 import { VpnTypeEnum, PortTypeEnum, VpnStateEnum } from "@/store/types";
@@ -117,6 +129,7 @@ export default {
     OnOffButtonControl,
     SelectButtonControl,
     GeolocationInfoControl,
+    SplitTunnelControl,
   },
   props: [
     "onShowPorts",
@@ -205,6 +218,12 @@ export default {
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.CONNECTED
       );
+    },
+    isLinux: function () {
+      return Platform() === PlatformEnum.Linux;
+    },
+    IsSplitTunnelEnabled: function () {
+      return this.$store.state.vpnState.splitTunnelling?.IsEnabled;
     },
   },
 
