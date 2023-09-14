@@ -32,6 +32,7 @@ import (
 
 	"github.com/ivpn/desktop-app/cli/cliplatform"
 	"github.com/ivpn/desktop-app/cli/flags"
+	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
@@ -159,18 +160,26 @@ func doAddApp(args []string, eaaPass string, isHashedPass bool) error {
 // ================================================================
 type SplitTun struct {
 	flags.CmdInfo
-	status     bool
-	statusFull bool
-	on         bool
-	off        bool
-	reset      bool
+	status      bool
+	statusFull  bool
+	on          bool
+	onInverse   bool
+	dnsFirewall string // [on/off]
+	off         bool
+	reset       bool
 
 	appremove  string
 	appadd     string // this parameter is not in use. We need it just for help info (using 'appaddArgs' parsed with specific logic)
 	appaddArgs []string
 }
 
+const (
+	cmd_name_on_inverse   = "on_inverse"
+	cmd_name_dns_firewall = "block_dns"
+)
+
 func (c *SplitTun) Init() {
+	c.KeepArgsOrderInHelp = true
 	// register special parse function for '-appadd' (parsing appaddArgs)
 	c.SetParseSpecialFunc(c.specialParse)
 
@@ -190,21 +199,43 @@ func (c *SplitTun) Init() {
 		c.StringVar(&c.appremove, "appremove", "", "PID", "Remove application from Split Tunnel environment\n(argument: Process ID)")
 	}
 
+	c.StringVar(&c.dnsFirewall, cmd_name_dns_firewall, "", "[on/off]",
+		`When this option is enabled, only DNS requests directed to IVPN DNS servers
+		or user-defined custom DNS servers within the IVPN appsettings will be allowed.
+		All other DNS requests on port 53 will be blocked.
+		Note: The IVPN AntiTracker and custom DNS are not functional when this feature is disabled.
+		Note: This feature is only applicable for Inverse Split Tunnel mode.`)
+
 	c.BoolVar(&c.on, "on", false, "Enable")
+	c.BoolVar(&c.onInverse, cmd_name_on_inverse, false, "Enable in inverse mode. Only specified applications utilize the VPN connection,\nwhile all other traffic circumvents the VPN, using the default connection")
+
 	c.BoolVar(&c.off, "off", false, "Disable")
+
 }
 
 func (c *SplitTun) Run() error {
-	if c.on && c.off {
-		return flags.BadParameter{}
+	if (c.on || c.onInverse) && c.off {
+		return flags.ConflictingParameters{}
 	}
+
 	if len(c.appadd) > 0 && len(c.appremove) > 0 {
-		return flags.BadParameter{}
+		return flags.ConflictingParameters{}
 	}
 
 	cfg, err := _proto.GetSplitTunnelStatus()
 	if err != nil {
 		return err
+	}
+
+	dnsFirewall := cfg.IsAnyDns
+	if len(c.dnsFirewall) > 0 {
+		if !c.onInverse {
+			return flags.BadParameter{Message: fmt.Sprintf("the '-%s' option is only applicable with '-%s' (Inverse Split Tunnel mode)", cmd_name_dns_firewall, cmd_name_on_inverse)}
+		}
+		dnsFirewall, err = helpers.BoolParameterParse(c.dnsFirewall) // [on/off]
+		if err != nil {
+			return err
+		}
 	}
 
 	if cfg.IsFunctionalityNotAvailable {
@@ -215,7 +246,7 @@ func (c *SplitTun) Run() error {
 		cfg.IsEnabled = false
 		cfg.SplitTunnelApps = make([]string, 0)
 
-		if err = _proto.SetSplitTunnelConfig(false, true); err != nil {
+		if err = _proto.SetSplitTunnelConfig(false, false, false, true); err != nil {
 			return err
 		}
 		cfg, err = _proto.GetSplitTunnelStatus()
@@ -225,12 +256,16 @@ func (c *SplitTun) Run() error {
 		return c.doShowStatus(cfg, c.statusFull)
 	}
 
-	if c.on || c.off {
-		isEnabled := false
-		if c.on {
-			isEnabled = true
+	if c.on || c.onInverse || c.off || len(c.dnsFirewall) > 0 {
+		isEnabled := c.on || c.onInverse || cfg.IsEnabled
+		isInverse := c.onInverse
+		isAnyDns := !dnsFirewall
+
+		if c.off {
+			isEnabled = false
 		}
-		if err = _proto.SetSplitTunnelConfig(isEnabled, false); err != nil {
+
+		if err = _proto.SetSplitTunnelConfig(isEnabled, isInverse, isAnyDns, false); err != nil {
 			return err
 		}
 		cfg, err = _proto.GetSplitTunnelStatus()
@@ -261,13 +296,13 @@ func (c *SplitTun) Run() error {
 }
 
 func (c *SplitTun) doShowStatus(cfg types.SplitTunnelStatus, isFull bool) error {
-	w := printSplitTunState(nil, false, isFull, cfg.IsEnabled, cfg.SplitTunnelApps, cfg.RunningApps)
+	w := printSplitTunState(nil, false, isFull, cfg.IsEnabled, cfg.IsInversed, cfg.IsAnyDns, cfg.SplitTunnelApps, cfg.RunningApps)
 	w.Flush()
 	return nil
 }
 
-func (c *SplitTun) doShowStatusShort(status types.SplitTunnelStatus) error {
-	w := printSplitTunState(nil, true, false, status.IsEnabled, status.SplitTunnelApps, status.RunningApps)
+func (c *SplitTun) doShowStatusShort(cfg types.SplitTunnelStatus) error {
+	w := printSplitTunState(nil, true, false, cfg.IsEnabled, cfg.IsInversed, cfg.IsAnyDns, cfg.SplitTunnelApps, cfg.RunningApps)
 	w.Flush()
 	return nil
 }

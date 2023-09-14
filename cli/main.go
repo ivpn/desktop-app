@@ -213,8 +213,15 @@ func runCommand(c ICommand, args []string) {
 
 	funcExitErrBadParam := func(err error) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		isParamError := false
 		if _, ok := err.(flags.BadParameter); ok {
-			c.Usage(false)
+			isParamError = true
+		} else if _, ok := err.(flags.ConflictingParameters); ok {
+			isParamError = true
+		}
+		if isParamError {
+			//c.Usage(false)
+			fmt.Printf("\nFor detailed argument descriptions, use the command:\n    %s %s -h\t\n", filepath.Base(os.Args[0]), c.Name())
 		}
 		os.Exit(1)
 	}

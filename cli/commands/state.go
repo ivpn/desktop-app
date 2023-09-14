@@ -79,7 +79,7 @@ func showState() error {
 		printDNSState(w, connected.Dns, &servers)
 	}
 	if !stStatus.IsFunctionalityNotAvailable {
-		printSplitTunState(w, true, false, stStatus.IsEnabled, stStatus.SplitTunnelApps, stStatus.RunningApps)
+		printSplitTunState(w, true, false, stStatus.IsEnabled, stStatus.IsInversed, stStatus.IsAnyDns, stStatus.SplitTunnelApps, stStatus.RunningApps)
 	}
 	printFirewallState(w, fwstate.IsEnabled, fwstate.IsPersistent, fwstate.StateLanAllowed, fwstate.IsAllowMulticast, fwstate.IsAllowApiServers, fwstate.UserExceptions, &state)
 	w.Flush()
