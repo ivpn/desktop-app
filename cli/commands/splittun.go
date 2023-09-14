@@ -227,7 +227,7 @@ func (c *SplitTun) Run() error {
 		return err
 	}
 
-	dnsFirewall := cfg.IsAnyDns
+	dnsFirewall := !cfg.IsAnyDns
 	if len(c.dnsFirewall) > 0 {
 		if !c.onInverse {
 			return flags.BadParameter{Message: fmt.Sprintf("the '-%s' option is only applicable with '-%s' (Inverse Split Tunnel mode)", cmd_name_dns_firewall, cmd_name_on_inverse)}

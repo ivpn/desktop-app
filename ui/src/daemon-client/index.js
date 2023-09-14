@@ -1484,16 +1484,13 @@ async function SplitTunnelGetStatus() {
   return ret;
 }
 async function SplitTunnelSetConfig(IsEnabled, IsInversed, IsAnyDns, doReset) {
-  await sendRecv(
-    {
-      Command: daemonRequests.SplitTunnelSetConfig,
-      IsEnabled,
-      IsInversed,
-      IsAnyDns,
-      Reset: doReset === true,
-    },
-    [daemonResponses.SplitTunnelStatus]
-  );
+  await sendRecv({
+    Command: daemonRequests.SplitTunnelSetConfig,
+    IsEnabled,
+    IsInversed,
+    IsAnyDns,
+    Reset: doReset === true,
+  });
 }
 
 async function SplitTunnelAddApp(execCmd, funcShowMessageBox) {

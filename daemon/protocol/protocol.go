@@ -773,6 +773,8 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+		// notify 'success'
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified about configuration change by service in OnSplitTunnelStatusChanged() handler
 
 	case "SplitTunnelAddApp":

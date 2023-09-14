@@ -1303,9 +1303,18 @@ func (s *Service) splitTunnelling_Reset() error {
 // - VPN connection state changed
 // - SplitTunnel configuration changed
 // - DNS configuration changed (needed for updating Inverse Split Tunnel firewal rule)
-func (s *Service) splitTunnelling_ApplyConfig() error {
-	// notify changed ST configuration status (even if functionality not available)
-	defer s._evtReceiver.OnSplitTunnelStatusChanged()
+func (s *Service) splitTunnelling_ApplyConfig() (retError error) {
+
+	defer func() {
+		// if error - disable SplitTunneling
+		if retError != nil {
+			prefs := s._preferences
+			prefs.IsSplitTunnel = false
+			s.setPreferences(prefs)
+		}
+		// notify changed ST configuration status (even if functionality not available)
+		s._evtReceiver.OnSplitTunnelStatusChanged()
+	}()
 
 	if stErr, _ := splittun.GetFuncNotAvailableError(); stErr != nil {
 		// Split-Tunneling not accessible (not able to connect to a driver or not implemented for current platform)

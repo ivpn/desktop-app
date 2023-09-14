@@ -399,8 +399,8 @@ func (c *Client) SetSplitTunnelConfig(isEnable, isInversed, isAnyDns, reset bool
 	}
 
 	req := types.SplitTunnelSetConfig{IsEnabled: isEnable, IsInversed: isInversed, IsAnyDns: isAnyDns, Reset: reset}
-	resp := types.SplitTunnelStatus{}
-	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+	resp := types.EmptyResp{}
+	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
 	}
 
