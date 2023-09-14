@@ -132,7 +132,6 @@ ipcMain.handle("renderer-request-update-wnd-close", async () => {
   if (!updateWindow) return;
   updateWindow.destroy();
 });
-
 ipcMain.handle(
   "renderer-request-update-wnd-resize",
   async (event, width, height) => {
@@ -142,6 +141,48 @@ ipcMain.handle(
     updateWindow.setContentSize(width, height);
   }
 );
+ipcMain.handle("renderer-request-SplitTunnelAddApp", async (event, execCmd) => {
+  LaunchAppInSplitTunnel(execCmd, event);
+});
+
+async function LaunchAppInSplitTunnel(execCmd, event) {
+  let wnd = win;
+  if (event && event.sender) wnd = event.sender.getOwnerBrowserWindow();
+
+  let funcShowMessageBox = function (dlgConfig) {
+    return dialog.showMessageBox(wnd, dlgConfig);
+  };
+
+  try {
+    // manuall app ...
+    if (!execCmd) {
+      let dlgFilters = [];
+      if (Platform() === PlatformEnum.Windows) {
+        dlgFilters = [
+          { name: "Executables", extensions: ["exe"] },
+          { name: "All files", extensions: ["*"] },
+        ];
+      } else {
+        dlgFilters = [{ name: "All files", extensions: ["*"] }];
+      }
+
+      var ret = dialog.showOpenDialogSync(wnd, dlgFilters);
+      if (!ret || ret.canceled || ret.length == 0) return;
+      execCmd = ret[0];
+    }
+
+    return await daemonClient.SplitTunnelAddApp(execCmd, funcShowMessageBox);
+  } catch (e) {
+    console.error(e);
+    funcShowMessageBox({
+      type: "error",
+      buttons: ["OK"],
+      detail: e.toString(),
+      message: "Failed to launch application in Split Tunnel environment",
+    });
+    return;
+  }
+}
 
 if (gotTheLock) {
   InitPersistentSettings();
@@ -282,7 +323,8 @@ if (gotTheLock) {
         menuOnShow,
         menuOnPreferences,
         menuOnAccount,
-        menuOnCheckUpdates
+        menuOnCheckUpdates,
+        LaunchAppInSplitTunnel
       );
       isTrayInitialized = true;
     } catch (e) {

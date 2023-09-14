@@ -308,7 +308,7 @@
                     height: 40px;
                     width: 100%;
                   "
-                  v-on:click="onManualAddNewApplication"
+                  v-on:click="addApp(null)"
                 >
                   <div class="flexRowRestSpace"></div>
                   <div class="flexRow">
@@ -400,7 +400,8 @@ export default {
 
       filterAppsToAdd: "",
 
-      // allInstalledApps [] - an array of configured application path's
+      // allInstalledApps [] - an array of applications installed on users device
+      //                       (in use in Split Tunnel mode)
       // Type (AppInfo):
       //    AppName       string
       //    AppGroup      string // optional
@@ -673,7 +674,7 @@ Do you want to enable Inverse mode for Split Tunnel?",
         let appsToAdd = this.filteredAppsToAdd;
         if (!appsToAdd || appsToAdd.length == 0) {
           // if no info about all installed applications - show dialog to manually select binary
-          this.onManualAddNewApplication();
+          this.addApp(null);
           return;
         }
         this.isShowAppAddPopup = true;
@@ -685,33 +686,6 @@ Do you want to enable Inverse mode for Split Tunnel?",
           }
         }, 0);
       } else this.isShowAppAddPopup = false;
-    },
-
-    async onManualAddNewApplication() {
-      try {
-        let dlgFilters = [];
-        if (Platform() === PlatformEnum.Windows) {
-          dlgFilters = [
-            { name: "Executables", extensions: ["exe"] },
-            { name: "All files", extensions: ["*"] },
-          ];
-        } else {
-          dlgFilters = [{ name: "All files", extensions: ["*"] }];
-        }
-
-        var diagConfig = {
-          properties: ["openFile"],
-          filters: dlgFilters,
-        };
-        var ret = await sender.showOpenDialog(diagConfig);
-        if (!ret || ret.canceled || ret.filePaths.length == 0) return;
-
-        await sender.SplitTunnelAddApp(ret.filePaths[0]);
-      } catch (e) {
-        processError(e);
-      } finally {
-        this.showAddApplicationPopup(false);
-      }
     },
 
     async removeApp(app) {
@@ -823,10 +797,8 @@ Do you want to enable Inverse mode for Split Tunnel?",
     },
 
     filteredAppsToAdd: function () {
-      let getApps = this.$store.getters["settings/FuncGetAppsToSplitTunnel"];
-      if (!getApps) return null;
-      let retInstalledApps = getApps(this.allInstalledApps);
-
+      let retInstalledApps =
+        this.$store.getters["settings/getAppsToSplitTunnel"];
       // filter: exclude already configured apps (not a running apps)
       // from the list installed apps
       if (!this.isLinux) {

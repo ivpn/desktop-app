@@ -33,10 +33,13 @@ import path from "path";
 const { nativeTheme } = require("electron");
 
 let tray = null;
+let lastTrayMenu = null;
+
 let menuHandlerShow = null;
 let menuHandlerPreferences = null;
 let menuHandlerAccount = null;
 let menuHandlerCheckUpdates = null;
+let fLaunchStApp = null;
 
 let iconConnected = null;
 let iconDisconnected = null;
@@ -56,6 +59,7 @@ const EnumMenuId = Object.freeze({
   Pause: "Pause",
   Resume: "Resume",
   ResumeIn: "ResumeIn",
+  LaunchStApp: "LaunchStApp",
   Disconnect: "Disconnect",
   Favorite: "Favorite",
 });
@@ -78,12 +82,14 @@ export function InitTray(
   menuItemShow,
   menuItemPreferences,
   menuItemAccount,
-  menuItemCheckUpdates
+  menuItemCheckUpdates,
+  funcLaunchStApp
 ) {
   menuHandlerShow = menuItemShow;
   menuHandlerPreferences = menuItemPreferences;
   menuHandlerAccount = menuItemAccount;
   menuHandlerCheckUpdates = menuItemCheckUpdates;
+  fLaunchStApp = funcLaunchStApp;
 
   // load icons
   switch (Platform()) {
@@ -169,7 +175,7 @@ export function InitTray(
       break;
   }
 
-  // subscribe to any changes in a tore
+  // subscribe to any changes in a store
   store.subscribe((mutation) => {
     try {
       switch (mutation.type) {
@@ -193,14 +199,17 @@ export function InitTray(
         case "settings/hostsFavoriteListDnsNames":
         case "settings/showHosts":
         case "account/session":
-          updateTrayMenu();
-          break;
-        case "settings/colorThemeTrayIcon":
-          updateTrayIcon();
-          break;
         case "isRequestingLocation":
         case "isRequestingLocationIPv6":
           updateTrayMenu();
+          break;
+        case "allInstalledApps":
+        case "vpnState/splitTunnelling":
+          if (Platform() === PlatformEnum.Linux) updateTrayMenu();
+          break;
+
+        case "settings/colorThemeTrayIcon":
+          updateTrayIcon();
           break;
 
         default:
@@ -264,7 +273,18 @@ function updateTrayIcon() {
   }
 }
 
+let timerUpdateTrayMenu = null;
 function updateTrayMenu() {
+  // call doUpdateTrayMenu() not often than once per 500ms
+  if (timerUpdateTrayMenu != null) return;
+  clearTimeout(timerUpdateTrayMenu);
+  timerUpdateTrayMenu = setTimeout(() => {
+    timerUpdateTrayMenu = null;
+    doUpdateTrayMenu();
+  }, 500);
+}
+
+function doUpdateTrayMenu() {
   if (tray == null) {
     // eslint-disable-next-line no-undef
     tray = new Tray(iconDisconnected);
@@ -445,10 +465,49 @@ function updateTrayMenu() {
       submenu: favorites,
       id: EnumMenuId.Favorite,
     });
+
+    mainMenu.push({ type: "separator" });
+
+    // applications to start in Split Tunnel mode
+    if (Platform() === PlatformEnum.Linux) {
+      try {
+        if (fLaunchStApp && store.state.vpnState.splitTunnelling.IsEnabled) {
+          const appsSubMenuTemplate = [
+            {
+              label: "[ Custom application... ]",
+              click: () => {
+                fLaunchStApp(null);
+              },
+            },
+          ];
+          const apps = store.getters["settings/getAppsToSplitTunnel"];
+          if (apps) {
+            apps.forEach((app) => {
+              appsSubMenuTemplate.push({
+                label: app.AppName ? app.AppName : app.AppBinaryPath,
+                click: async () => {
+                  await fLaunchStApp(app.AppBinaryPath);
+                },
+              });
+            });
+          }
+          mainMenu.push({
+            label: "Split Tunnel: Launch application",
+            type: "submenu",
+            id: EnumMenuId.LaunchStApp,
+            submenu: Menu.buildFromTemplate(appsSubMenuTemplate),
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     mainMenu.push({ type: "separator" });
 
     mainMenu.push({ label: "Account", click: menuHandlerAccount });
     mainMenu.push({ label: "Settings", click: menuHandlerPreferences });
+
     if (menuHandlerCheckUpdates != null) {
       mainMenu.push({
         label: `Check for Updates`,
@@ -458,13 +517,18 @@ function updateTrayMenu() {
     mainMenu.push({ type: "separator" });
   }
 
-  // APPLY TRAY MENU
   mainMenu.push({ label: "Quit", click: menuItemQuit });
 
-  tray.setToolTip("IVPN Client");
-  tray.setContextMenu(Menu.buildFromTemplate(mainMenu));
+  // do nothing if menu is the same
+  let newMenu = Menu.buildFromTemplate(mainMenu);
+  if (isMenuEquals(lastTrayMenu, newMenu) === true) return;
 
-  updateDockMenuMacOS(mainMenu);
+  // APPLY TRAY MENU
+  lastTrayMenu = newMenu;
+  tray.setToolTip("IVPN Client");
+  tray.setContextMenu(lastTrayMenu);
+
+  updateDockMenuMacOS(lastTrayMenu);
 }
 
 function updateDockMenuMacOS(mainMenuTemplate) {

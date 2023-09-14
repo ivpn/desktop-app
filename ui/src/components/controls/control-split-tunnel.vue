@@ -67,15 +67,11 @@ function processError(e) {
 }
 
 export default {
-  data: function () {
-    return {
-      allInstalledApps: null,
-    };
-  },
   async mounted() {
     setTimeout(async () => {
       try {
-        this.allInstalledApps = await sender.GetInstalledApps();
+        // request installed apps list (will be saved in store)
+        await sender.GetInstalledApps();
       } catch (e) {
         console.error(e);
       }
@@ -100,27 +96,10 @@ export default {
         return null;
       },
       async set(value) {
-        // launch app ...
-        if (value.AppBinaryPath) {
-          try {
-            await sender.SplitTunnelAddApp(value.AppBinaryPath);
-          } catch (e) {
-            processError(e);
-          }
-          return;
-        }
-        // manuall app ...
         try {
-          let dlgFilters = [{ name: "All files", extensions: ["*"] }];
-
-          var diagConfig = {
-            properties: ["openFile"],
-            filters: dlgFilters,
-          };
-          var ret = await sender.showOpenDialog(diagConfig);
-          if (!ret || ret.canceled || ret.filePaths.length == 0) return;
-
-          await sender.SplitTunnelAddApp(ret.filePaths[0]);
+          let binaryPath = null;
+          if (value.AppBinaryPath) binaryPath = value.AppBinaryPath;
+          await sender.SplitTunnelAddApp(binaryPath);
         } catch (e) {
           processError(e);
         }
@@ -128,9 +107,7 @@ export default {
     },
 
     sortedApps: function () {
-      let getApps = this.$store.getters["settings/FuncGetAppsToSplitTunnel"];
-      if (!getApps) return null;
-      return getApps(this.allInstalledApps);
+      return this.$store.getters["settings/getAppsToSplitTunnel"];
     },
   },
   methods: {

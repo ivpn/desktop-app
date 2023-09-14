@@ -1680,6 +1680,10 @@ async function GetInstalledApps() {
     if (appsResp == null) {
       return null;
     }
+
+    // save info about iunstalled apps
+    store.commit("allInstalledApps", appsResp.Apps);
+
     return appsResp.Apps;
   } catch (e) {
     console.error("GetInstalledApps failed: ", e);
@@ -1703,7 +1707,7 @@ async function GetAppIcon(binaryPath) {
 
     return resp.AppIcon;
   } catch (e) {
-    console.error("GetInstalledApps failed: ", e);
+    console.error("GetAppIcon failed: ", e);
     return null;
   }
 }
