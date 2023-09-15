@@ -459,7 +459,7 @@
             </li>
             <li>
               <b>obfs4 (IAT1)</b> - Large packets will be split into MTU-size
-              packets by Obfsproxy (instead the network drivers), resulting in
+              packets by Obfsproxy (instead of the network drivers), resulting in
               smaller packets that are more resistant to being reassembled for
               analysis and censoring.
             </li>
