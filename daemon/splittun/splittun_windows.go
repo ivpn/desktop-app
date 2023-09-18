@@ -29,6 +29,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -65,6 +67,8 @@ var (
 	// This variable stores information about successfully applied routing rules for Inverse Split Tunnel.
 	// It is essential to prevent the possibility of disrupting user configurations (in cases where the system already has identical rules), so we will not overwrite user configurations.
 	appliedRouteRulesForInverseSplitTun [][]string // list of route add commands like: {"add", destAddr, "MASK", "192.0.0.0", currDefGateway.String()}, ...
+
+	routeBinaryPath string = "route"
 )
 
 // 'blackhole' IP addresses. Used for forwarding all traffic of split-tunnel apps to 'nowhere' (in fact, to block traffic)
@@ -84,6 +88,14 @@ type Config struct {
 
 // Initialize doing initialization stuff (called on application start)
 func implInitialize() error {
+	// get path to 'route.exe' binary
+	envVarSystemroot := strings.ToLower(os.Getenv("SYSTEMROOT"))
+	if len(envVarSystemroot) == 0 {
+		log.Error("!!! ERROR !!! Unable to determine 'SYSTEMROOT' environment variable!")
+	} else {
+		routeBinaryPath = strings.ReplaceAll(path.Join(envVarSystemroot, "system32", "route.exe"), "/", "\\")
+	}
+
 	wfpDllPath := platform.WindowsWFPDllPath()
 	if len(wfpDllPath) == 0 {
 		return fmt.Errorf("unable to initialize split-tunnelling wrapper: firewall dll path not initialized")
@@ -92,6 +104,7 @@ func implInitialize() error {
 		return fmt.Errorf("unable to initialize split-tunnelling wrapper (firewall dll not found) : '%s'", wfpDllPath)
 	}
 
+	// load dll
 	dll := syscall.NewLazyDLL(wfpDllPath)
 
 	fSplitTun_Connect = dll.NewProc("SplitTun_Connect")
@@ -234,6 +247,10 @@ func implGetRunningApps() ([]RunningApp, error) {
 //
 // As a result, all traffic will pass through the default non-VPN interface, except for excluded apps designated by the split-tunnel driver, which will use the VPN interface.
 func applyInverseSplitTunRoutingRules(isVpnConnected bool) error {
+	if routeBinaryPath == "" {
+		return fmt.Errorf("route.exe location not specified")
+	}
+
 	// route add/delete 0.0.0.0		MASK 192.0.0.0	<DEFAULT_GATEWAY_IP>
 	// route add/delete 64.0.0.0	MASK 192.0.0.0 	<DEFAULT_GATEWAY_IP>
 	// route add/delete 128.0.0.0	MASK 192.0.0.0 	<DEFAULT_GATEWAY_IP>
@@ -250,7 +267,7 @@ func applyInverseSplitTunRoutingRules(isVpnConnected bool) error {
 		// erase already applied rules: remove only routes that were successfully added by us!
 		for _, cmd := range appliedRouteRulesForInverseSplitTun {
 			cmd[0] = "delete" // changing to "delete", because first field here is "add" (like "route add ...")
-			if err := shell.Exec(log, "route", cmd...); err != nil {
+			if err := shell.Exec(log, routeBinaryPath, cmd...); err != nil {
 				log.Error(fmt.Errorf("failed to apply inverse split-tunnelling routing rules: %w", err))
 			}
 		}
@@ -291,7 +308,7 @@ func applyInverseSplitTunRoutingRules(isVpnConnected bool) error {
 	for _, destAddr := range destAddresses {
 
 		cmd := []string{"add", destAddr, "MASK", "192.0.0.0", currDefGateway.String()}
-		if err := shell.Exec(log, "route", cmd...); err != nil {
+		if err := shell.Exec(log, routeBinaryPath, cmd...); err != nil {
 			// erase already applied rules: erase only successfully applied rules (from 'appliedRouteRulesForInverseSplitTun')
 			funcEraseAppliedRules()
 			return log.ErrorE(fmt.Errorf("failed to apply inverse split-tunnelling routing rules: %w", err), 0)
