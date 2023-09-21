@@ -590,6 +590,15 @@ func (s *Service) Pause(durationSeconds uint32) error {
 		return err
 	}
 
+	// In Inversed Split Tunnel mode we must ensure that the FW rule for single DNS is disabled (to not block DNS requests in paused mode)
+	prefs := s.Preferences()
+	isNeedToUpdateSingleDnsFwRule := prefs.IsInverseSplitTunneling() && !prefs.SplitTunnelAnyDns
+	if isNeedToUpdateSingleDnsFwRule {
+		if err := firewall.SingleDnsRuleOff(); err != nil {
+			log.Error(err)
+		}
+	}
+
 	s._pause._pauseTill = time.Now().Add(time.Second * time.Duration(durationSeconds))
 	log.Info(fmt.Sprintf("Paused on %v (till %v)", time.Second*time.Duration(durationSeconds), s._pause._pauseTill.Format(time.Stamp)))
 
@@ -627,6 +636,15 @@ func (s *Service) Resume() error {
 	vpn := s._vpn
 	if vpn == nil || !vpn.IsPaused() {
 		return fmt.Errorf("VPN not paused")
+	}
+
+	// In Inversed Split Tunnel mode we must re-apply ST configuration to ensure the FW rule for single DNS is enabled
+	prefs := s.Preferences()
+	isNeedToUpdateSingleDnsFwRule := prefs.IsInverseSplitTunneling() && !prefs.SplitTunnelAnyDns
+	if isNeedToUpdateSingleDnsFwRule {
+		if err := s.splitTunnelling_ApplyConfig(); err != nil {
+			log.Error(err)
+		}
 	}
 
 	return s.resume()
