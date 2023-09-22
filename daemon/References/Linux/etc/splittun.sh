@@ -164,8 +164,9 @@ function init_iptables()
     # Add mark on packets of classid ${_cgroup_classid}
     ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
     # Important! Process DNS request before setting mark rule (DNS request should not be marked)
-     ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
-     ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment  "${_comment}" -j RETURN
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j RETURN
+
     # Allow packets from/to cgroup (bypass IVPN firewall)
     ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
     ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
@@ -553,16 +554,20 @@ function info()
     cat /etc/iproute2/rt_tables
         
     echo ---------------------------------
-    echo "[*] ip6tables -t mangle -S:"
-    ${_bin_ip6tables} -t mangle -S
-    echo 
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip6tables -t mangle -S:"
+        ${_bin_ip6tables} -t mangle -S
+        echo 
+    fi
     echo "[*] iptables -t mangle -S:"
     ${_bin_iptables} -t mangle -S
     
     echo ---------------------------------
-    echo "[*] ip6tables -t nat -S:"
-    ${_bin_ip6tables} -t nat -S
-    echo 
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip6tables -t nat -S:"
+        ${_bin_ip6tables} -t nat -S
+        echo 
+    fi
     echo "[*] iptables -t nat -S:"
     ${_bin_iptables} -t nat -S
 
@@ -579,20 +584,25 @@ function info()
     #${_bin_iptables} -S ${OUTPUT}
     
     echo ---------------------------------
-    echo "[*] ip6tables -S | grep IVPN:"
-    ${_bin_ip6tables} -S  | grep IVPN
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip6tables -S | grep IVPN:"
+        ${_bin_ip6tables} -S  | grep IVPN
+    fi
     echo "[*] iptables -S | grep IVPN:"
     ${_bin_iptables} -S  | grep IVPN    
     echo ---------------------------------
-
-    echo "[*] ip -6 rule:"
-    ${_bin_ip} -6 rule
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip -6 rule:"
+        ${_bin_ip} -6 rule
+    fi
     echo "[*] ip rule:"
     ${_bin_ip} rule
 
     echo ---------------------------------
-    echo "[*] ip -6 route show table ${_routing_table_weight}"
-    ${_bin_ip} -6 route show table ${_routing_table_weight}    
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip -6 route show table ${_routing_table_weight}"
+        ${_bin_ip} -6 route show table ${_routing_table_weight}    
+    fi
     echo "[*] ip route show table ${_routing_table_weight}"
     ${_bin_ip} route show table ${_routing_table_weight} #${_routing_table_name}
     echo ---------------------------------

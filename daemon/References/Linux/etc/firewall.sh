@@ -40,7 +40,7 @@ FORWARD_IVPN=IVPN-FORWARD
 # chain for DNS rules
 OUT_IVPN_DNS=IVPN-OUT-DNS
 # IVPN chains for VPN interface rules (applicable when VPN enabled)
-# Chanin is processing before OUT_IVPN_DNS in order to allow connections to port 53sssss
+# Chanin is processing before OUT_IVPN_DNS in order to allow connections to port 53
 IN_IVPN_IF0=IVPN-IN-VPN0
 OUT_IVPN_IF0=IVPN-OUT-VPN0
 # IVPN chains for VPN interface rules (applicable when VPN enabled)
@@ -119,10 +119,10 @@ function only_dns {
 
   create_chain ${IPv4BIN} ${IVPN_OUT_DNSONLY}
   ${IPv4BIN} -w ${LOCKWAITTIME} -I OUTPUT -j ${IVPN_OUT_DNSONLY}
-  ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IVPN_OUT_DNSONLY} -p tcp --dport 53 -j DROP
-  ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IVPN_OUT_DNSONLY} -p udp --dport 53 -j DROP
-  ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IVPN_OUT_DNSONLY} -d ${DNSIP},127.0.0.0/8 -p tcp --dport 53 -j ACCEPT
-  ${IPv4BIN} -w ${LOCKWAITTIME} -I ${IVPN_OUT_DNSONLY} -d ${DNSIP},127.0.0.0/8 -p udp --dport 53 -j ACCEPT
+
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -o lo -j ACCEPT  
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} ! -d ${DNSIP} -p tcp --dport 53 -j DROP
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} ! -d ${DNSIP} -p udp --dport 53 -j DROP
 
   set +e
 }

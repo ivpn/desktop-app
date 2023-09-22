@@ -1491,6 +1491,15 @@ async function SplitTunnelSetConfig(IsEnabled, IsInversed, IsAnyDns, doReset) {
     IsAnyDns,
     Reset: doReset === true,
   });
+
+  // update Geo-lookup info (since it can be changed by Split Tunneling)
+  setTimeout(async () => {
+    try {
+      await GeoLookup();
+    } catch (e) {
+      console.error(e);
+    }
+  }, 0);
 }
 
 async function SplitTunnelAddApp(execCmd, funcShowMessageBox) {

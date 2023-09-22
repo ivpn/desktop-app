@@ -98,6 +98,19 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		}
 	}()
 
+	// erase temporary connection parameters
+	s._tmpParamsMutex.Lock()
+	s._tmpParams = types.ConnectionParams{}
+	s._tmpParamsMutex.Unlock()
+	defer func() {
+		s._tmpParamsMutex.Lock()
+		defer s._tmpParamsMutex.Unlock()
+		// update settings if we received any while VPN was connected
+		if s._tmpParams.CheckIsDefined() == nil {
+			s.setConnectionParams(params)
+		}
+	}()
+
 	// keep last used connection params
 	s.setConnectionParams(params)
 
@@ -671,7 +684,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 		s._vpn = nil
 
 		// Notify Split-Tunneling module about disconnected VPN status
-		// It is important to call it only after 's._vpn = nil' (so ST functionality will be correctly notifies about VPN disconnected state)
+		// It is important to call it only after 's._vpn = nil' (so ST functionality will be correctly notified about VPN disconnected state)
 		s.splitTunnelling_ApplyConfig()
 
 		log.Info("VPN process stopped")

@@ -125,6 +125,14 @@ type Service struct {
 
 	// variables related to connection test (e.g. ports accessibility test)
 	_connectionTest connTest
+
+	// Information about all connection settings is stored in the 'preferences' object (s._preferences.LastConnectionParams).
+	// When VPN is connected, it contains actual connection data.
+	// So, it is not allowed to update LastConnectionParams while connected without reconnection (to avoid inconsistency).
+	// We use this object to store connection settings while the VPN is connected (to be able to update LastConnectionParams after disconnection).
+	// (UI may send us new connection settings while VPN is connected, e.g., when the user changes connection settings in the UI)
+	_tmpParams      types.ConnectionParams
+	_tmpParamsMutex sync.Mutex
 }
 
 // VpnSessionInfo - Additional information about current VPN connection
@@ -1160,6 +1168,13 @@ func (s *Service) GetConnectionParams() types.ConnectionParams {
 }
 
 func (s *Service) SetConnectionParams(params types.ConnectionParams) error {
+	if s.Connected() {
+		s._tmpParamsMutex.Lock()
+		s._tmpParams = params
+		s._tmpParamsMutex.Unlock()
+		return nil
+	}
+
 	prefs := s._preferences
 
 	isOldParamsDefined := prefs.LastConnectionParams.CheckIsDefined() == nil
