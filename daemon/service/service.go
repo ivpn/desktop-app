@@ -326,6 +326,28 @@ func (s *Service) init() error {
 	return nil
 }
 
+// UnInitialise - function prepares to daemon stop (Stop/Disable everything)
+// - disconnect VPN (if connected)
+// - disable Split Tunnel mode
+// - etc. ...
+func (s *Service) UnInitialise() error {
+	log.Info("Uninitialising service...")
+	// Disconnect VPN
+	if err := s.Disconnect(); err != nil {
+		log.Error(err)
+	}
+
+	// Disable ST
+	if err := splittun.Reset(); err != nil {
+		log.Error(err)
+	}
+	if err := splittun.ApplyConfig(false, false, false, splittun.ConfigAddresses{}, []string{}); err != nil {
+		log.Error(err)
+	}
+
+	return nil
+}
+
 // IsConnectivityBlocked - returns nil if connectivity NOT blocked
 func (s *Service) IsConnectivityBlocked() error {
 	preferences := s._preferences
@@ -1325,6 +1347,7 @@ func (s *Service) splitTunnelling_Reset() error {
 
 	splittun.Reset()
 
+	// Apply configuration. Function will set (prefs.IsSplitTunnel = false) in case if error.
 	return s.splitTunnelling_ApplyConfig()
 }
 

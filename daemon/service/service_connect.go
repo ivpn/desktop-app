@@ -139,12 +139,6 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		return fmt.Errorf("failed to normalize hosts: %w", err)
 	}
 
-	// When Inverse Split Tunnel mode active - disable IPv6 connectivity
-	if params.VpnType == vpn.WireGuard && params.IPv6 && prefs.IsInverseSplitTunneling() {
-		log.Warning("The IPv6 disabled for this connection because of active Inverse Split Tunnel mode")
-		params.IPv6 = false
-	}
-
 	// ------------------------ V2RAY block start ------------------------
 	// 'originalEntryServerInfo' - will contain original info about EntryServer/Port (it is not 'nil' for V2Ray connections).
 	//  We need this info to notify correct data about vpn.CONNECTED state: for V2Ray connection the original parameters are overwriten by local V2Ray proxy params ('127.0.0.1:local_port')

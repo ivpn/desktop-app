@@ -55,6 +55,8 @@ func init() {
 
 // Service - service interface
 type Service interface {
+	UnInitialise() error
+
 	OnAuthenticatedClient(t types.ClientTypeEnum)
 
 	// GetDisabledFunctions returns info about functions which are disabled
@@ -221,7 +223,7 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 		log.Info("Protocol stopped")
 
 		// Disconnect VPN (if connected)
-		p._service.Disconnect()
+		p._service.UnInitialise()
 	}()
 
 	addr := "127.0.0.1:0"
