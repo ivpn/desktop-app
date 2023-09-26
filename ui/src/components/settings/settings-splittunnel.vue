@@ -127,7 +127,8 @@
               feature is disabled.
             </div>
             <div class="settingsGrayLongDescriptionFont">
-              This feature is only available in Inverse Split Tunnel mode.
+              This functionality only applies in Inverse Split Tunnel mode when
+              the VPN is connected.
             </div>
           </div>
         </ComponentDialog>
@@ -482,6 +483,35 @@ export default {
       this.stBlockNonVpnDnsLocal = !this.IsAnyDns;
     },
     async applyChanges() {
+      let fwState = this.$store.state.vpnState.firewallState;
+      let oldInverseMode = this.IsEnabled && this.IsInversed;
+      let newInverseMode = this.isSTEnabledLocal && this.stInversedLocal;
+
+      // going to enable Inverse ST
+      if (fwState.IsEnabled && !oldInverseMode && newInverseMode) {
+        try {
+          let ret = await sender.showMessageBoxSync(
+            {
+              type: "warning",
+              message: `Turning off Firewall for Inverse Split Tunnel mode`,
+              detail:
+                "The Inverse Split Tunnel mode requires disabling the IVPN Firewall.\nWould you like to proceed?",
+              buttons: ["Disable Firewall", "Cancel"],
+            },
+            true
+          );
+          if (ret == 1) {
+            // cancel
+            this.updateLocals();
+            return;
+          }
+          await sender.EnableFirewall(false);
+        } catch (e) {
+          processError(e);
+        }
+      }
+
+      // APPLY ST CONFIGURATION
       try {
         await sender.SplitTunnelSetConfig(
           this.isSTEnabledLocal,
@@ -494,6 +524,30 @@ export default {
       // ensure local value synced with data from storage
       // AND ensure that UI state of checkboxes updated!
       this.updateLocals();
+
+      // If VPN is connected and Inverse mode is just disabled - ask user to enable Firewall
+      if (
+        !newInverseMode &&
+        oldInverseMode &&
+        this.$store.getters["vpnState/isConnected"] &&
+        !fwState.IsEnabled
+      )
+        try {
+          let ret = await sender.showMessageBoxSync(
+            {
+              type: "question",
+              message: `The IVPN Firewall not enabled`,
+              detail:
+                "The Inverse Split Tunnel mode has been disabled successfully. You can now use the Firewall.\n\nWould you like to enable the IVPN Firewall?",
+              buttons: ["Enable Firewall", "Cancel"],
+            },
+            true
+          );
+          if (ret == 1) return; // cancel
+          await sender.EnableFirewall(true);
+        } catch (e) {
+          processError(e);
+        }
     },
 
     async onSTInversedChange() {

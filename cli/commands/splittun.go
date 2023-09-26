@@ -204,7 +204,7 @@ func (c *SplitTun) Init() {
 		or user-defined custom DNS servers within the IVPN appsettings will be allowed.
 		All other DNS requests on port 53 will be blocked.
 		Note: The IVPN AntiTracker and custom DNS are not functional when this feature is disabled.
-		Note: This feature is only applicable for Inverse Split Tunnel mode.`)
+		Note: This functionality only applies in Inverse Split Tunnel mode when the VPN is connected.`)
 
 	c.BoolVar(&c.on, "on", false, "Enable")
 	c.BoolVar(&c.onInverse, cmd_name_on_inverse, false, "Enable in inverse mode. Only specified applications utilize the VPN connection,\nwhile all other traffic circumvents the VPN, using the default connection")

@@ -1484,6 +1484,13 @@ async function SplitTunnelGetStatus() {
   return ret;
 }
 async function SplitTunnelSetConfig(IsEnabled, IsInversed, IsAnyDns, doReset) {
+  let stCfg = store.state.vpnState.splitTunnelling;
+  if (stCfg) {
+    if (IsEnabled == null) IsEnabled = stCfg.IsEnabled;
+    if (IsInversed == null) IsInversed = stCfg.IsInversed;
+    if (IsAnyDns == null) IsAnyDns = stCfg.IsAnyDns;
+  }
+
   await sendRecv({
     Command: daemonRequests.SplitTunnelSetConfig,
     IsEnabled,
