@@ -137,6 +137,7 @@ function detectDefRouteVars()
 function init_iptables() 
 {    
     local bin_iptables=$1
+    local def_inf_name=$2
 
     # in Inverse mode - we are inversing firewall rules:
     # 'splitted' apps use only VPN connection, all the rest apps use default connection settings (bypassing VPN)
@@ -160,7 +161,10 @@ function init_iptables()
     # Save packets mark (to be able to restore mark for incoming packets of the same connection)
     ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_mangle} -m comment --comment  "${_comment}" -j CONNMARK --save-mark    
     # Change the source IP address of packets to the IP address of the interface they're going out on
-    ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_nat} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment  "${_comment}" -j MASQUERADE
+    # Do this only if default interface is defined (for example: IPv6 interface may be empty when IPv6 not configured on the system)
+    if [ ! -z ${def_inf_name} ]; then
+        ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_nat} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -o ${def_inf_name} -m comment --comment  "${_comment}" -j MASQUERADE
+    fi
     # Add mark on packets of classid ${_cgroup_classid}
     ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
     # Important! Process DNS request before setting mark rule (DNS request should not be marked)
@@ -168,9 +172,17 @@ function init_iptables()
     ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j RETURN
 
     # Allow packets from/to cgroup (bypass IVPN firewall)
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
-    ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
-    ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j ACCEPT
+    if [ ! -z ${def_inf_name} ]; then
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j ACCEPT
+    else
+        # If local interface not defined - block all packets from/to cgroup
+        # (for example: IPv6 interface may be empty when IPv6 not configured on the system)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j DROP
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j DROP   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j DROP
+    fi
     
     # Inverse mode: only 'splitted' apps use only VPN connection
     if [ ${_is_inversed} -eq 1 ]; then
@@ -273,9 +285,9 @@ function init()
     ##############################################
     # Firewall rules for packets coming from cgroup
     ##############################################       
-    init_iptables  ${_bin_iptables}
-    if [ -f /proc/net/if_inet6 ] && [ ! -z ${_def_interface_nameIPv6} ]; then
-        init_iptables  ${_bin_ip6tables}        
+    init_iptables  ${_bin_iptables} ${_def_interface_name}
+    if [ -f /proc/net/if_inet6 ]; then
+        init_iptables  ${_bin_ip6tables} ${_def_interface_nameIPv6}
     fi
 
     ##############################################
