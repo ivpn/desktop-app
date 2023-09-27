@@ -338,6 +338,9 @@ func (s *Service) UnInitialise() error {
 	}
 
 	// Disable ST
+	if err := firewall.SingleDnsRuleOff(); err != nil {
+		log.Error(err)
+	}
 	if err := splittun.Reset(); err != nil {
 		log.Error(err)
 	}
