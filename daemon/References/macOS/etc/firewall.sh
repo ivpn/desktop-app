@@ -10,6 +10,13 @@
 # Show table
 #   sudo pfctl -a "ivpn_firewall" -t ivpn_servers -T show
 #   sudo pfctl -a "ivpn_firewall" -t ivpn_exceptions -T show
+# Logging:
+#   sudo ifconfig pflog1 create         # create log interface
+#   sudo tcpdump -nnn -e -ttt -i pflog1 # start realtime monitoring in terminal
+#   Modify rules (example: "pass out log (all, to pflog1) from any to 8.8.8.8")
+# Restoring:
+#   sudo pfctl -d                       # disable PF
+#   sudo pfctl -f /etc/pf.conf          # load default OS rules set
 
 PATH=/sbin:/usr/sbin:$PATH
 
