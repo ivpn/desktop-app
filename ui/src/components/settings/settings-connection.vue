@@ -327,7 +327,7 @@
               step="1"
               style="width: 165px"
               class="settingsTextInput"
-              title="Valid range [1280 - 65535]. Please note that changing this value make affect the proper functioning of the VPN tunnel."
+              title="Valid range [1280 - 65535]. Please note that changing this value may affect the proper functioning of the VPN tunnel."
             />
           </div>
           <div
