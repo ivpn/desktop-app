@@ -26,7 +26,7 @@ import (
 	"fmt"
 )
 
-const (
+var (
 	notImplementedError = fmt.Errorf("Split-Tunnelling is not implemented for this platform")
 )
 
