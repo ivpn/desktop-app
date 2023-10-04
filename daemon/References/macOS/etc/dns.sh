@@ -59,22 +59,43 @@ function ensurePrimaryInterfaceDetected {
 }
 
 function print_state {
+    echo "*** DNS STATUS ***"
+    echo "-------------------------------------"
+    echo "***  scutil --dns ***"
+    scutil --dns | grep -E 'resolver|nameserver'
+    echo "-------------------------------------"
+    echo "Primary interface: '${PRI_IFACE}' PSID: '${PSID}'"
+    echo "-------------------------------------"
+    echo "***  State:/Network/Global/IPv4 ***"
+    echo "show State:/Network/Global/IPv4" | scutil
+    echo "-------------------------------------"
+    echo "***  State:/Network/IVPN/Original/DNS/State ***"
+    echo "show State:/Network/IVPN/Original/DNS/State" | scutil
+    echo "-------------------------------------"
+    echo "***  State:/Network/IVPN/Original/DNS/Setup ***"
+    echo "show State:/Network/IVPN/Original/DNS/Setup" | scutil
+    echo "-------------------------------------"
 
-    ensurePrimaryInterfaceDetected
+    if isPrimaryInterfaceDetected; then
+        echo "***  State:/Network/Service/${PSID}/DNS ***"
+        echo "show State:/Network/Service/${PSID}/DNS" | scutil
+        echo "-------------------------------------"
+        echo "***  Setup:/Network/Service/${PSID}/DNS ***"
+        echo "show Setup:/Network/Service/${PSID}/DNS" | scutil
+    else
+        echo "!!! Primary interface not detected !!!"
+    fi
 
-    S_STATE=`echo "show State:/Network/Service/${PSID}/DNS" | scutil`
-    S_SETUP=`echo "show Setup:/Network/Service/${PSID}/DNS" | scutil`
-
-    echo "State: ${S_STATE}"
-    echo
-    echo "Setup: ${S_SETUP}"
-    echo
-
+    echo "-------------------------------------"
+    echo "***  State:/Network/IVPN/DNSAlternate ***"
+    echo "show State:/Network/IVPN/DNSAlternate" | scutil
+    echo "-------------------------------------"
+    echo "***  State:/Network/IVPN/DNSBase ***"
+    echo "show State:/Network/IVPN/DNSBase" | scutil
+    echo "-------------------------------------"
     update_IVPN_DNS_SOURCE_PATH
-    IVPN_DNS_VALUE=`echo "show ${IVPN_DNS_SOURCE_PATH}" | scutil`
-    echo "IVPN DNS path: ${IVPN_DNS_SOURCE_PATH}"
-    echo "IVPN DNS value: ${IVPN_DNS_VALUE}"
-    echo
+    echo "***  IVPN DNS path: ${IVPN_DNS_SOURCE_PATH}"
+    echo "-------------------------------------"
 }
 
 function is_dns_changed {
