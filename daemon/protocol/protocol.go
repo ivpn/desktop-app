@@ -55,6 +55,8 @@ func init() {
 
 // Service - service interface
 type Service interface {
+	UnInitialise() error
+
 	OnAuthenticatedClient(t types.ClientTypeEnum)
 
 	// GetDisabledFunctions returns info about functions which are disabled
@@ -88,7 +90,7 @@ type Service interface {
 	SetConnectionParams(params service_types.ConnectionParams) error
 	SetWiFiSettings(params preferences.WiFiParams) error
 
-	SplitTunnelling_SetConfig(isEnabled bool, reset bool) error
+	SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, isAllowWhenNoVpn, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
 	SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error)
 	SplitTunnelling_RemoveApp(pid int, exec string) (err error)
@@ -105,7 +107,8 @@ type Service interface {
 	// SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 	// If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 	SetManualDNS(dns dns.DnsSettings, antiTracker service_types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error)
-	GetAntiTrackerStatus() (antiTrackerStatus service_types.AntiTrackerMetadata, retErr error)
+	GetManualDNSStatus() dns.DnsSettings
+	GetAntiTrackerStatus() service_types.AntiTrackerMetadata
 
 	IsCanConnectMultiHop() error
 	Connect(params service_types.ConnectionParams) error
@@ -220,7 +223,7 @@ func (p *Protocol) Start(secret uint64, startedOnPort chan<- int, service Servic
 		log.Info("Protocol stopped")
 
 		// Disconnect VPN (if connected)
-		p._service.Disconnect()
+		p._service.UnInitialise()
 	}()
 
 	addr := "127.0.0.1:0"
@@ -768,10 +771,12 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
-		if err := p._service.SplitTunnelling_SetConfig(req.IsEnabled, req.Reset); err != nil {
+		if err := p._service.SplitTunnelling_SetConfig(req.IsEnabled, req.IsInversed, req.IsAnyDns, req.IsAllowWhenNoVpn, req.Reset); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+		// notify 'success'
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified about configuration change by service in OnSplitTunnelStatusChanged() handler
 
 	case "SplitTunnelAddApp":
@@ -864,30 +869,15 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			req.Dns.DnsHost = getSingleField(req.Dns.DnsHost)
 			req.Dns.DohTemplate = getSingleField(req.Dns.DohTemplate)
 
-			antiTrackerStatus := service_types.AntiTrackerMetadata{}
-			changedDns, err := p._service.SetManualDNS(req.Dns, req.AntiTracker)
-
-			if err != nil {
-				// DNS set failed. Trying to reset DNS
-				req.AntiTracker.Enabled = false
-				_, errReset := p._service.SetManualDNS(dns.DnsSettings{}, req.AntiTracker)
-				if errReset != nil {
-					log.ErrorTrace(errReset)
-				}
-			}
-
+			_, err := p._service.SetManualDNS(req.Dns, req.AntiTracker)
 			if err != nil {
 				log.ErrorTrace(err)
-				// send the response to the requestor
-				p.sendResponse(conn, &types.SetAlternateDNSResp{IsSuccess: false, ErrorMessage: err.Error()}, req.Idx)
+				p.sendErrorResponse(conn, reqCmd, err)
 			} else {
-				antiTrackerStatus, _ = p._service.GetAntiTrackerStatus()
-				response := types.SetAlternateDNSResp{IsSuccess: true, Dns: types.DnsStatus{Dns: changedDns, AntiTrackerStatus: antiTrackerStatus}}
-				// notify all connected clients
-				p.notifyClients(&response)
-				// send the response to the requestor
-				p.sendResponse(conn, &response, req.Idx)
+				p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx) // notify: request processed
 			}
+			// notify current DNS status
+			p.notifyClients(&types.SetAlternateDNSResp{Dns: types.DnsStatus{Dns: p._service.GetManualDNSStatus(), AntiTrackerStatus: p._service.GetAntiTrackerStatus()}})
 		}
 	case "GetDnsPredefinedConfigs":
 		cfgs, err := dns.GetPredefinedDnsConfigurations()

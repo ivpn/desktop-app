@@ -87,7 +87,7 @@ type Service struct {
 	_preferences       preferences.Preferences
 	_connectMutex      sync.Mutex
 
-	// Additional information about current VPN connection
+	// Additional information about current VPN connection: outbound IP addresses, local VPN addresses
 	// Use GetVpnSessionInfo()/SetVpnSessionInfo() to access this data
 	_vpnSessionInfo      VpnSessionInfo
 	_vpnSessionInfoMutex sync.Mutex
@@ -125,6 +125,14 @@ type Service struct {
 
 	// variables related to connection test (e.g. ports accessibility test)
 	_connectionTest connTest
+
+	// Information about all connection settings is stored in the 'preferences' object (s._preferences.LastConnectionParams).
+	// When VPN is connected, it contains actual connection data.
+	// So, it is not allowed to update LastConnectionParams while connected without reconnection (to avoid inconsistency).
+	// We use this object to store connection settings while the VPN is connected (to be able to update LastConnectionParams after disconnection).
+	// (UI may send us new connection settings while VPN is connected, e.g., when the user changes connection settings in the UI)
+	_tmpParams      types.ConnectionParams
+	_tmpParamsMutex sync.Mutex
 }
 
 // VpnSessionInfo - Additional information about current VPN connection
@@ -180,6 +188,13 @@ func (s *Service) init() error {
 			ipv6, err6 := netinfo.GetOutboundIP(true)
 			if (!ipv4.IsUnspecified() && err4 == nil) || (!ipv6.IsUnspecified() && err6 == nil) {
 				log.Info("IP stack initializaed")
+
+				// Save IP addresses of the current outbound interface (can be used, for example, for Split-Tunneling)
+				ipInfo := s.GetVpnSessionInfo()
+				ipInfo.OutboundIPv4 = ipv4
+				ipInfo.OutboundIPv6 = ipv6
+				s.SetVpnSessionInfo(ipInfo)
+
 				return
 			}
 			if time.Now().After(endTime) {
@@ -311,6 +326,31 @@ func (s *Service) init() error {
 	return nil
 }
 
+// UnInitialise - function prepares to daemon stop (Stop/Disable everything)
+// - disconnect VPN (if connected)
+// - disable Split Tunnel mode
+// - etc. ...
+func (s *Service) UnInitialise() error {
+	log.Info("Uninitialising service...")
+	// Disconnect VPN
+	if err := s.Disconnect(); err != nil {
+		log.Error(err)
+	}
+
+	// Disable ST
+	if err := firewall.SingleDnsRuleOff(); err != nil {
+		log.Error(err)
+	}
+	if err := splittun.Reset(); err != nil {
+		log.Error(err)
+	}
+	if err := splittun.ApplyConfig(false, false, false, false, splittun.ConfigAddresses{}, []string{}); err != nil {
+		log.Error(err)
+	}
+
+	return nil
+}
+
 // IsConnectivityBlocked - returns nil if connectivity NOT blocked
 func (s *Service) IsConnectivityBlocked() error {
 	preferences := s._preferences
@@ -416,7 +456,7 @@ func (s *Service) APIRequest(apiAlias string, ipTypeRequired protocolTypes.Requi
 // It can happen, for example, if some external binaries not installed
 // (e.g. obfsproxy or WireGuard on Linux)
 func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
-	var ovpnErr, obfspErr, v2rayErr, wgErr, splitTunErr error
+	var ovpnErr, obfspErr, v2rayErr, wgErr, splitTunErr, splitTunInversedErr error
 
 	if err := filerights.CheckFileAccessRightsExecutable(platform.OpenVpnBinaryPath()); err != nil {
 		ovpnErr = fmt.Errorf("OpenVPN binary: %w", err)
@@ -441,7 +481,7 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 	}
 
 	// returns non-nil error object if Split-Tunneling functionality not available
-	splitTunErr = splittun.GetFuncNotAvailableError()
+	splitTunErr, splitTunInversedErr = splittun.GetFuncNotAvailableError()
 
 	if errors.Is(ovpnErr, os.ErrNotExist) {
 		ovpnErr = fmt.Errorf("%w. Please install OpenVPN", ovpnErr)
@@ -469,6 +509,9 @@ func (s *Service) GetDisabledFunctions() protocolTypes.DisabledFunctionality {
 	}
 	if splitTunErr != nil {
 		ret.SplitTunnelError = splitTunErr.Error()
+	}
+	if splitTunInversedErr != nil {
+		ret.SplitTunnelInverseError = splitTunInversedErr.Error()
 	}
 
 	ret.Platform = s.implGetDisabledFuncForPlatform()
@@ -511,7 +554,7 @@ func (s *Service) disconnect() error {
 	}
 
 	// stop detections for routing changes
-	s._netChangeDetector.Stop()
+	s._netChangeDetector.UnInit()
 
 	// stop VPN
 	if err := vpn.Disconnect(); err != nil {
@@ -580,13 +623,22 @@ func (s *Service) Pause(durationSeconds uint32) error {
 		return err
 	}
 
+	// set pause time (to indicate that connection is paused)
 	s._pause._pauseTill = time.Now().Add(time.Second * time.Duration(durationSeconds))
 	log.Info(fmt.Sprintf("Paused on %v (till %v)", time.Second*time.Duration(durationSeconds), s._pause._pauseTill.Format(time.Stamp)))
 
+	// Update SplitTunnel state (if enabled)
+	prefs := s.Preferences()
+	if prefs.IsSplitTunnel {
+		if err := s.splitTunnelling_ApplyConfig(); err != nil {
+			log.Error(err)
+		}
+	}
+
+	// Pause resumer: Every second checks if it is time to resume VPN connection.
+	// Info: We can not use 'time.AfterFunc()' because
+	// it does not take into account the time when the system was in sleep mode.
 	go func() {
-		// Pause resumer: Every second checks if it is time to resume VPN connection.
-		// Info: We can not use 'time.AfterFunc()' because
-		// it does not take into account the time when the system was in sleep mode.
 		defer log.Info("Resumed")
 		for {
 			time.Sleep(time.Second * 1)
@@ -619,7 +671,18 @@ func (s *Service) Resume() error {
 		return fmt.Errorf("VPN not paused")
 	}
 
-	return s.resume()
+	if err := s.resume(); err != nil {
+		return err
+	}
+
+	// Update SplitTunnel state (if enabled)
+	prefs := s.Preferences()
+	if prefs.IsSplitTunnel {
+		if err := s.splitTunnelling_ApplyConfig(); err != nil {
+			log.Error(err)
+		}
+	}
+	return nil
 }
 
 // Resume resume vpn connection
@@ -684,16 +747,38 @@ func (s *Service) saveDefaultDnsParams(dnsCfg dns.DnsSettings, antiTrackerCfg ty
 	return s.setConnectionParams(defaultParams)
 }
 
-// GetDefaultDnsParams returns default DNS parameters
+// GetActiveDNS() eeturns DNS active settings for current VPN connection:
+// - if 'antiTracker' is enabled - returns DNS of AntiTracker server
+// - else if manual DNS is defined - returns manual DNS
+// - else returns default DNS configuration for current VPN connection
+// *Note! If VPN disconnected - returns empty data
+func (s *Service) GetActiveDNS() (dnsCfg dns.DnsSettings, err error) {
+	vpnObj := s._vpn
+	if vpnObj == nil {
+		return dns.DnsSettings{}, nil //VPN DISCONNECTED
+	}
+
+	_, _, manualDns, err := s.GetDefaultManualDnsParams()
+	if err != nil {
+		return dns.DnsSettings{}, err
+	}
+	if !manualDns.IsEmpty() {
+		return manualDns, nil
+	}
+
+	return dns.DnsSettingsCreate(vpnObj.DefaultDNS()), nil
+}
+
+// GetDefaultManualDnsParams returns default manual DNS parameters
 // Returns:
 //
-//	dnsCfg - default DNS parameters
+//	manualDnsCfg - default manual DNS parameters
 //	antiTrackerCfg - default AntiTracker parameters
 //	realDnsValue - real DNS value (if 'antiTracker' is enabled - it will contain DNS of AntiTracker server)
-func (s *Service) GetDefaultDnsParams() (dnsCfg dns.DnsSettings, antiTrackerCfg types.AntiTrackerMetadata, realDnsValue dns.DnsSettings, err error) {
+func (s *Service) GetDefaultManualDnsParams() (manualDnsCfg dns.DnsSettings, antiTrackerCfg types.AntiTrackerMetadata, realDnsValue dns.DnsSettings, err error) {
 	defaultParams := s.GetConnectionParams()
 
-	dnsCfg = defaultParams.ManualDNS
+	manualDnsCfg = defaultParams.ManualDNS
 	realDnsValue = defaultParams.ManualDNS
 	antiTrackerCfg = defaultParams.Metadata.AntiTracker
 
@@ -701,15 +786,31 @@ func (s *Service) GetDefaultDnsParams() (dnsCfg dns.DnsSettings, antiTrackerCfg 
 		realDnsValue, err = s.getAntiTrackerDns(antiTrackerCfg.Hardcore, antiTrackerCfg.AntiTrackerBlockListName)
 	}
 
-	return dnsCfg, antiTrackerCfg, realDnsValue, err
+	return manualDnsCfg, antiTrackerCfg, realDnsValue, err
 }
 
 // SetManualDNS update default DNS parameters AND apply new DNS value for current VPN connection
 // If 'antiTracker' is enabled - the 'dnsCfg' will be ignored
 func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTrackerMetadata) (changedDns dns.DnsSettings, retErr error) {
+	prefs := s.Preferences()
+	if !dnsCfg.IsEmpty() || antiTracker.Enabled {
+		if prefs.IsInverseSplitTunneling() && prefs.SplitTunnelAnyDns {
+			return dns.DnsSettings{}, fmt.Errorf("custom DNS or AntiTracker cannot be enabled while allowing all DNS for Inverse Split Tunnel mode; please block non-IVPN DNS first in the Inverse Split Tunnel configuration")
+		}
+	}
+
+	isChanged := false
+	defer func() {
+		if isChanged {
+			// Apply Firewall rule (for Inverse Split Tunnel): allow DNS requests only to IVPN servrers or to manually defined server
+			if err := s.splitTunnelling_ApplyConfig(); err != nil {
+				log.Error(err)
+			}
+		}
+	}()
+
 	// Update default metadata
 	defaultParams := s.GetConnectionParams()
-	isChanged := false
 	// save DNS and AntiTracker default metadata
 	if !defaultParams.ManualDNS.Equal(dnsCfg) {
 		defaultParams.ManualDNS = dnsCfg
@@ -749,13 +850,17 @@ func (s *Service) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker types.AntiTra
 	return changedDns, vpn.SetManualDNS(changedDns)
 }
 
-func (s *Service) GetAntiTrackerStatus() (types.AntiTrackerMetadata, error) {
+func (s *Service) GetManualDNSStatus() dns.DnsSettings {
+	return s.GetConnectionParams().ManualDNS
+}
+
+func (s *Service) GetAntiTrackerStatus() types.AntiTrackerMetadata {
 	// Get AntiTracker DNS settings. If error - use default date and ignore error
 	retAtMetadata, err := s.normalizeAntiTrackerBlockListName(s.GetConnectionParams().Metadata.AntiTracker)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to normalize AntiTracker block list name: %v (using '%s')", err, retAtMetadata.AntiTrackerBlockListName))
 	}
-	return retAtMetadata, nil
+	return retAtMetadata
 }
 
 // Normze AntiTracker block list name:
@@ -886,6 +991,9 @@ func (s *Service) SetKillSwitchState(isEnabled bool) error {
 	if s.IsPaused() {
 		return fmt.Errorf("unable to change the firewall state while connection is paused, please resume the connection first")
 	}
+	if isEnabled && s._preferences.IsInverseSplitTunneling() {
+		return fmt.Errorf("firewall cannot be enabled while Inverse Split Tunnel is active; please disable Inverse Split Tunnel first")
+	}
 
 	err := firewall.SetEnabled(isEnabled)
 	if err == nil {
@@ -923,6 +1031,10 @@ func (s *Service) KillSwitchState() (status types.KillSwitchStatus, err error) {
 func (s *Service) SetKillSwitchIsPersistent(isPersistant bool) error {
 	if s.IsPaused() {
 		return fmt.Errorf("unable to change the firewall state while connection is paused, please resume the connection first")
+	}
+
+	if isPersistant && s._preferences.IsInverseSplitTunneling() {
+		return fmt.Errorf("firewall cannot be enabled while Inverse Split Tunnel is active; please disable Inverse Split Tunnel first")
 	}
 
 	prefs := s._preferences
@@ -1074,7 +1186,7 @@ func (s *Service) ResetPreferences() error {
 	s._preferences = *preferences.Create()
 
 	// erase ST config
-	s.SplitTunnelling_SetConfig(false, true)
+	s.SplitTunnelling_SetConfig(false, false, false, false, true)
 	return nil
 }
 
@@ -1083,6 +1195,13 @@ func (s *Service) GetConnectionParams() types.ConnectionParams {
 }
 
 func (s *Service) SetConnectionParams(params types.ConnectionParams) error {
+	if s.Connected() {
+		s._tmpParamsMutex.Lock()
+		s._tmpParams = params
+		s._tmpParamsMutex.Unlock()
+		return nil
+	}
+
 	prefs := s._preferences
 
 	isOldParamsDefined := prefs.LastConnectionParams.CheckIsDefined() == nil
@@ -1161,9 +1280,26 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 		runningProcesses = []splittun.RunningApp{}
 	}
 
+	stErr, stInverseErr := splittun.GetFuncNotAvailableError()
+	isEnabled := prefs.IsSplitTunnel
+	if stErr != nil {
+		isEnabled = false
+	}
+	isInversed := prefs.SplitTunnelInversed
+	isAnyDns := prefs.SplitTunnelAnyDns
+	isAllowWhenNoVpn := prefs.SplitTunnelAllowWhenNoVpn
+	if stInverseErr != nil {
+		isInversed = false
+		isAnyDns = false
+		isAllowWhenNoVpn = false
+	}
+
 	ret := protocolTypes.SplitTunnelStatus{
-		IsFunctionalityNotAvailable: splittun.GetFuncNotAvailableError() != nil,
-		IsEnabled:                   prefs.IsSplitTunnel,
+		IsFunctionalityNotAvailable: stErr != nil,
+		IsEnabled:                   isEnabled,
+		IsInversed:                  isInversed,
+		IsAnyDns:                    isAnyDns,
+		IsAllowWhenNoVpn:            isAllowWhenNoVpn,
 		IsCanGetAppIconForBinary:    oshelpers.IsCanGetAppIconForBinary(),
 		SplitTunnelApps:             prefs.SplitTunnelApps,
 		RunningApps:                 runningProcesses}
@@ -1171,13 +1307,41 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 	return ret, nil
 }
 
-func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, reset bool) error {
-	if reset || splittun.GetFuncNotAvailableError() != nil {
+func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, isAllowWhenNoVpn, reset bool) error {
+	if reset {
 		return s.splitTunnelling_Reset()
+	}
+	stErr, stInverseErr := splittun.GetFuncNotAvailableError()
+	if stErr != nil {
+		return stErr
+	}
+	if isInversed && stInverseErr != nil {
+		return stInverseErr
+	}
+
+	if isEnabled && isInversed {
+		// if we are going to enable INVERSE SplitTunneling - ensure that Firewall is disabled
+		if enabled, _ := s.FirewallEnabled(); enabled {
+			return fmt.Errorf("unable to activate Inverse Split Tunnel: the Firewall is enabled; please, disable IVPN Firewall first")
+		}
+
+		// if we are going to allow any DNS in INVERSE SplitTunneling mode - ensure that custom DNS and AntiTracker is disabled
+		if isAnyDns {
+			defaultParams := s.GetConnectionParams()
+			if defaultParams.Metadata.AntiTracker.Enabled {
+				return fmt.Errorf("unable to disable the non-IVPN DNS blocking feature for Inverse Split Tunnel mode: AntiTracker is currently enabled; please disable both AntiTracker and manually configured DNS settings first")
+			}
+			if !defaultParams.ManualDNS.IsEmpty() {
+				return fmt.Errorf("unable to disable the non-IVPN DNS blocking feature for Inverse Split Tunnel mode: manual DNS is currently enabled; please disable manually configured DNS settings first")
+			}
+		}
 	}
 
 	prefs := s._preferences
 	prefs.IsSplitTunnel = isEnabled
+	prefs.SplitTunnelInversed = isInversed
+	prefs.SplitTunnelAnyDns = isAnyDns
+	prefs.SplitTunnelAllowWhenNoVpn = isAllowWhenNoVpn
 	s.setPreferences(prefs)
 
 	return s.splitTunnelling_ApplyConfig()
@@ -1185,37 +1349,94 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled bool, reset bool) error {
 func (s *Service) splitTunnelling_Reset() error {
 	prefs := s._preferences
 	prefs.IsSplitTunnel = false
+	prefs.SplitTunnelInversed = false
+	prefs.SplitTunnelAnyDns = false
+	prefs.SplitTunnelAllowWhenNoVpn = false
 	prefs.SplitTunnelApps = make([]string, 0)
 	s.setPreferences(prefs)
 
 	splittun.Reset()
 
+	// Apply configuration. Function will set (prefs.IsSplitTunnel = false) in case if error.
 	return s.splitTunnelling_ApplyConfig()
 }
-func (s *Service) splitTunnelling_ApplyConfig() error {
-	// notify changed ST configuration status (even if functionality not available)
-	defer s._evtReceiver.OnSplitTunnelStatusChanged()
 
-	if splittun.GetFuncNotAvailableError() != nil {
+// splitTunnelling_ApplyConfig() applies the required SplitTunnel configuration based on:
+// - current VPN connection state
+// - current SplitTunnel config (VPN and default interfaces; InverseSplitTunneling config and splitted apps list)
+//
+// It is important to call this function after:
+// - VPN connection state changed
+// - SplitTunnel configuration changed
+// - DNS configuration changed (needed for updating Inverse Split Tunnel firewal rule)
+func (s *Service) splitTunnelling_ApplyConfig() (retError error) {
+
+	defer func() {
+		// if error - disable SplitTunneling
+		if retError != nil {
+			prefs := s._preferences
+			prefs.IsSplitTunnel = false
+			s.setPreferences(prefs)
+		}
+		// notify changed ST configuration status (even if functionality not available)
+		s._evtReceiver.OnSplitTunnelStatusChanged()
+	}()
+
+	if stErr, _ := splittun.GetFuncNotAvailableError(); stErr != nil {
 		// Split-Tunneling not accessible (not able to connect to a driver or not implemented for current platform)
 		return nil
 	}
 
 	prefs := s.Preferences()
-	sInf := s.GetVpnSessionInfo()
 
+	// Network changes detection must be disabled for Inverse SplitTunneling
+	if prefs.IsInverseSplitTunneling() {
+		// If inverse SplitTunneling is enabled - stop detection of network changes (if it already started)
+		if err := s._netChangeDetector.Stop(); err != nil {
+			log.Error(fmt.Sprintf("Unable to stop network changes detection: %v", err.Error()))
+		}
+	} else {
+		defer func() {
+			// If inverse SplitTunneling is disabled - start detection of network changes (if it is not already started)
+			if s.Connected() {
+				if err := s._netChangeDetector.Start(); err != nil {
+					log.Error(fmt.Sprintf("Unable to start network changes detection: %v", err.Error()))
+				}
+			}
+		}()
+	}
+
+	sInf := s.GetVpnSessionInfo()
 	addressesCfg := splittun.ConfigAddresses{
 		IPv4Tunnel: sInf.VpnLocalIPv4,
 		IPv4Public: sInf.OutboundIPv4,
 		IPv6Tunnel: sInf.VpnLocalIPv6,
 		IPv6Public: sInf.OutboundIPv6}
 
-	return splittun.ApplyConfig(prefs.IsSplitTunnel, s.Connected(), addressesCfg, prefs.SplitTunnelApps)
+	// Apply Firewall rule (for Inverse Split Tunnel): allow DNS requests only to IVPN servrers or to manually defined server
+	if err := firewall.SingleDnsRuleOff(); err != nil { // disable custom DNS rule (if exists)
+		log.Error(err)
+	}
+	isVpnConnected := s.Connected() && !s.IsPaused()
+	if isVpnConnected && prefs.IsInverseSplitTunneling() && !prefs.SplitTunnelAnyDns {
+		dnsCfg, err := s.GetActiveDNS() // returns nil when VPN not connected
+		if err != nil {
+			return fmt.Errorf("failed to apply the firewall rule to allow DNS requests only to the IVPN server: %w", err)
+		}
+		if !dnsCfg.IsEmpty() {
+			if err := firewall.SingleDnsRuleOn(dnsCfg.Ip()); err != nil {
+				return fmt.Errorf("failed to apply the firewall rule to allow DNS requests only to the IVPN server: %w", err)
+			}
+		}
+	}
+
+	// Apply Split-Tun config
+	return splittun.ApplyConfig(prefs.IsSplitTunnel, prefs.IsInverseSplitTunneling(), prefs.SplitTunnelAllowWhenNoVpn, isVpnConnected, addressesCfg, prefs.SplitTunnelApps)
 }
 
 func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error) {
 	if !s._preferences.IsSplitTunnel {
-		return "", false, fmt.Errorf("unable to run application in Split Tunneling environment: Split Tunneling is disabled")
+		return "", false, fmt.Errorf("unable to run application in Split Tunnel environment: Split Tunnel is disabled")
 	}
 	// apply ST configuration after function ends
 	defer s.splitTunnelling_ApplyConfig()
@@ -1346,7 +1567,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 		// generate new keys for WireGuard
 		publicKey, privateKey, err = wireguard.GenerateKeys(platform.WgToolBinaryPath())
 		if err != nil {
-			log.Warning("Failed to generate wireguard keys for new session: %s", err)
+			log.Warning(fmt.Sprintf("Failed to generate wireguard keys for new session: %s", err.Error()))
 		}
 
 		successResp, errorLimitResp, apiErr, rawRespStr, err = s._api.SessionNew(accountID, publicKey, kemKeys, forceLogin, captchaID, captcha, confirmation2FA)

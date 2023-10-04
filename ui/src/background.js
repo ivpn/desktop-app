@@ -122,6 +122,9 @@ ipcMain.on("renderer-request-show-settings-firewall", () => {
 ipcMain.on("renderer-request-show-settings-antitracker", () => {
   showSettings("antitracker");
 });
+ipcMain.on("renderer-request-show-settings-SplitTunnel", () => {
+  showSettings("splittunnel");
+});
 ipcMain.handle("renderer-request-connect-to-daemon", async () => {
   return await connectToDaemon();
 });
@@ -129,7 +132,6 @@ ipcMain.handle("renderer-request-update-wnd-close", async () => {
   if (!updateWindow) return;
   updateWindow.destroy();
 });
-
 ipcMain.handle(
   "renderer-request-update-wnd-resize",
   async (event, width, height) => {
@@ -139,6 +141,48 @@ ipcMain.handle(
     updateWindow.setContentSize(width, height);
   }
 );
+ipcMain.handle("renderer-request-SplitTunnelAddApp", async (event, execCmd) => {
+  LaunchAppInSplitTunnel(execCmd, event);
+});
+
+async function LaunchAppInSplitTunnel(execCmd, event) {
+  let wnd = win;
+  if (event && event.sender) wnd = event.sender.getOwnerBrowserWindow();
+
+  let funcShowMessageBox = function (dlgConfig) {
+    return dialog.showMessageBox(wnd, dlgConfig);
+  };
+
+  try {
+    // manuall app ...
+    if (!execCmd) {
+      let dlgFilters = [];
+      if (Platform() === PlatformEnum.Windows) {
+        dlgFilters = [
+          { name: "Executables", extensions: ["exe"] },
+          { name: "All files", extensions: ["*"] },
+        ];
+      } else {
+        dlgFilters = [{ name: "All files", extensions: ["*"] }];
+      }
+
+      var ret = dialog.showOpenDialogSync(wnd, dlgFilters);
+      if (!ret || ret.canceled || ret.length == 0) return;
+      execCmd = ret[0];
+    }
+
+    return await daemonClient.SplitTunnelAddApp(execCmd, funcShowMessageBox);
+  } catch (e) {
+    console.error(e);
+    funcShowMessageBox({
+      type: "error",
+      buttons: ["OK"],
+      detail: e.toString(),
+      message: "Failed to launch application in Split Tunnel environment",
+    });
+    return;
+  }
+}
 
 if (gotTheLock) {
   InitPersistentSettings();
@@ -279,7 +323,8 @@ if (gotTheLock) {
         menuOnShow,
         menuOnPreferences,
         menuOnAccount,
-        menuOnCheckUpdates
+        menuOnCheckUpdates,
+        LaunchAppInSplitTunnel
       );
       isTrayInitialized = true;
     } catch (e) {
@@ -500,6 +545,42 @@ if (gotTheLock) {
 }
 
 async function isCanQuit() {
+  if (store.getters["vpnState/isInverseSplitTunnel"]) {
+    // temporary enable application icon in system dock
+    setAppDockVisibility(true);
+
+    let msgBoxConfig = {
+      type: "question",
+      message: "Deactivate Split Tunnel?",
+      detail:
+        "The Inverse Split Tunnel mode is active.\nDo you want to deactivate it before exiting the application?",
+      buttons: [
+        "Cancel",
+        "Keep Split Tunnel active",
+        "Deactivate Split Tunnel",
+      ],
+    };
+
+    let actionNo = 0;
+    let action = null;
+    if (win == null) action = await dialog.showMessageBox(msgBoxConfig);
+    else action = await dialog.showMessageBox(win, msgBoxConfig);
+    actionNo = action.response;
+
+    switch (actionNo) {
+      case 0: // Cancel
+        return false;
+
+      case 1: // Keep & Quit
+        // do nothing here
+        break;
+
+      case 2: // Deactivate & Quit
+        await daemonClient.SplitTunnelSetConfig(false);
+        break;
+    }
+  }
+
   // if disconnected -> close application immediately
   if (store.getters["vpnState/isDisconnected"]) {
     if (
@@ -513,8 +594,8 @@ async function isCanQuit() {
           "The IVPN Firewall is active.\nDo you want to deactivate it before exiting the application?",
         buttons: [
           "Cancel",
-          "Keep Firewall activated & Quit",
-          "Deactivate Firewall & Quit",
+          "Keep Firewall activated and Quit",
+          "Deactivate Firewall and Quit",
         ],
       };
 
@@ -551,7 +632,7 @@ async function isCanQuit() {
       type: "question",
       message: "Are you sure you want to quit?",
       detail: "You are connected to the VPN.",
-      buttons: ["Cancel", "Disconnect VPN & Quit"],
+      buttons: ["Cancel", "Disconnect VPN and Quit"],
     };
 
     // temporary enable application icon in system dock

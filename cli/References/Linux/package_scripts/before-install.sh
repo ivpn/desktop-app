@@ -20,6 +20,24 @@ if [ -f ${IVPN_BIN} ]; then
   ${IVPN_BIN} disconnect || echo "[-] Failed to disconnect"
 fi
 
+# Erasing Split Tunnel leftovers from old installation
+# Required for: 
+# - RPM upgrade
+# - compatibility with old package versions (v3.12.0 and older)
+if [ -f /opt/ivpn/etc/firewall.sh ] || [ -f /opt/ivpn/etc/splittun.sh ]; then 
+  echo "[+] Trying to erase old Split Tunnel rules ..."
+  if [ -f /opt/ivpn/etc/firewall.sh ]; then
+    printf "    * /opt/ivpn/etc/firewall.sh -only_dns_off: "
+    /opt/ivpn/etc/firewall.sh -only_dns_off >/dev/null 2>&1 && echo "OK" || echo "NOK"
+  fi
+  if [ -f /opt/ivpn/etc/splittun.sh ]; then
+    printf "    * /opt/ivpn/etc/splittun.sh reset        : "
+    /opt/ivpn/etc/splittun.sh reset >/dev/null 2>&1         && echo "OK" || echo "NOK"
+    printf "    * /opt/ivpn/etc/splittun.sh stop         : "
+    /opt/ivpn/etc/splittun.sh stop >/dev/null 2>&1          && echo "OK" || echo "NOK"
+  fi
+fi
+
 # ########################################################################################
 #
 # Next lines is in use only for compatibility with old package versions (v3.10.10 and older)

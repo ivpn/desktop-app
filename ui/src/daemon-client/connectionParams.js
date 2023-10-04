@@ -119,12 +119,16 @@ export function InitConnectionParamsObject() {
   if (store.getters["settings/isRandomExitServer"])
     metadata.ServerSelectionExit = ServerSelectionEnum.Random;
 
+  let fwOn =
+    store.state.settings.firewallActivateOnConnect === true &&
+    !store.getters["vpnState/isInverseSplitTunnel"];
+
   return {
     Metadata: metadata,
     VpnType: settings.vpnType,
     [vpnParamsPropName]: vpnParamsObj,
     ManualDNS: manualDNS,
-    FirewallOn: store.state.settings.firewallActivateOnConnect === true,
+    FirewallOn: fwOn,
 
     // Can use IPv6 connection inside tunnel
     // IPv6 has higher priority, if it supported by a server - we will use IPv6.

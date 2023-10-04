@@ -387,14 +387,21 @@ func (c *Client) GetSplitTunnelStatus() (cfg types.SplitTunnelStatus, err error)
 }
 
 // SetSplitTunnelConfig sets the split-tunnelling configuration
-func (c *Client) SetSplitTunnelConfig(isEnable, reset bool) (err error) {
+// Arguments:
+//
+//	isEnabled  bool - is ST enabled
+//	isInversed bool - when inversed - only apps added to ST will use VPN connection, all other apps will use direct unencrypted connection
+//	isAnyDns   bool - (only for Inverse Split Tunnel) When false: Allow only DNS servers specified by the IVPN application
+//	isAllowWhenNoVpn bool - (only for Inverse Split Tunnel) Allow connectivity for Split Tunnel apps when VPN is disabled
+//	reset      bool - reset ST config and disable ST (if enabled - all the rest paremeters are ignored)
+func (c *Client) SetSplitTunnelConfig(isEnable, isInversed, isAnyDns, isAllowWhenNoVpn, reset bool) (err error) {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
 
-	req := types.SplitTunnelSetConfig{IsEnabled: isEnable, Reset: reset}
-	resp := types.SplitTunnelStatus{}
-	if _, _, err := c.sendRecvAny(&req, &resp); err != nil {
+	req := types.SplitTunnelSetConfig{IsEnabled: isEnable, IsInversed: isInversed, IsAnyDns: isAnyDns, IsAllowWhenNoVpn: isAllowWhenNoVpn, Reset: reset}
+	resp := types.EmptyResp{}
+	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
 	}
 
@@ -692,17 +699,9 @@ func (c *Client) SetManualDNS(dnsCfg dns.DnsSettings, antiTracker service_types.
 	}
 
 	req := types.SetAlternateDns{Dns: dnsCfg, AntiTracker: antiTracker}
-	var resp types.SetAlternateDNSResp
+	var resp types.EmptyResp
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err
-	}
-
-	if !resp.IsSuccess {
-		if len(resp.ErrorMessage) > 0 {
-			return fmt.Errorf("DNS not changed: " + resp.ErrorMessage)
-		} else {
-			return fmt.Errorf("DNS not changed")
-		}
 	}
 
 	return nil

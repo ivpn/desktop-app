@@ -343,3 +343,11 @@ func removeAllHostsFromExceptions() error {
 	isPersistant := false
 	return removeHostsFromExceptions(toRemoveIPs, isPersistant)
 }
+
+func implSingleDnsRuleOff() (retErr error) {
+	return nil // nothing to do for this platform
+}
+
+func implSingleDnsRuleOn(dnsAddr net.IP) (retErr error) {
+	return nil // nothing to do for this platform
+}

@@ -32,6 +32,14 @@ _cgroup_folder=/sys/fs/cgroup/net_cls/${_cgroup_name}
 _routing_table_name=ivpn-exclude-tbl
 _routing_table_weight=17            # Anything from 1 to 252
 
+# iptables chains
+POSTROUTING_mangle="IVPN_ST_POSTROUTING -t mangle"
+OUTPUT_mangle="IVPN_ST_OUTPUT -t mangle"
+PREROUTING_mangle="IVPN_ST_PREROUTING -t mangle"
+POSTROUTING_nat="IVPN_ST_POSTROUTING -t nat"
+OUTPUT="IVPN_ST_OUTPUT"
+INPUT="IVPN_ST_INPUT"
+
 # Additional parameters
 _iptables_locktime=2
 
@@ -51,9 +59,6 @@ _mutable_folder_fallback=/opt/ivpn/mutable      # alternate location of 'mutable
 # So, this rule absorbs all packets which are not marked as 0xca6c
 _packets_fwmark_value=0xca6c        # Anything from 1 to 2147483647
 
-# iptables rules comment
-_comment="IVPN Split Tunneling"
-
 # Paths to standard binaries
 _bin_iptables=iptables
 _bin_ip6tables=ip6tables
@@ -64,11 +69,20 @@ _bin_grep=grep
 _bin_dirname=dirname
 _bin_sed=sed
 
+#
 #Variables vill be initialized later:
+#
 _def_interface_name=""
 _def_interface_nameIPv6=""
 _def_gateway=""
 _def_gatewayIPv6=""
+# When inversed - only apps added to ST will use VPN connection, 
+# all other apps will use direct unencrypted connection
+_is_inversed=0 
+# Applicable for Inverse mode only: block/allow communication for 'splitted' apps 
+#   -   "1" means the communication for splitted apps will be blocked (for example, when VPN not connected)
+#   -   "0" means the communication for splitted apps will not be blocked
+_is_inversed_blocked=0
 
 function test()
 {
@@ -100,57 +114,137 @@ function test()
 
     if ! command -v ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})" 1>&2; fi
     if ! command -v ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})" 1>&2; fi
-    if ! command -v ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})" 1>&2; fi    
-
-    echo "-= Variables =-"
-    initDefGatewayVars 
-    initDefInfNameVars
-    echo "_def_gateway            : ${_def_gateway}"
-    echo "_def_interface_name     : ${_def_interface_name}"
-    echo "_def_gatewayIPv6        : ${_def_gatewayIPv6}"
-    echo "_def_interface_nameIPv6 : ${_def_interface_nameIPv6}"
+    if ! command -v ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})" 1>&2; fi
 }
 
-function initDefGatewayVars() 
+function detectDefRouteVars() 
 {
-    if [ -z ${_def_gateway} ]; then
-        echo "[i] Default gateway is not defined. Trying to determine it automatically..."
-        _def_gateway=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $3 }')
-        echo "[+] Default gateway: '${_def_gateway}'"
+    if [ -z ${_def_gateway} ] || [ -z ${_def_interface_name} ]; then
+        # Get both default gateway IP and interface name in one command
+        read -r _def_gateway _def_interface_name <<< $(${_bin_ip} route | awk '/default/  {print $3, $5}')
+        echo "[+] Detected default route     : gateway='${_def_gateway}' interface='${_def_interface_name}'"
     fi
 
-    if [ -f /proc/net/if_inet6 ]; then
-        if [ -z ${_def_gatewayIPv6} ]; then
-            echo "[i] Default IPv6 gateway is not defined. Trying to determine it automatically..."
-            _def_gatewayIPv6=$(${_bin_ip} -6 route | ${_bin_awk} '/default/ { print $3 }')
-            echo "[+] Default IPv6 gateway: '${_def_gatewayIPv6}'"
+    if [ -z ${_def_gatewayIPv6} ] || [ -z ${_def_interface_nameIPv6} ]; then
+        if [ -f /proc/net/if_inet6 ]; then
+            read -r _def_gatewayIPv6 _def_interface_nameIPv6 <<< $(${_bin_ip} -6 route | awk '/default/  {print $3, $5}')
+            echo "[+] Detected default IPv6 route: gateway='${_def_gatewayIPv6}' interface='${_def_interface_nameIPv6}'"
         fi
     fi
 }
 
-function initDefInfNameVars() 
-{
-    if [ -z ${_def_interface_name} ]; then
-        echo "[i] Default network interface is not defined. Trying to determine it automatically..."
-        _def_interface_name=$(${_bin_ip} route | ${_bin_awk} '/default/ { print $5 }')
-        echo "[+] Default network interface: '${_def_interface_name}'"
-    fi
+function init_iptables() 
+{    
+    local bin_iptables=$1
+    local def_inf_name=$2
 
-    if [ -f /proc/net/if_inet6 ]; then
-        if [ -z ${_def_interface_nameIPv6} ]; then
-            echo "[i] Default IPv6 network interface is not defined. Trying to determine it automatically..."
-            _def_interface_nameIPv6=$(${_bin_ip} -6 route | ${_bin_awk} '/default/ { print $5 }')
-            echo "[+] Default IPv6 network interface: '${_def_interface_nameIPv6}'"
-        fi
+    # in Inverse mode - we are inversing firewall rules:
+    # 'splitted' apps use only VPN connection, all the rest apps use default connection settings (bypassing VPN)
+    local inverseOption=""
+    if [ ${_is_inversed} -eq 1 ]; then
+        inverseOption=" ! "
     fi
+    ##############################################
+    # Firewall rules for packets coming from cgroup
+    ##############################################    
+    # NOTE! All rules here added with "-I" parameter. "-I" means insert rule at the top.
+    # So, the original rules sequence will be the reverse sequence to the list below.
+
+    ${bin_iptables} -w ${LOCKWAITTIME} -N ${POSTROUTING_mangle}
+    ${bin_iptables} -w ${LOCKWAITTIME} -N ${OUTPUT_mangle}
+    ${bin_iptables} -w ${LOCKWAITTIME} -N ${PREROUTING_mangle}
+    ${bin_iptables} -w ${LOCKWAITTIME} -N ${POSTROUTING_nat}
+    ${bin_iptables} -w ${LOCKWAITTIME} -N ${OUTPUT}
+    ${bin_iptables} -w ${LOCKWAITTIME} -N ${INPUT}
+
+    # Save packets mark (to be able to restore mark for incoming packets of the same connection)
+    ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_mangle} -j CONNMARK --save-mark    
+    # Change the source IP address of packets to the IP address of the interface they're going out on
+    # Do this only if default interface is defined (for example: IPv6 interface may be empty when IPv6 not configured on the system)
+    if [ ! -z ${def_inf_name} ]; then
+        ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_nat} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -o ${def_inf_name} -j MASQUERADE
+    fi
+    # Add mark on packets of classid ${_cgroup_classid}
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j MARK --set-mark ${_packets_fwmark_value}
+    # Important! Process DNS request before setting mark rule (DNS request should not be marked)
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p tcp --dport 53 -j RETURN
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p udp --dport 53 -j RETURN
+
+    # Allow packets from/to cgroup (bypass IVPN firewall)
+    if [ ! -z ${def_inf_name} ]; then
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j ACCEPT
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m mark --mark ${_packets_fwmark_value} -j ACCEPT
+    else
+        # If local interface not defined - block all packets from/to cgroup
+        # (for example: IPv6 interface may be empty when IPv6 not configured on the system)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j DROP
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j DROP   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m mark --mark ${_packets_fwmark_value} -j DROP
+    fi
+    
+    # Inverse mode: only 'splitted' apps use only VPN connection
+    if [ ${_is_inversed} -eq 1 ]; then
+        # Important! Process DNS request first: do not drop DNS requests
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -p tcp --dport 53 -j RETURN
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -p udp --dport 53 -j RETURN
+        
+        # Allow or block communication for 'splitted' apps in inverse mode
+        # E.g.: If we want to block 'splitted' apps when VPN not connected -  '_is_inversed_blocked' must not '0'        
+        if [ ! ${_is_inversed_blocked} -eq 0 ]; then
+            ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup --cgroup ${_cgroup_classid} -j DROP
+            ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup --cgroup ${_cgroup_classid} -j DROP
+        fi 
+    fi 
+
+    # Just ensure that packets from/to localhost will not be blocked            
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -o lo -j ACCEPT
+    ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -i lo -j ACCEPT
+    
+    # Restore packets mark for incoming packets
+    ${bin_iptables} -w ${_iptables_locktime} -I ${PREROUTING_mangle} -j CONNMARK --restore-mark
+
+    ${bin_iptables} -w ${_iptables_locktime} -I POSTROUTING -t mangle  -j ${POSTROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -I OUTPUT -t mangle  -j ${OUTPUT_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -I PREROUTING -t mangle  -j ${PREROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -I POSTROUTING -t nat  -j ${POSTROUTING_nat}
+    ${bin_iptables} -w ${_iptables_locktime} -I OUTPUT -j ${OUTPUT}
+    ${bin_iptables} -w ${_iptables_locktime} -I INPUT -j ${INPUT}
+}
+
+function clear_iptables() 
+{   
+    local bin_iptables=$1    
+    ##############################################
+    # Remove firewall rules
+    ##############################################
+    # '-D' Delete matching rule from chain    
+    ${bin_iptables} -w ${_iptables_locktime} -D POSTROUTING -t mangle  -j ${POSTROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -D OUTPUT -t mangle  -j ${OUTPUT_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -D PREROUTING -t mangle  -j ${PREROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -D POSTROUTING -t nat  -j ${POSTROUTING_nat}
+    ${bin_iptables} -w ${_iptables_locktime} -D OUTPUT -j ${OUTPUT}
+    ${bin_iptables} -w ${_iptables_locktime} -D INPUT -j ${INPUT}
+    
+    # '-F' Delete all rules in  chain 
+    ${bin_iptables} -w ${_iptables_locktime} -F ${POSTROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -F ${OUTPUT_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -F ${PREROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -F ${POSTROUTING_nat}
+    ${bin_iptables} -w ${_iptables_locktime} -F ${OUTPUT}
+    ${bin_iptables} -w ${_iptables_locktime} -F ${INPUT}
+
+    # '-X' Delete a user-defined chains
+    ${bin_iptables} -w ${_iptables_locktime} -X ${POSTROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -X ${OUTPUT_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -X ${PREROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -X ${POSTROUTING_nat}
+    ${bin_iptables} -w ${_iptables_locktime} -X ${OUTPUT}
+    ${bin_iptables} -w ${_iptables_locktime} -X ${INPUT}
 }
 
 function init()
 {
-    # Ensure the input parameters not empty
-    initDefGatewayVars   
-    initDefInfNameVars
-
     if [ -z ${_def_interface_name} ]; then
         echo "Default network interface is not defined. Please, check internet connectivity." 1>&2
         return 2
@@ -159,11 +253,14 @@ function init()
         echo "Default gateway is not defined. Please, check internet connectivity." 1>&2
         return 3
     fi
-    if [ -z ${_def_gatewayIPv6} ]; then
-        echo "Warning: Default IPv6 gateway is not defined." 1>&2
-    fi
-    if [ -z ${_def_interface_nameIPv6} ]; then
-        echo "Warning: Default IPv6 interface is not defined." 1>&2
+
+    if [ -f /proc/net/if_inet6 ]; then 
+        if [ -z ${_def_gatewayIPv6} ]; then
+            echo "Warning: Default IPv6 gateway is not defined." 1>&2
+        fi
+        if [ -z ${_def_interface_nameIPv6} ]; then
+            echo "Warning: Default IPv6 interface is not defined." 1>&2
+        fi
     fi
 
     ##############################################
@@ -192,42 +289,10 @@ function init()
     
     ##############################################
     # Firewall rules for packets coming from cgroup
-    ##############################################    
-    # NOTE! All rules here added with "-I" parameter. "-I" means insert rule at the top.
-    # So, the original rules sequence will be the reverse sequence to the list below.
-
-    # Save packets mark (to be able to restore mark for incoming packets of the same connection)
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I POSTROUTING -m comment --comment  "${_comment}" -j CONNMARK --save-mark    
-    # Force the packets to exit through default interface (eg. eth0, enp0s3 ...) with NAT
-    ${_bin_iptables} -w ${_iptables_locktime} -t nat -I POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment  "${_comment}" -j MASQUERADE
-    # Add mark on packets of classid ${_cgroup_classid}
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
-    # Important! allow DNS request before setting mark rule (DNS request should not be marked)
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
-    # Allow packets from/to cgroup (bypass IVPN firewall)
-    ${_bin_iptables} -w ${_iptables_locktime} -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -I INPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
-    ${_bin_iptables} -w ${_iptables_locktime} -I INPUT -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j ACCEPT
-    # Restore packets mark for incoming packets
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -I PREROUTING -m comment --comment  "${_comment}" -j CONNMARK --restore-mark
-
-    if [ -f /proc/net/if_inet6 ] && [ ! -z ${_def_interface_nameIPv6} ]; then
-        # Save packets mark (to be able to restore mark for incoming packets of the same connection)
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I POSTROUTING -m comment --comment  "${_comment}" -j CONNMARK --save-mark 
-        # Force the packets to exit through default interface (eg. eth0, enp0s3 ...) with NAT
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t nat -I POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_nameIPv6} -m comment --comment  "${_comment}" -j MASQUERADE
-        # Add mark on packets of classid ${_cgroup_classid}
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
-        # Important! allow DNS request before setting mark rule (DNS request should not be marked)
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT        
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j ACCEPT
-        # Allow packets from/to cgroup (bypass IVPN firewall)
-        ${_bin_ip6tables} -w ${_iptables_locktime} -I OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
-        ${_bin_ip6tables} -w ${_iptables_locktime} -I INPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
-        ${_bin_ip6tables} -w ${_iptables_locktime} -I INPUT -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j ACCEPT
-        # Restore packets mark for incoming packets
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -I PREROUTING -m comment --comment  "${_comment}" -j CONNMARK --restore-mark
+    ##############################################       
+    init_iptables  ${_bin_iptables} ${_def_interface_name}
+    if [ -f /proc/net/if_inet6 ]; then
+        init_iptables  ${_bin_ip6tables} ${_def_interface_nameIPv6}
     fi
 
     ##############################################
@@ -236,7 +301,7 @@ function init()
     if ! ${_bin_grep} -E "^[0-9]+\s+${_routing_table_name}\s*$" /etc/iproute2/rt_tables &>/dev/null ; then
         # initialize new routing table
         echo "${_routing_table_weight}      ${_routing_table_name}" >> /etc/iproute2/rt_tables
-        
+
         # Packets with mark will use splittun table
         ${_bin_ip} rule add fwmark ${_packets_fwmark_value} table ${_routing_table_name}
 
@@ -261,6 +326,15 @@ function init()
     if [ ! -z "${_ret}" ]; then
         # Only for WireGuard connection:
         # Ensure rule 'rule add from all lookup main suppress_prefixlength 0' has higher priority
+        #
+        # This wireguard rule respects the manually configured routes in the main table. 
+        # (routing decision is ignored for routes with a prefix length of 0 (it is 'default' route: 0.0.0.0/0))
+        #
+        # Info:
+        #   wireguard adds such rules:
+        #   	from all lookup main suppress_prefixlength 0
+        #   	not from all fwmark 0xca6c lookup 51820
+
         ${_bin_ip} rule del from all lookup main suppress_prefixlength 0 > /dev/null 2>&1
         ${_bin_ip} rule add from all lookup main suppress_prefixlength 0
 
@@ -285,12 +359,9 @@ function updateRoutes()
         return
     fi
 
-    initDefGatewayVars
-    initDefInfNameVars
-
     # splittun table has a default gateway to the default interface
-    if [ ! -z ${_def_gateway} ]; then        
-        ${_bin_ip} route replace default via ${_def_gateway} table ${_routing_table_name}  
+    if [ ! -z ${_def_gateway} ] && [ ! -z ${_def_interface_name} ]; then        
+        ${_bin_ip} route replace default via ${_def_gateway} dev ${_def_interface_name} table ${_routing_table_name}  
     fi
     if [ -f /proc/net/if_inet6 ] && [ ! -z ${_def_gatewayIPv6} ] && [ ! -z ${_def_interface_nameIPv6} ]; then
         ${_bin_ip} -6 route replace default via ${_def_gatewayIPv6} dev ${_def_interface_nameIPv6} table ${_routing_table_name}
@@ -303,10 +374,7 @@ function clean()
     # Restore parameters
     ##############################################
     # read ${_def_interface_name} from backup
-    restore
-
-    # Ensure the input parameters not empty
-    initDefInfNameVars
+    restore 
 
     ##############################################
     # Move all processes from the IVPN cgroup to the main cgroup
@@ -326,42 +394,20 @@ function clean()
     ##############################################
     # Remove firewall rules
     ##############################################
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D PREROUTING -m comment --comment "${_comment}" -j CONNMARK --restore-mark
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment "${_comment}" -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment "${_comment}" -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
-    ${_bin_iptables} -w ${_iptables_locktime} -t mangle -D POSTROUTING -m comment --comment "${_comment}" -j CONNMARK --save-mark  
-    ${_bin_iptables} -w ${_iptables_locktime} -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT
-    ${_bin_iptables} -w ${_iptables_locktime} -D INPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
-    ${_bin_iptables} -w ${_iptables_locktime} -D INPUT -m mark --mark ${_packets_fwmark_value} -m comment --comment "${_comment}" -j ACCEPT
-    if [ ! -z ${_def_interface_name} ]; then
-        ${_bin_iptables} -w ${_iptables_locktime} -t nat -D POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_name} -m comment --comment "${_comment}" -j MASQUERADE
-    fi
-
+    clear_iptables ${_bin_iptables}    
     if [ -f /proc/net/if_inet6 ]; then
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D PREROUTING -m comment --comment "${_comment}" -j CONNMARK --restore-mark
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment "${_comment}" -j ACCEPT
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment "${_comment}" -j ACCEPT
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
-        ${_bin_ip6tables} -w ${_iptables_locktime} -t mangle -D POSTROUTING -m comment --comment "${_comment}" -j CONNMARK --save-mark  
-        ${_bin_ip6tables} -w ${_iptables_locktime} -D OUTPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT
-        ${_bin_ip6tables} -w ${_iptables_locktime} -D INPUT -m cgroup --cgroup ${_cgroup_classid} -m comment --comment "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
-        ${_bin_ip6tables} -w ${_iptables_locktime} -D INPUT -m mark --mark ${_packets_fwmark_value} -m comment --comment "${_comment}" -j ACCEPT
-        if [ ! -z ${_def_interface_nameIPv6} ]; then
-            ${_bin_ip6tables} -w ${_iptables_locktime} -t nat -D POSTROUTING -m cgroup --cgroup ${_cgroup_classid} -o ${_def_interface_nameIPv6} -m comment --comment "${_comment}" -j MASQUERADE
-        fi
+        clear_iptables ${_bin_ip6tables} &>/dev/null 
     fi
 
     ##############################################
     # Remove routing
     ##############################################
-    if [ -f /proc/net/if_inet6 ]; then
-        ${_bin_ip} -6 rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}    
-        ${_bin_ip} -6 route flush table ${_routing_table_name}    
-    fi 
-
     ${_bin_ip} rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}    
     ${_bin_ip} route flush table ${_routing_table_name}
+    if [ -f /proc/net/if_inet6 ]; then
+        ${_bin_ip} -6 rule del fwmark ${_packets_fwmark_value} table ${_routing_table_name}    &>/dev/null 
+        ${_bin_ip} -6 route flush table ${_routing_table_name}    &>/dev/null 
+    fi 
 
     ${_bin_sed} -i "/${_routing_table_name}\s*$/d" /etc/iproute2/rt_tables   
 }
@@ -401,7 +447,6 @@ function backup()
 function restore()
 {
     local _tempDir="$( getBackupFolderPath )"
-    
     if [ ! -f ${_tempDir}/def_interface ]; then 
         return 1
     fi
@@ -498,21 +543,21 @@ function status()
 
 function info()
 {
-    echo "[*] Interfaces (${_bin_ip} link):"
-    ${_bin_ip} link
-    echo
+    #echo "[*] Interfaces (${_bin_ip} link):"
+    #${_bin_ip} link
+    #echo
 
     _val=`cat /proc/sys/net/ipv4/ip_forward`
     echo "[*] /proc/sys/net/ipv4/ip_forward: ${_val}"
-    echo
-
+    
+    echo ---------------------------------
     echo "[*] /proc/sys/net/ipv4/conf/*/rp_filter:"
     for i in /proc/sys/net/ipv4/conf/*/rp_filter; do
         _val=`cat $i`
         echo $i: ${_val}
     done
-    echo  
-
+    
+    echo ---------------------------------
     if [ ! -d ${_cgroup_folder} ]; then
         echo "[*] cgroup folder NOT exists: '${_cgroup_folder}'"
     else
@@ -520,56 +565,97 @@ function info()
         echo "[*] File '${_cgroup_folder}/net_cls.classid':"
         cat ${_cgroup_folder}/net_cls.classid
     fi
-    echo     
-
+    
+    echo ---------------------------------
     echo "[*] File '/etc/iproute2/rt_tables':"
     cat /etc/iproute2/rt_tables
-    echo
-
-    echo "[*] ip6tables -t mangle -S:"
-    ${_bin_ip6tables} -t mangle -S
-    echo 
+        
+    echo ---------------------------------
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip6tables -t mangle -S:"
+        ${_bin_ip6tables} -t mangle -S
+        echo 
+    fi
     echo "[*] iptables -t mangle -S:"
     ${_bin_iptables} -t mangle -S
-    echo 
-
-    echo "[*] ip6tables -t nat -S:"
-    ${_bin_ip6tables} -t nat -S
-    echo 
+    
+    echo ---------------------------------
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip6tables -t nat -S:"
+        ${_bin_ip6tables} -t nat -S
+        echo 
+    fi
     echo "[*] iptables -t nat -S:"
     ${_bin_iptables} -t nat -S
-    echo 
 
-    echo "[*] ip -6 rule:"
-    ${_bin_ip} -6 rule
-    echo 
+    #echo ---------------------------------
+    #echo "[*] ip6tables -S ${INPUT}:"
+    #${_bin_ip6tables} -S ${INPUT}
+    #echo "[*] iptables -S ${INPUT}:"
+    #${_bin_iptables} -S ${INPUT}
+    #
+    #echo ---------------------------------
+    #echo "[*] ip6tables -S ${OUTPUT}:"
+    #${_bin_ip6tables} -S ${OUTPUT}
+    #echo "[*] iptables -S ${OUTPUT}:"
+    #${_bin_iptables} -S ${OUTPUT}
+    
+    echo ---------------------------------
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip6tables -S | grep IVPN:"
+        ${_bin_ip6tables} -S  | grep IVPN
+    fi
+    echo "[*] iptables -S | grep IVPN:"
+    ${_bin_iptables} -S  | grep IVPN    
+    echo ---------------------------------
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip -6 rule:"
+        ${_bin_ip} -6 rule
+    fi
     echo "[*] ip rule:"
     ${_bin_ip} rule
-    echo 
 
-    echo "[*] ip -6 route show table ${_routing_table_weight}"
-    ${_bin_ip} -6 route show table ${_routing_table_weight}
-    echo   
+    echo ---------------------------------
+    if [[ $1 != "-4" ]]; then
+        echo "[*] ip -6 route show table ${_routing_table_weight}"
+        ${_bin_ip} -6 route show table ${_routing_table_weight}    
+    fi
     echo "[*] ip route show table ${_routing_table_weight}"
     ${_bin_ip} route show table ${_routing_table_weight} #${_routing_table_name}
-    echo    
+    echo ---------------------------------
 
+    detectDefRouteVars
+
+    echo ---------------------------------
+    status
+}
+
+function parseInputArgs()
+{
+    while [ $# -gt 0 ]; do
+        # Check for empty parameter and shift if found
+        if [ -z "$1" ]; then
+            shift
+            continue
+        fi
+
+        case "$1" in
+            -interface) _def_interface_name="$2"; shift;;
+            -gateway) _def_gateway="$2"; shift;;
+            -interface6) _def_interface_nameIPv6="$2"; shift;;
+            -gateway6) _def_gatewayIPv6="$2"; shift;;
+            -inverse) _is_inversed=1; echo "'-inverse' flag defined!";;
+            -inverse_block) _is_inversed_blocked=1; echo "'-inverse_block' flag defined!";;
+            *) echo "Unknown parameter: '$1'" 1>&2; exit 1;;
+        esac
+        shift
+    done
 }
 
 if [[ $1 = "start" ]] ; then    
-    _def_interface_name=""
-    _def_interface_nameIPv6=""
-    _def_gateway=""
-    _def_gatewayIPv6=""
-    shift
-    while getopts ":i:s:g:6:" opt; do
-        case $opt in
-            i) _def_interface_name="$OPTARG"   ;;
-            s) _def_interface_nameIPv6="$OPTARG"   ;;
-            g) _def_gateway="$OPTARG"    ;;
-            6) _def_gatewayIPv6="$OPTARG"    ;;
-        esac
-    done
+    shift    
+    parseInputArgs "$@"    
+    detectDefRouteVars # Ensure the input parameters not empty
     init
 
 elif [[ $1 = "stop" ]] ; then    
@@ -605,6 +691,8 @@ elif [[ $1 = "run" ]] ; then
 elif [[ $1 = "update-routes" ]] ; then
     # Linux is erasing ST routing rules when disable/enable default network interface, so we need to restore them back
     shift 
+    detectDefRouteVars
+
     updateRoutes $@  
 
 elif [[ $1 = "info" ]] ; then
@@ -627,6 +715,7 @@ elif [[ $1 = "manual" ]] ; then
     ${_FUNCNAME} $@
 else
     echo "Script to control the Split-Tunneling functionality for Linux."
+    echo "Applications running in the split tunnel environment do not use the VPN tunnel."
     echo "It is a part of Daemon for IVPN Client Desktop."
     echo "https://github.com/ivpn/desktop-app/daemon"
     echo "Created by Stelnykovych Alexandr."
@@ -636,12 +725,17 @@ else
     echo "Note! The script have to be started under privilaged user (sudo $0 ...)"
     echo "    $0 <command> [parameters]"
     echo "Parameters:"
-    echo "    start [-i <interface_name>] [-g <gateway_ip>] [-6 <gateway_IPv6_ip>] [-s <interface_nameIPv6>]"
+    echo "    start [-interface <inf_name>] [-gateway <gateway>] [-interface6 <inf_name_IPv6>] [-gateway6 <gateway_IPv6>] [[-inverse] [-inverse_block]]"
     echo "        Initialize split-tunneling functionality"
-    echo "        - interface_name - (optional) name of network interface to be used for ST environment"
-    echo "        - gateway_ip     - (optional) gateway IP to be used for ST environment"
-    echo "        - gateway_IPv6_ip- (optional) IPv6 gateway IP to be used for ST environment"
-    echo "        - interface_nameIPv6- (optional) name of IPv6 network interface to be used for ST environment"
+    echo "        - interface      - (optional) name of IPv4 network interface to be used for ST environment"
+    echo "        - gateway        - (optional) IPv4 gateway IP to be used for ST environment"
+    echo "        - interface6     - (optional) name of IPv6 network interface to be used for ST environment"
+    echo "        - gateway6       - (optional) IPv6 gateway IP to be used for ST environment"
+    echo "        - inverse        - (optional) When defined - route specified applications exclusively through the VPN."
+    echo "                                      All other traffic will bypass the VPN and use the default connection."
+    echo "        - inverse_block  - (optional) Block connectivity for specified apps."
+    echo "                                      We can use it, for example, to block connectivity when VPN not enabled."
+    echo "                                      Note: This option applicable only with '-inverse' option."
     echo "    stop"
     echo "        Uninitialize split-tunneling functionality"
     echo "    run [-u <username>] <command>"
@@ -654,6 +748,9 @@ else
     echo "    removepid <PID>"
     echo "        Remove process from Split Tunneling environment"
     echo "        - PID             - process ID"
+    echo "    update-routes"
+    echo "        Update the routing table for packets within the split tunnel."
+    echo "        Linux erases split-tunnel routing rules when the default network interface is disabled/enabled. This command restores those rules."
     echo "    reset"
     echo "        Remove all processes from Split Tunneling environment"
     echo "    status"
@@ -661,7 +758,7 @@ else
     echo "Examples:"
     echo "    Initialize split-tunneling functionality:"
     echo "        $0 start"
-    echo "        $0 start -i wlp3s0 -g 192.168.1.1 -6 fe80::1111:2222:3333:4444"
+    echo "        $0 start -interface wlp3s0 -gateway 192.168.1.1"
     echo "    Start commands in split-tunneling environment:"
     echo "        $0 run firefox"
     echo "        $0 run /usr/bin/firefox"

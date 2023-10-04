@@ -4,51 +4,178 @@
 
     <div class="param">
       <input
-        ref="checkboxIsSTEnabled"
         type="checkbox"
-        id="isSTEnabled"
-        v-model="isSTEnabled"
+        id="isSTEnabledLocal"
+        v-model="isSTEnabledLocal"
+        @change="applyChanges"
       />
-      <label class="defColor" for="isSTEnabled">Split Tunnel</label>
+      <label class="defColor" for="isSTEnabledLocal">Split Tunnel</label>
+      <button
+        class="noBordersBtn flexRow"
+        title="Help"
+        v-on:click="$refs.helpSTEnabledLocal.showModal()"
+      >
+        <img src="@/assets/question.svg" />
+      </button>
+      <ComponentDialog ref="helpSTEnabledLocal" header="Info">
+        <div>
+          <p>
+            Exclude traffic from specific applications from being routed through
+            the VPN
+          </p>
+          <!-- functionality description: LINUX -->
+          <p v-if="isLinux">
+            <span style="font-weight: bold">Warning:</span>
+            Applications must be launched from the button below. Already running
+            applications or instances can not use Split Tunneling. Some
+            applications using shared resources (e.g. Web browsers) must be
+            closed before launching them or they may not be excluded from the
+            VPN tunnel.
+          </p>
+          <!-- functionality description: WINDOWS -->
+          <div v-else>
+            <p>
+              <span style="font-weight: bold">Warning:</span>
+              When adding a running application, any connections already
+              established by the application will continue to be routed through
+              the VPN tunnel until the TCP connection/s are reset or the
+              application is restarted
+            </p>
+            <div class="settingsGrayLongDescriptionFont">
+              For more information refer to the
+              <button class="link" v-on:click="onLearnMoreLink">
+                Split Tunnel Uses and Limitations
+              </button>
+              webpage
+            </div>
+          </div>
+        </div>
+      </ComponentDialog>
     </div>
-    <div class="fwDescription" style="margin-bottom: 0px">
+    <div class="fwDescription">
       Exclude traffic from specific applications from being routed through the
       VPN
     </div>
 
-    <div>
-      <!-- functionality description: LINUX -->
-      <div
-        v-if="isLinux"
-        class="fwDescription"
-        style="margin-top: 0px; margin-bottom: 0px"
-      >
-        <span class="settingsGrayLongDescriptionFont" style="font-weight: bold"
-          >Warning:</span
+    <!-- INVERSE MODE-->
+    <div v-show="isSplitTunnelInverseSupported">
+      <!-- Inverse mode -->
+      <div class="param">
+        <input
+          :disabled="!isSTEnabledLocal"
+          type="checkbox"
+          id="stInversedLocal"
+          v-model="stInversedLocal"
+          @change="onSTInversedChange"
+        />
+        <label class="defColor" for="stInversedLocal"
+          >Inverse mode (BETA)</label
         >
-        Applications must be launched from the button below. Already running
-        applications or instances can not use Split Tunneling. Some applications
-        using shared resources (e.g. Web browsers) must be closed before
-        launching them or they may not be excluded from the VPN tunnel.
+        <button
+          class="noBordersBtn flexRow"
+          title="Help"
+          v-on:click="$refs.helpStInversedLocal.showModal()"
+        >
+          <img src="@/assets/question.svg" />
+        </button>
+        <ComponentDialog ref="helpStInversedLocal" header="Info">
+          <div>
+            <p>
+              When activated (alongside the Split Tunnel option), it reverses
+              the split tunneling behavior. Specified applications utilize the
+              VPN connection, while all other traffic circumvents the VPN, using
+              the default connection.
+            </p>
+            <div class="settingsGrayLongDescriptionFont">
+              The IVPN Firewall is not functional when this feature is enabled.
+            </div>
+          </div>
+        </ComponentDialog>
       </div>
-      <!-- functionality description: WINDOWS -->
-      <div v-else>
-        <div class="fwDescription" style="margin-top: 0px; margin-bottom: 0px">
-          <span
-            class="settingsGrayLongDescriptionFont"
-            style="font-weight: bold"
-            >Warning:</span
+
+      <div class="fwDescription">
+        Only specified applications utilize the VPN connection.
+      </div>
+
+      <div style="margin-left: 16px">
+        <!-- Allow connectivity for Split Tunnel apps when VPN is disabled -->
+        <div class="param">
+          <input
+            :disabled="!stInversedLocal || !isSTEnabledLocal"
+            type="checkbox"
+            id="stAllowWhenNoVpnLocal"
+            v-model="stAllowWhenNoVpnLocal"
+            @change="applyChanges"
+          />
+          <label class="defColor" for="stAllowWhenNoVpnLocal">
+            Allow connectivity for Split Tunnel apps when VPN is disabled</label
           >
-          When adding a running application, any connections already established
-          by the application will continue to be routed through the VPN tunnel
-          until the TCP connection/s are reset or the application is restarted
-        </div>
-        <div class="fwDescription" style="margin-top: 0px">
-          For more information refer to the
-          <button class="link" v-on:click="onLearnMoreLink">
-            Split Tunnel Uses and Limitations
+          <button
+            class="noBordersBtn flexRow"
+            title="Help"
+            v-on:click="$refs.helpStAllowWhenNoVpnLocal.showModal()"
+          >
+            <img src="@/assets/question.svg" />
           </button>
-          webpage
+          <ComponentDialog ref="helpStAllowWhenNoVpnLocal" header="Info">
+            <div>
+              <p>
+                Enabling this feature allows applications within the Split
+                Tunnel environment to utilize the default network connection
+                when the VPN is disabled, mirroring the behavior of applications
+                outside the Split Tunnel environment.
+              </p>
+              <p>
+                By default, this feature is turned off, and applications within
+                the Split Tunnel environment won't have access to the default
+                network interface when the VPN is disabled.
+              </p>
+            </div>
+          </ComponentDialog>
+        </div>
+
+        <!-- Block DNS servers not specified by the IVPN application -->
+        <div class="param">
+          <input
+            :disabled="!stInversedLocal || !isSTEnabledLocal"
+            type="checkbox"
+            id="stBlockNonVpnDnsLocal"
+            v-model="stBlockNonVpnDnsLocal"
+            @change="applyChanges"
+          />
+          <label class="defColor" for="stBlockNonVpnDnsLocal"
+            >Block DNS servers not specified by the IVPN application</label
+          >
+          <button
+            class="noBordersBtn flexRow"
+            title="Help"
+            v-on:click="$refs.helpStInversedAnyDns.showModal()"
+          >
+            <img src="@/assets/question.svg" />
+          </button>
+          <ComponentDialog ref="helpStInversedAnyDns" header="Info">
+            <div>
+              <p>
+                When this option is enabled, only DNS requests directed to IVPN
+                DNS servers or user-defined custom DNS servers within the IVPN
+                app settings will be allowed. All other DNS requests on port 53
+                will be blocked.
+              </p>
+              <p>
+                For enhanced privacy, it is recommended to keep this option
+                enabled. Disabling it may result in your apps using the default
+                DNS configuration.
+              </p>
+              <div class="settingsGrayLongDescriptionFont">
+                The IVPN AntiTracker and custom DNS are not functional when this
+                feature is disabled.
+              </div>
+              <div class="settingsGrayLongDescriptionFont">
+                This functionality only applies in Inverse Split Tunnel mode
+                when the VPN is connected.
+              </div>
+            </div>
+          </ComponentDialog>
         </div>
       </div>
     </div>
@@ -68,8 +195,8 @@
         <div>
           <button
             class="settingsButton"
-            v-bind:class="{ opacityOnHoverLight: isSTEnabled === true }"
-            :disabled="isSTEnabled !== true"
+            v-bind:class="{ opacityOnHoverLight: IsEnabled === true }"
+            :disabled="IsEnabled !== true"
             style="min-width: 156px"
             v-on:click="showAddApplicationPopup(true)"
           >
@@ -79,7 +206,7 @@
       </div>
 
       <div class="horizontalLine" />
-      <div class="flexRow" style="position: relative">
+      <div ref="appsListParent" class="flexRow" style="position: relative">
         <!-- Configured apps view -->
 
         <!-- No applications in Split Tunnel configuration -->
@@ -88,7 +215,7 @@
           style="
             text-align: center;
             width: 100%;
-            margin-top: 50px;
+            margin-top: 35px;
             padding: 50px;
           "
         >
@@ -100,7 +227,9 @@
         <!-- Configured apps list -->
         <div
           v-if="!isShowAppAddPopup && !isNoConfiguredApps"
-          :style="appsListStyle"
+          :style="`overflow: auto; width: 100%; height: ${
+            $refs.footer.offsetTop - $refs.appsListParent.offsetTop
+          }px;`"
         >
           <spinner
             :loading="isLoadingAllApps"
@@ -225,7 +354,7 @@
                     height: 40px;
                     width: 100%;
                   "
-                  v-on:click="onManualAddNewApplication"
+                  v-on:click="addApp(null)"
                 >
                   <div class="flexRowRestSpace"></div>
                   <div class="flexRow">
@@ -250,7 +379,7 @@
 
     <!-- FOOTER -->
 
-    <div style="position: sticky; bottom: 20px">
+    <div ref="footer" style="position: sticky; bottom: 20px">
       <div class="horizontalLine" />
 
       <div class="flexRow" style="margin-top: 15px">
@@ -276,6 +405,7 @@ import Image_search_windows from "@/assets/search-windows.svg";
 import Image_search_macos from "@/assets/search-macos.svg";
 import Image_search_linux from "@/assets/search-linux.svg";
 
+import ComponentDialog from "@/components/component-dialog.vue";
 import binaryInfoControl from "@/components/controls/control-app-binary-info.vue";
 
 import spinner from "@/components/controls/control-spinner.vue";
@@ -301,16 +431,24 @@ export default {
   components: {
     spinner,
     binaryInfoControl,
+    ComponentDialog,
   },
 
   data: function () {
     return {
+      isSTEnabledLocal: false,
+      stInversedLocal: false,
+      stAnyDnsLocal: false,
+      stBlockNonVpnDnsLocal: true,
+      stAllowWhenNoVpnLocal: false,
+
       isLoadingAllApps: false,
       isShowAppAddPopup: false,
 
       filterAppsToAdd: "",
 
-      // allInstalledApps [] - an array of configured application path's
+      // allInstalledApps [] - an array of applications installed on users device
+      //                       (in use in Split Tunnel mode)
       // Type (AppInfo):
       //    AppName       string
       //    AppGroup      string // optional
@@ -336,6 +474,11 @@ export default {
   },
 
   async mounted() {
+    this.isSTEnabledLocal = this.IsEnabled;
+    this.stInversedLocal = this.IsInversed;
+    this.stBlockNonVpnDnsLocal = !this.IsAnyDns;
+    this.stAllowWhenNoVpnLocal = this.IsAllowWhenNoVpn;
+
     // show base information about splitted apps immediately
     //this.updateAppsToShow();
 
@@ -363,21 +506,131 @@ export default {
   },
 
   watch: {
+    IsEnabled() {
+      this.isSTEnabledLocal = this.IsEnabled;
+    },
+    IsInversed() {
+      this.stInversedLocal = this.IsInversed;
+    },
+    IsAnyDns() {
+      this.stBlockNonVpnDnsLocal = !this.IsAnyDns;
+    },
+    IsAllowWhenNoVpn() {
+      this.stAllowWhenNoVpnLocal = this.IsAllowWhenNoVpn;
+    },
+
     STConfig() {
-      if (this.$refs.checkboxIsSTEnabled) {
-        // we have to update checkbox manually
-        this.$refs.checkboxIsSTEnabled.checked =
-          this.$store.state.vpnState.splitTunnelling.IsEnabled;
-      }
-
       this.updateAppsToShow();
-
       // if there are running apps - start requesting ST status
       this.startBackgroundCheckOfStatus();
     },
   },
 
   methods: {
+    updateLocals() {
+      this.isSTEnabledLocal = this.IsEnabled;
+      this.stInversedLocal = this.IsInversed;
+      this.stBlockNonVpnDnsLocal = !this.IsAnyDns;
+      this.stAllowWhenNoVpnLocal = this.IsAllowWhenNoVpn;
+    },
+    async applyChanges() {
+      let fwState = this.$store.state.vpnState.firewallState;
+      let oldInverseMode = this.IsEnabled && this.IsInversed;
+      let newInverseMode = this.isSTEnabledLocal && this.stInversedLocal;
+
+      // going to enable Inverse ST
+      if (fwState.IsEnabled && !oldInverseMode && newInverseMode) {
+        try {
+          let ret = await sender.showMessageBoxSync(
+            {
+              type: "warning",
+              message: `Turning off Firewall for Inverse Split Tunnel mode`,
+              detail:
+                "The Inverse Split Tunnel mode requires disabling the IVPN Firewall.\nWould you like to proceed?",
+              buttons: ["Disable Firewall", "Cancel"],
+            },
+            true
+          );
+          if (ret == 1) {
+            // cancel
+            this.updateLocals();
+            return;
+          }
+          await sender.EnableFirewall(false);
+        } catch (e) {
+          processError(e);
+        }
+      }
+
+      // APPLY ST CONFIGURATION
+      try {
+        await sender.SplitTunnelSetConfig(
+          this.isSTEnabledLocal,
+          this.stInversedLocal,
+          !this.stBlockNonVpnDnsLocal, // isAnyDns,
+          this.stAllowWhenNoVpnLocal
+        );
+      } catch (e) {
+        processError(e);
+      }
+      // ensure local value synced with data from storage
+      // AND ensure that UI state of checkboxes updated!
+      this.updateLocals();
+
+      // If VPN is connected and Inverse mode is just disabled - ask user to enable Firewall
+      if (
+        !newInverseMode &&
+        oldInverseMode &&
+        !fwState.IsEnabled &&
+        !this.$store.getters["vpnState/isPaused"] && // we can not enable firewall in paused state
+        this.$store.getters["vpnState/isConnected"] // no need to enable firewall if VPN is not connected
+      )
+        try {
+          let ret = await sender.showMessageBoxSync(
+            {
+              type: "question",
+              message: `The IVPN Firewall not enabled`,
+              detail:
+                "The Inverse Split Tunnel mode has been disabled successfully. You can now use the Firewall.\n\nWould you like to enable the IVPN Firewall?",
+              buttons: ["Enable Firewall", "Cancel"],
+            },
+            true
+          );
+          if (ret == 1) return; // cancel
+          await sender.EnableFirewall(true);
+        } catch (e) {
+          processError(e);
+        }
+    },
+
+    async onSTInversedChange() {
+      let cancel = false;
+
+      if (this.IsInversed === false) {
+        // going to enable
+        let ret = await sender.showMessageBoxSync(
+          {
+            type: "warning",
+            message: `Enabling Inverse mode for Split Tunnel`,
+            detail:
+              "By enabling Inverse Split Tunnel, only specified apps will use the VPN tunnel while the rest of your system will keep using the default connection, bypassing the VPN tunnel.\n\
+Note! The IVPN Firewall is not functional when this feature is enabled.\n\n\
+Do you want to enable Inverse mode for Split Tunnel?",
+            buttons: ["Enable", "Cancel"],
+          },
+          true
+        );
+        if (ret == 1) cancel = true; // cancel
+      }
+
+      if (!cancel) {
+        await this.applyChanges();
+      } else {
+        // ensure local value synced with data from storage
+        // AND ensure that UI state of checkboxes updated!
+        this.updateLocals();
+      }
+    },
     isRunningAppsAvailable() {
       let stStatus = this.$store.state.vpnState.splitTunnelling;
       return (
@@ -528,7 +781,7 @@ export default {
         let appsToAdd = this.filteredAppsToAdd;
         if (!appsToAdd || appsToAdd.length == 0) {
           // if no info about all installed applications - show dialog to manually select binary
-          this.onManualAddNewApplication();
+          this.addApp(null);
           return;
         }
         this.isShowAppAddPopup = true;
@@ -540,33 +793,6 @@ export default {
           }
         }, 0);
       } else this.isShowAppAddPopup = false;
-    },
-
-    async onManualAddNewApplication() {
-      try {
-        let dlgFilters = [];
-        if (Platform() === PlatformEnum.Windows) {
-          dlgFilters = [
-            { name: "Executables", extensions: ["exe"] },
-            { name: "All files", extensions: ["*"] },
-          ];
-        } else {
-          dlgFilters = [{ name: "All files", extensions: ["*"] }];
-        }
-
-        var diagConfig = {
-          properties: ["openFile"],
-          filters: dlgFilters,
-        };
-        var ret = await sender.showOpenDialog(diagConfig);
-        if (!ret || ret.canceled || ret.filePaths.length == 0) return;
-
-        await sender.SplitTunnelAddApp(ret.filePaths[0]);
-      } catch (e) {
-        processError(e);
-      } finally {
-        this.showAddApplicationPopup(false);
-      }
     },
 
     async removeApp(app) {
@@ -605,7 +831,7 @@ export default {
       if (actionNo == 1) return;
 
       this.resetFilters();
-      await sender.SplitTunnelSetConfig(false, true);
+      await sender.SplitTunnelSetConfig(false, false, false, false, true);
     },
 
     resetFilters: function () {
@@ -638,33 +864,28 @@ export default {
       return "Add application manually ...";
     },
 
-    appsListStyle: function () {
-      // TODO: avoid hardcoding element height.
-      let height = 244;
-      if (Platform() === PlatformEnum.Linux) height = 268;
-
-      return `\
-            overflow: auto;\
-            width: 100%;\
-            position: relative;\
-            height: ${height}px;\
-            min-height: ${height}px;\
-            max-height: ${height}px;\
-          `;
-    },
     isLinux: function () {
       return Platform() === PlatformEnum.Linux;
     },
 
-    isSTEnabled: {
-      get() {
-        return this.$store.state.vpnState.splitTunnelling.IsEnabled;
-      },
-      set(value) {
-        (async function () {
-          await sender.SplitTunnelSetConfig(value);
-        })();
-      },
+    isSplitTunnelInverseSupported() {
+      return this.$store.getters["isSplitTunnelInverseEnabled"];
+    },
+
+    // needed for 'watch'
+    IsEnabled: function () {
+      return this.$store.state.vpnState.splitTunnelling?.IsEnabled;
+    },
+    // needed for 'watch'
+    IsInversed: function () {
+      return this.$store.state.vpnState.splitTunnelling?.IsInversed;
+    },
+    // needed for 'watch'
+    IsAnyDns: function () {
+      return this.$store.state.vpnState.splitTunnelling?.IsAnyDns;
+    },
+    IsAllowWhenNoVpn: function () {
+      return this.$store.state.vpnState.splitTunnelling?.IsAllowWhenNoVpn;
     },
 
     // needed for 'watch'
@@ -686,61 +907,25 @@ export default {
     },
 
     filteredAppsToAdd: function () {
-      let retInstalledApps = [];
-      if (this.allInstalledApps)
-        retInstalledApps = Object.assign(
-          retInstalledApps,
-          this.allInstalledApps
-        );
-
-      // Add extra parameter 'LastUsedDate' to each element in app list (if exists in settings.splitTunnel.favoriteAppsList)
-      // And add apps from 'favorite list' which are not present in common app list
-      const s = this.$store.state.settings;
-      if (s.splitTunnel && s.splitTunnel.favoriteAppsList) {
-        const favApps = s.splitTunnel.favoriteAppsList;
-        let favAppsHashed = {};
-        favApps.forEach((appInfo) => {
-          favAppsHashed[appInfo.AppBinaryPath] = Object.assign({}, appInfo);
-        });
-
-        // add LastUsedDate info
-        retInstalledApps.forEach(function (element, index, theArray) {
-          const knownAppInfo = favAppsHashed[element.AppBinaryPath];
-          if (!knownAppInfo) return;
-          knownAppInfo.isManual = false;
-          theArray[index].LastUsedDate = knownAppInfo.LastUsedDate;
-        });
-
-        // add apps from 'favorite list' which are not present in common app list
-        for (const favAppBinaryPath in favAppsHashed) {
-          const favApp = favAppsHashed[favAppBinaryPath];
-
-          if (!favApp || favApp.isManual === false) continue;
-          if (!favApp.AppName) {
-            favApp.AppName = getFileName(favApp.AppBinaryPath);
-            favApp.AppGroup = getFileFolder(favApp.AppBinaryPath);
-          }
-
-          retInstalledApps.push(favApp);
-        }
-      }
-
+      let retInstalledApps =
+        this.$store.getters["settings/getAppsToSplitTunnel"];
       // filter: exclude already configured apps (not a running apps)
       // from the list installed apps
-      let confAppsHashed = {};
-      this.appsToShow.forEach((appInfo) => {
-        confAppsHashed[appInfo.AppBinaryPath.toLowerCase()] = appInfo;
-      });
-
-      let funcFilter = function (appInfo) {
-        let confApp = confAppsHashed[appInfo.AppBinaryPath.toLowerCase()];
-        if (confApp && (!confApp.RunningApp || !confApp.RunningApp.Pid))
-          return false;
-        return true;
-      };
-      retInstalledApps = retInstalledApps.filter((appInfo) =>
-        funcFilter(appInfo)
-      );
+      if (!this.isLinux) {
+        let confAppsHashed = {};
+        this.appsToShow.forEach((appInfo) => {
+          confAppsHashed[appInfo.AppBinaryPath.toLowerCase()] = appInfo;
+        });
+        let funcFilter = function (appInfo) {
+          let confApp = confAppsHashed[appInfo.AppBinaryPath.toLowerCase()];
+          if (confApp && (!confApp.RunningApp || !confApp.RunningApp.Pid))
+            return false;
+          return true;
+        };
+        retInstalledApps = retInstalledApps.filter((appInfo) =>
+          funcFilter(appInfo)
+        );
+      }
 
       // filter: default (filtering apps according to user input)
       let filter = this.filterAppsToAdd.toLowerCase();
@@ -751,24 +936,10 @@ export default {
             appInfo.AppGroup.toLowerCase().includes(filter)
           );
         };
-
         retInstalledApps = retInstalledApps.filter((appInfo) =>
           funcFilter(appInfo)
         );
       }
-
-      // sort applications: LastUsedDate + appName
-      retInstalledApps.sort(function (a, b) {
-        if (b.LastUsedDate && a.LastUsedDate)
-          return new Date(b.LastUsedDate) - new Date(a.LastUsedDate);
-        if (b.LastUsedDate && !a.LastUsedDate) return 1;
-        if (!b.LastUsedDate && a.LastUsedDate) return -1;
-        let aName = a.AppName;
-        let bName = b.AppName;
-        if (!aName) aName = "";
-        if (!bName) bName = "";
-        return aName.localeCompare(bName);
-      });
 
       return retInstalledApps;
     },
@@ -821,8 +992,8 @@ function getFileFolder(appBinPath) {
 
 div.fwDescription {
   @extend .settingsGrayLongDescriptionFont;
-  margin-top: 9px;
-  margin-bottom: 17px;
+  margin-top: 4px;
+  margin-bottom: 8px;
   margin-left: 22px;
   max-width: 425px;
 }
@@ -862,6 +1033,15 @@ button:disabled + label {
   cursor: not-allowed;
 }
 
+input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+input:disabled + label {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 $popup-background: var(--background-color);
 $shadow: 0px 3px 12px rgba(var(--shadow-color-rgb), var(--shadow-opacity));
 .appsSelectionPopup {
@@ -872,10 +1052,10 @@ $shadow: 0px 3px 12px rgba(var(--shadow-color-rgb), var(--shadow-opacity));
   width: 100%;
 
   padding: 15px;
-  height: 435px; //calc(100% + 140px);
+  height: 445px; //calc(100% + 140px);
   width: calc(100% + 10px);
   left: -20px;
-  top: -180px;
+  top: -250px;
 
   border-width: 1px;
   border-style: solid;

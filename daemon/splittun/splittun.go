@@ -46,6 +46,10 @@ type ConfigAddresses struct {
 	IPv6Tunnel net.IP // VpnLocalIPv6
 }
 
+func (c ConfigAddresses) IsEmpty() bool {
+	return (len(c.IPv4Public) == 0 || len(c.IPv4Tunnel) == 0) && (len(c.IPv6Public) == 0 || len(c.IPv6Tunnel) == 0)
+}
+
 // Information about running application
 // https://man7.org/linux/man-pages/man5/proc.5.html
 type RunningApp struct {
@@ -75,7 +79,7 @@ func Initialize() error {
 
 // IsFuncNotAvailableError returns non-nil error object if Split-Tunneling functionality not available
 // The return value is the same as Initialize()
-func GetFuncNotAvailableError() error {
+func GetFuncNotAvailableError() (generalStError, inversedStError error) {
 	return implFuncNotAvailableError()
 }
 
@@ -87,7 +91,7 @@ func Reset() error {
 }
 
 // ApplyConfig control split-tunnel functionality
-func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
+func ApplyConfig(isStEnabled, isStInverse, isStInverseAllowWhenNoVpn, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -96,7 +100,7 @@ func ApplyConfig(isStEnabled bool, isVpnEnabled bool, addrConfig ConfigAddresses
 		addrConfig.IPv6Tunnel = nil
 	}
 
-	return implApplyConfig(isStEnabled, isVpnEnabled, addrConfig, splitTunnelApps)
+	return implApplyConfig(isStEnabled, isStInverse, isStInverseAllowWhenNoVpn, isVpnEnabled, addrConfig, splitTunnelApps)
 }
 
 // AddPid add process to Split-Tunnel environment

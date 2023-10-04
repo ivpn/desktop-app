@@ -148,19 +148,16 @@ ipcMain.handle("renderer-request-SplitTunnelGetStatus", async () => {
 });
 ipcMain.handle(
   "renderer-request-SplitTunnelSetConfig",
-  async (event, enabled, doReset) => {
-    return await client.SplitTunnelSetConfig(enabled, doReset);
+  async (event, enabled, inversed, isAnyDns, allowWhenNoVpn, doReset) => {
+    return await client.SplitTunnelSetConfig(
+      enabled,
+      inversed,
+      isAnyDns,
+      allowWhenNoVpn,
+      doReset
+    );
   }
 );
-ipcMain.handle("renderer-request-SplitTunnelAddApp", async (event, execCmd) => {
-  let funcShowMessageBox = function (dlgConfig) {
-    return dialog.showMessageBox(
-      event.sender.getOwnerBrowserWindow(),
-      dlgConfig
-    );
-  };
-  return await client.SplitTunnelAddApp(execCmd, funcShowMessageBox);
-});
 ipcMain.handle(
   "renderer-request-SplitTunnelRemoveApp",
   async (event, pid, execCmd) => {

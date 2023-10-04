@@ -20,6 +20,9 @@
       description="Ensure that all traffic is routed through VPN"
       :onChecked="firewallOnChecked"
       :isChecked="this.$store.state.vpnState.firewallState.IsEnabled"
+      :switcherOpacity="
+        this.$store.getters['vpnState/isInverseSplitTunnel'] ? 0.4 : 1
+      "
       :checkedColor="
         this.$store.state.vpnState.firewallState.IsPersistent
           ? '#77152a77'
@@ -38,7 +41,12 @@
       description="Block trackers whilst connected to VPN"
       :onChecked="antitrackerOnChecked"
       :isChecked="this.$store.state.settings.antiTracker?.Enabled"
-      :switcherOpacity="!IsConnected ? 0.4 : 1"
+      :switcherOpacity="
+        !IsConnected ||
+        this.$store.getters['vpnState/isInverseSplitTunnelAnyDns']
+          ? 0.4
+          : 1
+      "
       :checkedColor="
         this.$store.state.settings.antiTracker?.Hardcore ? '#77152a' : null
       "
@@ -54,6 +62,14 @@
       v-bind:text="portProtocolText"
       description="Protocol/Port"
     />
+
+    <!-- SPLIT TUNNEL -->
+    <transition name="fade">
+      <div v-if="isLinux && IsSplitTunnelEnabled">
+        <div class="horizontalLine" />
+        <SplitTunnelControl class="leftPanelBlock" />
+      </div>
+    </transition>
 
     <!-- WIFI -->
     <transition name="fade">
@@ -88,9 +104,13 @@
 </template>
 
 <script>
+import { Platform, PlatformEnum } from "@/platform/platform";
+
 import OnOffButtonControl from "@/components/controls/control-config-on-off-button.vue";
 import SelectButtonControl from "@/components/controls/control-config-to-select-button.vue";
 import GeolocationInfoControl from "@/components/controls/control-geolocation-info.vue";
+import SplitTunnelControl from "@/components/controls/control-split-tunnel.vue";
+
 const sender = window.ipcSender;
 import { enumValueName } from "@/helpers/helpers";
 import { VpnTypeEnum, PortTypeEnum, VpnStateEnum } from "@/store/types";
@@ -109,6 +129,7 @@ export default {
     OnOffButtonControl,
     SelectButtonControl,
     GeolocationInfoControl,
+    SplitTunnelControl,
   },
   props: [
     "onShowPorts",
@@ -179,7 +200,7 @@ export default {
     WiFiMarkerColor: function () {
       if (this.wifiSSID == "") return null;
       const TRUSTED = "#64ad07";
-      const UNTRUSTED = "#FF6258";
+      const UNTRUSTED = "var(--warning-color)";
       const INSECURE = "darkorange";
       const NOTRUSTSTATUS = "var(--background-color-alternate)"; //"#BBBBBB";
       const trustState = this.getTrustInfoForCurrentWifi();
@@ -197,6 +218,12 @@ export default {
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.CONNECTED
       );
+    },
+    isLinux: function () {
+      return Platform() === PlatformEnum.Linux;
+    },
+    IsSplitTunnelEnabled: function () {
+      return this.$store.state.vpnState.splitTunnelling?.IsEnabled;
     },
   },
 

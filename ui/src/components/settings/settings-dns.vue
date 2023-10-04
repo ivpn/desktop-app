@@ -248,8 +248,15 @@ export default {
       }
 
       if (this.isDnsValueChanged !== true) return true;
-      this.isDnsValueChanged = false;
-      await sender.SetDNS();
+      try {
+        await sender.SetDNS();
+        this.isDnsValueChanged = false;
+      } catch (e) {
+        processError(e);
+        // it is 'beforeunload' handler. Prevent closing window.
+        e.preventDefault();
+        e.returnValue = "";
+      }
       return true;
     },
 

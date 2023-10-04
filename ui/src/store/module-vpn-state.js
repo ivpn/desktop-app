@@ -71,10 +71,14 @@ export default {
 
     // The split-tunnelling configuration
     splitTunnelling: {
-      IsEnabled: false,
+      IsEnabled: false, // is ST enabled
+      IsInversed: false, // Inverse Split Tunnel (only 'splitted' apps use VPN tunnel)
+      IsAnyDns: false, // (only for Inverse Split Tunnel) When false: Allow only DNS servers specified by the IVPN application
+      IsAllowWhenNoVpn: false, // (only for Inverse Split Tunnel) When true: Allow network access when VPN is not connected
       IsCanGetAppIconForBinary: false,
       // Split-Tunnelling (SplitTunnelStatus)
       // IsEnabled bool                     - Is ST enabled
+      // IsInversed bool                    - Inversed split-tunneling (only 'splitted' apps use VPN tunnel)
       // IsCanGetAppIconForBinary bool      - This parameter informs availability of the functionality to get icon for particular binary
       //                                      (true - if commands GetAppIcon/AppIconResp  applicable for this platform)
       // SplitTunnelApps []string           - Information about applications added to ST configuration
@@ -277,6 +281,17 @@ export default {
       if (!state.connectionInfo || !state.connectionInfo.IsPaused) return false;
       return state.connectionInfo.IsPaused;
     },
+    isInverseSplitTunnel: (state) => {
+      if (!state.splitTunnelling) return false;
+      return (
+        state.splitTunnelling.IsInversed && state.splitTunnelling.IsEnabled
+      );
+    },
+    isInverseSplitTunnelAnyDns: (state, getters) => {
+      return getters.isInverseSplitTunnel && state.splitTunnelling.IsAnyDns;
+    },
+
+    // IsAnyDns
     vpnStateText: (state) => {
       return enumValueName(VpnStateEnum, state.connectionState);
     },
@@ -678,7 +693,7 @@ function saveDnsSettings(context, dnsStatus) {
     return;
   }
 
-  // If AntiTracker is diabled - do not save empty AT settings (to keep current AntiTracker configuration. e.g. blocklist)
+  // If AntiTracker is disabled - do not save empty AT settings (to keep current AntiTracker configuration. e.g. blocklist)
   context.dispatch("settings/antiTracker", dnsStatus.AntiTrackerStatus, {
     root: true,
   });

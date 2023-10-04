@@ -89,8 +89,7 @@ func fSetDNSByLocalIP(interfaceLocalAddr net.IP, dnsCfg DnsSettings, ipv6 bool, 
 
 	dnsIpString := ""
 	if !dnsCfg.IsEmpty() {
-		isAddrIpv6, _ := dnsCfg.IsIPv6()
-		if isAddrIpv6 != ipv6 {
+		if dnsCfg.IsIPv6() != ipv6 {
 			return fmt.Errorf("unable to apply DNS configuration. IP address type mismatch to the IPv6 parameter")
 		}
 		dnsIpString = dnsCfg.Ip().String()
@@ -185,7 +184,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 
 	dnscryptproxy.Stop()
 
-	if isIPv6, _ := dnsCfg.IsIPv6(); isIPv6 {
+	if dnsCfg.IsIPv6() {
 		return DnsSettings{}, fmt.Errorf("IPv6 DNS is not supported")
 	}
 
@@ -200,7 +199,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 	if dnsCfg.IsEmpty() {
 		return DnsSettings{}, fmt.Errorf("unable to change DNS (configuration is not defined)")
 	}
-	isIpv6, _ := dnsCfg.IsIPv6()
+	isIpv6 := dnsCfg.IsIPv6()
 
 	var notVpnInterfacesToUpdate []net.IPNet
 	var err error
@@ -288,7 +287,7 @@ func implDeleteManual(localInterfaceIP net.IP) (retErr error) {
 
 	isIpv6 := false
 	if !_lastDNS.IsEmpty() {
-		isIpv6, _ = _lastDNS.IsIPv6()
+		isIpv6 = _lastDNS.IsIPv6()
 	}
 
 	if localInterfaceIP != nil {

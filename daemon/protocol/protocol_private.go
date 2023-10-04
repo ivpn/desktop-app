@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -179,7 +180,7 @@ func (p *Protocol) sendError(conn net.Conn, errorText string, cmdIdx int) {
 
 func (p *Protocol) sendErrorResponse(conn net.Conn, request types.RequestBase, err error) {
 	log.Error(fmt.Sprintf("%sError processing request '%s': %s", p.connLogID(conn), request.Command, err))
-	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: err.Error()}, request.Idx)
+	p.sendResponse(conn, &types.ErrorResp{ErrorMessage: helpers.CapitalizeFirstLetter(err.Error())}, request.Idx)
 }
 
 func (p *Protocol) sendResponse(conn net.Conn, cmd types.ICommandBase, idx int) (retErr error) {
@@ -204,8 +205,6 @@ func (p *Protocol) sendResponse(conn net.Conn, cmd types.ICommandBase, idx int) 
 // -------------- Initialize response objects ---------------
 func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 	prefs := p._service.Preferences()
-	at, _ := p._service.GetAntiTrackerStatus()
-
 	return &types.SettingsResp{
 		IsAutoconnectOnLaunch:       prefs.IsAutoconnectOnLaunch,
 		IsAutoconnectOnLaunchDaemon: prefs.IsAutoconnectOnLaunchDaemon,
@@ -213,7 +212,7 @@ func (p *Protocol) createSettingsResponse() *types.SettingsResp {
 		UserPrefs:                   prefs.UserPrefs,
 		WiFi:                        prefs.WiFiControl,
 		IsLogging:                   prefs.IsLogging,
-		AntiTracker:                 at,
+		AntiTracker:                 p._service.GetAntiTrackerStatus(),
 		// TODO: implement the rest of daemon settings
 	}
 }
@@ -261,7 +260,6 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 	}
 
 	manualDns := dns.GetLastManualDNS()
-	antiTrackerStatus, _ := p._service.GetAntiTrackerStatus()
 
 	ret := &types.ConnectedResp{
 		TimeSecFrom1970: state.Time,
@@ -271,7 +269,7 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 		ServerPort:      state.ServerPort,
 		VpnType:         state.VpnType,
 		ExitHostname:    state.ExitHostname,
-		Dns:             types.DnsStatus{Dns: manualDns, AntiTrackerStatus: antiTrackerStatus},
+		Dns:             types.DnsStatus{Dns: manualDns, AntiTrackerStatus: p._service.GetAntiTrackerStatus()},
 		IsTCP:           state.IsTCP,
 		Mtu:             state.Mtu,
 		V2RayProxy:      state.V2RayProxy,

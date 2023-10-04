@@ -479,19 +479,7 @@ async function processResponse(response) {
       break;
 
     case daemonResponses.SetAlternateDNSResp:
-      if (obj.IsSuccess == null) break;
-      if (obj.IsSuccess !== true) {
-        if (obj.ErrorMessage) {
-          await messageBox({
-            type: "error",
-            buttons: ["OK"],
-            message: `Failed to change DNS`,
-            detail: obj.ErrorMessage,
-          });
-        }
-        break;
-      }
-      store.dispatch(`vpnState/dns`, obj.Dns);
+      if (obj.Dns) store.dispatch(`vpnState/dns`, obj.Dns);
       break;
 
     case daemonResponses.DnsPredefinedConfigsResp:
@@ -1495,15 +1483,38 @@ async function SplitTunnelGetStatus() {
   );
   return ret;
 }
-async function SplitTunnelSetConfig(IsEnabled, doReset) {
-  await sendRecv(
-    {
-      Command: daemonRequests.SplitTunnelSetConfig,
-      IsEnabled,
-      Reset: doReset === true,
-    },
-    [daemonResponses.SplitTunnelStatus]
-  );
+async function SplitTunnelSetConfig(
+  IsEnabled,
+  IsInversed,
+  IsAnyDns,
+  IsAllowWhenNoVpn,
+  doReset
+) {
+  let stCfg = store.state.vpnState.splitTunnelling;
+  if (stCfg) {
+    if (IsEnabled == null) IsEnabled = stCfg.IsEnabled;
+    if (IsInversed == null) IsInversed = stCfg.IsInversed;
+    if (IsAnyDns == null) IsAnyDns = stCfg.IsAnyDns;
+    if (IsAllowWhenNoVpn == null) IsAllowWhenNoVpn = stCfg.IsAllowWhenNoVpn;
+  }
+
+  await sendRecv({
+    Command: daemonRequests.SplitTunnelSetConfig,
+    IsEnabled,
+    IsInversed,
+    IsAnyDns,
+    IsAllowWhenNoVpn,
+    Reset: doReset === true,
+  });
+
+  // update Geo-lookup info (since it can be changed by Split Tunneling)
+  setTimeout(async () => {
+    try {
+      await GeoLookup();
+    } catch (e) {
+      console.error(e);
+    }
+  }, 0);
 }
 
 async function SplitTunnelAddApp(execCmd, funcShowMessageBox) {
@@ -1693,6 +1704,10 @@ async function GetInstalledApps() {
     if (appsResp == null) {
       return null;
     }
+
+    // save info about iunstalled apps
+    store.commit("allInstalledApps", appsResp.Apps);
+
     return appsResp.Apps;
   } catch (e) {
     console.error("GetInstalledApps failed: ", e);
@@ -1716,7 +1731,7 @@ async function GetAppIcon(binaryPath) {
 
     return resp.AppIcon;
   } catch (e) {
-    console.error("GetInstalledApps failed: ", e);
+    console.error("GetAppIcon failed: ", e);
     return null;
   }
 }

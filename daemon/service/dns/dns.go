@@ -113,12 +113,12 @@ func (d DnsSettings) Equal(x DnsSettings) bool {
 	return true
 }
 
-func (d DnsSettings) IsIPv6() (bool, error) {
+func (d DnsSettings) IsIPv6() bool {
 	ip := d.Ip()
 	if ip == nil {
-		return false, fmt.Errorf("unable to determine IP protocol version for the DnsSettings object (object is not initialized)")
+		return false
 	}
-	return ip.To4() == nil, nil
+	return ip.To4() == nil
 }
 
 func (d DnsSettings) Ip() net.IP {

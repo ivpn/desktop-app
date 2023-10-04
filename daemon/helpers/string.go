@@ -20,40 +20,14 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-package splittun
+package helpers
 
-import (
-	"fmt"
-)
+import "strings"
 
-var (
-	notImplementedError = fmt.Errorf("Split-Tunnelling is not implemented for this platform")
-)
-
-func implInitialize() error {
-	return notImplementedError
-}
-
-func implFuncNotAvailableError() (generalStError, inversedStError error) {
-	return notImplementedError, fmt.Errorf("Inversed Split-Tunnelling is not implemented for this platform")
-}
-
-func implReset() error {
-	return notImplementedError
-}
-
-func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	return notImplementedError
-}
-
-func implAddPid(pid int, commandToExecute string) error {
-	return notImplementedError
-}
-
-func implRemovePid(pid int) error {
-	return notImplementedError
-}
-
-func implGetRunningApps() ([]RunningApp, error) {
-	return nil, notImplementedError
+func CapitalizeFirstLetter(s string) string {
+	if len(s) == 0 {
+		return s // Return the original string if it's empty
+	}
+	// Convert the first character to uppercase and concatenate it with the rest of the string
+	return strings.ToUpper(s[:1]) + s[1:]
 }

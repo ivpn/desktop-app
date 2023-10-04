@@ -175,10 +175,19 @@ export default {
   SplitTunnelGetStatus: async () => {
     return await invoke("renderer-request-SplitTunnelGetStatus");
   },
-  SplitTunnelSetConfig: async (enabled, doReset) => {
+  SplitTunnelSetConfig: async (
+    enabled,
+    inversed,
+    isAnyDns,
+    allowWhenNoVpn,
+    doReset
+  ) => {
     return await invoke(
       "renderer-request-SplitTunnelSetConfig",
       enabled,
+      inversed,
+      isAnyDns,
+      allowWhenNoVpn,
       doReset
     );
   },
@@ -315,6 +324,9 @@ export default {
   },
   ShowAntitrackerSettings: function () {
     ipcRenderer.send("renderer-request-show-settings-antitracker");
+  },
+  ShowSplitTunnelSettings: function () {
+    ipcRenderer.send("renderer-request-show-settings-SplitTunnel");
   },
 
   // CONTEXT MENU

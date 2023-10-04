@@ -31,5 +31,16 @@ func (e BadParameter) Error() string {
 	if len(e.Message) == 0 {
 		return "bad parameter"
 	}
-	return "bad parameter (" + e.Message + ")"
+	return "bad parameter: " + e.Message
+}
+
+type ConflictingParameters struct {
+	Message string
+}
+
+func (e ConflictingParameters) Error() string {
+	if len(e.Message) == 0 {
+		return "conflicting arguments: provided arguments cannot be used simultaneously"
+	}
+	return "conflicting arguments: " + e.Message
 }

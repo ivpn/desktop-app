@@ -167,7 +167,7 @@ func printFirewallState(w *tabwriter.Writer, isEnabled, isPersistent, isAllowLAN
 	return w
 }
 
-func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isFullPrint bool, isEnabled bool, apps []string, runningApps []splittun.RunningApp) *tabwriter.Writer {
+func printSplitTunState(w *tabwriter.Writer, isShortPrint, isFullPrint, isEnabled, isInversed, isAnyDns, isAllowWhenNoVpn bool, apps []string, runningApps []splittun.RunningApp) *tabwriter.Writer {
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
@@ -177,11 +177,33 @@ func printSplitTunState(w *tabwriter.Writer, isShortPrint bool, isFullPrint bool
 	}
 
 	state := "Disabled"
+	dnsFw := ""
+	allowDefConnectivity := ""
 	if isEnabled {
 		state = "Enabled"
+		if isInversed {
+			state += " (INVERSE MODE)"
+
+			if isAnyDns {
+				dnsFw = "Allowed (!)"
+			} else {
+				dnsFw = "Blocked"
+			}
+			if isAllowWhenNoVpn {
+				allowDefConnectivity = "Allowed"
+			} else {
+				allowDefConnectivity = "Not allowed"
+			}
+		}
 	}
 
 	fmt.Fprintf(w, "Split Tunnel\t:\t%v\n", state)
+	if len(dnsFw) > 0 {
+		fmt.Fprintf(w, "    Non-IVPN DNS\t:\t%v\n", dnsFw)
+	}
+	if len(allowDefConnectivity) > 0 {
+		fmt.Fprintf(w, "    No-VPN connectivity\t:\t%v\n", allowDefConnectivity)
+	}
 
 	if !isShortPrint {
 		for i, path := range apps {

@@ -32,6 +32,8 @@ $base-font-family: "MainIVPNFont", "SF Pro Text", "Helvetica", "sans-serif";
 
     --flag-border-color-rgb: 203,210,211; // #cbd2d3;
 
+    --warning-color: #FF6258;
+
     @media (prefers-color-scheme: dark){
          color-scheme: dark;
          --text-color-rgb: 255, 255, 255;

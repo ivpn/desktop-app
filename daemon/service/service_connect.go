@@ -98,6 +98,19 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		}
 	}()
 
+	// erase temporary connection parameters
+	s._tmpParamsMutex.Lock()
+	s._tmpParams = types.ConnectionParams{}
+	s._tmpParamsMutex.Unlock()
+	defer func() {
+		s._tmpParamsMutex.Lock()
+		defer s._tmpParamsMutex.Unlock()
+		// update settings if we received any while VPN was connected
+		if s._tmpParams.CheckIsDefined() == nil {
+			s.setConnectionParams(params)
+		}
+	}()
+
 	// keep last used connection params
 	s.setConnectionParams(params)
 
@@ -519,13 +532,13 @@ func (s *Service) keepConnection(originalEntryServerInfo *svrConnInfo, createVpn
 		lastConnectionTryTime := time.Now()
 
 		// get actual DNS configuration
-		dns, antitracker, _, err := s.GetDefaultDnsParams()
+		manualDns, antitracker, _, err := s.GetDefaultManualDnsParams()
 		if err != nil {
 			return fmt.Errorf("failed to get DNS settings: %w", err)
 		}
 
 		// start connection
-		connErr := s.connect(originalEntryServerInfo, vpnObj, dns, antitracker, firewallOn, firewallDuringConnection, v2rayWrapper)
+		connErr := s.connect(originalEntryServerInfo, vpnObj, manualDns, antitracker, firewallOn, firewallDuringConnection, v2rayWrapper)
 		if connErr != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", connErr))
 			if s._requiredVpnState == Connect {
@@ -631,7 +644,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 		}
 
 		// Ensure that routing-change detector is stopped (we do not need it when VPN disconnected)
-		s._netChangeDetector.Stop()
+		s._netChangeDetector.UnInit()
 
 		// ensure firewall removed rules for DNS
 		firewall.OnChangeDNS(nil)
@@ -665,6 +678,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 		s._vpn = nil
 
 		// Notify Split-Tunneling module about disconnected VPN status
+		// It is important to call it only after 's._vpn = nil' (so ST functionality will be correctly notified about VPN disconnected state)
 		s.splitTunnelling_ApplyConfig()
 
 		log.Info("VPN process stopped")
@@ -705,75 +719,89 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 					state.V2RayProxy = originalEntryServerInfo.V2RayProxyType
 				}
 
-				// forward state to 'stateChan'
-				s._evtReceiver.OnVpnStateChanged(state)
+				//  using the inline function to process state. It is required for a correct functioning of the "defer" statement
+				func() {
+					// do not forget to forward state to 'stateChan'
+					defer s._evtReceiver.OnVpnStateChanged(state)
 
-				log.Info(fmt.Sprintf("State: %v", state))
+					log.Info(fmt.Sprintf("State: %v", state))
 
-				// internally process VPN state change
-				switch state.State {
+					// internally process VPN state change
+					switch state.State {
 
-				case vpn.RECONNECTING:
-					// Disable routing-change detector when reconnecting
-					s._netChangeDetector.Stop()
+					case vpn.RECONNECTING:
+						// Disable routing-change detector when reconnecting
+						s._netChangeDetector.UnInit()
 
-					// Add host IP to firewall exceptions
-					// Some OS-specific implementations (e.g. macOS) can remove server host from firewall rules after connection established
-					// We have to allow it's IP to be able to reconnect
-					const onlyForICMP = false
-					const isPersistent = false
-					err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP, isPersistent)
-					if err != nil {
-						log.Error("Unable to add host to firewall exceptions:", err.Error())
+						// Add host IP to firewall exceptions
+						// Some OS-specific implementations (e.g. macOS) can remove server host from firewall rules after connection established
+						// We have to allow it's IP to be able to reconnect
+						const onlyForICMP = false
+						const isPersistent = false
+						err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP, isPersistent)
+						if err != nil {
+							log.Error("Unable to add host to firewall exceptions:", err.Error())
+						}
+
+					case vpn.INITIALISED:
+						// start routing change detection
+						if netInterface, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
+							log.Error(fmt.Sprintf("Unable to initialize routing change detection. Failed to get interface '%s'", state.ClientIP.String()))
+						} else {
+							if err := s._netChangeDetector.Init(routingChangeChan, routingUpdateChan, netInterface); err != nil {
+								log.Error(fmt.Errorf("failed to init route change detection: %w", err))
+							}
+							if s._preferences.IsInverseSplitTunneling() {
+								// Inversed split-tunneling: disable monitoring of the default route to the VPN server.
+								// Note: the monitoring must be enabled as soon as the inverse split-tunneling is disabled!
+								log.Info("Disabled the monitoring of the default route to the VPN server due to Inverse Split-Tunnel")
+							} else {
+								log.Info("Starting route change detection")
+								if err := s._netChangeDetector.Start(); err != nil {
+									log.Error(fmt.Errorf("failed to start route change detection: %w", err))
+								}
+							}
+						}
+
+					case vpn.CONNECTED:
+						// since we are connected - keep connection (reconnect if unexpected disconnection)
+						if s._requiredVpnState == Connect {
+							s._requiredVpnState = KeepConnection
+						}
+
+						// If no any clients connected - connection notification will not be passed to user
+						// In this case we are trying to save info message into system log
+						if !s._evtReceiver.IsClientConnected(false) {
+							s.systemLog(Info, "VPN connected")
+						}
+
+						// Inform firewall about client local IP
+						firewall.ClientConnected(
+							state.ClientIP, state.ClientIPv6,
+							state.ClientPort,
+							state.ServerIP, state.ServerPort,
+							state.IsTCP)
+
+						// Ensure firewall is configured to allow DNS communication
+						// At this moment, firewall must be already configured for custom DNS
+						// but if it still has no rule - apply DNS rules for default DNS
+						if _, isInitialized := firewall.GetDnsInfo(); !isInitialized {
+							d := dns.DnsSettingsCreate(vpnProc.DefaultDNS())
+							firewall.OnChangeDNS(&d)
+						}
+
+						// save ClientIP/ClientIPv6 into vpn-session-info
+						sInfo := s.GetVpnSessionInfo()
+						sInfo.VpnLocalIPv4 = state.ClientIP
+						sInfo.VpnLocalIPv6 = state.ClientIPv6
+						s.SetVpnSessionInfo(sInfo)
+
+						// Notify Split-Tunneling module about connected VPN status
+						// It is important to call it after 's._vpn' initialised. So ST functionality will be correctly informed about 'VPN connected' status
+						s.splitTunnelling_ApplyConfig()
+					default:
 					}
-
-				case vpn.INITIALISED:
-					// start routing change detection
-					if netInterface, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
-						log.Error(fmt.Sprintf("Unable to initialize routing change detection. Failed to get interface '%s'", state.ClientIP.String()))
-					} else {
-
-						log.Info("Starting route change detection")
-						s._netChangeDetector.Start(routingChangeChan, routingUpdateChan, netInterface)
-					}
-
-				case vpn.CONNECTED:
-					// since we are connected - keep connection (reconnect if unexpected disconnection)
-					if s._requiredVpnState == Connect {
-						s._requiredVpnState = KeepConnection
-					}
-
-					// If no any clients connected - connection notification will not be passed to user
-					// In this case we are trying to save info message into system log
-					if !s._evtReceiver.IsClientConnected(false) {
-						s.systemLog(Info, "VPN connected")
-					}
-
-					// Inform firewall about client local IP
-					firewall.ClientConnected(
-						state.ClientIP, state.ClientIPv6,
-						state.ClientPort,
-						state.ServerIP, state.ServerPort,
-						state.IsTCP)
-
-					// Ensure firewall is configured to allow DNS communication
-					// At this moment, firewall must be already configured for custom DNS
-					// but if it still has no rule - apply DNS rules for default DNS
-					if _, isInitialized := firewall.GetDnsInfo(); !isInitialized {
-						d := dns.DnsSettingsCreate(vpnProc.DefaultDNS())
-						firewall.OnChangeDNS(&d)
-					}
-
-					// save ClientIP/ClientIPv6 into vpn-session-info
-					sInfo := s.GetVpnSessionInfo()
-					sInfo.VpnLocalIPv4 = state.ClientIP
-					sInfo.VpnLocalIPv6 = state.ClientIPv6
-					s.SetVpnSessionInfo(sInfo)
-
-					// Notify Split-Tunneling module about connected VPN status
-					s.splitTunnelling_ApplyConfig()
-				default:
-				}
+				}()
 
 			case <-stopChannel: // triggered when the stopChannel is closed
 				isRuning = false

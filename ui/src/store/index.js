@@ -58,6 +58,7 @@ export default createStore({
       OpenVPNError: "",
       ObfsproxyError: "",
       SplitTunnelError: "",
+      SplitTunnelInverseError: "",
       Platform: {
         Linux: {
           DnsMgmtOldResolvconfError: "",
@@ -139,6 +140,17 @@ export default createStore({
       }
     }*/
     latestVersionInfo: null,
+
+    // allInstalledApps [] - an array of applications installed on users device
+    //                       (in use in Split Tunnel mode)
+    // Type (AppInfo):
+    //    AppName       string
+    //    AppGroup      string // optional
+    //    AppIcon       string - base64 icon of the executable binary
+    //    AppBinaryPath string - The unique parameter describing an application
+    //                    Windows: absolute path to application binary
+    //                    Linux: program to execute, possibly with arguments.
+    allInstalledApps: null,
   },
 
   getters: {
@@ -191,6 +203,8 @@ export default createStore({
     isOpenVPNEnabled: (state) => !state.disabledFunctions.OpenVPNError,
     isObfsproxyEnabled: (state) => !state.disabledFunctions.ObfsproxyError,
     isSplitTunnelEnabled: (state) => !state.disabledFunctions.SplitTunnelError,
+    isSplitTunnelInverseEnabled: (state) =>
+      !state.disabledFunctions.SplitTunnelInverseError,
 
     getDnsAbilities: (state) => {
       return state.dnsAbilities;
@@ -261,6 +275,10 @@ export default createStore({
     },
     isRequestingLocationIPv6(state, value) {
       state.isRequestingLocationIPv6 = value;
+    },
+
+    allInstalledApps(state, value) {
+      state.allInstalledApps = value;
     },
   },
 
