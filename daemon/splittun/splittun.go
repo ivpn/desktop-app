@@ -91,7 +91,7 @@ func Reset() error {
 }
 
 // ApplyConfig control split-tunnel functionality
-func ApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
+func ApplyConfig(isStEnabled, isStInverse, isStInverseAllowWhenNoVpn, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -100,7 +100,7 @@ func ApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrCon
 		addrConfig.IPv6Tunnel = nil
 	}
 
-	return implApplyConfig(isStEnabled, isStInversed, isVpnEnabled, addrConfig, splitTunnelApps)
+	return implApplyConfig(isStEnabled, isStInverse, isStInverseAllowWhenNoVpn, isVpnEnabled, addrConfig, splitTunnelApps)
 }
 
 // AddPid add process to Split-Tunnel environment

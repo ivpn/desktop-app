@@ -74,6 +74,7 @@ export default {
       IsEnabled: false, // is ST enabled
       IsInversed: false, // Inverse Split Tunnel (only 'splitted' apps use VPN tunnel)
       IsAnyDns: false, // (only for Inverse Split Tunnel) When false: Allow only DNS servers specified by the IVPN application
+      IsAllowWhenNoVpn: false, // (only for Inverse Split Tunnel) When true: Allow network access when VPN is not connected
       IsCanGetAppIconForBinary: false,
       // Split-Tunnelling (SplitTunnelStatus)
       // IsEnabled bool                     - Is ST enabled

@@ -141,14 +141,14 @@ func implReset() error {
 	return nil
 }
 
-func implApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
+func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	// Check if functionality available
 	splitTunErr, splitTunInversedErr := GetFuncNotAvailableError()
 	isFunctionalityNotAvailable := splitTunErr != nil || (isStInversed && splitTunInversedErr != nil)
 
-	if isStInversed && !isVpnEnabled {
-		// If VPN not connected and inverse split-tunneling enabled - we need to set blackhole IP addresses for tunnel interface
-		// This will forward all traffic of split-tunnel apps to 'nowhere' (in fact, it will block all traffic of split-tunnel apps)
+	// If: (VPN not connected + inverse split-tunneling enabled + isStInverseAllowWhenNoVpn==false) --> we need to set blackhole IP addresses for tunnel interface
+	// This will forward all traffic of split-tunnel apps to 'nowhere' (in fact, it will block all traffic of split-tunnel apps)
+	if isStInversed && !isStInverseAllowWhenNoVpn && !isVpnEnabled {
 		addrConfig.IPv4Tunnel = net.ParseIP(BlackHoleIPv4)
 		addrConfig.IPv6Tunnel = net.ParseIP(BlackHoleIPv6)
 	}

@@ -23,27 +23,33 @@
     </button>
 
     <div
-      class="triangle"
       style="margin-left: 18px"
       title="Launch application in Split Tunnel environment ..."
     >
-      <select
-        v-model="appToLaunch"
-        id="appsList"
-        style="
-          cursor: pointer;
-          position: absolute;
-          opacity: 0;
-          width: 22px;
-          height: 22px;
-          left: -10px;
-        "
-      >
-        <option>[ Custom application... ]</option>
-        <option v-for="item in sortedApps" :key="item" :value="item">
-          {{ item.AppName ? item.AppName : item.AppBinaryPath }}
-        </option>
-      </select>
+      <div style="position: relative">
+        <select
+          v-model="appToLaunch"
+          id="appsList"
+          style="
+            cursor: pointer;
+            position: absolute;
+            opacity: 0;
+            width: 24px;
+            height: 26px;
+          "
+        >
+          <option>[ Custom application... ]</option>
+          <option v-for="item in sortedApps" :key="item" :value="item">
+            {{ item.AppName ? item.AppName : item.AppBinaryPath }}
+          </option>
+        </select>
+        <img
+          style="position: relative; z-index: -1"
+          width="24"
+          height="24"
+          src="@/assets/plus.svg"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -133,25 +139,12 @@ export default {
   color: var(--text-color-details);
 }
 
-.triangle {
-  width: 0px;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-bottom: 20px solid transparent; /* You can change the color */
-  transform: rotate(90deg);
-  border-bottom-color: #8b9aab;
-}
-
-.btn {
+#selectBtn {
   border: none;
   background-color: inherit;
   outline-width: 0;
   cursor: pointer;
-}
 
-#selectBtn {
-  @extend .btn;
   padding: 0px;
 
   display: flex;

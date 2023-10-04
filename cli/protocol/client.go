@@ -392,13 +392,14 @@ func (c *Client) GetSplitTunnelStatus() (cfg types.SplitTunnelStatus, err error)
 //	isEnabled  bool - is ST enabled
 //	isInversed bool - when inversed - only apps added to ST will use VPN connection, all other apps will use direct unencrypted connection
 //	isAnyDns   bool - (only for Inverse Split Tunnel) When false: Allow only DNS servers specified by the IVPN application
+//	isAllowWhenNoVpn bool - (only for Inverse Split Tunnel) Allow connectivity for Split Tunnel apps when VPN is disabled
 //	reset      bool - reset ST config and disable ST (if enabled - all the rest paremeters are ignored)
-func (c *Client) SetSplitTunnelConfig(isEnable, isInversed, isAnyDns, reset bool) (err error) {
+func (c *Client) SetSplitTunnelConfig(isEnable, isInversed, isAnyDns, isAllowWhenNoVpn, reset bool) (err error) {
 	if err := c.ensureConnected(); err != nil {
 		return err
 	}
 
-	req := types.SplitTunnelSetConfig{IsEnabled: isEnable, IsInversed: isInversed, IsAnyDns: isAnyDns, Reset: reset}
+	req := types.SplitTunnelSetConfig{IsEnabled: isEnable, IsInversed: isInversed, IsAnyDns: isAnyDns, IsAllowWhenNoVpn: isAllowWhenNoVpn, Reset: reset}
 	resp := types.EmptyResp{}
 	if err := c.sendRecv(&req, &resp); err != nil {
 		return err

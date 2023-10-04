@@ -148,11 +148,12 @@ ipcMain.handle("renderer-request-SplitTunnelGetStatus", async () => {
 });
 ipcMain.handle(
   "renderer-request-SplitTunnelSetConfig",
-  async (event, enabled, inversed, IsAnyDns, doReset) => {
+  async (event, enabled, inversed, isAnyDns, allowWhenNoVpn, doReset) => {
     return await client.SplitTunnelSetConfig(
       enabled,
       inversed,
-      IsAnyDns,
+      isAnyDns,
+      allowWhenNoVpn,
       doReset
     );
   }

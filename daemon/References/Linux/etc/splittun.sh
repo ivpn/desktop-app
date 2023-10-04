@@ -59,9 +59,6 @@ _mutable_folder_fallback=/opt/ivpn/mutable      # alternate location of 'mutable
 # So, this rule absorbs all packets which are not marked as 0xca6c
 _packets_fwmark_value=0xca6c        # Anything from 1 to 2147483647
 
-# iptables rules comment
-_comment="IVPN Split Tunneling"
-
 # Paths to standard binaries
 _bin_iptables=iptables
 _bin_ip6tables=ip6tables
@@ -82,8 +79,10 @@ _def_gatewayIPv6=""
 # When inversed - only apps added to ST will use VPN connection, 
 # all other apps will use direct unencrypted connection
 _is_inversed=0 
-# Applicable for Inverse mode only: when VPN not connected - the communication for spliteed apps will be blocked
-_is_vpn_connected=0
+# Applicable for Inverse mode only: block/allow communication for 'splitted' apps 
+#   -   "1" means the communication for splitted apps will be blocked (for example, when VPN not connected)
+#   -   "0" means the communication for splitted apps will not be blocked
+_is_inversed_blocked=0
 
 function test()
 {
@@ -159,45 +158,51 @@ function init_iptables()
     ${bin_iptables} -w ${LOCKWAITTIME} -N ${INPUT}
 
     # Save packets mark (to be able to restore mark for incoming packets of the same connection)
-    ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_mangle} -m comment --comment  "${_comment}" -j CONNMARK --save-mark    
+    ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_mangle} -j CONNMARK --save-mark    
     # Change the source IP address of packets to the IP address of the interface they're going out on
     # Do this only if default interface is defined (for example: IPv6 interface may be empty when IPv6 not configured on the system)
     if [ ! -z ${def_inf_name} ]; then
-        ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_nat} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -o ${def_inf_name} -m comment --comment  "${_comment}" -j MASQUERADE
+        ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_nat} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -o ${def_inf_name} -j MASQUERADE
     fi
     # Add mark on packets of classid ${_cgroup_classid}
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j MARK --set-mark ${_packets_fwmark_value}
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j MARK --set-mark ${_packets_fwmark_value}
     # Important! Process DNS request before setting mark rule (DNS request should not be marked)
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p tcp --dport 53 -m comment --comment  "${_comment}" -j RETURN
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p udp --dport 53 -m comment --comment  "${_comment}" -j RETURN
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p tcp --dport 53 -j RETURN
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p udp --dport 53 -j RETURN
 
     # Allow packets from/to cgroup (bypass IVPN firewall)
     if [ ! -z ${def_inf_name} ]; then
-        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT
-        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
-        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j ACCEPT
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j ACCEPT
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m mark --mark ${_packets_fwmark_value} -j ACCEPT
     else
         # If local interface not defined - block all packets from/to cgroup
         # (for example: IPv6 interface may be empty when IPv6 not configured on the system)
-        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j DROP
-        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j DROP   # this rule is not effective, so we use 'mark' (see the next rule)
-        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m mark --mark ${_packets_fwmark_value} -m comment --comment  "${_comment}" -j DROP
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j DROP
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j DROP   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m mark --mark ${_packets_fwmark_value} -j DROP
     fi
     
     # Inverse mode: only 'splitted' apps use only VPN connection
     if [ ${_is_inversed} -eq 1 ]; then
         # Important! Process DNS request first: do not drop DNS requests
-        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -p tcp --dport 53 -m comment --comment  "${_comment}" -j RETURN
-        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -p udp --dport 53 -m comment --comment  "${_comment}" -j RETURN
-        # When Inversed mode and VPN not connected - 'splitted' apps must not have connectivity (because the splitted apps must use only VPN connection)    
-        if [ ${_is_vpn_connected} -eq 0 ]; then
-            ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j DROP
-            ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT} -m cgroup --cgroup ${_cgroup_classid} -m comment --comment  "${_comment}" -j DROP   # this rule is not effective, so we use 'mark' (see the next rule)    
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -p tcp --dport 53 -j RETURN
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -p udp --dport 53 -j RETURN
+        
+        # Allow or block communication for 'splitted' apps in inverse mode
+        # E.g.: If we want to block 'splitted' apps when VPN not connected -  '_is_inversed_blocked' must not '0'        
+        if [ ! ${_is_inversed_blocked} -eq 0 ]; then
+            ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup --cgroup ${_cgroup_classid} -j DROP
+            ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup --cgroup ${_cgroup_classid} -j DROP
         fi 
     fi 
+
+    # Just ensure that packets from/to localhost will not be blocked            
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -o lo -j ACCEPT
+    ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -i lo -j ACCEPT
     
     # Restore packets mark for incoming packets
-    ${bin_iptables} -w ${_iptables_locktime} -I ${PREROUTING_mangle} -m comment --comment  "${_comment}" -j CONNMARK --restore-mark
+    ${bin_iptables} -w ${_iptables_locktime} -I ${PREROUTING_mangle} -j CONNMARK --restore-mark
 
     ${bin_iptables} -w ${_iptables_locktime} -I POSTROUTING -t mangle  -j ${POSTROUTING_mangle}
     ${bin_iptables} -w ${_iptables_locktime} -I OUTPUT -t mangle  -j ${OUTPUT_mangle}
@@ -640,7 +645,7 @@ function parseInputArgs()
             -interface6) _def_interface_nameIPv6="$2"; shift;;
             -gateway6) _def_gatewayIPv6="$2"; shift;;
             -inverse) _is_inversed=1; echo "'-inverse' flag defined!";;
-            -connected) _is_vpn_connected=1;;
+            -inverse_block) _is_inversed_blocked=1; echo "'-inverse_block' flag defined!";;
             *) echo "Unknown parameter: '$1'" 1>&2; exit 1;;
         esac
         shift
@@ -720,14 +725,17 @@ else
     echo "Note! The script have to be started under privilaged user (sudo $0 ...)"
     echo "    $0 <command> [parameters]"
     echo "Parameters:"
-    echo "    start [-interface <inf_name>] [-gateway <gateway>] [-interface6 <inf_name_IPv6>] [-gateway6 <gateway_IPv6>] [-inverse]"
+    echo "    start [-interface <inf_name>] [-gateway <gateway>] [-interface6 <inf_name_IPv6>] [-gateway6 <gateway_IPv6>] [[-inverse] [-inverse_block]]"
     echo "        Initialize split-tunneling functionality"
     echo "        - interface      - (optional) name of IPv4 network interface to be used for ST environment"
     echo "        - gateway        - (optional) IPv4 gateway IP to be used for ST environment"
     echo "        - interface6     - (optional) name of IPv6 network interface to be used for ST environment"
     echo "        - gateway6       - (optional) IPv6 gateway IP to be used for ST environment"
-    echo "        - Inverse        - (optional) When defined - route specified applications exclusively through the VPN."
+    echo "        - inverse        - (optional) When defined - route specified applications exclusively through the VPN."
     echo "                                      All other traffic will bypass the VPN and use the default connection."
+    echo "        - inverse_block  - (optional) Block connectivity for specified apps."
+    echo "                                      We can use it, for example, to block connectivity when VPN not enabled."
+    echo "                                      Note: This option applicable only with '-inverse' option."
     echo "    stop"
     echo "        Uninitialize split-tunneling functionality"
     echo "    run [-u <username>] <command>"

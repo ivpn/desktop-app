@@ -1483,12 +1483,19 @@ async function SplitTunnelGetStatus() {
   );
   return ret;
 }
-async function SplitTunnelSetConfig(IsEnabled, IsInversed, IsAnyDns, doReset) {
+async function SplitTunnelSetConfig(
+  IsEnabled,
+  IsInversed,
+  IsAnyDns,
+  IsAllowWhenNoVpn,
+  doReset
+) {
   let stCfg = store.state.vpnState.splitTunnelling;
   if (stCfg) {
     if (IsEnabled == null) IsEnabled = stCfg.IsEnabled;
     if (IsInversed == null) IsInversed = stCfg.IsInversed;
     if (IsAnyDns == null) IsAnyDns = stCfg.IsAnyDns;
+    if (IsAllowWhenNoVpn == null) IsAllowWhenNoVpn = stCfg.IsAllowWhenNoVpn;
   }
 
   await sendRecv({
@@ -1496,6 +1503,7 @@ async function SplitTunnelSetConfig(IsEnabled, IsInversed, IsAnyDns, doReset) {
     IsEnabled,
     IsInversed,
     IsAnyDns,
+    IsAllowWhenNoVpn,
     Reset: doReset === true,
   });
 

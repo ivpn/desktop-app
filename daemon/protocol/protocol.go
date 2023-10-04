@@ -90,7 +90,7 @@ type Service interface {
 	SetConnectionParams(params service_types.ConnectionParams) error
 	SetWiFiSettings(params preferences.WiFiParams) error
 
-	SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, reset bool) error
+	SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, isAllowWhenNoVpn, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
 	SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error)
 	SplitTunnelling_RemoveApp(pid int, exec string) (err error)
@@ -771,7 +771,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
-		if err := p._service.SplitTunnelling_SetConfig(req.IsEnabled, req.IsInversed, req.IsAnyDns, req.Reset); err != nil {
+		if err := p._service.SplitTunnelling_SetConfig(req.IsEnabled, req.IsInversed, req.IsAnyDns, req.IsAllowWhenNoVpn, req.Reset); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}

@@ -10,51 +10,56 @@
         @change="applyChanges"
       />
       <label class="defColor" for="isSTEnabledLocal">Split Tunnel</label>
+      <button
+        class="noBordersBtn flexRow"
+        title="Help"
+        v-on:click="$refs.helpSTEnabledLocal.showModal()"
+      >
+        <img src="@/assets/question.svg" />
+      </button>
+      <ComponentDialog ref="helpSTEnabledLocal" header="Info">
+        <div>
+          <p>
+            Exclude traffic from specific applications from being routed through
+            the VPN
+          </p>
+          <!-- functionality description: LINUX -->
+          <p v-if="isLinux">
+            <span style="font-weight: bold">Warning:</span>
+            Applications must be launched from the button below. Already running
+            applications or instances can not use Split Tunneling. Some
+            applications using shared resources (e.g. Web browsers) must be
+            closed before launching them or they may not be excluded from the
+            VPN tunnel.
+          </p>
+          <!-- functionality description: WINDOWS -->
+          <div v-else>
+            <p>
+              <span style="font-weight: bold">Warning:</span>
+              When adding a running application, any connections already
+              established by the application will continue to be routed through
+              the VPN tunnel until the TCP connection/s are reset or the
+              application is restarted
+            </p>
+            <div class="settingsGrayLongDescriptionFont">
+              For more information refer to the
+              <button class="link" v-on:click="onLearnMoreLink">
+                Split Tunnel Uses and Limitations
+              </button>
+              webpage
+            </div>
+          </div>
+        </div>
+      </ComponentDialog>
     </div>
-
-    <div class="fwDescription" style="margin-bottom: 0px">
+    <div class="fwDescription">
       Exclude traffic from specific applications from being routed through the
       VPN
     </div>
 
-    <div>
-      <!-- functionality description: LINUX -->
-      <div
-        v-if="isLinux"
-        class="fwDescription"
-        style="margin-top: 0px; margin-bottom: 0px"
-      >
-        <span class="settingsGrayLongDescriptionFont" style="font-weight: bold"
-          >Warning:</span
-        >
-        Applications must be launched from the button below. Already running
-        applications or instances can not use Split Tunneling. Some applications
-        using shared resources (e.g. Web browsers) must be closed before
-        launching them or they may not be excluded from the VPN tunnel.
-      </div>
-      <!-- functionality description: WINDOWS -->
-      <div v-else>
-        <div class="fwDescription" style="margin-top: 0px; margin-bottom: 0px">
-          <span
-            class="settingsGrayLongDescriptionFont"
-            style="font-weight: bold"
-            >Warning:</span
-          >
-          When adding a running application, any connections already established
-          by the application will continue to be routed through the VPN tunnel
-          until the TCP connection/s are reset or the application is restarted
-        </div>
-        <div class="fwDescription" style="margin-top: 0px">
-          For more information refer to the
-          <button class="link" v-on:click="onLearnMoreLink">
-            Split Tunnel Uses and Limitations
-          </button>
-          webpage
-        </div>
-      </div>
-    </div>
-
+    <!-- INVERSE MODE-->
     <div v-show="isSplitTunnelInverseSupported">
+      <!-- Inverse mode -->
       <div class="param">
         <input
           :disabled="!isSTEnabledLocal"
@@ -88,50 +93,90 @@
         </ComponentDialog>
       </div>
 
-      <div class="fwDescription" style="margin-top: 0px; margin-bottom: 0px">
+      <div class="fwDescription">
         Only specified applications utilize the VPN connection.
       </div>
-      <div class="param">
-        <input
-          :disabled="!stInversedLocal || !isSTEnabledLocal"
-          type="checkbox"
-          id="stBlockNonVpnDnsLocal"
-          v-model="stBlockNonVpnDnsLocal"
-          @change="applyChanges"
-        />
-        <label class="defColor" for="stBlockNonVpnDnsLocal"
-          >Block DNS servers not specified by the IVPN application</label
-        >
-        <button
-          class="noBordersBtn flexRow"
-          title="Help"
-          v-on:click="$refs.helpStInversedAnyDns.showModal()"
-        >
-          <img src="@/assets/question.svg" />
-        </button>
-        <ComponentDialog ref="helpStInversedAnyDns" header="Info">
-          <div>
-            <p>
-              When this option is enabled, only DNS requests directed to IVPN
-              DNS servers or user-defined custom DNS servers within the IVPN app
-              settings will be allowed. All other DNS requests on port 53 will
-              be blocked.
-            </p>
-            <p>
-              For enhanced privacy, it is recommended to keep this option
-              enabled. Disabling it may result in your apps using the default
-              DNS configuration.
-            </p>
-            <div class="settingsGrayLongDescriptionFont">
-              The IVPN AntiTracker and custom DNS are not functional when this
-              feature is disabled.
+
+      <div style="margin-left: 16px">
+        <!-- Allow connectivity for Split Tunnel apps when VPN is disabled -->
+        <div class="param">
+          <input
+            :disabled="!stInversedLocal || !isSTEnabledLocal"
+            type="checkbox"
+            id="stAllowWhenNoVpnLocal"
+            v-model="stAllowWhenNoVpnLocal"
+            @change="applyChanges"
+          />
+          <label class="defColor" for="stAllowWhenNoVpnLocal">
+            Allow connectivity for Split Tunnel apps when VPN is disabled</label
+          >
+          <button
+            class="noBordersBtn flexRow"
+            title="Help"
+            v-on:click="$refs.helpStAllowWhenNoVpnLocal.showModal()"
+          >
+            <img src="@/assets/question.svg" />
+          </button>
+          <ComponentDialog ref="helpStAllowWhenNoVpnLocal" header="Info">
+            <div>
+              <p>
+                Enabling this feature allows applications within the Split
+                Tunnel environment to utilize the default network connection
+                when the VPN is disabled, mirroring the behavior of applications
+                outside the Split Tunnel environment.
+              </p>
+              <p>
+                By default, this feature is turned off, and applications within
+                the Split Tunnel environment won't have access to the default
+                network interface when the VPN is disabled.
+              </p>
             </div>
-            <div class="settingsGrayLongDescriptionFont">
-              This functionality only applies in Inverse Split Tunnel mode when
-              the VPN is connected.
+          </ComponentDialog>
+        </div>
+
+        <!-- Block DNS servers not specified by the IVPN application -->
+        <div class="param">
+          <input
+            :disabled="!stInversedLocal || !isSTEnabledLocal"
+            type="checkbox"
+            id="stBlockNonVpnDnsLocal"
+            v-model="stBlockNonVpnDnsLocal"
+            @change="applyChanges"
+          />
+          <label class="defColor" for="stBlockNonVpnDnsLocal"
+            >Block DNS servers not specified by the IVPN application</label
+          >
+          <button
+            class="noBordersBtn flexRow"
+            title="Help"
+            v-on:click="$refs.helpStInversedAnyDns.showModal()"
+          >
+            <img src="@/assets/question.svg" />
+          </button>
+          <ComponentDialog ref="helpStInversedAnyDns" header="Info">
+            <div>
+              <p>
+                When this option is enabled, only DNS requests directed to IVPN
+                DNS servers or user-defined custom DNS servers within the IVPN
+                app settings will be allowed. All other DNS requests on port 53
+                will be blocked.
+              </p>
+              <p>
+                For enhanced privacy, it is recommended to keep this option
+                enabled. Disabling it may result in your apps using the default
+                DNS configuration.
+              </p>
+              <div class="settingsGrayLongDescriptionFont">
+                The IVPN AntiTracker and custom DNS are not functional when this
+                feature is disabled.
+              </div>
+              <div class="settingsGrayLongDescriptionFont">
+                This functionality only applies in Inverse Split Tunnel mode
+                when the VPN is connected.
+              </div>
             </div>
-          </div>
-        </ComponentDialog>
+          </ComponentDialog>
+        </div>
       </div>
     </div>
 
@@ -395,6 +440,7 @@ export default {
       stInversedLocal: false,
       stAnyDnsLocal: false,
       stBlockNonVpnDnsLocal: true,
+      stAllowWhenNoVpnLocal: false,
 
       isLoadingAllApps: false,
       isShowAppAddPopup: false,
@@ -431,6 +477,7 @@ export default {
     this.isSTEnabledLocal = this.IsEnabled;
     this.stInversedLocal = this.IsInversed;
     this.stBlockNonVpnDnsLocal = !this.IsAnyDns;
+    this.stAllowWhenNoVpnLocal = this.IsAllowWhenNoVpn;
 
     // show base information about splitted apps immediately
     //this.updateAppsToShow();
@@ -468,6 +515,9 @@ export default {
     IsAnyDns() {
       this.stBlockNonVpnDnsLocal = !this.IsAnyDns;
     },
+    IsAllowWhenNoVpn() {
+      this.stAllowWhenNoVpnLocal = this.IsAllowWhenNoVpn;
+    },
 
     STConfig() {
       this.updateAppsToShow();
@@ -481,6 +531,7 @@ export default {
       this.isSTEnabledLocal = this.IsEnabled;
       this.stInversedLocal = this.IsInversed;
       this.stBlockNonVpnDnsLocal = !this.IsAnyDns;
+      this.stAllowWhenNoVpnLocal = this.IsAllowWhenNoVpn;
     },
     async applyChanges() {
       let fwState = this.$store.state.vpnState.firewallState;
@@ -516,7 +567,8 @@ export default {
         await sender.SplitTunnelSetConfig(
           this.isSTEnabledLocal,
           this.stInversedLocal,
-          !this.stBlockNonVpnDnsLocal // isAnyDns
+          !this.stBlockNonVpnDnsLocal, // isAnyDns,
+          this.stAllowWhenNoVpnLocal
         );
       } catch (e) {
         processError(e);
@@ -529,8 +581,9 @@ export default {
       if (
         !newInverseMode &&
         oldInverseMode &&
-        this.$store.getters["vpnState/isConnected"] &&
-        !fwState.IsEnabled
+        !fwState.IsEnabled &&
+        !this.$store.getters["vpnState/isPaused"] && // we can not enable firewall in paused state
+        this.$store.getters["vpnState/isConnected"] // no need to enable firewall if VPN is not connected
       )
         try {
           let ret = await sender.showMessageBoxSync(
@@ -778,7 +831,7 @@ Do you want to enable Inverse mode for Split Tunnel?",
       if (actionNo == 1) return;
 
       this.resetFilters();
-      await sender.SplitTunnelSetConfig(false, false, false, true);
+      await sender.SplitTunnelSetConfig(false, false, false, false, true);
     },
 
     resetFilters: function () {
@@ -830,6 +883,9 @@ Do you want to enable Inverse mode for Split Tunnel?",
     // needed for 'watch'
     IsAnyDns: function () {
       return this.$store.state.vpnState.splitTunnelling?.IsAnyDns;
+    },
+    IsAllowWhenNoVpn: function () {
+      return this.$store.state.vpnState.splitTunnelling?.IsAllowWhenNoVpn;
     },
 
     // needed for 'watch'
@@ -936,8 +992,8 @@ function getFileFolder(appBinPath) {
 
 div.fwDescription {
   @extend .settingsGrayLongDescriptionFont;
-  margin-top: 9px;
-  margin-bottom: 17px;
+  margin-top: 4px;
+  margin-bottom: 8px;
   margin-left: 22px;
   max-width: 425px;
 }

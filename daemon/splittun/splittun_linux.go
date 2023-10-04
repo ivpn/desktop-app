@@ -81,7 +81,7 @@ func implInitialize() error {
 	}
 
 	// Ensure that ST is disable on daemon startup
-	enable(false, false, false)
+	enable(false, false, false, false)
 
 	// Register network change detector
 	//
@@ -128,8 +128,8 @@ func implReset() error {
 	return shell.Exec(nil, stScriptPath, "reset")
 }
 
-func implApplyConfig(isStEnabled bool, isStInversed bool, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	err := enable(isStEnabled, isStInversed, isVpnEnabled)
+func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
+	err := enable(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled)
 	if err != nil {
 		log.Error(err)
 	}
@@ -358,10 +358,8 @@ func isEnabled() (bool, error) {
 	return true, nil
 }
 
-func enable(isEnable, isStInversed, isVpnConnected bool) error {
-
+func enable(isEnable, isStInversed, isStInverseAllowWhenNoVpn, isVpnConnected bool) error {
 	if !isEnable {
-
 		enabled, err := isEnabled()
 		if err == nil && !enabled {
 			return nil
@@ -373,22 +371,21 @@ func enable(isEnable, isStInversed, isVpnConnected bool) error {
 		log.Info("Split Tunnel disabled")
 	} else {
 		inversedArg := ""
+		inverseBlockArg := ""
 		if isStInversed {
 			inversedArg = "-inverse"
+			// Block 'inversed' apps when VPN is not connected
+			if !isVpnConnected && !isStInverseAllowWhenNoVpn {
+				inverseBlockArg = "-inverse_block"
+			}
 		}
-		vpnConnectedArg := ""
-		if isVpnConnected {
-			vpnConnectedArg = "-connected"
-		}
-
-		_, outErrText, _, _, err := shell.ExecAndGetOutput(log, 1024, "", stScriptPath, "start", inversedArg, vpnConnectedArg)
+		_, outErrText, _, _, err := shell.ExecAndGetOutput(log, 1024, "", stScriptPath, "start", inversedArg, inverseBlockArg)
 		if err != nil {
 			if len(outErrText) > 0 {
 				err = fmt.Errorf("(%w) %s", err, outErrText)
 			}
 			// if ST start failed - clean everything (by command 'stop')
 			shell.Exec(nil, stScriptPath, "stop")
-
 			return fmt.Errorf("failed to enable Split Tunnel: %w", err)
 		}
 		log.Info("Split Tunnel enabled")

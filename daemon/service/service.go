@@ -344,7 +344,7 @@ func (s *Service) UnInitialise() error {
 	if err := splittun.Reset(); err != nil {
 		log.Error(err)
 	}
-	if err := splittun.ApplyConfig(false, false, false, splittun.ConfigAddresses{}, []string{}); err != nil {
+	if err := splittun.ApplyConfig(false, false, false, false, splittun.ConfigAddresses{}, []string{}); err != nil {
 		log.Error(err)
 	}
 
@@ -623,22 +623,22 @@ func (s *Service) Pause(durationSeconds uint32) error {
 		return err
 	}
 
-	// In Inversed Split Tunnel mode we must ensure that the FW rule for single DNS is disabled (to not block DNS requests in paused mode)
+	// set pause time (to indicate that connection is paused)
+	s._pause._pauseTill = time.Now().Add(time.Second * time.Duration(durationSeconds))
+	log.Info(fmt.Sprintf("Paused on %v (till %v)", time.Second*time.Duration(durationSeconds), s._pause._pauseTill.Format(time.Stamp)))
+
+	// Update SplitTunnel state (if enabled)
 	prefs := s.Preferences()
-	isNeedToUpdateSingleDnsFwRule := prefs.IsInverseSplitTunneling() && !prefs.SplitTunnelAnyDns
-	if isNeedToUpdateSingleDnsFwRule {
-		if err := firewall.SingleDnsRuleOff(); err != nil {
+	if prefs.IsSplitTunnel {
+		if err := s.splitTunnelling_ApplyConfig(); err != nil {
 			log.Error(err)
 		}
 	}
 
-	s._pause._pauseTill = time.Now().Add(time.Second * time.Duration(durationSeconds))
-	log.Info(fmt.Sprintf("Paused on %v (till %v)", time.Second*time.Duration(durationSeconds), s._pause._pauseTill.Format(time.Stamp)))
-
+	// Pause resumer: Every second checks if it is time to resume VPN connection.
+	// Info: We can not use 'time.AfterFunc()' because
+	// it does not take into account the time when the system was in sleep mode.
 	go func() {
-		// Pause resumer: Every second checks if it is time to resume VPN connection.
-		// Info: We can not use 'time.AfterFunc()' because
-		// it does not take into account the time when the system was in sleep mode.
 		defer log.Info("Resumed")
 		for {
 			time.Sleep(time.Second * 1)
@@ -671,16 +671,18 @@ func (s *Service) Resume() error {
 		return fmt.Errorf("VPN not paused")
 	}
 
-	// In Inversed Split Tunnel mode we must re-apply ST configuration to ensure the FW rule for single DNS is enabled
+	if err := s.resume(); err != nil {
+		return err
+	}
+
+	// Update SplitTunnel state (if enabled)
 	prefs := s.Preferences()
-	isNeedToUpdateSingleDnsFwRule := prefs.IsInverseSplitTunneling() && !prefs.SplitTunnelAnyDns
-	if isNeedToUpdateSingleDnsFwRule {
+	if prefs.IsSplitTunnel {
 		if err := s.splitTunnelling_ApplyConfig(); err != nil {
 			log.Error(err)
 		}
 	}
-
-	return s.resume()
+	return nil
 }
 
 // Resume resume vpn connection
@@ -1184,7 +1186,7 @@ func (s *Service) ResetPreferences() error {
 	s._preferences = *preferences.Create()
 
 	// erase ST config
-	s.SplitTunnelling_SetConfig(false, false, false, true)
+	s.SplitTunnelling_SetConfig(false, false, false, false, true)
 	return nil
 }
 
@@ -1285,9 +1287,11 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 	}
 	isInversed := prefs.SplitTunnelInversed
 	isAnyDns := prefs.SplitTunnelAnyDns
+	isAllowWhenNoVpn := prefs.SplitTunnelAllowWhenNoVpn
 	if stInverseErr != nil {
 		isInversed = false
 		isAnyDns = false
+		isAllowWhenNoVpn = false
 	}
 
 	ret := protocolTypes.SplitTunnelStatus{
@@ -1295,6 +1299,7 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 		IsEnabled:                   isEnabled,
 		IsInversed:                  isInversed,
 		IsAnyDns:                    isAnyDns,
+		IsAllowWhenNoVpn:            isAllowWhenNoVpn,
 		IsCanGetAppIconForBinary:    oshelpers.IsCanGetAppIconForBinary(),
 		SplitTunnelApps:             prefs.SplitTunnelApps,
 		RunningApps:                 runningProcesses}
@@ -1302,7 +1307,7 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 	return ret, nil
 }
 
-func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, reset bool) error {
+func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, isAllowWhenNoVpn, reset bool) error {
 	if reset {
 		return s.splitTunnelling_Reset()
 	}
@@ -1336,6 +1341,7 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, res
 	prefs.IsSplitTunnel = isEnabled
 	prefs.SplitTunnelInversed = isInversed
 	prefs.SplitTunnelAnyDns = isAnyDns
+	prefs.SplitTunnelAllowWhenNoVpn = isAllowWhenNoVpn
 	s.setPreferences(prefs)
 
 	return s.splitTunnelling_ApplyConfig()
@@ -1345,6 +1351,7 @@ func (s *Service) splitTunnelling_Reset() error {
 	prefs.IsSplitTunnel = false
 	prefs.SplitTunnelInversed = false
 	prefs.SplitTunnelAnyDns = false
+	prefs.SplitTunnelAllowWhenNoVpn = false
 	prefs.SplitTunnelApps = make([]string, 0)
 	s.setPreferences(prefs)
 
@@ -1410,7 +1417,8 @@ func (s *Service) splitTunnelling_ApplyConfig() (retError error) {
 	if err := firewall.SingleDnsRuleOff(); err != nil { // disable custom DNS rule (if exists)
 		log.Error(err)
 	}
-	if prefs.IsInverseSplitTunneling() && !prefs.SplitTunnelAnyDns {
+	isVpnConnected := s.Connected() && !s.IsPaused()
+	if isVpnConnected && prefs.IsInverseSplitTunneling() && !prefs.SplitTunnelAnyDns {
 		dnsCfg, err := s.GetActiveDNS() // returns nil when VPN not connected
 		if err != nil {
 			return fmt.Errorf("failed to apply the firewall rule to allow DNS requests only to the IVPN server: %w", err)
@@ -1423,7 +1431,7 @@ func (s *Service) splitTunnelling_ApplyConfig() (retError error) {
 	}
 
 	// Apply Split-Tun config
-	return splittun.ApplyConfig(prefs.IsSplitTunnel, prefs.IsInverseSplitTunneling(), s.Connected(), addressesCfg, prefs.SplitTunnelApps)
+	return splittun.ApplyConfig(prefs.IsSplitTunnel, prefs.IsInverseSplitTunneling(), prefs.SplitTunnelAllowWhenNoVpn, isVpnConnected, addressesCfg, prefs.SplitTunnelApps)
 }
 
 func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error) {
