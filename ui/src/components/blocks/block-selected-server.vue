@@ -19,6 +19,7 @@
             <serverNameControl
               class="serverName"
               style="max-width: 245px"
+              SecondLineMaxWidth="245px"
               :isLargeText="true"
               :server="this.server"
               :serverHostName="this.serverHostName"

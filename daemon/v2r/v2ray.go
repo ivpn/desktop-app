@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
@@ -73,6 +74,9 @@ type V2RayWrapper struct {
 	command        *exec.Cmd
 	mutex          sync.Mutex
 	stoppedChan    chan struct{}
+
+	// IP address of the default gateway which was used for static route to V2Ray server
+	defaultGeteway net.IP
 }
 
 // CreateV2RayWrapper - creates new V2RayWrapper object
@@ -147,6 +151,47 @@ func (v *V2RayWrapper) Start() error {
 	return v.start()
 }
 
+// UpdateMainRoute - updates the route to V2Ray server.
+// This method must be called when the default route was changed (e.g. chnaged WiFi network)
+func (v *V2RayWrapper) UpdateMainRoute() error {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
+	gwIp, err := netinfo.DefaultGatewayIP()
+	if err != nil {
+		return fmt.Errorf("getting default gateway ip error : %w", err)
+	}
+
+	if v.defaultGeteway != nil && v.defaultGeteway.Equal(gwIp) {
+		return nil //gateway did not chnage. Nothing to update
+	}
+
+	log.Info("Updating route to V2Ray server...")
+	if err := v.deleteMainRoute(); err != nil {
+		log.Error(err)
+	}
+	return v.setMainRoute(gwIp)
+}
+
+func (v *V2RayWrapper) setMainRoute(defaultGateway net.IP) error {
+	var err error
+	if defaultGateway == nil {
+		defaultGateway, err = netinfo.DefaultGatewayIP()
+		if err != nil {
+			return fmt.Errorf("getting default gateway ip error : %w", err)
+		}
+	}
+	if err := v.implSetMainRoute(defaultGateway); err == nil {
+		v.defaultGeteway = defaultGateway
+	}
+	return err
+}
+
+func (v *V2RayWrapper) deleteMainRoute() error {
+	v.defaultGeteway = nil
+	return v.implDeleteMainRoute()
+}
+
 func (v *V2RayWrapper) start() (retError error) {
 	// check if object correctly initialized
 	if v.binary == "" {
@@ -183,13 +228,13 @@ func (v *V2RayWrapper) start() (retError error) {
 	}
 
 	// Apply route to remote endpoint
-	if err := v.implSetMainRoute(); err != nil {
+	if err := v.setMainRoute(nil); err != nil {
 		return fmt.Errorf("error applying route to remote V2Ray endpoint: %w", err)
 	}
 	defer func() {
 		if retError != nil {
 			// in case of error - ensure route is deleted
-			v.implDeleteMainRoute()
+			v.deleteMainRoute()
 		}
 	}()
 

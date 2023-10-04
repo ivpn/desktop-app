@@ -24,8 +24,8 @@ package v2r
 
 import (
 	"fmt"
+	"net"
 
-	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
@@ -33,19 +33,14 @@ func implInit() {
 	// nothing to do here for macOS
 }
 
-func (v *V2RayWrapper) implSetMainRoute() error {
-	gwIp, err := netinfo.DefaultGatewayIP()
-	if err != nil {
-		return fmt.Errorf("getting default gateway ip error : %w", err)
-	}
-
+func (v *V2RayWrapper) implSetMainRoute(defaultGateway net.IP) error {
 	remoteHost, _, err := v.getRemoteEndpoint()
 	if err != nil {
 		return fmt.Errorf("getting remote endpoint error : %w", err)
 	}
 
 	// /sbin/ip route add 144.217.148.72/32 via 192.168.2.1
-	if err := shell.Exec(log, "ip", "route", "add", remoteHost.String()+"/32", "via", gwIp.String()); err != nil {
+	if err := shell.Exec(log, "ip", "route", "add", remoteHost.String()+"/32", "via", defaultGateway.String()); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 

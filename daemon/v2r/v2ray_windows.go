@@ -24,11 +24,11 @@ package v2r
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path"
 	"strings"
 
-	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
@@ -43,14 +43,9 @@ func implInit() {
 	}
 }
 
-func (v *V2RayWrapper) implSetMainRoute() error {
+func (v *V2RayWrapper) implSetMainRoute(defaultGateway net.IP) error {
 	if routeBinaryPath == "" {
 		return fmt.Errorf("route.exe location not specified")
-	}
-
-	gwIp, err := netinfo.DefaultGatewayIP()
-	if err != nil {
-		return fmt.Errorf("getting default gateway ip error : %w", err)
 	}
 
 	remoteHost, _, err := v.getRemoteEndpoint()
@@ -59,7 +54,7 @@ func (v *V2RayWrapper) implSetMainRoute() error {
 	}
 
 	// route.exe add 144.217.233.114 mask 255.255.255.255 192.168.0.1
-	if err := shell.Exec(log, routeBinaryPath, "add", remoteHost.String(), "mask", "255.255.255.255", gwIp.String()); err != nil {
+	if err := shell.Exec(log, routeBinaryPath, "add", remoteHost.String(), "mask", "255.255.255.255", defaultGateway.String()); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
 

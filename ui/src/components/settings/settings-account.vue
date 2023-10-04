@@ -68,8 +68,7 @@
               Upgrade
             </button>
           </div>
-
-          <div v-if="IsActive">
+          <div v-if="IsActive && IsShowActiveUntil">
             <div class="settingsGrayDescriptionFont">Active until</div>
             <div class="defColor" style="margin-top: 5px; margin-bottom: 4px">
               {{ ActiveUntil }}
@@ -270,6 +269,14 @@ export default {
     },
     IsActive: function () {
       return this.$store.state.account.accountStatus.Active;
+    },
+    IsShowActiveUntil: function () {
+      // Disable active until and Add more time when product name = Member VPN Pro Account
+      // https://github.com/ivpn/desktop-app-shadow/issues/135
+      // TODO: this is bad practice. The team account attribute have to be provideded by backend
+      if (this.CurrentPlan == "Member VPN Pro Account") return false;
+
+      return true;
     },
     IsCanUpgradeToPro: function () {
       return (

@@ -289,9 +289,12 @@ function doUpdateTrayMenu() {
     // eslint-disable-next-line no-undef
     tray = new Tray(iconDisconnected);
 
-    tray.on("double-click", () => {
-      if (menuHandlerShow != null) menuHandlerShow();
-    });
+    // Windows: on tray icon click -> show app (macOS/Linux: show menu)
+    if (Platform() == PlatformEnum.Windows) {
+      tray.on("click", () => {
+        if (menuHandlerShow != null) menuHandlerShow();
+      });
+    }
   }
 
   // FAVORITE SERVERS MENU
