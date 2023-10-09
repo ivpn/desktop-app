@@ -107,7 +107,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		defer s._tmpParamsMutex.Unlock()
 		// update settings if we received any while VPN was connected
 		if s._tmpParams.CheckIsDefined() == nil {
-			s.setConnectionParams(params)
+			s.setConnectionParams(s._tmpParams)
 		}
 	}()
 
@@ -138,6 +138,16 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 	if err := params.NormalizeHosts(); err != nil {
 		return fmt.Errorf("failed to normalize hosts: %w", err)
 	}
+
+	// ------------------------ Inverse Split Tunnel block start ------------------------
+	if prefs.IsInverseSplitTunneling() {
+		if params.FirewallOn || params.FirewallOnDuringConnection {
+			log.Info("The Firewall will not be enabled for the current connection because Split Tunnel Inverse mode is active")
+			params.FirewallOn = false
+			params.FirewallOnDuringConnection = false
+		}
+	}
+	// ------------------------ Inverse Split Tunnel block end --------------------------
 
 	// ------------------------ V2RAY block start ------------------------
 	// 'originalEntryServerInfo' - will contain original info about EntryServer/Port (it is not 'nil' for V2Ray connections).

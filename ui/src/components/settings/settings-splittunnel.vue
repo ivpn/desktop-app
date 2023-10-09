@@ -540,13 +540,17 @@ export default {
 
       // going to enable Inverse ST
       if (fwState.IsEnabled && !oldInverseMode && newInverseMode) {
+        let extraMessage = "";
+        if (fwState.IsPersistent)
+          extraMessage =
+            "\n\nNote! The always-on firewall is enabled. If you disable the firewall the 'always-on' feature will be disabled.\n";
+
         try {
           let ret = await sender.showMessageBoxSync(
             {
               type: "warning",
               message: `Turning off Firewall for Inverse Split Tunnel mode`,
-              detail:
-                "The Inverse Split Tunnel mode requires disabling the IVPN Firewall.\nWould you like to proceed?",
+              detail: `The Inverse Split Tunnel mode requires disabling the IVPN Firewall.${extraMessage}\nWould you like to proceed?`,
               buttons: ["Disable Firewall", "Cancel"],
             },
             true
@@ -556,6 +560,8 @@ export default {
             this.updateLocals();
             return;
           }
+          if (fwState.IsPersistent)
+            await sender.KillSwitchSetIsPersistent(false);
           await sender.EnableFirewall(false);
         } catch (e) {
           processError(e);

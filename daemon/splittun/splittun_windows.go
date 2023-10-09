@@ -154,7 +154,13 @@ func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpn
 	}
 
 	// If ST not enabled or no configuration - just disconnect driver (if connected)
-	isStMustBeDisabled := !isStEnabled || (!isVpnEnabled && !isStInversed) || addrConfig.IsEmpty() || len(splitTunnelApps) == 0
+	// We do not need to start ST driver when:
+	// - ST disabled
+	// - VPN disconnected and NOT Inversed ST
+	// - VPN disconnected and apps from ST environment allowed to use default connection
+	// - ST addresses are not defined
+	// - ST apps are not defined
+	isStMustBeDisabled := !isStEnabled || (!isVpnEnabled && !isStInversed) || (!isVpnEnabled && isStInverseAllowWhenNoVpn) || addrConfig.IsEmpty() || len(splitTunnelApps) == 0
 	if isStMustBeDisabled || isFunctionalityNotAvailable {
 		applyInverseSplitTunRoutingRules(false, false, false) // erase applied routing rules if any
 		if isDriverConnected {                                // If driver connected

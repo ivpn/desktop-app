@@ -119,9 +119,7 @@ export function InitConnectionParamsObject() {
   if (store.getters["settings/isRandomExitServer"])
     metadata.ServerSelectionExit = ServerSelectionEnum.Random;
 
-  let fwOn =
-    store.state.settings.firewallActivateOnConnect === true &&
-    !store.getters["vpnState/isInverseSplitTunnel"];
+  let fwOn = store.state.settings.firewallActivateOnConnect === true;
 
   return {
     Metadata: metadata,
