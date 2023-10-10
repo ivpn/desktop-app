@@ -26,6 +26,9 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+
+	"golang.org/x/sys/windows"
+	"golang.zx2c4.com/wireguard/windows/tunnel/winipcfg"
 )
 
 // doDefaultGatewayIP - returns: default gateway IP
@@ -51,4 +54,49 @@ func doDefaultGatewayIP() (defGatewayIP net.IP, err error) {
 	}
 
 	return nil, fmt.Errorf("failed to determine default route")
+}
+
+// DefaultGatewayEx returns the interface that has the default route for the given address family.
+func DefaultGatewayEx(isIpv6 bool) (defGatewayIP net.IP, inf *net.Interface, err error) {
+	family := winipcfg.AddressFamily(windows.AF_INET)
+	if isIpv6 {
+		family = winipcfg.AddressFamily(windows.AF_INET6)
+	}
+
+	routes, err := winipcfg.GetIPForwardTable2(family)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get network interfaces: %w", err)
+	}
+
+	const NOMETRIC = ^uint32(0)
+	var (
+		bestIf      net.Interface
+		bestMetric  uint32 = NOMETRIC
+		bestNextHop net.IP
+	)
+	for _, route := range routes {
+		if route.DestinationPrefix.PrefixLength != 0 {
+			continue // skip non-default routes
+		}
+		for _, ifs := range ifaces {
+			if uint32(ifs.Index) != route.InterfaceIndex || ifs.Flags&net.FlagUp == 0 || ifs.Flags&net.FlagLoopback == 1 {
+				continue // skip down and loopback interfaces
+			}
+			if route.Metric < bestMetric {
+				bestIf = ifs
+				bestMetric = route.Metric
+				bestNextHop = route.NextHop.Addr().AsSlice()
+			}
+		}
+	}
+
+	if bestMetric == NOMETRIC {
+		return nil, nil, fmt.Errorf(fmt.Sprintf("unable to determine default %v route", family))
+	}
+	return bestNextHop, &bestIf, nil
 }

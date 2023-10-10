@@ -140,6 +140,45 @@ func InterfaceByIPAddr(localAddr net.IP) (*net.Interface, error) {
 	return nil, errors.New("not found network interface with address:" + localAddr.String())
 }
 
+func GetLoopbackInterface(isIpv6 bool) (*net.Interface, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get network interfaces: %w", err)
+	}
+
+	for _, ifs := range ifaces {
+		// check only loopback interfaces
+		if ifs.Flags&net.FlagLoopback == 0 || ifs.Flags&net.FlagUp == 0 {
+			continue
+		}
+
+		addrs, _ := ifs.Addrs()
+		if addrs == nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			// loopback interface must have required IP address type (IPv6/IPv4)
+			if ip != nil {
+				ipv6 := ip.To4() == nil
+				if ipv6 == isIpv6 {
+					return &ifs, nil
+				}
+			}
+		}
+	}
+	return nil, fmt.Errorf("not found loopback network interface (ipv6=%v)", isIpv6)
+}
+
 // GetFreePort - get unused local port
 // Note there is no guarantee that port will not be in use right after finding it
 func GetFreePort(isTCP bool) (int, error) {

@@ -11,6 +11,7 @@ require (
 	golang.org/x/sync v0.2.0
 	golang.org/x/sys v0.8.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
+	golang.zx2c4.com/wireguard/windows v0.5.3
 )
 
 require (
