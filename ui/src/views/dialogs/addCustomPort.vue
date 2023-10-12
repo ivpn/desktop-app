@@ -133,7 +133,7 @@ export default {
 
         ranges = ranges.filter(
           (r) =>
-            r.type === this.portType && r.range && r.range.min <= r.range.max
+            r.type === this.portType && r.range && r.range.min <= r.range.max,
         );
 
         // Trying to union ranges (when it is possible)
@@ -210,7 +210,7 @@ export default {
 
       // check port range
       const rPos = this.ranges.find(
-        (r) => portNumVal >= r.range.min && portNumVal <= r.range.max
+        (r) => portNumVal >= r.range.min && portNumVal <= r.range.max,
       );
       if (!rPos) {
         await sender.showMessageBoxSync({
@@ -227,7 +227,7 @@ export default {
       // check if port already exists
       const ports = this.$store.getters["vpnState/connectionPorts"];
       const pPos = ports.find(
-        (p) => p.type === this.portType && p.port === portNumVal
+        (p) => p.type === this.portType && p.port === portNumVal,
       );
       if (pPos) {
         await sender.showMessageBoxSync({

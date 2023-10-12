@@ -325,7 +325,7 @@ export default {
               "Warning: On application start 'Autoconnect on application launch' will not be applied until the EAA password is entered.",
             buttons: ["Enable", "Cancel"],
           },
-          true
+          true,
         );
         if (ret == 1) {
           // cancel
@@ -344,7 +344,7 @@ export default {
               'This option requires "Launch at login" to be enabled.\nDo you want to enable both options?',
             buttons: ["Enable", "Cancel"],
           },
-          true
+          true,
         );
         if (ret == 1) {
           // Cancel
@@ -490,7 +490,7 @@ export default {
       set(value) {
         let settingsUpdates = Object.assign(
           {},
-          this.$store.state.settings.updates
+          this.$store.state.settings.updates,
         );
         settingsUpdates.isBetaProgram = value;
 

@@ -301,7 +301,7 @@ export default {
           // replace item with a new value
           nets = [
             ...nets.map((item) =>
-              item.ssid !== ssid ? item : { ssid: ssid, isTrusted: isTrusted }
+              item.ssid !== ssid ? item : { ssid: ssid, isTrusted: isTrusted },
             ),
           ];
         } else nets.push({ ssid: ssid, isTrusted: isTrusted });
@@ -348,7 +348,7 @@ export default {
               "Warning: On application start Trusted WiFi will be disabled until the EAA password is entered",
             buttons: ["Enable", "Cancel"],
           },
-          true
+          true,
         );
         if (ret == 1) {
           // cancel
@@ -370,7 +370,7 @@ export default {
               "Warning: On application start `Autoconnect on joining networks without encryption` will be disabled until the EAA password is entered",
             buttons: ["Enable", "Cancel"],
           },
-          true
+          true,
         );
         if (ret == 1) {
           // cancel
@@ -391,7 +391,7 @@ export default {
               'This option requires "Launch at login" to be enabled.\nDo you want to enable both options?',
             buttons: ["Enable", "Cancel"],
           },
-          true
+          true,
         );
         if (ret == 1) {
           // Cancel
@@ -456,7 +456,7 @@ export default {
     wifiSettings: function () {
       if (!this.$store.state.settings.daemonSettings?.WiFi) return null;
       return JSON.parse(
-        JSON.stringify(this.$store.state.settings.daemonSettings?.WiFi)
+        JSON.stringify(this.$store.state.settings.daemonSettings?.WiFi),
       );
     },
 

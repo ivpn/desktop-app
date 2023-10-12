@@ -266,7 +266,7 @@ export default {
         this.isDnsValueChanged = true;
         let newDnsCfg = Object.assign(
           {},
-          this.$store.state.settings.dnsCustomCfg
+          this.$store.state.settings.dnsCustomCfg,
         );
         newDnsCfg.DnsHost = newVal.DnsHost;
         newDnsCfg.DohTemplate = newVal.DohTemplate;
@@ -368,7 +368,7 @@ export default {
           }
 
           let prefs = clone(
-            this.$store.state.settings.daemonSettings.UserPrefs
+            this.$store.state.settings.daemonSettings.UserPrefs,
           );
           if (prefs.Linux.IsDnsMgmtOldStyle != value) {
             prefs.Linux.IsDnsMgmtOldStyle = value;
@@ -409,7 +409,7 @@ export default {
         this.isDnsValueChanged = true;
         let newDnsCfg = Object.assign(
           {},
-          this.$store.state.settings.dnsCustomCfg
+          this.$store.state.settings.dnsCustomCfg,
         );
         newDnsCfg.DnsHost = value.trim();
 
@@ -450,7 +450,7 @@ export default {
         this.isDnsValueChanged = true;
         let newDnsCfg = Object.assign(
           {},
-          this.$store.state.settings.dnsCustomCfg
+          this.$store.state.settings.dnsCustomCfg,
         );
         newDnsCfg.Encryption = enc;
         this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
@@ -465,7 +465,7 @@ export default {
         this.isDnsValueChanged = true;
         let newDnsCfg = Object.assign(
           {},
-          this.$store.state.settings.dnsCustomCfg
+          this.$store.state.settings.dnsCustomCfg,
         );
         newDnsCfg.DohTemplate = value.trim();
         this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
@@ -500,7 +500,7 @@ export default {
             cfg.Encryption === expectedEnc &&
             cfg.DnsHost &&
             cfg.DohTemplate &&
-            !checkIsDnsIPError(cfg.DnsHost)
+            !checkIsDnsIPError(cfg.DnsHost),
         );
         return filtered;
       },

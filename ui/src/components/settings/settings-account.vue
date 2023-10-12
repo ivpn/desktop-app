@@ -180,7 +180,7 @@ export default {
             checkboxLabel: mesResetSettings,
             buttons: ["Turn Firewall off and log out", "Log out", "Cancel"],
           },
-          true
+          true,
         );
         if (ret.response == 2) return; // cancel
         if (ret.response != 0) needToDisableFirewall = false;
@@ -194,7 +194,7 @@ export default {
             checkboxLabel: mesResetSettings,
             buttons: ["Log out", "Cancel"],
           },
-          true
+          true,
         );
         if (ret.response == 1) return; // cancel
         needToResetSettings = ret.checkboxChecked;
@@ -208,7 +208,7 @@ export default {
         await sender.Logout(
           needToResetSettings,
           needToDisableFirewall,
-          isCanDeleteSessionLocally
+          isCanDeleteSessionLocally,
         );
       } catch (e) {
         this.isProcessing = false;
@@ -231,7 +231,7 @@ export default {
           await sender.Logout(
             needToResetSettings,
             needToDisableFirewall,
-            isCanDeleteSessionLocally
+            isCanDeleteSessionLocally,
           );
         } catch (e) {
           sender.showMessageBoxSync({
@@ -264,7 +264,7 @@ export default {
     },
     ActiveUntil: function () {
       return dateDefaultFormat(
-        new Date(this.$store.state.account.accountStatus.ActiveUntil * 1000)
+        new Date(this.$store.state.account.accountStatus.ActiveUntil * 1000),
       );
     },
     IsActive: function () {

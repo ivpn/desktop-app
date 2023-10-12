@@ -156,12 +156,12 @@ export default {
         // do not show port number for multi-hop connections
         return `${enumValueName(VpnTypeEnum, protocol)}/${enumValueName(
           PortTypeEnum,
-          port.type
+          port.type,
         )}`;
       }
       return `${enumValueName(VpnTypeEnum, protocol)}/${enumValueName(
         PortTypeEnum,
-        port.type
+        port.type,
       )} ${port.port}`;
     },
     isTrustedNetworksControlActive() {

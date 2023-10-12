@@ -324,7 +324,7 @@ export default {
         this.isExceptionsValueChanged = true;
         let newFirewallCfg = Object.assign(
           {},
-          this.$store.state.settings.firewallCfg
+          this.$store.state.settings.firewallCfg,
         );
         newFirewallCfg.userExceptions = value;
 

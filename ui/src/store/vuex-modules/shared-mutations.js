@@ -84,7 +84,7 @@ class SharedMutations {
     // Don't use commit in renderer outside of actions
     this.store.commit = () => {
       throw new Error(
-        `[Vuex Electron] Please, don't use direct commit's, use dispatch instead of this.`
+        `[Vuex Electron] Please, don't use direct commit's, use dispatch instead of this.`,
       );
     };
 

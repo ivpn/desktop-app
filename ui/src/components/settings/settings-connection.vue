@@ -459,9 +459,9 @@
             </li>
             <li>
               <b>obfs4 (IAT1)</b> - Large packets will be split into MTU-size
-              packets by Obfsproxy (instead of the network drivers), resulting in
-              smaller packets that are more resistant to being reassembled for
-              analysis and censoring.
+              packets by Obfsproxy (instead of the network drivers), resulting
+              in smaller packets that are more resistant to being reassembled
+              for analysis and censoring.
             </li>
             <li>
               <b>obfs4 (IAT2)</b> - (paranoid mode) - Large packets will be
@@ -809,7 +809,7 @@ export default {
 
       t.setSeconds(
         t.getSeconds() +
-          this.$store.state.account.session.WgKeysRegenIntervalSec
+          this.$store.state.account.session.WgKeysRegenIntervalSec,
       );
 
       let now = new Date();
@@ -912,7 +912,7 @@ export default {
 
           // try to use currently selected port
           let curPort = ports.find(
-            (p) => p.port === this.port.port && p.type === this.port.type
+            (p) => p.port === this.port.port && p.type === this.port.type,
           );
           if (curPort) {
             if (curPort.type === PortTypeEnum.TCP)
@@ -922,11 +922,11 @@ export default {
           // get first port definition for each protocol
           if (!portsByProtoHash.tcp)
             portsByProtoHash.tcp = ports.find(
-              (p) => p.type === PortTypeEnum.TCP
+              (p) => p.type === PortTypeEnum.TCP,
             );
           if (!portsByProtoHash.udp)
             portsByProtoHash.udp = ports.find(
-              (p) => p.type === PortTypeEnum.UDP
+              (p) => p.type === PortTypeEnum.UDP,
             );
 
           if (portsByProtoHash.tcp || portsByProtoHash.udp) {
@@ -946,7 +946,7 @@ export default {
               : `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
           key: `${enumValueName(PortTypeEnum, p.type)} ${p.port}`,
           port: p,
-        })
+        }),
       );
       return ret;
     },

@@ -39,7 +39,7 @@ export function isValidURL(str, isIgnoreProtocol) {
       "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
       "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
       "(\\#[-a-z\\d_]*)?$",
-    "i"
+    "i",
   ); // fragment locator
   return !!pattern.test(str);
 }
@@ -103,7 +103,7 @@ export function dateYyyyMonDd(date) {
   var dd = date.getDate();
 
   return [date.getFullYear(), monthNames[mm], (dd > 9 ? "" : "0") + dd].join(
-    "-"
+    "-",
   );
 }
 
@@ -149,7 +149,7 @@ export function getCoordinatesBy(
   longitude,
   latitude,
   bitmapWidth,
-  bitmapHeight
+  bitmapHeight,
 ) {
   if (bitmapWidth == null) bitmapWidth = 11300;
   if (bitmapHeight == null) bitmapHeight = 8249;

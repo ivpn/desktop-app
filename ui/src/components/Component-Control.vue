@@ -248,7 +248,7 @@ export default {
         this.lastServersPingRequestTime = new Date();
       } else {
         console.log(
-          "Server pings request blocked (due to requests per minute limitation)"
+          "Server pings request blocked (due to requests per minute limitation)",
         );
       }
     },

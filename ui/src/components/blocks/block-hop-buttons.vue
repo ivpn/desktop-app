@@ -41,7 +41,7 @@ export default {
 
       this.$store.dispatch(
         `settings/isMultiHop`,
-        !this.$store.state.settings.isMultiHop
+        !this.$store.state.settings.isMultiHop,
       );
 
       if (

@@ -197,7 +197,7 @@ export default {
         if (this.accountID) this.accountID = this.accountID.trim();
         if (pattern.test(this.accountID) !== true) {
           throw new Error(
-            "Your account ID has to be in 'i-XXXX-XXXX-XXXX' or 'ivpnXXXXXXXX' format. You can find it on other devices where you are logged in and in the client area of the IVPN website."
+            "Your account ID has to be in 'i-XXXX-XXXX-XXXX' or 'ivpnXXXXXXXX' format. You can find it on other devices where you are logged in and in the client area of the IVPN website.",
           );
         }
 
@@ -219,7 +219,7 @@ export default {
             : false,
           this.captchaID,
           this.captcha,
-          confirmation2FA ? confirmation2FA : this.confirmation2FA
+          confirmation2FA ? confirmation2FA : this.confirmation2FA,
         );
         this.isForceLogoutRequested = false;
 
@@ -237,7 +237,7 @@ export default {
             this.isForceLogoutRequested = isForceLogout;
           } else if (resp.APIStatus === API_2FA_TOKEN_NOT_VALID) {
             throw new Error(
-              `Specified two-factor authentication token is not valid`
+              `Specified two-factor authentication token is not valid`,
             );
           } else if (resp.APIStatus === API_2FA_REQUIRED) {
             // UI should be updated automatically based on data from 'resp.RawResponse'
@@ -327,7 +327,7 @@ export default {
                 "The always-on firewall is enabled. If you disable the firewall the 'always-on' feature will be disabled.",
               buttons: ["Disable Always-on firewall", "Cancel"],
             },
-            true
+            true,
           );
 
           if (ret == 1) return; // cancel

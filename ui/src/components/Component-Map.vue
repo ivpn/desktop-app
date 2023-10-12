@@ -739,7 +739,7 @@ export default {
         server.longitude,
         server.latitude,
         this.scale * this.map.naturalWidth,
-        this.scale * this.map.naturalHeight
+        this.scale * this.map.naturalHeight,
       );
 
       let scrollLeft =
@@ -808,7 +808,7 @@ export default {
         this.showPopup(
           this.scrollTo.left + this.canvas.width / 2,
           this.scrollTo.top + this.canvas.height / 2,
-          this.scrollTo.isPopupRequired
+          this.scrollTo.isPopupRequired,
         );
         this.stopScroll();
         return;
@@ -957,7 +957,7 @@ export default {
         l + zoomPoint.offsetX - mLOffset,
         t + zoomPoint.offsetY - mTOffset,
         this.scale * mapFullW,
-        this.scale * mapFullH
+        this.scale * mapFullH,
       );
 
       // change scale
@@ -971,7 +971,7 @@ export default {
         centerCoord.longitude,
         centerCoord.latitude,
         this.scale * mapFullW,
-        this.scale * mapFullH
+        this.scale * mapFullH,
       );
 
       this.combinedDiv.scrollLeft = mLOffset + newPoint.x - zoomPoint.offsetX;
@@ -993,7 +993,7 @@ export default {
         location.longitude,
         location.latitude,
         this.scale * this.map.naturalWidth,
-        this.scale * this.map.naturalHeight
+        this.scale * this.map.naturalHeight,
       );
       return point;
     },
@@ -1004,7 +1004,7 @@ export default {
         location.longitude,
         location.latitude,
         this.scale * this.map.naturalWidth,
-        this.scale * this.map.naturalHeight
+        this.scale * this.map.naturalHeight,
       );
       if (point == null) return null;
       point.x = point.x - this.combinedDiv.scrollLeft;
@@ -1030,7 +1030,7 @@ export default {
       city = this.createCity(
         this.connectedLocation,
         cities,
-        PointRadiusExitServer
+        PointRadiusExitServer,
       );
       if (city != null) cities.push(city);
       // if MultiHop - just ensure that entry- server vill be visible
@@ -1080,7 +1080,7 @@ export default {
         pointRadius,
         textWidth,
         textHeight,
-        locations
+        locations,
       );
       if (textPos == null) {
         //console.log(`Skipped '${location.city}' due to overlapping`);
@@ -1213,7 +1213,7 @@ function calcTextLocation(
   pointRadius,
   textWidth,
   textHeight,
-  drawedCities
+  drawedCities,
 ) {
   const space = 3;
   const width = textWidth;
@@ -1561,8 +1561,10 @@ div.trialWillExpire button {
   letter-spacing: -0.3px;
 
   color: var(--map-text-color);
-  text-shadow: -1px 1px 0 var(--background-color),
-    1px 1px 0 var(--background-color), 1px -1px 0 var(--background-color),
+  text-shadow:
+    -1px 1px 0 var(--background-color),
+    1px 1px 0 var(--background-color),
+    1px -1px 0 var(--background-color),
     -1px -1px 0 var(--background-color);
 }
 
@@ -1601,7 +1603,10 @@ div.trialWillExpire button {
   border-radius: 100%;
   display: inline-block;
 
-  transition: transform 0.7s, opacity 0.7s, background 0.5s;
+  transition:
+    transform 0.7s,
+    opacity 0.7s,
+    background 0.5s;
 }
 
 .mapLocationCircleSelectedSvr {

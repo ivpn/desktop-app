@@ -112,7 +112,7 @@ export async function CheckAndNotifyInaccessibleServer(isExitServer, server) {
 
   if (!showMessageBoxFunc) {
     console.error(
-      "CheckAndNotifyInaccessibleServer: showMessageBoxFunc not initialised"
+      "CheckAndNotifyInaccessibleServer: showMessageBoxFunc not initialised",
     );
     return true;
   }

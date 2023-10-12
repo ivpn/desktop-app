@@ -92,7 +92,7 @@ export default {
       // (to be sure that account info belongs to correct session)
       if (accState.SessionToken)
         state.accountStatus.SessionTokenLastPart = getLastPartOfSessionToken(
-          accState.SessionToken
+          accState.SessionToken,
         );
 
       // convert capabilities to lower case
