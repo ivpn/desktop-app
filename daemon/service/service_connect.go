@@ -171,7 +171,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 				// remove V2Ray remote IP from firewall exceptions
 				v2RayRemoteHost, _, err := v2RayWrapper.GetRemoteEndpoint()
 				if err == nil {
-					firewall.RemoveHostsFromExceptions([]net.IP{v2RayRemoteHost}, false, true)
+					firewall.RemoveHostsFromExceptions([]net.IP{v2RayRemoteHost}, false, false)
 				}
 				// stop V2Ray
 				if err := v2RayWrapper.Stop(); err != nil {
@@ -185,7 +185,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 			if err != nil {
 				return fmt.Errorf("failed to get V2Ray remote endpoint: %w", err)
 			}
-			firewall.AddHostsToExceptions([]net.IP{v2RayRemoteHost}, false, true)
+			firewall.AddHostsToExceptions([]net.IP{v2RayRemoteHost}, false, false) // Linux(isPersistent==false and onlyForICMP==false) - this exceptions have highest priority
 		}
 	}
 	// ------------------------ V2RAY block end ------------------------
