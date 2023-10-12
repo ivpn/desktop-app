@@ -232,9 +232,14 @@ func doAllowLAN(isAllowLAN, isAllowLanMulticast bool) error {
 //   - IPs			-	list of IP addresses to ba allowed
 //   - onlyForICMP	-	try add rule to allow only ICMP protocol for this IP
 //   - isPersistent	-	keep rule enabled even if VPN disconnected
+//
+// NOTE! if (isPersistent==false and onlyForICMP==false) - this exceptions have highest priority (e.g. they will not be blocked by DNS restrictions of the FW)
 func implAddHostsToExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool) error {
 	IPsStr := make([]string, 0, len(IPs))
 	for _, ip := range IPs {
+		if ip.Equal(net.IPv4(127, 0, 0, 1)) {
+			continue // we do not need localhost in exceptions
+		}
 		IPsStr = append(IPsStr, ip.String())
 	}
 
@@ -304,7 +309,12 @@ func implSingleDnsRuleOff() (retErr error) {
 }
 
 func implSingleDnsRuleOn(dnsAddr net.IP) (retErr error) {
-	return shell.Exec(log, platform.FirewallScript(), "-only_dns", dnsAddr.String())
+	exceptions := ""
+	if prioritized, _ := getAllowedIpExceptions(); len(prioritized) > 0 {
+		exceptions = strings.Join(prioritized, ",")
+	}
+
+	return shell.Exec(log, platform.FirewallScript(), "-only_dns", dnsAddr.String(), exceptions)
 }
 
 //---------------------------------------------------------------------
@@ -356,21 +366,10 @@ func applyRemoveHostsFromExceptions(hostsIPs []string, isPersistant bool, onlyFo
 }
 
 func reApplyExceptions() error {
-
 	// Allow LAN communication (if necessary)
 	// Restore all exceptions (all hosts which are allowed)
-	allowedIPs := make([]string, 0, len(allowedHosts))
-	allowedIPsPersistant := make([]string, 0, len(allowedHosts))
-	if len(allowedHosts) > 0 {
-		for ipStr, isPersistant := range allowedHosts {
-			if isPersistant {
-				allowedIPsPersistant = append(allowedIPsPersistant, ipStr)
-			} else {
-				allowedIPs = append(allowedIPs, ipStr)
-			}
-		}
-	}
 
+	allowedIPs, allowedIPsPersistant := getAllowedIpExceptions()
 	allowedIPsICMP := make([]string, 0, len(allowedForICMP))
 	if len(allowedForICMP) > 0 {
 		for ipStr := range allowedForICMP {
@@ -511,6 +510,19 @@ func removeAllHostsFromExceptions() error {
 }
 
 //---------------------------------------------------------------------
+
+func getAllowedIpExceptions() (prioritized, persistant []string) {
+	prioritized = make([]string, 0, len(allowedHosts))
+	persistant = make([]string, 0, len(allowedHosts))
+	for ipStr, isPersistant := range allowedHosts {
+		if isPersistant {
+			persistant = append(persistant, ipStr)
+		} else {
+			prioritized = append(prioritized, ipStr)
+		}
+	}
+	return prioritized, persistant
+}
 
 func getUserExceptions(ipv4, ipv6 bool) []net.IPNet {
 	ret := []net.IPNet{}

@@ -553,7 +553,7 @@ async function isCanQuit() {
       type: "question",
       message: "Deactivate Split Tunnel?",
       detail:
-        "The Inverse Split Tunnel mode is active.\nDo you want to deactivate it before exiting the application?",
+        "The Inverse Split Tunnel mode is active.\nDo you want to deactivate Split Tunnel before exiting the application?",
       buttons: [
         "Cancel",
         "Keep Split Tunnel active",

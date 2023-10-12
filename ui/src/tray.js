@@ -275,6 +275,10 @@ function updateTrayIcon() {
 
 let timerUpdateTrayMenu = null;
 function updateTrayMenu() {
+  if (tray == null) {
+    return doUpdateTrayMenu(); // if tray is not created yet - crete it and update menu immediately
+  }
+
   // call doUpdateTrayMenu() not often than once per 500ms
   if (timerUpdateTrayMenu != null) return;
   clearTimeout(timerUpdateTrayMenu);
@@ -288,6 +292,9 @@ function doUpdateTrayMenu() {
   if (tray == null) {
     // eslint-disable-next-line no-undef
     tray = new Tray(iconDisconnected);
+    setTimeout(() => {
+      updateTrayIcon(); // do not forget to update icon of the newly created tray
+    }, 0);
 
     // Windows: on tray icon click -> show app (macOS/Linux: show menu)
     if (Platform() == PlatformEnum.Windows) {

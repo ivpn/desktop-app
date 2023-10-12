@@ -321,7 +321,7 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 		}
 
 		// save last good IP
-		a.SetLastGoodAlternateIP(isIPv6, ip)
+		a.SetLastGoodAlternateIP(ip)
 
 		log.Info("Success!")
 		return resp, err

@@ -107,7 +107,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		defer s._tmpParamsMutex.Unlock()
 		// update settings if we received any while VPN was connected
 		if s._tmpParams.CheckIsDefined() == nil {
-			s.setConnectionParams(params)
+			s.setConnectionParams(s._tmpParams)
 		}
 	}()
 
@@ -139,6 +139,16 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		return fmt.Errorf("failed to normalize hosts: %w", err)
 	}
 
+	// ------------------------ Inverse Split Tunnel block start ------------------------
+	if prefs.IsInverseSplitTunneling() {
+		if params.FirewallOn || params.FirewallOnDuringConnection {
+			log.Info("The Firewall will not be enabled for the current connection because Split Tunnel Inverse mode is active")
+			params.FirewallOn = false
+			params.FirewallOnDuringConnection = false
+		}
+	}
+	// ------------------------ Inverse Split Tunnel block end --------------------------
+
 	// ------------------------ V2RAY block start ------------------------
 	// 'originalEntryServerInfo' - will contain original info about EntryServer/Port (it is not 'nil' for V2Ray connections).
 	//  We need this info to notify correct data about vpn.CONNECTED state: for V2Ray connection the original parameters are overwriten by local V2Ray proxy params ('127.0.0.1:local_port')
@@ -161,7 +171,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 				// remove V2Ray remote IP from firewall exceptions
 				v2RayRemoteHost, _, err := v2RayWrapper.GetRemoteEndpoint()
 				if err == nil {
-					firewall.RemoveHostsFromExceptions([]net.IP{v2RayRemoteHost}, false, true)
+					firewall.RemoveHostsFromExceptions([]net.IP{v2RayRemoteHost}, false, false)
 				}
 				// stop V2Ray
 				if err := v2RayWrapper.Stop(); err != nil {
@@ -175,7 +185,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 			if err != nil {
 				return fmt.Errorf("failed to get V2Ray remote endpoint: %w", err)
 			}
-			firewall.AddHostsToExceptions([]net.IP{v2RayRemoteHost}, false, true)
+			firewall.AddHostsToExceptions([]net.IP{v2RayRemoteHost}, false, false) // Linux(isPersistent==false and onlyForICMP==false) - this exceptions have highest priority
 		}
 	}
 	// ------------------------ V2RAY block end ------------------------

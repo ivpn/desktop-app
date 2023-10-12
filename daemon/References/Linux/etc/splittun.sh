@@ -83,6 +83,7 @@ _is_inversed=0
 #   -   "1" means the communication for splitted apps will be blocked (for example, when VPN not connected)
 #   -   "0" means the communication for splitted apps will not be blocked
 _is_inversed_blocked=0
+_is_inversed_blocked_ipv6=0
 
 function test()
 {
@@ -137,6 +138,7 @@ function init_iptables()
 {    
     local bin_iptables=$1
     local def_inf_name=$2
+    local inverse_block=$3
 
     # in Inverse mode - we are inversing firewall rules:
     # 'splitted' apps use only VPN connection, all the rest apps use default connection settings (bypassing VPN)
@@ -190,8 +192,8 @@ function init_iptables()
         ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -p udp --dport 53 -j RETURN
         
         # Allow or block communication for 'splitted' apps in inverse mode
-        # E.g.: If we want to block 'splitted' apps when VPN not connected -  '_is_inversed_blocked' must not '0'        
-        if [ ! ${_is_inversed_blocked} -eq 0 ]; then
+        # E.g.: If we want to block 'splitted' apps when VPN not connected -  'inverse_block' must be '1'
+        if [ ${inverse_block} -eq 1 ]; then
             ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup --cgroup ${_cgroup_classid} -j DROP
             ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup --cgroup ${_cgroup_classid} -j DROP
         fi 
@@ -290,9 +292,13 @@ function init()
     ##############################################
     # Firewall rules for packets coming from cgroup
     ##############################################       
-    init_iptables  ${_bin_iptables} ${_def_interface_name}
+    init_iptables  ${_bin_iptables} ${_def_interface_name} ${_is_inversed_blocked}
     if [ -f /proc/net/if_inet6 ]; then
-        init_iptables  ${_bin_ip6tables} ${_def_interface_nameIPv6}
+        block=0
+        if [ ! ${_is_inversed_blocked} -eq 0 ] || [ ! ${_is_inversed_blocked_ipv6} -eq 0 ]; then 
+            block=1
+        fi
+        init_iptables  ${_bin_ip6tables} ${_def_interface_nameIPv6} ${block}
     fi
 
     ##############################################
@@ -547,15 +553,17 @@ function info()
     #${_bin_ip} link
     #echo
 
-    _val=`cat /proc/sys/net/ipv4/ip_forward`
-    echo "[*] /proc/sys/net/ipv4/ip_forward: ${_val}"
-    
-    echo ---------------------------------
-    echo "[*] /proc/sys/net/ipv4/conf/*/rp_filter:"
-    for i in /proc/sys/net/ipv4/conf/*/rp_filter; do
-        _val=`cat $i`
-        echo $i: ${_val}
-    done
+    if [[ $1 != "-6" ]]; then
+        _val=`cat /proc/sys/net/ipv4/ip_forward`
+        echo "[*] /proc/sys/net/ipv4/ip_forward: ${_val}"
+        
+        echo ---------------------------------
+        echo "[*] /proc/sys/net/ipv4/conf/*/rp_filter:"
+        for i in /proc/sys/net/ipv4/conf/*/rp_filter; do
+            _val=`cat $i`
+            echo $i: ${_val}
+        done
+    fi
     
     echo ---------------------------------
     if [ ! -d ${_cgroup_folder} ]; then
@@ -574,20 +582,21 @@ function info()
     if [[ $1 != "-4" ]]; then
         echo "[*] ip6tables -t mangle -S:"
         ${_bin_ip6tables} -t mangle -S
-        echo 
     fi
-    echo "[*] iptables -t mangle -S:"
-    ${_bin_iptables} -t mangle -S
-    
+    if [[ $1 != "-6" ]]; then
+        echo "[*] iptables -t mangle -S:"
+        ${_bin_iptables} -t mangle -S
+    fi
+
     echo ---------------------------------
     if [[ $1 != "-4" ]]; then
         echo "[*] ip6tables -t nat -S:"
         ${_bin_ip6tables} -t nat -S
-        echo 
     fi
-    echo "[*] iptables -t nat -S:"
-    ${_bin_iptables} -t nat -S
-
+    if [[ $1 != "-6" ]]; then
+        echo "[*] iptables -t nat -S:"
+        ${_bin_iptables} -t nat -S
+    fi
     #echo ---------------------------------
     #echo "[*] ip6tables -S ${INPUT}:"
     #${_bin_ip6tables} -S ${INPUT}
@@ -605,23 +614,29 @@ function info()
         echo "[*] ip6tables -S | grep IVPN:"
         ${_bin_ip6tables} -S  | grep IVPN
     fi
-    echo "[*] iptables -S | grep IVPN:"
-    ${_bin_iptables} -S  | grep IVPN    
+    if [[ $1 != "-6" ]]; then
+        echo "[*] iptables -S | grep IVPN:"
+        ${_bin_iptables} -S  | grep IVPN    
+    fi
     echo ---------------------------------
     if [[ $1 != "-4" ]]; then
         echo "[*] ip -6 rule:"
         ${_bin_ip} -6 rule
     fi
-    echo "[*] ip rule:"
-    ${_bin_ip} rule
+    if [[ $1 != "-6" ]]; then
+        echo "[*] ip rule:"
+        ${_bin_ip} rule
+    fi
 
     echo ---------------------------------
     if [[ $1 != "-4" ]]; then
         echo "[*] ip -6 route show table ${_routing_table_weight}"
         ${_bin_ip} -6 route show table ${_routing_table_weight}    
     fi
-    echo "[*] ip route show table ${_routing_table_weight}"
-    ${_bin_ip} route show table ${_routing_table_weight} #${_routing_table_name}
+    if [[ $1 != "-6" ]]; then
+        echo "[*] ip route show table ${_routing_table_weight}"
+        ${_bin_ip} route show table ${_routing_table_weight} #${_routing_table_name}
+    fi
     echo ---------------------------------
 
     detectDefRouteVars
@@ -646,6 +661,7 @@ function parseInputArgs()
             -gateway6) _def_gatewayIPv6="$2"; shift;;
             -inverse) _is_inversed=1; echo "'-inverse' flag defined!";;
             -inverse_block) _is_inversed_blocked=1; echo "'-inverse_block' flag defined!";;
+            -inverse_block_ipv6) _is_inversed_blocked_ipv6=1; echo "'-inverse_block_ipv6' flag defined!";;
             *) echo "Unknown parameter: '$1'" 1>&2; exit 1;;
         esac
         shift
@@ -727,15 +743,18 @@ else
     echo "Parameters:"
     echo "    start [-interface <inf_name>] [-gateway <gateway>] [-interface6 <inf_name_IPv6>] [-gateway6 <gateway_IPv6>] [[-inverse] [-inverse_block]]"
     echo "        Initialize split-tunneling functionality"
-    echo "        - interface      - (optional) name of IPv4 network interface to be used for ST environment"
-    echo "        - gateway        - (optional) IPv4 gateway IP to be used for ST environment"
-    echo "        - interface6     - (optional) name of IPv6 network interface to be used for ST environment"
-    echo "        - gateway6       - (optional) IPv6 gateway IP to be used for ST environment"
-    echo "        - inverse        - (optional) When defined - route specified applications exclusively through the VPN."
-    echo "                                      All other traffic will bypass the VPN and use the default connection."
-    echo "        - inverse_block  - (optional) Block connectivity for specified apps."
-    echo "                                      We can use it, for example, to block connectivity when VPN not enabled."
-    echo "                                      Note: This option applicable only with '-inverse' option."
+    echo "        - interface         - (optional) name of IPv4 network interface to be used for ST environment"
+    echo "        - gateway           - (optional) IPv4 gateway IP to be used for ST environment"
+    echo "        - interface6        - (optional) name of IPv6 network interface to be used for ST environment"
+    echo "        - gateway6          - (optional) IPv6 gateway IP to be used for ST environment"
+    echo "        - inverse           - (optional) When defined - route specified applications exclusively through the VPN."
+    echo "                                         All other traffic will bypass the VPN and use the default connection."
+    echo "        - inverse_block     - (optional) Block connectivity for specified apps."
+    echo "                                         For example, to block connectivity when VPN not enabled."
+    echo "                                         Note: This option applicable only with '-inverse' option."
+    echo "        - inverse_block_ipv6- (optional) Block IPv6 connectivity for specified apps."
+    echo "                                         For example, to block IPv6 connectivity when VPN does not support IPv6."
+    echo "                                         Note: This option applicable only with '-inverse' option."    
     echo "    stop"
     echo "        Uninitialize split-tunneling functionality"
     echo "    run [-u <username>] <command>"

@@ -32,11 +32,13 @@ import (
 	"path"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
+	"golang.org/x/sys/windows"
 )
 
 var (
@@ -60,17 +62,13 @@ var (
 
 var (
 	isDriverConnected bool
+
 	// If defined, route rules were applied for inverse split tunneling.
 	// This variable contains the IP address of the default gateway used in routing rules.
-	defGatewayForInverseSpliTunRoutes net.IP
-
-	// This variable stores information about successfully applied routing rules for Inverse Split Tunnel.
-	// It is essential to prevent the possibility of disrupting user configurations (in cases where the system already has identical rules), so we will not overwrite user configurations.
-	appliedRouteRulesForInverseSplitTun [][]string // list of route add commands like: {"add", destAddr, "MASK", "192.0.0.0", currDefGateway.String()}, ...
-	isIPv6Blocked                       bool
+	appliedNextHopIpv4 net.IP
+	appliedNextHopIpv6 net.IP
 
 	routeBinaryPath string = "route"
-	netshBinaryPath string = "netsh"
 )
 
 // 'blackhole' IP addresses. Used for forwarding all traffic of split-tunnel apps to 'nowhere' (in fact, to block traffic)
@@ -96,7 +94,6 @@ func implInitialize() error {
 		log.Error("!!! ERROR !!! Unable to determine 'SYSTEMROOT' environment variable!")
 	} else {
 		routeBinaryPath = strings.ReplaceAll(path.Join(envVarSystemroot, "system32", "route.exe"), "/", "\\")
-		netshBinaryPath = strings.ReplaceAll(path.Join(envVarSystemroot, "system32", "netsh.exe"), "/", "\\")
 	}
 
 	wfpDllPath := platform.WindowsWFPDllPath()
@@ -126,8 +123,25 @@ func implInitialize() error {
 
 	// to ensure that functionality works - just try to start/stop driver
 	defer disconnect(false)
-	if connectErr := connect(false); connectErr != nil {
-		funcNotAvailableError = fmt.Errorf("Split-Tunnel functionality test failed: %w", connectErr)
+
+	// Check if ST driver can start
+	const retryDelay = time.Second
+	const retryCnt = 5
+	for i := 1; i <= retryCnt; i++ {
+		if connectErr := connect(false); connectErr != nil {
+			funcNotAvailableError = fmt.Errorf("Split-Tunnel functionality test failed: %w", connectErr)
+			if connectErr == windows.ERROR_SERVICE_MARKED_FOR_DELETE {
+				log.Warning(fmt.Sprintf("[%d of %d; retry in %v] : %s", i, retryCnt, retryDelay, funcNotAvailableError.Error()))
+				time.Sleep(retryDelay)
+				continue
+			}
+		} else {
+			if i > 1 {
+				log.Info("Split-Tunnel functionality test success")
+			}
+			funcNotAvailableError = nil
+		}
+		break
 	}
 
 	return funcNotAvailableError
@@ -154,7 +168,13 @@ func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpn
 	}
 
 	// If ST not enabled or no configuration - just disconnect driver (if connected)
-	isStMustBeDisabled := !isStEnabled || (!isVpnEnabled && !isStInversed) || addrConfig.IsEmpty() || len(splitTunnelApps) == 0
+	// We do not need to start ST driver when:
+	// - ST disabled
+	// - VPN disconnected and NOT Inversed ST
+	// - VPN disconnected and apps from ST environment allowed to use default connection
+	// - ST addresses are not defined
+	// - ST apps are not defined
+	isStMustBeDisabled := !isStEnabled || (!isVpnEnabled && !isStInversed) || (!isVpnEnabled && isStInverseAllowWhenNoVpn) || addrConfig.IsEmpty() || len(splitTunnelApps) == 0
 	if isStMustBeDisabled || isFunctionalityNotAvailable {
 		applyInverseSplitTunRoutingRules(false, false, false) // erase applied routing rules if any
 		if isDriverConnected {                                // If driver connected
@@ -176,6 +196,12 @@ func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpn
 	addresses := addrConfig
 	// For inversed split-tunnel we just inverse IP addresses in driver configuration (defaultPublicInterfaceIP <=> tunnelInterfaceIP)
 	if isStInversed {
+		// In situation when there is no IPv6 connectivity on local machine (IPv6Public not defined) - we need to set IPv6Tunnel to IPv6Public
+		// otherwise (if IPv6Public or IPv6Tunnel not defined) - IPv6 traffic for 'splited' apps will be blocked by ST driver
+		if len(addresses.IPv6Public) == 0 && len(addresses.IPv6Tunnel) > 0 {
+			addresses.IPv6Public = addresses.IPv6Tunnel
+		}
+
 		// inverse IP addresses (defaultPublicInterfaceIP <=> tunnelInterfaceIP)
 		p4 := addresses.IPv4Public
 		addresses.IPv4Public = addresses.IPv4Tunnel
@@ -249,121 +275,88 @@ func implGetRunningApps() ([]RunningApp, error) {
 //	route add 192.0.0.0 MASK 192.0.0.0 192.168.1.1
 //
 // As a result, all traffic will pass through the default non-VPN interface, except for excluded apps designated by the split-tunnel driver, which will use the VPN interface.
-func applyInverseSplitTunRoutingRules(isVpnEnabled, isStInversed, isStEnabled bool) error {
+func applyInverseSplitTunRoutingRules(isVpnEnabled, isStInversed, isStEnabled bool) (retErr error) {
+	isNeedApplyRoutes := isVpnEnabled && isStInversed && isStEnabled
+
+	const IPv4 = false
+	const IPv6 = true
+	if err := doApplyInverseRoutes(IPv4, isNeedApplyRoutes); err != nil {
+		retErr = err
+		log.Error(err)
+	}
+	if err := doApplyInverseRoutes(IPv6, isNeedApplyRoutes); err != nil {
+		retErr = err
+		log.Error(err)
+	}
+	return retErr
+}
+
+func doApplyInverseRoutes(isIPv6, enable bool) error {
 	if routeBinaryPath == "" {
 		return fmt.Errorf("route.exe location not specified")
 	}
-
-	// route add/delete 0.0.0.0		MASK 192.0.0.0	<DEFAULT_GATEWAY_IP>
-	// route add/delete 64.0.0.0	MASK 192.0.0.0 	<DEFAULT_GATEWAY_IP>
-	// route add/delete 128.0.0.0	MASK 192.0.0.0 	<DEFAULT_GATEWAY_IP>
-	// route add/delete 192.0.0.0	MASK 192.0.0.0 	<DEFAULT_GATEWAY_IP>
-	var (
-		destAddresses  []string = []string{"0.0.0.0", "64.0.0.0", "128.0.0.0", "192.0.0.0"}
-		currDefGateway net.IP
-		err            error
-	)
-
-	// enable/disable IPv6 blocking routes
-	isBlockIPv6 := isStEnabled && isStInversed
-	if err := applyIPv6BlockRoutes(isBlockIPv6); err != nil {
-		return err
+	var appliedNextHop *net.IP = &appliedNextHopIpv4
+	blackHole := net.ParseIP(BlackHoleIPv4)
+	// subnets to apply routing rules to cover all addresses (with mask "/2")
+	masks := []string{"0.0.0.0/2", "64.0.0.0/2", "128.0.0.0/2", "192.0.0.0/2"}
+	if isIPv6 {
+		appliedNextHop = &appliedNextHopIpv6
+		blackHole = net.ParseIP(BlackHoleIPv6)
+		masks = []string{"::/2", "4000::/2", "8000::/2", "C000::/2"}
 	}
 
-	isNeedApplyRoutes := isVpnEnabled && isStInversed && isStEnabled
-	// if VPN connected - we need to check if already applied rules are correct
-	if isNeedApplyRoutes {
-		if currDefGateway, err = netinfo.DefaultGatewayIP(); err != nil {
-			return log.ErrorE(fmt.Errorf("failed to obtain default gateway IP address: %w", err), 0)
+	// internal functions
+	fnErase := func(masksToErase []string) {
+		if *appliedNextHop == nil {
+			return
 		}
-		if currDefGateway.Equal(defGatewayForInverseSpliTunRoutes) {
-			return nil // already applied
+		for _, mask := range masksToErase {
+			cmd := []string{"delete", mask, appliedNextHop.String()}
+			if err := shell.Exec(log, routeBinaryPath, cmd...); err != nil {
+				log.Error(fmt.Errorf("failed to erase inverse split-tunnelling routing rules (ipv6=%v): %w", isIPv6, err))
+			}
 		}
+		*appliedNextHop = nil
 	}
 
-	// erase already applied rules (if any)
-	eraseAppliedRules()
-
-	if !isNeedApplyRoutes {
-		return nil // nothing to do
-	}
-
-	// get current default gateway IP address (if not obtained yet)
-	if len(currDefGateway) == 0 {
-		if currDefGateway, err = netinfo.DefaultGatewayIP(); err != nil {
-			return log.ErrorE(fmt.Errorf("failed to obtain default gateway IP address: %w", err), 0)
-		}
-	}
-
-	// save info about applied rules (keep gateway IP address)
-	defGatewayForInverseSpliTunRoutes = currDefGateway
-	// apply rules
-	appliedRouteRulesForInverseSplitTun = [][]string{} // erase
-	for _, destAddr := range destAddresses {
-		cmd := []string{"add", destAddr, "MASK", "192.0.0.0", currDefGateway.String()}
-		if err := shell.Exec(log, routeBinaryPath, cmd...); err != nil {
-			eraseAppliedRules() // erase already applied rules: erase only successfully applied rules (from 'appliedRouteRulesForInverseSplitTun')
-			return log.ErrorE(fmt.Errorf("failed to apply inverse split-tunnelling routing rules: %w", err), 0)
-		}
-		appliedRouteRulesForInverseSplitTun = append(appliedRouteRulesForInverseSplitTun, cmd)
-	}
-	return nil
-}
-
-// function to erase already applied rules (if any)
-func eraseAppliedRules() {
-	// erase already applied rules: remove only routes that were successfully added by us!
-	for _, cmd := range appliedRouteRulesForInverseSplitTun {
-		cmd[0] = "delete" // changing to "delete", because first field here is "add" (like "route add ...")
-		if err := shell.Exec(log, routeBinaryPath, cmd...); err != nil {
-			log.Error(fmt.Errorf("failed to apply inverse split-tunnelling routing rules: %w", err))
-		}
-	}
-	// reset info about applied rules (erase gateway IP address)
-	appliedRouteRulesForInverseSplitTun = [][]string{}
-	defGatewayForInverseSpliTunRoutes = net.IP{}
-}
-
-func applyIPv6BlockRoutes(block bool) error {
-	if block == isIPv6Blocked {
+	// just remove all routes if enable!=true
+	if !enable {
+		fnErase(masks)
 		return nil
 	}
 
-	if netshBinaryPath == "" {
-		return fmt.Errorf("netsh.exe location not specified")
-	}
-
-	var destAddressesIPv6 []string = []string{"::/2", "4000::/2", "8000::/2", "C000::/2"}
-	commands := [][]string{}
-	for _, destAddr := range destAddressesIPv6 {
-		cmd := []string{"interface", "ipv6", "add", "route", destAddr, "interface=loopback", "store=active"}
-		commands = append(commands, cmd)
-	}
-
-	erase := func(appliedCommands [][]string) {
-		for _, cmd := range appliedCommands {
-			cmd[2] = "delete" // changing to "delete", because first field here is "add": 'interface ipv6 add route ::/2 interface=loopback'
-			if err := shell.Exec(log, netshBinaryPath, cmd...); err != nil {
-				log.Error(fmt.Errorf("failed to apply inverse split-tunnelling routing rules (IPv6): %w", err))
-			}
+	// get default gateway & interface
+	var defGateway net.IP
+	var defInf *net.Interface
+	var err error
+	if defGateway, defInf, err = netinfo.DefaultGatewayEx(isIPv6); err != nil {
+		// if failed to get default gateway - use "blackhole" as next hop (it will block all traffic)
+		log.Info(fmt.Errorf("not detected default gateway IP address [ipv6=%v]; routing all traffic to blackhole %v (err=%w)", isIPv6, defGateway.String(), err))
+		defGateway = blackHole
+		defInf, err = netinfo.GetLoopbackInterface(isIPv6)
+		if err != nil {
+			return err
 		}
 	}
 
-	if block {
-		commandsApplied := [][]string{}
-		for _, cmd := range commands {
-			if err := shell.Exec(log, netshBinaryPath, cmd...); err != nil {
-				erase(commandsApplied) // erase already applied rules: erase only successfully applied rules
-				return log.ErrorE(fmt.Errorf("failed to apply inverse split-tunnelling routing rules (IPv6): %w", err), 0)
-			}
-			commandsApplied = append(commandsApplied, cmd)
-		}
-		isIPv6Blocked = true
-	} else if isIPv6Blocked {
-		erase(commands)
-		isIPv6Blocked = false
+	// if already applied - nothing to do
+	if defGateway.Equal(*appliedNextHop) {
+		return nil
 	}
 
+	// erase already applied rules (if any)
+	fnErase(masks)
+	*appliedNextHop = defGateway // save info about interface next hop
+	var masksApplied []string
+	for _, mask := range masks {
+		// route add <range> <gw> [if <interface_idx>]
+		cmd := []string{"add", mask, appliedNextHop.String(), "if", fmt.Sprintf("%d", defInf.Index)}
+		if err := shell.Exec(log, routeBinaryPath, cmd...); err != nil {
+			fnErase(masksApplied) // erase already applied rules: erase only successfully applied rules
+			return log.ErrorE(fmt.Errorf("failed to apply inverse split-tunnelling routing rules (ipv6=%v): %w", isIPv6, err), 0)
+		}
+		masksApplied = append(masksApplied, mask)
+	}
 	return nil
 }
 

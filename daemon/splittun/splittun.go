@@ -47,7 +47,7 @@ type ConfigAddresses struct {
 }
 
 func (c ConfigAddresses) IsEmpty() bool {
-	return (len(c.IPv4Public) == 0 || len(c.IPv4Tunnel) == 0) && (len(c.IPv6Public) == 0 || len(c.IPv6Tunnel) == 0)
+	return len(c.IPv4Public) == 0 && len(c.IPv4Tunnel) == 0 && len(c.IPv6Public) == 0 && len(c.IPv6Tunnel) == 0
 }
 
 // Information about running application

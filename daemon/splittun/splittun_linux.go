@@ -81,7 +81,7 @@ func implInitialize() error {
 	}
 
 	// Ensure that ST is disable on daemon startup
-	enable(false, false, false, false)
+	enable(false, false, false, false, false)
 
 	// Register network change detector
 	//
@@ -129,7 +129,13 @@ func implReset() error {
 }
 
 func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	err := enable(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled)
+	// If VPN does not support IPv6 - block IPv6 connectivity for 'splitted' apps in inverse mode
+	vpnNoIPv6 := false
+	if isVpnEnabled && len(addrConfig.IPv6Tunnel) == 0 {
+		vpnNoIPv6 = true
+	}
+
+	err := enable(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled, vpnNoIPv6)
 	if err != nil {
 		log.Error(err)
 	}
@@ -358,7 +364,7 @@ func isEnabled() (bool, error) {
 	return true, nil
 }
 
-func enable(isEnable, isStInversed, isStInverseAllowWhenNoVpn, isVpnConnected bool) error {
+func enable(isEnable, isStInversed, isStInverseAllowWhenNoVpn, isVpnConnected, vpnNoIPv6 bool) error {
 	if !isEnable {
 		enabled, err := isEnabled()
 		if err == nil && !enabled {
@@ -377,7 +383,11 @@ func enable(isEnable, isStInversed, isStInverseAllowWhenNoVpn, isVpnConnected bo
 			// Block 'inversed' apps when VPN is not connected
 			if !isVpnConnected && !isStInverseAllowWhenNoVpn {
 				inverseBlockArg = "-inverse_block"
+			} else if isVpnConnected && vpnNoIPv6 {
+				// If VPN does not support IPv6 - block IPv6 connectivity for 'splitted' apps in inverse mode
+				inverseBlockArg = "-inverse_block_ipv6"
 			}
+
 		}
 		_, outErrText, _, _, err := shell.ExecAndGetOutput(log, 1024, "", stScriptPath, "start", inversedArg, inverseBlockArg)
 		if err != nil {

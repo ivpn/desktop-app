@@ -116,9 +116,16 @@ function only_dns {
   set -e
 
   DNSIP=$1
+  EXCEPTION_IP=$2
 
   create_chain ${IPv4BIN} ${IVPN_OUT_DNSONLY}
   ${IPv4BIN} -w ${LOCKWAITTIME} -I OUTPUT -j ${IVPN_OUT_DNSONLY}
+
+  # Allow communication with IP addresses from EXCEPTION_IP list (if defined)
+  # It avoids situation of blocking communication with VPN server over port 53 (e.g. connection trough V2Ray/QUICK on UDP 53)
+  if [ ! -z ${EXCEPTION_IP} ]; then
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -d ${EXCEPTION_IP} -p udp --dport 53 -j ACCEPT
+  fi
 
   ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -o lo -j ACCEPT  
   ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} ! -d ${DNSIP} -p tcp --dport 53 -j DROP
@@ -663,8 +670,9 @@ function main {
       # Inverse Split Tunnel mode does not allow to enable "firewall" but have to block unwanted DNS requests anyway
 
       DNSIP=$2
+      EXCEPTION_IP=$3
 
-      only_dns ${DNSIP}
+      only_dns ${DNSIP} ${EXCEPTION_IP}
     
     elif [[ $1 = "-only_dns_off" ]]; then
       only_dns_off

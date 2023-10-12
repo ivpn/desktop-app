@@ -159,17 +159,24 @@ func (a *API) IsAlternateIPsInitialized(IPv6 bool) bool {
 
 func (a *API) GetLastGoodAlternateIP(IPv6 bool) net.IP {
 	if IPv6 {
+		if a.lastGoodAlternateIPv6.To4() != nil {
+			return nil // something wrong here: lastGoodAlternateIPv6 must be IPv6 address
+		}
 		return a.lastGoodAlternateIPv6
 	}
-	return a.lastGoodAlternateIPv4
+	return a.lastGoodAlternateIPv4.To4()
 }
 
-func (a *API) SetLastGoodAlternateIP(IPv6 bool, ip net.IP) {
+// SetLastGoodAlternateIP - save last good alternate IP address of API server
+// It keeps IPv4 and IPv6 addresses separately
+func (a *API) SetLastGoodAlternateIP(ip net.IP) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
-	if IPv6 {
+	isIp6Addr := ip.To4() == nil
+	if isIp6Addr {
 		a.lastGoodAlternateIPv6 = ip
+		return
 	}
 	a.lastGoodAlternateIPv4 = ip
 }
