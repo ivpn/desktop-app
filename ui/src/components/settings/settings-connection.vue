@@ -843,8 +843,7 @@ export default {
     isShowAddPortOption: function () {
       if (
         this.$store.state.settings.isMultiHop === true ||
-        this.$store.getters["settings/isConnectionUseObfsproxy"] ||
-        this.$store.getters["settings/getV2RayConfig"]
+        this.$store.getters["settings/isConnectionUseObfsproxy"]
       )
         return false;
 

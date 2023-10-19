@@ -28,6 +28,7 @@ import {
   ColorThemeTrayIcon,
   DnsEncryption,
   V2RayObfuscationEnum,
+  isPortInRanges,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -1210,17 +1211,6 @@ function GetDefaultPort(context, ports, vpnType) {
   return defPort;
 }
 
-function isAcceptablePortForRange(p, range) {
-  if (!range || !p) return false;
-  if (
-    range.find(
-      (r) => p.type === r.type && p.port >= r.range.min && p.port <= r.range.max
-    ) === undefined
-  )
-    return false;
-  return true;
-}
-
 function doAddNewCustomPort(context, port) {
   port = NormalizedConfigPortObject(port);
   if (!context || !port) return;
@@ -1231,7 +1221,19 @@ function doAddNewCustomPort(context, port) {
     const state = context.state;
     const currVpnPortRanges = getRanges(state.vpnType);
 
-    if (!isAcceptablePortForRange(port, currVpnPortRanges)) return;
+    // if true - skip port type checks when validating new port
+    // (it is required for WireGuard ports when V2Ray/TCP is in use)
+    let isSkipCheckPortRangesType = false;
+    if (
+      state.vpnType == VpnTypeEnum.WireGuard &&
+      context.state.V2RayConfig.WireGuard === V2RayObfuscationEnum.TCP
+    ) {
+      isSkipCheckPortRangesType = true;
+    }
+
+    // check if port is acceptable: check if port is in allowed ranges for current VPN type
+    if (!isPortInRanges(port, currVpnPortRanges, isSkipCheckPortRangesType))
+      return;
 
     // check if custom port already exists
     if (isPortExists(state.customPorts, port) === true) return;
@@ -1271,16 +1273,13 @@ function eraseNonAcceptableCustomPorts(context) {
 
     let newCustomPorts = [];
     state.customPorts.forEach((p) => {
-      if (
-        isAcceptablePortForRange(p, rangesOvpn) ||
-        isAcceptablePortForRange(p, rangesWg)
-      )
+      if (isPortInRanges(p, rangesOvpn) || isPortInRanges(p, rangesWg))
         newCustomPorts.push(p);
     });
 
     if (newCustomPorts.length != state.customPorts.length) {
       console.log(
-        "Warning! Removing custom ports that do not belong to new ranges!"
+        "Warning! Removing custom ports that do not belong to new ranges!",
       );
       context.commit("customPorts", newCustomPorts);
     }

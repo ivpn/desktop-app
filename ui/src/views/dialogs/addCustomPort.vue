@@ -77,7 +77,7 @@
 </template>
 
 <script>
-import { PortTypeEnum } from "@/store/types";
+import { PortTypeEnum, V2RayObfuscationEnum } from "@/store/types";
 import { SetInputFilterNumbers } from "@/helpers/renderer";
 
 const sender = window.ipcSender;
@@ -87,6 +87,7 @@ export default {
     onClose: Function,
   },
   mounted() {
+    this.initializeType();
     if (this.$refs.portField) this.$refs.portField.focus();
     SetInputFilterNumbers(this.$refs.portField);
   },
@@ -108,7 +109,25 @@ export default {
 
   computed: {
     ranges: function () {
-      return this.$store.getters["vpnState/portRanges"];
+      let ranges = this.$store.getters["vpnState/portRanges"];
+
+      // The V2Ray service listens on it’s own IP address using the same ports as WireGuard.
+      // It listens on both TCP and UDP ports.
+      let updatePortType = null;
+      const V2RayType = this.$store.getters["settings/getV2RayConfig"];
+      if (V2RayType === V2RayObfuscationEnum.QUIC) {
+        updatePortType = PortTypeEnum.UDP;
+      } else if (V2RayType === V2RayObfuscationEnum.TCP) {
+        updatePortType = PortTypeEnum.TCP;
+      }
+      if (updatePortType != null) {
+        ranges = ranges.map((r) => {
+          r.type = updatePortType;
+          return r;
+        });
+      }
+
+      return ranges;
     },
 
     portType: function () {
