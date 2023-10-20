@@ -26,6 +26,7 @@ import (
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
+	"github.com/ivpn/desktop-app/daemon/wifiNotifier"
 )
 
 // OnServiceSessionChanged - SessionChanged handler
@@ -61,10 +62,10 @@ func (p *Protocol) OnKillSwitchStateChanged() {
 }
 
 // OnWiFiChanged - handler of WiFi status change. Notifying clients.
-func (p *Protocol) OnWiFiChanged(ssid string, isInsecureNetwork bool) {
+func (p *Protocol) OnWiFiChanged(info wifiNotifier.WifiInfo) {
 	p.notifyClients(&types.WiFiCurrentNetworkResp{
-		SSID:              ssid,
-		IsInsecureNetwork: isInsecureNetwork})
+		SSID:              info.SSID,
+		IsInsecureNetwork: info.IsInsecure})
 }
 
 // OnPingStatus - servers ping status

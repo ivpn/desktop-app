@@ -10,18 +10,13 @@ func implGetAvailableSSIDs() []string {
 	return nil
 }
 
-// GetCurrentSSID returns current WiFi SSID
-func implGetCurrentSSID() string {
-	return ""
-}
-
-// GetCurrentNetworkIsInsecure returns current security mode
-func implGetCurrentNetworkIsInsecure() bool {
-	return false
+// GetCurrentWifiInfo returns current WiFi info
+func implGetCurrentWifiInfo() (WifiInfo, error) {
+	return WifiInfo{}, nil
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func implSetWifiNotifier(cb func(string)) error {
+func implSetWifiNotifier(cb func()) error {
 	logger.Debug("WiFi functionality disabled in this build")
 	return nil
 }

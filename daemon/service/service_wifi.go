@@ -42,7 +42,7 @@ func (s *Service) initWiFiFunctionality() (err error) {
 	return wifiNotifier.SetWifiNotifier(s.onWiFiChanged)
 }
 
-func (s *Service) onWiFiChanged(ssid string) {
+func (s *Service) onWiFiChanged() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("onWiFiChanged PANIC (recovered): ", r)
@@ -56,23 +56,28 @@ func (s *Service) onWiFiChanged(ssid string) {
 		oldTimerId.Stop()
 	}
 
-	// check network encryption
-	isInsecure := wifiNotifier.GetCurrentNetworkIsInsecure()
-
 	// Delay before processing wifi change
 	// (same wifi change event can occur several times in short period of time)
 	timerDelayedWifiNotify = time.AfterFunc(delayBeforeWiFiChangeNotify, func() {
+
+		info, err := wifiNotifier.GetCurrentWifiInfo()
+		if err != nil {
+			log.Error("Can not obtain current WiFi info: ", err)
+			return
+		}
+
 		// notify clients about WiFi change
-		s._evtReceiver.OnWiFiChanged(ssid, isInsecure)
+		s._evtReceiver.OnWiFiChanged(info)
 
 		// 'trusted-wifi' functionality: auto-connect if necessary
-		s.autoConnectIfRequired(OnWifiChanged, &wifiStatus{WifiSsid: ssid, WifiIsInsecure: isInsecure})
+		s.autoConnectIfRequired(OnWifiChanged, &info)
 	})
 }
 
 // GetWiFiCurrentState returns info about currently connected wifi
-func (s *Service) GetWiFiCurrentState() (ssid string, isInsecureNetwork bool) {
-	return wifiNotifier.GetCurrentSSID(), wifiNotifier.GetCurrentNetworkIsInsecure()
+func (s *Service) GetWiFiCurrentState() wifiNotifier.WifiInfo {
+	info, _ := wifiNotifier.GetCurrentWifiInfo()
+	return info
 }
 
 // GetWiFiAvailableNetworks returns list of available WIFI networks

@@ -240,16 +240,16 @@ static inline char * getCurrentWifiInfo(int* retIsInsecure) {
     return retSSID;
 }
 
-static inline char * getCurrentSSID(void) {
-    return getCurrentWifiInfo(NULL);
-}
+//static inline char * getCurrentSSID(void) {
+//    return getCurrentWifiInfo(NULL);
+//}
 
-static inline int getCurrentNetworkIsInsecure() {
-    int retIsInecure = 0xFFFFFFFF;
-    char* ssid = getCurrentWifiInfo(&retIsInecure);
-    if (ssid!=NULL) free(ssid);
-    return retIsInecure;
-}
+//static inline int getCurrentNetworkIsInsecure() {
+//    int retIsInecure = 0xFFFFFFFF;
+//    char* ssid = getCurrentWifiInfo(&retIsInecure);
+//    if (ssid!=NULL) free(ssid);
+//    return retIsInecure;
+//}
 
 static inline char* getAvailableSSIDs(void) {
     char* retSSID = NULL;
@@ -286,21 +286,24 @@ func implGetAvailableSSIDs() []string {
 	return strings.Split(goSsidList, "\n")
 }
 
-// GetCurrentSSID returns current WiFi SSID
-func implGetCurrentSSID() string {
-	ssid := C.getCurrentSSID()
+// GetCurrentWifiInfo returns current WiFi info
+func implGetCurrentWifiInfo() (WifiInfo, error) {
+    
+    int isInsecure = 0xFFFFFFFF;
+
+    ssid := C.getCurrentWifiInfo(&isInsecure)
 	goSsid := C.GoString(ssid)
 	C.free(unsafe.Pointer(ssid))
-	return goSsid
-}
 
-// GetCurrentNetworkIsInsecure returns current security mode
-func implGetCurrentNetworkIsInsecure() bool {
-	return C.getCurrentNetworkIsInsecure() == 1
+
+	return WifiInfo{
+		SSID:       goSsid,
+		IsInsecure: isInsecure == 1,
+	}, nil
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func implSetWifiNotifier(cb func(string)) error {
+func implSetWifiNotifier(cb func()) error {
 	if cb == nil {
 		return fmt.Errorf("callback function not defined")
 	}
@@ -314,7 +317,7 @@ func implSetWifiNotifier(cb func(string)) error {
 	go func() {
 		for {
 			<-onNetChange
-			cb(GetCurrentSSID())
+			cb()
 		}
 	}()
 

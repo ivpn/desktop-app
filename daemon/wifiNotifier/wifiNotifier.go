@@ -8,22 +8,22 @@ func init() {
 	log = logger.NewLogger("wifi")
 }
 
+type WifiInfo struct {
+	SSID       string
+	IsInsecure bool
+}
+
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
 func GetAvailableSSIDs() []string {
 	return implGetAvailableSSIDs()
 }
 
-// GetCurrentSSID returns current WiFi SSID
-func GetCurrentSSID() string {
-	return implGetCurrentSSID()
-}
-
-// GetCurrentNetworkIsInsecure returns current security mode
-func GetCurrentNetworkIsInsecure() bool {
-	return implGetCurrentNetworkIsInsecure()
+// GetCurrentWifiInfo returns current WiFi info
+func GetCurrentWifiInfo() (WifiInfo, error) {
+	return implGetCurrentWifiInfo()
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func SetWifiNotifier(cb func(string)) error {
+func SetWifiNotifier(cb func()) error {
 	return implSetWifiNotifier(cb)
 }

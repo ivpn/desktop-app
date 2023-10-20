@@ -29,12 +29,8 @@ static inline CWInterface * getCWInterface() {
 
 static inline void wifi_network_changed(SCDynamicStoreRef store, CFArrayRef changedKeys, void *ctx)
 {
-	CWInterface * WiFiInterface = getCWInterface();
-	if (WiFiInterface == nil) return;
-
-	NSString *currentSSID = [WiFiInterface ssid] ? [WiFiInterface ssid] : NOT_CONNECTED;
-	extern void __onWifiChanged(char *);
-	__onWifiChanged(nsstring2cstring(currentSSID));
+	extern void __onWifiChanged();
+	__onWifiChanged();
 }
 
 static inline char * getCurrentSSID(void) {
@@ -101,6 +97,7 @@ static inline void setWifiNotifier(void) {
 */
 import "C"
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -111,28 +108,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var internalOnWifiChangedCb func(string)
+var internalOnWifiChangedCb func()
 
 func init() {
 	ex_initIsNativeApiWorks()
 }
 
 //export __onWifiChanged
-func __onWifiChanged(ssid *C.char) {
-	goSsid := C.GoString(ssid)
-	C.free(unsafe.Pointer(ssid))
-
-	if !ex_nativeApiWorks {
-		// Hacky implementation of obtaining SSID for macOS 14.0+ (Sonoma+)
-		if goSsid != "" {
-			ex_nativeApiWorks = true // just in case. If we got SSID - native API works
-		} else {
-			goSsid, _ = ex_getWifiInfo()
-		}
-	}
-
+func __onWifiChanged() {
 	if internalOnWifiChangedCb != nil {
-		internalOnWifiChangedCb(goSsid)
+		internalOnWifiChangedCb()
 	}
 }
 
@@ -148,12 +133,28 @@ func implGetAvailableSSIDs() []string {
 	return strings.Split(goSsidList, "\n")
 }
 
-// GetCurrentSSID returns current WiFi SSID
-func implGetCurrentSSID() string {
+// GetCurrentWifiInfo returns current WiFi info
+func implGetCurrentWifiInfo() (WifiInfo, error) {
+	SSID := getCurrentSSID()
+
+	// If we can not obtain SSID using native API - we use external tool as a workaround
 	if !ex_nativeApiWorks {
-		ssid, _ := ex_getWifiInfo()
-		return ssid
+		if len(SSID) > 0 {
+			log.Info("Native API works!")
+			ex_nativeApiWorks = true // Looks like native API works
+		} else {
+			return ex_getWifiInfo() // We can not use native API for SSID detection, so we use external tool as a workaround
+		}
 	}
+
+	return WifiInfo{
+		SSID:       SSID,
+		IsInsecure: getCurrentNetworkIsInsecure(),
+	}, nil
+}
+
+// GetCurrentSSID returns current WiFi SSID
+func getCurrentSSID() string {
 	ssid := C.getCurrentSSID()
 	goSsid := C.GoString(ssid)
 	C.free(unsafe.Pointer(ssid))
@@ -161,12 +162,7 @@ func implGetCurrentSSID() string {
 }
 
 // GetCurrentNetworkIsInsecure returns current security mode
-func implGetCurrentNetworkIsInsecure() bool {
-	if !ex_nativeApiWorks {
-		_, isInsecure := ex_getWifiInfo()
-		return isInsecure
-	}
-
+func getCurrentNetworkIsInsecure() bool {
 	const (
 		CWSecurityNone               = 0
 		CWSecurityWEP                = 1
@@ -196,7 +192,7 @@ func implGetCurrentNetworkIsInsecure() bool {
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func implSetWifiNotifier(cb func(string)) error {
+func implSetWifiNotifier(cb func()) error {
 	internalOnWifiChangedCb = cb
 
 	go func() {
@@ -235,38 +231,46 @@ const ex_airport_tool_bin = "/System/Library/PrivateFrameworks/Apple80211.framew
 func ex_initIsNativeApiWorks() {
 	_, err := os.Stat(ex_airport_tool_bin)
 	if err != nil {
+		log.Debug("!!! airport tool not found !!!")
 		return // we can not use airport tool for SSID detection
 	}
 
 	// Checking macOS version
 	var uts unix.Utsname
 	if err := unix.Uname(&uts); err != nil {
+		log.Error(fmt.Errorf("Can not obtain macOS version: %w", err))
 		return
 	}
 	release := unix.ByteSliceToString(uts.Release[:])
 	dotPos := strings.Index(release, ".")
 	if dotPos == -1 {
+		log.Error("Can not obtain macOS version")
 		return
 	}
 	major := release[:dotPos]
 	majorVersion, err := strconv.Atoi(major)
 	if err != nil {
+		log.Error(fmt.Errorf("Can not obtain macOS version: %w", err))
 		return
 	}
 	if majorVersion >= 23 {
 		// Darwin v23.x.x == macOS 14 Sonoma
 		// It is not possible anymore to obtaine WiFi SSID for background daemons since macOS 14.
 		ex_nativeApiWorks = false
+		log.Warning("macOS 14+ detected. WiFi SSID detection will be performed using external tool")
 	}
 }
 
-func ex_getWifiInfo() (SSID string, isInsecure bool) {
+func ex_getWifiInfo() (WifiInfo, error) {
 	//log.Debug("!!! Trying to obtain WiFi info using airport tool !!!")
+
+	SSID := ""
+	isInsecure := false
 
 	cmd := exec.Command(ex_airport_tool_bin, "--getinfo")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", false
+		return WifiInfo{}, err
 	}
 
 	const (
@@ -289,7 +293,7 @@ func ex_getWifiInfo() (SSID string, isInsecure bool) {
 		}
 	}
 
-	return SSID, isInsecure
+	return WifiInfo{SSID: SSID, IsInsecure: isInsecure}, nil
 }
 
 func ex_getAvailableSSIDs() []string {

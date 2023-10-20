@@ -31,6 +31,7 @@ import (
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/service/wgkeys"
 	"github.com/ivpn/desktop-app/daemon/vpn"
+	"github.com/ivpn/desktop-app/daemon/wifiNotifier"
 )
 
 // IServersUpdater - interface for updating server info mechanism
@@ -72,7 +73,7 @@ type IServiceEventsReceiver interface {
 	OnServiceSessionChanged()
 	OnAccountStatus(sessionToken string, account preferences.AccountStatus)
 	OnKillSwitchStateChanged()
-	OnWiFiChanged(ssid string, isInsecureNetwork bool)
+	OnWiFiChanged(wifiNotifier.WifiInfo)
 	OnPingStatus(retMap map[string]int)
 	OnServersUpdated(*api_types.ServersInfoResponse)
 	OnSplitTunnelStatusChanged()

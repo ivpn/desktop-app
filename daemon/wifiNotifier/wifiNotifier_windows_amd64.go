@@ -210,7 +210,10 @@ static inline char* concatenate(char* baseString, const char* toAdd, char delimi
 	return newString;
 }
 
-static inline char* getCurrentSSID(void) {
+static inline char* getCurrent(int* security) {
+    if (security != 0) {
+        *security = 0xFFFFFFFF;
+    }
     if (initWlanapiDll()) return NULL;
 
     openHandle();
@@ -252,6 +255,9 @@ static inline char* getCurrentSSID(void) {
                 else {
                     // wprintf(L"  Profile name used:\t %ws\n", pConnectInfo->strProfileName);
                     wchar2char(pConnectInfo->strProfileName, ssid);
+                    if (security != 0) {
+                        *security = pConnectInfo->wlanSecurityAttributes.dot11CipherAlgorithm;
+                    }
                     break;
                 }
             }
@@ -270,70 +276,6 @@ static inline char* getCurrentSSID(void) {
     }
 
     return ssid;
-}
-
-static inline int getCurrentNetworkSecurity() {
-    int retSecurity = 0xFFFFFFFF;
-    if (initWlanapiDll()) return retSecurity;
-
-    openHandle();
-
-    char* ssid = (char*) malloc(256);
-    memset(ssid, 0, 256);
-
-    DWORD dwResult = 0;
-    unsigned int i;
-
-    PWLAN_INTERFACE_INFO_LIST pIfList = NULL;
-    PWLAN_INTERFACE_INFO pIfInfo = NULL;
-
-    PWLAN_CONNECTION_ATTRIBUTES pConnectInfo = NULL;
-    DWORD connectInfoSize = sizeof(WLAN_CONNECTION_ATTRIBUTES);
-    WLAN_OPCODE_VALUE_TYPE opCode = wlan_opcode_value_type_invalid;
-
-    dwResult = _f_WlanEnumInterfaces(hClient, NULL, &pIfList);
-    if (dwResult != ERROR_SUCCESS) {
-        wprintf(L"WlanEnumInterfaces failed with error: %u\n", dwResult);
-    }
-    else {
-
-        for (i = 0; i < (int)pIfList->dwNumberOfItems; i++) {
-            pIfInfo = (WLAN_INTERFACE_INFO*)&pIfList->InterfaceInfo[i];
-
-            if (pIfInfo->isState == wlan_interface_state_connected) {
-                dwResult = _f_WlanQueryInterface(hClient,
-                    &pIfInfo->InterfaceGuid,
-                    wlan_intf_opcode_current_connection,
-                    NULL,
-                    &connectInfoSize,
-                    (PVOID*)&pConnectInfo,
-                    &opCode);
-
-                if (dwResult != ERROR_SUCCESS) {
-                    wprintf(L"WlanQueryInterface failed with error: %u\n", dwResult);
-                }
-                else {
-                    // wprintf(L"  Profile name used:\t %ws\n", pConnectInfo->strProfileName);
-                    //wchar2char(pConnectInfo->strProfileName,ssid);
-                    retSecurity = pConnectInfo->wlanSecurityAttributes.dot11CipherAlgorithm;
-                    break;
-                }
-            }
-        }
-
-    }
-
-    if (pConnectInfo != NULL) {
-        _f_WlanFreeMemory(pConnectInfo);
-        pConnectInfo = NULL;
-    }
-
-    if (pIfList != NULL) {
-        _f_WlanFreeMemory(pIfList);
-        pIfList = NULL;
-    }
-
-    return retSecurity;
 }
 
 static inline char* getAvailableSSIDs(void) {
@@ -424,8 +366,8 @@ static inline char* getAvailableSSIDs(void) {
 
 static inline void onWifiChanged(PWLAN_NOTIFICATION_DATA data,PVOID context)
 {
-	extern void __onWifiChanged(char *);
-	__onWifiChanged(getCurrentSSID());
+	extern void __onWifiChanged();
+	__onWifiChanged();
 }
 
 static inline void setWifiNotifier()
@@ -456,15 +398,12 @@ import (
 	"unsafe"
 )
 
-var internalOnWifiChangedCb func(string)
+var internalOnWifiChangedCb func()
 
 //export __onWifiChanged
-func __onWifiChanged(ssid *C.char) {
-	goSsid := C.GoString(ssid)
-	C.free(unsafe.Pointer(ssid))
-
+func __onWifiChanged() {
 	if internalOnWifiChangedCb != nil {
-		internalOnWifiChangedCb(goSsid)
+		internalOnWifiChangedCb()
 	}
 }
 
@@ -476,16 +415,23 @@ func implGetAvailableSSIDs() []string {
 	return strings.Split(goSsidList, "\n")
 }
 
-// GetCurrentSSID returns current WiFi SSID
-func implGetCurrentSSID() string {
-	ssid := C.getCurrentSSID()
+// GetCurrentWifiInfo returns current WiFi info
+func implGetCurrentWifiInfo() (WifiInfo, error) {
+
+    int security = 0;
+
+    ssid := C.getCurrent(&security)
 	goSsid := C.GoString(ssid)
 	C.free(unsafe.Pointer(ssid))
-	return goSsid
+
+
+	return WifiInfo{
+		SSID:       getCurrentSSID(),
+		IsInsecure: checkIsInsecure(security),
+	}, nil
 }
 
-// GetCurrentNetworkIsInsecure returns current security mode
-func implGetCurrentNetworkIsInsecure() bool {
+func checkIsInsecure(int security) bool {
 	const (
 		DOT11_CIPHER_ALGO_NONE          = 0x00
 		DOT11_CIPHER_ALGO_WEP40         = 0x01
@@ -511,7 +457,7 @@ func implGetCurrentNetworkIsInsecure() bool {
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func implSetWifiNotifier(cb func(string)) error {
+func implSetWifiNotifier(cb func()) error {
 	internalOnWifiChangedCb = cb
 	go C.setWifiNotifier()
 	return nil

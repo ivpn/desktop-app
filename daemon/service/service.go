@@ -51,6 +51,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/splittun"
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
+	"github.com/ivpn/desktop-app/daemon/wifiNotifier"
 
 	syncSemaphore "golang.org/x/sync/semaphore"
 )
@@ -959,7 +960,7 @@ func (s *Service) setKillSwitchAllowLAN(isAllowLan bool, isAllowLanMulticast boo
 	return err
 }
 
-func (s *Service) applyKillSwitchAllowLAN(wifiInfoPtr *wifiStatus) error {
+func (s *Service) applyKillSwitchAllowLAN(wifiInfoPtr *wifiNotifier.WifiInfo) error {
 	prefs := s._preferences
 
 	isAllowLAN := prefs.IsFwAllowLAN
