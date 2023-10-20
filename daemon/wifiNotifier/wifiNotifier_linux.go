@@ -279,7 +279,7 @@ import (
 )
 
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
-func GetAvailableSSIDs() []string {
+func implGetAvailableSSIDs() []string {
 	ssidList := C.getAvailableSSIDs()
 	goSsidList := C.GoString(ssidList)
 	C.free(unsafe.Pointer(ssidList))
@@ -287,7 +287,7 @@ func GetAvailableSSIDs() []string {
 }
 
 // GetCurrentSSID returns current WiFi SSID
-func GetCurrentSSID() string {
+func implGetCurrentSSID() string {
 	ssid := C.getCurrentSSID()
 	goSsid := C.GoString(ssid)
 	C.free(unsafe.Pointer(ssid))
@@ -295,12 +295,12 @@ func GetCurrentSSID() string {
 }
 
 // GetCurrentNetworkIsInsecure returns current security mode
-func GetCurrentNetworkIsInsecure() bool {
+func implGetCurrentNetworkIsInsecure() bool {
 	return C.getCurrentNetworkIsInsecure() == 1
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func SetWifiNotifier(cb func(string)) error {
+func implSetWifiNotifier(cb func(string)) error {
 	if cb == nil {
 		return fmt.Errorf("callback function not defined")
 	}

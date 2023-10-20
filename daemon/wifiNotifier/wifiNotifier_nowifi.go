@@ -6,22 +6,22 @@ package wifiNotifier
 import "github.com/ivpn/desktop-app/daemon/logger"
 
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
-func GetAvailableSSIDs() []string {
+func implGetAvailableSSIDs() []string {
 	return nil
 }
 
 // GetCurrentSSID returns current WiFi SSID
-func GetCurrentSSID() string {
+func implGetCurrentSSID() string {
 	return ""
 }
 
 // GetCurrentNetworkIsInsecure returns current security mode
-func GetCurrentNetworkIsInsecure() bool {
+func implGetCurrentNetworkIsInsecure() bool {
 	return false
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func SetWifiNotifier(cb func(string)) error {
+func implSetWifiNotifier(cb func(string)) error {
 	logger.Debug("WiFi functionality disabled in this build")
 	return nil
 }

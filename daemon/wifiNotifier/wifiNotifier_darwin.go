@@ -101,25 +101,35 @@ static inline void setWifiNotifier(void) {
 */
 import "C"
 import (
+	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
 
-	"github.com/ivpn/desktop-app/daemon/logger"
+	"golang.org/x/sys/unix"
 )
 
-var log *logger.Logger
+var internalOnWifiChangedCb func(string)
 
 func init() {
-	log = logger.NewLogger("wifi")
+	ex_initIsNativeApiWorks()
 }
-
-var internalOnWifiChangedCb func(string)
 
 //export __onWifiChanged
 func __onWifiChanged(ssid *C.char) {
 	goSsid := C.GoString(ssid)
 	C.free(unsafe.Pointer(ssid))
+
+	if !ex_nativeApiWorks {
+		// Hacky implementation of obtaining SSID for macOS 14.0+ (Sonoma+)
+		if goSsid != "" {
+			ex_nativeApiWorks = true // just in case. If we got SSID - native API works
+		} else {
+			goSsid, _ = ex_getWifiInfo()
+		}
+	}
 
 	if internalOnWifiChangedCb != nil {
 		internalOnWifiChangedCb(goSsid)
@@ -127,7 +137,11 @@ func __onWifiChanged(ssid *C.char) {
 }
 
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
-func GetAvailableSSIDs() []string {
+func implGetAvailableSSIDs() []string {
+	if !ex_nativeApiWorks {
+		return ex_getAvailableSSIDs()
+	}
+
 	ssidList := C.getAvailableSSIDs()
 	goSsidList := C.GoString(ssidList)
 	C.free(unsafe.Pointer(ssidList))
@@ -135,7 +149,11 @@ func GetAvailableSSIDs() []string {
 }
 
 // GetCurrentSSID returns current WiFi SSID
-func GetCurrentSSID() string {
+func implGetCurrentSSID() string {
+	if !ex_nativeApiWorks {
+		ssid, _ := ex_getWifiInfo()
+		return ssid
+	}
 	ssid := C.getCurrentSSID()
 	goSsid := C.GoString(ssid)
 	C.free(unsafe.Pointer(ssid))
@@ -143,7 +161,12 @@ func GetCurrentSSID() string {
 }
 
 // GetCurrentNetworkIsInsecure returns current security mode
-func GetCurrentNetworkIsInsecure() bool {
+func implGetCurrentNetworkIsInsecure() bool {
+	if !ex_nativeApiWorks {
+		_, isInsecure := ex_getWifiInfo()
+		return isInsecure
+	}
+
 	const (
 		CWSecurityNone               = 0
 		CWSecurityWEP                = 1
@@ -173,8 +196,9 @@ func GetCurrentNetworkIsInsecure() bool {
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func SetWifiNotifier(cb func(string)) error {
+func implSetWifiNotifier(cb func(string)) error {
 	internalOnWifiChangedCb = cb
+
 	go func() {
 		log.Info("WiFi notifier enter")
 		defer log.Error("WiFi notifier exit")
@@ -192,4 +216,107 @@ func SetWifiNotifier(cb func(string)) error {
 		}
 	}()
 	return nil
+}
+
+// ----------------------------------------------------
+// Hacky implementation of obtaining SSID for macOS 14.0+ (Sonoma+)
+// ----------------------------------------------------
+// Starting from macOS 14 Sonoma release, Apple has changed behavior of CWInterface (CoreWLAN framework):
+// It is not possible anymore to obtaine WiFi SSID for background daemons.
+// Bellow implementation is a hacky workaround for this issue.
+//
+// https://developer.apple.com/forums/thread/732431
+// https://developer.apple.com/forums/thread/739712#768907022
+
+var ex_nativeApiWorks = true
+
+const ex_airport_tool_bin = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
+
+func ex_initIsNativeApiWorks() {
+	_, err := os.Stat(ex_airport_tool_bin)
+	if err != nil {
+		return // we can not use airport tool for SSID detection
+	}
+
+	// Checking macOS version
+	var uts unix.Utsname
+	if err := unix.Uname(&uts); err != nil {
+		return
+	}
+	release := unix.ByteSliceToString(uts.Release[:])
+	dotPos := strings.Index(release, ".")
+	if dotPos == -1 {
+		return
+	}
+	major := release[:dotPos]
+	majorVersion, err := strconv.Atoi(major)
+	if err != nil {
+		return
+	}
+	if majorVersion >= 23 {
+		// Darwin v23.x.x == macOS 14 Sonoma
+		// It is not possible anymore to obtaine WiFi SSID for background daemons since macOS 14.
+		ex_nativeApiWorks = false
+	}
+}
+
+func ex_getWifiInfo() (SSID string, isInsecure bool) {
+	//log.Debug("!!! Trying to obtain WiFi info using airport tool !!!")
+
+	cmd := exec.Command(ex_airport_tool_bin, "--getinfo")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", false
+	}
+
+	const (
+		field_ssid = "SSID:"
+		field_auth = "link auth:"
+	)
+
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		l := strings.TrimSpace(line)
+
+		if strings.HasPrefix(l, field_ssid) {
+			SSID = strings.TrimSpace(strings.TrimPrefix(l, field_ssid))
+		}
+		if strings.HasPrefix(l, field_auth) {
+			auth := strings.TrimSpace(strings.TrimPrefix(l, field_auth))
+			if auth == "none" || strings.Contains(auth, "wep") {
+				isInsecure = true
+			}
+		}
+	}
+
+	return SSID, isInsecure
+}
+
+func ex_getAvailableSSIDs() []string {
+	ret := []string{}
+
+	cmd := exec.Command(ex_airport_tool_bin, "--scan")
+	output, err := cmd.Output()
+	if err != nil {
+		return ret
+	}
+
+	lines := strings.Split(string(output), "\n")
+	for i, line := range lines {
+		if len(line) < 32 {
+			break
+		}
+		if i == 0 {
+			// the header has to have first fiels as "SSID". It's length must be 32 symbols
+			if strings.TrimSpace(line[:32]) != "SSID" {
+				return ret
+			}
+			continue // skip header
+		}
+		ssid := strings.TrimSpace(line[:32])
+		if ssid != "" {
+			ret = append(ret, ssid)
+		}
+	}
+	return ret
 }
