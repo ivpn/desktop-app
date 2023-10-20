@@ -417,21 +417,19 @@ func implGetAvailableSSIDs() []string {
 
 // GetCurrentWifiInfo returns current WiFi info
 func implGetCurrentWifiInfo() (WifiInfo, error) {
+	var security C.int
 
-    int security = 0;
-
-    ssid := C.getCurrent(&security)
+	ssid := C.getCurrent(&security)
 	goSsid := C.GoString(ssid)
 	C.free(unsafe.Pointer(ssid))
 
-
 	return WifiInfo{
-		SSID:       getCurrentSSID(),
-		IsInsecure: checkIsInsecure(security),
+		SSID:       goSsid,
+		IsInsecure: checkIsInsecure(int(security)),
 	}, nil
 }
 
-func checkIsInsecure(int security) bool {
+func checkIsInsecure(security int) bool {
 	const (
 		DOT11_CIPHER_ALGO_NONE          = 0x00
 		DOT11_CIPHER_ALGO_WEP40         = 0x01
@@ -445,7 +443,6 @@ func checkIsInsecure(int security) bool {
 		DOT11_CIPHER_ALGO_IHV_END       = 0xffffffff
 	)
 
-	security := C.getCurrentNetworkSecurity()
 	switch security {
 	case DOT11_CIPHER_ALGO_NONE,
 		DOT11_CIPHER_ALGO_WEP40,

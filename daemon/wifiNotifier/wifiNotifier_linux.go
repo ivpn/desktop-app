@@ -211,6 +211,11 @@ static inline char* get_essid (char *iface)
 }
 
 static inline char * getCurrentWifiInfo(int* retIsInsecure) {
+    if (retIsInsecure != NULL)
+    {
+        *retIsInsecure = 0xFFFFFFFF;
+    }
+
     char* retSSID = NULL;
 
     // get all available network interfaces
@@ -288,17 +293,15 @@ func implGetAvailableSSIDs() []string {
 
 // GetCurrentWifiInfo returns current WiFi info
 func implGetCurrentWifiInfo() (WifiInfo, error) {
-    
-    int isInsecure = 0xFFFFFFFF;
+	var isInsecure C.int
 
-    ssid := C.getCurrentWifiInfo(&isInsecure)
+	ssid := C.getCurrentWifiInfo(&isInsecure)
 	goSsid := C.GoString(ssid)
 	C.free(unsafe.Pointer(ssid))
 
-
 	return WifiInfo{
 		SSID:       goSsid,
-		IsInsecure: isInsecure == 1,
+		IsInsecure: int(isInsecure) == 1,
 	}, nil
 }
 
