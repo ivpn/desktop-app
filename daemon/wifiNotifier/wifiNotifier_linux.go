@@ -245,17 +245,6 @@ static inline char * getCurrentWifiInfo(int* retIsInsecure) {
     return retSSID;
 }
 
-//static inline char * getCurrentSSID(void) {
-//    return getCurrentWifiInfo(NULL);
-//}
-
-//static inline int getCurrentNetworkIsInsecure() {
-//    int retIsInecure = 0xFFFFFFFF;
-//    char* ssid = getCurrentWifiInfo(&retIsInecure);
-//    if (ssid!=NULL) free(ssid);
-//    return retIsInecure;
-//}
-
 static inline char* getAvailableSSIDs(void) {
     char* retSSID = NULL;
 
@@ -278,9 +267,14 @@ import "C"
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"unsafe"
 
 	"github.com/ivpn/desktop-app/daemon/oshelpers/linux/netlink"
+)
+
+var (
+	mutex sync.Mutex
 )
 
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
@@ -293,6 +287,9 @@ func implGetAvailableSSIDs() []string {
 
 // GetCurrentWifiInfo returns current WiFi info
 func implGetCurrentWifiInfo() (WifiInfo, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	var isInsecure C.int
 
 	ssid := C.getCurrentWifiInfo(&isInsecure)
