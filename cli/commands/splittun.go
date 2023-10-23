@@ -164,6 +164,7 @@ type SplitTun struct {
 	statusFull        bool
 	on                bool
 	onInverse         bool
+	offInverse        bool
 	dnsFirewall       string // [on/off]
 	noVpnConnectivity string // [on/off]
 	off               bool
@@ -176,6 +177,7 @@ type SplitTun struct {
 
 const (
 	cmd_name_on_inverse          = "inverse_on"
+	cmd_name_off_inverse         = "inverse_off"
 	cmd_name_dns_firewall        = "inverse_restrict_dns"
 	cmd_name_no_vpn_connectivity = "inverse_allow_default_connection"
 )
@@ -191,16 +193,21 @@ func (c *SplitTun) Init() {
 
 	if !cliplatform.IsSplitTunRunsApp() {
 		// Windows
-		c.BoolVar(&c.reset, "clean", false, "Erase configuration (delete all applications from configuration and disable)")
+		c.BoolVar(&c.reset, "clean", false, "Erase configuration (remove applications from configuration and disable Split Tunnel)")
 		c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to binary)")
 		c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to binary)")
 	} else {
 		// Linux
 		c.BoolVar(&c.statusFull, "status_full", false, "(extended status info) Show detailed Split Tunnel status")
-		c.BoolVar(&c.reset, "clean", false, "Erase configuration (delete all applications from configuration and disable)")
+		c.BoolVar(&c.reset, "clean", false, "Erase configuration (remove applications from configuration and disable Split Tunnel)")
 		c.StringVar(&c.appadd, "appadd", "", "COMMAND", "Execute command (binary) in Split Tunnel environment\nInfo: short version of this command is 'ivpn exclude <command>'\nExamples:\n    ivpn splittun -appadd firefox\n    ivpn splittun -appadd ping 1.1.1.1\n    ivpn splittun -appadd /usr/bin/google-chrome")
 		c.StringVar(&c.appremove, "appremove", "", "PID", "Remove application from Split Tunnel environment\n(argument: Process ID)")
 	}
+
+	c.BoolVar(&c.onInverse, cmd_name_on_inverse, false,
+		`Enable inverse mode. Only specified applications utilize the VPN connection,
+		while all other traffic circumvents the VPN, using the default connection.`)
+	c.BoolVar(&c.offInverse, cmd_name_off_inverse, false, `Disable inverse mode`)
 
 	c.StringVar(&c.noVpnConnectivity, cmd_name_no_vpn_connectivity, "", "[on/off]",
 		`Enabling this feature allows applications within the Split Tunnel environment 
@@ -208,16 +215,14 @@ func (c *SplitTun) Init() {
 		mirroring the behavior of applications outside the Split Tunnel environment.
 		By default, this feature is turned off, and applications within	the Split Tunnel environment
 		won't have access to the default network interface when the VPN is disabled.
-		!Note! This functionality only applies in Inverse Split Tunnel mode`)
+		Note! This functionality only applies in Inverse Split Tunnel mode`)
 
 	c.StringVar(&c.dnsFirewall, cmd_name_dns_firewall, "", "[on/off]",
 		`When this option is enabled, only DNS requests directed to IVPN DNS servers
 		or user-defined custom DNS servers within the IVPN appsettings will be allowed.
 		All other DNS requests on port 53 will be blocked.
-		!Note! The IVPN AntiTracker and custom DNS are not functional when this feature is disabled.
-		!Note! This functionality only applies in Inverse Split Tunnel mode when the VPN is connected.`)
-
-	c.BoolVar(&c.onInverse, cmd_name_on_inverse, false, "Enable in inverse mode. Only specified applications utilize the VPN connection,\nwhile all other traffic circumvents the VPN, using the default connection")
+		Note! The IVPN AntiTracker and custom DNS are not functional when this feature is disabled.
+		Note! This functionality only applies in Inverse Split Tunnel mode when the VPN is connected.`)
 
 	c.BoolVar(&c.on, "on", false, "Enable: exclude traffic from specific applications from being routed trough the VPN")
 
@@ -227,6 +232,9 @@ func (c *SplitTun) Init() {
 
 func (c *SplitTun) Run() error {
 	if (c.on || c.onInverse) && c.off {
+		return flags.ConflictingParameters{}
+	}
+	if c.onInverse && c.offInverse {
 		return flags.ConflictingParameters{}
 	}
 
@@ -279,13 +287,16 @@ func (c *SplitTun) Run() error {
 		return c.doShowStatus(cfg, c.statusFull)
 	}
 
-	if c.on || c.onInverse || c.off || len(c.dnsFirewall) > 0 || len(c.noVpnConnectivity) > 0 {
+	if c.on || c.off || c.onInverse || c.offInverse || len(c.dnsFirewall) > 0 || len(c.noVpnConnectivity) > 0 {
 		isEnabled := c.on || c.onInverse || cfg.IsEnabled
-		isInverse := c.onInverse
+		isInverse := c.onInverse || cfg.IsInversed
 		isAnyDns := !dnsFirewall
 
 		if c.off {
 			isEnabled = false
+		}
+		if c.offInverse {
+			isInverse = false
 		}
 
 		if err = _proto.SetSplitTunnelConfig(isEnabled, isInverse, isAnyDns, isAllowWhenNoVpn, false); err != nil {
