@@ -159,6 +159,9 @@ func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpn
 	// Check if functionality available
 	splitTunErr, splitTunInversedErr := GetFuncNotAvailableError()
 	isFunctionalityNotAvailable := splitTunErr != nil || (isStInversed && splitTunInversedErr != nil)
+	if isFunctionalityNotAvailable {
+		return nil
+	}
 
 	// If: (VPN not connected + inverse split-tunneling enabled + isStInverseAllowWhenNoVpn==false) --> we need to set blackhole IP addresses for tunnel interface
 	// This will forward all traffic of split-tunnel apps to 'nowhere' (in fact, it will block all traffic of split-tunnel apps)
@@ -174,69 +177,80 @@ func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpn
 	// - VPN disconnected and apps from ST environment allowed to use default connection
 	// - ST addresses are not defined
 	// - ST apps are not defined
-	isStMustBeDisabled := !isStEnabled || (!isVpnEnabled && !isStInversed) || (!isVpnEnabled && isStInverseAllowWhenNoVpn) || addrConfig.IsEmpty() || len(splitTunnelApps) == 0
-	if isStMustBeDisabled || isFunctionalityNotAvailable {
-		applyInverseSplitTunRoutingRules(false, false, false) // erase applied routing rules if any
-		if isDriverConnected {                                // If driver connected
-			defer disconnect(true) // do not forget to disconnect driver
-			return stopAndClean()  // stop and erase old configuration (if any)
+	isDriverMustBeDisabled := !isStEnabled || (!isVpnEnabled && !isStInversed) || (!isVpnEnabled && isStInverseAllowWhenNoVpn) || addrConfig.IsEmpty() || len(splitTunnelApps) == 0
+	// The inverse mode routing rules must be applied even if there is no defined apps in 'splitTunnelApps'.
+	// This ensures that non-ST apps still use default connection (and bypassing VPN)
+	isInverseRulesMustBeApplied := isStEnabled && isStInversed && !addrConfig.IsEmpty()
+
+	applyInverseSplitTunRoutingRules(false, false, false) // erase applied InverseST routing rules if any
+
+	if isDriverMustBeDisabled {
+		if isDriverConnected { // If driver connected
+			if err := stopAndClean(); err != nil { // stop and erase old configuration (if any)
+				log.Error(err)
+			}
+			if err := disconnect(true); err != nil { // disconnect driver
+				log.Error(err)
+			}
 		}
-		return nil
-	}
+	} else {
+		// If driver not connected: connect
+		if err := connect(true); err != nil {
+			return log.ErrorE(fmt.Errorf("failed to connect split-tunnel driver: %w", err), 0)
+		}
+		// clean old configuration (if any)
+		if err := stopAndClean(); err != nil {
+			return log.ErrorE(fmt.Errorf("failed to clean split-tunnel state: %w", err), 0)
+		}
 
-	// If driver not connected: connect
-	if err := connect(true); err != nil {
-		return log.ErrorE(fmt.Errorf("failed to connect split-tunnel driver: %w", err), 0)
-	}
-	// clean old configuration (if any)
-	if err := stopAndClean(); err != nil {
-		return log.ErrorE(fmt.Errorf("failed to clean split-tunnel state: %w", err), 0)
-	}
+		addresses := addrConfig
+		// For inversed split-tunnel we just inverse IP addresses in driver configuration (defaultPublicInterfaceIP <=> tunnelInterfaceIP)
+		if isStInversed {
+			// In situation when there is no IPv6 connectivity on local machine (IPv6Public not defined) - we need to set IPv6Tunnel to IPv6Public
+			// otherwise (if IPv6Public or IPv6Tunnel not defined) - IPv6 traffic for 'splited' apps will be blocked by ST driver
+			if len(addresses.IPv6Public) == 0 && len(addresses.IPv6Tunnel) > 0 {
+				addresses.IPv6Public = addresses.IPv6Tunnel
+			}
 
-	addresses := addrConfig
-	// For inversed split-tunnel we just inverse IP addresses in driver configuration (defaultPublicInterfaceIP <=> tunnelInterfaceIP)
-	if isStInversed {
-		// In situation when there is no IPv6 connectivity on local machine (IPv6Public not defined) - we need to set IPv6Tunnel to IPv6Public
-		// otherwise (if IPv6Public or IPv6Tunnel not defined) - IPv6 traffic for 'splited' apps will be blocked by ST driver
-		if len(addresses.IPv6Public) == 0 && len(addresses.IPv6Tunnel) > 0 {
+			// inverse IP addresses (defaultPublicInterfaceIP <=> tunnelInterfaceIP)
+			p4 := addresses.IPv4Public
+			addresses.IPv4Public = addresses.IPv4Tunnel
+			addresses.IPv4Tunnel = p4
+			p6 := addresses.IPv6Public
 			addresses.IPv6Public = addresses.IPv6Tunnel
+			addresses.IPv6Tunnel = p6
 		}
 
-		// inverse IP addresses (defaultPublicInterfaceIP <=> tunnelInterfaceIP)
-		p4 := addresses.IPv4Public
-		addresses.IPv4Public = addresses.IPv4Tunnel
-		addresses.IPv4Tunnel = p4
-		p6 := addresses.IPv6Public
-		addresses.IPv6Public = addresses.IPv6Tunnel
-		addresses.IPv6Tunnel = p6
+		// Set new configuration for driver
+		cfg := Config{}
+		cfg.Apps = ConfigApps{ImagesPathToSplit: splitTunnelApps}
+		cfg.Addr = addresses
+		if err := setConfig(cfg); err != nil {
+			stopAndClean()
+			disconnect(true) // disconnect driver
+			return log.ErrorE(fmt.Errorf("error on configuring Split-Tunnelling: %w", err), 0)
+		}
+
+		// start split-tunneling:
+		if err := start(); err != nil {
+			stopAndClean()   // stop and erase old configuration (if any)
+			disconnect(true) // disconnect driver
+			return log.ErrorE(fmt.Errorf("error on start Split-Tunnelling: %w", err), 0)
+		}
+
+		defer log.Info(fmt.Sprintf("Split-Tunnelling started: IPv4: (%s) => (%s) IPv6: (%s) => (%s)", addresses.IPv4Tunnel, addresses.IPv4Public, addresses.IPv6Tunnel, addresses.IPv6Public))
 	}
 
-	// Set new configuration for driver
-	cfg := Config{}
-	cfg.Apps = ConfigApps{ImagesPathToSplit: splitTunnelApps}
-	cfg.Addr = addresses
-	if err := setConfig(cfg); err != nil {
-		stopAndClean()
-		disconnect(true) // disconnect driver
-		return log.ErrorE(fmt.Errorf("error on configuring Split-Tunnelling: %w", err), 0)
+	if isInverseRulesMustBeApplied {
+		// apply routing rules for inversed split-tunneling (if VPN connected) or erase applied rules (if VPN not connected)
+		if err := applyInverseSplitTunRoutingRules(isVpnEnabled, isStInversed, isStEnabled); err != nil {
+			applyInverseSplitTunRoutingRules(false, false, false) // erase applied routing rules if any
+			stopAndClean()                                        // stop and erase old configuration (if any)
+			disconnect(true)                                      // disconnect driver
+			return err
+		}
 	}
 
-	// start split-tunneling:
-	if err := start(); err != nil {
-		stopAndClean()   // stop and erase old configuration (if any)
-		disconnect(true) // disconnect driver
-		return log.ErrorE(fmt.Errorf("error on start Split-Tunnelling: %w", err), 0)
-	}
-
-	// apply routing rules for inversed split-tunneling (if VPN connected) or erase applied rules (if VPN not connected)
-	if err := applyInverseSplitTunRoutingRules(isVpnEnabled, isStInversed, isStEnabled); err != nil {
-		applyInverseSplitTunRoutingRules(false, false, false) // erase applied routing rules if any
-		stopAndClean()                                        // stop and erase old configuration (if any)
-		disconnect(true)                                      // disconnect driver
-		return err
-	}
-
-	log.Info(fmt.Sprintf("Split-Tunnelling started: IPv4: (%s) => (%s) IPv6: (%s) => (%s)", addresses.IPv4Tunnel, addresses.IPv4Public, addresses.IPv6Tunnel, addresses.IPv6Public))
 	return nil
 }
 
