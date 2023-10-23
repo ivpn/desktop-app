@@ -15,8 +15,4 @@ OpenVPN\x86_64\tap\license.txt
 OpenVPN\x86_64\tap\OemVista.inf
 OpenVPN\x86_64\tap\tapivpn.cat
 OpenVPN\x86_64\tap\tapivpn.sys
-OpenVPN\x86_64\tap_oldsign\license.txt
-OpenVPN\x86_64\tap_oldsign\OemVista.inf
-OpenVPN\x86_64\tap_oldsign\tapivpn.cat
-OpenVPN\x86_64\tap_oldsign\tapivpn.sys
 SplitTunnelDriver\x86_64\ivpn-split-tunnel.sys

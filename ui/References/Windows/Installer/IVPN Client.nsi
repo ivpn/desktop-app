@@ -382,26 +382,8 @@ Section "${PRODUCT_NAME}" SecIVPN
   CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall ${PRODUCT_NAME}.lnk" "$INSTDIR\Uninstall.exe"
   CreateShortCut "$SMPROGRAMS\$StartMenuFolder\${PRODUCT_NAME}.lnk" "$INSTDIR\ui\IVPN Client.exe"
 
-  Call CheckIsWin7DriverInstalled
-
   ; ============ TAP driver ======================================================================
   DetailPrint "Installing TAP Driver..."
-
-  ; Remove unnecessary driver version
-  ; We are using two versions of the tap driver. It is the same driver but signed by different certificates:
-  ; - OpenVPN\x86_64\tap: Signed by Microsoft (using IVPN EV certificate). It works only since Windows 10.
-  ;   (additionally, it allows to install of the driver in silent mode (required for Winget package manager))
-  ; - OpenVPN\x86_64\tap_oldsign: The driver signed by an old certificate. Works for old Windows versions.
-  ${If} ${AtLeastWin10}
-    ; keep using "$INSTDIR\OpenVPN\x86_64\tap"
-  ${Else}
-    ; use driver from "$INSTDIR\OpenVPN\x86_64\tap_oldsign"
-     DetailPrint "info: The Windows version older than Windows 10"
-     Delete "$INSTDIR\OpenVPN\x86_64\tap\*.*"
-     CopyFiles "$INSTDIR\OpenVPN\x86_64\tap_oldsign\*.*" "$INSTDIR\OpenVPN\x86_64\tap"
-  ${EndIf}
-  ; we do not need 'tap_oldsign' anymore
-  RMDir /r "$INSTDIR\OpenVPN\x86_64\tap_oldsign"
 
   ; check if TUN/TAP driver is installed
   IntOp $R5 0 & 0
@@ -586,6 +568,7 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\SplitTunnelDriver"
   RMDir /r "$INSTDIR\dnscrypt-proxy"
   RMDir /r "$INSTDIR\kem"
+  RMDir /r "$INSTDIR\v2ray"
 
   Delete "$INSTDIR\*.*"
 
@@ -623,10 +606,10 @@ SectionEnd
 ; ----------------
 
 Function CheckOSSupported
-    ${If} ${AtLeastWin7}
+    ${If} ${AtLeastWin10}
         goto archcheck
     ${EndIf}
-    MessageBox MB_ICONSTOP|MB_OK "Unsupported Windows Version.$\nThis version of IVPN Client can only be installed on Windows 7 and above."
+    MessageBox MB_ICONSTOP|MB_OK "Unsupported Windows Version.$\nThis version of IVPN Client can only be installed on Windows 10 and above."
     Quit
 archcheck:
     ${If} ${RunningX64}
@@ -857,86 +840,6 @@ Function ExecAppFile
         Sleep 100
     ${EndWhile}
 
-FunctionEnd
-
-; For Windows 7 there is requirements:
-; - Windows7 SP1 should be installed
-; - security update KB3033929 should be installed (info: https://docs.microsoft.com/en-us/security-updates/securityadvisories/2015/3033929 )
-Function CheckIsWin7DriverInstalled
-
-	; check is it Windows7
-	${WinVerGetMajor} $0
-	${WinVerGetMinor} $1
-	StrCmp '$0.$1' '6.1' label_win7
-	Goto end
-
-	label_win7:
-		; check is driver works fine
-		nsExec::ExecToStack '"$INSTDIR\OpenVPN\$BitDir\tap\${DEVCON_BASENAME}" status ${PRODUCT_TAP_WIN_COMPONENT_ID}'
-		Pop $0 ; Return
-		Pop $1 ; Output
-		${If} $0 != '0'
-			; command execution failed - do nothing
-			Goto end
-		${Else}
-			; In case of driver installation problem, 'devcon.exe' returns error.
-			; 	e.g.: 'The device has the following problem: 52'
-			${StrContains} $0 "problem" $1
-			StrCmp $0 "" end ; do nothing if driver has no problems
-		${EndIf}
-
-		; check service pack version
-		${WinVerGetServicePackLevel} $0
-		StrCmp $0 '0' win7_SP1_required
-		Goto checkRequiredWinUpdate
-
-		win7_SP1_required:
-			; inform user that Windows7 SP1 required
-			MessageBox MB_ICONINFORMATION|MB_OK  "Windows 7 Service Pack 1 is not installed on your PC.$\nPlease, install ServicePack1.$\n$\nProbably, you would need to reinstall the application then.\
-				$\n$\nhttps://www.microsoft.com/en-us/download/details.aspx?id=5842" IDOK true ;IDCANCEL next
-				true:
-					;ExecShell "" "iexplore.exe" "https://www.microsoft.com/en-us/download/details.aspx?id=5842"
-					;nsExec::ExecToStack 'cmd /Q /C start /Q https://www.microsoft.com/en-us/download/details.aspx?id=5842'
-			;	next:
-			;Quit
-			Goto end
-
-		checkRequiredWinUpdate:
-			; check is KB3033929 security update installed (if not - notify to user)
-			nsExec::ExecToStack '"$SYSDIR\cmd" /Q /C "%SYSTEMROOT%\System32\wbem\wmic.exe qfe get hotfixid"'
-			Pop $0 ; Return
-			Pop $1 ; Output
-
-			${If} $0 != '0'
-				; command execution failed - do nothing
-				Goto end
-			${Else}
-				${StrContains} $0 "KB3033929" $1
-				StrCmp $0 "" notfound
-					; security update is installed
-					Goto end
-				notfound:
-					; security update not installed
-					${If} ${RunningX64}
-						MessageBox MB_ICONINFORMATION|MB_OK  "Security Update for Windows 7 for x64-based Systems (KB3033929) is not installed on your PC.\
-							$\nPlease, install Security Update(KB3033929). \
-							$\n$\nhttps://www.microsoft.com/en-us/download/details.aspx?id=46148" IDOK yes_x64 ;IDCANCEL quit
-							yes_x64:
-								;ExecShell "" "iexplore.exe" "https://www.microsoft.com/en-us/download/details.aspx?id=46148"
-								;nsExec::ExecToStack 'cmd start /Q https://www.microsoft.com/en-us/download/details.aspx?id=46148'
-					${Else}
-						MessageBox MB_ICONINFORMATION|MB_OK  "Security Update for Windows 7 (KB3033929) is not installed on your PC.\
-							$\nPlease, install Security Update(KB3033929). \
-							$\n$\nhttps://www.microsoft.com/en-in/download/details.aspx?id=46078" IDOK yes_x32 ;IDCANCEL quit
-							yes_x32:
-								;ExecShell "" "iexplore.exe" "https://www.microsoft.com/en-in/download/details.aspx?id=46078"
-								;nsExec::ExecToStack 'cmd start /Q https://www.microsoft.com/en-in/download/details.aspx?id=46078'
-					${EndIf}
-				;quit:
-				;Quit
-				Goto end
-			${EndIf}
-	end:
 FunctionEnd
 
 Function AddPath
