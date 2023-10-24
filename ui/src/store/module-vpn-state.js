@@ -29,6 +29,7 @@ import {
   NormalizedConfigPortRangeObject,
   PortTypeEnum,
   V2RayObfuscationEnum,
+  isPortInRanges,
 } from "./types";
 
 export default {
@@ -362,13 +363,13 @@ export default {
                 l.latitude,
                 l.longitude,
                 a.latitude,
-                a.longitude,
+                a.longitude
               );
               var distB = getDistanceFromLatLonInKm(
                 l.latitude,
                 l.longitude,
                 b.latitude,
-                b.longitude,
+                b.longitude
               );
               if (distA === distB) return 0;
               if (distA < distB) return -1;
@@ -402,48 +403,23 @@ export default {
         if (vpnType == undefined || vpnType == null)
           vpnType = rootState.settings.vpnType;
 
+        let customPortsType = PortTypeEnum.UDP; // type of applicable custom ports (null or PortTypeEnum.UDP/PortTypeEnum.TCP)
         let ports = state.servers.config.ports.wireguard;
-        if (vpnType === VpnTypeEnum.OpenVPN)
+        if (vpnType === VpnTypeEnum.OpenVPN) {
+          customPortsType = null; // OpenVPN supports both UDP and TCP ports
           ports = state.servers.config.ports.openvpn;
-
-        // add custom ports
-        try {
-          if (
-            rootState.settings.customPorts &&
-            rootState.settings.customPorts.length > 0
-          ) {
-            let customPorts = rootState.settings.customPorts;
-            // Filter custom port for current VPN type:
-            // - WG supports only UDP ports
-            // - custom port have to be in a range of allowed ports for current protocol
-            const ranges = getters.funcGetConnectionPortRanges(vpnType);
-            customPorts = customPorts.filter((p) => {
-              if (!p) return false;
-              // avoid duplicated
-              if (isPortExists(ports, p) === true) {
-                return false;
-              }
-              // WG supports only UDP ports
-              if (
-                vpnType === VpnTypeEnum.WireGuard &&
-                p.type != PortTypeEnum.UDP
-              )
-                return false;
-              // custom port have to be in a range of allowed ports for current protocol
-              return isPortInAllowedRanges(ranges, p);
-            });
-
-            ports = ports.concat(customPorts);
-          }
-        } catch (e) {
-          console.error(e);
         }
-        if (!ports) return [];
+        if (!ports) ports = [];
 
         // normalize ports from configuration
         ports = ports
           .map((p) => NormalizedConfigPortObject(p))
           .filter((p) => p != null);
+
+        // if true - skip port type checks when validating custom ports
+        // (it is required for WireGuard ports when V2Ray/TCP is in use)
+        let isSkipCheckPortRangesType = false;
+
         // --------------------------------------------------------
         // Update suitable ports according to current configuration
         // V2Ray (has precendance over Obfsproxy)
@@ -458,25 +434,63 @@ export default {
 
           if (v2rayType === V2RayObfuscationEnum.QUIC) {
             // V2Ray (QUIC) uses only UDP ports
+            customPortsType = PortTypeEnum.UDP;
             ports = ports.filter((p) => p.type === PortTypeEnum.UDP);
           } else if (v2rayType === V2RayObfuscationEnum.TCP) {
             // V2Ray (TCP) uses only TCP ports
+            customPortsType = PortTypeEnum.TCP;
             const portsFiltered = ports.filter(
-              (p) => p.type === PortTypeEnum.TCP,
+              (p) => p.type === PortTypeEnum.TCP
             );
+
             if (portsFiltered.length > 0) ports = portsFiltered;
             else if (vpnType === VpnTypeEnum.WireGuard) {
               // For WireGuard connection there will not be TCP ports defined. So we transform TCP ports to UDP ports
+              isSkipCheckPortRangesType = true;
               ports = ports.map((p) => {
                 return { port: p.port, type: PortTypeEnum.TCP };
               });
             }
-          } else {
+          } else if (
+            vpnType === VpnTypeEnum.OpenVPN &&
+            rootState.settings.openvpnObfsproxyConfig.Version > 0
+          ) {
             // For Obfsproxy: only TCP protocol is applicable.
-            const isUseObfsproxy =
-              rootState.settings.openvpnObfsproxyConfig.Version > 0;
-            if (vpnType === VpnTypeEnum.OpenVPN && isUseObfsproxy === true)
-              ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+            customPortsType = PortTypeEnum.TCP;
+            ports = ports.filter((p) => p.type === PortTypeEnum.TCP);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+
+        // --------------------------------------------------------
+        // Add custom ports (defined by user)
+        // --------------------------------------------------------
+        try {
+          if (
+            rootState.settings.customPorts &&
+            rootState.settings.customPorts.length > 0
+          ) {
+            let customPorts = rootState.settings.customPorts;
+            // Filter custom ports:
+            // - skip duplicated
+            // - port type have to be the same as customPortsType
+            // - custom port have to be in a range of allowed ports for current protocol
+            const ranges = getters.funcGetConnectionPortRanges(vpnType);
+            customPorts = customPorts.filter((p) => {
+              // avoid duplicated
+              if (!p || isPortExists(ports, p) === true) {
+                return false;
+              }
+              // filter custom ports by type
+              if (customPortsType != null && p.type != customPortsType)
+                return false;
+
+              // custom port have to be in a range of allowed ports for current protocol
+              return isPortInRanges(p, ranges, isSkipCheckPortRangesType);
+            });
+
+            ports = ports.concat(customPorts);
           }
         } catch (e) {
           console.error(e);
@@ -589,7 +603,7 @@ export default {
           // Check if the port exists in applicable ports list
           if (!isPortExists(ports, newPort)) {
             const portRagnes = context.getters.portRanges;
-            if (isPortInAllowedRanges(portRagnes, newPort)) {
+            if (isPortInRanges(newPort, portRagnes)) {
               // Outside connection (CLI) on custom port
               // Save new custom port into app settings
               context.dispatch("settings/addNewCustomPort", newPort, {
@@ -811,19 +825,6 @@ function updateServers(oldServers, newServers) {
     servers: newServers,
     serversHashed: serversHashed,
   };
-}
-
-function isPortInAllowedRanges(availablePortRanges, portToFind) {
-  portToFind = NormalizedConfigPortObject(portToFind);
-  if (!portToFind || !availablePortRanges) return false;
-  const found = availablePortRanges.find(
-    (p) =>
-      p.type === portToFind.type &&
-      portToFind.port >= p.range.min &&
-      portToFind.port <= p.range.max,
-  );
-  if (found) return true;
-  return false;
 }
 
 function isPortExists(availablePorts, portToFind) {

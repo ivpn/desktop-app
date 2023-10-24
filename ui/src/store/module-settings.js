@@ -28,6 +28,7 @@ import {
   ColorThemeTrayIcon,
   DnsEncryption,
   V2RayObfuscationEnum,
+  isPortInRanges,
 } from "@/store/types";
 import { enumValueName } from "@/helpers/helpers";
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -518,7 +519,7 @@ export default {
         if (favSvrs.length > 0) {
           // Filter only servers from 'favorite servers' list
           ret = activeServers.filter(
-            (s) => favSvrs.includes(s.gateway.split(".")[0]), // Converting gateway name to geteway ID (if necessary). Example: "nl.gw.ivpn.net" => "nl"
+            (s) => favSvrs.includes(s.gateway.split(".")[0]) // Converting gateway name to geteway ID (if necessary). Example: "nl.gw.ivpn.net" => "nl"
           );
         }
       } catch (e) {
@@ -568,7 +569,7 @@ export default {
     // Resulted list is sorted by 'LastUsedDate' and 'AppName'
     getAppsToSplitTunnel: (state, getters, rootState) => {
       let installedApps = JSON.parse(
-        JSON.stringify(rootState.allInstalledApps),
+        JSON.stringify(rootState.allInstalledApps)
       );
 
       let getFileName = function (appBinPath) {
@@ -670,8 +671,8 @@ export default {
               "setPort",
               getDefaultPortFromList(
                 applicablePorts,
-                context.getters["getPort"],
-              ),
+                context.getters["getPort"]
+              )
             );
         }
       }
@@ -1016,7 +1017,7 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
       serverEntry = findServerFromLocation(
         servers,
         serverEntry.country_code,
-        serverEntry.city,
+        serverEntry.city
       );
     }
   }
@@ -1025,7 +1026,7 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
       serverExit = findServerFromLocation(
         servers,
         serverExit.country_code,
-        serverExit.city,
+        serverExit.city
       );
     }
   }
@@ -1128,7 +1129,7 @@ function doSettingsUpgradeAfterSvrsUpdateIfRequired(context) {
       // save converted data
       context.dispatch(
         "hostsFavoriteListDnsNames",
-        Array.from(hostsFavListDnsNamesSet),
+        Array.from(hostsFavListDnsNamesSet)
       );
       // forget 'hostsFavoriteList' forever
       context.commit("deleteObsoletePropertiesAfterUpgrade", null);
@@ -1214,7 +1215,7 @@ function ensurePortsSelectedCorrectly(ctx) {
       "(ensurePortsSelectedCorrectly) Port was changed from:",
       state.port,
       "to:",
-      cPort,
+      cPort
     );
   }
 }
@@ -1272,18 +1273,6 @@ function GetDefaultPort(context, ports, vpnType) {
   return defPort;
 }
 
-function isAcceptablePortForRange(p, range) {
-  if (!range || !p) return false;
-  if (
-    range.find(
-      (r) =>
-        p.type === r.type && p.port >= r.range.min && p.port <= r.range.max,
-    ) === undefined
-  )
-    return false;
-  return true;
-}
-
 function doAddNewCustomPort(context, port) {
   port = NormalizedConfigPortObject(port);
   if (!context || !port) return;
@@ -1294,7 +1283,19 @@ function doAddNewCustomPort(context, port) {
     const state = context.state;
     const currVpnPortRanges = getRanges(state.vpnType);
 
-    if (!isAcceptablePortForRange(port, currVpnPortRanges)) return;
+    // if true - skip port type checks when validating new port
+    // (it is required for WireGuard ports when V2Ray/TCP is in use)
+    let isSkipCheckPortRangesType = false;
+    if (
+      state.vpnType == VpnTypeEnum.WireGuard &&
+      context.state.V2RayConfig.WireGuard === V2RayObfuscationEnum.TCP
+    ) {
+      isSkipCheckPortRangesType = true;
+    }
+
+    // check if port is acceptable: check if port is in allowed ranges for current VPN type
+    if (!isPortInRanges(port, currVpnPortRanges, isSkipCheckPortRangesType))
+      return;
 
     // check if custom port already exists
     if (isPortExists(state.customPorts, port) === true) return;
@@ -1334,16 +1335,13 @@ function eraseNonAcceptableCustomPorts(context) {
 
     let newCustomPorts = [];
     state.customPorts.forEach((p) => {
-      if (
-        isAcceptablePortForRange(p, rangesOvpn) ||
-        isAcceptablePortForRange(p, rangesWg)
-      )
+      if (isPortInRanges(p, rangesOvpn) || isPortInRanges(p, rangesWg))
         newCustomPorts.push(p);
     });
 
     if (newCustomPorts.length != state.customPorts.length) {
       console.log(
-        "Warning! Removing custom ports that do not belong to new ranges!",
+        "Warning! Removing custom ports that do not belong to new ranges!"
       );
       context.commit("customPorts", newCustomPorts);
     }

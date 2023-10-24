@@ -152,3 +152,19 @@ export function NormalizedConfigPortRangeObject(portFromServersConfig) {
         : PortTypeEnum.UDP,
   };
 }
+
+export function isPortInRanges(portToFind, availablePortRanges, isIgnoreType) {
+  portToFind = NormalizedConfigPortObject(portToFind);
+  if (!portToFind || !availablePortRanges) return false;
+  if (
+    undefined ===
+    availablePortRanges.find(
+      (r) =>
+        (isIgnoreType === true || r.type === portToFind.type) &&
+        portToFind.port >= r.range.min &&
+        portToFind.port <= r.range.max,
+    )
+  )
+    return false;
+  return true;
+}
