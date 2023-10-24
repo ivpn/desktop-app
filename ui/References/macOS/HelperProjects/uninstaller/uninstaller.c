@@ -4,8 +4,9 @@
 #include <string.h>
 
 #define HELPER_LABEL "net.ivpn.client.Helper"
-#define HELPER_TO_REMOVE_PLIST_PATH "/Library/LaunchDaemons/net.ivpn.client.Helper.plist"
-#define HELPER_TO_REMOVE_BIN_PATH "/Library/PrivilegedHelperTools/net.ivpn.client.Helper"
+#define HELPER_INSTALLED_PLIST_PATH "/Library/LaunchDaemons/net.ivpn.client.Helper.plist"
+#define HELPER_INSTALLED_BIN_PATH "/Library/PrivilegedHelperTools/net.ivpn.client.Helper"
+#define HELPER_PATH_IN_APP_BUNDLE "/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/Library/LaunchServices/net.ivpn.client.Helper"
 
 // #define IS_INSTALLER 0   //  IS_INSTALLER should be passed by compiler
 //  Makefile example: cc -D IS_INSTALLER='1' ...
@@ -94,50 +95,11 @@ int getBundleVer(const char* bundlePath, char* retBuff, int buffSize) {
     return retVal;
 }
 
-int getInstalledHelperBundlePath(char* retBuff, int buffSize) {
-    CFStringRef helperString = CFStringCreateWithCString(kCFAllocatorDefault, HELPER_LABEL, kCFStringEncodingMacRoman);
-    CFDictionaryRef retDict = SMJobCopyDictionary(kSMDomainSystemLaunchd, helperString);
-    if (helperString!=NULL)
-      CFRelease(helperString);
-
-    if (retDict == NULL)
-      return 1;
-
-    int retVal = 0;
-    CFStringRef key = CFStringCreateWithCString(kCFAllocatorDefault, "ProgramArguments", kCFStringEncodingMacRoman);
-    if (CFDictionaryContainsKey(retDict, key))
-    {
-        CFArrayRef program_arguments = CFDictionaryGetValue(retDict, key);
-        if (program_arguments!=NULL)
-        {
-          CFStringRef helperBundlePath = CFArrayGetValueAtIndex(program_arguments, 0);
-          if (!CFStringGetCString(helperBundlePath, retBuff, buffSize, kCFStringEncodingMacRoman))
-            retVal = 2;
-        }
-        else
-          retVal = 3;
-    }
-    else
-        retVal = 4;
-
-    if (key!=NULL)
-      CFRelease(key);
-    if (retDict!=NULL)
-      CFRelease(retDict);
-
-    return retVal;
-}
-
 void get_versions(char* retInstalledVer, char* retCurrentVer, int buffersSize) {
     // check if the helper of current version is already installed
     char installedBundlePath[256]={0};
-    getBundleVer("/Applications/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/Library/LaunchServices/net.ivpn.client.Helper", retCurrentVer, buffersSize);
-
-    if (getInstalledHelperBundlePath(installedBundlePath, 256)==0)
-    {
-      // helper is installed
-      getBundleVer(installedBundlePath, retInstalledVer, buffersSize);;
-    }
+    getBundleVer(HELPER_PATH_IN_APP_BUNDLE, retCurrentVer, buffersSize);
+    getBundleVer(HELPER_INSTALLED_BIN_PATH, retInstalledVer, buffersSize);
 }
 
 // returns 0 in case if helper must (and can) be installed
@@ -148,7 +110,7 @@ int is_helper_installation_required() {
 
     get_versions(installedVer, currentVer, 128);
     if (currentVer[0]==0)
-      return 1; // Unable to install IVPN Helper. Please, copy 'IVPN.app' to '/Applications'
+      return 2; // Unable to install IVPN Helper. Please, copy 'IVPN.app' to '/Applications'
 
     if (installedVer[0]!=0)
     {
@@ -174,12 +136,12 @@ int remove_helper_with_auth(AuthorizationRef authRef) {
     return 1;
   }
 
-  char *filesToRemove[] = {HELPER_TO_REMOVE_PLIST_PATH, HELPER_TO_REMOVE_BIN_PATH, NULL};
+  char *filesToRemove[] = {HELPER_INSTALLED_PLIST_PATH, HELPER_INSTALLED_BIN_PATH, NULL};
   OSStatus err = AuthorizationExecuteWithPrivileges(authRef, (const char*) "/bin/rm", kAuthorizationFlagDefaults, filesToRemove, NULL);
   if (err)
   {
     char messageBuff[256] = {0};
-    snprintf(messageBuff, 256, "ERROR (%d): Error removing files: '%s' and/or '%s'", err, HELPER_TO_REMOVE_PLIST_PATH, HELPER_TO_REMOVE_BIN_PATH);
+    snprintf(messageBuff, 256, "ERROR (%d): Error removing files: '%s' and/or '%s'", err, HELPER_INSTALLED_PLIST_PATH, HELPER_INSTALLED_BIN_PATH);
     logmes(LOG_ERR, messageBuff);
     ret=2;
   }
