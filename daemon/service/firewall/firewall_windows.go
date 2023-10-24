@@ -744,6 +744,11 @@ func implSingleDnsRuleOn(dnsAddr net.IP) (retErr error) {
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow localhost dns': %w", err)
 		}
+		// allow V2Ray: to avoid blocking connections to V2Ray port 53
+		_, err = manager.AddFilter(winlib.NewFilterAllowApplication(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "", platform.V2RayBinaryPath(), false))
+		if err != nil {
+			return fmt.Errorf("failed to add filter 'allow application - V2Ray': %w", err)
+		}
 	}
 	return nil
 }
