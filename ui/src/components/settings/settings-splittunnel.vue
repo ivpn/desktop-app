@@ -595,7 +595,7 @@ export default {
           let ret = await sender.showMessageBoxSync(
             {
               type: "question",
-              message: `The IVPN Firewall not enabled`,
+              message: `The IVPN Firewall is not enabled`,
               detail:
                 "The Inverse Split Tunnel mode has been disabled successfully. You can now use the Firewall.\n\nWould you like to enable the IVPN Firewall?",
               buttons: ["Enable Firewall", "Cancel"],
