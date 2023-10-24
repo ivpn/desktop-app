@@ -45,6 +45,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
+	"github.com/ivpn/desktop-app/daemon/wifiNotifier"
 )
 
 var log *logger.Logger
@@ -138,7 +139,7 @@ type Service interface {
 	WireGuardGenerateKeys(updateIfNecessary bool) error
 	WireGuardSetKeysRotationInterval(interval int64)
 
-	GetWiFiCurrentState() (ssid string, isInsecureNetwork bool)
+	GetWiFiCurrentState() wifiNotifier.WifiInfo
 	GetWiFiAvailableNetworks() []string
 
 	GetDiagnosticLogs() (logActive string, logPrevSession string, extraInfo string, err error)
@@ -1077,10 +1078,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 	case "WiFiCurrentNetwork":
 		// sending WIFI info
-		ssid, isInsecureNetwork := p._service.GetWiFiCurrentState()
+		wifi := p._service.GetWiFiCurrentState()
 		p.sendResponse(conn, &types.WiFiCurrentNetworkResp{
-			SSID:              ssid,
-			IsInsecureNetwork: isInsecureNetwork}, reqCmd.Idx)
+			SSID:              wifi.SSID,
+			IsInsecureNetwork: wifi.IsInsecure}, reqCmd.Idx)
 
 	case "WiFiSettings":
 		var r types.WiFiSettings

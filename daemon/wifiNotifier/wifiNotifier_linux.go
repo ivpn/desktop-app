@@ -211,6 +211,11 @@ static inline char* get_essid (char *iface)
 }
 
 static inline char * getCurrentWifiInfo(int* retIsInsecure) {
+    if (retIsInsecure != NULL)
+    {
+        *retIsInsecure = 0xFFFFFFFF;
+    }
+
     char* retSSID = NULL;
 
     // get all available network interfaces
@@ -240,17 +245,6 @@ static inline char * getCurrentWifiInfo(int* retIsInsecure) {
     return retSSID;
 }
 
-static inline char * getCurrentSSID(void) {
-    return getCurrentWifiInfo(NULL);
-}
-
-static inline int getCurrentNetworkIsInsecure() {
-    int retIsInecure = 0xFFFFFFFF;
-    char* ssid = getCurrentWifiInfo(&retIsInecure);
-    if (ssid!=NULL) free(ssid);
-    return retIsInecure;
-}
-
 static inline char* getAvailableSSIDs(void) {
     char* retSSID = NULL;
 
@@ -273,34 +267,43 @@ import "C"
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"unsafe"
 
 	"github.com/ivpn/desktop-app/daemon/oshelpers/linux/netlink"
 )
 
+var (
+	mutex sync.Mutex
+)
+
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
-func GetAvailableSSIDs() []string {
+func implGetAvailableSSIDs() []string {
 	ssidList := C.getAvailableSSIDs()
 	goSsidList := C.GoString(ssidList)
 	C.free(unsafe.Pointer(ssidList))
 	return strings.Split(goSsidList, "\n")
 }
 
-// GetCurrentSSID returns current WiFi SSID
-func GetCurrentSSID() string {
-	ssid := C.getCurrentSSID()
+// GetCurrentWifiInfo returns current WiFi info
+func implGetCurrentWifiInfo() (WifiInfo, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	var isInsecure C.int
+
+	ssid := C.getCurrentWifiInfo(&isInsecure)
 	goSsid := C.GoString(ssid)
 	C.free(unsafe.Pointer(ssid))
-	return goSsid
-}
 
-// GetCurrentNetworkIsInsecure returns current security mode
-func GetCurrentNetworkIsInsecure() bool {
-	return C.getCurrentNetworkIsInsecure() == 1
+	return WifiInfo{
+		SSID:       goSsid,
+		IsInsecure: int(isInsecure) == 1,
+	}, nil
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
-func SetWifiNotifier(cb func(string)) error {
+func implSetWifiNotifier(cb func()) error {
 	if cb == nil {
 		return fmt.Errorf("callback function not defined")
 	}
@@ -314,7 +317,7 @@ func SetWifiNotifier(cb func(string)) error {
 	go func() {
 		for {
 			<-onNetChange
-			cb(GetCurrentSSID())
+			cb()
 		}
 	}()
 

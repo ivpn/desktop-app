@@ -34,12 +34,8 @@ import (
 	"github.com/ivpn/desktop-app/daemon/service/preferences"
 	"github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/vpn"
+	"github.com/ivpn/desktop-app/daemon/wifiNotifier"
 )
-
-type wifiStatus struct {
-	WifiSsid       string
-	WifiIsInsecure bool
-}
 
 type autoConnectReason int
 
@@ -88,7 +84,7 @@ type automaticAction struct {
 }
 
 type lastProcessedWiFiInfo struct {
-	wifi   wifiStatus
+	wifi   wifiNotifier.WifiInfo
 	params preferences.WiFiParams
 }
 
@@ -106,7 +102,7 @@ func (s *Service) OnAuthenticatedClient(t protocolTypes.ClientTypeEnum) {
 	s.autoConnectIfRequired(OnUiClientConnected, nil)
 }
 
-func (s *Service) isTrustedWifiForcingToBlockLan(wifiInfoPtr *wifiStatus) bool {
+func (s *Service) isTrustedWifiForcingToBlockLan(wifiInfoPtr *wifiNotifier.WifiInfo) bool {
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return false
@@ -116,11 +112,10 @@ func (s *Service) isTrustedWifiForcingToBlockLan(wifiInfoPtr *wifiStatus) bool {
 		return false
 	}
 
-	var wifiInfo wifiStatus
+	var wifiInfo wifiNotifier.WifiInfo
 	// Check WiFi status (if not defined)
 	if wifiInfoPtr == nil {
-		ssid, isInsecure := s.GetWiFiCurrentState()
-		wifiInfo = wifiStatus{WifiSsid: ssid, WifiIsInsecure: isInsecure}
+		wifiInfo = s.GetWiFiCurrentState()
 	} else {
 		wifiInfo = *wifiInfoPtr
 	}
@@ -136,7 +131,7 @@ func (s *Service) isTrustedWifiForcingToBlockLan(wifiInfoPtr *wifiStatus) bool {
 //
 //	reason - the reason why this method is called
 //	wifiInfo - current WiFi info. It can be 'nil', in this case, the function will check the WiFi info itself
-func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *wifiStatus) error {
+func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *wifiNotifier.WifiInfo) error {
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return nil
@@ -146,11 +141,10 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 		return nil // background actions not allowed (e.g. due to EAA enabled)
 	}
 
-	var wifiInfo wifiStatus
+	var wifiInfo wifiNotifier.WifiInfo
 	// Check WiFi status (if not defined)
 	if wifiInfoPtr == nil {
-		ssid, isInsecure := s.GetWiFiCurrentState()
-		wifiInfo = wifiStatus{WifiSsid: ssid, WifiIsInsecure: isInsecure}
+		wifiInfo = s.GetWiFiCurrentState()
 	} else {
 		wifiInfo = *wifiInfoPtr
 	}
@@ -223,7 +217,7 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 	if !isWifiProcessedAlready &&
 		action.Vpn == VPN_NoAction &&
 		prefs.WiFiControl.ConnectVPNOnInsecureNetwork &&
-		wifiInfo.WifiIsInsecure {
+		wifiInfo.IsInsecure {
 
 		if s.isCanApplyWiFiActions() {
 			log.Info("Automatic connection manager: applying Auto-Connect 'On joining WiFi networks without encryption' action...")
@@ -317,7 +311,7 @@ func (s *Service) isCanApplyWiFiActions() bool {
 	return true
 }
 
-func (s *Service) getActionForWifiNetwork(wifiInfo wifiStatus) (retAction automaticAction) {
+func (s *Service) getActionForWifiNetwork(wifiInfo wifiNotifier.WifiInfo) (retAction automaticAction) {
 	prefs := s.Preferences()
 	if !prefs.Session.IsLoggedIn() {
 		return
@@ -328,7 +322,7 @@ func (s *Service) getActionForWifiNetwork(wifiInfo wifiStatus) (retAction automa
 	}
 
 	wifiParams := prefs.WiFiControl
-	if !wifiParams.TrustedNetworksControl || wifiInfo.WifiSsid == "" {
+	if !wifiParams.TrustedNetworksControl || wifiInfo.SSID == "" {
 		return
 	}
 
@@ -336,7 +330,7 @@ func (s *Service) getActionForWifiNetwork(wifiInfo wifiStatus) (retAction automa
 
 	// get config for ssid
 	for _, w := range wifiParams.Networks {
-		if w.SSID != wifiInfo.WifiSsid {
+		if w.SSID != wifiInfo.SSID {
 			continue
 		}
 
