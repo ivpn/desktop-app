@@ -113,7 +113,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 				if time.Now().After(time.Unix(prefs.Account.ActiveUntil, 0)) {
 					return fmt.Errorf("your subscription has expired")
 				}
-				return fmt.Errorf("your subscription not active")
+				return fmt.Errorf("your subscription is not active")
 			}
 
 		}
