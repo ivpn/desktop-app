@@ -165,8 +165,12 @@ async function LaunchAppInSplitTunnel(execCmd, event) {
       } else {
         dlgFilters = [{ name: "All files", extensions: ["*"] }];
       }
-
-      var ret = dialog.showOpenDialogSync(wnd, dlgFilters);
+      let dlgConfig = {
+        title: "Select application to launch",
+        filters: dlgFilters,
+        properties: ["openFile"],
+      };
+      var ret = dialog.showOpenDialogSync(wnd, dlgConfig);
       if (!ret || ret.canceled || ret.length == 0) return;
       execCmd = ret[0];
     }
