@@ -28,6 +28,7 @@
     >
       <div style="position: relative">
         <select
+          ref="selectAppElement"
           v-model="appToLaunch"
           id="appsList"
           style="
@@ -108,6 +109,9 @@ export default {
           await sender.SplitTunnelAddApp(binaryPath);
         } catch (e) {
           processError(e);
+        } finally {
+          // we need to reset the selected value to null to be able to select the same value again
+          this.$refs.selectAppElement.selectedIndex = -1;
         }
       },
     },
