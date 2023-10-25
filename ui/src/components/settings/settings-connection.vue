@@ -841,8 +841,13 @@ export default {
       return "Disabled";
     },
     isShowAddPortOption: function () {
+      const V2RayType = this.$store.getters["settings/getV2RayConfig"];
+      const isV2Ray =
+        V2RayType === V2RayObfuscationEnum.QUIC ||
+        V2RayType === V2RayObfuscationEnum.TCP;
+
       if (
-        this.$store.state.settings.isMultiHop === true ||
+        (this.$store.state.settings.isMultiHop === true && isV2Ray === false) ||
         this.$store.getters["settings/isConnectionUseObfsproxy"]
       )
         return false;
