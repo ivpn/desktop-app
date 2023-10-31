@@ -39,7 +39,7 @@
     "@vue/cli-plugin-vuex": "5.0.8",
     "@vue/cli-service": "5.0.8",
     "@vue/eslint-config-prettier": "8.0.0",
-    "electron": "25.9.1",
+    "electron": "25.9.3",
     "eslint": "8.51.0",
     "eslint-plugin-prettier": "5.0.1",
     "eslint-plugin-vue": "9.17.0",
