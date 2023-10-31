@@ -649,6 +649,21 @@ func (s *Service) Pause(durationSeconds uint32) error {
 			} else {
 				// Note! In order to avoid any potential issues with location or changes with system clock, we must use "monotonic clock" time (Unix()).
 				if time.Now().Unix()-s.PausedTill().Unix() >= 0 {
+					// For situations when the system suspended, it can happen that network interfaces are not ready yet.
+					// Waiting here to IPv4 interface will be ready.
+					var logMesTime time.Time
+					for {
+						ipv4, err4 := netinfo.GetOutboundIP(false)
+						if !s.IsPaused() || !ipv4.IsUnspecified() || err4 == nil {
+							break
+						}
+						if time.Since(logMesTime) > time.Second*15 {
+							log.Info("Resume delayed: IPv4 interface not ready yet")
+							logMesTime = time.Now()
+						}
+						time.Sleep(time.Millisecond * 500)
+					}
+
 					log.Info(fmt.Sprintf("Automatic resuming after %v ...", time.Second*time.Duration(durationSeconds)))
 					if err := s.Resume(); err != nil {
 						log.Error(fmt.Errorf("Resume failed: %w", err))
@@ -680,6 +695,7 @@ func (s *Service) Resume() error {
 	if prefs.IsSplitTunnel {
 		if err := s.splitTunnelling_ApplyConfig(); err != nil {
 			log.Error(err)
+			return err
 		}
 	}
 	return nil
@@ -1337,14 +1353,24 @@ func (s *Service) SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, isA
 		}
 	}
 
-	prefs := s._preferences
+	prefsOld := s._preferences
+	prefs := prefsOld
 	prefs.IsSplitTunnel = isEnabled
 	prefs.SplitTunnelInversed = isInversed
 	prefs.SplitTunnelAnyDns = isAnyDns
 	prefs.SplitTunnelAllowWhenNoVpn = isAllowWhenNoVpn
 	s.setPreferences(prefs)
 
-	return s.splitTunnelling_ApplyConfig()
+	ret := s.splitTunnelling_ApplyConfig()
+	if ret != nil {
+		// if error - restore old preferences and apply configuration
+		s.setPreferences(prefsOld)
+		if err := s.splitTunnelling_ApplyConfig(); err != nil {
+			log.Error(fmt.Errorf("failed to restore SplitTunnel configuration: %w", err))
+		}
+	}
+
+	return ret
 }
 func (s *Service) splitTunnelling_Reset() error {
 	prefs := s._preferences
@@ -1370,14 +1396,7 @@ func (s *Service) splitTunnelling_Reset() error {
 // - SplitTunnel configuration changed
 // - DNS configuration changed (needed for updating Inverse Split Tunnel firewal rule)
 func (s *Service) splitTunnelling_ApplyConfig() (retError error) {
-
 	defer func() {
-		// if error - disable SplitTunneling
-		if retError != nil {
-			prefs := s._preferences
-			prefs.IsSplitTunnel = false
-			s.setPreferences(prefs)
-		}
 		// notify changed ST configuration status (even if functionality not available)
 		s._evtReceiver.OnSplitTunnelStatusChanged()
 	}()
