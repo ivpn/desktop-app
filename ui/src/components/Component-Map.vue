@@ -25,7 +25,7 @@
 
     <!-- Buttons panel LEFT-->
     <div class="buttonsPanelTopLeft" v-if="isBlured !== 'true'">
-      <button class="settingsBtn" v-on:click="onMinimize">
+      <button class="settingsBtn" v-on:click="onMinimize" title="Hide map">
         <img src="@/assets/minimize.svg" />
       </button>
     </div>
@@ -38,18 +38,27 @@
       }"
       v-if="isBlured !== 'true'"
     >
-      <button class="settingsBtn settingsBtnMarginLeft" v-on:click="onSettings">
+      <button
+        class="settingsBtn settingsBtnMarginLeft"
+        v-on:click="onSettings"
+        title="Settings"
+      >
         <img src="@/assets/settings.svg" />
       </button>
 
       <button
         class="settingsBtn settingsBtnMarginLeft"
         v-on:click="onAccountSettings"
+        title="Account settings"
       >
         <img src="@/assets/user.svg" />
       </button>
 
-      <button class="settingsBtn" v-on:click="centerCurrentLocation()">
+      <button
+        class="settingsBtn"
+        v-on:click="centerCurrentLocation()"
+        title="Center map to current location"
+      >
         <img src="@/assets/crosshair.svg" />
       </button>
     </div>

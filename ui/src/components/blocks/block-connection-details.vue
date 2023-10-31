@@ -61,6 +61,7 @@
       :click="onShowPorts"
       v-bind:text="portProtocolText"
       description="Protocol/Port"
+      title="Connection settings"
     />
 
     <!-- SPLIT TUNNEL -->
@@ -88,6 +89,7 @@
           :markerText="WiFiMarkerText"
           :markerColor="WiFiMarkerColor"
           :markerTextColor="'var(--text-color-details)'"
+          title="WiFi control settings"
         />
       </div>
     </transition>
