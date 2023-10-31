@@ -10,15 +10,15 @@
               minimizedButtonsPanelRightElements: isWindowHasFrame,
             }"
           >
-            <button v-on:click="onAccountSettings()">
+            <button v-on:click="onAccountSettings()" title="Account settings">
               <img src="@/assets/user.svg" />
             </button>
 
-            <button v-on:click="onSettings()">
+            <button v-on:click="onSettings()" title="Settings">
               <img src="@/assets/settings.svg" />
             </button>
 
-            <button v-on:click="onMaximize(true)">
+            <button v-on:click="onMaximize(true)" title="Show map">
               <img src="@/assets/maximize.svg" />
             </button>
           </div>
