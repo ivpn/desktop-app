@@ -649,12 +649,14 @@ func (s *Service) Pause(durationSeconds uint32) error {
 			} else {
 				// Note! In order to avoid any potential issues with location or changes with system clock, we must use "monotonic clock" time (Unix()).
 				if time.Now().Unix()-s.PausedTill().Unix() >= 0 {
+					log.Info(fmt.Sprintf("Automatic resuming after %v ...", time.Second*time.Duration(durationSeconds)))
+
 					// For situations when the system suspended, it can happen that network interfaces are not ready yet.
 					// Waiting here to IPv4 interface will be ready.
 					var logMesTime time.Time
 					for {
-						ipv4, err4 := netinfo.GetOutboundIP(false)
-						if !s.IsPaused() || !ipv4.IsUnspecified() || err4 == nil {
+						_, err4 := netinfo.GetOutboundIP(false)
+						if !s.IsPaused() || err4 == nil {
 							break
 						}
 						if time.Since(logMesTime) > time.Second*15 {
@@ -664,7 +666,7 @@ func (s *Service) Pause(durationSeconds uint32) error {
 						time.Sleep(time.Millisecond * 500)
 					}
 
-					log.Info(fmt.Sprintf("Automatic resuming after %v ...", time.Second*time.Duration(durationSeconds)))
+					// Resume connection
 					if err := s.Resume(); err != nil {
 						log.Error(fmt.Errorf("Resume failed: %w", err))
 					}
