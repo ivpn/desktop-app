@@ -331,24 +331,44 @@ func (s *Service) init() error {
 // - disable Split Tunnel mode
 // - etc. ...
 func (s *Service) UnInitialise() error {
+	return s.unInitialise()
+}
+
+// unInitialise - stop service on logout or daemon is going to stop
+// - disconnect VPN (if connected)
+// - disable Split Tunnel mode
+// - etc. ...
+func (s *Service) unInitialise() error {
 	log.Info("Uninitialising service...")
+	var retErr error
+	updateRetErr := func(e error) {
+		if retErr != nil {
+			retErr = fmt.Errorf("%w | error=%w", retErr, e)
+		} else {
+			retErr = e
+		}
+	}
 	// Disconnect VPN
 	if err := s.Disconnect(); err != nil {
 		log.Error(err)
+		updateRetErr(err)
 	}
 
 	// Disable ST
 	if err := firewall.SingleDnsRuleOff(); err != nil {
 		log.Error(err)
+		updateRetErr(err)
 	}
 	if err := splittun.Reset(); err != nil {
 		log.Error(err)
+		updateRetErr(err)
 	}
 	if err := splittun.ApplyConfig(false, false, false, false, splittun.ConfigAddresses{}, []string{}); err != nil {
 		log.Error(err)
+		updateRetErr(err)
 	}
 
-	return nil
+	return retErr
 }
 
 // IsConnectivityBlocked - returns nil if connectivity NOT blocked
@@ -1312,6 +1332,12 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 		isAllowWhenNoVpn = false
 	}
 
+	if !prefs.Session.IsLoggedIn() {
+		// SplitTunnel not applicable when logged out.
+		// Sending "disabled" status
+		isEnabled = false
+	}
+
 	ret := protocolTypes.SplitTunnelStatus{
 		IsFunctionalityNotAvailable: stErr != nil,
 		IsEnabled:                   isEnabled,
@@ -1409,6 +1435,10 @@ func (s *Service) splitTunnelling_ApplyConfig() (retError error) {
 	}
 
 	prefs := s.Preferences()
+
+	if !prefs.Session.IsLoggedIn() {
+		return srverrors.ErrorNotLoggedIn{}
+	}
 
 	// Network changes detection must be disabled for Inverse SplitTunneling
 	if prefs.IsInverseSplitTunneling() {
@@ -1569,7 +1599,6 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 			log.Info("Logging in - FAILED: ", err)
 		} else {
 			log.Info("Logging in - SUCCESS")
-
 		}
 	}()
 
@@ -1658,6 +1687,11 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 
 	log.Info(fmt.Sprintf("(logging in) WG keys updated (%s:%s; psk:%v)", successResp.WireGuard.IPAddress, publicKey, len(wgPresharedKey) > 0))
 
+	// Apply SplitTunnel configuration. It is applicable for Inverse mode of SplitTunnel
+	if err := s.splitTunnelling_ApplyConfig(); err != nil {
+		log.Error(err)
+	}
+
 	return apiCode, "", accountInfo, rawResponse, nil
 }
 
@@ -1677,8 +1711,17 @@ func (s *Service) SessionDelete(isCanDeleteSessionLocally bool) error {
 //	  in case if API request failed we just erasing session info locally (no errors returned)
 
 func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLocally bool) error {
-	// Disconnect (if connected)
-	s.Disconnect()
+	// Stop service:
+	// - disconnect VPN (if connected)
+	// - disable Split Tunnel mode
+	// - etc. ...
+	if err := s.unInitialise(); err != nil {
+		log.Error(err)
+	}
+
+	defer func() {
+		s._evtReceiver.OnSplitTunnelStatusChanged()
+	}()
 
 	// stop session checker (use goroutine to avoid deadlocks)
 	go s.stopSessionChecker()
