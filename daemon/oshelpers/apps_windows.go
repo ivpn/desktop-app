@@ -137,8 +137,8 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 	}
 	if len(userAppData) > 0 {
 		appDataUserSMDir = userAppData + `\Microsoft\Windows\Start Menu\Programs`
-		absPath, err := filepath.Abs(appDataSMDir)
-		if err == nil {
+		absPath, err := filepath.Abs(appDataUserSMDir)
+		if err == nil && appDataUserSMDir != appDataSMDir {
 			appDataUserSMDir = absPath
 			excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataUserSMDir+`\startup`))
 			excludeStartMenuPaths = append(excludeStartMenuPaths, strings.ToLower(appDataUserSMDir+`\Administrative Tools`))
@@ -168,6 +168,10 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 				log.Error(errText)
 			}
 		}()
+
+		if walkErr != nil || info == nil {
+			return nil
+		}
 
 		// Only look for lnk files.
 		if filepath.Ext(info.Name()) == ".lnk" {
