@@ -1016,7 +1016,6 @@ button.link {
 }
 label {
   margin-left: 1px;
-  font-weight: 500;
 }
 
 input#filter {
