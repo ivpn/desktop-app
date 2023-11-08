@@ -152,15 +152,17 @@ function test()
     # ###
     # -= Compare minimum required iptables version for Inverse Split Tunneling =-
     # ###
-    min_required_ver="1.8.7"
+    local min_required_ver="1.8.7"
     
-    iptables_version=$(iptables --version 2>&1 | awk '{print $2}') # Get iptables version
-    iptables_version=${iptables_version#v} # remove "v" prefix, if exists
+    local iptables_version=$(${_bin_iptables} --version 2>&1 | ${_bin_awk} '{print $2}') # Get iptables version
+    local iptables_version=${iptables_version#v} # remove "v" prefix, if exists
     vercomp $iptables_version $min_required_ver # compare versions
     if [[ $? -eq 2 ]]; then 
         # NOTE! Do not chnage the message below. It is used by daemon to detect the error.
         echo "Warning: Inverse mode for IVPN Split Tunnel functionality is not applicable. The minimum required version of 'iptables' is $min_required_ver, while your version is $iptables_version."
     fi
+    
+    return 0
 }
 
 function detectDefRouteVars() 
@@ -351,6 +353,7 @@ function init()
     ##############################################    
     if ! ${_bin_grep} -E "^[0-9]+\s+${_routing_table_name}\s*$" /etc/iproute2/rt_tables &>/dev/null ; then
         # initialize new routing table
+        mkdir -p /etc/iproute2
         echo "${_routing_table_weight}      ${_routing_table_name}" >> /etc/iproute2/rt_tables
 
         # Packets with mark will use splittun table
