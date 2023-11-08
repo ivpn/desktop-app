@@ -100,7 +100,11 @@ func ApplyConfig(isStEnabled, isStInverse, isStInverseAllowWhenNoVpn, isVpnEnabl
 		addrConfig.IPv6Tunnel = nil
 	}
 
-	return implApplyConfig(isStEnabled, isStInverse, isStInverseAllowWhenNoVpn, isVpnEnabled, addrConfig, splitTunnelApps)
+	retErr := implApplyConfig(isStEnabled, isStInverse, isStInverseAllowWhenNoVpn, isVpnEnabled, addrConfig, splitTunnelApps)
+	if retErr != nil {
+		log.Error(retErr)
+	}
+	return retErr
 }
 
 // AddPid add process to Split-Tunnel environment

@@ -85,6 +85,37 @@ _is_inversed=0
 _is_inversed_blocked=0
 _is_inversed_blocked_ipv6=0
 
+vercomp () {
+    if [[ $1 == $2 ]]
+    then
+        return 0
+    fi
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if ((10#${ver1[i]} > 10#${ver2[i]}))
+        then
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]}))
+        then
+            return 2
+        fi
+    done
+    return 0
+}
+
 function test()
 {
     # TODO: the real mount path have to be taken from /proc/mounts
@@ -116,6 +147,22 @@ function test()
     if ! command -v ${_bin_ip6tables} &>/dev/null ;  then echo "WARNING: Binary Not Found (${_bin_ip6tables})" 1>&2; fi
     if ! command -v ${_bin_awk} &>/dev/null ;        then echo "WARNING: Binary Not Found (${_bin_awk})" 1>&2; fi
     if ! command -v ${_bin_runuser} &>/dev/null ;    then echo "WARNING: Binary Not Found (${_bin_runuser})" 1>&2; fi
+
+
+    # ###
+    # -= Compare minimum required iptables version for Inverse Split Tunneling =-
+    # ###
+    local min_required_ver="1.8.7"
+    
+    local iptables_version=$(${_bin_iptables} --version 2>&1 | ${_bin_awk} '{print $2}') # Get iptables version
+    local iptables_version=${iptables_version#v} # remove "v" prefix, if exists
+    vercomp $iptables_version $min_required_ver # compare versions
+    if [[ $? -eq 2 ]]; then 
+        # NOTE! Do not chnage the message below. It is used by daemon to detect the error.
+        echo "Warning: Inverse mode for IVPN Split Tunnel functionality is not applicable. The minimum required version of 'iptables' is $min_required_ver, while your version is $iptables_version."
+    fi
+    
+    return 0
 }
 
 function detectDefRouteVars() 
@@ -306,6 +353,7 @@ function init()
     ##############################################    
     if ! ${_bin_grep} -E "^[0-9]+\s+${_routing_table_name}\s*$" /etc/iproute2/rt_tables &>/dev/null ; then
         # initialize new routing table
+        mkdir -p /etc/iproute2
         echo "${_routing_table_weight}      ${_routing_table_name}" >> /etc/iproute2/rt_tables
 
         # Packets with mark will use splittun table

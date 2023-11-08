@@ -147,6 +147,20 @@ func implInitialize() error {
 	return funcNotAvailableError
 }
 
+func isInitialised() error {
+	// check if fSplitTun_Connect and other functions initialized
+	if fSplitTun_Connect == nil ||
+		fSplitTun_Disconnect == nil ||
+		fSplitTun_StopAndClean == nil ||
+		fSplitTun_ProcMonInitRunningApps == nil ||
+		fSplitTun_SplitStart == nil ||
+		fSplitTun_ConfigSetAddresses == nil ||
+		fSplitTun_ConfigSetSplitAppRaw == nil {
+		return fmt.Errorf("Split-Tunnel functionality not initialized")
+	}
+	return nil
+}
+
 func implFuncNotAvailableError() (generalStError, inversedStError error) {
 	return funcNotAvailableError, nil
 }
@@ -161,6 +175,10 @@ func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpn
 	isFunctionalityNotAvailable := splitTunErr != nil || (isStInversed && splitTunInversedErr != nil)
 	if isFunctionalityNotAvailable {
 		return nil
+	}
+
+	if err := isInitialised(); err != nil {
+		return err
 	}
 
 	// If: (VPN not connected + inverse split-tunneling enabled + isStInverseAllowWhenNoVpn==false) --> we need to set blackhole IP addresses for tunnel interface
@@ -406,6 +424,10 @@ func connect(logging bool) (err error) {
 		log.Info("Split-Tunnelling: Connect driver...")
 	}
 
+	if err := isInitialised(); err != nil {
+		return err
+	}
+
 	drvPath := platform.WindowsSplitTunnelDriverPath()
 	utfDrvPath, err := syscall.UTF16PtrFromString(drvPath)
 	if err != nil {
@@ -443,6 +465,10 @@ func disconnect(logging bool) (err error) {
 		log.Info("Split-Tunnelling: Disconnect driver...")
 	}
 
+	if err := isInitialised(); err != nil {
+		return err
+	}
+
 	retval, _, err := fSplitTun_Disconnect.Call()
 	if err := checkCallErrResp(retval, err, "SplitTun_Disconnect"); err != nil {
 		if logging {
@@ -458,6 +484,10 @@ func stopAndClean() (err error) {
 	defer catchPanic(&err)
 
 	log.Info("Split-Tunnelling: StopAndClean...")
+
+	if err := isInitialised(); err != nil {
+		return err
+	}
 
 	/// Stop and clean everything:
 	///		Stop splitting
@@ -475,6 +505,10 @@ func start() (err error) {
 	defer catchPanic(&err)
 
 	log.Info("Split-Tunnelling: Start...")
+
+	if err := isInitialised(); err != nil {
+		return err
+	}
 
 	/// Start splitting.
 	/// If "process monitor" not running - it will be started.
@@ -511,6 +545,10 @@ func setConfig(config Config) (err error) {
 	defer catchPanic(&err)
 
 	log.Info("Split-Tunnelling: SetConfig...")
+
+	if err := isInitialised(); err != nil {
+		return err
+	}
 
 	// SET IP ADDRESSES
 	IPv4Public := config.Addr.IPv4Public.To4()

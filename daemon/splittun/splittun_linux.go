@@ -41,9 +41,10 @@ import (
 
 var (
 	// error describing details if functionality not available
-	funcNotAvailableError error
-	stScriptPath          string
-	isActive              bool
+	funcNotAvailableError        error
+	inverseModeNotAvailableError error
+	stScriptPath                 string
+	isActive                     bool
 )
 
 // Information about added running process to the ST (by implAddPid())
@@ -67,8 +68,16 @@ func implInitialize() error {
 		return funcNotAvailableError
 	}
 
+	// Hardcoded text for detection of inverse mode not available error
+	const inverseModeErrorDetectionText = "Warning: Inverse mode for IVPN Split Tunnel functionality is not applicable."
 	// check if ST functionality accessible
 	outProcessFunc := func(text string, isError bool) {
+		if strings.HasPrefix(text, inverseModeErrorDetectionText) {
+			text, _ = strings.CutPrefix(text, "Warning: ")
+			inverseModeNotAvailableError = fmt.Errorf("%s", text)
+			log.Warning(text)
+			return
+		}
 		if isError {
 			log.Error("Split Tunnel test: " + text)
 		} else {
@@ -119,7 +128,7 @@ func implInitialize() error {
 }
 
 func implFuncNotAvailableError() (generalStError, inversedStError error) {
-	return funcNotAvailableError, funcNotAvailableError
+	return funcNotAvailableError, inverseModeNotAvailableError
 }
 
 func implReset() error {

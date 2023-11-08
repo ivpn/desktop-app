@@ -2,6 +2,120 @@
   <div class="flexColumn">
     <div class="settingsTitle flexRow">SPLIT TUNNEL SETTINGS</div>
 
+    <!-- SELECT apps 'popup' view -->
+    <div ref="appsListParent" class="flexRow" style="position: relative">
+      <transition name="fade-super-quick" mode="out-in">
+        <div v-if="isShowAppAddPopup" class="appsSelectionPopup">
+          <div>
+            <div class="flexRow" style="margin-bottom: 10px">
+              <div class="flexRowRestSpace settingsGrayTextColor">
+                {{ textAddAppFromInstalledAppsHeader }}
+              </div>
+
+              <button
+                class="noBordersBtn opacityOnHoverLight settingsGrayTextColor"
+                style="pointer-events: auto"
+                v-on:click="showAddApplicationPopup(false)"
+              >
+                CANCEL
+              </button>
+            </div>
+
+            <!-- filter -->
+            <input
+              ref="installedAppsFilterInput"
+              id="filter"
+              class="styled"
+              placeholder="Search for app"
+              v-model="filterAppsToAdd"
+              v-bind:style="{
+                backgroundImage: 'url(' + searchImageInstalledApps + ')',
+              }"
+              style="margin: 0px; margin-bottom: 10px"
+            />
+            <div class="horizontalLine" />
+
+            <!--all apps-->
+            <div
+              style="
+                overflow: auto;
+                position: relative;
+                height: 320px;
+                max-height: 320px;
+              "
+            >
+              <!-- No applications that are fit the filter -->
+              <div
+                v-if="!filteredAppsToAdd || filteredAppsToAdd.length == 0"
+                style="text-align: center; width: 100%; margin-top: 100px"
+              >
+                <div class="settingsGrayTextColor">
+                  No applications that are fit the filter:
+                </div>
+                <div>
+                  '<span
+                    class="settingsGrayTextColor"
+                    style="
+                      display: inline-block;
+                      font-weight: bold;
+                      overflow: hidden;
+                      white-space: nowrap;
+                      text-overflow: ellipsis;
+                      max-width: 300px;
+                    "
+                    >{{ filterAppsToAdd }}</span
+                  >'
+                </div>
+              </div>
+
+              <div
+                v-else
+                v-for="app of filteredAppsToAdd"
+                v-bind:key="app.AppBinaryPath"
+              >
+                <div
+                  v-on:click="addApp(app.AppBinaryPath)"
+                  class="flexRow grayedOnHover"
+                  style="padding-top: 4px"
+                >
+                  <binaryInfoControl :app="app" style="width: 100%" />
+                </div>
+              </div>
+            </div>
+            <div style="height: 100%" />
+            <div class="horizontalLine" />
+
+            <div>
+              <button
+                class="settingsButton flexRow grayedOnHover"
+                style="
+                  margin-top: 10px;
+                  margin-bottom: 10px;
+                  height: 40px;
+                  width: 100%;
+                "
+                v-on:click="addApp(null)"
+              >
+                <div class="flexRowRestSpace"></div>
+                <div class="flexRow">
+                  <img
+                    width="24"
+                    height="24"
+                    style="margin: 8px"
+                    src="@/assets/plus.svg"
+                  />
+                </div>
+                <div class="flexRow settingsGrayTextColor">
+                  {{ textAddAppManuallyButton }}
+                </div>
+                <div class="flexRowRestSpace"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
+
     <div class="param">
       <input
         type="checkbox"
@@ -262,118 +376,6 @@
             </div>
           </div>
         </div>
-
-        <!-- SELECT apps 'popup' view -->
-        <transition name="fade-super-quick" mode="out-in">
-          <div v-if="isShowAppAddPopup" class="appsSelectionPopup">
-            <div>
-              <div class="flexRow" style="margin-bottom: 10px">
-                <div class="flexRowRestSpace settingsGrayTextColor">
-                  {{ textAddAppFromInstalledAppsHeader }}
-                </div>
-
-                <button
-                  class="noBordersBtn opacityOnHoverLight settingsGrayTextColor"
-                  style="pointer-events: auto"
-                  v-on:click="showAddApplicationPopup(false)"
-                >
-                  CANCEL
-                </button>
-              </div>
-
-              <!-- filter -->
-              <input
-                ref="installedAppsFilterInput"
-                id="filter"
-                class="styled"
-                placeholder="Search for app"
-                v-model="filterAppsToAdd"
-                v-bind:style="{
-                  backgroundImage: 'url(' + searchImageInstalledApps + ')',
-                }"
-                style="margin: 0px; margin-bottom: 10px"
-              />
-              <div class="horizontalLine" />
-
-              <!--all apps-->
-              <div
-                style="
-                  overflow: auto;
-                  position: relative;
-                  height: 320px;
-                  max-height: 320px;
-                "
-              >
-                <!-- No applications that are fit the filter -->
-                <div
-                  v-if="!filteredAppsToAdd || filteredAppsToAdd.length == 0"
-                  style="text-align: center; width: 100%; margin-top: 100px"
-                >
-                  <div class="settingsGrayTextColor">
-                    No applications that are fit the filter:
-                  </div>
-                  <div>
-                    '<span
-                      class="settingsGrayTextColor"
-                      style="
-                        display: inline-block;
-                        font-weight: bold;
-                        overflow: hidden;
-                        white-space: nowrap;
-                        text-overflow: ellipsis;
-                        max-width: 300px;
-                      "
-                      >{{ filterAppsToAdd }}</span
-                    >'
-                  </div>
-                </div>
-
-                <div
-                  v-else
-                  v-for="app of filteredAppsToAdd"
-                  v-bind:key="app.AppBinaryPath"
-                >
-                  <div
-                    v-on:click="addApp(app.AppBinaryPath)"
-                    class="flexRow grayedOnHover"
-                    style="padding-top: 4px"
-                  >
-                    <binaryInfoControl :app="app" style="width: 100%" />
-                  </div>
-                </div>
-              </div>
-              <div style="height: 100%" />
-              <div class="horizontalLine" />
-
-              <div>
-                <button
-                  class="settingsButton flexRow grayedOnHover"
-                  style="
-                    margin-top: 10px;
-                    margin-bottom: 10px;
-                    height: 40px;
-                    width: 100%;
-                  "
-                  v-on:click="addApp(null)"
-                >
-                  <div class="flexRowRestSpace"></div>
-                  <div class="flexRow">
-                    <img
-                      width="24"
-                      height="24"
-                      style="margin: 8px"
-                      src="@/assets/plus.svg"
-                    />
-                  </div>
-                  <div class="flexRow settingsGrayTextColor">
-                    {{ textAddAppManuallyButton }}
-                  </div>
-                  <div class="flexRowRestSpace"></div>
-                </button>
-              </div>
-            </div>
-          </div>
-        </transition>
       </div>
     </div>
 
@@ -1016,7 +1018,6 @@ button.link {
 }
 label {
   margin-left: 1px;
-  font-weight: 500;
 }
 
 input#filter {
@@ -1058,10 +1059,10 @@ $shadow: 0px 3px 12px rgba(var(--shadow-color-rgb), var(--shadow-opacity));
   width: 100%;
 
   padding: 15px;
-  height: 445px; //calc(100% + 140px);
+  height: 450px; //calc(100% + 140px);
   width: calc(100% + 10px);
   left: -20px;
-  top: -250px;
+  top: 0px;
 
   border-width: 1px;
   border-style: solid;
