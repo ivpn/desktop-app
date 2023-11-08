@@ -73,7 +73,7 @@ func implInitialize() error {
 	// check if ST functionality accessible
 	outProcessFunc := func(text string, isError bool) {
 		if strings.HasPrefix(text, inverseModeErrorDetectionText) {
-			text, _ = strings.CutPrefix(text, "Warning: ")
+			text = strings.TrimSpace(strings.TrimPrefix(text, "Warning: "))
 			inverseModeNotAvailableError = fmt.Errorf("%s", text)
 			log.Warning(text)
 			return
