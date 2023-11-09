@@ -140,11 +140,11 @@
           <!-- functionality description: LINUX -->
           <p v-if="isLinux">
             <span style="font-weight: bold">Warning:</span>
-            Applications must be launched from the button below. Already running
-            applications or instances can not use Split Tunneling. Some
-            applications using shared resources (e.g. Web browsers) must be
-            closed before launching them or they may not be excluded from the
-            VPN tunnel.
+            Applications must be launched from the "{{ textAddAppButton }}"
+            button. Already running applications or instances can not use Split
+            Tunneling. Some applications using shared resources (e.g. Web
+            browsers) must be closed before launching them or they may not be
+            excluded from the VPN tunnel.
           </p>
           <!-- functionality description: WINDOWS -->
           <div v-else>
@@ -155,13 +155,13 @@
               the VPN tunnel until the TCP connection/s are reset or the
               application is restarted
             </p>
-            <div class="settingsGrayLongDescriptionFont">
-              For more information refer to the
-              <button class="link" v-on:click="onLearnMoreLink">
-                Split Tunnel Uses and Limitations
-              </button>
-              webpage
-            </div>
+          </div>
+          <div class="settingsGrayLongDescriptionFont">
+            For more information refer to the
+            <button class="link" v-on:click="onLearnMoreLink">
+              Split Tunnel Uses and Limitations
+            </button>
+            webpage
           </div>
         </div>
       </ComponentDialog>
@@ -555,7 +555,7 @@ export default {
               detail: `The Inverse Split Tunnel mode requires disabling the IVPN Firewall.${extraMessage}\nWould you like to proceed?`,
               buttons: ["Disable Firewall", "Cancel"],
             },
-            true
+            true,
           );
           if (ret == 1) {
             // cancel
@@ -576,7 +576,7 @@ export default {
           this.isSTEnabledLocal,
           this.stInversedLocal,
           !this.stBlockNonVpnDnsLocal, // isAnyDns,
-          this.stAllowWhenNoVpnLocal
+          this.stAllowWhenNoVpnLocal,
         );
       } catch (e) {
         processError(e);
@@ -602,7 +602,7 @@ export default {
                 "The Inverse Split Tunnel mode has been disabled successfully. You can now use the Firewall.\n\nWould you like to enable the IVPN Firewall?",
               buttons: ["Enable Firewall", "Cancel"],
             },
-            true
+            true,
           );
           if (ret == 1) return; // cancel
           await sender.EnableFirewall(true);
@@ -626,7 +626,7 @@ Note! The IVPN Firewall is not functional when this feature is enabled.\n\n\
 Do you want to enable Inverse mode for Split Tunnel?",
             buttons: ["Enable", "Cancel"],
           },
-          true
+          true,
         );
         if (ret == 1) cancel = true; // cancel
       }
@@ -675,7 +675,7 @@ Do you want to enable Inverse mode for Split Tunnel?",
     },
     onLearnMoreLink: () => {
       sender.shellOpenExternal(
-        `https://www.ivpn.net/knowledgebase/general/split-tunnel-uses-and-limitations`
+        `https://www.ivpn.net/knowledgebase/general/split-tunnel-uses-and-limitations`,
       );
     },
 
@@ -809,7 +809,7 @@ Do you want to enable Inverse mode for Split Tunnel?",
         if (app.RunningApp)
           await sender.SplitTunnelRemoveApp(
             app.RunningApp.Pid,
-            app.AppBinaryPath
+            app.AppBinaryPath,
           );
         else await sender.SplitTunnelRemoveApp(0, app.AppBinaryPath);
       } catch (e) {
@@ -931,7 +931,7 @@ Do you want to enable Inverse mode for Split Tunnel?",
           return true;
         };
         retInstalledApps = retInstalledApps.filter((appInfo) =>
-          funcFilter(appInfo)
+          funcFilter(appInfo),
         );
       }
 
@@ -945,7 +945,7 @@ Do you want to enable Inverse mode for Split Tunnel?",
           );
         };
         retInstalledApps = retInstalledApps.filter((appInfo) =>
-          funcFilter(appInfo)
+          funcFilter(appInfo),
         );
       }
 
