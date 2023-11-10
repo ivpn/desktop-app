@@ -158,9 +158,10 @@
           </div>
           <div class="settingsGrayLongDescriptionFont">
             For more information refer to the
-            <button class="link" v-on:click="onLearnMoreLink">
-              Split Tunnel Uses and Limitations
-            </button>
+            <linkCtrl
+              label="Split Tunnel Uses and Limitations"
+              url="https://www.ivpn.net/knowledgebase/general/split-tunnel-uses-and-limitations"
+            />
             webpage
           </div>
         </div>
@@ -411,6 +412,7 @@ import ComponentDialog from "@/components/component-dialog.vue";
 import binaryInfoControl from "@/components/controls/control-app-binary-info.vue";
 
 import spinner from "@/components/controls/control-spinner.vue";
+import linkCtrl from "@/components/controls/control-link.vue";
 
 function processError(e) {
   let errMes = e.toString();
@@ -434,6 +436,7 @@ export default {
     spinner,
     binaryInfoControl,
     ComponentDialog,
+    linkCtrl,
   },
 
   data: function () {
@@ -672,11 +675,6 @@ Do you want to enable Inverse mode for Split Tunnel?",
           }
         }, 5000);
       }
-    },
-    onLearnMoreLink: () => {
-      sender.shellOpenExternal(
-        `https://www.ivpn.net/knowledgebase/general/split-tunnel-uses-and-limitations`,
-      );
     },
 
     updateAppsToShow() {
