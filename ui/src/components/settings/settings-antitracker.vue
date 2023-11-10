@@ -5,7 +5,7 @@
     <div class="defColor" style="margin-bottom: 24px">
       When AntiTracker is enabled, IVPN blocks ads, malicious websites, and
       third-party trackers using our private DNS servers.
-      <button class="link" v-on:click="onLearnMoreLink">Learn more</button>
+      <linkCtrl label="Learn more" url="https://www.ivpn.net/antitracker" />
       about how IVPN AntiTracker is implemented.
     </div>
 
@@ -35,9 +35,10 @@
       AntiTracker experience.
     </div>
     <div class="fwDescription">
-      <button class="link" v-on:click="onAntitrackerBlockListLink">
-        Learn more
-      </button>
+      <linkCtrl
+        label="Learn more"
+        url="https://www.ivpn.net/knowledgebase/general/antitracker-plus-lists-explained/"
+      />
       about AntiTracker block lists.
     </div>
 
@@ -57,8 +58,10 @@
     <div class="fwDescription">
       To better understand how this may impact your experience please refer to
       our
-      <button class="link" v-on:click="onHardcodeLink">hardcore mode FAQ</button
-      >.
+      <linkCtrl
+        label="hardcore mode FAQ"
+        url="https://www.ivpn.net/antitracker/hardcore"
+      />.
     </div>
   </div>
 </template>
@@ -66,23 +69,16 @@
 <script>
 const sender = window.ipcSender;
 
+import linkCtrl from "@/components/controls/control-link.vue";
+
 export default {
+  components: {
+    linkCtrl,
+  },
   data: function () {
     return {};
   },
-  methods: {
-    onAntitrackerBlockListLink: () => {
-      sender.shellOpenExternal(
-        `https://www.ivpn.net/knowledgebase/general/antitracker-plus-lists-explained/`,
-      );
-    },
-    onLearnMoreLink: () => {
-      sender.shellOpenExternal(`https://www.ivpn.net/antitracker`);
-    },
-    onHardcodeLink: () => {
-      sender.shellOpenExternal(`https://www.ivpn.net/antitracker/hardcore`);
-    },
-  },
+  methods: {},
   computed: {
     isAntitrackerHardcore: {
       get() {
