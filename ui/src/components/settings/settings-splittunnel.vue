@@ -140,11 +140,11 @@
           <!-- functionality description: LINUX -->
           <p v-if="isLinux">
             <span style="font-weight: bold">Warning:</span>
-            Applications must be launched from the button below. Already running
-            applications or instances can not use Split Tunneling. Some
-            applications using shared resources (e.g. Web browsers) must be
-            closed before launching them or they may not be excluded from the
-            VPN tunnel.
+            Applications must be launched from the "{{ textAddAppButton }}"
+            button. Already running applications or instances can not use Split
+            Tunneling. Some applications using shared resources (e.g. Web
+            browsers) must be closed before launching them or they may not be
+            excluded from the VPN tunnel.
           </p>
           <!-- functionality description: WINDOWS -->
           <div v-else>
@@ -155,13 +155,13 @@
               the VPN tunnel until the TCP connection/s are reset or the
               application is restarted
             </p>
-            <div class="settingsGrayLongDescriptionFont">
-              For more information refer to the
-              <button class="link" v-on:click="onLearnMoreLink">
-                Split Tunnel Uses and Limitations
-              </button>
-              webpage
-            </div>
+          </div>
+          <div class="settingsGrayLongDescriptionFont">
+            For more information refer to the
+            <button class="link" v-on:click="onLearnMoreLink">
+              Split Tunnel Uses and Limitations
+            </button>
+            webpage
           </div>
         </div>
       </ComponentDialog>
