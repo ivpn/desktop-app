@@ -168,25 +168,12 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 		}
 		defer func() {
 			if v2RayWrapper != nil {
-				// remove V2Ray remote IP from firewall exceptions
-				v2RayRemoteHost, _, err := v2RayWrapper.GetRemoteEndpoint()
-				if err == nil {
-					firewall.RemoveHostsFromExceptions([]net.IP{v2RayRemoteHost}, false, false)
-				}
 				// stop V2Ray
 				if err := v2RayWrapper.Stop(); err != nil {
 					log.Error(fmt.Errorf("failed to stop V2Ray: %w", err))
 				}
 			}
 		}()
-		// Configure firewall to allow V2Ray remote IP
-		if v2RayWrapper != nil {
-			v2RayRemoteHost, _, err := v2RayWrapper.GetRemoteEndpoint()
-			if err != nil {
-				return fmt.Errorf("failed to get V2Ray remote endpoint: %w", err)
-			}
-			firewall.AddHostsToExceptions([]net.IP{v2RayRemoteHost}, false, false) // Linux(isPersistent==false and onlyForICMP==false) - this exceptions have highest priority
-		}
 	}
 	// ------------------------ V2RAY block end ------------------------
 
@@ -699,7 +686,18 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 	// Signaling when there were some routing changes but 'interfaceToProtect' is still is the default route
 	routingUpdateChan := make(chan struct{}, 1)
 
-	destinationHostIP := vpnProc.DestinationIP()
+	destinationIpAddresses := make([]net.IP, 0)
+	// Add VPN server IP to firewall exceptions
+	destinationIpAddresses = append(destinationIpAddresses, vpnProc.DestinationIP())
+
+	if v2rayWrapper != nil {
+		// Configure firewall to allow V2Ray remote IP
+		v2RayRemoteHost, _, err := v2rayWrapper.GetRemoteEndpoint()
+		if err != nil {
+			return fmt.Errorf("failed to get V2Ray remote endpoint: %w", err)
+		}
+		destinationIpAddresses = append(destinationIpAddresses, v2RayRemoteHost)
+	}
 
 	// goroutine: process + forward VPN state change
 	connectRoutinesWaiter.Add(1)
@@ -748,7 +746,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 						// We have to allow it's IP to be able to reconnect
 						const onlyForICMP = false
 						const isPersistent = false
-						err := firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP, isPersistent)
+						err := firewall.AddHostsToExceptions(destinationIpAddresses, onlyForICMP, isPersistent)
 						if err != nil {
 							log.Error("Unable to add host to firewall exceptions:", err.Error())
 						}
@@ -929,7 +927,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 	// Add host IP to firewall exceptions
 	const onlyForICMP = false
 	const isPersistent = false
-	err = firewall.AddHostsToExceptions([]net.IP{destinationHostIP}, onlyForICMP, isPersistent)
+	err = firewall.AddHostsToExceptions(destinationIpAddresses, onlyForICMP, isPersistent)
 	if err != nil {
 		log.Error("Failed to start. Unable to add hosts to firewall exceptions:", err.Error())
 		return err
