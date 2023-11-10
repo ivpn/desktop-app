@@ -529,8 +529,9 @@ function doUpdateTrayMenu() {
 
   mainMenu.push({ label: "Quit", click: menuItemQuit });
 
+  let menuTemplate = mainMenu;
   // do nothing if menu is the same
-  let newMenu = Menu.buildFromTemplate(mainMenu);
+  let newMenu = Menu.buildFromTemplate(menuTemplate);
   if (isMenuEquals(lastTrayMenu, newMenu) === true) return;
 
   // APPLY TRAY MENU
@@ -538,7 +539,7 @@ function doUpdateTrayMenu() {
   tray.setToolTip("IVPN Client");
   tray.setContextMenu(lastTrayMenu);
 
-  updateDockMenuMacOS(lastTrayMenu);
+  updateDockMenuMacOS(menuTemplate);
 }
 
 function updateDockMenuMacOS(mainMenuTemplate) {
