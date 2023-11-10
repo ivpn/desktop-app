@@ -1,6 +1,6 @@
 #!/bin/sh
 
-V2RAY_VER=v5.7.0
+V2RAY_VER=v5.8.0
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
