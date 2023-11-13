@@ -591,6 +591,8 @@ func (s *Service) disconnect() error {
 
 // Connected returns 'true' if VPN connected
 func (s *Service) Connected() bool {
+	// TODO: It seems this needs to be reworked.
+	// The 's._vpn' can be temporarily nil during reconnection (see keepConnection() function).
 	return s._vpn != nil
 }
 
