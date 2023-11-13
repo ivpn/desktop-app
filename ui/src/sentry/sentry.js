@@ -51,12 +51,18 @@ export function SentrySendDiagnosticReport(
   comment,
   eventAdditionalDataObject,
   daemonVer,
-  buildExtraInfo
+  buildExtraInfo,
 ) {
   if (!DSN || comment == "" || eventAdditionalDataObject == null) return;
 
   if (!daemonVer) daemonVer = "UNKNOWN";
 
+  if (comment.length > 400) {
+    eventAdditionalDataObject["  User comment (full)"] = comment;
+    comment =
+      comment.substr(0, 400) +
+      " ... \n\n<read full comment in 'ADDITIONAL DATA' section>";
+  }
   // Sentry can not accept very long fields (>16KB)
   // therefore, here we are dividing fields on smaller
   const maxFieldSize = 16 * 1024;

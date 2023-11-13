@@ -54,10 +54,18 @@
           <textarea readonly id="logsBlock" v-model="viewTextOther" />
         </div>
         <div v-if="activeTabName == 'userComment'" class="flexColumn">
-          <div style="margin-bottom: 5px">
-            Please write a description of the problem you are experiencing:
+          <div style="display: flex; margin-bottom: 5px">
+            <div style="flex-grow: 1">
+              Please write a description of the problem you are experiencing:
+            </div>
+            <div>
+              [ {{ 9000 - userComment.length }}
+              / 9000 ]
+            </div>
           </div>
+
           <textarea
+            maxlength="9000"
             id="commentBlock"
             v-model="userComment"
             v-bind:class="{
