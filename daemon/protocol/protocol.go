@@ -1104,7 +1104,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 
 		if !p._service.Connected() {
 			p.sendResponse(conn, &types.DisconnectedResp{Reason: types.DisconnectRequested}, reqCmd.Idx)
-			break
+			// INFO: _service.Connected() is based on a simple check (s._vpn != nil). So there is still a chance
+			// that the connection-retry loop is running and we just caught a moment while s._vpn is temporarily nil.
+			// Therefore, we continue to ensure that Disconnect() is called.
 		}
 
 		if err := p._service.Disconnect(); err != nil {

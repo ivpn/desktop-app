@@ -534,8 +534,11 @@ func (s *Service) keepConnection(originalEntryServerInfo *svrConnInfo, createVpn
 			return fmt.Errorf("failed to get DNS settings: %w", err)
 		}
 
+		prefs = s.Preferences()
+		isInverseSplitTun := prefs.IsInverseSplitTunneling()
+
 		// start connection
-		connErr := s.connect(originalEntryServerInfo, vpnObj, manualDns, antitracker, firewallOn, firewallDuringConnection, v2rayWrapper)
+		connErr := s.connect(originalEntryServerInfo, vpnObj, manualDns, antitracker, firewallOn && !isInverseSplitTun, firewallDuringConnection && !isInverseSplitTun, v2rayWrapper)
 		if connErr != nil {
 			log.Error(fmt.Sprintf("Connection error: %s", connErr))
 			if s._requiredVpnState == Connect {
