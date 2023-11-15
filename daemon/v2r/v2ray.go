@@ -77,6 +77,9 @@ type V2RayWrapper struct {
 
 	// IP address of the default gateway which was used for static route to V2Ray server
 	defaultGeteway net.IP
+	// IP address of local interface which is in use for communication with V2Ray server
+	// (we use use it to detect changes of the route to V2Ray server)
+	localInterfaceIp net.IP
 }
 
 // CreateV2RayWrapper - creates new V2RayWrapper object
@@ -157,13 +160,26 @@ func (v *V2RayWrapper) UpdateMainRoute() error {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 
+	// check: do we need to update route to V2Ray server? (due to it was changed or removed)
+	isRouteChanged := false
+	if lInterfaceIp, err := v.getMainRouteLocalInfAddress(); err == nil {
+		if v.localInterfaceIp != nil && !v.localInterfaceIp.Equal(lInterfaceIp) {
+			isRouteChanged = true
+		}
+	}
+
+	// check: do we need to update route to V2Ray server? (due to change of default gateway)
+	isGatewayChanged := false
 	gwIp, err := netinfo.DefaultGatewayIP()
 	if err != nil {
 		return fmt.Errorf("getting default gateway ip error : %w", err)
 	}
+	if v.defaultGeteway != nil && !v.defaultGeteway.Equal(gwIp) {
+		isGatewayChanged = true
+	}
 
-	if v.defaultGeteway != nil && v.defaultGeteway.Equal(gwIp) {
-		return nil //gateway did not chnage. Nothing to update
+	if !isGatewayChanged && !isRouteChanged {
+		return nil // nothing to update
 	}
 
 	log.Info("Updating route to V2Ray server...")
@@ -183,8 +199,23 @@ func (v *V2RayWrapper) setMainRoute(defaultGateway net.IP) error {
 	}
 	if err := v.implSetMainRoute(defaultGateway); err == nil {
 		v.defaultGeteway = defaultGateway
+		// save IP address of local interface which is in use for communication with V2Ray server
+		v.localInterfaceIp, err = v.getMainRouteLocalInfAddress()
+		if err != nil {
+			return fmt.Errorf("unable to obtain local interface info for V2Ray connection: %w", err)
+		}
 	}
 	return err
+}
+
+// Get IP address of local interface which is in use for communication with V2Ray server
+// (it depends of routing table)
+func (v *V2RayWrapper) getMainRouteLocalInfAddress() (net.IP, error) {
+	remoteHost, _, err := v.getRemoteEndpoint()
+	if err != nil {
+		return nil, err
+	}
+	return netinfo.GetOutboundIPEx(remoteHost)
 }
 
 func (v *V2RayWrapper) deleteMainRoute() error {
