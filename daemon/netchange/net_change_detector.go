@@ -106,11 +106,14 @@ func (d *Detector) DelayBeforeNotify() time.Duration {
 	return d.delayBeforeNotify
 }
 
-// must be called when routing change detected (called from platform-specific sources)
+// Must be called when routing change detected (called from platform-specific sources)
+// It notifies about routing change with delay 'd.DelayBeforeNotify()'. This reduces amount of multiple consecutive notifications
 func (d *Detector) routingChangeDetected() {
 	d.timerNotifyAfterDelay.Reset(d.DelayBeforeNotify())
 }
 
+// Immediately notify about routing change.
+// Consider using routingChangeDetected() instead
 func (d *Detector) notifyRoutingChange() {
 	if d.routingChangeNotifyChan == nil {
 		return
