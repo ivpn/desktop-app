@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.13.1 - 2023-11-16
+
+[NEW] (Windows/Linux) Introducing the Inverse Split Tunnel mode  
+[NEW] (Windows) End of support for Windows 8  
+[IMPROVED] (Linux) Ability to launch apps for Split Tunnel from the application's main window  
+[IMPROVED] (Windows) Show the application with a single click on the tray icon  
+[IMPROVED] GUI: Ability to define custom ports when V2Ray is enabled  
+[IMPROVED] GUI: Added tooltips to buttons  
+[FIX] Connection loss during connection roaming when V2Ray obfuscation is enabled  
+[FIX] Ability to use port 53 UDP for V2Ray connections  
+[FIX] (Linux) Split Tunnel now works when '/etc/iproute2' is not present  
+[FIX] (macOS) Resolved an unresponsive tray menu issue  
+[FIX] (Windows) Fixed an occasional issue where apps ignored Split Tunnel settings after reboot  
+[FIX] Various other minor bug fixes and improvements  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.13.1.exe)  
+SHA256: db921050930eacc678c4d4d3b11f9db78361fd9c72f97b3c6f9fe418774eaa38  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.13.1.dmg)  
+SHA256: b053acbffa416117c3072415025d238701f0cb58f649154d10078b433cb3cecf  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.13.1-arm64.dmg)  
+SHA256: bb7d047ff5a1e01e783cd26a037599be7f929bc513940adabbb26cb5bb95dd9a  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.13.1_amd64.deb)  
+SHA256: 15b8bb0ba8df93f40cdcfb800fd5b28f1b9413aaac2b56a00945948097ed5396  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.13.1-1.x86_64.rpm)  
+SHA256: 41c871ca27696705bf80ea4b7bea93cb4f8c779b48d9939f2074ccd2481adf1d  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.13.1_amd64.deb)  
+SHA256: b39ece0ca2e35d39a38478ff204f6ac2d4f37aa4a32dac7b391cf6aecd6db061  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.13.1-1.x86_64.rpm)  
+SHA256: 21f9b0f06f74b2981ad2d127c92f089f2d105bbb0209c97b07faf26df08d8331  
+
 ## Version 3.12.0 - 2023-08-31
 
 [NEW] Added V2Ray as an optional obfuscation type for WireGuard and OpenVPN connections  
