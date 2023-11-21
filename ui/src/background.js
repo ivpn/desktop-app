@@ -450,6 +450,7 @@ if (gotTheLock) {
             updateAppDockVisibility();
             nativeTheme.themeSource = store.state.settings.colorTheme;
             AutoLaunchSet(false);
+            applyMinimizedState();
           } catch (e) {
             console.debug("Failed to reset settings to defaults: " + e);
           }
@@ -499,6 +500,7 @@ if (gotTheLock) {
           break;
         case "settings/minimizedUI":
           if (!store.state.settings.minimizedUI) closeSettingsWindow();
+          applyMinimizedState();
           break;
 
         case "account/accountStatus":
@@ -809,6 +811,15 @@ function createWindow(doNotShowWhenReady) {
   win.on("closed", () => {
     win = null;
   });
+}
+
+async function applyMinimizedState() {
+  let w = win;
+  if (w == null) return null;
+  const animate = false;
+  if (store.state.settings.minimizedUI)
+    return await w.setBounds({ width: config.MinimizedUIWidth }, animate);
+  else return await w.setBounds({ width: config.MaximizedUIWidth }, animate);
 }
 
 function onDaemonExiting() {

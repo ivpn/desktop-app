@@ -366,9 +366,6 @@ export default {
   getCurrentWindowProperties: () => {
     return ipcRenderer.sendSync("renderer-request-properties-current-window");
   },
-  uiMinimize: (isMinimize) => {
-    return invoke("renderer-request-UI-minimize", isMinimize);
-  },
 
   // SHELL
   shellShowItemInFolder: (file) => {

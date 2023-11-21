@@ -109,11 +109,7 @@ export default {
       return this.$store.state.settings.minimizedUI;
     },
   },
-  watch: {
-    isMinimizedUI() {
-      this.updateUIState();
-    },
-  },
+
   methods: {
     onAccountSettings: function () {
       //if (this.$store.state.settings.minimizedUI)
@@ -140,10 +136,6 @@ export default {
     },
     onMaximize: function (isMaximize) {
       this.$store.dispatch("settings/minimizedUI", !isMaximize);
-      this.updateUIState();
-    },
-    updateUIState: function () {
-      sender.uiMinimize(this.isMinimizedUI);
     },
   },
 };

@@ -381,14 +381,7 @@ ipcMain.handle("renderer-request-showOpenDialog", async (event, options) => {
 });
 
 // WINDOW
-ipcMain.handle("renderer-request-UI-minimize", async (event, isMinimize) => {
-  let win = event.sender.getOwnerBrowserWindow();
-  if (win == null) return null;
-  const animate = false;
-  if (isMinimize)
-    return await win.setBounds({ width: config.MinimizedUIWidth }, animate);
-  else return await win.setBounds({ width: config.MaximizedUIWidth }, animate);
-});
+
 ipcMain.handle("renderer-request-close-current-window", async (event) => {
   return await event.sender.getOwnerBrowserWindow().close();
 });
