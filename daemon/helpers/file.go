@@ -63,8 +63,13 @@ func WriteFile(file string, data []byte, fileMode os.FileMode) error {
 		return err
 	}
 
-	_, err = f.Write(data)
-	return err
+	// Write data to the file
+	if _, err = f.Write(data); err != nil {
+		return err
+	}
+
+	// Ensure changes are immediately flushed to disk
+	return f.Sync()
 }
 
 // FileExists checks if a file exists and is not a directory

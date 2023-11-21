@@ -25,13 +25,14 @@ package preferences
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+
+	"os"
 
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
@@ -169,6 +170,10 @@ func (p *Preferences) UpdateWgCredentials(wgPublicKey string, wgPrivateKey strin
 	p.SavePreferences()
 }
 
+func (p *Preferences) getTempFilePath() string {
+	return platform.SettingsFile() + ".tmp"
+}
+
 // SavePreferences saves preferences
 func (p *Preferences) SavePreferences() error {
 	mutexRW.Lock()
@@ -182,9 +187,23 @@ func (p *Preferences) SavePreferences() error {
 	}
 
 	settingsFile := platform.SettingsFile()
-	if err := helpers.WriteFile(settingsFile, data, 0600); err != nil { // read\write only for privileged user
+	settingsFileMode := os.FileMode(0600) // read\write only for privileged user
+
+	// Save the settings file to a temporary file. This is necessary to prevent data loss in case of a power failure
+	// or other system operations that could interrupt the saving process (e.g., a crash or process termination).
+	// If the settings file becomes corrupted, the daemon will attempt to restore it from the temporary file.
+	settingsFileTmp := p.getTempFilePath()
+	if err := helpers.WriteFile(p.getTempFilePath(), data, settingsFileMode); err != nil { // read\write only for privileged user
 		return err
 	}
+
+	// save settings file
+	if err := helpers.WriteFile(settingsFile, data, settingsFileMode); err != nil { // read\write only for privileged user
+		return err
+	}
+
+	// Remove temp file after successful saving
+	os.Remove(settingsFileTmp)
 
 	return nil
 }
@@ -194,16 +213,30 @@ func (p *Preferences) LoadPreferences() error {
 	mutexRW.RLock()
 	defer mutexRW.RUnlock()
 
-	data, err := ioutil.ReadFile(platform.SettingsFile())
+	funcReadPreferences := func(filePath string) (data []byte, err error) {
+		data, err = os.ReadFile(filePath)
+		if err != nil {
+			return data, fmt.Errorf("failed to read preferences file: %w", err)
+		}
 
-	if err != nil {
-		return fmt.Errorf("failed to read preferences file: %w", err)
+		// Parse json into preferences object
+		err = json.Unmarshal(data, p)
+		if err != nil {
+			return data, err
+		}
+		return data, nil
 	}
 
-	// Parse json onto preferences object
-	err = json.Unmarshal(data, p)
+	data, err := funcReadPreferences(platform.SettingsFile())
 	if err != nil {
-		return err
+		log.Error(fmt.Sprintf("failed to read preferences file: %v", err))
+		// Try to read from temp file, if exists (this is necessary to prevent data loss in case of a power failure)
+		var errTmp error
+		data, errTmp = funcReadPreferences(p.getTempFilePath())
+		if errTmp != nil {
+			return err // return original error
+		}
+		log.Info("Preferences file was restored from temporary file")
 	}
 
 	// init WG properties
