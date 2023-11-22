@@ -187,6 +187,7 @@
               </select>
 
               <button
+                style="pointer-events: auto"
                 class="noBordersBtn flexRow"
                 title="Help"
                 v-on:click="onShowHelpObfsproxy"
@@ -306,6 +307,7 @@
             </select>
 
             <button
+              style="pointer-events: auto"
               class="noBordersBtn flexRow"
               title="Help"
               v-on:click="onShowHelpObfsproxy"
