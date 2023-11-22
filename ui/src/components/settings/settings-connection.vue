@@ -91,142 +91,145 @@
         </select>
       </div>
 
-      <div
-        v-bind:class="{
-          disabled:
-            connectionUseObfsproxy || V2RayType !== 0 || !isDisconnected,
-        }"
-      >
-        <div class="flexRow paramBlock">
-          <div class="defColor paramName">Network proxy:</div>
-          <div class="settingsRadioBtnProxy">
-            <input
-              type="radio"
-              id="proxyNone"
-              name="proxy"
-              v-model="ovpnProxyType"
-              value=""
-            />
-            <label class="defColor" for="proxyNone">None</label>
+      <div :title="tooltipOptionEditRequiresDisconnection">
+        <div
+          v-bind:class="{
+            disabled:
+              connectionUseObfsproxy || V2RayType !== 0 || !isDisconnected,
+          }"
+        >
+          <div class="flexRow paramBlock">
+            <div class="defColor paramName">Network proxy:</div>
+            <div class="settingsRadioBtnProxy">
+              <input
+                type="radio"
+                id="proxyNone"
+                name="proxy"
+                v-model="ovpnProxyType"
+                value=""
+              />
+              <label class="defColor" for="proxyNone">None</label>
+            </div>
+            <div class="settingsRadioBtnProxy">
+              <input
+                type="radio"
+                id="proxyHTTP"
+                name="proxy"
+                v-model="ovpnProxyType"
+                value="http"
+              />
+              <label class="defColor" for="proxyHTTP">HTTP</label>
+            </div>
+            <div class="settingsRadioBtnProxy">
+              <input
+                type="radio"
+                id="proxySocks"
+                name="proxy"
+                v-model="ovpnProxyType"
+                value="socks"
+              />
+              <label class="defColor" for="proxySocks">Socks</label>
+            </div>
           </div>
-          <div class="settingsRadioBtnProxy">
-            <input
-              type="radio"
-              id="proxyHTTP"
-              name="proxy"
-              v-model="ovpnProxyType"
-              value="http"
-            />
-            <label class="defColor" for="proxyHTTP">HTTP</label>
-          </div>
-          <div class="settingsRadioBtnProxy">
-            <input
-              type="radio"
-              id="proxySocks"
-              name="proxy"
-              v-model="ovpnProxyType"
-              value="socks"
-            />
-            <label class="defColor" for="proxySocks">Socks</label>
-          </div>
-        </div>
 
-        <div v-bind:class="{ disabled: ovpnProxyType.length == 0 }">
-          <div class="flexRow">
-            <div class="paramBlockText">
-              <div>Server:</div>
-              <input
-                class="settingsTextInput proxyParam"
-                placeholder="0.0.0.0"
-                v-model="ovpnProxyServer"
-              />
-            </div>
-            <div class="paramBlockText">
-              <div>Port:</div>
-              <input
-                class="settingsTextInput proxyParam"
-                v-model="ovpnProxyPort"
-              />
-            </div>
-            <div class="paramBlockText">
-              <div>Login:</div>
-              <input
-                class="settingsTextInput proxyParam"
-                v-model="ovpnProxyUser"
-              />
-            </div>
-            <div class="paramBlockText">
-              <div>Password:</div>
-              <input
-                type="password"
-                class="settingsTextInput proxyParam"
-                v-model="ovpnProxyPass"
-              />
+          <div v-bind:class="{ disabled: ovpnProxyType.length == 0 }">
+            <div class="flexRow">
+              <div class="paramBlockText">
+                <div>Server:</div>
+                <input
+                  class="settingsTextInput proxyParam"
+                  placeholder="0.0.0.0"
+                  v-model="ovpnProxyServer"
+                />
+              </div>
+              <div class="paramBlockText">
+                <div>Port:</div>
+                <input
+                  class="settingsTextInput proxyParam"
+                  v-model="ovpnProxyPort"
+                />
+              </div>
+              <div class="paramBlockText">
+                <div>Login:</div>
+                <input
+                  class="settingsTextInput proxyParam"
+                  v-model="ovpnProxyUser"
+                />
+              </div>
+              <div class="paramBlockText">
+                <div>Password:</div>
+                <input
+                  type="password"
+                  class="settingsTextInput proxyParam"
+                  v-model="ovpnProxyPass"
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <div class="settingsBoldFont">Additional settings:</div>
-      <div v-bind:class="{ disabled: !isDisconnected }">
-        <div class="flexRowAlignTop">
-          <div class="flexRowAlignTop paramName" style="padding-top: 2px">
-            <label class="defColor">Obfuscation:</label>
-          </div>
+      <div :title="tooltipOptionEditRequiresDisconnection">
+        <div v-bind:class="{ disabled: !isDisconnected }">
+          <div class="flexRowAlignTop">
+            <div class="flexRowAlignTop paramName" style="padding-top: 2px">
+              <label class="defColor">Obfuscation:</label>
+            </div>
 
-          <div>
-            <div class="flexRow">
-              <select v-model="obfuscationType">
-                <option
-                  v-for="item in obfuscationTypes"
-                  :value="item"
-                  :key="item.text"
+            <div>
+              <div class="flexRow">
+                <select v-model="obfuscationType">
+                  <option
+                    v-for="item in obfuscationTypes"
+                    :value="item"
+                    :key="item.text"
+                  >
+                    {{ item.text }}
+                  </option>
+                </select>
+
+                <button
+                  style="pointer-events: auto"
+                  class="noBordersBtn flexRow"
+                  title="Help"
+                  v-on:click="onShowHelpObfsproxy"
                 >
-                  {{ item.text }}
-                </option>
-              </select>
-
-              <button
-                style="pointer-events: auto"
-                class="noBordersBtn flexRow"
-                title="Help"
-                v-on:click="onShowHelpObfsproxy"
-              >
-                <img src="@/assets/question.svg" />
-              </button>
-            </div>
-            <div class="description" style="margin-left: 0px">
-              Only enable if you have trouble connecting.
+                  <img src="@/assets/question.svg" />
+                </button>
+              </div>
+              <div class="description" style="margin-left: 0px">
+                Only enable if you have trouble connecting.
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="param" v-if="userDefinedOvpnFile">
-          <input
-            type="checkbox"
-            id="openvpnManualConfig"
-            v-model="openvpnManualConfig"
-          />
-          <label class="defColor" for="openvpnManualConfig"
-            >Add additional OpenVPN configuration parameters</label
-          >
-        </div>
-
-        <div v-if="openvpnManualConfig && userDefinedOvpnFile">
-          <div class="description">
-            <div class="settingsGrayLongDescriptionFont">
-              Please be aware that this is a feature for advanced users as
-              adding parameters may affect the proper functioning and security
-              of the VPN tunnel
-            </div>
-            <button
-              style="margin-top: 4px"
-              class="settingsButton"
-              v-on:click="onVPNConfigFileLocation"
+          <div class="param" v-if="userDefinedOvpnFile">
+            <input
+              type="checkbox"
+              id="openvpnManualConfig"
+              v-model="openvpnManualConfig"
+            />
+            <label class="defColor" for="openvpnManualConfig"
+              >Add additional OpenVPN configuration parameters</label
             >
-              Open configuration file location ...
-            </button>
-            <!--
+          </div>
+
+          <div v-if="openvpnManualConfig && userDefinedOvpnFile">
+            <div class="description">
+              <div class="settingsGrayLongDescriptionFont">
+                Please be aware that this is a feature for advanced users as
+                adding parameters may affect the proper functioning and security
+                of the VPN tunnel
+              </div>
+              <button
+                style="margin-top: 4px"
+                class="settingsButton"
+                v-on:click="onVPNConfigFileLocation"
+              >
+                Open configuration file location ...
+              </button>
+              <!--
           <div style="max-width: 500px; margin: 0px; padding: 0px">
             <div
               class="settingsGrayLongDescriptionFont selectable"
@@ -241,7 +244,9 @@
               {{ userDefinedOvpnFile }}
             </div>
           </div>
-          --></div>
+          -->
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -286,64 +291,73 @@
         </select>
       </div>
 
-      <div
-        class="flexRow paramBlock"
-        v-bind:class="{ disabled: !isDisconnected }"
-      >
-        <div class="flexRow paramName">
-          <label class="defColor">Obfuscation:</label>
-        </div>
+      <div :title="tooltipOptionEditRequiresDisconnection">
+        <div
+          class="flexRow paramBlock"
+          v-bind:class="{ disabled: !isDisconnected }"
+        >
+          <div class="flexRow paramName">
+            <label class="defColor">Obfuscation:</label>
+          </div>
 
-        <div>
-          <div class="flexRow">
-            <select v-model="obfuscationType">
-              <option
-                v-for="item in obfuscationTypes"
-                :value="item"
-                :key="item.text"
+          <div>
+            <div class="flexRow">
+              <select v-model="obfuscationType">
+                <option
+                  v-for="item in obfuscationTypes"
+                  :value="item"
+                  :key="item.text"
+                >
+                  {{ item.text }}
+                </option>
+              </select>
+
+              <button
+                style="pointer-events: auto"
+                class="noBordersBtn flexRow"
+                title="Help"
+                v-on:click="onShowHelpObfsproxy"
               >
-                {{ item.text }}
-              </option>
-            </select>
-
-            <button
-              style="pointer-events: auto"
-              class="noBordersBtn flexRow"
-              title="Help"
-              v-on:click="onShowHelpObfsproxy"
-            >
-              <img src="@/assets/question.svg" />
-            </button>
+                <img src="@/assets/question.svg" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div v-bind:class="{ disabled: !isDisconnected }">
-        <div class="flexRow paramBlock" style="margin: 0px; margin-top: 2px">
-          <div class="defColor paramName">Custom MTU:</div>
-          <div>
-            <input
-              ref="mtuInput"
-              v-model="mtu"
-              type="number"
-              step="1"
-              style="width: 165px"
-              class="settingsTextInput"
-              title="Valid range [1280 - 65535]. Please note that changing this value may affect the proper functioning of the VPN tunnel."
-            />
+      <div :title="tooltipOptionEditRequiresDisconnection">
+        <div v-bind:class="{ disabled: !isDisconnected }">
+          <div class="flexRow paramBlock" style="margin: 0px; margin-top: 2px">
+            <div class="defColor paramName">Custom MTU:</div>
+            <div>
+              <input
+                ref="mtuInput"
+                v-model="mtu"
+                type="number"
+                step="1"
+                style="width: 165px"
+                class="settingsTextInput"
+                title="Valid range [1280 - 65535]. Please note that changing this value may affect the proper functioning of the VPN tunnel."
+              />
+            </div>
+            <div
+              v-if="isMtuBadValue"
+              class="description"
+              style="
+                margin-top: 4px;
+                margin-left: 4px;
+                width: 180px;
+                color: red;
+              "
+            >
+              Expected value: [1280 - 65535]
+            </div>
           </div>
-          <div
-            v-if="isMtuBadValue"
-            class="description"
-            style="margin-top: 4px; margin-left: 4px; width: 180px; color: red"
-          >
-            Expected value: [1280 - 65535]
-          </div>
-        </div>
-        <div class="flexRow">
-          <div class="paramName" />
-          <div class="description" style="margin-left: 0px">
-            Leave blank to use default value
+          <div class="flexRow">
+            <div class="paramName" />
+            <div class="description" style="margin-left: 0px">
+              Leave blank to use default value
+            </div>
           </div>
         </div>
       </div>
@@ -621,6 +635,10 @@ export default {
     },
   },
   computed: {
+    tooltipOptionEditRequiresDisconnection: function () {
+      if (this.isDisconnected) return null;
+      return "Disconnect VPN to edit this option";
+    },
     isDisconnected: function () {
       return (
         this.$store.state.vpnState.connectionState === VpnStateEnum.DISCONNECTED
