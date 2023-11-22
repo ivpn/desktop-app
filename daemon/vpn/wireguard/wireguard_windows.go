@@ -72,7 +72,7 @@ const (
 func (wg *WireGuard) init() error {
 	// uninstall WG service (if installed)
 
-	if installed, err := wg.isServiceInstalled(); installed == false || err != nil {
+	if installed, err := wg.isServiceInstalled(); !installed || err != nil {
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	if err != nil {
 		// check is there any custom parameters defined. If so - warn user about potential problem because of them
 		if wg.connectParams.mtu > 0 {
-			return fmt.Errorf("failed to install windows service: %w\nThe 'Custom MTU' option may be set incorrectly, either revert to the default or try another value e.g. 1420.", err)
+			return fmt.Errorf("failed to install windows service: %w\nThe 'Custom MTU' option may be set incorrectly, either revert to the default or try another value e.g. 1420", err)
 		}
 		return err
 	}
@@ -430,7 +430,7 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 	// waiting for until service installed
 	log.Info("Waiting for service install...")
 	serviceName := wg.getServiceName()
-	for started := time.Now(); time.Since(started) < _waitServiceInstallTimeout; time.Sleep(time.Millisecond * 10) {
+	for started := time.Now(); time.Since(started) < _waitServiceInstallTimeout; time.Sleep(time.Millisecond * 20) {
 		service, err := m.OpenService(serviceName)
 		if err == nil {
 			log.Info("Service installed")
@@ -447,9 +447,12 @@ func (wg *WireGuard) installService(stateChan chan<- vpn.StateInfo) error {
 
 	// wait for service starting
 	log.Info("Waiting for service start...")
-	for started := time.Now(); time.Since(started) < _waitServiceStartTimeout; time.Sleep(time.Millisecond * 10) {
+	for started := time.Now(); time.Since(started) < _waitServiceStartTimeout; time.Sleep(time.Millisecond * 20) {
 		_, stat, err := wg.getServiceStatus(m)
 		if err != nil {
+			if err == windows.ERROR_SERVICE_CANNOT_ACCEPT_CTRL {
+				continue // The service cannot accept control messages at this time. Wait, then retry operation.
+			}
 			return fmt.Errorf("service start error: %w", err)
 		}
 
@@ -543,7 +546,7 @@ func (wg *WireGuard) uninstallService() error {
 	nextUninstallRetryTime := time.Second * 3
 
 	isUninstalled := false
-	for started := time.Now(); time.Since(started) < _waitServiceInstallTimeout && isUninstalled == false; time.Sleep(50) {
+	for started := time.Now(); time.Since(started) < _waitServiceInstallTimeout && !isUninstalled; time.Sleep(time.Millisecond * 20) {
 		isServFound, state, err := wg.getServiceStatus(m)
 		if err != nil {
 			if err == windows.ERROR_SERVICE_DOES_NOT_EXIST {
@@ -565,7 +568,7 @@ func (wg *WireGuard) uninstallService() error {
 		}
 	}
 
-	if isUninstalled == false {
+	if !isUninstalled {
 		return fmt.Errorf("service not uninstalled (timeout)")
 	}
 
