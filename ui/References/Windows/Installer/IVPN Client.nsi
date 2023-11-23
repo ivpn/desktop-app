@@ -503,6 +503,7 @@ Section "Uninstall"
   ${If} $0 == ""
       ; uninstall
       DetailPrint "Ensure firewall is disabled..."
+      nsExec::ExecToLog '"${PATHDIR}\ivpn.exe" firewall -persistent_off'
       nsExec::ExecToLog '"${PATHDIR}\ivpn.exe" firewall -off'
 
       DetailPrint "Logout..."

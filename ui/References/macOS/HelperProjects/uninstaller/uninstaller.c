@@ -282,6 +282,7 @@ int install_helper() {
 
 int disableFirewall() {
   printf("[ ] Disabling IVPN firewall ...\n");
+  system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn firewall -persistent_off");
   system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn firewall -off");
   return 0;
 }
