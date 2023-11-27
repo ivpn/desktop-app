@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.13.3 - 2023-11-27
+
+[FIX] Fixed settings file corruption issue that led to unexpected logout  
+[FIX] (Windows) Sometimes WireGuard fails to connect with the error 'The service cannot accept control messages at this time'  
+[FIX] (Windows/macOS) Fixed an issue where the uninstaller did not disable the firewall in some circumstances  
+[FIX] User interface fixes and improvements  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.13.3.exe)  
+SHA256: a3897d2cfa69a4b1457070d9e0732abf01c7c56e3ed555dd3735f7a5b2658756  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.13.3.dmg)  
+SHA256: b97924d4dd645a5f02744e4f91fd18219f2c2b67aabd550cf38f6b2935d71e6e  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.13.3-arm64.dmg)  
+SHA256: 16c25de9b991f460b71ff06e89cdb32cc81d1570514f9dca12299fbea4614a02  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.13.3_amd64.deb)  
+SHA256: 5a37b9a0b5b74d39add9935251fd85da6f1751876f373d8569cb73c834f35a88  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.13.3-1.x86_64.rpm)  
+SHA256: 6338c7807274084af2d40c72cbc34011d1f39b8a9f44dc6c6c8a565dc7d50735  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.13.3_amd64.deb)  
+SHA256: 9fb9fe91cd420ff28e66be60abf3fe901eb231f8ddbf5ab66d5184dbddfa1a56  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.13.3-1.x86_64.rpm)  
+SHA256: 105d9858d5a02f8f0ae2184ad2a7702ed2a826d41d02dec80277afdf8b3b0a9e  
+
 ## Version 3.13.1 - 2023-11-16
 
 [NEW] (Windows/Linux) Introducing the Inverse Split Tunnel mode  
