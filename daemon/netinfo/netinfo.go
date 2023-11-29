@@ -48,8 +48,8 @@ var (
 	}
 
 	_multicastAddresses []net.IPNet = []net.IPNet{
-		{IP: net.ParseIP("240.0.0.0"), Mask: net.CIDRMask(4, 32)}, //IPv4 Multicast Addresses
-		{IP: net.ParseIP("ff::"), Mask: net.CIDRMask(8, 128)},     //IPv6 Multicast Addresses
+		{IP: net.ParseIP("224.0.0.0"), Mask: net.CIDRMask(4, 32)}, //IPv4 Multicast Addresses (RFC 5771)
+		{IP: net.ParseIP("ff00::"), Mask: net.CIDRMask(8, 128)},   //IPv6 Multicast Addresses (RFC 4291; RFC 3306)
 	}
 )
 
