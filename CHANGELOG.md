@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.13.4 - 2023-11-29
+
+[FIX] Fixed an issue with the 'Allow Multicast' functionality in firewall rules  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.13.4.exe)  
+SHA256: 5adc35afa14f582cdad0adba5963cd321d54c56e8065626c705c9eaed0157e47  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.13.4.dmg)  
+SHA256: 52fc8838cdde376d89ebb718494771da84d1ded18632780a4172888c132efaa4  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.13.4-arm64.dmg)  
+SHA256: 5699ef5702970e6310f1bafe3a77ad3b1e4e6f4292c3396d0b0b2c6162893036  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.13.4_amd64.deb)  
+SHA256: 10d8bf35ffedbdac2943fb7a3ab608eb8ae069dcc344e9b6b97b96a662372c35  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.13.4-1.x86_64.rpm)  
+SHA256: bea799dca102d3f42bc085756361e028f1650c72a4a3e24a7bb0bb4a2500a186  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.13.4_amd64.deb)  
+SHA256: 79c272ba4c73bb4e86b0ec5995d303c30086494af62fcfd86c929d055f2202b1  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.13.4-1.x86_64.rpm)  
+SHA256: f10b2977789ed4282caee11cf4ca1e339a8ae2c2456dabe1a2ffcf49132fb01a  
+
 ## Version 3.13.3 - 2023-11-27
 
 [FIX] Fixed settings file corruption issue that led to unexpected logout  
