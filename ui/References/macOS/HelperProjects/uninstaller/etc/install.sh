@@ -42,7 +42,7 @@ function RestoreBackup
 
 function CntAppRunningProcesses
 {
-    return `ps aux | grep -v grep | grep -c "/Applications/IVPN.app/Contents/MacOS/IVPN"`
+    return `ps -eo comm | grep -v grep | grep -c "^/Applications/IVPN.app/Contents/MacOS/IVPN$"`
 }
 
 function KillAppProcess
@@ -79,6 +79,8 @@ function StartApp
 
         echo "[ ] Sleep '${i}' ..."
         sleep ${i}
+
+        open "${_app_path}" # sencond try, without sudo (the 'sudo -u "$USER" ...' is not working in some cases, like for Standard macOS user)
 
         CntAppRunningProcesses
         _cnt=$?
