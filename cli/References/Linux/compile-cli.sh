@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 SCRIPT_DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 OUT_DIR="$SCRIPT_DIR/_out_bin"
 OUT_FILE="$OUT_DIR/ivpn"
+OUT_BASH_COMPLETION_SCRIPT=$OUT_DIR/ivpn.bash-completion
 
 set -e
 
@@ -82,6 +83,12 @@ else
     go build -o "$OUT_FILE" -trimpath -ldflags "-s -w -X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
 fi
 
-echo "Compiled CLI binary: '$OUT_FILE'"
+# generate bash-completion script
+$SCRIPT_DIR/bash-completion-generator-ivpn-cli.sh "$OUT_FILE" > "$OUT_BASH_COMPLETION_SCRIPT"
+bash -n "$OUT_BASH_COMPLETION_SCRIPT" # check bash-completion script syntax
+
+
+echo "Compiled CLI binary   : '$OUT_FILE'"
+echo "Bash-completion script: '$OUT_BASH_COMPLETION_SCRIPT'"
 
 set +e

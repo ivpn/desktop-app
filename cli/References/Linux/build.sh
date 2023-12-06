@@ -216,6 +216,7 @@ CreatePackage()
     $DAEMON_REPO_ABS_PATH/References/common/etc=/opt/ivpn/ \
     $DAEMON_REPO_ABS_PATH/References/Linux/scripts/_out_bin/ivpn-service=/usr/bin/ \
     $OUT_DIR/ivpn=/usr/bin/ \
+    $OUT_DIR/ivpn.bash-completion=/opt/ivpn/etc/ivpn.bash-completion \
     $OBFSPXY_BIN=/opt/ivpn/obfsproxy/obfs4proxy \
     $V2RAY_BIN=/opt/ivpn/v2ray/v2ray \
     $WG_QUICK_BIN=/opt/ivpn/wireguard-tools/wg-quick \

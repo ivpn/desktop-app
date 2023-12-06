@@ -2,12 +2,6 @@
 
 echo "[*] After install (<%= version %> : <%= pkg %> : $1)"
 
-# When removing package: $1==0 for RPM; $1 == "remove" for DEB
-_IS_REMOVE=0
-if [ "$1" = "remove" -o "$1" = "0" ]; then
-  _IS_REMOVE=1
-fi
-
 NEED_TO_SAVE_INSTRUCTIONS=true
 IVPN_OPT="/opt/ivpn"
 IVPN_ETC="/opt/ivpn/etc"
@@ -49,6 +43,19 @@ try_systemd_install() {
     fi
 }
 
+install_bash_completion() {
+    # get bash completion folder (according to https://github.com/scop/bash-completion)
+    bash_competion_folder=$(pkg-config --variable=completionsdir bash-completion 2>&1) 
+    if [ $? -eq 0 ] && [ ! -z $bash_competion_folder ] ; then
+      completion_file=${bash_competion_folder}/ivpn
+      echo "[+] Installing bash completion (into '${completion_file}')"
+      silent cp "$IVPN_ETC/ivpn.bash-completion" "${completion_file}"
+      silent chmod 644 "${completion_file}"
+    else
+      echo "[ ] Installing bash completion - SKIPPED"
+    fi
+}
+
 echo "[+] Defining access rights for files ..."
 silent chmod 0400 $IVPN_ETC/*             # can read only owner (root)
 silent chmod 0600 $IVPN_ETC/servers.json  # can read/wrire only owner (root)
@@ -87,6 +94,8 @@ if $NEED_TO_SAVE_INSTRUCTIONS == true ; then
     echo $INSTALL_OUTPUT > $INSTRUCTIONS_FILE
     echo "[!] Service start instructions saved into file: '$INSTRUCTIONS_FILE'"
 fi
+
+install_bash_completion
 
 # ########################################################################################
 #

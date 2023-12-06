@@ -64,8 +64,22 @@ try_systemd_stop() {
     fi
 }
 
+uninstall_bash_completion() {
+    # get bash completion folder (according to https://github.com/scop/bash-completion)
+    bash_competion_folder=$(pkg-config --variable=completionsdir bash-completion 2>&1) 
+    if [ $? -eq 0 ] && [ ! -z $bash_competion_folder ] ; then
+      completion_file=${bash_competion_folder}/ivpn
+      if [ -f ${completion_file} ] ; then
+        echo "[+] Uninstalling bash completion ('${completion_file}')"
+        rm "${completion_file}"    
+      fi
+    fi
+}
+
 # stop & disable service
 try_systemd_stop
+
+uninstall_bash_completion
 
 PLEASERUN_DIR="/usr/share/pleaserun/ivpn-service"
 if [ -d $PLEASERUN_DIR ] ; then
