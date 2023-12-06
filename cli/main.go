@@ -24,7 +24,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -139,6 +138,18 @@ func main() {
 			}
 			os.Exit(0)
 		}
+
+		// Processing help for a specific command before connecting to the daemon
+		// to avoid unnecessary connection attempts
+		if arg2 == "h" || arg2 == "help" {
+			for _, c := range _commands {
+				if c.Name() == arg1 {
+					c.Usage(false)
+					os.Exit(0)
+				}
+			}
+		}
+
 	}
 
 	// initialize command handler
@@ -258,7 +269,7 @@ func readDaemonPort() (port int, secret uint64, err error) {
 		return 0, 0, fmt.Errorf("connection-info check error: %s", err)
 	}
 
-	data, err := ioutil.ReadFile(filepath.Clean(file))
+	data, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		log.Fatal(err)
 	}
