@@ -52,8 +52,6 @@ import (
 	"github.com/ivpn/desktop-app/daemon/vpn"
 	"github.com/ivpn/desktop-app/daemon/vpn/wireguard"
 	"github.com/ivpn/desktop-app/daemon/wifiNotifier"
-
-	syncSemaphore "golang.org/x/sync/semaphore"
 )
 
 var log *logger.Logger
@@ -112,9 +110,9 @@ type Service struct {
 	_systemLog chan<- SystemLogMessage
 
 	_ping struct {
-		_results_mutex               sync.RWMutex
-		_result                      map[string]int //[host]latency
-		_singleRequestLimitSemaphore *syncSemaphore.Weighted
+		_results_mutex           sync.RWMutex
+		_result                  map[string]int //[host]latency
+		_singleRequestLimitMutex sync.Mutex
 	}
 
 	// variables needed for automatic resume
@@ -162,8 +160,6 @@ func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater ISe
 		_globalEvents:      globalEvents,
 		_systemLog:         systemLog,
 	}
-
-	serv._ping._singleRequestLimitSemaphore = syncSemaphore.NewWeighted(1)
 
 	// register the current service as a 'Connectivity checker' for API object
 	serv._api.SetConnectivityChecker(serv)
@@ -307,10 +303,11 @@ func (s *Service) init() error {
 			// wait for 'servers updated' event
 			<-s._serversUpdater.UpdateNotifierChannel()
 			// notify clients
-			svrs, _ := s.ServersList()
-			s._evtReceiver.OnServersUpdated(svrs)
-			// update firewall rules: notify firewall about new IP addresses of IVPN API
-			s.updateAPIAddrInFWExceptions()
+			if svrs, err := s.ServersList(); svrs != nil && err == nil {
+				s._evtReceiver.OnServersUpdated(svrs)
+				// update firewall rules: notify firewall about new IP addresses of IVPN API
+				s.updateAPIAddrInFWExceptions()
+			}
 		}
 	}()
 
@@ -402,7 +399,10 @@ func (s *Service) SetVpnSessionInfo(i VpnSessionInfo) {
 }
 
 func (s *Service) updateAPIAddrInFWExceptions() {
-	svrs, _ := s.ServersList()
+	svrs, err := s.ServersList()
+	if err != nil {
+		return
+	}
 
 	ivpnAPIAddr := svrs.Config.API.IPAddresses
 

@@ -103,17 +103,14 @@ func (s *Service) PingServers(firstPhaseTimeoutMs int, vpnTypePrioritized vpn.Ty
 	}
 
 	// Do not allow multiple ping request simultaneously
-	if !s._ping._singleRequestLimitSemaphore.TryAcquire(1) {
+	if !s._ping._singleRequestLimitMutex.TryLock() {
 		return nil, fmt.Errorf("servers pinging skipped: ping already in progress, please try again after some delay")
 	}
-
-	s._ping._results_mutex.Lock()
-	isNoDataSaved := len(s._ping._result) == 0 // true when there is no latency result saved yet (very first ping request)
-	s._ping._results_mutex.Unlock()
 
 	// Get hosts to ping in prioritized order
 	hostsToPing, err := s.ping_getHosts(vpnTypePrioritized, skipSecondPhase)
 	if err != nil {
+		s._ping._singleRequestLimitMutex.Unlock()
 		return nil, err
 	}
 
@@ -136,7 +133,7 @@ func (s *Service) PingServers(firstPhaseTimeoutMs int, vpnTypePrioritized vpn.Ty
 			log.Error("implPingServersStopped failed: " + err.Error())
 		}
 		// release semaphore (to allow new calls of current finction)
-		s._ping._singleRequestLimitSemaphore.Release(1)
+		s._ping._singleRequestLimitMutex.Unlock()
 	}()
 
 	// Request geo-location in separate routine
@@ -164,6 +161,7 @@ func (s *Service) PingServers(firstPhaseTimeoutMs int, vpnTypePrioritized vpn.Ty
 	firstPhaseDeadline := startTime.Add(time.Millisecond * time.Duration(firstPhaseTimeoutMs))
 	isInterrupted := s.ping_iteration(hostsToPing, Ping_MaxHostTimeoutFirstPhase, result, &firstPhaseDeadline, onGeoLookupChan)
 
+	isNoDataSaved := s.ping_isEmptyResults()
 	if !skipSecondPhase && len(result) < len(hostsToPing) {
 		// The first ping result already received.
 		// So, now there is no rush to do second ping iteration. Doing it in background.
@@ -336,7 +334,7 @@ func (s *Service) ping_iteration(hostsToPing []pingHost, hostTimeout time.Durati
 				continue
 			}
 
-			// If we received geo-location info: sort hosts acoording to new location and retry ping loop
+			// If we received geo-location info: sort hosts according to new location and retry ping loop
 			select {
 			case location := <-onGeolookupChan:
 				if location != nil {
@@ -349,11 +347,11 @@ func (s *Service) ping_iteration(hostsToPing []pingHost, hostTimeout time.Durati
 				break
 			}
 
-			// limit count of allowed simultaneous pings
+			// limit count of allowed simultaneus pings
 			pingsLimit <- struct{}{}
 			wg.Add(1)
 
-			// Ping single host in routuine
+			// Ping single host in routine
 			go func(hostIp string, timeout time.Duration) {
 				defer func() {
 					if r := recover(); r != nil { // recover in case of panic
@@ -431,4 +429,10 @@ func (s *Service) ping_getLastResults() map[string]int {
 		ret[k] = v
 	}
 	return ret
+}
+
+func (s *Service) ping_isEmptyResults() bool {
+	s._ping._results_mutex.RLock()
+	defer s._ping._results_mutex.RUnlock()
+	return len(s._ping._result) == 0
 }
