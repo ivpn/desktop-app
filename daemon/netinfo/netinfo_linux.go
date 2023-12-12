@@ -40,9 +40,11 @@ func doDefaultGatewayIP() (defGatewayIP net.IP, err error) {
 	// default via 192.168.1.1 dev enp0s3 proto dhcp metric 100
 	// 192.168.1.0/24 dev enp0s3 proto kernel scope link src 192.168.1.57 metric 100
 	// 192.168.122.0/24 dev virbr0 proto kernel scope link src 192.168.122.1 linkdown
+	//
+	// Note that metric value is optional, e.g.:	default via 192.168.1.1 dev eth0 onlink
 
 	metric := -1
-	outRegexp := regexp.MustCompile("default[ a-z]*([0-9.]*).*metric *([0-9]*)")
+	outRegexp := regexp.MustCompile("default[ a-z]*([0-9.]*)(?:.*metric ([0-9]*))?")
 
 	outParse := func(text string, isError bool) {
 		if !isError {
@@ -50,18 +52,21 @@ func doDefaultGatewayIP() (defGatewayIP net.IP, err error) {
 			if len(columns) <= 2 {
 				return
 			}
-
 			gw := net.ParseIP(columns[1])
 			if gw == nil {
 				return
 			}
-			m, err := strconv.Atoi(columns[2])
-			if err != nil {
-				return
+
+			currMetric := 0
+			if len(columns) >= 3 && len(columns[2]) > 0 {
+				if currMetric, err = strconv.Atoi(columns[2]); err != nil {
+					currMetric = 0
+				}
 			}
-			if metric == -1 || metric > m {
+
+			if metric == -1 || metric > currMetric {
 				defGatewayIP = gw
-				metric = m
+				metric = currMetric
 			}
 		}
 	}
