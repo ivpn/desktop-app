@@ -66,10 +66,6 @@ func doStopped() {
 	implStopped()
 }
 
-func isNeedToSavePortInFile() bool {
-	return true
-}
-
 // checkIsAdmin - check is application running with root privileges
 func doCheckIsAdmin() bool {
 	uid := os.Geteuid()

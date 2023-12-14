@@ -164,24 +164,21 @@ func Launch() {
 		// waiting for port number info
 		openedPort := <-startedOnPortChan
 
-		// save port info into a file (UI clients is able to read it)
-		if isNeedToSavePortInFile() == true {
-			file, err := os.Create(platform.ServicePortFile())
-			if err != nil {
-				logger.Panic(err.Error())
-			}
-			defer file.Close()
-			file.WriteString(fmt.Sprintf("%d:%x", openedPort, secret))
+		// save port info into a file (UI/CLI clients is able to read it)
+		file, err := os.Create(platform.ServicePortFile())
+		if err != nil {
+			logger.Panic(err.Error())
 		}
+		defer file.Close()
+		if _, err := file.WriteString(fmt.Sprintf("%d:%x", openedPort, secret)); err != nil {
+			log.Error(fmt.Errorf("failed to write port info into file: %w", err))
+		}
+
 		// inform OS-specific implementation about listener port
 		doStartedOnPort(openedPort, secret)
 	}()
 
-	defer func() {
-		if isNeedToSavePortInFile() == true {
-			os.Remove(platform.ServicePortFile())
-		}
-	}()
+	defer os.Remove(platform.ServicePortFile())
 
 	// perform OS-specific preparations (if necessary)
 	if err := doPrepareToRun(); err != nil {

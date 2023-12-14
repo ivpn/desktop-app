@@ -68,7 +68,3 @@ func doCheckIsAdmin() bool {
 
 func doStartedOnPort(port int, secret uint64) {
 }
-
-func isNeedToSavePortInFile() bool {
-	return true
-}

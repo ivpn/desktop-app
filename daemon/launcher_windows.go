@@ -261,7 +261,3 @@ loop:
 
 	return
 }
-
-func isNeedToSavePortInFile() bool {
-	return true
-}
