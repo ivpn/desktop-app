@@ -363,13 +363,13 @@ export default {
                 l.latitude,
                 l.longitude,
                 a.latitude,
-                a.longitude
+                a.longitude,
               );
               var distB = getDistanceFromLatLonInKm(
                 l.latitude,
                 l.longitude,
                 b.latitude,
-                b.longitude
+                b.longitude,
               );
               if (distA === distB) return 0;
               if (distA < distB) return -1;
@@ -440,7 +440,7 @@ export default {
             // V2Ray (TCP) uses only TCP ports
             customPortsType = PortTypeEnum.TCP;
             const portsFiltered = ports.filter(
-              (p) => p.type === PortTypeEnum.TCP
+              (p) => p.type === PortTypeEnum.TCP,
             );
 
             if (portsFiltered.length > 0) ports = portsFiltered;

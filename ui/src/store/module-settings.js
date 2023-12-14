@@ -519,7 +519,7 @@ export default {
         if (favSvrs.length > 0) {
           // Filter only servers from 'favorite servers' list
           ret = activeServers.filter(
-            (s) => favSvrs.includes(s.gateway.split(".")[0]) // Converting gateway name to geteway ID (if necessary). Example: "nl.gw.ivpn.net" => "nl"
+            (s) => favSvrs.includes(s.gateway.split(".")[0]), // Converting gateway name to geteway ID (if necessary). Example: "nl.gw.ivpn.net" => "nl"
           );
         }
       } catch (e) {
@@ -569,7 +569,7 @@ export default {
     // Resulted list is sorted by 'LastUsedDate' and 'AppName'
     getAppsToSplitTunnel: (state, getters, rootState) => {
       let installedApps = JSON.parse(
-        JSON.stringify(rootState.allInstalledApps)
+        JSON.stringify(rootState.allInstalledApps),
       );
 
       let getFileName = function (appBinPath) {
@@ -671,8 +671,8 @@ export default {
               "setPort",
               getDefaultPortFromList(
                 applicablePorts,
-                context.getters["getPort"]
-              )
+                context.getters["getPort"],
+              ),
             );
         }
       }
@@ -1017,7 +1017,7 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
       serverEntry = findServerFromLocation(
         servers,
         serverEntry.country_code,
-        serverEntry.city
+        serverEntry.city,
       );
     }
   }
@@ -1026,7 +1026,7 @@ function updateSelectedServers(context, isDenyMultihopServersFromSameCountry) {
       serverExit = findServerFromLocation(
         servers,
         serverExit.country_code,
-        serverExit.city
+        serverExit.city,
       );
     }
   }
@@ -1129,7 +1129,7 @@ function doSettingsUpgradeAfterSvrsUpdateIfRequired(context) {
       // save converted data
       context.dispatch(
         "hostsFavoriteListDnsNames",
-        Array.from(hostsFavListDnsNamesSet)
+        Array.from(hostsFavListDnsNamesSet),
       );
       // forget 'hostsFavoriteList' forever
       context.commit("deleteObsoletePropertiesAfterUpgrade", null);
@@ -1215,7 +1215,7 @@ function ensurePortsSelectedCorrectly(ctx) {
       "(ensurePortsSelectedCorrectly) Port was changed from:",
       state.port,
       "to:",
-      cPort
+      cPort,
     );
   }
 }
@@ -1341,7 +1341,7 @@ function eraseNonAcceptableCustomPorts(context) {
 
     if (newCustomPorts.length != state.customPorts.length) {
       console.log(
-        "Warning! Removing custom ports that do not belong to new ranges!"
+        "Warning! Removing custom ports that do not belong to new ranges!",
       );
       context.commit("customPorts", newCustomPorts);
     }
