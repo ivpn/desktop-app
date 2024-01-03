@@ -22,7 +22,7 @@
             Please update daemon by downloading latest version from
             <button
               class="noBordersTextBtn settingsLinkText"
-              v-on:click="visitWebsite"
+              v-on:click="visitWebsiteAppsPage"
             >
               IVPN website</button
             >.
@@ -34,10 +34,10 @@
             try to reconnect.
           </div>
           <div class="small_text">
-            The latest daemon version can be downloaded from
+            The latest version of the IVPN software can be downloaded from the
             <button
               class="noBordersTextBtn settingsLinkText"
-              v-on:click="visitWebsite"
+              v-on:click="visitWebsiteAppsPage"
             >
               IVPN website</button
             >.
@@ -89,6 +89,9 @@ export default {
     },
     visitWebsite() {
       sender.shellOpenExternal(`https://www.ivpn.net`);
+    },
+    visitWebsiteAppsPage() {
+      sender.shellOpenExternal(`https://www.ivpn.net/apps/`);
     },
   },
   computed: {
