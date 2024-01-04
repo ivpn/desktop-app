@@ -266,21 +266,14 @@ func StartConsoleReaders(cmd *exec.Cmd, outProcessFunc func(text string, isError
 
 // Kill trying to kill process
 func Kill(cmd *exec.Cmd) error {
-	// ProcessState contains information about an exited process,
-	// available after a call to Wait or Run.
-	// (NOT nil = process finished)
 	if cmd == nil || cmd.Process == nil || cmd.ProcessState != nil {
-		return nil // nothing to stop
+		return nil
 	}
-
 	return cmd.Process.Kill()
 }
 
 // IsRunning - true when process is currently running
 func IsRunning(cmd *exec.Cmd) bool {
-	// ProcessState contains information about an exited process,
-	// available after a call to Wait or Run.
-	// (NOT nil = process finished)
 	if cmd == nil || cmd.Process == nil || cmd.ProcessState != nil {
 		return false
 	}

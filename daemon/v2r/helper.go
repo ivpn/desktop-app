@@ -30,7 +30,7 @@ import (
 )
 
 // Start - helper function which starts V2Ray client with specified parameters
-// It tryes to start V2Ray on the free port. In case of error it tryes to start V2Ray on another port (5 attemps)
+// It tryes to start V2Ray on the free port. In case of error it tryes to start V2Ray on another port (few attemps)
 // Note: To get local port it uses call V2RayWrapper.GetLocalPort()
 // Parameters:
 //

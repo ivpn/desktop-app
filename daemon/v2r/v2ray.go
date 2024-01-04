@@ -241,15 +241,25 @@ func (v *V2RayWrapper) deleteMainRoute() error {
 }
 
 func (v *V2RayWrapper) start() (retError error) {
+	defer func() {
+		if retError != nil {
+			log.Error(retError)
+			// ensure process is stopped
+			if err := shell.Kill(v.command); err != nil {
+				log.Error(fmt.Errorf("error stopping V2Ray process: %w", err))
+			}
+		}
+	}()
+
 	// check if object correctly initialized
 	if v.binary == "" {
-		return fmt.Errorf("binary is empty")
+		return fmt.Errorf("path to binary is empty")
 	}
 	if v.tempConfigFile == "" {
 		return fmt.Errorf("temp config file is empty")
 	}
 	if v.config == nil {
-		return fmt.Errorf("config is empty")
+		return fmt.Errorf("config object is empty")
 	}
 
 	// check if config is valid
@@ -268,7 +278,6 @@ func (v *V2RayWrapper) start() (retError error) {
 	// delete temp config file on exit
 	defer os.Remove(v.tempConfigFile)
 
-	// TODO: remove debug lines
 	// Beatify json data from cgfStr and print it to log
 	var prettyJSON bytes.Buffer
 	if e := json.Indent(&prettyJSON, cfgStr, "", "\t"); e == nil {
@@ -280,8 +289,8 @@ func (v *V2RayWrapper) start() (retError error) {
 		return fmt.Errorf("error applying route to remote V2Ray endpoint: %w", err)
 	}
 	defer func() {
+		// in case of error starting V2Ray process - ensure route is deleted
 		if retError != nil {
-			// in case of error - ensure route is deleted
 			v.deleteMainRoute()
 		}
 	}()
@@ -290,6 +299,7 @@ func (v *V2RayWrapper) start() (retError error) {
 	initialised := make(chan struct{}, 1)
 
 	// regexp to parse output and get local port number from it (if any)
+	// Example: "... [Info] transport/internet/udp: listening UDP on 0.0.0.0:58683"
 	portRegExp := regexp.MustCompile(`^.+\s+\[Info\]\s+transport/internet/((udp)|(tcp)):\s+listening\s+((UDP)|(TCP))\s+on\s+0\.0\.0\.0:([0-9]+)\s*$`)
 	outputParseFunc := func(text string, isError bool) {
 		if isError {
@@ -323,28 +333,22 @@ func (v *V2RayWrapper) start() (retError error) {
 		}
 	}
 
-	v.stoppedChan = make(chan struct{}, 1)
-
 	log.Info("Starting V2Ray client")
 	v.command = exec.Command(v.binary, "run", "-config", v.tempConfigFile)
-	defer func() {
-		if err != nil {
-			// in case of error - ensure process is stopped
-			shell.Kill(v.command)
-			close(v.stoppedChan) // notify as stopped
-		}
-	}()
-
 	// start reading output
 	if err := shell.StartConsoleReaders(v.command, outputParseFunc); err != nil {
-		log.Error("Failed to init command: ", err.Error())
-		return err
+		return fmt.Errorf("failed to init process console reader: %w", err)
 	}
 	// start process
 	if err := v.command.Start(); err != nil {
-		log.Error("Failed to start client: ", err.Error())
-		return err
+		return fmt.Errorf("failed to start client: %w", err)
 	}
+	// wait for process to finish (in separate routine)
+	v.stoppedChan = make(chan struct{}, 1)
+	go func() {
+		v.command.Wait()
+		close(v.stoppedChan) // notify as stopped
+	}()
 
 	configuredPort, configuredPortIsTCP := v.config.GetLocalPort()
 	configuredPortStr := fmt.Sprintf("%d:UDP", configuredPort)
@@ -353,53 +357,38 @@ func (v *V2RayWrapper) start() (retError error) {
 	}
 
 	// wait for v2ray to start (or timeout)
-	var startError error
 	select {
 	case <-initialised:
 		if localPort == 0 {
-			startError = fmt.Errorf("V2Ray start failed (local port %s)", configuredPortStr)
+			return fmt.Errorf("V2Ray start failed (local port %s)", configuredPortStr)
 		} else if configuredPort != localPort {
-			startError = fmt.Errorf("V2Ray client started on unexpected local port: %s", configuredPortStr)
+			return fmt.Errorf("V2Ray client started on unexpected local port: %s", configuredPortStr)
 		}
 	case <-time.After(10 * time.Second):
-		startError = fmt.Errorf("V2Ray start timeout (port %s)", configuredPortStr)
-	}
-
-	if startError != nil {
-		v.command.Process.Kill()
-		log.Error(startError)
-		return startError
+		return fmt.Errorf("V2Ray start timeout (port %s)", configuredPortStr)
 	}
 
 	// routine alive until process finished
 	go func() {
-
-		// Periodically checking the IP address of the local interface used for communication with the V2Ray server
-		// and update/restore route, if necessary
-		done := make(chan struct{}, 1)
-		defer close(done)
-		go func() {
-			for {
-				select {
-				case <-time.After(time.Second * 20):
-					if v.isMainRouteLocalInfAddressChanged() {
-						log.Info("The IP address of the local interface used for communication with the V2Ray server has changed")
-						if err := v.UpdateMainRoute(); err != nil {
-							log.Error(err)
-						}
+		for {
+			select {
+			case <-time.After(time.Second * 20):
+				// Periodically checking the IP address of the local interface used for communication with the V2Ray server
+				// and update/restore route, if necessary
+				if v.isMainRouteLocalInfAddressChanged() {
+					log.Info("The IP address of the local interface used for communication with the V2Ray server has changed")
+					if err := v.UpdateMainRoute(); err != nil {
+						log.Error(err)
 					}
-				case <-done:
-					return
 				}
+			case <-v.stoppedChan:
+				v.implDeleteMainRoute() // ensure route is deleted
+				log.Info(fmt.Sprintf("V2Ray client stopped (port %s)", configuredPortStr))
+				return
 			}
-		}()
-
-		v.command.Wait()
-		// ensure route is deleted
-		v.implDeleteMainRoute()
-		log.Info(fmt.Sprintf("V2Ray client stopped (port %s)", configuredPortStr))
-		close(v.stoppedChan) // notify as stopped
+		}
 	}()
+
 	log.Info(fmt.Sprintf("V2Ray client started (port %s)", configuredPortStr))
 	return nil
 }
