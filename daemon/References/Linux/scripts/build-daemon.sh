@@ -75,13 +75,20 @@ fi
 # Build
 cd $SCRIPT_DIR/../../../
 
+BUILDTAG_DEBUG=""  # "debug"
+BUILDTAG_NOWIFI="" # "nowifi"
+
 if [[ "$@" == *"-debug"* ]]
 then
-    echo "Compiling in DEBUG mode"
-    go build -buildmode=pie -tags debug -o "$OUT_FILE" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
-else
-    go build -buildmode=pie -o "$OUT_FILE" -trimpath -ldflags "-s -w -X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
+  echo "[!] Compiling in DEBUG mode."
+  BUILDTAG_DEBUG="debug"
 fi
+if [ ! -z "$IVPN_NO_WIFI" ]; then
+  echo "[!] WIFI functionality DISABLED."
+  BUILDTAG_NOWIFI="nowifi"
+fi
+
+go build -buildmode=pie -tags "${BUILDTAG_DEBUG} ${BUILDTAG_NOWIFI}" -o "$OUT_FILE" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
 
 echo "Compiled binary: '$OUT_FILE'"
 
