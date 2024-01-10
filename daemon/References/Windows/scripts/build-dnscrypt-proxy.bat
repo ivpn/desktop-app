@@ -3,7 +3,7 @@
 setlocal
 
 rem TODO: define here dnscrypt-proxy version to build
-set _VERSION=2.1.1
+set _VERSION=2.1.5
 
 set SCRIPTDIR=%~dp0
 
@@ -35,5 +35,5 @@ echo [*] Compiling dnscrypt-proxy ...
 go build -o "%SCRIPTDIR%..\dnscrypt-proxy\dnscrypt-proxy.exe" -trimpath -ldflags "-s -w" ./dnscrypt-proxy >nul 2>&1 || exit /b 1
 
 echo [ ] SUCCESS
-echo [ ] The compiled 'obfs4proxy.exe' binary located at:
+echo [ ] The compiled 'dnscrypt-proxy.exe' binary located at:
 echo [ ] "%SCRIPTDIR%..\dnscrypt-proxy\dnscrypt-proxy.exe"

@@ -1,6 +1,7 @@
 #!/bin/sh
 
-_VERSION=2.1.1 # TODO: define here dnscrypt-roxy version to build
+# TODO: define here dnscrypt-roxy version to build
+_VERSION=2.1.5
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
