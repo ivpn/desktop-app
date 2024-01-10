@@ -3,7 +3,7 @@
 setlocal
 
 rem TODO: define here version to build
-set _VERSION=v5.8.0
+set _VERSION=v5.12.1
 
 set SCRIPTDIR=%~dp0
 
