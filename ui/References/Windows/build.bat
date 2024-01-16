@@ -111,7 +111,7 @@ goto :success
 	goto :eof
 
 :copy_files
-	set UI_BINARIES_FOLDER=%SCRIPTDIR%..\..\dist_electron\win-unpacked
+	set UI_BINARIES_FOLDER=%SCRIPTDIR%..\..\dist\win-unpacked
 
 	set TIMESTAMP_SERVER=http://timestamp.digicert.com
 	if NOT "%CERT_SHA1%" == "" (

@@ -1677,7 +1677,7 @@ async function GetInstalledApps() {
 
       // get environment variables
 
-      if (process.env.IS_DEBUG) {
+      if (config.IsDebug()) {
         XDG_CURRENT_DESKTOP = "ubuntu:GNOME";
       }
 

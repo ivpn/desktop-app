@@ -305,7 +305,7 @@ parts:
       - libnspr4
       - libnss3
     override-build: |
-      rm -fr dist_electron
+      rm -fr dist
       ./References/Linux/build.sh -v $SNAPCRAFT_PROJECT_VERSION
       mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui
-      cp -R dist_electron/bin $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui
+      cp -R dist/bin $SNAPCRAFT_PART_INSTALL/opt/ivpn/ui

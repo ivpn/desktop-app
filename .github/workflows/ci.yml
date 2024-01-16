@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [ master, beta, development, feature/s160-update-binaries-to-latest-versions ]
+    branches: [ master, beta, development, feature/s160-update-binaries-to-latest-versions, feature/UI-app-migration-on-Vite ]
   push:
-    branches: [ master, beta, development, feature/s160-update-binaries-to-latest-versions ]
+    branches: [ master, beta, development, feature/s160-update-binaries-to-latest-versions, feature/UI-app-migration-on-Vite ]
 jobs:
   win:
     runs-on: windows-latest
@@ -31,7 +31,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 16.x #lts/*
+          node-version: 18.x #lts/*
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
@@ -60,7 +60,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 16.x #lts/*
+          node-version: 18.x #lts/*
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
@@ -104,7 +104,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 16.x #lts/*
+          node-version: 18.x #lts/*
           cache: npm
           cache-dependency-path: ui/package-lock.json
 

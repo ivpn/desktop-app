@@ -52,9 +52,9 @@ CheckLastResult()
 ARCH="$( node -e 'console.log(process.arch)' )"
 SCRIPT_DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 OUT_DIR="$SCRIPT_DIR/_out_bin"
-APP_UNPACKED_DIR="$SCRIPT_DIR/../../dist_electron/linux-unpacked"
-APP_UNPACKED_DIR_ARCH="$SCRIPT_DIR/../../dist_electron/linux-${ARCH}-unpacked"
-APP_BIN_DIR="$SCRIPT_DIR/../../dist_electron/bin"
+APP_UNPACKED_DIR="$SCRIPT_DIR/../../dist/linux-unpacked"
+APP_UNPACKED_DIR_ARCH="$SCRIPT_DIR/../../dist/linux-${ARCH}-unpacked"
+APP_BIN_DIR="$SCRIPT_DIR/../../dist/bin"
 IVPN_DESKTOP_UI2_SOURCES="$SCRIPT_DIR/../../"
 
 # ---------------------------------------------------------

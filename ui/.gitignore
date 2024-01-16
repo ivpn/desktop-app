@@ -21,7 +21,7 @@ pnpm-debug.log*
 *.sw?
 
 #Electron-builder output
-/dist_electron
+/dist
 /References/Linux/_out_bin/*
 /References/Linux/_tmp/*
 

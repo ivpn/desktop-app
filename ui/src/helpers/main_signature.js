@@ -51,7 +51,7 @@ export async function ValidateFileOpenSSLCertificate(
     .slice(0, -1)
     .join(".");
 
-  let pubKeyPath = path.join(config.GetResourcesPath(), "public.pem");
+  let pubKeyPath = path.resolve(path.join(config.GetResourcesPath(), "public.pem"));
   try {
     //    decode base64:
     //        openssl base64 -d -in sign.sha256.base64 -out sign2.sha256

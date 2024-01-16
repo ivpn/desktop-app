@@ -19,16 +19,15 @@
 //  You should have received a copy of the GNU General Public License
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
-import path from "path";
+
 function IsDebug() {
-  if (process.env.WEBPACK_DEV_SERVER_URL) return true;
+  if (import.meta.env.DEV) 
+    return true;
   return false;
 }
 function GetResourcesPath() {
-  if (this.IsDebug()) {
-    // eslint-disable-next-line no-undef
-    return path.join(__static, "..", "extraResources");
-  }
+  if (this.IsDebug()) 
+    return "extraResources";
   return process.resourcesPath;
 }
 

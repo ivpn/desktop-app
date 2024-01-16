@@ -91,6 +91,8 @@ export function InitTray(
   menuHandlerCheckUpdates = menuItemCheckUpdates;
   fLaunchStApp = funcLaunchStApp;
 
+  const trayIconsDir = path.join(path.dirname(__dirname), "renderer", "tray");
+
   // load icons
   switch (Platform()) {
     case PlatformEnum.Windows:
@@ -105,17 +107,7 @@ export function InitTray(
           }
         });
 
-        let f = path.join(path.dirname(__dirname), "tray", "windows", "/");
-        if (process.env.IS_DEBUG) {
-          f = path.join(
-            path.dirname(__dirname),
-            "public",
-            "tray",
-            "windows",
-            "/"
-          );
-        }
-
+        let f = path.join(trayIconsDir, "windows", "/");
         iconConnected = nativeImage.createFromPath(f + "connected.ico");
         iconDisconnected = nativeImage.createFromPath(f + "disconnected.ico");
         iconPaused = nativeImage.createFromPath(f + "paused.ico");
@@ -136,8 +128,8 @@ export function InitTray(
       }
       break;
     case PlatformEnum.Linux:
-      {
-        const f = __static + "/tray/linux/";
+      {        
+        const f = path.join(trayIconsDir, "linux", "/");
         iconConnected = nativeImage.createFromPath(f + "connected.png");
         iconDisconnected = nativeImage.createFromPath(f + "disconnected.png");
         iconPaused = nativeImage.createFromPath(f + "paused.png");
@@ -160,7 +152,7 @@ export function InitTray(
       break;
     case PlatformEnum.macOS:
       {
-        const f = __static + "/tray/mac/";
+        const f = path.join(trayIconsDir, "mac", "/");        
         iconPaused = nativeImage.createFromPath(f + "pausedTemplate.png");
         iconConnected = nativeImage.createFromPath(f + "connectedTemplate.png");
         iconDisconnected = nativeImage.createFromPath(
