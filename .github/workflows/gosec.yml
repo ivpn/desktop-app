@@ -2,9 +2,9 @@ name: "Security Scan (gosec)"
 
 on:
   pull_request:
-    branches: [ master, beta, development ]
+    branches: [ master, beta, development, test ]
   push:
-    branches: [ master, beta, development ]
+    branches: [ master, beta, development, test ]
 
 permissions: read-all
 

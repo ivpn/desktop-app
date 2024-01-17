@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [ master, beta, development, feature/s160-update-binaries-to-latest-versions, feature/UI-app-migration-on-Vite ]
+    branches: [ master, beta, development, test ]
   push:
-    branches: [ master, beta, development, feature/s160-update-binaries-to-latest-versions, feature/UI-app-migration-on-Vite ]
+    branches: [ master, beta, development, test ]
 jobs:
   win:
     runs-on: windows-latest

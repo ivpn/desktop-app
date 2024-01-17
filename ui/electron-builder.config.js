@@ -14,7 +14,7 @@ module.exports = {
   ],
   
   afterPack: "buildHooks/afterPack.js",
-  
+
   mac: {
     target: "dir",
     extendInfo: {
@@ -23,17 +23,10 @@ module.exports = {
     },
   },
   win: {
-    target: "dir",
-    //extraResources: [
-    //  {
-    //    from: "public/tray/windows",
-    //    to: "tray/windows",
-    //    filter: ["**/*"],
-    //  },
-    //],
+    target: "dir",    
   },
   linux: {
-    target: ["dir"],
+    target: "dir",
     category: "Network",
   },
   snap: {

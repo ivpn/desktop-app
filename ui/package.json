@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "1.0.2",
-    "@rushstack/eslint-patch": "1.6.1",
+    "@rushstack/eslint-patch": "1.7.0",
     "@vitejs/plugin-vue": "5.0.3",
     "@vue/eslint-config-prettier": "8.0.0",
     "electron": "25.9.8",
@@ -44,7 +44,7 @@
     "electron-vite": "^2.0.0",
     "eslint": "8.56.0",
     "eslint-plugin-vue": "9.20.1",
-    "prettier": "3.2.2",
+    "prettier": "3.2.3",
     "sass": "1.69.7",
     "vite": "5.0.11",
     "vue": "3.4.14",
