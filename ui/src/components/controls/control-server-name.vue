@@ -166,10 +166,10 @@ export default {
     serverImage: function () {
       if (this.isFastestServer === true) return Image_speedometer;
       if (this.isRandomServer === true) return Image_shuffle;
-      if (!this.server) return `/flags/unk.svg`;
+      if (!this.server) return `flags/svg/_UNKNOWN.svg`;
       try {
         const ccode = this.server.country_code.toUpperCase();
-        return `/flags/svg/${ccode}.svg`;
+        return `flags/svg/${ccode}.svg`;
       } catch (e) {
         console.log(e);
         return null;

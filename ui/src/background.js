@@ -35,10 +35,8 @@ import {
   session,
   powerMonitor,
 } from "electron";
-import {
-  createProtocol,
-  //installVueDevtools
-} from "vue-cli-plugin-electron-builder/lib";
+
+import path from "path";
 
 import { SentryInit } from "./sentry/sentry.js";
 SentryInit();
@@ -56,15 +54,13 @@ import { InitPersistentSettings, SaveSettings } from "./settings-persistent";
 import { IsWindowHasFrame } from "@/platform/platform";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
-import path from "path";
+import { join } from 'path'
 
 import { StartUpdateChecker, CheckUpdates } from "@/app-updater";
 import { WasOpenedAtLogin } from "@/auto-launch";
 
 // default copy/edit context menu event handlers
-require("@/context-menu/main");
-
-const isDevelopment = process.env.NODE_ENV !== "production";
+import "@/context-menu/main";
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -88,6 +84,9 @@ if (!gotTheLock) {
     menuOnShow();
   });
 }
+
+// Specify locale. We do not use other languages, so we can remove all other languages from "locales" folder in production build
+app.commandLine.appendSwitch ('lang', 'en-US');
 
 // abortController can be used to cancel active messageBox dialogs when app exiting.
 // Example:
@@ -255,7 +254,7 @@ if (gotTheLock) {
       ],
     },
   ];
-  if (process.env.IS_DEBUG) {
+  if (config.IsDebug()) {
     // DEBUG: TESTING MENU
     template.push({
       label: "TEST (dev. menu)",
@@ -294,7 +293,7 @@ if (gotTheLock) {
     daemonClient.RegisterMsgBoxFunc(dialog.showMessageBox);
 
     // MACOS: Check is application is located in correct place (path)
-    if (Platform() === PlatformEnum.macOS && !process.env.IS_DEBUG) {
+    if (Platform() === PlatformEnum.macOS && !config.IsDebug()) {
       let appPath = app.getAppPath();
       if (!appPath.startsWith("/Applications/IVPN.app/")) {
         console.log(`Failed to start. Wrong application path: ${appPath}`);
@@ -334,22 +333,7 @@ if (gotTheLock) {
     } catch (e) {
       console.error(e);
     }
-
-    /*
-    if (isDevelopment && !process.env.IS_TEST) {
-      // Install Vue Devtools
-      // Devtools extensions are broken in Electron 6.0.0 and greater
-      // See https://github.com/nklayman/vue-cli-plugin-electron-builder/issues/378 for more info
-      // Electron will not launch with Devtools extensions installed on Windows 10 with dark mode
-      // If you are not using Windows 10 dark mode, you may uncomment these lines
-      // In addition, if the linked issue is closed, you can upgrade electron and uncomment these lines
-      try {
-        await installVueDevtools();
-      } catch (e) {
-        console.error("Vue Devtools failed to install:", e.toString());
-      }
-    }*/
-
+    
     if (store.state.settings.minimizeToTray && WasOpenedAtLogin()) {
       // do not show main application window when application was started automatically on login
       // (if enabled minimizeToTray)
@@ -359,7 +343,7 @@ if (gotTheLock) {
       createWindow();
     }
 
-    if (isDevelopment) {
+    if (config.IsDebug()) {
       try {
         win.webContents.openDevTools();
       } catch (e) {
@@ -427,7 +411,7 @@ if (gotTheLock) {
   });
 
   // Exit cleanly on request from parent process in development mode.
-  if (isDevelopment) {
+  if (config.IsDebug()) {
     if (process.platform === "win32") {
       process.on("message", (data) => {
         if (data === "graceful-exit") {
@@ -679,10 +663,10 @@ async function isCanQuit() {
 function getWindowIcon() {
   try {
     // loading window icon only for Linux.
-    // The reest platforms will use icon from application binary
+    // The rest platforms will use icon from application binary
     if (Platform() !== PlatformEnum.Linux) return null;
-    // eslint-disable-next-line no-undef
-    return nativeImage.createFromPath(__static + "/64x64.png");
+    const iconPath = path.join(path.dirname(__dirname), "renderer", "64x64.png");
+    return nativeImage.createFromPath(iconPath);
   } catch (e) {
     console.error(e);
   }
@@ -691,11 +675,8 @@ function getWindowIcon() {
 
 function createBrowserWindow(config) {
   config.webPreferences = {
-    preload: path.join(__dirname, "preload.js"),
+    preload: join(__dirname, "../preload/preload.js"),
 
-    // Use pluginOptions.nodeIntegration, leave this alone
-    // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-    //nodeIntegration: process.env.ELECTRON_NODE_INTEGRATION
     nodeIntegration: false,
     contextIsolation: true,
     sandbox: true,
@@ -757,15 +738,12 @@ function createWindow(doNotShowWhenReady) {
     if (isWindowVisibleOnScreen == true)
       win.setBounds({ x: lastPos.x, y: lastPos.y });
   }
-
-  if (process.env.WEBPACK_DEV_SERVER_URL) {
-    // Load the url of the dev server if in development mode
-    win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
-    //if (!process.env.IS_TEST) win.webContents.openDevTools();
+ 
+  // Load the remote URL for development or the local html file for production.
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    createProtocol("app");
-    // Load the index.html when not in development
-    win.loadURL("app://./index.html");
+    win.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
   // show\hide app from system dock
@@ -859,21 +837,19 @@ function createSettingsWindow(viewName) {
 
   settingsWindow = createBrowserWindow(windowConfig);
 
-  if (process.env.WEBPACK_DEV_SERVER_URL) {
-    // Load the url of the dev server if in development mode
-    settingsWindow.loadURL(
-      process.env.WEBPACK_DEV_SERVER_URL + `#settings/${viewName}`
-    );
+  console.log("ELECTRON_RENDERER_URL: ", process.env['ELECTRON_RENDERER_URL'])
+
+    // Load the remote URL for development or the local html file for production.
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    settingsWindow.loadURL(process.env['ELECTRON_RENDERER_URL']+ `#settings/${viewName}`)
   } else {
-    createProtocol("app");
-    // Load the index.html when not in development
-    settingsWindow.loadURL("app://./index.html" + `#settings/${viewName}`);
+    settingsWindow.loadURL(`file://${join(__dirname, '../renderer/index.html')}#settings/${viewName}`);
   }
 
   settingsWindow.once("ready-to-show", () => {
     settingsWindow.show();
 
-    if (isDevelopment) {
+    if (config.IsDebug()) {
       try {
         settingsWindow.webContents.openDevTools();
       } catch (e) {
@@ -920,19 +896,17 @@ function createUpdateWindow() {
 
   updateWindow = createBrowserWindow(windowConfig);
 
-  if (process.env.WEBPACK_DEV_SERVER_URL) {
-    // Load the url of the dev server if in development mode
-    updateWindow.loadURL(process.env.WEBPACK_DEV_SERVER_URL + `#update`);
+  // Load the remote URL for development or the local html file for production.
+  if (process.env['ELECTRON_RENDERER_URL']) {
+    updateWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + `#update`)
   } else {
-    createProtocol("app");
-    // Load the index.html when not in development
-    updateWindow.loadURL("app://./index.html" + `#update`);
+    updateWindow.loadURL(`file://${join(__dirname, '../renderer/index.html')}#update`);
   }
 
   updateWindow.once("ready-to-show", () => {
     updateWindow.show();
 
-    if (isDevelopment) {
+    if (config.IsDebug()) {
       try {
         updateWindow.webContents.openDevTools();
       } catch (e) {

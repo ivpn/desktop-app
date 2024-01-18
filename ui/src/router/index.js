@@ -49,7 +49,7 @@ const mainRoutes = [
     // this generates a separate chunk (about.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
     component: () =>
-      import(/* webpackChunkName: "about" */ "../views/Component-Test.vue"),
+      import("../views/Component-Test.vue"),
   },
 ];
 const forbiddenToChangeRouteFrom = [
@@ -64,7 +64,7 @@ const routes = mainRoutes.concat(forbiddenToChangeRouteFrom);
 
 const router = createRouter({
   history: createWebHashHistory(),
-  base: process.env.BASE_URL,
+  base: import.meta.env.BASE_URL, // process.env.BASE_URL,
   routes,
 });
 

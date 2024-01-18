@@ -8,10 +8,10 @@
               this.isExitServer
                 ? "Exit server"
                 : isConnected
-                ? "Connected to"
-                : isConnecting
-                ? "Connecting to ..."
-                : "Connect to"
+                  ? "Connected to"
+                  : isConnecting
+                    ? "Connecting to ..."
+                    : "Connect to"
             }}
           </div>
           <div style="min-height: 4px" />

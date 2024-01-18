@@ -25,11 +25,13 @@ import { AppUpdateStage } from "@/store/types";
 import { Platform, PlatformEnum } from "@/platform/platform";
 const NoUpdaterErrorMessage = "App updater not available for this platform";
 
+import * as updater_generic from './updater_generic';
+import * as updater_linux from './updater_linux';
 function getUpdater() {
   try {
-    // Can be loaded different updaters according to platform
-    if (IsGenericUpdater()) return require("./updater_generic");
-    return require("./updater_linux");
+    if (IsGenericUpdater()) 
+      return updater_generic;
+    return updater_linux;
   } catch (e) {
     console.error("[ERROR] getUpdater:", e);
   }

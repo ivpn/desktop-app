@@ -8,45 +8,49 @@
   "private": true,
   "scripts": {
     "init": "node pre_build.js",
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint",
-    "electron:build": "node pre_build.js && vue-cli-service electron:build",
-    "electron:serve": "node pre_build.js && vue-cli-service electron:serve",
+    
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
+    "build": "npm run init && electron-vite build",
+    
+    "electron:build": "npm run build && electron-builder --config electron-builder.config.js",
+
+    "electron:build:win": "npm run build && electron-builder --win --config",
+    "electron:build:mac": "npm run build && electron-builder --mac --config",
+    "electron:build:linux": "npm run build && electron-builder --linux --config",
+    
     "postinstall": "electron-builder install-app-deps",
-    "postuninstall": "electron-builder install-app-deps"
+    
+    "format": "prettier --write .",
+    "lint": "eslint --ext .js,.vue --ignore-path .gitignore --fix src"    
   },
-  "main": "background.js",
+  "main": "./out/main/background.js",
   "dependencies": {
     "@sentry/electron": "4.11.1",
     "auto-launch": "5.0.6",
     "click-outside-vue3": "4.0.1",
-    "core-js": "3.33.0",
     "electron-log": "4.4.8",
     "pbkdf2": "3.1.2",
     "qrcode-generator": "1.4.4",
-    "vue": "3.3.4",
-    "vue-router": "4.2.5",
-    "vuex": "4.1.0",
-    "vuex-electron": "1.0.3",
-    "winreg": "1.2.4"
+    "winreg": "1.2.5"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.22.15",
-    "@vue/cli-plugin-babel": "5.0.8",
-    "@vue/cli-plugin-eslint": "5.0.8",
-    "@vue/cli-plugin-router": "5.0.8",
-    "@vue/cli-plugin-vuex": "5.0.8",
-    "@vue/cli-service": "5.0.8",
+    "@electron-toolkit/eslint-config": "1.0.2",
+    "@rushstack/eslint-patch": "1.7.0",
+    "@vitejs/plugin-vue": "5.0.3",
     "@vue/eslint-config-prettier": "8.0.0",
-    "electron": "25.9.3",
-    "eslint": "8.51.0",
-    "eslint-plugin-prettier": "5.0.1",
-    "eslint-plugin-vue": "9.17.0",
-    "prettier": "3.0.3",
-    "sass": "1.69.3",
-    "sass-loader": "13.3.2",
-    "vue-cli-plugin-electron-builder": "2.1.1"
+    "electron": "25.9.8",
+    "electron-builder": "24.9.1",
+    "electron-vite": "^2.0.0",
+    "eslint": "8.56.0",
+    "eslint-plugin-vue": "9.20.1",
+    "prettier": "3.2.3",
+    "sass": "1.69.7",
+    "vite": "5.0.11",
+    "vue": "3.4.14",
+    "vue-router": "4.2.5",
+    "vuex": "4.1.0",
+    "vuex-electron": "1.0.3"
   },
   "eslintConfig": {
     "root": true,
@@ -58,11 +62,13 @@
       "eslint:recommended",
       "@vue/prettier"
     ],
-    "parserOptions": {
-      "parser": "@babel/eslint-parser"
-    },
     "rules": {
-      "prettier/prettier": [ "warn", { "endOfLine": "auto" }]
+      "prettier/prettier": [
+        "warn",
+        {
+          "endOfLine": "auto"
+        }
+      ]
     }
   },
   "browserslist": [

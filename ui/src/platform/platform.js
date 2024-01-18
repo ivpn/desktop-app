@@ -28,16 +28,16 @@ export const PlatformEnum = Object.freeze({
   Windows: 3,
 });
 
-import os from "os";
 
 let hashedCurrPlatform = null;
 export function Platform() {
   if (hashedCurrPlatform) return hashedCurrPlatform;
 
-  if (IsRenderer()) hashedCurrPlatform = window.ipcSender.Platform();
+  if (IsRenderer())     
+    hashedCurrPlatform = window.ipcSender.Platform();
   else {
     // main process
-    switch (os.platform()) {
+    switch (process.platform) {
       case "win32":
         hashedCurrPlatform = PlatformEnum.Windows;
         break;

@@ -202,7 +202,7 @@ _PATH_IMAGE_FOLDER="${_SCRIPT_DIR}/_image"
 _PATH_UI_COMPILED_IMAGE=${_PATH_IMAGE_FOLDER}/${_FNAME_UI_COMPILED}
 
 _FNAME_UI_ORIG="IVPN.app"
-_PATH_COMPILED_UI_ORIG="${_PATH_ABS_REPO_UI}/dist_electron/${_COMPILEDFOLDER}/${_FNAME_UI_ORIG}"
+_PATH_COMPILED_UI_ORIG="${_PATH_ABS_REPO_UI}/dist/${_COMPILEDFOLDER}/${_FNAME_UI_ORIG}"
 
 # Erasing old files
 rm -fr ${_PATH_IMAGE_FOLDER}
@@ -215,7 +215,7 @@ fi
 
 echo "[+] Preparing DMG image: Copying UI binaries ..."
 cp -a "${_PATH_COMPILED_UI_ORIG}" ${_PATH_UI_COMPILED_IMAGE} || CheckLastResult
-rm ${_PATH_ABS_REPO_UI}/dist_electron/IVPN* # removing all created DMG (we do not need them)
+rm ${_PATH_ABS_REPO_UI}/dist/IVPN* # removing all created DMG (we do not need them)
 
 echo "[+] Preparing DMG image: Copying 'etc' ..."
 cp -R "${_PATH_ABS_REPO_DAEMON}/References/macOS/etc" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources" || CheckLastResult

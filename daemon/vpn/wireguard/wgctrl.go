@@ -30,8 +30,9 @@ import (
 )
 
 // WaitForFirstHanshake waits for a handshake during 'timeout' time.
-// if isStopArray is defined and at lease one of it's elements == true: function stops and channel closes
-func WaitForWireguardFirstHanshakeChan(tunnelName string, isStopArray []*bool, logFunc func(string)) <-chan error {
+// It returns channel that will be closed when handshake detected. In case of error, channel will contain error.
+// if stopTriggers is defined and at least one of it's elements == true: function stops and channel closes.
+func WaitForWireguardFirstHanshakeChan(tunnelName string, stopTriggers []*bool, logFunc func(string)) <-chan error {
 	retChan := make(chan error, 1)
 
 	go func() (retError error) {
@@ -56,7 +57,7 @@ func WaitForWireguardFirstHanshakeChan(tunnelName string, isStopArray []*bool, l
 		defer client.Close()
 
 		for ; ; time.Sleep(time.Millisecond * 50) {
-			for _, isStop := range isStopArray {
+			for _, isStop := range stopTriggers {
 				if isStop != nil && *isStop {
 					return nil // stop requested (probably, disconnect requested or already disconnected)
 				}

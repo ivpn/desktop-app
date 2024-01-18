@@ -12,3 +12,4 @@ daemon/References/common/kem-helper/_out_linux/
 daemon/References/common/kem-helper/_out_macos/
 daemon/References/common/kem-helper/_out_windows/
 daemon/References/Windows/v2ray/v2ray.exe
+ui/out/

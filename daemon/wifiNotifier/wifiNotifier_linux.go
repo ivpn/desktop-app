@@ -11,7 +11,7 @@ package wifiNotifier
 // 2) comment '#include "iwlib_2_linux.c"'
 // 3) remove  suffix '_2' from function names (in this file): iw_get_range_info_2, iw_init_event_stream_2, iw_extract_event_stream_2
 // #cgo LDFLAGS: -liw
-#include "iwlib_2_linux.c"
+#include "linux_lib/iwlib_2_linux.c"
 
 #include <stdio.h>  // printf
 #include <string.h> // strndup prototype

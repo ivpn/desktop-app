@@ -307,11 +307,13 @@ func (wg *WireGuard) waitHandshakeAndNotifyConnected(stateChan chan<- vpn.StateI
 	err := <-WaitForWireguardFirstHanshakeChan(wg.GetTunnelName(), []*bool{&wg.isDisconnectRequested, &wg.isDisconnected}, func(mes string) { log.Info(mes) })
 	if err != nil {
 		return err
-	} else {
-		log.Info("Connected") // no errors - handshake received
 	}
 
-	wg.notifyConnectedStat(stateChan)
+	if !wg.isDisconnectRequested && !wg.isDisconnected {
+		log.Info("Connected")
+		wg.notifyConnectedStat(stateChan)
+	}
+
 	return nil
 }
 
