@@ -194,6 +194,12 @@ function toJson(data) {
   return res;
 }
 
+function getNextRequestNo() {
+  requestNo += 1;
+  if (requestNo > 0xffffffff) requestNo = 1;
+  return requestNo;
+}
+
 // send request to connected daemon
 function send(request, reqNo) {
   if (socket == null) throw Error("Unable to send request (socket is closed)");
@@ -211,10 +217,8 @@ function send(request, reqNo) {
     );
   }
 
-  if (typeof reqNo === "undefined") {
-    requestNo += 1;
-    reqNo = requestNo;
-  }
+  if (typeof reqNo === "undefined") reqNo = getNextRequestNo();
+
   request.Idx = reqNo;
 
   let serialized = toJson(request);
@@ -263,10 +267,10 @@ function addWaiter(waiter, timeoutMs) {
 // which mach one of elements in 'waitRespCommandsList'.
 // Otherwise, waiter will accept only response with correspond response index.
 function sendRecv(request, waitRespCommandsList, timeoutMs) {
-  requestNo += 1;
+  let reqNo = getNextRequestNo();
 
   const waiter = {
-    responseNo: requestNo,
+    responseNo: reqNo,
     waitForCommandsList: waitRespCommandsList,
   };
 
@@ -280,7 +284,7 @@ function sendRecv(request, waitRespCommandsList, timeoutMs) {
 
   // send data
   try {
-    send(request, requestNo);
+    send(request, reqNo);
   } catch (e) {
     console.error(e);
     throw e;
