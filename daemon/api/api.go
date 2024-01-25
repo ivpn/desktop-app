@@ -344,7 +344,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, kemKeys types.Kem
 
 // SessionStatus - get session status
 func (a *API) SessionStatus(session string) (
-	*types.ServiceStatusAPIResp,
+	*types.SessionStatusResponse,
 	*types.APIErrorResponse,
 	error) {
 
@@ -368,7 +368,7 @@ func (a *API) SessionStatus(session string) (
 		if err := json.Unmarshal(data, &resp); err != nil {
 			return nil, nil, fmt.Errorf("failed to deserialize API response: %w", err)
 		}
-		return &resp.ServiceStatus, &apiErr, nil
+		return &resp, &apiErr, nil
 	}
 
 	return nil, &apiErr, types.CreateAPIError(apiErr.Status, apiErr.Message)

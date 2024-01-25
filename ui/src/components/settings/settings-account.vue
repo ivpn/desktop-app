@@ -33,6 +33,13 @@
         <div ref="qrcode" class="qrcode"></div>
       </div>
 
+      <div v-if="$store?.state?.account?.session?.DeviceName">
+        <div class="settingsGrayDescriptionFont">Device Name</div>
+        <div class="defColor" style="margin-top: 5px; margin-bottom: 4px">
+          {{ $store?.state?.account?.session?.DeviceName }}
+        </div>
+      </div>
+
       <!-- ACCOUNT EXPIRATION TEXT -->
       <div
         style="margin-bottom: 12px; color: darkorange"
@@ -144,9 +151,7 @@ export default {
     qr.make();
     this.$refs.qrcode.innerHTML = qr.createSvgTag(3, 10);
 
-    // request account status (if not exists)
-    if (this.$store.getters["account/isAccountStateExists"] !== true)
-      this.accountStatusRequest();
+    this.accountStatusRequest();
   },
   methods: {
     async logOut() {
@@ -246,7 +251,7 @@ export default {
       }
     },
     async accountStatusRequest() {
-      await sender.AccountStatus();
+      await sender.SessionStatus();
     },
     upgrade() {
       sender.shellOpenExternal(`https://www.ivpn.net/account`);

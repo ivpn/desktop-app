@@ -244,8 +244,7 @@ type SessionDelete struct {
 	IsCanDeleteSessionLocally bool
 }
 
-// AccountStatus get account status
-type AccountStatus struct {
+type SessionStatus struct {
 	RequestBase
 }
 

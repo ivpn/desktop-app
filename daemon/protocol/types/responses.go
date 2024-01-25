@@ -167,6 +167,7 @@ type HelloResp struct {
 type SessionResp struct {
 	AccountID          string
 	Session            string
+	DeviceName         string
 	WgPublicKey        string
 	WgLocalIP          string
 	WgKeyGenerated     int64 // Unix time
@@ -179,6 +180,7 @@ func CreateSessionResp(s preferences.SessionStatus) SessionResp {
 	return SessionResp{
 		AccountID:          s.AccountID,
 		Session:            s.Session,
+		DeviceName:         s.DeviceName,
 		WgPublicKey:        s.WGPublicKey,
 		WgLocalIP:          s.WGLocalIP,
 		WgKeyGenerated:     s.WGKeyGenerated.Unix(),
@@ -196,13 +198,13 @@ type SessionNewResp struct {
 	RawResponse     string
 }
 
-// AccountStatusResp - information about account status (or error info)
-type AccountStatusResp struct {
+type SessionStatusResp struct {
 	CommandBase
 	APIStatus       int
 	APIErrorMessage string
 	SessionToken    string
 	Account         preferences.AccountStatus
+	DeviceName      string
 }
 
 // KillSwitchStatusResp returns kill-switch status

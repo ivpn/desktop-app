@@ -66,6 +66,7 @@ type SessionNewResponse struct {
 	CaptchaImage string `json:"captcha_image"`
 
 	ServiceStatus ServiceStatusAPIResp `json:"service_status"`
+	DeviceName    string               `json:"device_name,omitempty"`
 
 	WireGuard struct {
 		Status    int    `json:"status"`
@@ -92,6 +93,7 @@ type SessionsWireGuardResponse struct {
 type SessionStatusResponse struct {
 	APIErrorResponse
 	ServiceStatus ServiceStatusAPIResp `json:"service_status"`
+	DeviceName    string               `json:"device_name,omitempty"`
 }
 
 // GeoLookupResponse geolocation info

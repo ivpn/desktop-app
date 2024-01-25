@@ -31,6 +31,7 @@ export default {
     session: {
       AccountID: "",
       Session: "",
+      DeviceName: "",
       WgPublicKey: "",
       WgLocalIP: "",
       WgUsePresharedKey: false,
@@ -66,7 +67,7 @@ export default {
       )
         state.accountStatus = null;
     },
-    accountStatus(state, accState) {
+    sessionStatus(state, accState) {
       if (
         accState == null ||
         accState.Account == null ||
@@ -76,16 +77,7 @@ export default {
       )
         return;
 
-      /*
-      //  ACCOUNT EXPIRATION TEST!
-      accState.Account.IsFreeTrial = true;
-      var result = new Date();
-      result.setDate(result.getDate() + 1);
-      accState.Account.ActiveUntil = Math.round(result / 1000);
-      accState.Account.WillAutoRebill = false;
-      //accState.Account.Active = false;
-      */
-
+      state.session.DeviceName = accState.DeviceName;
       state.accountStatus = accState.Account;
 
       // save session for account status object
@@ -153,8 +145,8 @@ export default {
   },
 
   actions: {
-    accountStatus(context, val) {
-      context.commit("accountStatus", val);
+    sessionStatus(context, val) {
+      context.commit("sessionStatus", val);
 
       if (context.getters.isMultihopAllowed === false)
         // TODO: have to be removed from here (potential problem example: VPN is connected multihop but multihop not allowed)

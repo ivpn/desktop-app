@@ -67,7 +67,7 @@ const daemonRequests = Object.freeze({
   CheckAccessiblePorts: "CheckAccessiblePorts",
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
-  AccountStatus: "AccountStatus",
+  SessionStatus: "SessionStatus",
 
   WiFiSettings: "WiFiSettings",
   ConnectSettings: "ConnectSettings",
@@ -128,7 +128,7 @@ const daemonResponses = Object.freeze({
   SetAlternateDNSResp: "SetAlternateDNSResp",
   DnsPredefinedConfigsResp: "DnsPredefinedConfigsResp",
   KillSwitchStatusResp: "KillSwitchStatusResp",
-  AccountStatusResp: "AccountStatusResp",
+  SessionStatusResp: "SessionStatusResp",
 
   SplitTunnelStatus: "SplitTunnelStatus",
   SplitTunnelAddAppCmdResp: "SplitTunnelAddAppCmdResp",
@@ -369,7 +369,7 @@ async function processResponse(response) {
       commitSession(obj.Session);
 
       // request account status update every app start
-      if (store.getters["account/isLoggedIn"]) AccountStatus();
+      if (store.getters["account/isLoggedIn"]) SessionStatus();
 
       if (obj.DisabledFunctions) {
         store.commit("disabledFunctions", obj.DisabledFunctions);
@@ -430,10 +430,8 @@ async function processResponse(response) {
       store.dispatch("settings/daemonSettings", obj);
       break;
 
-    case daemonResponses.AccountStatusResp:
-      //obj.APIStatus:       apiCode,
-      //obj.APIErrorMessage: apiErrMsg,
-      store.dispatch(`account/accountStatus`, obj);
+    case daemonResponses.SessionStatusResp:
+      store.dispatch(`account/sessionStatus`, obj);
       break;
 
     case daemonResponses.VpnStateResp:
@@ -958,8 +956,8 @@ async function Logout(
   }
 }
 
-async function AccountStatus() {
-  return await sendRecv({ Command: daemonRequests.AccountStatus });
+async function SessionStatus() {
+  return await sendRecv({ Command: daemonRequests.SessionStatus });
 }
 
 async function GetAppUpdateInfo(appUpdateType) {
@@ -1893,7 +1891,7 @@ export default {
 
   Login,
   Logout,
-  AccountStatus,
+  SessionStatus,
 
   GetAppUpdateInfo,
 

@@ -117,8 +117,8 @@ export default {
       isCanDeleteSessionLocally
     );
   },
-  AccountStatus: async () => {
-    return await invoke("renderer-request-account-status");
+  SessionStatus: async () => {
+    return await invoke("renderer-request-session-status");
   },
   PingServers: () => {
     return invoke("renderer-request-ping-servers");

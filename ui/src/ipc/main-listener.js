@@ -79,8 +79,8 @@ ipcMain.handle(
   }
 );
 
-ipcMain.handle("renderer-request-account-status", async () => {
-  return await client.AccountStatus();
+ipcMain.handle("renderer-request-session-status", async () => {
+  return await client.SessionStatus();
 });
 
 ipcMain.handle("renderer-request-ping-servers", async () => {

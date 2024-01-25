@@ -133,7 +133,7 @@ type Service interface {
 		apiCode int,
 		apiErrorMsg string,
 		sessionToken string,
-		accountInfo preferences.AccountStatus,
+		sessionData preferences.SessionMutableData,
 		err error)
 
 	WireGuardGenerateKeys(updateIfNecessary bool) error
@@ -1008,20 +1008,21 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// notify all clients about changed session status
 		p.notifyClients(p.createHelloResponse())
 
-	case "AccountStatus":
-		var resp types.AccountStatusResp
-		apiCode, apiErrMsg, sessionToken, accountInfo, err := p._service.RequestSessionStatus()
+	case "SessionStatus":
+		var resp types.SessionStatusResp
+		apiCode, apiErrMsg, sessionToken, sessionData, err := p._service.RequestSessionStatus()
 		if err != nil && apiCode == 0 {
 			// if apiCode == 0 - it is not API error. Sending error response
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
 		// Sending session info
-		resp = types.AccountStatusResp{
+		resp = types.SessionStatusResp{
 			APIStatus:       apiCode,
 			APIErrorMessage: apiErrMsg,
 			SessionToken:    sessionToken,
-			Account:         accountInfo}
+			Account:         sessionData.Account,
+			DeviceName:      sessionData.DeviceName}
 
 		// send response
 		p.sendResponse(conn, &resp, reqCmd.Idx)

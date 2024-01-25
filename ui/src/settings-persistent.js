@@ -30,11 +30,9 @@ import store from "@/store";
 import { DnsEncryption } from "@/store/types";
 
 var saveSettingsTimeout = null;
-var saveAccStateTimeout = null;
 
 const userDataFolder = app.getPath("userData");
 const filename = path.join(userDataFolder, "ivpn-settings.json");
-const filenameAccState = path.join(userDataFolder, "acc-state.json");
 
 export function InitPersistentSettings() {
   // persistent SETTINGS
@@ -88,24 +86,8 @@ export function InitPersistentSettings() {
     }
   } else {
     console.log(
-      "Settings file not exist (probably, the first application start)"
+      "Settings file not exist (probably, the first application start)",
     );
-  }
-
-  // ACCOUNT STATE
-  if (fs.existsSync(filenameAccState)) {
-    try {
-      // merge data from a settings file
-      const data = fs.readFileSync(filenameAccState);
-      const accState = JSON.parse(data);
-
-      if (accState.Active)
-        store.commit("account/accountStatus", { Account: accState });
-    } catch (e) {
-      console.error(e);
-    }
-  } else {
-    console.log("Account state file not exist (probably, not logged in)");
   }
 
   // STORE EVENT SUBSCRIPTION
@@ -120,17 +102,10 @@ export function InitPersistentSettings() {
           SaveSettings();
         }, 2000);
       }
-      // ACCOUNT STATE
-      else if (mutation.type.startsWith("account/")) {
-        if (saveAccStateTimeout != null) clearTimeout(saveAccStateTimeout);
-        saveAccStateTimeout = setTimeout(() => {
-          SaveAccountState();
-        }, 2000);
-      }
     } catch (e) {
       console.error(
         `Error in InitPersistentSettings (store.subscribe ${mutation.type}):`,
-        e
+        e,
       );
     }
   });
@@ -147,28 +122,6 @@ export function SaveSettings() {
     fs.writeFileSync(filename, data);
   } catch (e) {
     console.error("Failed to save settings:" + e);
-  }
-}
-
-export function SaveAccountState() {
-  if (saveAccStateTimeout == null) return;
-
-  clearTimeout(saveAccStateTimeout);
-  saveAccStateTimeout = null;
-
-  try {
-    if (
-      store.getters["account/isLoggedIn"] !== true ||
-      !store.state.account ||
-      !store.state.account.accountStatus
-    ) {
-      if (fs.existsSync(filenameAccState)) fs.unlinkSync(filenameAccState);
-    } else {
-      let data = JSON.stringify(store.state.account.accountStatus, null, 2);
-      fs.writeFileSync(filenameAccState, data);
-    }
-  } catch (e) {
-    console.error("Failed to save account state:" + e);
   }
 }
 

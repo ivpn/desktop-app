@@ -32,6 +32,7 @@ import (
 type SessionStatus struct {
 	AccountID          string
 	Session            string `json:",omitempty"`
+	DeviceName         string `json:",omitempty"`
 	OpenVPNUser        string `json:",omitempty"`
 	OpenVPNPass        string `json:",omitempty"`
 	WGPublicKey        string
