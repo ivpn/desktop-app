@@ -67,7 +67,7 @@ const daemonRequests = Object.freeze({
   CheckAccessiblePorts: "CheckAccessiblePorts",
   SessionNew: "SessionNew",
   SessionDelete: "SessionDelete",
-  AccountStatus: "AccountStatus",
+  SessionStatus: "SessionStatus",
 
   WiFiSettings: "WiFiSettings",
   ConnectSettings: "ConnectSettings",
@@ -128,7 +128,7 @@ const daemonResponses = Object.freeze({
   SetAlternateDNSResp: "SetAlternateDNSResp",
   DnsPredefinedConfigsResp: "DnsPredefinedConfigsResp",
   KillSwitchStatusResp: "KillSwitchStatusResp",
-  AccountStatusResp: "AccountStatusResp",
+  SessionStatusResp: "SessionStatusResp",
 
   SplitTunnelStatus: "SplitTunnelStatus",
   SplitTunnelAddAppCmdResp: "SplitTunnelAddAppCmdResp",
@@ -194,6 +194,12 @@ function toJson(data) {
   return res;
 }
 
+function getNextRequestNo() {
+  requestNo += 1;
+  if (requestNo > 0xffffffff) requestNo = 1;
+  return requestNo;
+}
+
 // send request to connected daemon
 function send(request, reqNo) {
   if (socket == null) throw Error("Unable to send request (socket is closed)");
@@ -211,10 +217,8 @@ function send(request, reqNo) {
     );
   }
 
-  if (typeof reqNo === "undefined") {
-    requestNo += 1;
-    reqNo = requestNo;
-  }
+  if (typeof reqNo === "undefined") reqNo = getNextRequestNo();
+
   request.Idx = reqNo;
 
   let serialized = toJson(request);
@@ -263,10 +267,10 @@ function addWaiter(waiter, timeoutMs) {
 // which mach one of elements in 'waitRespCommandsList'.
 // Otherwise, waiter will accept only response with correspond response index.
 function sendRecv(request, waitRespCommandsList, timeoutMs) {
-  requestNo += 1;
+  let reqNo = getNextRequestNo();
 
   const waiter = {
-    responseNo: requestNo,
+    responseNo: reqNo,
     waitForCommandsList: waitRespCommandsList,
   };
 
@@ -280,7 +284,7 @@ function sendRecv(request, waitRespCommandsList, timeoutMs) {
 
   // send data
   try {
-    send(request, requestNo);
+    send(request, reqNo);
   } catch (e) {
     console.error(e);
     throw e;
@@ -365,7 +369,7 @@ async function processResponse(response) {
       commitSession(obj.Session);
 
       // request account status update every app start
-      if (store.getters["account/isLoggedIn"]) AccountStatus();
+      if (store.getters["account/isLoggedIn"]) SessionStatus();
 
       if (obj.DisabledFunctions) {
         store.commit("disabledFunctions", obj.DisabledFunctions);
@@ -426,10 +430,8 @@ async function processResponse(response) {
       store.dispatch("settings/daemonSettings", obj);
       break;
 
-    case daemonResponses.AccountStatusResp:
-      //obj.APIStatus:       apiCode,
-      //obj.APIErrorMessage: apiErrMsg,
-      store.dispatch(`account/accountStatus`, obj);
+    case daemonResponses.SessionStatusResp:
+      store.dispatch(`account/sessionStatus`, obj);
       break;
 
     case daemonResponses.VpnStateResp:
@@ -954,8 +956,8 @@ async function Logout(
   }
 }
 
-async function AccountStatus() {
-  return await sendRecv({ Command: daemonRequests.AccountStatus });
+async function SessionStatus() {
+  return await sendRecv({ Command: daemonRequests.SessionStatus });
 }
 
 async function GetAppUpdateInfo(appUpdateType) {
@@ -1889,7 +1891,7 @@ export default {
 
   Login,
   Logout,
-  AccountStatus,
+  SessionStatus,
 
   GetAppUpdateInfo,
 

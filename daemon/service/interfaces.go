@@ -71,7 +71,7 @@ type IWgKeysManager interface {
 // IServiceEventsReceiver is the receiver for service events (normally, it is protocol object)
 type IServiceEventsReceiver interface {
 	OnServiceSessionChanged()
-	OnAccountStatus(sessionToken string, account preferences.AccountStatus)
+	OnSessionStatus(sessionToken string, sessionData preferences.SessionMutableData)
 	OnKillSwitchStateChanged()
 	OnWiFiChanged(wifiNotifier.WifiInfo)
 	OnPingStatus(retMap map[string]int)

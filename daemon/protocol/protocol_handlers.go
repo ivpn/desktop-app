@@ -36,15 +36,17 @@ func (p *Protocol) OnServiceSessionChanged() {
 	p.notifyClients(helloResp)
 }
 
-// OnAccountStatus - handler of account status info. Notifying clients.
-func (p *Protocol) OnAccountStatus(sessionToken string, accountInfo preferences.AccountStatus) {
+// OnSessionStatus - handler of session/account status info. Notifying clients.
+func (p *Protocol) OnSessionStatus(sessionToken string, sessionData preferences.SessionMutableData) {
 	if len(sessionToken) == 0 {
 		return
 	}
 
-	p.notifyClients(&types.AccountStatusResp{
+	p.notifyClients(&types.SessionStatusResp{
 		SessionToken: sessionToken,
-		Account:      accountInfo})
+		Account:      sessionData.Account,
+		DeviceName:   sessionData.DeviceName,
+	})
 }
 
 // OnKillSwitchStateChanged - Firewall change handler

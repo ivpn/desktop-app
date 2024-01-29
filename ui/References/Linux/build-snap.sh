@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # check result of last executed command
 CheckLastResult()
@@ -37,9 +37,18 @@ then
   echo "      $0 -v <version>"
   echo "    It is possible to use additional arguments which will be passed directly to snapcraft tool"
   echo "      Example: $0 -v <version> --use-lxd"
+  echo "    Note: Using Multipass leads to the consumption of an enormous amount of HDD space! Using LXD is recommended!"
+  echo "    Note: Building the LXD image may FAIL sometimes due to connectivity issues. In such cases, try running: 'sudo iptables -P FORWARD ACCEPT'."
   exit 1
 fi
-# ---------------------------------------------------------
+
+if [[ $@ != *"--use-lxd"* ]]; then
+  echo -e "You have not specified '--use-lxd'.\nUsing Multipass leads to the consumption of an enormous amount of HDD space!\nDo you really want to continue (by using Multipass)? (y/n)"
+  read -p "" CONTINUE
+  if [ "$CONTINUE" != "y" ]; then
+    exit 1
+  fi
+fi
 
 # exclude first two argunments (-v X.X.X) from $@
 shift

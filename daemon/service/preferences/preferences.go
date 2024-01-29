@@ -113,6 +113,11 @@ type Preferences struct {
 	WiFiControl          WiFiParams
 }
 
+type SessionMutableData struct {
+	Account    AccountStatus
+	DeviceName string
+}
+
 func Create() *Preferences {
 	// init default values
 	return &Preferences{
@@ -139,6 +144,7 @@ func (p *Preferences) IsInverseSplitTunneling() bool {
 func (p *Preferences) SetSession(accountInfo AccountStatus,
 	accountID string,
 	session string,
+	deviceName string,
 	vpnUser string,
 	vpnPass string,
 	wgPublicKey string,
@@ -152,15 +158,16 @@ func (p *Preferences) SetSession(accountInfo AccountStatus,
 		p.Account = accountInfo
 	}
 
-	p.setSession(accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP, wgPreSharedKey)
+	p.setSession(accountID, session, deviceName, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP, wgPreSharedKey)
 	p.SavePreferences()
 }
 
-func (p *Preferences) UpdateAccountInfo(acc AccountStatus) {
+func (p *Preferences) UpdateSessionData(sData SessionMutableData) {
 	if len(p.Session.AccountID) == 0 || len(p.Session.Session) == 0 {
-		acc = AccountStatus{}
+		sData = SessionMutableData{}
 	}
-	p.Account = acc
+	p.Account = sData.Account
+	p.Session.DeviceName = sData.DeviceName
 	p.SavePreferences()
 }
 
@@ -293,6 +300,7 @@ func (p *Preferences) LoadPreferences() error {
 
 func (p *Preferences) setSession(accountID string,
 	session string,
+	deviceName string,
 	vpnUser string,
 	vpnPass string,
 	wgPublicKey string,
@@ -303,6 +311,7 @@ func (p *Preferences) setSession(accountID string,
 	p.Session = SessionStatus{
 		AccountID:          strings.TrimSpace(accountID),
 		Session:            strings.TrimSpace(session),
+		DeviceName:         strings.TrimSpace(deviceName),
 		OpenVPNUser:        strings.TrimSpace(vpnUser),
 		OpenVPNPass:        strings.TrimSpace(vpnPass),
 		WGKeysRegenInerval: p.Session.WGKeysRegenInerval} // keep 'WGKeysRegenInerval' from previous Session object

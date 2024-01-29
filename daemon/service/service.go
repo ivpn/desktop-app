@@ -1521,11 +1521,12 @@ func (s *Service) SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecut
 // SESSIONS
 //////////////////////////////////////////////////////////
 
-func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountID, session, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64, wgPreSharedKey string) error {
+func (s *Service) setCredentials(accountInfo preferences.AccountStatus, accountID, session, deviceName, vpnUser, vpnPass, wgPublicKey, wgPrivateKey, wgLocalIP string, wgKeyGenerated int64, wgPreSharedKey string) error {
 	// save session info
 	s._preferences.SetSession(accountInfo,
 		accountID,
 		session,
+		deviceName,
 		vpnUser,
 		vpnPass,
 		wgPublicKey,
@@ -1682,6 +1683,7 @@ func (s *Service) SessionNew(accountID string, forceLogin bool, captchaID string
 	s.setCredentials(accountInfo,
 		accountID,
 		successResp.Token,
+		successResp.DeviceName,
 		successResp.VpnUsername,
 		successResp.VpnPassword,
 		publicKey,
@@ -1762,7 +1764,7 @@ func (s *Service) logOut(sessionNeedToDeleteOnBackend bool, isCanDeleteSessionLo
 		}
 	}
 
-	s._preferences.SetSession(preferences.AccountStatus{}, "", "", "", "", "", "", "", "")
+	s._preferences.SetSession(preferences.AccountStatus{}, "", "", "", "", "", "", "", "", "")
 	log.Info("Logged out locally")
 
 	// notify clients about session update
@@ -1778,11 +1780,11 @@ func (s *Service) OnSessionNotFound() {
 	s.logOut(needToDeleteOnBackend, canLogoutOnlyLocally)
 }
 
-func (s *Service) OnAccountStatus(sessionToken string, accountInfo preferences.AccountStatus) {
+func (s *Service) OnSessionStatus(sessionToken string, sessionData preferences.SessionMutableData) {
 	// save last known info about account status
-	s._preferences.UpdateAccountInfo(accountInfo)
+	s._preferences.UpdateSessionData(sessionData)
 	// notify about account status
-	s._evtReceiver.OnAccountStatus(sessionToken, accountInfo)
+	s._evtReceiver.OnSessionStatus(sessionToken, sessionData)
 }
 
 // RequestSessionStatus receives session status
@@ -1790,18 +1792,18 @@ func (s *Service) RequestSessionStatus() (
 	apiCode int,
 	apiErrorMsg string,
 	sessionToken string,
-	accountInfo preferences.AccountStatus,
+	sessionStatus preferences.SessionMutableData,
 	err error) {
 
 	session := s.Preferences().Session
 	if !session.IsLoggedIn() {
-		return apiCode, "", "", accountInfo, srverrors.ErrorNotLoggedIn{}
+		return apiCode, "", "", sessionStatus, srverrors.ErrorNotLoggedIn{}
 	}
 
 	// if no connectivity - skip request (and activate _isWaitingToUpdateAccInfoChan)
 	if err := s.IsConnectivityBlocked(); err != nil {
 		s._isNeedToUpdateSessionInfo = true
-		return apiCode, "", "", accountInfo, fmt.Errorf("session status request skipped (%w)", err)
+		return apiCode, "", "", sessionStatus, fmt.Errorf("session status request skipped (%w)", err)
 	}
 	// defer: ensure s._isWaitingToUpdateAccInfoChan is empty
 	defer func() {
@@ -1817,52 +1819,43 @@ func (s *Service) RequestSessionStatus() (
 		// It could happen that logout\login was performed during the session check
 		// Ignoring result if there is already a new session
 		log.Info("Ignoring requested session status result. Local session already changed.")
-		return apiCode, "", "", accountInfo, srverrors.ErrorNotLoggedIn{}
+		return apiCode, "", "", sessionStatus, srverrors.ErrorNotLoggedIn{}
+	}
+
+	if stat != nil {
+		sessionStatus.Account = s.createAccountStatus(stat.ServiceStatus)
+		sessionStatus.DeviceName = stat.DeviceName
 	}
 
 	apiCode = 0
 	if apiErr != nil {
 		apiCode = apiErr.Status
-
 		// Session not found - can happens when user forced to logout from another device
 		if apiCode == api_types.SessionNotFound {
 			s.OnSessionNotFound()
 		}
-
 		// save last account info AND notify clients that account not active
 		if apiCode == api_types.AccountNotActive {
-			accountInfo = preferences.AccountStatus{}
-			if stat != nil {
-				accountInfo = s.createAccountStatus(*stat)
-			}
-			accountInfo.Active = false
-			// notify about account status
-			s.OnAccountStatus(session.Session, accountInfo)
-			return apiCode, apiErr.Message, session.Session, accountInfo, err
+			sessionStatus.Account.Active = false
+			s.OnSessionStatus(session.Session, sessionStatus)
+			return apiCode, apiErr.Message, session.Session, sessionStatus, err
 		}
 	}
 
 	if err != nil {
-		// in case of other API error
 		if apiErr != nil {
-			return apiCode, apiErr.Message, "", accountInfo, err
+			return apiCode, apiErr.Message, "", sessionStatus, err
 		}
-
-		// not API error
-		return apiCode, "", "", accountInfo, err
+		return apiCode, "", "", sessionStatus, err
 	}
 
 	if stat == nil {
-		return apiCode, "", "", accountInfo, fmt.Errorf("unexpected error when creating requesting session status")
+		return apiCode, "", "", sessionStatus, fmt.Errorf("unexpected error when creating requesting session status")
 	}
 
-	// get account status info
-	accountInfo = s.createAccountStatus(*stat)
-	// ave last account info AND notify about account status
-	s.OnAccountStatus(session.Session, accountInfo)
-
-	// success
-	return apiCode, "", session.Session, accountInfo, nil
+	// save last account info AND notify about account status
+	s.OnSessionStatus(session.Session, sessionStatus)
+	return apiCode, "", session.Session, sessionStatus, nil
 }
 
 func (s *Service) createAccountStatus(apiResp api_types.ServiceStatusAPIResp) preferences.AccountStatus {

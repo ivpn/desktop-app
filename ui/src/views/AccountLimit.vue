@@ -29,6 +29,15 @@
         </button>
 
         <div style="height: 16px"></div>
+        <button
+          class="slave"
+          v-if="isCanForceLogout"
+          v-on:click="onVisitDeviceManagement"
+        >
+          Visit Device Management
+        </button>
+
+        <div style="height: 16px"></div>
         <div class="centered">
           <button class="link linkFont" v-on:click="onTryAgain">Go back</button>
         </div>
@@ -114,6 +123,11 @@ export default {
     },
     onContactSupport: function () {
       sender.shellOpenExternal(`https://www.ivpn.net/contactus`);
+    },
+    onVisitDeviceManagement: function () {
+      sender.shellOpenExternal(
+        `https://www.ivpn.net/account/device-management`,
+      );
     },
   },
 };

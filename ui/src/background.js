@@ -487,7 +487,7 @@ if (gotTheLock) {
           applyMinimizedState();
           break;
 
-        case "account/accountStatus":
+        case "account/sessionStatus":
           // When IVPN apps detect a plan downgrade (from Pro to Standard), an active VPN connection that uses Pro features (MultiHop or Port forwarding)
           // should be disconnected or reconnected with Standard plan features.
           // Before the active VPN connection is disconnected by the app,
