@@ -168,23 +168,22 @@ func (c *Client) GetHelloResponse() types.HelloResp {
 }
 
 // SessionNew creates new session
-func (c *Client) SessionNew(accountID string, forceLogin bool, the2FA string) (apiStatus int, err error) {
+func (c *Client) SessionNew(accountID string, forceLogin bool, the2FA string) (resp types.SessionNewResp, err error) {
 	if err := c.ensureConnected(); err != nil {
-		return 0, err
+		return resp, err
 	}
 
 	req := types.SessionNew{AccountID: accountID, ForceLogin: forceLogin, Confirmation2FA: the2FA}
-	var resp types.SessionNewResp
 
 	if err := c.sendRecv(&req, &resp); err != nil {
-		return 0, err
+		return resp, err
 	}
 
 	if len(resp.Session.Session) <= 0 {
-		return resp.APIStatus, fmt.Errorf("[%d] %s", resp.APIStatus, resp.APIErrorMessage)
+		return resp, fmt.Errorf("[%d] %s", resp.APIStatus, resp.APIErrorMessage)
 	}
 
-	return resp.APIStatus, nil
+	return resp, nil
 }
 
 // SessionDelete remove session

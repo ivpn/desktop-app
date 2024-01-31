@@ -88,3 +88,7 @@ func TrimSpacesAndRemoveQuotes(s string) string {
 	}
 	return s
 }
+
+func IsLegacyAccount(accountID string) bool {
+	return len(accountID) <= 12 && strings.HasPrefix(accountID, "ivpn")
+}

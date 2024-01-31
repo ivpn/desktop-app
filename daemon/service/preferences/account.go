@@ -35,18 +35,20 @@ const (
 
 // AccountStatus contains information about current account
 type AccountStatus struct {
-	Active         bool
-	ActiveUntil    int64
-	CurrentPlan    string
-	PaymentMethod  string
-	IsRenewable    bool
-	WillAutoRebill bool
-	IsFreeTrial    bool
-	Capabilities   []string
-	Upgradable     bool
-	UpgradeToPlan  string
-	UpgradeToURL   string
-	Limit          int
+	Active              bool
+	ActiveUntil         int64
+	CurrentPlan         string
+	PaymentMethod       string
+	IsRenewable         bool
+	WillAutoRebill      bool
+	IsFreeTrial         bool
+	Capabilities        []string
+	Upgradable          bool
+	UpgradeToPlan       string
+	UpgradeToURL        string
+	DeviceManagement    bool
+	DeviceManagementURL string
+	Limit               int
 }
 
 func (a AccountStatus) IsInitialized() bool {

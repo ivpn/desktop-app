@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app/cli/flags"
+	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/service/srverrors"
 	"github.com/ivpn/desktop-app/daemon/vpn"
@@ -92,9 +93,9 @@ func doLogin(accountID string, force bool) error {
 		accountID = string(data)
 	}
 
-	apiStatus, err := _proto.SessionNew(accountID, force, "")
+	resp, err := _proto.SessionNew(accountID, force, "")
 	if err != nil {
-		if apiStatus == types.The2FARequired {
+		if resp.APIStatus == types.The2FARequired {
 			fmt.Println("Account has two-factor authentication enabled.")
 			fmt.Print("Please enter TOTP token to login: ")
 			reader := bufio.NewReader(os.Stdin)
@@ -103,14 +104,19 @@ func doLogin(accountID string, force bool) error {
 			topt = strings.TrimSuffix(topt, "\n")
 			topt = strings.TrimSuffix(topt, "\r")
 
-			apiStatus, err = _proto.SessionNew(accountID, force, topt)
+			resp, err = _proto.SessionNew(accountID, force, topt)
 		}
 
-		if apiStatus == types.CodeSessionsLimitReached {
+		if resp.APIStatus == types.CodeSessionsLimitReached {
 			PrintTips([]TipType{TipForceLogin})
 
-			fmt.Println("Visit Device Management to manage your devices: 'https://www.ivpn.net/account/device-management'")
-			fmt.Println("")
+			if !helpers.IsLegacyAccount(accountID) && len(resp.Account.DeviceManagementURL) > 0 {
+				prefixText := "Visit Device Management"
+				if !resp.Account.DeviceManagement {
+					prefixText = "Enable Device Management"
+				}
+				fmt.Println(fmt.Sprintf("%s to manage your devices: '%s'", prefixText, resp.Account.DeviceManagementURL))
+			}
 		}
 
 		if err != nil {

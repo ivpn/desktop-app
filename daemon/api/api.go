@@ -284,7 +284,8 @@ func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.Req
 		}
 	}
 
-	return a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0, 0)
+	responseData, _, err = a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0, 0)
+	return responseData, err
 }
 
 // SessionNew - try to register new session
@@ -310,7 +311,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, kemKeys types.Kem
 		Captcha:         captcha,
 		Confirmation2FA: confirmation2FA}
 
-	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, 0, 0)
+	data, httpResp, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, 0, 0)
 	if err != nil {
 		return nil, nil, nil, rawResponse, err
 	}
@@ -319,7 +320,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, kemKeys types.Kem
 
 	// Check is it API error
 	if err := json.Unmarshal(data, &apiErr); err != nil {
-		return nil, nil, nil, rawResponse, fmt.Errorf("failed to deserialize API response: %w", err)
+		return nil, nil, nil, rawResponse, fmt.Errorf("[%d; status=%s] failed to deserialize API response: %w", httpResp.StatusCode, httpResp.Status, err)
 	}
 
 	// success
@@ -353,7 +354,7 @@ func (a *API) SessionStatus(session string) (
 
 	request := &types.SessionStatusRequest{Session: session}
 
-	data, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionStatusPath, "POST", "application/json", request, 0, 0)
+	data, _, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionStatusPath, "POST", "application/json", request, 0, 0)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -442,7 +443,7 @@ func (a *API) GeoLookup(timeoutMs int, ipTypeRequired protocolTypes.RequiredIPPr
 					gl.isRunning = false
 					close(gl.done)
 				}()
-				gl.response, gl.err = a.requestRaw(ipType, "", _geoLookupPath, "GET", "", nil, timeoutMs, 0)
+				gl.response, _, gl.err = a.requestRaw(ipType, "", _geoLookupPath, "GET", "", nil, timeoutMs, 0)
 				if err := json.Unmarshal(gl.response, &gl.location); err != nil {
 					gl.err = fmt.Errorf("failed to deserialize API response: %w", err)
 				}

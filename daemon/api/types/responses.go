@@ -35,18 +35,20 @@ type APIErrorResponse struct {
 
 // ServiceStatusAPIResp account info
 type ServiceStatusAPIResp struct {
-	Active         bool     `json:"is_active"`
-	ActiveUntil    int64    `json:"active_until"`
-	CurrentPlan    string   `json:"current_plan"`
-	PaymentMethod  string   `json:"payment_method"`
-	IsRenewable    bool     `json:"is_renewable"`
-	WillAutoRebill bool     `json:"will_auto_rebill"`
-	IsFreeTrial    bool     `json:"is_on_free_trial"`
-	Capabilities   []string `json:"capabilities"`
-	Upgradable     bool     `json:"upgradable"`
-	UpgradeToPlan  string   `json:"upgrade_to_plan"`
-	UpgradeToURL   string   `json:"upgrade_to_url"`
-	Limit          int      `json:"limit"` // applicable for 'session limit' error
+	Active              bool     `json:"is_active"`
+	ActiveUntil         int64    `json:"active_until"`
+	CurrentPlan         string   `json:"current_plan"`
+	PaymentMethod       string   `json:"payment_method"`
+	IsRenewable         bool     `json:"is_renewable"`
+	WillAutoRebill      bool     `json:"will_auto_rebill"`
+	IsFreeTrial         bool     `json:"is_on_free_trial"`
+	Capabilities        []string `json:"capabilities"`
+	Upgradable          bool     `json:"upgradable"`
+	UpgradeToPlan       string   `json:"upgrade_to_plan"`
+	UpgradeToURL        string   `json:"upgrade_to_url"`
+	DeviceManagement    bool     `json:"device_management"`
+	DeviceManagementURL string   `json:"device_management_url"` // applicable for 'session limit' error
+	Limit               int      `json:"limit"`                 // applicable for 'session limit' error
 }
 
 // KemCiphers in use for KEM: to exchange WG PresharedKey

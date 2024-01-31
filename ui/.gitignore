@@ -33,3 +33,5 @@ libivpn.dylib
 References/macOS/_compiled
 References/macOS/HelperProjects/uninstaller/bin
 References/Windows/bin/
+out/*
+addons/wifi-info-macos/build/*
