@@ -253,9 +253,12 @@ export default {
                   accountID: this.accountID,
                   devicesMaxLimit: resp.Account.Limit,
                   CurrentPlan: resp.Account.CurrentPlan,
+                  PaymentMethod: resp.Account.PaymentMethod,
                   Upgradable: resp.Account.Upgradable,
                   UpgradeToPlan: resp.Account.UpgradeToPlan,
                   UpgradeToURL: resp.Account.UpgradeToURL,
+                  DeviceManagement: resp.Account.DeviceManagement,
+                  DeviceManagementURL: resp.Account.DeviceManagementURL,
                   extraArgs: {
                     confirmation2FA: oldConfirmation2FA,
                   },

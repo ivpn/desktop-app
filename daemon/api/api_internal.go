@@ -330,18 +330,22 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 	return nil, fmt.Errorf("unable to access IVPN API server: %w", firstErr)
 }
 
-func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int, timeoutDialMs int) (responseData []byte, err error) {
+func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int, timeoutDialMs int) (responseData []byte, httpResp *http.Response, err error) {
 	resp, err := a.doRequest(ipTypeRequired, host, urlPath, method, contentType, requestObject, timeoutMs, timeoutDialMs)
 	if err != nil {
-		return nil, fmt.Errorf("API request failed: %w", err)
+		return nil, nil, fmt.Errorf("API request failed: %w", err)
+	}
+
+	if resp.StatusCode != 200 {
+		log.Debug(fmt.Sprintf("API response: (HTTP status code %d); status=%s", resp.StatusCode, resp.Status))
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get API HTTP response body: %w", err)
+		return nil, nil, fmt.Errorf("failed to read API HTTP response body: %w", err)
 	}
 
-	return body, nil
+	return body, resp, nil
 }
 
 func (a *API) request(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}) error {
@@ -349,7 +353,7 @@ func (a *API) request(host string, urlPath string, method string, contentType st
 }
 
 func (a *API) requestEx(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}, timeoutMs int, timeoutDialMs int) error {
-	body, err := a.requestRaw(types.IPvAny, host, urlPath, method, contentType, requestObject, timeoutMs, timeoutDialMs)
+	body, _, err := a.requestRaw(types.IPvAny, host, urlPath, method, contentType, requestObject, timeoutMs, timeoutDialMs)
 	if err != nil {
 		return err
 	}

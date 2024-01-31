@@ -1860,18 +1860,20 @@ func (s *Service) RequestSessionStatus() (
 
 func (s *Service) createAccountStatus(apiResp api_types.ServiceStatusAPIResp) preferences.AccountStatus {
 	return preferences.AccountStatus{
-		Active:         apiResp.Active,
-		ActiveUntil:    apiResp.ActiveUntil,
-		CurrentPlan:    apiResp.CurrentPlan,
-		PaymentMethod:  apiResp.PaymentMethod,
-		IsRenewable:    apiResp.IsRenewable,
-		WillAutoRebill: apiResp.WillAutoRebill,
-		IsFreeTrial:    apiResp.IsFreeTrial,
-		Capabilities:   apiResp.Capabilities,
-		Upgradable:     apiResp.Upgradable,
-		UpgradeToPlan:  apiResp.UpgradeToPlan,
-		UpgradeToURL:   apiResp.UpgradeToURL,
-		Limit:          apiResp.Limit}
+		Active:              apiResp.Active,
+		ActiveUntil:         apiResp.ActiveUntil,
+		CurrentPlan:         apiResp.CurrentPlan,
+		PaymentMethod:       apiResp.PaymentMethod,
+		IsRenewable:         apiResp.IsRenewable,
+		WillAutoRebill:      apiResp.WillAutoRebill,
+		IsFreeTrial:         apiResp.IsFreeTrial,
+		Capabilities:        apiResp.Capabilities,
+		Upgradable:          apiResp.Upgradable,
+		UpgradeToPlan:       apiResp.UpgradeToPlan,
+		UpgradeToURL:        apiResp.UpgradeToURL,
+		DeviceManagement:    apiResp.DeviceManagement,
+		DeviceManagementURL: apiResp.DeviceManagementURL,
+		Limit:               apiResp.Limit}
 }
 
 func (s *Service) startSessionChecker() {

@@ -29,13 +29,11 @@
         </button>
 
         <div style="height: 16px"></div>
-        <button
-          class="slave"
-          v-if="isCanForceLogout"
-          v-on:click="onVisitDeviceManagement"
-        >
-          Visit Device Management
-        </button>
+        <div v-if="isLegacyAccount == false && this.DeviceManagementURL">
+          <button class="slave" v-on:click="onVisitDeviceManagement">
+            {{ devManagementButtonText }}
+          </button>
+        </div>
 
         <div style="height: 16px"></div>
         <div class="centered">
@@ -71,9 +69,12 @@ export default {
       this.accountID = params.accountID;
       this.devicesMaxLimit = params.devicesMaxLimit;
       this.CurrentPlan = params.CurrentPlan;
+      this.PaymentMethod = params.PaymentMethod;
       this.Upgradable = params.Upgradable;
       this.UpgradeToPlan = params.UpgradeToPlan;
       this.UpgradeToURL = params.UpgradeToURL;
+      this.DeviceManagement = params.DeviceManagement;
+      this.DeviceManagementURL = params.DeviceManagementURL;
     } else {
       console.error("AccountLimit view: history params are not defined!");
     }
@@ -85,10 +86,12 @@ export default {
       accountID: null,
       devicesMaxLimit: 0,
       CurrentPlan: null,
+      PaymentMethod: null,
       Upgradable: null,
       UpgradeToPlan: null,
       UpgradeToURL: null,
-
+      DeviceManagement: false,
+      DeviceManagementURL: "",
       extraArgs: null,
     };
   },
@@ -99,6 +102,18 @@ export default {
     isCanForceLogout: function () {
       if (this.accountID == null || this.accountID === "") return false;
       return true;
+    },
+    isLegacyAccount: function () {
+      return typeof this.accountID === "string" &&
+        this.accountID.startsWith("ivpn") &&
+        this.accountID.length <= 12
+        ? true
+        : false;
+    },
+    devManagementButtonText: function () {
+      return this.DeviceManagement
+        ? "Visit Device Management"
+        : "Enable Device Management";
     },
   },
   methods: {
@@ -125,9 +140,7 @@ export default {
       sender.shellOpenExternal(`https://www.ivpn.net/contactus`);
     },
     onVisitDeviceManagement: function () {
-      sender.shellOpenExternal(
-        `https://www.ivpn.net/account/device-management`,
-      );
+      sender.shellOpenExternal(this.DeviceManagementURL);
     },
   },
 };

@@ -50,6 +50,8 @@ export default {
       Upgradable: false,
       UpgradeToPlan: "",
       UpgradeToURL: "",
+      DeviceManagement: false,
+      DeviceManagementURL: "", // applicable for 'session limit' error
       Limit: 0, // applicable for 'session limit' error
     },
   },

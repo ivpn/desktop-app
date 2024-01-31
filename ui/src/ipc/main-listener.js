@@ -423,9 +423,18 @@ ipcMain.handle("renderer-request-shell-open-external", async (event, uri) => {
   }
 
   if (!isAllowedUrl) {
-    const errMsg = `Opening the link '${uri}' is blocked. Not allowed to open links which are not starting from: ${config.URLsAllowedPrefixes}`;
-    console.log(errMsg);
-    throw Error(errMsg);
+    const errMsgText = `The link cannot be opened`;
+    const errMsgTextLnk = `${uri}`;
+    const errMsgDetail = `Links must start with: "${config.URLsAllowedPrefixes}". Opening links that do not meet this criterion is not allowed.`;
+    console.log(errMsgText + " " + errMsgTextLnk+ " " + errMsgDetail);
+
+    dialog.showMessageBoxSync(event.sender.getOwnerBrowserWindow(), {
+      type: "error",
+      message: errMsgText,
+      detail: errMsgTextLnk+ "\n\n" + errMsgDetail,
+      buttons: ["OK"],
+    });
+    return;
   }
   return shell.openExternal(uri);
 });
