@@ -33,6 +33,13 @@
             Not connected to daemon. Please, ensure IVPN daemon is running and
             try to reconnect.
           </div>
+          <div v-if="isMacOS" class="small_text">
+            Ensure that the <span>'IVPN'</span> background item is enabled in
+            your system settings. If it's not enabled, please turn it on and
+            then reboot your system. (<span
+              >General -> Login Items -> Allow in the Background</span
+            >)
+          </div>
           <div class="small_text">
             The latest version of the IVPN software can be downloaded from the
             <button
@@ -57,6 +64,7 @@
 
 <script>
 import spinner from "@/components/controls/control-spinner.vue";
+import { Platform, PlatformEnum } from "@/platform/platform";
 import { DaemonConnectionType } from "@/store/types";
 const sender = window.ipcSender;
 import config from "@/config";
@@ -120,6 +128,9 @@ export default {
     },
     daemonIsOldVersionError: function () {
       return this.$store.state.daemonIsOldVersionError;
+    },
+    isMacOS: function () {
+      return Platform() === PlatformEnum.macOS;
     },
   },
   watch: {
