@@ -12,6 +12,10 @@
 		<true/>
 	</dict>
 	<key>RunAtLoad</key>
-		<true/>
+	<true/>
+	<key>AssociatedBundleIdentifiers</key>
+	<array>
+		<string>com.electron.ivpn-ui</string>
+	</array>
 </dict>
 </plist>
