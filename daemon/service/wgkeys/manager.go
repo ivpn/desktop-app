@@ -73,6 +73,7 @@ type KeysManager struct {
 	wgToolBinPath string
 
 	activeRotationInterval time.Duration
+	stopMutex              sync.Mutex
 	stop                   context.CancelFunc
 	activeRotationWg       sync.WaitGroup
 }
@@ -106,10 +107,11 @@ func (m *KeysManager) StartKeysRotation() error {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	m.mutex.Lock()
+	m.stopMutex.Lock()
 	m.stop = cancel
+	m.stopMutex.Unlock()
+
 	m.activeRotationInterval = interval
-	m.mutex.Unlock()
 
 	m.activeRotationWg.Add(1)
 	go func(ctx context.Context) {
@@ -174,13 +176,14 @@ func (m *KeysManager) StartKeysRotation() error {
 // StopKeysRotation stop keys rotation
 func (m *KeysManager) StopKeysRotation() {
 	// send stop signal (if already running)
-	m.mutex.Lock()
+	m.stopMutex.Lock()
 	if m.stop != nil {
 		m.stop()
 		m.stop = nil
-		m.activeRotationInterval = 0
 	}
-	m.mutex.Unlock()
+	m.stopMutex.Unlock()
+	m.activeRotationInterval = 0
+
 	// wait untill keys rotution goroutine stops (if running)
 	m.activeRotationWg.Wait()
 }

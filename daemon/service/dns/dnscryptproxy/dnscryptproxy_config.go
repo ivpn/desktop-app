@@ -24,7 +24,6 @@ package dnscryptproxy
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -39,7 +38,7 @@ func SaveConfigFile(dnsSvrStamp, configFileTemplate, configFileOut string) error
 		return err
 	}
 
-	input, err := ioutil.ReadFile(configFileTemplate)
+	input, err := os.ReadFile(configFileTemplate)
 	if err != nil {
 		return err
 	}
@@ -70,7 +69,7 @@ func SaveConfigFile(dnsSvrStamp, configFileTemplate, configFileOut string) error
 	}
 
 	output := strings.Join(lines, "\n")
-	err = ioutil.WriteFile(configFileOut, []byte(output), 0600) // read only for owner
+	err = os.WriteFile(configFileOut, []byte(output), 0600) // read only for owner
 	if err != nil {
 		return err
 	}

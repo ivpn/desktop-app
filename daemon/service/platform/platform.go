@@ -25,7 +25,6 @@ package platform
 import (
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -228,7 +227,7 @@ func createOpenVpnUserParamsFileExample() error {
 	builder.WriteString("# All changes are made at your own risk!\n")
 	builder.WriteString("# We recommend keeping this file empty.\n")
 
-	return ioutil.WriteFile(openvpnUserParamsFile, []byte(builder.String()), filerights.DefaultFilePermissionsForConfig())
+	return os.WriteFile(openvpnUserParamsFile, []byte(builder.String()), filerights.DefaultFilePermissionsForConfig())
 }
 
 func makeDir(description string, dirpath string, mode fs.FileMode) error {
