@@ -24,8 +24,8 @@ package wireguard
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 
@@ -238,7 +238,7 @@ func (wg *WireGuard) generateAndSaveConfigFile(cfgFilePath string) error {
 	// write configuration into temporary file
 	configText := strings.Join(cfg, "\n")
 
-	err = ioutil.WriteFile(cfgFilePath, []byte(configText), 0600)
+	err = os.WriteFile(cfgFilePath, []byte(configText), 0600)
 	if err != nil {
 		return fmt.Errorf("failed to save WireGuard configuration into a file: %w", err)
 	}
