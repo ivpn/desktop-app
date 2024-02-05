@@ -296,7 +296,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 			var e types.APIError
 			if errors.As(err, &e) {
 				if e.ErrorCode == types.SessionNotFound {
-					m.service.OnSessionNotFound()
+					go m.service.OnSessionNotFound() // run in routine to avoid deadlock
 					return fmt.Errorf("WG keys not updated (session not found)")
 				}
 			}
