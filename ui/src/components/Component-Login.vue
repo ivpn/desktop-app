@@ -164,7 +164,8 @@ export default {
 
     if (this.$refs.accountid) this.$refs.accountid.focus();
 
-    let stateParams = history.state.params;
+    let stateParams = history.state.params;    
+    history.replaceState({}, ""); // clear state params to avoid re-login on page refresh    
 
     if (stateParams && stateParams.forceLoginAccount != null) {
       this.accountID = stateParams.forceLoginAccount;
