@@ -107,6 +107,8 @@ apps:
 
   ivpn:
     command: bin/ivpn
+    completer:
+      opt/ivpn/bash-completion/ivpn.bash-completion
     plugs:
       - network
 
@@ -200,6 +202,8 @@ parts:
       cli/References/Linux/compile-cli.sh -v $SNAPCRAFT_PROJECT_VERSION
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
       cp cli/References/Linux/_out_bin/ivpn $SNAPCRAFT_PART_INSTALL/bin
+      mkdir -p $SNAPCRAFT_PART_INSTALL/opt/ivpn/bash-completion
+      cp cli/References/Linux/_out_bin/ivpn.bash-completion $SNAPCRAFT_PART_INSTALL/opt/ivpn/bash-completion
 
   wireguard-tools:
     plugin: nil
