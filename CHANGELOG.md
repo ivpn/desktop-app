@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.14.2 - 2024-02-08
+
+[NEW] Device Management  
+[NEW] (Linux) Bash-completion of IVPN commands in terminal using Tab key  
+[IMPROVED] Account status now updates upon opening Account Info in application settings  
+[IMPROVED] Removed deprecated dependencies from source code  
+[IMPROVED] Updated: Electron v25.9.8  
+[IMPROVED] Updated: V2Ray v5.12.1  
+[IMPROVED] Updated: dnscrypt-proxy v2.1.5  
+[IMPROVED] (Windows/macOS) Updated: OpenVPN v2.6.8 (OpenSSL v3.2.0)  
+[FIX] Issue when user is not able to logout  
+[FIX] (macOS) In certain instances, the app does not start automatically after an automatic update  
+[FIX] (macOS) The "Login items" in OS settings now show daemon with correct icon and name  
+[FIX] (Linux) v2ray and obfs4proxy failed to initialize in some Linux environments  
+[FIX] Other minor issues and improvements  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.14.2.exe)  
+SHA256: 78e363c6405134ab4424650f2d0435c5a2f4120fcd1b0d4ce062fcd3f6dc471a  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.14.2.dmg)  
+SHA256: 6fcf17bff558efddac5ed753fe15e42211505c2bdceac3afcf63f12e325874c6  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.14.2-arm64.dmg)  
+SHA256: 721e78d76f5d522e023fb4a168492a8a4351136a3dd9bbf77939fc49df31973e  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.14.2_amd64.deb)  
+SHA256: 12d1005eeb92c5b35bf83b9df51317ec4ac08efc6fbb7ab01e962250f23b891d  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.14.2-1.x86_64.rpm)  
+SHA256: 45dba6b5a281646bde6b6651661092024aafc0165268e3245fb515dabb866996  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.14.2_amd64.deb)  
+SHA256: f64cd84b4e0ce252f0c066977d180b953c55f2b485cf7a5437b1e4c7af1959f7  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.14.2-1.x86_64.rpm)  
+SHA256: 0b3602497cf599060e44b0912923f3a5bc2f9325c8d34856bc7ef2eb019bb6ee  
+
 ## Version 3.13.4 - 2023-11-29
 
 [FIX] Fixed an issue with the 'Allow Multicast' functionality in firewall rules  
