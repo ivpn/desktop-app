@@ -35,7 +35,7 @@ namespace prc
 		)
 	{
 		UNREFERENCED_PARAMETER(Table);
-		return ExAllocatePoolWithTag(NonPagedPool, ByteSize, POOL_TAG);
+		return ExAllocatePool2(POOL_FLAG_NON_PAGED, ByteSize, POOL_TAG);
 	}
 
 	VOID _freeRoutine (

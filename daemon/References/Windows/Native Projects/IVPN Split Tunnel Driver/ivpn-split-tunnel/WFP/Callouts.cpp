@@ -366,7 +366,7 @@ namespace wfp
 		else
 		{ // BIND
 			const auto srcAddr = reinterpret_cast<const IN6_ADDR*>(inFixedValues->incomingValue[FWPS_FIELD_ALE_BIND_REDIRECT_V6_IP_LOCAL_ADDRESS].value.byteArray16);
-			const bool isSrcTun = IN6_ADDR_EQUAL(srcAddr, &config.IPv6Tunnel);
+			// const bool isSrcTun = IN6_ADDR_EQUAL(srcAddr, &config.IPv6Tunnel);
 
 			static const IN6_ADDR IN6_ADDR_ZERO = { 0 };
 			const auto needRedirect = IN6_ADDR_EQUAL(srcAddr, &IN6_ADDR_ZERO)

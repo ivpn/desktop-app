@@ -12,7 +12,7 @@ NTSTATUS StringCreateCopy(
 {
 	destination->MaximumLength = source->Length;
 	destination->Length = 0;
-	destination->Buffer = static_cast<PWCH>(ExAllocatePoolWithTag(NonPagedPool, source->Length, POOL_TAG));
+	destination->Buffer = static_cast<PWCH>(ExAllocatePool2(POOL_FLAG_NON_PAGED, source->Length, POOL_TAG));
 
 	if (NULL == destination->Buffer)
 		return STATUS_INSUFFICIENT_RESOURCES;
