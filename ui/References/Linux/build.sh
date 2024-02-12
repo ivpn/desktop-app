@@ -66,17 +66,23 @@ while getopts ":v:" opt; do
   case $opt in
     v) VERSION="$OPTARG"
     ;;
-#    \?) echo "Invalid option -$OPTARG" >&2
-#   ;;
   esac
 done
 
 if [ -z "$VERSION" ]
 then
-  echo "Usage:"
-  echo "    $0 -v <version>"
-  echo ""
-  exit 1
+  # Version was not provided by argument.
+  # Intialize $VERSION by the data from of command: '../../package.json'
+  VERSION="$(awk -F: '/"version"/ { gsub(/[" ,\n\r]/, "", $2); print $2 }' ../../package.json)"
+  if [ -n "$VERSION" ]
+  then
+    echo "[ ] You are going to compile IVPN UI v${VERSION}"
+    read -p "Press enter to continue" yn
+  else    
+    echo "Usage:"
+    echo "    $0 -v <version>"
+    exit 1
+  fi
 fi
 
 echo "Architecture: $ARCH"
