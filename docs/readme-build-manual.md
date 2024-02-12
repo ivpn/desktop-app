@@ -28,7 +28,7 @@ As a result, you will have compiled all the required binaries:
 Manual installation involves placing compiled binaries into specified locations on the target system. The IVPN service checks for the existence of required files, their access rights, and owner. All the necessary files should be located under `/opt/ivpn`.
 
 Below is an example of a correct installation.  
-The file source locations are indicated as comments (e.g. `# path-relative-to-repository-root`)"
+The file source locations are indicated as comments (e.g. `# path-relative-to-repository-root`)  
 ***Note: Files' owner and access rights are important!***  
 
 ```bash
