@@ -56,13 +56,13 @@ These instructions enable you to get the project up and running on your local ma
 
 #### Windows
 
-[npm](https://www.npmjs.com/get-npm); [Node.js (18)](https://nodejs.org/); [nsis3](https://nsis.sourceforge.io/Download); Build Tools for Visual Studio 2019 ('Windows 10 SDK 10.0.19041.0', 'Windows 11 SDK 10.0.22000.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools'); gcc compiler e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/); [Go 1.21+](https://golang.org/); Git
+[Go 1.21+](https://golang.org/); Git; [npm](https://www.npmjs.com/get-npm); [Node.js (18)](https://nodejs.org/); [nsis3](https://nsis.sourceforge.io/Download); Build Tools for Visual Studio 2019 ('Windows 10 SDK 10.0.19041.0', 'Windows 11 SDK 10.0.22000.0', 'MSVC v142 C++ x64 build tools', 'C++ ATL for latest v142 build tools'); gcc compiler (e.g. [TDM GCC](https://jmeubank.github.io/tdm-gcc/download/))  
 
 <a name="requirements_macos"></a>
 
 #### macOS
 
-[npm](https://www.npmjs.com/get-npm); [Node.js (18)](https://nodejs.org/); Xcode Command Line Tools; [Go 1.21+](https://golang.org/); Git  
+[Go 1.21+](https://golang.org/); Git; [npm](https://www.npmjs.com/get-npm); [Node.js (18)](https://nodejs.org/); Xcode Command Line Tools  
 To compile the OpenVPN/OpenSSL binaries locally, additional packages are required: `brew install autoconf automake libtool`  
 To compile  [liboqs](https://github.com/open-quantum-safe/liboqs), additional packages are required:  
 
@@ -75,8 +75,9 @@ pip3 install pytest pytest-xdist pyyaml
 
 #### Linux
 
-[npm](https://www.npmjs.com/get-npm); [Node.js (18)](https://nodejs.org/); packages: [FPM](https://fpm.readthedocs.io/en/latest/installation.html), curl, rpm, libiw-dev; [Go 1.21+](https://golang.org/); gcc; make; Git  
+[Go 1.21+](https://golang.org/); Git; [npm](https://www.npmjs.com/get-npm); [Node.js (18)](https://nodejs.org/); gcc; make; [FPM](https://fpm.readthedocs.io/en/latest/installation.html); curl; rpm; libiw-dev  
 To compile  [liboqs](https://github.com/open-quantum-safe/liboqs), additional packages are required:  `sudo apt install astyle cmake gcc ninja-build libssl-dev python3-pytest python3-pytest-xdist unzip xsltproc doxygen graphviz python3-yaml valgrind`
+
 <a name="compilation"></a>
 
 ### Compilation
@@ -115,32 +116,29 @@ Compiled binary can be found at: `ui/References/macOS/_compiled`
 
 #### Linux
 
-<a name="compilation_linux_daemon"></a>
+```bash
+# get sources
+git clone https://github.com/ivpn/desktop-app.git
+cd desktop-app
+```
 
-##### Linux - base package (CLI)
+Base package *(daemon + CLI)*:
 
 ```bash
-git clone https://github.com/ivpn/desktop-app.git
-cd desktop-app/cli/References/Linux/
-./build.sh
+./cli/References/Linux/build.sh
 ```
 
 Compiled DEB/RPM packages can be found at `cli/References/Linux/_out_bin`  
 *Note: You can refer to [manual installation guide for Linux](docs/readme-build-manual.md).*
 
-<a name="compilation_linux_ui"></a>
-
-##### Linux - Graphical User Interface
+Graphical User Interface *(UI)*:
 
 ```bash
-git clone https://github.com/ivpn/desktop-app.git
-cd desktop-app/ui/References/Linux
-./build.sh
+./ui/References/Linux/build.sh
 ```
 
 Compiled DEB/RPM packages can be found at `ui/References/Linux/_out_bin`  
 *Note: It is required to have installed IVPN Daemon before running IVPN UI.*  
-*Note: You can refer to [manual installation guide for Linux](docs/readme-build-manual.md).*  
 
 <a name="versioning"></a>
 
