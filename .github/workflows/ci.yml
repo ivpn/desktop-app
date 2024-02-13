@@ -73,7 +73,9 @@ jobs:
           bundler-cache: false
 
       - name: Install fpm
-        run: gem install fpm
+        run: |
+          gem install dotenv -v 2.8.1
+          gem install fpm
 
       - name: Build CLI
         run: |
