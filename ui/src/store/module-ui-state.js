@@ -45,6 +45,10 @@ export default {
     //  }
     //}
     appUpdateProgress: null,
+
+    // if not empty, then UI settings view will show this message 
+    // (e.g. message text about the Location Services permission required for ability to get WiFi info)
+    wifiWarningMessage: "",
   },
 
   mutations: {
@@ -65,6 +69,9 @@ export default {
     },
     isPauseResumeInProgress(state, value) {
       state.isPauseResumeInProgress = value;
+    },
+    wifiWarningMessage(state, value) {
+      state.wifiWarningMessage = value;
     },
   },
 

@@ -283,7 +283,13 @@ func launchService(secret uint64, startedOnPort chan<- int) {
 	activeProtocol = protocol
 
 	// initialize service
-	serv, err := service.CreateService(protocol, apiObj, updater, netDetector, wgKeysMgr, serviceEventsChan, systemLog)
+	serv, err := service.CreateService(protocol,
+		apiObj,
+		updater,
+		netDetector,
+		wgKeysMgr,
+		serviceEventsChan,
+		systemLog)
 	if err != nil {
 		log.Panic("Failed to initialize service:", err)
 	}

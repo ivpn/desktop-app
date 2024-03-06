@@ -416,7 +416,7 @@ ipcMain.handle("renderer-request-shell-open-external", async (event, uri) => {
   let isAllowedUrl = false;
 
   for (let p of config.URLsAllowedPrefixes) {
-    if (uri == p || uri.startsWith(p + "/")) {
+    if (uri == p || uri.startsWith(p)) {
       isAllowedUrl = true;
       break;
     }

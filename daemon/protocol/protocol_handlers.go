@@ -64,10 +64,15 @@ func (p *Protocol) OnKillSwitchStateChanged() {
 }
 
 // OnWiFiChanged - handler of WiFi status change. Notifying clients.
-func (p *Protocol) OnWiFiChanged(info wifiNotifier.WifiInfo) {
-	p.notifyClients(&types.WiFiCurrentNetworkResp{
+func (p *Protocol) OnWiFiChanged(info wifiNotifier.WifiInfo, err error) {
+	msg := &types.WiFiCurrentNetworkResp{
 		SSID:              info.SSID,
-		IsInsecureNetwork: info.IsInsecure})
+		IsInsecureNetwork: info.IsInsecure,
+	}
+	if err != nil {
+		msg.Error = err.Error()
+	}
+	p.notifyClients(msg)
 }
 
 // OnPingStatus - servers ping status

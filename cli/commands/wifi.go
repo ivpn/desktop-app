@@ -315,22 +315,21 @@ func (c *CmdWiFi) printStatus(w *tabwriter.Writer) *tabwriter.Writer {
 		return boolToStrEx(&v, "Enabled", "Disabled", "")
 	}
 
-	curNetworkName := ""
-	curNetworkInfo := ""
 	curNet, err := _proto.GetWiFiCurrentNetwork()
 	if err != nil {
 		fmt.Println(err)
+	} else if len(curNet.Error) > 0 {
+		fmt.Printf("\n<<< ERROR: %s >>>\n\n", curNet.Error)
 	} else {
-		curNetworkName = fmt.Sprintf("%s", curNet.SSID)
+		curNetworkInfo := ""
+		curNetworkName := fmt.Sprintf("%s", curNet.SSID)
 		if curNet.IsInsecureNetwork {
 			curNetworkInfo = fmt.Sprintf(" (no encryption)")
 		}
+		fmt.Fprintf(w, "Connected WiFi network%s\t:\t%v\n", curNetworkInfo, curNetworkName)
 	}
 
 	wifiSettings := _proto.GetHelloResponse().DaemonSettings.WiFi
-	fmt.Fprintf(w, "Connected WiFi network%s\t:\t%v\n", curNetworkInfo, curNetworkName)
-
-	//fmt.Fprintf(w, "Allow background daemon to Apply WiFi Control settings\t:\t%v\n", boolToStr(wifiSettings.CanApplyInBackground))
 	if isInsecureNetworksSuppported() {
 		fmt.Fprintf(w, "Autoconnect on joining WiFi networks without encryption\t:\t%v\n", boolToStr(wifiSettings.CanApplyInBackground && wifiSettings.ConnectVPNOnInsecureNetwork))
 	}

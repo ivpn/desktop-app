@@ -73,7 +73,7 @@ type IServiceEventsReceiver interface {
 	OnServiceSessionChanged()
 	OnSessionStatus(sessionToken string, sessionData preferences.SessionMutableData)
 	OnKillSwitchStateChanged()
-	OnWiFiChanged(wifiNotifier.WifiInfo)
+	OnWiFiChanged(wifiNotifier.WifiInfo, error)
 	OnPingStatus(retMap map[string]int)
 	OnServersUpdated(*api_types.ServersInfoResponse)
 	OnSplitTunnelStatusChanged()

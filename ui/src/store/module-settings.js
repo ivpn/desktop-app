@@ -103,7 +103,7 @@ const getDefaultState = () => {
 
         connectVPNOnInsecureNetwork: false,
 
-        trustedNetworksControl: true,
+        trustedNetworksControl: false,
         defaultTrustStatusTrusted: null, // null/true/false
         networks: null, // []{ ssid: "" isTrusted: false }
 

@@ -314,17 +314,41 @@ type WiFiNetworkInfo struct {
 	SSID string
 }
 
+func (w WiFiNetworkInfo) GetSSID() string {
+	return w.SSID
+}
+
 // WiFiAvailableNetworksResp - contains information about available WIFI networks
 type WiFiAvailableNetworksResp struct {
-	CommandBase
+	ResponseBase
 	Networks []WiFiNetworkInfo
+}
+
+func (wl WiFiAvailableNetworksResp) GetNetworks() []WiFiNetworkInfo {
+	return wl.Networks
+}
+
+func (wl WiFiAvailableNetworksResp) GetSSIDs() []string {
+	ret := make([]string, len(wl.Networks))
+	for i, n := range wl.Networks {
+		ret[i] = n.SSID
+	}
+	return ret
 }
 
 // WiFiCurrentNetworkResp contains the information about currently connected WIFI
 type WiFiCurrentNetworkResp struct {
-	CommandBase
+	ResponseBase
 	SSID              string
 	IsInsecureNetwork bool
+}
+
+func (wi WiFiCurrentNetworkResp) GetSSID() string {
+	return wi.SSID
+}
+
+func (wi WiFiCurrentNetworkResp) GetIsInsecure() bool {
+	return wi.IsInsecureNetwork
 }
 
 // APIResponse contains the raw data of response to custom API request

@@ -1,0 +1,15 @@
+#define SERVICE_NAME "net.ivpn.client.Helper"
+
+enum MsgTypes {
+    MSG_TYPE_WIFI_CHANGED = 2,
+    MSG_TYPE_WIFI_INFO = 3,
+    MSG_TYPE_WIFI_SCAN_RESULT = 4,
+
+    MSG_TYPE_REQUEST_WIFI_INFO = 32,
+    MSG_TYPE_REQUEST_WIFI_SCAN = 33,
+};
+
+#define MSG_FIELD_TYPE "MSG_TYPE"
+#define MSG_FIELD_SSID "SSID"
+#define MSG_FIELD_SECURITY "Security"
+#define MSG_FIELD_SSID_LIST "SSID_List"

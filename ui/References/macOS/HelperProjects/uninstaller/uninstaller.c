@@ -340,6 +340,9 @@ int uninstall() {
       system("/usr/bin/defaults delete net.ivpn.client.IVPN"); // old UI bundleID
       system("/usr/bin/defaults delete com.electron.ivpn-ui");
 
+      //printf("[ ] Removing LaunchAgent (only for current user)...\n");
+      //system("/Applications/IVPN.app/Contents/MacOS/IVPN uninstall-agent"); // % launchctl list | grep ivpn
+
       printf("[ ] Removing helper ...\n");
       remove_helper_with_auth(authRef);
 

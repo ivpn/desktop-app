@@ -58,6 +58,8 @@ import { join } from 'path'
 
 import { StartUpdateChecker, CheckUpdates } from "@/app-updater";
 import { WasOpenedAtLogin } from "@/auto-launch";
+import wifiHelperMacOS from "@/os-helpers/macos/wifi-helper.js";
+
 
 // default copy/edit context menu event handlers
 import "@/context-menu/main";
@@ -71,6 +73,19 @@ let isAppReadyToQuit = false;
 
 let isTrayInitialized = false;
 let lastRouteArgs = null; // last route arguments (requested by renderer process when window initialized)
+
+let isAllowedToStart = true;
+
+// Checking command line arguments
+if (process.argv.find(arg => arg === 'uninstall-agent')) {
+  console.log("'uninstall-agent' argument detected. Just uninstalling agent and exiting...");
+  wifiHelperMacOS.UninstallAgent();
+  app.quit();
+  isAllowedToStart = false;
+} else if (process.argv.find(arg => arg === 'install-agent')) {
+  console.log("'install-agent' argument detected. Installing agent...");
+  wifiHelperMacOS.InstallAgent();
+}
 
 // Only one instance of application can be started
 const gotTheLock = app.requestSingleInstanceLock();
@@ -187,10 +202,16 @@ async function LaunchAppInSplitTunnel(execCmd, event) {
   }
 }
 
-if (gotTheLock) {
-  InitPersistentSettings();
-  connectToDaemon();
+// This method will be called when Electron has finished initialization and is ready to show the window.
+function onWindowReady(win) {
+  wifiHelperMacOS.InitWifiHelper(win, () => {showSettings("networks");} );
+}
 
+// INITIALIZATION
+if (gotTheLock && isAllowedToStart) {
+  InitPersistentSettings();  
+  connectToDaemon();
+  
   // INIT COLOR SCHEME
   try {
     if (store.state.settings.colorTheme)
@@ -343,6 +364,8 @@ if (gotTheLock) {
       createWindow();
     }
 
+   
+    
     if (config.IsDebug()) {
       try {
         win.webContents.openDevTools();
@@ -749,11 +772,13 @@ function createWindow(doNotShowWhenReady) {
   // show\hide app from system dock
   updateAppDockVisibility();
 
-  if (doNotShowWhenReady != true) {
-    win.once("ready-to-show", () => {
+  win.once("ready-to-show", () => {   
+    if (doNotShowWhenReady != true) {   
       win.show();
-    });
-  }
+    }
+
+    onWindowReady(win);
+  });
 
   win.on("close", async (event) => {
     // save last window position in order to be able to restore it

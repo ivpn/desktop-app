@@ -63,6 +63,7 @@ plutil -replace SMAuthorizedClients -xml \
         "<array> \
           <string>identifier net.ivpn.client.installer and certificate leaf[subject.OU] = ${_SIGN_CERT}</string>\
           <string>identifier net.ivpn.client.uninstaller and certificate leaf[subject.OU] = ${_SIGN_CERT}</string>\
+          <string>identifier net.ivpn.LaunchAgent and certificate leaf[subject.OU] = ${_SIGN_CERT}</string>\
         </array>" "${_PLIST_INFO}" || CheckLastResult
 
 plutil -replace CFBundleShortVersionString -xml "<string>${_VERSION}</string>" "${_PLIST_INFO}" || CheckLastResult

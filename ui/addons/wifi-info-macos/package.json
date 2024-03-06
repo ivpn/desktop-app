@@ -1,0 +1,24 @@
+{
+  "name": "wifi-info-macos",
+  "version": "1.0.0",
+  "os": [
+    "darwin"
+  ],
+  "description": "Ability to obtain WIFI info on macOS and manage required permissions",
+  "main": "lib/binding.js",
+  "gypfile": true,
+  "author": "Alexandr Stelnykovych",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ivpn/desktop-app/ui/addons/wifi-info-macos"
+  },
+  "scripts": {
+    "test": "node --napi-modules ./test/test_binding.js",
+    "install": "node-gyp rebuild"
+  },
+  "keywords": [
+    "wifi",
+    "macos"
+  ]
+}

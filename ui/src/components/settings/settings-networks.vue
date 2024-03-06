@@ -74,6 +74,15 @@
       untrusted and what actions to take when joining the WiFi network
     </div>
 
+    <div v-if="wifiWarningMessage" class="warningBlock" >
+      <textWithLinkCtrl
+        :text="wifiWarningMessage" 
+        textRequired="Location Services"
+        textToUseAsLink="System Settings"
+        link="x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices"
+      />  
+    </div>
+
     <div class="flexRow">
       <button
         v-on:click="onNetworks"
@@ -193,15 +202,12 @@
 
         <div class="horizontalLine" />
 
+        <!-- The height: 0; style in combination with flex-grow: 1; is a common trick used in CSS Flexbox layouts 
+          to make an element expand to fill all available space in the container, 
+          even when its content is not enough to fill that space.-->
         <div
           class="scrollableColumnContainer"
-          style="
-            padding: 1px;
-            margin-top: 8px;
-            margin-bottom: 8px;
-            max-height: 235px;
-            height: 225px;
-          "
+          style="height: 0; flex-grow: 1; overflow-y: auto;"
         >
           <div v-for="wifi of networks" v-bind:key="wifi.SSID">
             <trustedNetConfigControl
@@ -243,6 +249,7 @@
 <script>
 import trustedNetConfigControl from "@/components/controls/control-trusted-network-config.vue";
 import ComponentDialog from "@/components/component-dialog.vue";
+import textWithLinkCtrl from "@/components/controls/control-text-with-link.vue";
 
 const sender = window.ipcSender;
 
@@ -250,6 +257,7 @@ export default {
   components: {
     trustedNetConfigControl,
     ComponentDialog,
+    textWithLinkCtrl,
   },
   mounted() {
     //if (this.trustedNetworksControl === true) sender.GetWiFiAvailableNetworks();
@@ -592,6 +600,10 @@ export default {
         sender.SetWiFiSettings(wifi);
       },
     },
+    
+    wifiWarningMessage: function () {
+      return this.$store?.state?.uiState?.wifiWarningMessage;
+    },
   },
 };
 </script>
@@ -637,5 +649,20 @@ input:disabled {
 }
 input:disabled + label {
   opacity: 0.5;
+}
+
+.warningBlock {
+  font-size: 12px;
+  line-height: 14px;
+  letter-spacing: -0.4px;
+
+  color: #ad6407;
+    
+  background: rgba(57, 143, 230, 0.1);
+  border-radius: 8px;
+  padding-left: 14px;
+  padding-right: 14px;
+  padding-top: 7px;
+  padding-bottom: 6px;
 }
 </style>

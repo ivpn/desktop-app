@@ -139,8 +139,8 @@ type Service interface {
 	WireGuardGenerateKeys(updateIfNecessary bool) error
 	WireGuardSetKeysRotationInterval(interval int64)
 
-	GetWiFiCurrentState() wifiNotifier.WifiInfo
-	GetWiFiAvailableNetworks() []string
+	GetWiFiCurrentState() (wifiNotifier.WifiInfo, error)
+	GetWiFiAvailableNetworks() ([]string, error)
 
 	GetDiagnosticLogs() (logActive string, logPrevSession string, extraInfo string, err error)
 }
@@ -394,6 +394,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			}
 		}
 	}
+
 	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command, fmt.Sprintf(" [%d]%s", reqCmd.Idx, cmdExtraInfo))
 
 	isDoSkipParanoidMode := func(commandName string) bool {
@@ -612,16 +613,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 		p.sendResponse(conn, &types.CheckAccessiblePortsResponse{Ports: accessiblePorts}, req.Idx)
-
-	case "WiFiAvailableNetworks":
-		networks := p._service.GetWiFiAvailableNetworks()
-		nets := make([]types.WiFiNetworkInfo, 0, len(networks))
-		for _, ssid := range networks {
-			nets = append(nets, types.WiFiNetworkInfo{SSID: ssid})
-		}
-
-		p.notifyClients(&types.WiFiAvailableNetworksResp{Networks: nets})
-		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	case "KillSwitchGetStatus":
 		if status, err := p._service.KillSwitchState(); err != nil {
@@ -1078,11 +1069,16 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		p.sendResponse(conn, &types.InstalledAppsResp{Apps: apps}, reqCmd.Idx)
 
 	case "WiFiCurrentNetwork":
-		// sending WIFI info
-		wifi := p._service.GetWiFiCurrentState()
-		p.sendResponse(conn, &types.WiFiCurrentNetworkResp{
-			SSID:              wifi.SSID,
-			IsInsecureNetwork: wifi.IsInsecure}, reqCmd.Idx)
+		p.OnWiFiChanged(p._service.GetWiFiCurrentState())
+
+	case "WiFiAvailableNetworks":
+		networks, _ := p._service.GetWiFiAvailableNetworks()
+		nets := make([]types.WiFiNetworkInfo, 0, len(networks))
+		for _, ssid := range networks {
+			nets = append(nets, types.WiFiNetworkInfo{SSID: ssid})
+		}
+		p.notifyClients(&types.WiFiAvailableNetworksResp{Networks: nets})
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
 	case "WiFiSettings":
 		var r types.WiFiSettings
@@ -1095,7 +1091,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			return
 		}
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
-
 		// notify all clients about changed wifi settings
 		p.notifyClients(p.createHelloResponse())
 

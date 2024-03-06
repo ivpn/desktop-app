@@ -20,8 +20,12 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+console.log("[ ] Preparing build...");
+
 const os = require("os");
 
+// PLATFORM SPECIFIC STYLE LOADER
+console.log("\n[ ] Copying platform specific style loader...");
 var styleLoaderFile = __dirname + "/src/main_style.js";
 var styleLoaderFilePlatform =
   __dirname + "/src/main_style_" + os.platform() + ".js";
@@ -45,3 +49,5 @@ if (fs.existsSync(styleLoaderFilePlatform)) {
 
   throw mainStyleFileNotExists;
 }
+
+console.log("\n[ ] Build preparation finished.\n");

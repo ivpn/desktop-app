@@ -67,7 +67,7 @@ func (s *Service) onWiFiChanged() {
 		}
 
 		// notify clients about WiFi change
-		s._evtReceiver.OnWiFiChanged(info)
+		s._evtReceiver.OnWiFiChanged(info, err)
 
 		// 'trusted-wifi' functionality: auto-connect if necessary
 		s.autoConnectIfRequired(OnWifiChanged, &info)
@@ -75,12 +75,11 @@ func (s *Service) onWiFiChanged() {
 }
 
 // GetWiFiCurrentState returns info about currently connected wifi
-func (s *Service) GetWiFiCurrentState() wifiNotifier.WifiInfo {
-	info, _ := wifiNotifier.GetCurrentWifiInfo()
-	return info
+func (s *Service) GetWiFiCurrentState() (wifiNotifier.WifiInfo, error) {
+	return wifiNotifier.GetCurrentWifiInfo()
 }
 
 // GetWiFiAvailableNetworks returns list of available WIFI networks
-func (s *Service) GetWiFiAvailableNetworks() []string {
+func (s *Service) GetWiFiAvailableNetworks() ([]string, error) {
 	return wifiNotifier.GetAvailableSSIDs()
 }

@@ -7,9 +7,9 @@
     "javascriptreact",
     "typescriptreact"
   ],
-
+  "editor.tabSize": 2,
   "editor.formatOnSave": false,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
+    "source.fixAll.eslint": "never" //explicit
   }
 }

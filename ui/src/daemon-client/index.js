@@ -204,32 +204,24 @@ function getNextRequestNo() {
 function send(request, reqNo) {
   if (socket == null) throw Error("Unable to send request (socket is closed)");
 
-  if (!request.ProtocolSecret) {
+  if (!request.ProtocolSecret) 
     request.ProtocolSecret = ParanoidModeSecret;
-  }
 
-  if (!request.Command) {
+  if (!request.Command)
     throw Error('Unable to send request ("Command" parameter not defined)');
-  }
-  if (typeof request.Command === "undefined") {
-    throw Error(
-      'Unable to send request. Unknown command: "' + request.Command + '"'
-    );
-  }
-
+  
+  if (typeof request.Command === "undefined") 
+    throw Error('Unable to send request. Unknown command: "' + request.Command + '"');
+  
   if (typeof reqNo === "undefined") reqNo = getNextRequestNo();
 
   request.Idx = reqNo;
 
   let serialized = toJson(request);
-  // : Full logging is only for debug. Must be removed from production!
   //log.debug(`==> ${serialized}`);
-  if (request.Command == "APIRequest")
-    log.debug(`==> ${request.Command}  [${request.Idx}] ${request.APIPath}`);
-  else log.debug(`==> ${request.Command}  [${request.Idx}]`);
+  log.debug(`==> ${request.Command}  [${request.Idx}] ${request.Command == "APIRequest"? request.APIPath : ""}`);
+  
   socket.write(`${serialized}\n`);
-
-  return request.Idx;
 }
 
 function addWaiter(waiter, timeoutMs) {
@@ -245,14 +237,11 @@ function addWaiter(waiter, timeoutMs) {
         for (let i = 0; i < waiters.length; i += 1) {
           if (waiters[i] === waiter) {
             waiters.splice(i, 1);
-            reject(
-              new Error("Response timeout (no response from the daemon).")
-            );
+            reject(new Error("Response timeout (no response from the daemon)."));
             break;
           }
         }
       },
-
       timeoutMs != null && timeoutMs > 0 ? timeoutMs : DefaultResponseTimeoutMs
     );
   });
@@ -261,6 +250,39 @@ function addWaiter(waiter, timeoutMs) {
   waiters.push(waiter);
 
   return promise;
+}
+
+function notifyWaitersForNewMessage(msg) {
+  for (let i = 0; i < waiters.length; i += 1) {
+    // check response index
+    if (waiters[i].responseNo === msg.Idx) {
+      if (
+        msg.Command === daemonResponses.ErrorResp &&
+        msg.ErrorMessage != null
+      ) {
+        waiters[i].promiseReject(msg.ErrorMessage);
+        continue;
+      }
+
+      waiters[i].promiseResolve(msg);
+      // remove waiter
+      waiters.splice(i, 1);
+      i -= 1;
+    } else {
+      // check response command
+      let waitingCommands = waiters[i].waitForCommandsList;
+      if (waitingCommands != null && waitingCommands.length > 0) {
+        for (let c = 0; c < waitingCommands.length; c++) {
+          if (waitingCommands[c] === msg.Command) {
+            waiters[i].promiseResolve(msg);
+            // remove waiter
+            waiters.splice(i, 1);
+            i -= 1;
+          }
+        }
+      }
+    }
+  }
 }
 
 // If 'waitRespCommandsList' defined - the waiter will accept ANY response
@@ -540,7 +562,7 @@ async function processResponse(response) {
         }, 3000);
       }
       break;
-
+    
     case daemonResponses.ErrorResp:
       if (obj.ErrorMessage) console.log("ERROR response:", obj.ErrorMessage);
 
@@ -551,42 +573,13 @@ async function processResponse(response) {
         console.log("!!!!!!!!!!!!!!!!!!!!!! ERROR RESP !!!!!!!!!!!!!!!!!!!!");
         console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
       }
-      break;
+      break;    
 
     default:
   }
 
   // Process waiters
-  for (let i = 0; i < waiters.length; i += 1) {
-    // check response index
-    if (waiters[i].responseNo === obj.Idx) {
-      if (
-        obj.Command === daemonResponses.ErrorResp &&
-        obj.ErrorMessage != null
-      ) {
-        waiters[i].promiseReject(obj.ErrorMessage);
-        continue;
-      }
-
-      waiters[i].promiseResolve(obj);
-      // remove waiter
-      waiters.splice(i, 1);
-      i -= 1;
-    } else {
-      // check response command
-      let waitingCommands = waiters[i].waitForCommandsList;
-      if (waitingCommands != null && waitingCommands.length > 0) {
-        for (let c = 0; c < waitingCommands.length; c++) {
-          if (waitingCommands[c] === obj.Command) {
-            waiters[i].promiseResolve(obj);
-            // remove waiter
-            waiters.splice(i, 1);
-            i -= 1;
-          }
-        }
-      }
-    }
-  }
+  notifyWaitersForNewMessage(obj);
 }
 
 let receivedBuffer = "";
@@ -1839,6 +1832,12 @@ async function GetWiFiAvailableNetworks() {
   });
 }
 
+async function RequestWiFiCurrentNetwork() {
+  await send({
+    Command: daemonRequests.WiFiCurrentNetwork,
+  });
+}
+
 function paranoidModePasswordHash(password) {
   if (!password) return "";
   var pbkdf2 = require("pbkdf2");
@@ -1932,6 +1931,7 @@ export default {
 
   GetWiFiAvailableNetworks,
   SetWiFiSettings,
+  RequestWiFiCurrentNetwork,
 
   SetParanoidModePassword,
   SetLocalParanoidModePassword,

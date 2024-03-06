@@ -145,7 +145,14 @@ type VpnSessionInfo struct {
 }
 
 // CreateService - service constructor
-func CreateService(evtReceiver IServiceEventsReceiver, api *api.API, updater IServersUpdater, netChDetector INetChangeDetector, wgKeysMgr IWgKeysManager, globalEvents <-chan ServiceEventType, systemLog chan<- SystemLogMessage) (*Service, error) {
+func CreateService(evtReceiver IServiceEventsReceiver,
+	api *api.API,
+	updater IServersUpdater,
+	netChDetector INetChangeDetector,
+	wgKeysMgr IWgKeysManager,
+	globalEvents <-chan ServiceEventType,
+	systemLog chan<- SystemLogMessage) (*Service, error) {
+
 	if updater == nil {
 		return &Service{}, fmt.Errorf("ServersUpdater is not defined")
 	}

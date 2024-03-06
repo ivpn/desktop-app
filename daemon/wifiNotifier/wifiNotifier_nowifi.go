@@ -6,8 +6,8 @@ package wifiNotifier
 import "github.com/ivpn/desktop-app/daemon/logger"
 
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
-func implGetAvailableSSIDs() []string {
-	return nil
+func implGetAvailableSSIDs() ([]string, error) {
+	return nil, nil
 }
 
 // GetCurrentWifiInfo returns current WiFi info

@@ -278,11 +278,11 @@ var (
 )
 
 // GetAvailableSSIDs returns the list of the names of available Wi-Fi networks
-func implGetAvailableSSIDs() []string {
+func implGetAvailableSSIDs() ([]string, error) {
 	ssidList := C.getAvailableSSIDs()
 	goSsidList := C.GoString(ssidList)
 	C.free(unsafe.Pointer(ssidList))
-	return strings.Split(goSsidList, "\n")
+	return strings.Split(goSsidList, "\n"), nil
 }
 
 // GetCurrentWifiInfo returns current WiFi info

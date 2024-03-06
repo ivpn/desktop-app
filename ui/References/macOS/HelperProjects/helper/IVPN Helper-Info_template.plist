@@ -16,6 +16,7 @@
 	<array>
 		<string>identifier net.ivpn.client.uninstaller and certificate leaf[subject.OU] = HERE_SHOULD_BE_DEVELOPERID_CERTIFICATE</string>
 		<string>identifier net.ivpn.client.installer and certificate leaf[subject.OU] = HERE_SHOULD_BE_DEVELOPERID_CERTIFICATE</string>
+		<string>identifier net.ivpn.LaunchAgent and certificate leaf[subject.OU] = HERE_SHOULD_BE_DEVELOPERID_CERTIFICATE</string>
 	</array>
 </dict>
 </plist>

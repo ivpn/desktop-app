@@ -143,6 +143,10 @@ else
 fi
 CheckLastResult "[!] ERROR building helper binary"
 
+echo "[+] Building LaunchAgent (net.ivpn.LaunchAgent) ..."
+${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/launchAgent/build.sh
+CheckLastResult "[!] ERROR building net.ivpn.LaunchAgent binary"
+
 if [ ! -z ${_BUILDTAGS_USE_LIBVPN} ]; then
   echo "[+] Building libivpn.dylib ..."
   cd ${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/libivpn
@@ -213,6 +217,10 @@ if [ ! -d ${_PATH_COMPILED_UI_ORIG} ]; then
   echo "[!] ERROR: unable to find compiled UI binary: ${_PATH_COMPILED_UI_ORIG}"
 fi
 
+echo "[+] Preparing DMG image: Copying background image for DMG ..."
+mkdir -p "${_PATH_IMAGE_FOLDER}/.background" && cp "${_PATH_ABS_REPO_UI}/References/macOS/resources/dmg_background.png" "${_PATH_IMAGE_FOLDER}/.background/back.png"
+CheckLastResult
+
 echo "[+] Preparing DMG image: Copying UI binaries ..."
 cp -a "${_PATH_COMPILED_UI_ORIG}" ${_PATH_UI_COMPILED_IMAGE} || CheckLastResult
 rm ${_PATH_ABS_REPO_UI}/dist/IVPN* # removing all created DMG (we do not need them)
@@ -276,16 +284,11 @@ if [ ! -z ${_FILE_TO_INTEGRATE_IN_BUNDLE} ]; then
   cp "${_FILE_TO_INTEGRATE_IN_BUNDLE}" "${_PATH_UI_COMPILED_IMAGE}/Contents/Resources"
 fi
 
-echo "[+] Preparing DMG image: Copying background image for DMG ..."
-mkdir -p "${_PATH_IMAGE_FOLDER}/.background" && cp "${_PATH_ABS_REPO_UI}/References/macOS/resources/dmg_background.png" "${_PATH_IMAGE_FOLDER}/.background/back.png"
+echo "[+] Preparing DMG image: Copying net.ivpn.LaunchAgent ..."
+mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/Library/LaunchAgents" && cp -R "${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/launchAgent/net.ivpn.LaunchAgent_launchd.plist" "${_PATH_UI_COMPILED_IMAGE}/Contents/Library/LaunchAgents/"
 CheckLastResult
-
-#echo "Copying Uninstaller ..."
-#cp -a "${UNINSTALL_FILE}" ./_image/
-#CheckLastResult "Error copying ${UNINSTALL_FILE}"
-
-#echo "[+] Preparing DMG image: Signing..."
-#../sign-file.sh "./_image/IVPN.app" || CheckLastResult
+cp -R "${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/launchAgent/_out/net.ivpn.LaunchAgent" "${_PATH_UI_COMPILED_IMAGE}/Contents/MacOS/"
+CheckLastResult
 
 # ============================== SIGNING ==============================
 if [ -z "${_SIGN_CERT}" ]; then

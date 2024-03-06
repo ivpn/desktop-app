@@ -80,6 +80,7 @@ ListCompiledBinaries=(
 
 ListThirdPartyBinaries=(
 "_image/IVPN.app/Contents/MacOS/IVPN Installer.app/Contents/Library/LaunchServices/net.ivpn.client.Helper"
+"_image/IVPN.app/Contents/MacOS/net.ivpn.LaunchAgent"
 "_image/IVPN.app/Contents/MacOS/openvpn"
 "_image/IVPN.app/Contents/MacOS/WireGuard/wg"
 "_image/IVPN.app/Contents/MacOS/WireGuard/wireguard-go"
@@ -108,6 +109,6 @@ echo "[+] Signing compiled binaries..."
 for f in "${ListCompiledBinaries[@]}";
 do
   echo "    signing: [" $f "]";
-  codesign --verbose=4 --force --deep --sign "${_SIGN_CERT}" --entitlements build_HarderingEntitlements.plist --options runtime "$f"
+  codesign --verbose=4 --force --sign "${_SIGN_CERT}" --options runtime "$f" --deep --entitlements build_HarderingEntitlements.plist
   CheckLastResult "Signing failed"
 done

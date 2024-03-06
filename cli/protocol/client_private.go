@@ -32,6 +32,7 @@ import (
 
 	"github.com/ivpn/desktop-app/cli/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
+	daemonProtocol "github.com/ivpn/desktop-app/daemon/protocol"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
@@ -48,11 +49,11 @@ func (c *Client) ensureConnected() error {
 	return nil
 }
 
-func (c *Client) sendRecv(request interface{}, response interface{}) error {
+func (c *Client) sendRecv(request daemonProtocol.ICommandBase, response interface{}) error {
 	return c.sendRecvTimeOut(request, response, c._defaultTimeout)
 }
 
-func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, timeout time.Duration) error {
+func (c *Client) sendRecvTimeOut(request daemonProtocol.ICommandBase, response interface{}, timeout time.Duration) error {
 
 	doJob := func() error {
 		var receiver *receiverChannel
@@ -112,12 +113,12 @@ func (c *Client) sendRecvTimeOut(request interface{}, response interface{}, time
 	return err
 }
 
-func (c *Client) sendRecvAny(request interface{}, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
+func (c *Client) sendRecvAny(request daemonProtocol.ICommandBase, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
 	isIgnoreResponseIndex := true
 	return c.sendRecvAnyEx(request, isIgnoreResponseIndex, waitingObjects...)
 }
 
-func (c *Client) sendRecvAnyEx(request interface{}, isIgnoreResponseIndex bool, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
+func (c *Client) sendRecvAnyEx(request daemonProtocol.ICommandBase, isIgnoreResponseIndex bool, waitingObjects ...interface{}) (data []byte, cmdBase types.CommandBase, err error) {
 
 	doJob := func() (data []byte, cmdBase types.CommandBase, err error) {
 		var receiver *receiverChannel
@@ -177,7 +178,7 @@ func (c *Client) sendRecvAnyEx(request interface{}, isIgnoreResponseIndex bool, 
 	return data, cmdBase, err
 }
 
-func (c *Client) send(cmd interface{}, requestIdx int) error {
+func (c *Client) send(cmd daemonProtocol.ICommandBase, requestIdx int) error {
 	cmdName := types.GetTypeName(cmd)
 
 	logger.Info("--> ", cmdName)
@@ -186,7 +187,7 @@ func (c *Client) send(cmd interface{}, requestIdx int) error {
 		return err
 	}
 
-	if err := types.Send(c._conn, cmd, requestIdx); err != nil {
+	if err := daemonProtocol.Send(c._conn, cmd, requestIdx); err != nil {
 		return fmt.Errorf("failed to send command '%s': %w", cmdName, err)
 	}
 	return nil

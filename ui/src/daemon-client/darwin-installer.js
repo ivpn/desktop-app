@@ -21,8 +21,17 @@
 //
 
 import { Platform, PlatformEnum } from "@/platform/platform";
+import wifiHelperMacOS from "@/os-helpers/macos/wifi-helper.js";
 
 function InstallDaemon(onInstallationStarted, done) {
+  // Re-install agent every time when daemon is installed to ensure that it's up-to-date
+  // Here we just uninstall it. It will be installed later automatically
+  try {
+    wifiHelperMacOS.UninstallAgent();
+  } catch (e) {
+    console.log(e);
+  }
+
   let spawn = require("child_process").spawn;
 
   let logStringPrefix = "[IVPN Installer --install_helper]";

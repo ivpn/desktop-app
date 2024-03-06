@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.m": "c",
+        "signal.h": "c",
+        "location.h": "c"
+    }
+}

@@ -1,20 +1,24 @@
 {
   "name": "ivpn-ui",
-  "version": "3.14.2",
+  "version": "3.14.6",
   "productName": "IVPN",
   "description": "IVPN Client",
   "author": "IVPN Limited",
   "license": "GPL-3.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ivpn/desktop-app/"
+  },
   "scripts": {
     "init": "node pre_build.js",
-    
+
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "npm run init && electron-vite build",
-    
-    "electron:build": "npm run build && electron-builder --config electron-builder.config.js",
 
+    "electron:build": "npm run build && electron-builder --config electron-builder.config.js",
+    
     "electron:build:win": "npm run build && electron-builder --win --config",
     "electron:build:mac": "npm run build && electron-builder --mac --config",
     "electron:build:linux": "npm run build && electron-builder --linux --config",
@@ -22,7 +26,7 @@
     "postinstall": "electron-builder install-app-deps",
     
     "format": "prettier --write .",
-    "lint": "eslint --ext .js,.vue --ignore-path .gitignore --fix src"    
+    "lint": "eslint --ext .js,.vue --ignore-path .gitignore --fix src"
   },
   "main": "./out/main/background.js",
   "dependencies": {
@@ -34,13 +38,16 @@
     "qrcode-generator": "1.4.4",
     "winreg": "1.2.5"
   },
+  "optionalDependencies": {
+    "wifi-info-macos": "file:addons/wifi-info-macos"
+  },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "1.0.2",
     "@rushstack/eslint-patch": "1.7.0",
     "@vitejs/plugin-vue": "5.0.3",
     "@vue/eslint-config-prettier": "8.0.0",
     "electron": "25.9.8",
-    "electron-builder": "24.9.1",
+    "electron-builder": "24.13.3",
     "electron-vite": "^2.0.0",
     "eslint": "8.56.0",
     "eslint-plugin-vue": "9.20.1",

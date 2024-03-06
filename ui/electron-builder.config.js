@@ -17,16 +17,21 @@ module.exports = {
 
   mac: {
     target: "dir",
+    icon: "buildResources/appicons/icon.icns",
     extendInfo: {
       LSUIElement: 1,
       SUPublicDSAKeyFile: "dsa_pub.pem",
+      NSLocationUsageDescription: "IVPN requires location access to correctly detect WIFI network info",
+      NSLocationAlwaysAndWhenInUseUsageDescription: "IVPN requires location access to correctly detect WIFI network info",
     },
   },
   win: {
-    target: "dir",    
+    target: "dir",
+    icon: "buildResources/appicons/icon.ico",
   },
   linux: {
     target: "dir",
+    icon: "buildResources/appicons/icons",
     category: "Network",
   },
   snap: {

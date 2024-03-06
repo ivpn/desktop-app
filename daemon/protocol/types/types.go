@@ -25,14 +25,9 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"reflect"
 	"strings"
 )
-
-type ICommandBase interface {
-	LogExtraInfo() string
-}
 
 // CommandBase is a base object for communication with daemon.
 // Contains fields required for all requests\responses.
@@ -44,8 +39,27 @@ type CommandBase struct {
 	Idx int
 }
 
-func (cb CommandBase) LogExtraInfo() string {
+func (cb *CommandBase) Init(name string, idx int) {
+	cb.Command = name
+	cb.Idx = idx
+}
+func (cb *CommandBase) Name() string {
+	return cb.Command
+}
+func (cb *CommandBase) Index() int {
+	return cb.Idx
+}
+func (cb *CommandBase) LogExtraInfo() string {
 	return ""
+}
+
+type ResponseBase struct {
+	CommandBase
+	Error string
+}
+
+func (rb *ResponseBase) GetError() string {
+	return rb.Error
 }
 
 // RequestBase contains fields which are common for requests to a daemon
@@ -66,30 +80,14 @@ func (sp ServicePreference) Equals(key string) bool {
 	return key == string(sp)
 }
 
-// Send sends a command to a connection : init+serialize+send
-func Send(conn net.Conn, cmd interface{}, idx int) (retErr error) {
-	defer func() {
-		if retErr != nil {
-			retErr = fmt.Errorf("failed to send command to client: %w", retErr)
-			log.Error(retErr)
-		}
-	}()
-
-	bytesToSend, err := serialize(cmd, idx)
-	if err != nil {
-		return fmt.Errorf("unable to send command: %w", err)
+// GetTypeName returns objects type name (without package)
+func GetTypeName(cmd interface{}) string {
+	t := reflect.TypeOf(cmd)
+	typePath := strings.Split(t.String(), ".")
+	if len(typePath) == 0 {
+		return ""
 	}
-
-	if bytesToSend == nil {
-		return fmt.Errorf("data is nil")
-	}
-
-	bytesToSend = append(bytesToSend, byte('\n'))
-	if _, err := conn.Write(bytesToSend); err != nil {
-		return err
-	}
-
-	return nil
+	return typePath[len(typePath)-1]
 }
 
 // GetRequestBase deserializing to RequestBase object
@@ -118,69 +116,4 @@ func GetCommandBase(messageData []byte) (CommandBase, error) {
 	}
 
 	return obj, nil
-}
-
-// GetTypeName returns objects type name (without package)
-func GetTypeName(cmd interface{}) string {
-	t := reflect.TypeOf(cmd)
-	typePath := strings.Split(t.String(), ".")
-	if len(typePath) == 0 {
-		return ""
-	}
-	return typePath[len(typePath)-1]
-}
-
-// Serialize initializing 'Command' field and serializing object
-func serialize(cmd interface{}, idx int) (ret []byte, err error) {
-	if err := initCmdFields(cmd, idx); err != nil {
-		return nil, err
-	}
-
-	data, err := json.Marshal(cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
-// initCmdName initializes 'Command' field of given interface by it's type name
-// (useful to initialize request or response objects)
-func initCmdFields(obj interface{}, idx int) error {
-	valueIface := reflect.ValueOf(obj)
-
-	// Check if the passed interface is a pointer
-	if valueIface.Type().Kind() != reflect.Ptr {
-		return fmt.Errorf("interface is not a pointer")
-	}
-
-	// Get the field by name "Command"
-	commandField := valueIface.Elem().FieldByName("Command")
-	if !commandField.IsValid() {
-		return fmt.Errorf("interface `%s` does not have the field `Command`", valueIface.Type())
-	}
-	if commandField.Type().Kind() != reflect.String {
-		return fmt.Errorf("'Command' field of an interface `%s` is not 'string'", valueIface.Type())
-	}
-
-	// set command to a type name
-	name := GetTypeName(obj)
-	if len(name) == 0 {
-		return fmt.Errorf("unable to determine type name of the interface")
-	}
-	commandField.Set(reflect.ValueOf(name))
-
-	if idx != 0 {
-		// Get the field by name "Idx"
-		idxField := valueIface.Elem().FieldByName("Idx")
-		if !idxField.IsValid() {
-			return fmt.Errorf("interface `%s` does not have the field `Idx`", valueIface.Type())
-		}
-		if idxField.Type().Kind() != reflect.Int {
-			return fmt.Errorf("'Idx' field of an interface `%s` is not 'string'", valueIface.Type())
-		}
-		// set index
-		idxField.Set(reflect.ValueOf(idx))
-	}
-	return nil
 }

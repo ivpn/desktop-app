@@ -115,7 +115,7 @@ func (s *Service) isTrustedWifiForcingToBlockLan(wifiInfoPtr *wifiNotifier.WifiI
 	var wifiInfo wifiNotifier.WifiInfo
 	// Check WiFi status (if not defined)
 	if wifiInfoPtr == nil {
-		wifiInfo = s.GetWiFiCurrentState()
+		wifiInfo, _ = s.GetWiFiCurrentState()
 	} else {
 		wifiInfo = *wifiInfoPtr
 	}
@@ -144,7 +144,7 @@ func (s *Service) autoConnectIfRequired(reason autoConnectReason, wifiInfoPtr *w
 	var wifiInfo wifiNotifier.WifiInfo
 	// Check WiFi status (if not defined)
 	if wifiInfoPtr == nil {
-		wifiInfo = s.GetWiFiCurrentState()
+		wifiInfo, _ = s.GetWiFiCurrentState()
 	} else {
 		wifiInfo = *wifiInfoPtr
 	}
