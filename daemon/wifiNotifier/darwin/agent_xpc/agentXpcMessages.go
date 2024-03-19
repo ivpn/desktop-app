@@ -70,6 +70,8 @@ type wifiInfo struct {
 
 type WifiSource struct {
 	onWifiChangedCallback func()
+	lastWifiInfo          wifiInfo
+	lastWifiInfoLocker    sync.Mutex
 }
 
 func GetWifiSourceInstance() *WifiSource {
@@ -93,10 +95,7 @@ func onXpcConnection(connectionsCount C.int, isAdded C.bool) {
 
 //export onWifiChanged
 func onWifiChanged() {
-	wifiChangedCallback := GetWifiSourceInstance().onWifiChangedCallback
-	if wifiChangedCallback != nil {
-		wifiChangedCallback()
-	}
+	GetWifiSourceInstance().notifyChange()
 }
 
 //export onWifiInfo
@@ -198,11 +197,36 @@ func (o *WifiSource) GetAvailableSSIDs() ([]string, error) {
 // GetCurrentWifiInfo returns current WiFi info
 func (o *WifiSource) GetCurrentWifiInfo() (ssid string, security int, err error) {
 	ret, err := requestAndWaitWifiInfo()
+
+	// If the info was requested and it's different from the last one reported, trigger the "wifi changed" event.
+	//
+	// Example: This is useful in situations when the LocationServices permission was granted (changed from OFF to ON).
+	// The "wifi changed" event is not triggered because the daemon is unable to detect changes in LocationServices permissions, but the UI can.
+	// In this case, the UI requests the WiFi info itself and the daemon should trigger the "wifi changed" event.
+	// As a result, the daemon will process WiFi change actions (like auto-connect) if necessary.
+	o.lastWifiInfoLocker.Lock()
+	defer o.lastWifiInfoLocker.Unlock()
+	if ret.SSID != o.lastWifiInfo.SSID {
+		o.lastWifiInfo = ret
+		go o.notifyChange() // call in a goroutine to avoid deadlocks
+	}
+
 	return ret.SSID, ret.Security, err
 }
 
 // SetWifiNotifier initializes a handler method 'OnWifiChanged'
 func (o *WifiSource) SetWifiNotifier(cb func()) error {
+	if o.onWifiChangedCallback != nil {
+		return fmt.Errorf("Wifi notifier already set")
+	}
 	o.onWifiChangedCallback = cb
+	return nil
+}
+
+func (o *WifiSource) notifyChange() error {
+	cb := o.onWifiChangedCallback
+	if cb != nil {
+		cb()
+	}
 	return nil
 }
