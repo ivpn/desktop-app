@@ -138,7 +138,7 @@ async function showWarningDialogIfRequired(electronWindow, showSettingsFunc) {
         type: "warning",
         message: "WIFI Control is inactive",
         detail:  errMsg,
-        buttons: ["OK", "System Settings ...", "Settings..."],
+        buttons: ["OK", "System Settings ...", "Settings ..."],
       });  
 
       if (ret.response == 2) // WIFI Control settings

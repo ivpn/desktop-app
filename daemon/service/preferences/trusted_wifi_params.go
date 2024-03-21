@@ -29,8 +29,8 @@ type WiFiNetwork struct {
 
 type WiFiParams struct {
 	// CanApplyInBackground:
-	//	false - means the daemon applies actions in background
-	//	true - VPN connection and Firewall status can be changed ONLY when UI client is connected to the daemon (UI app is running)
+	//	false - VPN connection and Firewall status can be changed ONLY when UI client is connected to the daemon (UI app is running)
+	//	true - means the daemon applies actions in background
 	CanApplyInBackground bool `json:"canApplyInBackground"`
 
 	ConnectVPNOnInsecureNetwork bool `json:"connectVPNOnInsecureNetwork"`

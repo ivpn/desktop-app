@@ -302,17 +302,21 @@ func (c *CmdWiFi) printStatus(w *tabwriter.Writer) *tabwriter.Writer {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	}
 
-	boolToStrEx := func(v *bool, trueVal, falseVal, nullVal string) string {
+	boolToStrEx := func(v *bool, trueVal, falseVal, nullVal, suffixForTrue string) string {
 		if v == nil {
 			return nullVal
 		}
 		if *v {
-			return trueVal
+			return trueVal + suffixForTrue
 		}
 		return falseVal
 	}
+	const (
+		enabledStrVal  = "Enabled"
+		disabledStrVal = "Disabled"
+	)
 	boolToStr := func(v bool) string {
-		return boolToStrEx(&v, "Enabled", "Disabled", "")
+		return boolToStrEx(&v, enabledStrVal, disabledStrVal, "", "")
 	}
 
 	curNet, err := _proto.GetWiFiCurrentNetwork()
@@ -330,11 +334,17 @@ func (c *CmdWiFi) printStatus(w *tabwriter.Writer) *tabwriter.Writer {
 	}
 
 	wifiSettings := _proto.GetHelloResponse().DaemonSettings.WiFi
-	if isInsecureNetworksSuppported() {
-		fmt.Fprintf(w, "Autoconnect on joining WiFi networks without encryption\t:\t%v\n", boolToStr(wifiSettings.CanApplyInBackground && wifiSettings.ConnectVPNOnInsecureNetwork))
+
+	canApplyInBackgroundWarning := ""
+	if !wifiSettings.CanApplyInBackground {
+		canApplyInBackgroundWarning = " (only while the IVPN UI application is running)"
 	}
-	fmt.Fprintf(w, "Trusted/Untrusted WiFi network control\t:\t%v\n", boolToStr(wifiSettings.CanApplyInBackground && wifiSettings.TrustedNetworksControl))
-	fmt.Fprintf(w, "Default trust status for undefined networks\t:\t%v\n", boolToStrEx(wifiSettings.DefaultTrustStatusTrusted, "Trusted", "Untrusted", "No status"))
+
+	if isInsecureNetworksSuppported() {
+		fmt.Fprintf(w, "Autoconnect on joining WiFi networks without encryption\t:\t%v\n", boolToStrEx(&wifiSettings.ConnectVPNOnInsecureNetwork, enabledStrVal, disabledStrVal, "", canApplyInBackgroundWarning))
+	}
+	fmt.Fprintf(w, "Trusted/Untrusted WiFi network control\t:\t%v\n", boolToStrEx(&wifiSettings.TrustedNetworksControl, enabledStrVal, disabledStrVal, "", canApplyInBackgroundWarning))
+	fmt.Fprintf(w, "Default trust status for undefined networks\t:\t%v\n", boolToStrEx(wifiSettings.DefaultTrustStatusTrusted, "Trusted", "Untrusted", "No status", ""))
 	fmt.Fprintf(w, "Actions:\t\n")
 	fmt.Fprintf(w, "    Actions for Untrusted WiFi:\t\n")
 	fmt.Fprintf(w, "        Connect to VPN\t:\t%v\n", boolToStr(wifiSettings.Actions.UnTrustedConnectVpn))
@@ -349,7 +359,7 @@ func (c *CmdWiFi) printStatus(w *tabwriter.Writer) *tabwriter.Writer {
 	} else {
 		fmt.Fprintf(w, "Networks:\t\n")
 		for _, n := range wifiSettings.Networks {
-			fmt.Fprintf(w, "        %s\t:\t%v\n", n.SSID, boolToStrEx(&n.IsTrusted, "Trusted", "Untrusted", "No status"))
+			fmt.Fprintf(w, "        %s\t:\t%v\n", n.SSID, boolToStrEx(&n.IsTrusted, "Trusted", "Untrusted", "No status", ""))
 		}
 	}
 	return w
