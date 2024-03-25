@@ -29,7 +29,11 @@ export default {
         Part2: "",
         LinkText: "",
       };
-      if (warning?.includes(this.textRequired) && warning?.includes(this.textToUseAsLink)) {
+
+      if (this.textRequired && !warning?.includes(this.textRequired)) 
+        return retObject;
+
+      if (warning?.includes(this.textToUseAsLink)) {
         let parts = warning?.split(this.textToUseAsLink);
         if (parts?.length == 2) {
           retObject.Part1 = parts[0];

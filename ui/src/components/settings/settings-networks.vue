@@ -602,7 +602,11 @@ export default {
     },
     
     wifiWarningMessage: function () {
-      return this.$store?.state?.uiState?.wifiWarningMessage;
+      let warn = this.$store?.state?.uiState?.wifiWarningMessage;
+      if (warn && warn.includes("Location Services") && !warn.includes("System Settings")) {
+        return warn +" Review your System Settings.";
+      }
+      return warn;
     },
   },
 };

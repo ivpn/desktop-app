@@ -234,8 +234,8 @@ function getOsConfigErrorDesctiption() {
 
   let lsEnabled = helperAddon.LocationServicesEnabled();
   if (!lsEnabled) {
-    // NOTE! The "Location Services," prefix is in use by components/settings/settings-networks.vue
-    return "Location Services, essential for this functionality, are currently turned off in your System Settings.";
+    // NOTE! The "Location Services" text is in use by components/settings/settings-networks.vue
+    return `WiFi Control is currently inactive due to macOS Location Services being disabled.`;
   }
 
   let lsAuthStatus = helperAddon.LocationServicesAuthorizationStatus();
@@ -246,8 +246,8 @@ function getOsConfigErrorDesctiption() {
   }
   if (lsAuthStatus !== LOCATION_SERVICES_AUTHORISATION_STATUS.AuthorizedAlways 
     && lsAuthStatus !== LOCATION_SERVICES_AUTHORISATION_STATUS.AuthorizedWhenInUse) {      
-      // NOTE! The "Location Services," prefix is in use by components/settings/settings-networks.vue 
-      return `Location Services, essential for this functionality, are not currently activated for the ${app.getName()} application in your System Settings.`;
+      // NOTE! The "Location Services" text is in use by components/settings/settings-networks.vue 
+      return `WiFi Control is currently inactive due to macOS Location Services being disabled for the ${app.getName()} application.`;
     }
 
   return "";
