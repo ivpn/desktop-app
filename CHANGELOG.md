@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.14.12 - 2024-03-26
+
+[IMPROVED] (macOS) WiFi Control: Optimized WiFi information retrieval for modern macOS versions  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.14.12.dmg)  
+SHA256: 802426e0ab7eacd1bb2b9da39eb31d59cf3c0d250073b77692449a4d9ec77dbe  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.14.12-arm64.dmg)  
+SHA256: eb41d2049ae30518b940eafc439043d527729070dea6b8df0165923055b64949  
+
 ## Version 3.14.2 - 2024-02-08
 
 [NEW] Device Management  
