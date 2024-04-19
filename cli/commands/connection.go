@@ -165,6 +165,7 @@ func (c *CmdConnect) Init() {
 	c.BoolVar(&c.filter_invert, "filter_invert", false, "Invert filtering")
 
 	// Automatic server selection flags
+	c.BoolVar(&c.fastest, "f", false, "Connect to fastest server")
 	c.BoolVar(&c.fastest, "fastest", false, "Connect to fastest server")
 	c.BoolVar(&c.last, "last", false, "Connect with the last used connection parameters")
 	c.BoolVar(&c.any, "any", false, "Use a random server from the found results to connect")
