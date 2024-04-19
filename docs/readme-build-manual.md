@@ -20,7 +20,7 @@ As a result, you will have compiled all the required binaries:
 
 - service binary  (`daemon/References/Linux/scripts/_out_bin/ivpn-service`)  
 - CLI binary (`cli/References/Linux/_out_bin/ivpn`)
-- all third-party binaries (located under folders `daemon\References\Linux\_deps\*_inst`)
+- all third-party binaries (located under folders `daemon/References/Linux/_deps/*_inst`)
 - ready-to-use DEB and RPM packages (located at `cli/References/Linux/_out_bin`)
 
 ## Manual installation
@@ -33,30 +33,30 @@ The file source locations are indicated as comments (e.g. `# path-relative-to-re
 
 ```bash
 /opt/ivpn/etc:
--r-------- 1 root root  2358 Feb  8 16:10 ca.crt            # daemon\References\common\etc\ca.crt
--rwx------ 1 root root   268 Feb  8 16:10 client.down       # daemon\References\Linux\etc\client.down
--rwx------ 1 root root  2664 Feb  8 16:10 client.up         # daemon\References\Linux\etc\client.up
--r-------- 1 root root 28111 Feb  8 16:10 dnscrypt-proxy-template.toml # daemon\References\common\etc\dnscrypt-proxy-template.toml
--rwx------ 1 root root 27168 Feb  8 16:10 firewall.sh       # daemon\References\Linux\etc\firewall.sh
--rw------- 1 root root 68694 Feb  8 16:10 servers.json      # daemon\References\common\etc\servers.json
--rwx------ 1 root root 33173 Feb  8 16:10 splittun.sh       # daemon\References\Linux\etc\splittun.sh
--r-------- 1 root root   636 Feb  8 16:10 ta.key            # daemon\References\common\etc\ta.key
+-r-------- 1 root root  2358 Feb  8 16:10 ca.crt            # daemon/References/common/etc/ca.crt
+-rwx------ 1 root root   268 Feb  8 16:10 client.down       # daemon/References/Linux/etc/client.down
+-rwx------ 1 root root  2664 Feb  8 16:10 client.up         # daemon/References/Linux/etc/client.up
+-r-------- 1 root root 28111 Feb  8 16:10 dnscrypt-proxy-template.toml # daemon/References/common/etc/dnscrypt-proxy-template.toml
+-rwx------ 1 root root 27168 Feb  8 16:10 firewall.sh       # daemon/References/Linux/etc/firewall.sh
+-rw------- 1 root root 68694 Feb  8 16:10 servers.json      # daemon/References/common/etc/servers.json
+-rwx------ 1 root root 33173 Feb  8 16:10 splittun.sh       # daemon/References/Linux/etc/splittun.sh
+-r-------- 1 root root   636 Feb  8 16:10 ta.key            # daemon/References/common/etc/ta.key
 
 /opt/ivpn/dnscrypt-proxy:
--rwxr-xr-x 1 root root 10828056 Feb  8 16:10 dnscrypt-proxy # daemon\References\Linux\_deps\dnscryptproxy_inst\dnscrypt-proxy
+-rwxr-xr-x 1 root root 10828056 Feb  8 16:10 dnscrypt-proxy # daemon/References/Linux/_deps/dnscryptproxy_inst/dnscrypt-proxy
 
 /opt/ivpn/kem:
--rwxr-xr-x 1 root root 313568 Feb  8 16:10 kem-helper   # daemon\References\Linux\_deps\kem-helper\kem-helper-bin\kem-helper
+-rwxr-xr-x 1 root root 313568 Feb  8 16:10 kem-helper   # daemon/References/Linux/_deps/kem-helper/kem-helper-bin/kem-helper
 
 /opt/ivpn/obfsproxy:
--rwxr-xr-x 1 root root 5460792 Feb  8 16:10 obfs4proxy  # daemon\References\Linux\_deps\obfs4proxy_inst\obfs4proxy
+-rwxr-xr-x 1 root root 5460792 Feb  8 16:10 obfs4proxy  # daemon/References/Linux/_deps/obfs4proxy_inst/obfs4proxy
 
 /opt/ivpn/v2ray:
--rwxr-xr-x 1 root root 31774552 Feb  8 16:10 v2ray      # daemon\References\Linux\_deps\v2ray_inst\v2ray
+-rwxr-xr-x 1 root root 31774552 Feb  8 16:10 v2ray      # daemon/References/Linux/_deps/v2ray_inst/v2ray
 
 /opt/ivpn/wireguard-tools:
--rwxr-xr-x 1 root root 101312 Feb  8 16:10 wg           # daemon\References\Linux\_deps\wireguard-tools_inst\wg
--rwxr-xr-x 1 root root  13460 Feb  8 16:10 wg-quick     # daemon\References\Linux\_deps\wireguard-tools_inst\wg-quick
+-rwxr-xr-x 1 root root 101312 Feb  8 16:10 wg           # daemon/References/Linux/_deps/wireguard-tools_inst/wg
+-rwxr-xr-x 1 root root  13460 Feb  8 16:10 wg-quick     # daemon/References/Linux/_deps/wireguard-tools_inst/wg-quick
 ```
 
 Place the IVPN binaries in the system's binary folder to access them from the terminal:
