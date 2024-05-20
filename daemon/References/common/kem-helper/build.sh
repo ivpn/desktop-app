@@ -5,7 +5,7 @@
 # sudo apt install -y astyle cmake gcc ninja-build libssl-dev python3-pytest python3-pytest-xdist unzip xsltproc doxygen graphviz python3-yaml valgrind
 # #############################################################
 
-_LIBOQS_VERSION="0.8.0"
+_LIBOQS_VERSION="0.10.0"
 
 _SCRIPT_DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 _WORK_FOLDER=$_SCRIPT_DIR/_out_linux
@@ -67,8 +67,8 @@ cd liboqs
 echo "[*] Configuring and compiling liboqs ..."
 mkdir build && cd build
 
-# If KEM_HELPER_ALL_ARGS not defined - do minimal build (only kyber and mceliece KEMs)
-if [ -n "${KEM_HELPER_ALL_ARGS}" ]; then
+# If KEM_HELPER_ALL_ALGS not defined - do minimal build (only kyber and mceliece KEMs)
+if [ -n "${KEM_HELPER_ALL_ALGS}" ]; then
     echo "[*] Configuring liboqs (FULL build) ..."
     cmake -GNinja .. \
         -DCMAKE_BUILD_TYPE=Release \
@@ -113,7 +113,7 @@ else # linux
     if [ -d $_LIBOQS_INSTALL_FOLDER/lib64 ]; then 
         _LIB_FOLDER=$_LIBOQS_INSTALL_FOLDER/lib64        
     fi
-    gcc main.c base64.c -o $_OUT_FOLDER/kem-helper -Wall -O2 -I$_LIBOQS_INSTALL_FOLDER/include -L$_LIB_FOLDER -loqs -Wl,-z,stack-size=5242880 
+    gcc main.c base64.c -o $_OUT_FOLDER/kem-helper -pthread -Wall -O2 -I$_LIBOQS_INSTALL_FOLDER/include -L$_LIB_FOLDER -loqs -Wl,-z,stack-size=5242880 
 fi
 
 echo "[ ] SUCCESS"
