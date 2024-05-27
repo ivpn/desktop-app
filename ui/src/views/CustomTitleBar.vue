@@ -1,6 +1,7 @@
 <template>
   <div class="titleBar" v-show="!isWindowHasFrame">
     <button
+      title="Minimize"
       style="margin-top: 1px"
       v-if="minimizable"
       class="noBordersBtn winBtns winBtnMinimize"
@@ -12,6 +13,7 @@
     </button>
 
     <button
+      title="Close"
       style="margin-top: 1px; margin-right: 1px"
       v-if="closable"
       class="noBordersBtn winBtns winBtnClose"

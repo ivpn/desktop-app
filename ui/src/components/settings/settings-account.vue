@@ -1,11 +1,11 @@
 <template>
   <div class="flexColumn">
-    <div class="settingsTitle">ACCOUNT SETTINGS</div>
+    <div class="settingsTitle" tabindex="0">ACCOUNT SETTINGS</div>
 
     <div class="flexColumn">
       <spinner :loading="isProcessing" />
 
-      <div class="flexRowSpace">
+      <div class="flexRowSpace" tabindex="0">
         <div class="flexColumn">
           <div class="settingsGrayDescriptionFont">Account ID</div>
 
@@ -41,21 +41,21 @@
       </div>
 
       <!-- ACCOUNT EXPIRATION TEXT -->
-      <div
+      <div tabindex="0"
         style="margin-bottom: 12px; color: darkorange"
         v-if="$store.getters['account/messageAccountExpiration']"
       >
         {{ $store.getters["account/messageAccountExpiration"] }}
       </div>
       <!-- FREE TRIAL EXPIRATION TEXT -->
-      <div
+      <div tabindex="0"
         style="margin-bottom: 12px; color: darkorange"
         v-if="$store.getters['account/messageFreeTrial']"
       >
         {{ $store.getters["account/messageFreeTrial"] }}
       </div>
 
-      <div class="subscriptionDetails" v-if="IsAccountStateExists">
+      <div class="subscriptionDetails" v-if="IsAccountStateExists" tabindex="0">
         <div class="settingsBoldFont" style="margin-bottom: 16px">
           Subscription details:
         </div>

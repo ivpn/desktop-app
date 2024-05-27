@@ -8,9 +8,9 @@
       <ComponentEaaDisable style="margin: 0px" :onClose="onCloseEaaDlg" />
     </ComponentDialog>
 
-    <div class="settingsTitle">ADVANCED SETTINGS</div>
-    <div class="settingsBoldFont">Enhanced App Authentication</div>
-    <div class="settingsParamProps settingsDescription">
+    <div class="settingsTitle" tabindex="0">ADVANCED SETTINGS</div>
+    <div class="settingsBoldFont" tabindex="0">Enhanced App Authentication</div>
+    <div class="settingsParamProps settingsDescription" tabindex="0">
       Enhanced App Authentication (EAA) implements an additional authentication
       factor between the IVPN app (UI) and the daemon that manages the VPN
       tunnel. This prevents a malicious app from being able to manipulate the
@@ -18,7 +18,7 @@
       enter the EAA password when starting the app.
     </div>
 
-    <div class="flexRowAlignTop settingsParamProps">
+    <div class="flexRowAlignTop settingsParamProps" tabindex="0">
       <div class="settingsDefaultTextColor paramName">Status:</div>
       <div style="font-weight: 500">
         <div v-if="IsPmEnabled">
@@ -43,15 +43,15 @@
         </div>
       </div>
     </div>
-    <div class="settingsBoldFont">Miscellaneous</div>
-    <div class="param">
+    <div class="settingsBoldFont" tabindex="0">Miscellaneous</div>
+    <div class="param" tabindex="0">
       <input type="checkbox" id="showISPInfo" v-model="showISPInfo" />
       <label class="defColor" for="showISPInfo">Show server ISP info</label>
     </div>
 
     <div v-show="isMultihopAllowed === true">
-      <div class="settingsBoldFont">Multi-Hop</div>
-      <div class="param">
+      <div class="settingsBoldFont" tabindex="0">Multi-Hop</div>
+      <div class="param" tabindex="0">
         <input
           type="checkbox"
           id="multihopWarnSelectSameCountries"
@@ -63,7 +63,7 @@
         >
       </div>
 
-      <div class="param">
+      <div class="param" tabindex="0">
         <input
           type="checkbox"
           id="multihopWarnSelectSameISPs"

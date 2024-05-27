@@ -95,7 +95,7 @@
     </transition>
 
     <!-- GEOLOCATOIN INFO -->
-    <transition name="fade">
+    <transition name="fade" tabindex="0">
       <div v-if="$store.state.settings.minimizedUI">
         <div class="horizontalLine" />
 

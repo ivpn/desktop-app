@@ -1,6 +1,6 @@
 <template>
   <div class="flexColumn">
-    <div class="settingsTitle flexRow">SPLIT TUNNEL SETTINGS</div>
+    <div class="settingsTitle flexRow" tabindex="0">SPLIT TUNNEL SETTINGS</div>
 
     <!-- SELECT apps 'popup' view -->
     <div ref="appsListParent" class="flexRow" style="position: relative">
@@ -86,7 +86,7 @@
             <div class="horizontalLine" />
 
             <div>
-              <button
+              <button 
                 class="settingsButton flexRow grayedOnHover"
                 style="
                   margin-top: 10px;
@@ -123,7 +123,7 @@
         v-model="isSTEnabledLocal"
         @change="applyChanges"
       />
-      <label class="defColor" for="isSTEnabledLocal">Split Tunnel</label>
+      <label class="defColor" for="isSTEnabledLocal" tabindex="0">Split Tunnel</label>
       <button
         class="noBordersBtn flexRow"
         title="Help"
@@ -167,7 +167,7 @@
         </div>
       </ComponentDialog>
     </div>
-    <div class="fwDescription">
+    <div class="fwDescription" tabindex="0">
       Exclude traffic from specific applications from being routed through the
       VPN
     </div>
@@ -175,7 +175,7 @@
     <!-- INVERSE MODE-->
     <div v-show="isSplitTunnelInverseSupported">
       <!-- Inverse mode -->
-      <div class="param">
+      <div class="param" tabindex="0">
         <input
           :disabled="!isSTEnabledLocal"
           type="checkbox"
@@ -208,13 +208,13 @@
         </ComponentDialog>
       </div>
 
-      <div class="fwDescription">
+      <div class="fwDescription" tabindex="0">
         Only specified applications utilize the VPN connection.
       </div>
 
       <div style="margin-left: 16px">
         <!-- Allow connectivity for Split Tunnel apps when VPN is disabled -->
-        <div class="param">
+        <div class="param" tabindex="0">
           <input
             :disabled="!stInversedLocal || !isSTEnabledLocal"
             type="checkbox"
@@ -250,7 +250,7 @@
         </div>
 
         <!-- Block DNS servers not specified by the IVPN application -->
-        <div class="param">
+        <div class="param" tabindex="0">
           <input
             :disabled="!stInversedLocal || !isSTEnabledLocal"
             type="checkbox"

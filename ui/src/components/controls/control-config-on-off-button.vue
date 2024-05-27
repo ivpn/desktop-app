@@ -20,6 +20,7 @@
 
       <div>
         <SwitchProgress
+          :title="(isChecked)?'Disable '+text:'Enable '+text"
           :style="switcherStyle"
           :onChecked="onChecked"
           :isChecked="isChecked"

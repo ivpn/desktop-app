@@ -1,5 +1,9 @@
 <template>
-  <div>
+  <!-- Using a 'button' here (instead of a 'div') allows screen readers to read the "title," improving accessibility for blind persons. -->
+  <button 
+    style="border: none; background-color: inherit; outline-width: 0;  margin: 0; padding: 0; cursor: none;" 
+    :title="title"
+  >
     <label class="switch" v-bind:class="{ load: isProgress }">
       <input
         type="checkbox"
@@ -8,12 +12,12 @@
       />
       <div :style="style"></div>
     </label>
-  </div>
+  </button>
 </template>
 
 <script>
 export default {
-  props: ["onChecked", "isChecked", "isProgress", "checkedColor"],
+  props: ["onChecked", "isChecked", "isProgress", "checkedColor", "title"],
   computed: {
     isConnected: function () {
       if (this.isProgress) return false;

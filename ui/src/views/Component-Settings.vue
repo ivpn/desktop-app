@@ -4,11 +4,11 @@
       <div id="leftPanel" class="settingsLeftPanel">
         <div class="flexColumn">
           <div class="row settingsLeftPanelHeader" id="leftPanelHeader">
-            <button id="backBtn" class="noBordersBtn" v-on:click="goBack">
+            <button id="backBtn" class="noBordersBtn" v-on:click="goBack" title="Back">
               <!-- ARROW LEFT -->
               <imgArrowLeft />
             </button>
-            <div class="Header settingsHeader">Settings</div>
+            <div class="Header settingsHeader" tabindex="0">Settings</div>
           </div>
 
           <!-- TABS -->
@@ -124,7 +124,7 @@
           </div>
 
           <!-- VERSION -->
-          <div class="flexRow" style="flex-grow: 1">
+          <div class="flexRow" style="flex-grow: 1" tabindex="0">
             <div class="flexRow" style="margin: 20px; flex-grow: 1">
               <div
                 style="flex-grow: 1; text-align: center; cursor: pointer"

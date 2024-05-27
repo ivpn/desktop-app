@@ -2,8 +2,8 @@
   <div>
     <div class="settingsTitle">GENERAL SETTINGS</div>
 
-    <div class="param" :title="isLaunchAtLoginDisableBlockerInfo">
-      <input
+    <div class="param" :title="isLaunchAtLoginDisableBlockerInfo" tabindex="0">
+      <input 
         type="checkbox"
         id="launchAtLogin"
         v-model="isLaunchAtLogin"
@@ -15,7 +15,7 @@
       <label class="defColor" for="launchAtLogin">Launch at login</label>
     </div>
 
-    <div class="param" v-show="!isLinux">
+    <div class="param" v-show="!isLinux" tabindex="0">
       <input
         type="checkbox"
         id="showAppInSystemDock"
@@ -26,7 +26,7 @@
       >
     </div>
 
-    <div class="param">
+    <div class="param" tabindex="0">
       <input type="checkbox" id="minimizeToTray" v-model="minimizeToTray" />
       <label class="defColor" for="minimizeToTray">Minimize to tray</label>
       <div v-if="isLinux">
@@ -53,7 +53,7 @@
       </div>
     </div>
 
-    <div class="param">
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="connectSelectedMapLocation"
@@ -64,15 +64,15 @@
       >
     </div>
 
-    <div class="param">
+    <div class="param" tabindex="0">
       <input type="checkbox" id="showHosts" v-model="showHosts" />
       <label class="defColor" for="showHosts"
         >Enable selection of individual servers in server selection list</label
       >
     </div>
 
-    <div class="settingsBoldFont">View:</div>
-    <div class="flexRow param">
+    <div class="settingsBoldFont" tabindex="0">View:</div>
+    <div class="flexRow param" tabindex="0">
       <div class="defColor paramName" style="min-width: 102px">
         Color theme:
       </div>
@@ -89,7 +89,7 @@
       </select>
     </div>
 
-    <div class="flexRow param" v-if="isCanShowTrayIconTheme">
+    <div class="flexRow param" v-if="isCanShowTrayIconTheme" tabindex="0">
       <div class="defColor paramName" style="min-width: 102px">Tray icon:</div>
       <select v-model="colorThemeTrayIcon">
         <option
@@ -122,8 +122,8 @@
       </div>
     </div> -->
 
-    <div class="settingsBoldFont">Autoconnect:</div>
-    <div class="param">
+    <div class="settingsBoldFont" tabindex="0">Autoconnect:</div>
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="connectOnLaunch"
@@ -134,7 +134,8 @@
     </div>
 
     <div
-      class="param"
+       tabindex="0"
+       class="param"
       :title="
         isParanoidMode
           ? 'The option is not applicable when `Enhanced App Authentication` enabled'
@@ -171,8 +172,8 @@
       </ComponentDialog>
     </div>
 
-    <div class="settingsBoldFont">On exit:</div>
-    <div class="param">
+    <div class="settingsBoldFont" tabindex="0">On exit:</div>
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="quitWithoutConfirmation"
@@ -182,7 +183,7 @@
         >Quit without confirmation when closing application</label
       >
     </div>
-    <div class="param">
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="disconnect"
@@ -221,7 +222,7 @@
     <div v-if="!isLinux" style="height: 6px" />
     <div style="margin-top: 2px">
       <!-- TAB-view (diagnostic): general -->
-      <div v-if="diagnosticViewIsGeneral" class="flexRow">
+      <div v-if="diagnosticViewIsGeneral" class="flexRow" tabindex="0">
         <div class="param">
           <input type="checkbox" id="logging" v-model="logging" />
           <label class="defColor" for="logging">Allow logging</label>
@@ -237,7 +238,7 @@
         </button>
       </div>
       <!-- TAB-view (diagnostic): beta -->
-      <div v-if="diagnosticViewIsBeta" class="flexRow">
+      <div v-if="diagnosticViewIsBeta" class="flexRow" tabindex="0">
         <div>
           <div class="param">
             <input type="checkbox" id="beta" v-model="beta" />
