@@ -23,7 +23,7 @@
       </div>
       <div class="horizontalLine" />
     </div>
-    <div class="selectable">
+    <div class="selectable" tabindex="0">
       <slot class="selectable">
         <!-- here will be shown content of component -->
       </slot>
