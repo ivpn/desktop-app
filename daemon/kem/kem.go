@@ -35,8 +35,9 @@ import (
 )
 
 type genkeysResp struct {
-	Priv string `json:"priv"`
-	Pub  string `json:"pub"`
+	Priv          string `json:"priv"`
+	Pub           string `json:"pub"`
+	LiboqsVersion string `json:"lib_ver"`
 }
 type decpskArgs struct {
 	Cipher string `json:"cipher"`
@@ -46,9 +47,9 @@ type decpskResp struct {
 	Secret string `json:"secret"`
 }
 
-func GenerateKeys(kemHelperPath string, kemAlgorithmName Kem_Algo_Name) (privateKeyBase64, publicKeyBase64 string, retErr error) {
+func GenerateKeys(kemHelperPath string, kemAlgorithmName Kem_Algo_Name) (privateKeyBase64, publicKeyBase64, liboqsVer string, retErr error) {
 	if string(kemAlgorithmName) == "" {
-		return "", "", fmt.Errorf("kem-helper error: bad argument")
+		return "", "", "", fmt.Errorf("kem-helper error: bad argument")
 	}
 	cmd := exec.Command(kemHelperPath, "genkeys", string(kemAlgorithmName))
 	var stdout bytes.Buffer
@@ -58,36 +59,43 @@ func GenerateKeys(kemHelperPath string, kemAlgorithmName Kem_Algo_Name) (private
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return "", "", fmt.Errorf("kem-helper error (kem:%s): %w (%s)", kemAlgorithmName, err, strings.TrimSpace(stderr.String()))
+		return "", "", "", fmt.Errorf("kem-helper error (kem:%s): %w (%s)", kemAlgorithmName, err, strings.TrimSpace(stderr.String()))
 	}
 
 	resp := genkeysResp{}
 	if err := json.Unmarshal(stdout.Bytes(), &resp); err != nil {
-		return "", "", fmt.Errorf("kem-helper error: %w", err)
+		return "", "", "", fmt.Errorf("kem-helper error: %w", err)
 	}
 
 	if len(resp.Priv) == 0 || len(resp.Pub) == 0 {
-		return "", "", fmt.Errorf("kem-helper error: empty keys")
+		return "", "", "", fmt.Errorf("kem-helper error: empty keys")
 	}
 
-	return resp.Priv, resp.Pub, nil
+	return resp.Priv, resp.Pub, resp.LiboqsVersion, nil
 }
 
-func GenerateKeysMulti(kemHelperPath string, kemAlgorithmName []Kem_Algo_Name) (privateKeyBase64, publicKeyBase64 []string, retErr error) {
+func GenerateKeysMulti(kemHelperPath string, kemAlgorithmName []Kem_Algo_Name) (privateKeyBase64, publicKeyBase64 []string, liboqsVersion string, retErr error) {
 	if len(kemAlgorithmName) == 0 {
-		return nil, nil, fmt.Errorf("kem-helper error: bad argument")
+		return nil, nil, "", fmt.Errorf("kem-helper error: bad argument")
 	}
 
+	libVersion := ""
 	for _, alg := range kemAlgorithmName {
-		priv, public, err := GenerateKeys(kemHelperPath, alg)
+		priv, public, libVer, err := GenerateKeys(kemHelperPath, alg)
 		if err != nil {
-			return []string{}, []string{}, err
+			return []string{}, []string{}, "", err
 		}
+
+		if libVersion != "" && libVersion != libVer {
+			return []string{}, []string{}, "", fmt.Errorf("kem-helper internal error: different liboqs versions")
+		}
+		libVersion = libVer
+
 		privateKeyBase64 = append(privateKeyBase64, priv)
 		publicKeyBase64 = append(publicKeyBase64, public)
 	}
 
-	return privateKeyBase64, publicKeyBase64, nil
+	return privateKeyBase64, publicKeyBase64, libVersion, nil
 }
 
 func DecodeCipher(kemHelperPath string, kemAlgorithmName Kem_Algo_Name, privateKeyBase64 string, cipherBase64 string) (secretBase64 string, retErr error) {

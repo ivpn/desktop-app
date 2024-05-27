@@ -45,6 +45,7 @@ type KemHelper struct {
 	algorithms    []Kem_Algo_Name
 	privateKeys   []string // base64
 	publicKeys    []string // base64
+	liboqsVersion string
 	ciphers       []string // base64
 	secrets       []string // base64 (decoded ciphers)
 }
@@ -53,7 +54,7 @@ func GetDefaultKemAlgorithms() []Kem_Algo_Name {
 	return []Kem_Algo_Name{AlgName_Kyber1024, AlgName_ClassicMcEliece348864}
 }
 
-// Initialise KEM helper and generate Key pairs
+// Initialize KEM helper and generate Key pairs
 // IMPORTANT! The algorithms order in argument 'kemAlgorithms' is important! It in use for PresharedKey calculation!
 func CreateHelper(kemHelperBinaryPath string, kemAlgorithms []Kem_Algo_Name) (*KemHelper, error) {
 	if len(kemHelperBinaryPath) == 0 {
@@ -80,6 +81,10 @@ func (k KemHelper) GetPublicKey(kemAlgoName Kem_Algo_Name) (string, error) {
 		return "", err
 	}
 	return k.publicKeys[idx], nil
+}
+
+func (k KemHelper) GetPublicKeyLiboqsVersion() string {
+	return k.liboqsVersion
 }
 
 func (k KemHelper) SetCipher(kemAlgoName Kem_Algo_Name, cipher string) error {
@@ -128,7 +133,7 @@ func (k KemHelper) getAlgoIndex(alg Kem_Algo_Name) (index int, err error) {
 }
 
 func (k *KemHelper) generateKeys() (retErr error) {
-	k.privateKeys, k.publicKeys, retErr = GenerateKeysMulti(k.kemHelperPath, k.algorithms)
+	k.privateKeys, k.publicKeys, k.liboqsVersion, retErr = GenerateKeysMulti(k.kemHelperPath, k.algorithms)
 	return retErr
 }
 

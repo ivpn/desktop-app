@@ -252,6 +252,7 @@ func (m *KeysManager) generateKeys(onlyUpdateIfNecessary bool) (retErr error) {
 	if err != nil {
 		log.Error("Failed to generate KEM keys: ", err)
 	} else {
+		kemKeys.KemLibraryVersion = kemHelper.GetPublicKeyLiboqsVersion()
 		kemKeys.KemPublicKey_Kyber1024, err = kemHelper.GetPublicKey(kem.AlgName_Kyber1024)
 		if err != nil {
 			log.Error(err)

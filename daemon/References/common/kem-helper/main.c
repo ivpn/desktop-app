@@ -8,7 +8,7 @@
 #include "jsmn.h"
 #include "base64.h"
 
-#define APP_VERSION "1.0.1"
+#define APP_VERSION "1.1.0"
 
 #define SUCCESS 0
 #define ERROR	-1
@@ -167,7 +167,7 @@ int generate_keys(FILE* const _out_stream, const char* kem_alg_name) {
 
 	remove_newlines(sec_key_base64);
 	remove_newlines(pub_key_base64);
-	fprintf(_out_stream, "{\n\"priv\":\"%s\",\n\"pub\":\"%s\"\n}\n", sec_key_base64, pub_key_base64);
+	fprintf(_out_stream, "{\n\"priv\":\"%s\",\n\"pub\":\"%s\",\n\"lib_ver\":\"%s\"\n}\n", sec_key_base64, pub_key_base64, OQS_VERSION_TEXT);
 
 	OQS_MEM_secure_free(sec_key_base64, sec_key_base_64_len);
 	OQS_MEM_secure_free(pub_key_base64, pub_key_base64_len);
@@ -355,7 +355,7 @@ void print_usage(const char* program_name) {
 	printf(	"  %s genkeys [<kem_algorithm_name>]\n"
 			"      -  generate public and private keys\n"
 			"      -  no input data required\n"
-			"      -  output format:  '{\"priv\":\"...\", \"pub\":\"...\"}'\n"
+			"      -  output format:  '{\"priv\":\"...\", \"pub\":\"...\", \"lib_ver\":\"...\"}'\n"
 		, program_name);
 	printf("  %s encpsk  [<kem_algorithm_name>]>]\n"
 			"      -  generate cipher text (encode PresharedKey using public key)\n"

@@ -26,6 +26,7 @@ package types
 type KemPublicKeys struct {
 	KemPublicKey_Kyber1024             string `json:"kem_public_key1,omitempty"`
 	KemPublicKey_ClassicMcEliece348864 string `json:"kem_public_key2,omitempty"`
+	KemLibraryVersion                  string `json:"kem_library_version,omitempty"`
 }
 
 // SessionNewRequest request to create new session
