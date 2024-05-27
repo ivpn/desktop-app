@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="switchButton">
-      <div align="left">
+      <div align="left" tabindex="0">
         <button
           v-if="onTextClick"
           class="noBordersTextBtnEx"

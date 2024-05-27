@@ -5,16 +5,16 @@
     <div class="flexColumn">
       <spinner :loading="isProcessing" />
 
-      <div class="flexRowSpace" tabindex="0">
+      <div class="flexRowSpace">
         <div class="flexColumn">
-          <div class="settingsGrayDescriptionFont">Account ID</div>
+          <div class="settingsGrayDescriptionFont" tabindex="0">Account ID</div>
 
-          <div class="settingsBigBoldFont" id="accountID">
+          <div class="settingsBigBoldFont" id="accountID" tabindex="0">
             <label class="settingsBigBoldFont selectable">
               {{ this.$store.state.account.session.AccountID }}
             </label>
           </div>
-          <div>
+          <div tabindex="0">
             <div
               class="statusButtonActive"
               v-if="IsAccountStateExists && IsActive"
@@ -91,7 +91,7 @@
         </div>
       </div>
 
-      <div class="proAcountDescriptionBlock" v-if="IsCanUpgradeToPro">
+      <div class="proAcountDescriptionBlock" v-if="IsCanUpgradeToPro" tabindex="0">
         <p>
           <strong>IVPN PRO</strong> gives you more possibilities to stay safe
           and protected:

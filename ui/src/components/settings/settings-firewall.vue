@@ -2,7 +2,7 @@
   <div>
     <div class="settingsTitle" tabindex="0">FIREWALL SETTINGS</div>
 
-    <div class="settingsBoldFont">Non-VPN traffic blocking:</div>
+    <div class="settingsBoldFont" tabindex="0">Non-VPN traffic blocking:</div>
 
     <div>
       <div class="settingsRadioBtn" tabindex="0">

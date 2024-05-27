@@ -9,7 +9,7 @@
 
     <div class="settingsTitle" tabindex="0">CONNECTION SETTINGS</div>
 
-    <div class="settingsBoldFont">VPN protocol:</div>
+    <div class="settingsBoldFont" tabindex="0">VPN protocol:</div>
 
     <div>
       <div class="settingsRadioBtn" tabindex="0">

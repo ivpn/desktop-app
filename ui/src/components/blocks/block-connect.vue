@@ -1,11 +1,11 @@
 <template>
   <div class="left_panel_block" style="margin-top: 26px">
     <div style="display: flex; justify-content: space-between">
-      <div tabindex="0">
-        <div class="small_text">Your status is</div>
-        <div>
-          <!-- `role="status" allows screen readers to read the text when it changes -->
-          <div class="large_text" role="status" :aria-label="protectedText">
+      <div>
+        <div class="small_text" tabindex="0" >Your status is</div>
+        <!-- `role="status" allows screen readers to read the text when it changes -->
+        <div role="status">
+          <div class="large_text" tabindex="0">
             {{ protectedText }}
           </div>          
         </div>

@@ -299,7 +299,7 @@
     <div style="height: 100%">
       <!-- HEADER: Applications -->
       <div class="flexRow" style="margin-top: 12px; margin-bottom: 12px">
-        <div
+        <div tabindex="0"
           class="flexRowRestSpace settingsBoldFont settingsDefaultTextColor"
           style="margin-top: 0px; margin-bottom: 0px; white-space: nowrap"
         >
@@ -325,7 +325,7 @@
         <!-- Configured apps view -->
 
         <!-- No applications in Split Tunnel configuration -->
-        <div
+        <div tabindex="0"
           v-if="isNoConfiguredApps"
           style="
             text-align: center;
@@ -362,7 +362,7 @@
           >
             <div class="flexRow grayedOnHover" style="padding-top: 4px">
               <!-- APP INFO  -->
-              <binaryInfoControl :app="app" style="width: 100%" />
+              <binaryInfoControl :app="app" style="width: 100%" tabindex="0"/>
               <!-- APP REMOVE BUTTON -->
               <div>
                 <button

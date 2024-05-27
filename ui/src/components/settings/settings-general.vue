@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="settingsTitle">GENERAL SETTINGS</div>
+    <div class="settingsTitle" tabindex="0">GENERAL SETTINGS</div>
 
     <div class="param" :title="isLaunchAtLoginDisableBlockerInfo" tabindex="0">
       <input 
