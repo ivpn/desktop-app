@@ -1,9 +1,9 @@
 <template>
   <div>
-    <div class="settingsTitle">DNS SETTINGS</div>
+    <div class="settingsTitle" tabindex="0">DNS SETTINGS</div>
 
     <div>
-      <div class="param">
+      <div class="param" tabindex="0">
         <input type="checkbox" id="dnsIsCustom" v-model="dnsIsCustom" />
         <label class="defColor" for="dnsIsCustom"
           >Use custom DNS server when connected to IVPN</label
@@ -11,7 +11,7 @@
       </div>
 
       <div v-bind:class="{ disabled: dnsIsCustom === false }">
-        <div class="flexRow paramProps">
+        <div class="flexRow paramProps" tabindex="0">
           <div class="defColor paramName">IP address:</div>
 
           <input
@@ -24,7 +24,7 @@
 
         <div v-if="CanUseDnsOverHttps || CanUseDnsOverTls">
           <div class="paramProps">
-            <div class="flexRow paramBlock">
+            <div class="flexRow paramBlock" tabindex="0">
               <div class="defColor paramName">DNS encryption:</div>
               <div class="settingsRadioBtnEx">
                 <input
@@ -65,7 +65,7 @@
           </div>
 
           <div
-            class="flexRowAlignTop paramProps"
+            class="flexRowAlignTop paramProps" tabindex="0"
             v-bind:class="{ disabled: dnsIsEncrypted === false }"
           >
             <div class="defColor paramName">
@@ -126,7 +126,7 @@
       </div>
 
       <div class="paramProps">
-        <div class="fwDescription">
+        <div class="fwDescription" tabindex="0">
           AntiTracker will override the custom DNS when enabled.
         </div>
       </div>

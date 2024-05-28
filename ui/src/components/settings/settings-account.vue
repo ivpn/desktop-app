@@ -1,20 +1,20 @@
 <template>
   <div class="flexColumn">
-    <div class="settingsTitle">ACCOUNT SETTINGS</div>
+    <div class="settingsTitle" tabindex="0">ACCOUNT SETTINGS</div>
 
     <div class="flexColumn">
       <spinner :loading="isProcessing" />
 
       <div class="flexRowSpace">
         <div class="flexColumn">
-          <div class="settingsGrayDescriptionFont">Account ID</div>
+          <div class="settingsGrayDescriptionFont" tabindex="0">Account ID</div>
 
-          <div class="settingsBigBoldFont" id="accountID">
+          <div class="settingsBigBoldFont" id="accountID" tabindex="0">
             <label class="settingsBigBoldFont selectable">
               {{ this.$store.state.account.session.AccountID }}
             </label>
           </div>
-          <div>
+          <div tabindex="0">
             <div
               class="statusButtonActive"
               v-if="IsAccountStateExists && IsActive"
@@ -41,21 +41,21 @@
       </div>
 
       <!-- ACCOUNT EXPIRATION TEXT -->
-      <div
+      <div tabindex="0"
         style="margin-bottom: 12px; color: darkorange"
         v-if="$store.getters['account/messageAccountExpiration']"
       >
         {{ $store.getters["account/messageAccountExpiration"] }}
       </div>
       <!-- FREE TRIAL EXPIRATION TEXT -->
-      <div
+      <div tabindex="0"
         style="margin-bottom: 12px; color: darkorange"
         v-if="$store.getters['account/messageFreeTrial']"
       >
         {{ $store.getters["account/messageFreeTrial"] }}
       </div>
 
-      <div class="subscriptionDetails" v-if="IsAccountStateExists">
+      <div class="subscriptionDetails" v-if="IsAccountStateExists" tabindex="0">
         <div class="settingsBoldFont" style="margin-bottom: 16px">
           Subscription details:
         </div>
@@ -91,7 +91,7 @@
         </div>
       </div>
 
-      <div class="proAcountDescriptionBlock" v-if="IsCanUpgradeToPro">
+      <div class="proAcountDescriptionBlock" v-if="IsCanUpgradeToPro" tabindex="0">
         <p>
           <strong>IVPN PRO</strong> gives you more possibilities to stay safe
           and protected:

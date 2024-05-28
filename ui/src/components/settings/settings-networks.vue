@@ -1,9 +1,9 @@
 <template>
   <div class="flexColumn">
-    <div class="settingsTitle">WIFI CONTROL SETTINGS</div>
+    <div class="settingsTitle" tabindex="0">WIFI CONTROL SETTINGS</div>
 
     <div
-      class="param"
+      class="param" tabindex="0"
       :title="
         isParanoidMode
           ? 'The option is not applicable when `Enhanced App Authentication` enabled'
@@ -46,7 +46,7 @@
       </ComponentDialog>
     </div>
 
-    <div class="param">
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="connectVPNOnInsecureNetwork"
@@ -58,7 +58,7 @@
       >
     </div>
 
-    <div class="param">
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="trustedNetworksControl"
@@ -69,7 +69,7 @@
         >Trusted/Untrusted WiFi network control</label
       >
     </div>
-    <div class="fwDescription">
+    <div class="fwDescription" tabindex="0">
       By enabling this feature you can define a WiFi network as trusted or
       untrusted and what actions to take when joining the WiFi network
     </div>
@@ -106,8 +106,8 @@
     <div class="flexColumn" style="min-height: 0px">
       <!-- ACTIONS -->
       <div v-if="isActionsView" style="flex-grow: 1">
-        <div class="settingsBoldFont">Actions for Untrusted WiFi</div>
-        <div class="param">
+        <div class="settingsBoldFont" tabindex="0">Actions for Untrusted WiFi</div>
+        <div class="param" tabindex="0">
           <input
             type="checkbox"
             id="unTrustedConnectVpn"
@@ -117,7 +117,7 @@
             >Connect to VPN</label
           >
         </div>
-        <div class="param">
+        <div class="param" tabindex="0">
           <input
             type="checkbox"
             id="unTrustedEnableFirewall"
@@ -127,7 +127,7 @@
             >Enable firewall</label
           >
         </div>
-        <div class="param">
+        <div class="param" tabindex="0">
           <input
             type="checkbox"
             id="unTrustedBlockLan"
@@ -154,8 +154,8 @@
           </ComponentDialog>
         </div>
 
-        <div class="settingsBoldFont">Actions for Trusted WiFi</div>
-        <div class="param">
+        <div class="settingsBoldFont" tabindex="0">Actions for Trusted WiFi</div>
+        <div class="param" tabindex="0">
           <input
             type="checkbox"
             id="trustedDisconnectVpn"
@@ -165,7 +165,7 @@
             >Disconnect from VPN</label
           >
         </div>
-        <div class="param">
+        <div class="param" tabindex="0">
           <input
             type="checkbox"
             id="trustedDisableFirewall"
@@ -180,7 +180,7 @@
       <!-- NETWORKS -->
       <div v-if="!isActionsView" class="flexColumn">
         <div class="flexRow" style="margin-top: 12px; margin-bottom: 12px">
-          <div class="flexRowRestSpace">
+          <div class="flexRowRestSpace" tabindex="0">
             Default trust status for undefined networks:
           </div>
           <div>
@@ -210,7 +210,7 @@
           style="height: 0; flex-grow: 1; overflow-y: auto;"
         >
           <div v-for="wifi of networks" v-bind:key="wifi.SSID">
-            <trustedNetConfigControl
+            <trustedNetConfigControl tabindex="0"
               :wifiInfo="wifi"
               :onChange="onNetworkTrustChanged"
             />
@@ -230,7 +230,7 @@
               v-on:click="onShowAllNetworks"
               style="margin: 0px 5px 0px 0px"
             />
-            <label class="defColor" for="showAllWifi">
+            <label class="defColor" for="showAllWifi" tabindex="0">
               Show all WiFi networks</label
             >
           </div>

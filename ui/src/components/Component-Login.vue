@@ -85,7 +85,7 @@
     </div>
 
     <div class="flexRow leftright_margins" style="margin-bottom: 20px">
-      <div
+      <div role="status"
         class="flexRow flexRowRestSpace switcher_small_text"
         style="margin-right: 10px"
       >
@@ -93,6 +93,7 @@
       </div>
 
       <SwitchProgress
+        :title="isChecked?'Disable Firewall':'Enable Firewall'"
         :onChecked="firewallOnChecked"
         :isChecked="this.$store.state.vpnState.firewallState.IsEnabled"
         :isProgress="firewallIsProgress"

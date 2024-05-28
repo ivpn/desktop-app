@@ -1,12 +1,13 @@
 <template>
   <div class="left_panel_block" style="margin-top: 26px">
     <div style="display: flex; justify-content: space-between">
-      <div align="left">
-        <div class="small_text">Your status is</div>
-        <div>
-          <div class="large_text">
+      <div>
+        <div class="small_text" tabindex="0" >Your status is</div>
+        <!-- `role="status" allows screen readers to read the text when it changes -->
+        <div role="status">
+          <div class="large_text" tabindex="0">
             {{ protectedText }}
-          </div>
+          </div>          
         </div>
       </div>
 
@@ -16,6 +17,7 @@
             <div v-if="isCanPause || isCanResume">
               <button
                 v-if="isCanPause"
+                title="Pause"
                 class="settingsBtn"
                 style="background: var(--background-color); position: relative"
                 v-on:click="onPauseMenu"
@@ -26,6 +28,7 @@
 
               <button
                 v-else-if="isCanResume"
+                title="Resume"
                 class="settingsBtnResume"
                 style="position: relative"
                 v-on:click="onPauseResume(null)"
@@ -82,6 +85,7 @@
 
         <div style="min-width: 50px; margin-left: auto; margin-right: 0">
           <SwitchProgress
+          :title="(isConnected==true)? 'Disconnect' : 'Connect'"
             v-bind:class="{ lowOpacity: isCanResume }"
             :onChecked="onChecked"
             :isChecked="isChecked"

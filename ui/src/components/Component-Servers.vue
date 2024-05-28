@@ -72,6 +72,7 @@
 
       <div class="buttonWithPopup">
         <button
+          title="Sort servers by"
           class="noBordersBtn sortBtn sortBtnPlatform"
           v-on:click="onSortMenuClicked()"
           v-click-outside="onSortMenuClickedOutside"
@@ -151,7 +152,7 @@
       class="small_text"
       style="margin-bottom: 5px"
     >
-      Disable servers you do not want to be choosen as the fastest server
+      Disable servers you do not want to be chosen as the fastest server
     </div>
 
     <!-- SERVERS LIST BLOCK -->
@@ -169,7 +170,7 @@
           >
             <serverNameControl class="serverName" :isFastestServer="true" />
           </button>
-          <button class="noBordersBtn" v-on:click="onFastestServerConfig()">
+          <button class="noBordersBtn" v-on:click="onFastestServerConfig()" title="Fastest server settings">            
             <img :src="settingsImage" />
           </button>
         </div>

@@ -1,15 +1,15 @@
 <template>
   <div>
-    <div class="settingsTitle">ANTITRACKER SETTINGS</div>
+    <div class="settingsTitle" tabindex="0">ANTITRACKER SETTINGS</div>
 
-    <div class="defColor" style="margin-bottom: 24px">
+    <div class="defColor" style="margin-bottom: 24px" tabindex="0">
       When AntiTracker is enabled, IVPN blocks ads, malicious websites, and
       third-party trackers using our private DNS servers.
       <linkCtrl label="Learn more" url="https://www.ivpn.net/antitracker" />
       about how IVPN AntiTracker is implemented.
     </div>
 
-    <div class="flexRow paramBlock" style="margin-bottom: 12px">
+    <div class="flexRow paramBlock" style="margin-bottom: 12px" tabindex="0">
       <div class="defColor paramName">Block list:</div>
       <select v-model="AtPlusListNameSelected">
         <optgroup
@@ -27,14 +27,14 @@
         </optgroup>
       </select>
     </div>
-    <div class="fwDescription">
+    <div class="fwDescription" tabindex="0">
       Block lists refer to DNS blocking lists used by our AntiTracker. The
       'Basic', 'Comprehensive', and 'Restrictive' options are combinations of
       individual lists, each offering a different level of protection. You also
       have the freedom to select from individual lists for a more tailored
       AntiTracker experience.
     </div>
-    <div class="fwDescription">
+    <div class="fwDescription" tabindex="0">
       <linkCtrl
         label="Learn more"
         url="https://www.ivpn.net/knowledgebase/general/antitracker-plus-lists-explained/"
@@ -42,7 +42,7 @@
       about AntiTracker block lists.
     </div>
 
-    <div class="param">
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="isAntitrackerHardcore"
@@ -51,11 +51,11 @@
       <label class="defColor" for="isAntitrackerHardcore">Hardcore Mode</label>
     </div>
 
-    <div class="fwDescription">
+    <div class="fwDescription" tabindex="0">
       Adding Hardcore mode will block the leading companies with business models
       relying on user surveillance (currently: Google and Facebook).
     </div>
-    <div class="fwDescription">
+    <div class="fwDescription" tabindex="0">
       To better understand how this may impact your experience please refer to
       our
       <linkCtrl

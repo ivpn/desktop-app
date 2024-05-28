@@ -1,11 +1,11 @@
 <template>
   <div>
-    <div class="settingsTitle">FIREWALL SETTINGS</div>
+    <div class="settingsTitle" tabindex="0">FIREWALL SETTINGS</div>
 
-    <div class="settingsBoldFont">Non-VPN traffic blocking:</div>
+    <div class="settingsBoldFont" tabindex="0">Non-VPN traffic blocking:</div>
 
     <div>
-      <div class="settingsRadioBtn">
+      <div class="settingsRadioBtn" tabindex="0">
         <input
           ref="radioFWOnDemand"
           type="radio"
@@ -16,14 +16,14 @@
         />
         <label class="defColor" for="onDemand">On-demand</label>
       </div>
-      <div class="fwDescription">
+      <div class="fwDescription" tabindex="0">
         When this option is enabled the IVPN Firewall can be either manually
         activated or automatically activated when the VPN connection is
         established - see On-demand Firewall options below
       </div>
 
-      <div>
-        <div class="settingsRadioBtn">
+      <div >
+        <div class="settingsRadioBtn" tabindex="0">
           <input
             ref="radioFWPersistent"
             type="radio"
@@ -34,7 +34,7 @@
           />
           <label class="defColor" for="alwaysOn">Always-on firewall</label>
         </div>
-        <div class="fwDescription">
+        <div class="fwDescription" tabindex="0">
           When the option is enabled the IVPN Firewall is started during system
           boot time before any other process. IVPN Firewall will always be
           active even when IVPN Client is not running
@@ -42,7 +42,7 @@
       </div>
     </div>
 
-    <div class="param">
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="firewallAllowApiServers"
@@ -54,9 +54,9 @@
     </div>
 
     <!-- On-demand Firewall -->
-    <div class="settingsBoldFont">On-demand Firewall:</div>
+    <div class="settingsBoldFont" tabindex="0">On-demand Firewall:</div>
 
-    <div class="param">
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="firewallActivateOnConnect"
@@ -67,7 +67,7 @@
         >Activate IVPN Firewall on connect to VPN</label
       >
     </div>
-    <div class="param">
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="firewallDeactivateOnDisconnect"
@@ -105,7 +105,7 @@
     <!-- TAB: LAN settings -->
     <div style="margin-top: 12px">
       <div v-if="extraCfgViewIsLan">
-        <div class="param">
+        <div class="param" tabindex="0">
           <input
             type="checkbox"
             id="firewallAllowLan"
@@ -135,7 +135,7 @@
             </div>
           </ComponentDialog>
         </div>
-        <div class="param">
+        <div class="param" tabindex="0">
           <input
             type="checkbox"
             id="firewallAllowMulticast"
@@ -157,7 +157,7 @@
             placeholder="192.0.2.0/24, 198.51.100.1"
             v-model="firewallExceptions"
           />
-          <div class="fwDescription" style="margin-left: 0px; margin-top: 4px">
+          <div class="fwDescription" style="margin-left: 0px; margin-top: 4px" tabindex="0">
             Enter a comma-separated list of IP addresses or subnets (using CIDR
             notation) that will be allowed through the firewall when enabled.
           </div>

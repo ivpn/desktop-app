@@ -67,6 +67,7 @@
 
           <transition name="fade">
             <button
+              title="Scroll down"
               class="btnScrollDown"
               v-if="isShowScrollButton"
               v-on:click="onScrollDown()"

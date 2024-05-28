@@ -7,12 +7,12 @@
       />
     </ComponentDialog>
 
-    <div class="settingsTitle">CONNECTION SETTINGS</div>
+    <div class="settingsTitle" tabindex="0">CONNECTION SETTINGS</div>
 
-    <div class="settingsBoldFont">VPN protocol:</div>
+    <div class="settingsBoldFont" tabindex="0">VPN protocol:</div>
 
     <div>
-      <div class="settingsRadioBtn">
+      <div class="settingsRadioBtn" tabindex="0">
         <input
           type="radio"
           id="openvpn"
@@ -24,7 +24,7 @@
         <label class="defColor" for="openvpn">OpenVPN</label>
       </div>
 
-      <div class="settingsRadioBtn">
+      <div class="settingsRadioBtn" tabindex="0">
         <input
           type="radio"
           id="wireguard"
@@ -39,7 +39,7 @@
 
     <!-- IPv6 -->
     <div>
-      <div class="param">
+      <div class="param" tabindex="0">
         <input
           type="checkbox"
           id="enableIPv6InTunnel"
@@ -51,7 +51,7 @@
         >
       </div>
 
-      <div class="param">
+      <div class="param" tabindex="0">
         <input
           type="checkbox"
           id="showGatewaysWithoutIPv6"
@@ -66,9 +66,9 @@
 
     <!-- OpenVPN -->
     <div v-if="isOpenVPN">
-      <div class="settingsBoldFont">OpenVPN configuration:</div>
+      <div class="settingsBoldFont" tabindex="0">OpenVPN configuration:</div>
 
-      <div
+      <div tabindex="0"
         class="flexRow paramBlock"
         v-bind:class="{ disabled: prefferedPorts.length <= 1 }"
       >
@@ -92,13 +92,13 @@
       </div>
 
       <div :title="tooltipOptionEditRequiresDisconnection">
-        <div
+        <div  tabindex="0"
           v-bind:class="{
             disabled:
               connectionUseObfsproxy || V2RayType !== 0 || !isDisconnected,
           }"
         >
-          <div class="flexRow paramBlock">
+          <div class="flexRow paramBlock" >
             <div class="defColor paramName">Network proxy:</div>
             <div class="settingsRadioBtnProxy">
               <input
@@ -169,10 +169,10 @@
         </div>
       </div>
 
-      <div class="settingsBoldFont">Additional settings:</div>
+      <div class="settingsBoldFont" tabindex="0">Additional settings:</div>
       <div :title="tooltipOptionEditRequiresDisconnection">
         <div v-bind:class="{ disabled: !isDisconnected }">
-          <div class="flexRowAlignTop">
+          <div class="flexRowAlignTop" tabindex="0">
             <div class="flexRowAlignTop paramName" style="padding-top: 2px">
               <label class="defColor">Obfuscation:</label>
             </div>
@@ -189,7 +189,7 @@
                   </option>
                 </select>
 
-                <button
+                <button 
                   style="pointer-events: auto"
                   class="noBordersBtn flexRow"
                   title="Help"
@@ -204,7 +204,7 @@
             </div>
           </div>
 
-          <div class="param" v-if="userDefinedOvpnFile">
+          <div class="param" v-if="userDefinedOvpnFile" tabindex="0">
             <input
               type="checkbox"
               id="openvpnManualConfig"
@@ -253,13 +253,13 @@
 
     <!-- Wireguard -->
     <div v-show="!isOpenVPN">
-      <div class="settingsBoldFont">Wireguard configuration:</div>
+      <div class="settingsBoldFont" tabindex="0">Wireguard configuration:</div>
 
       <div
         v-bind:class="{ disabled: prefferedPorts.length <= 1 }"
         class="flexRow paramBlock"
       >
-        <div class="defColor paramName">Preferred port:</div>
+        <div class="defColor paramName" tabindex="0">Preferred port:</div>
         <select v-model="port">
           <option
             v-for="item in prefferedPorts"
@@ -278,7 +278,7 @@
         </select>
       </div>
 
-      <div class="flexRow paramBlock">
+      <div class="flexRow paramBlock" tabindex="0">
         <div class="defColor paramName">Rotate key every:</div>
         <select class="defInputWidth" v-model="wgKeyRegenerationInterval">
           <option
@@ -291,7 +291,7 @@
         </select>
       </div>
 
-      <div :title="tooltipOptionEditRequiresDisconnection">
+      <div :title="tooltipOptionEditRequiresDisconnection" tabindex="0">
         <div
           class="flexRow paramBlock"
           v-bind:class="{ disabled: !isDisconnected }"
@@ -325,7 +325,7 @@
         </div>
       </div>
 
-      <div :title="tooltipOptionEditRequiresDisconnection">
+      <div :title="tooltipOptionEditRequiresDisconnection" tabindex="0">
         <div v-bind:class="{ disabled: !isDisconnected }">
           <div class="flexRow paramBlock" style="margin: 0px; margin-top: 2px">
             <div class="defColor paramName">Custom MTU:</div>
@@ -363,40 +363,40 @@
       </div>
 
       <div v-if="IsAccountActive">
-        <div class="settingsBoldFont">Wireguard key information:</div>
+        <div class="settingsBoldFont" tabindex="0">Wireguard key information:</div>
 
         <spinner :loading="isProcessing" />
-        <div class="flexRow paramBlockDetailedConfig">
+        <div class="flexRow paramBlockDetailedConfig" tabindex="0">
           <div class="defColor paramName">Local IP Address:</div>
           <div class="detailedParamValue">
             {{ this.$store.state.account.session.WgLocalIP }}
           </div>
         </div>
-        <div class="flexRow paramBlockDetailedConfig">
+        <div class="flexRow paramBlockDetailedConfig" tabindex="0">
           <div class="defColor paramName">Public key:</div>
           <div class="detailedParamValue">
             {{ this.$store.state.account.session.WgPublicKey }}
           </div>
         </div>
-        <div class="flexRow paramBlockDetailedConfig">
+        <div class="flexRow paramBlockDetailedConfig" tabindex="0">
           <div class="defColor paramName">Generated:</div>
           <div class="detailedParamValue">
             {{ wgKeysGeneratedDateStr }}
           </div>
         </div>
-        <div class="flexRow paramBlockDetailedConfig">
+        <div class="flexRow paramBlockDetailedConfig" tabindex="0">
           <div class="defColor paramName">Scheduled rotation date:</div>
           <div class="detailedParamValue">
             {{ wgKeysWillBeRegeneratedStr }}
           </div>
         </div>
-        <div class="flexRow paramBlockDetailedConfig">
+        <div class="flexRow paramBlockDetailedConfig" tabindex="0">
           <div class="defColor paramName">Expiration date:</div>
           <div class="detailedParamValue">
             {{ wgKeysExpirationDateStr }}
           </div>
         </div>
-        <div class="flexRow paramBlockDetailedConfig">
+        <div class="flexRow paramBlockDetailedConfig" tabindex="0">
           <div class="defColor paramName">Quantum Resistance:</div>
           <div class="detailedParamValue">
             {{ wgQuantumResistanceStr }}
