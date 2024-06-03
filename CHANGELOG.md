@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.14.14 - 2024-06-03
+
+[IMPROVED] Updated the liboqs library to v0.10.0, incorporating the latest updates in Quantum-Resistant algorithms  
+[IMPROVED] GUI: Enhanced readability for screen readers to assist blind users  
+[IMPROVED] CLI: Added a short synonym "-f" for the "-fastest" option to specify a connection to the "fastest" server  
+[FIX] (Linux) Corrected permissions on some files in the UI app  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.14.14.exe)  
+SHA256: 2dd2511facb200b644dae3946305c801a0a5c00eb971a7df0f1f1157457d9aba  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.14.14.dmg)  
+SHA256: 0d4ed59601695ef8cfeb68ffad30ca761446b117d669679448ca8f4acc714f55  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.14.14-arm64.dmg)  
+SHA256: c25c046560b832d1443b371996ddbd0804d4230d6088de10101db996990729e2  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.14.14_amd64.deb)  
+SHA256: 123cc46bd12baede70fbf3e8db013ee248fe1faa9090af9ff3c6a8dcc60cc27d  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.14.14-1.x86_64.rpm)  
+SHA256: fb29f980b609a63f4ad8653652b1d441197421915aa99f7642c1e3dc66bc2e3d  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.14.14_amd64.deb)  
+SHA256: 9cc74190cc567d4f6d813311c9fcba51695280c9776754150a251032f36ee941  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.14.14-1.x86_64.rpm)  
+SHA256: 5eb0de7de062180812deba88a641fe5f4dfde36c41dee56120aff3536a164654  
+
 ## Version 3.14.12 - 2024-03-26
 
 [IMPROVED] (macOS) WiFi Control: Optimized WiFi information retrieval for modern macOS versions  
