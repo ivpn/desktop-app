@@ -882,13 +882,11 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 	// Split-Tunnelling: Checking default outbound IPs
 	// (note: it is important to call this code after 'vpnProc.Init()')
 	var sInfo VpnSessionInfo
-	sInfo.OutboundIPv4, err = netinfo.GetOutboundIP(false)
-	if err != nil {
-		log.Warning(fmt.Errorf("failed to detect outbound IPv4 address: %w", err))
-	}
-	sInfo.OutboundIPv6, err = netinfo.GetOutboundIP(true)
-	if err != nil {
-		log.Warning(fmt.Errorf("failed to detect outbound IPv6 address: %w", err))
+	log.Info("Detecting outbound IP addresses...")
+	if sInfo.OutboundIPv4, sInfo.OutboundIPv6, err = WaitAndGetOutboundIPs(time.Minute); err != nil {
+		log.Error(fmt.Errorf("failed to detect outbound IP addresses: %w", err))
+	} else {
+		log.Info(fmt.Sprintf("Detected outbound IP addresses: %v, %v", sInfo.OutboundIPv4, sInfo.OutboundIPv6))
 	}
 	s.SetVpnSessionInfo(sInfo)
 

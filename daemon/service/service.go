@@ -186,26 +186,15 @@ func (s *Service) init() error {
 	go func() {
 		defer close(_ipStackInitializationWaiter) // ip stack initialized (or timeout)
 		log.Info("Waiting for IP stack initialization ...")
-		endTime := time.Now().Add(time.Minute * 2)
-		for {
-			ipv4, err4 := netinfo.GetOutboundIP(false)
-			ipv6, err6 := netinfo.GetOutboundIP(true)
-			if (!ipv4.IsUnspecified() && err4 == nil) || (!ipv6.IsUnspecified() && err6 == nil) {
-				log.Info("IP stack initializaed")
-
-				// Save IP addresses of the current outbound interface (can be used, for example, for Split-Tunneling)
-				ipInfo := s.GetVpnSessionInfo()
-				ipInfo.OutboundIPv4 = ipv4
-				ipInfo.OutboundIPv6 = ipv6
-				s.SetVpnSessionInfo(ipInfo)
-
-				return
-			}
-			if time.Now().After(endTime) {
-				log.Info("WARNING! Timeout waiting for IP stack initialization!")
-				return
-			}
-			time.Sleep(time.Millisecond * 200)
+		if outIpv4, outIPv6, err := WaitAndGetOutboundIPs(time.Minute * 2); err != nil {
+			log.Error(fmt.Errorf("IP stack initialization waiter error: %w", err))
+		} else {
+			log.Info("IP stack initialized")
+			// Save IP addresses of the current outbound interface (can be used, for example, for Split-Tunneling)
+			ipInfo := s.GetVpnSessionInfo()
+			ipInfo.OutboundIPv4 = outIpv4
+			ipInfo.OutboundIPv6 = outIPv6
+			s.SetVpnSessionInfo(ipInfo)
 		}
 	}()
 
@@ -326,9 +315,28 @@ func (s *Service) init() error {
 	}()
 
 	// Start processing power events in separate routine (Windows)
-	s.startProcessingPowerEvents()
+	go func() {
+		<-_ipStackInitializationWaiter // Wait for IP stack initialization
+		s.startProcessingPowerEvents()
+	}()
 
 	return nil
+}
+
+func WaitAndGetOutboundIPs(timeout time.Duration) (outIpv4, outIPv6 net.IP, err error) {
+	endTime := time.Now().Add(timeout)
+	var err4, err6 error
+	for {
+		outIpv4, err4 = netinfo.GetOutboundIP(false)
+		outIPv6, err6 = netinfo.GetOutboundIP(true)
+		if (!outIpv4.IsUnspecified() && err4 == nil) || (!outIPv6.IsUnspecified() && err6 == nil) {
+			return outIpv4, outIPv6, nil
+		}
+		if time.Now().After(endTime) {
+			return outIpv4, outIPv6, fmt.Errorf("timeout")
+		}
+		time.Sleep(time.Millisecond * 200)
+	}
 }
 
 // UnInitialise - function prepares to daemon stop (Stop/Disable everything)
