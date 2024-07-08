@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.14.16 - 2024-07-08
+
+[FIX] (Windows) Fixed issue with initializing Split-Tunnel when the main network interface is not initialized  
+[FIX] (Windows) Fixed issue with resuming OpenVPN connection when Inverse Split-Tunnel is active  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.14.16.exe)  
+SHA256: 89bf718ff97a8df2fd9e2784af98480db9f77f5a43f902dd397d46f9ab2ac09e  
+
 ## Version 3.14.14 - 2024-06-03
 
 [IMPROVED] Updated the liboqs library to v0.10.0, incorporating the latest updates in Quantum-Resistant algorithms  

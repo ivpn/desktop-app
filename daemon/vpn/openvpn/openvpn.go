@@ -34,6 +34,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
@@ -527,6 +528,16 @@ func (o *OpenVPN) Pause() error {
 
 // Resume doing required operation for Resume (restores DNS configuration before Pause)
 func (o *OpenVPN) Resume() (retErr error) {
+	// If OpenVPN is in re-connecting state - wait until connected
+	defer func() {
+		for {
+			if !o.state.IsConnecting() {
+				break
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+	}()
+
 	o.pauseLocker.Lock()
 	defer o.pauseLocker.Unlock()
 

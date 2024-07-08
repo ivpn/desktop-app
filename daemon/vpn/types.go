@@ -77,6 +77,15 @@ const (
 	INITIALISED  State = iota // Interface initialised (WireGuard: but connection handshake still not detected)
 )
 
+func (s State) IsConnecting() bool {
+	switch s {
+	case CONNECTING, WAIT, AUTH, GETCONFIG, ASSIGNIP, ADDROUTES, RECONNECTING, TCP_CONNECT:
+		return true
+	default:
+		return false
+	}
+}
+
 func (s State) String() string {
 	if s < DISCONNECTED || s > INITIALISED {
 		return "<Unknown>"
