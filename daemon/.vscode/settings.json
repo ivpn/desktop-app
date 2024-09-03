@@ -1,10 +1,21 @@
 {
     "cSpell.words": [
+        "Alexandr",
+        "blackhole",
+        "DWORD",
         "evtlog",
+        "inversed",
+        "IVPN",
         "Liboqs",
         "netinfo",
         "prefs",
-        "serv"
+        "retval",
+        "serv",
+        "splitted",
+        "splittun",
+        "Stelnykovych",
+        "Systemroot",
+        "WCHAR"
     ],
     "cSpell.ignorePaths": [
         "package-lock.json",

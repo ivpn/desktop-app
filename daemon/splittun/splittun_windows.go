@@ -225,7 +225,7 @@ func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpn
 		// For inversed split-tunnel we just inverse IP addresses in driver configuration (defaultPublicInterfaceIP <=> tunnelInterfaceIP)
 		if isStInversed {
 			// In situation when there is no IPv6 connectivity on local machine (IPv6Public not defined) - we need to set IPv6Tunnel to IPv6Public
-			// otherwise (if IPv6Public or IPv6Tunnel not defined) - IPv6 traffic for 'splited' apps will be blocked by ST driver
+			// otherwise (if IPv6Public or IPv6Tunnel not defined) - IPv6 traffic for 'splitted' apps will be blocked by ST driver
 			if len(addresses.IPv6Public) == 0 && len(addresses.IPv6Tunnel) > 0 {
 				addresses.IPv6Public = addresses.IPv6Tunnel
 			}
@@ -527,7 +527,7 @@ func start() (err error) {
 	// Initialize already running apps info
 	/// Set application PID\PPIDs which have to be splitted.
 	/// It adds new info to internal process tree but not erasing current known PID\PPIDs.
-	/// Operaion fails when 'process monitor' not running
+	/// Operation fails when 'process monitor' not running
 	retval, _, err = fSplitTun_ProcMonInitRunningApps.Call()
 
 	if err == syscall.ERROR_NO_MORE_FILES {
@@ -581,7 +581,7 @@ func setConfig(config Config) (err error) {
 	// SET APPS TO SPLIT
 	buff, err := makeRawBuffAppsConfig(config.Apps)
 	if err != nil {
-		return log.ErrorE(fmt.Errorf("failed to set split-tinnelling configuration (apps): %w", err), 0)
+		return log.ErrorE(fmt.Errorf("failed to set split-tunnelling configuration (apps): %w", err), 0)
 	}
 
 	var bufSize uint32 = uint32(len(buff))
@@ -687,7 +687,7 @@ func getConfig() (cfg Config, err error) {
 
 	apps, err := parseRawBuffAppsConfig(buff)
 	if err != nil {
-		return Config{}, log.ErrorE(fmt.Errorf("failed to obtain split-tinnelling configuration (apps): %w", err), 0)
+		return Config{}, log.ErrorE(fmt.Errorf("failed to obtain split-tunnelling configuration (apps): %w", err), 0)
 	}
 
 	return Config{Addr: addr, Apps: apps}, nil

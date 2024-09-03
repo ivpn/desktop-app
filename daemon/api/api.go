@@ -410,7 +410,7 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 	return resp, nil
 }
 
-// GeoLookup gets geolocation
+// GeoLookup gets geo-location
 func (a *API) GeoLookup(timeoutMs int, ipTypeRequired protocolTypes.RequiredIPProtocol) (location *types.GeoLookupResponse, rawData []byte, retErr error) {
 	// There could be multiple Geolookup requests at the same time.
 	// It doesn't make sense to make multiple requests to the API.
