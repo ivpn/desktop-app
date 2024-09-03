@@ -194,7 +194,7 @@ export default {
   methods: {
     async Login(isForceLogout, confirmation2FA) {
       try {
-        // check accoundID
+        // check accountID
         var pattern = new RegExp("^(i-....-....-....)|(ivpn[a-zA-Z0-9]{7,8})$"); // fragment locator
         if (this.accountID) this.accountID = this.accountID.trim();
         if (pattern.test(this.accountID) !== true) {
@@ -298,7 +298,7 @@ export default {
       this.isForceLogoutRequested = false;
     },
     keyup(event) {
-      if (event.keyCode === 13) {
+      if (event.keyCode === 13 && !this.isProcessing && !this.$store.getters["account/isLoggedIn"]) {
         // Cancel the default action, if needed
         event.preventDefault();
         this.Login();
