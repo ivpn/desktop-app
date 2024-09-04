@@ -214,7 +214,7 @@ func doInitOperations() (w string, e error) {
 			// Servers file is not exists on required place
 			// Probably, it is first start after clean install
 			// Copying it from a bundle
-			os.MkdirAll(filepath.Base(serversFile), os.ModePerm)
+			os.MkdirAll(filepath.Dir(serversFile), os.ModePerm)
 			if err = helpers.CopyFile(serversFileBundled, serversFile); err != nil {
 				return err.Error(), nil
 			}
