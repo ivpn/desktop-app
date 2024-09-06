@@ -174,7 +174,7 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 	return true, false, err
 }
 
-func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
+func implSetManual(dnsCfg DnsSettings, localVpnInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
 	defer catchPanic(&retErr)
 	defer func() {
 		if retErr != nil {
@@ -213,10 +213,10 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
 	} else {
 		// non-VPN interfaces to update (if DNS located in local network)
-		notVpnInterfacesToUpdate, _ = getInterfacesIPsWhichContainsIP(dnsCfg.Ip(), localInterfaceIP)
+		notVpnInterfacesToUpdate, _ = getInterfacesIPsWhichContainsIP(dnsCfg.Ip(), localVpnInterfaceIP)
 	}
 
-	if localInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
+	if localVpnInterfaceIP == nil && len(notVpnInterfacesToUpdate) <= 0 {
 		return DnsSettings{}, nil
 	}
 
@@ -230,24 +230,39 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 		}
 	}()
 
-	if localInterfaceIP != nil {
-		// INFO: support of IPv6 DNS disabled in current implementation
-		// Reset DNS configuration for the protocol which is not in use
-		// if e := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, !isIpv6, OperationSet); err != nil {
-		//	log.Warning(fmt.Errorf("failed to reset DNS (IPv6=%v) for local interface: %w", !isIpv6, e))
-		// }
-
-		// SET DNS to VPN interface (for appropriate IPv4\IPv6 protocol)
-		if err := fSetDNSByLocalIP(localInterfaceIP, dnsCfg, isIpv6, OperationSet); err != nil {
-			return DnsSettings{}, fmt.Errorf("failed to set DNS for local interface: %w", err)
-		}
-	}
-
+	// If DNS server is in local network - apply it to the appropriate interfaces
 	if len(notVpnInterfacesToUpdate) > 0 {
-		// ADD DNS to non-VPN interface (if necessary, when DNS is in local network)
+		// ADD DNS to non-VPN interface
 		for _, ifcAddr := range notVpnInterfacesToUpdate {
 			if err := fSetDNSByLocalIP(ifcAddr.IP, dnsCfg, isIpv6, OperationAdd); err != nil {
 				return DnsSettings{}, fmt.Errorf("failed to set DNS for non-VPN interface: %w", err)
+			}
+		}
+
+		if localVpnInterfaceIP != nil {
+			// Since we use local DNS server - we do not need to apply it to the VPN interface
+			// ERASE DNS configuration for the VPN interface (to avoid DNS requests to the VPN server)
+			if err := fSetDNSByLocalIP(localVpnInterfaceIP, DnsSettings{}, isIpv6, OperationSet); err != nil {
+				return DnsSettings{}, fmt.Errorf("failed to set DNS for local interface: %w", err)
+			}
+		}
+	} else {
+		// If the DNS server is not in the local network, apply it to the VPN interface.
+		//
+		// Note: Do not apply DNS to the VPN interface if the DNS server is in the local network,
+		// to avoid sending DNS requests to the VPN server in parallel with local DNS requests.
+
+		// SET DNS to VPN interface
+		if localVpnInterfaceIP != nil {
+			// INFO: support of IPv6 DNS disabled in current implementation
+			// Reset DNS configuration for the protocol which is not in use
+			// if e := fSetDNSByLocalIP(localInterfaceIP, DnsSettings{}, !isIpv6, OperationSet); err != nil {
+			//	log.Warning(fmt.Errorf("failed to reset DNS (IPv6=%v) for local interface: %w", !isIpv6, e))
+			// }
+
+			// SET DNS to VPN interface (for appropriate IPv4\IPv6 protocol)
+			if err := fSetDNSByLocalIP(localVpnInterfaceIP, dnsCfg, isIpv6, OperationSet); err != nil {
+				return DnsSettings{}, fmt.Errorf("failed to set DNS for local interface: %w", err)
 			}
 		}
 	}
