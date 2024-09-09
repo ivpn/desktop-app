@@ -79,6 +79,7 @@
                 v-bind:class="{ badData: isTemplateURIError === true }"
                 placeholder="https://..."
                 v-model="dnsDohTemplate"
+                spellcheck="false"
               />
               <div v-if="isShowDnsproxyDescription" class="fwDescription">
                 DNS over HTTPS (DoH) is implemented using dnscrypt-proxy from
