@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.14.17 - 2024-09-19
+
+[IMPROVED] GUI: Account ID and QR code are blurred by default in account settings  
+[FIX] GUI: Pressing Enter multiple times during login was creating multiple sessions  
+[FIX] Disabled spellcheck for the "DoH URI template" setting  
+[FIX] (Windows): Using a local custom DNS was causing connection delays  
+[FIX] (Linux): App installation was creating a redundant folder  
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.14.17.exe)  
+SHA256: 7caaaf08b452caebe0ba42ec3df9cb291c8385c508670118f8da77ec7d116678  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.14.17.dmg)  
+SHA256: 18f8d1d932ee9106397ddec621bbd441fa4a712185909de3acba65a03d7f5724  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.14.17-arm64.dmg)  
+SHA256: 7a54920c97584eb03407a790bd007c03c583615528d06c9a071bd988b342021b  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.14.17_amd64.deb)  
+SHA256: 1e66b3300c6cbaa567458d8ff4949a9309f35bd713b07c4e143fda3f0eb0adc9  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.14.17-1.x86_64.rpm)  
+SHA256: 6bf9c626a510d6a91cb4267c80ba041dd3dd741181359570e8e8795c0b847b66  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.14.17_amd64.deb)  
+SHA256: f6adb4974ec52910af2dedf367d11d309db56661fc1f6fb53a8210c1439a03e6  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.14.17-1.x86_64.rpm)  
+SHA256: c19bd6303c9f27aef9705a848f04632d51d2bf7daa54c7b99e3ff4270103f6cd  
+
 ## Version 3.14.16 - 2024-07-08
 
 [FIX] (Windows) Fixed issue with initializing Split-Tunnel when the main network interface is not initialized  
