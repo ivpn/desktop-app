@@ -153,7 +153,7 @@ export default {
         ) {
           if (warningMessage) warningMessage += "\n\n";
           warningMessage +=
-            "On application start Trusted WiFi will be disabled until the EAA password is entered.";
+            "On application start Trusted Wi-Fi will be disabled until the EAA password is entered.";
         }
 
         if (
