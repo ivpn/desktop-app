@@ -129,7 +129,7 @@
                 3927, 4291, 4193.
               </p>
               <div class="settingsGrayLongDescriptionFont">
-                'WiFi control' actions for untrusted networks will override this
+                'Wi-Fi control' actions for untrusted networks will override this
                 option.
               </div>
             </div>
