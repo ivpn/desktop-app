@@ -393,7 +393,7 @@ export default {
     isLaunchAtLoginDisableBlockerInfo() {
       if (!this.isLaunchAtLogin) return "";
       if (this.isWifiActionsInBackground === true)
-        return `This option can not be disabled\nbecause of 'Allow background daemon to Apply WiFi Control settings' is active`;
+        return `This option can not be disabled\nbecause of 'Allow background daemon to Apply Wi-Fi Control settings' is active`;
       if (this.isAutoconnectOnLaunchDaemon === true)
         return `This option can not be disabled\nbecause of 'Allow background daemon to manage autoconnect' is active`;
       return "";

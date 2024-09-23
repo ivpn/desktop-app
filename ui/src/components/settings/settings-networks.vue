@@ -1,6 +1,6 @@
 <template>
   <div class="flexColumn">
-    <div class="settingsTitle" tabindex="0">WIFI CONTROL SETTINGS</div>
+    <div class="settingsTitle" tabindex="0">WI-FI CONTROL SETTINGS</div>
 
     <div
       class="param" tabindex="0"
@@ -22,7 +22,7 @@
         v-model="canApplyInBackground"
       />
       <label class="defColor" for="canApplyInBackground"
-        >Allow background daemon to Apply WiFi Control settings</label
+        >Allow background daemon to Apply Wi-Fi Control settings</label
       >
 
       <button
@@ -36,9 +36,9 @@
       <ComponentDialog ref="helpCanApplyInBackground" header="Info">
         <div>
           <p>
-            By enabling this feature the IVPN daemon will apply the WiFi control
+            By enabling this feature the IVPN daemon will apply the Wi-Fi control
             settings before the IVPN app has been launched. This enables the
-            WiFi control settings to be applied as quickly as possible as the
+            Wi-Fi control settings to be applied as quickly as possible as the
             daemon is started early in the operating system boot process and
             before the IVPN app (The GUI).
           </p>
@@ -54,7 +54,7 @@
         v-model="connectVPNOnInsecureNetwork"
       />
       <label class="defColor" for="connectVPNOnInsecureNetwork"
-        >Autoconnect on joining WiFi networks without encryption</label
+        >Autoconnect on joining Wi-Fi networks without encryption</label
       >
     </div>
 
@@ -66,12 +66,12 @@
         v-model="trustedNetworksControl"
       />
       <label class="defColor" for="trustedNetworksControl"
-        >Trusted/Untrusted WiFi network control</label
+        >Trusted/Untrusted Wi-Fi network control</label
       >
     </div>
     <div class="fwDescription" tabindex="0">
-      By enabling this feature you can define a WiFi network as trusted or
-      untrusted and what actions to take when joining the WiFi network
+      By enabling this feature you can define a Wi-Fi network as trusted or
+      untrusted and what actions to take when joining the Wi-Fi network
     </div>
 
     <div v-if="wifiWarningMessage" class="warningBlock" >
@@ -89,7 +89,7 @@
         class="selectableButtonOff"
         v-bind:class="{ selectableButtonOn: !isActionsView }"
       >
-        WiFi networks
+        Wi-Fi networks
       </button>
       <button
         v-on:click="onActions"
@@ -106,7 +106,7 @@
     <div class="flexColumn" style="min-height: 0px">
       <!-- ACTIONS -->
       <div v-if="isActionsView" style="flex-grow: 1">
-        <div class="settingsBoldFont" tabindex="0">Actions for Untrusted WiFi</div>
+        <div class="settingsBoldFont" tabindex="0">Actions for Untrusted Wi-Fi</div>
         <div class="param" tabindex="0">
           <input
             type="checkbox"
@@ -154,7 +154,7 @@
           </ComponentDialog>
         </div>
 
-        <div class="settingsBoldFont" tabindex="0">Actions for Trusted WiFi</div>
+        <div class="settingsBoldFont" tabindex="0">Actions for Trusted Wi-Fi</div>
         <div class="param" tabindex="0">
           <input
             type="checkbox"
@@ -231,7 +231,7 @@
               style="margin: 0px 5px 0px 0px"
             />
             <label class="defColor" for="showAllWifi" tabindex="0">
-              Show all WiFi networks</label
+              Show all Wi-Fi networks</label
             >
           </div>
 
@@ -353,7 +353,7 @@ export default {
             type: "warning",
             message: `Enhanced App Authentication`,
             detail:
-              "Warning: On application start Trusted WiFi will be disabled until the EAA password is entered",
+              "Warning: On application start Trusted Wi-Fi will be disabled until the EAA password is entered",
             buttons: ["Enable", "Cancel"],
           },
           true,

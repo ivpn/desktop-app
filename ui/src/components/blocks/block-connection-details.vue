@@ -85,11 +85,11 @@
           class="leftPanelBlock"
           :click="onShowWifiConfig"
           v-bind:text="wifiSSID"
-          :description="wifiSSID == '' ? 'No WiFi connection' : 'WiFi network'"
+          :description="wifiSSID == '' ? 'No Wi-Fi connection' : 'Wi-Fi network'"
           :markerText="WiFiMarkerText"
           :markerColor="WiFiMarkerColor"
           :markerTextColor="'var(--text-color-details)'"
-          title="WiFi control settings"
+          title="Wi-Fi control settings"
         />
       </div>
     </transition>
