@@ -25,20 +25,48 @@ package netinfo
 import (
 	"fmt"
 	"net"
-	"os/exec"
-	"regexp"
-	"strings"
+	"syscall"
+
+	"golang.org/x/net/route"
 )
 
-// IsDefaultRoutingInterface - Get active routing interface
+// IsDefaultRoutingInterface - Check if interface is default IPv4 routing interface ('default' or '0/1'+'128/1' route)
 func IsDefaultRoutingInterface(interfaceName string) (bool, error) {
-	routes, e := doGetDefaultRoutes(true)
-	if e != nil {
-		return false, e
+	// get interface info by name (to know the interface index)
+	iface, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return false, fmt.Errorf("unable to get interface by name: %w", err)
 	}
 
-	for _, r := range routes {
-		if strings.Compare(r.InterfaceName, interfaceName) == 0 {
+	// Check "0/1" and "128/1" routes (they are more specific than "default" route)
+	_, dst0, err := net.ParseCIDR("0.0.0.0/1") // "0/1" route
+	if err != nil {
+		return false, err
+	}
+	_, dst1, err := net.ParseCIDR("128.0.0.0/1") // "128.0/1" route
+	if err != nil {
+		return false, err
+	}
+	gwIp0, ifIdx0, _ := findRouteByDestination(*dst0)
+	if gwIp0 != nil {
+		gwIp1, ifIdx1, _ := findRouteByDestination(*dst1)
+		if gwIp1 != nil {
+			// Check if the interface index is the same as the one we are looking for and the gateways are equal
+			if iface.Index == ifIdx0 && ifIdx0 == ifIdx1 && gwIp0.Equal(gwIp1) {
+				return true, nil
+			}
+		}
+	}
+
+	// Check "default" route (destination = 0.0.0.0 and netmask = 0.0.0.0/0)
+	defaultDST := &net.IPNet{
+		IP:   net.IPv4(0, 0, 0, 0),
+		Mask: net.CIDRMask(0, 32),
+	}
+	_, ifIdx, _ := findRouteByDestination(*defaultDST)
+	if ifIdx >= 0 {
+		// Check if the interface index is the same as the one we are looking for
+		if iface.Index == ifIdx {
 			return true, nil
 		}
 	}
@@ -46,92 +74,84 @@ func IsDefaultRoutingInterface(interfaceName string) (bool, error) {
 	return false, nil
 }
 
-// doDefaultGatewayIP - returns: default gateway
+// doDefaultGatewayIP - returns: 'default' IPv4 gateway IP address
 func doDefaultGatewayIP() (defGatewayIP net.IP, err error) {
-	routes, e := doGetDefaultRoutes(false)
-	if e != nil {
-		return nil, e
+	// 'default' route: destination = 0.0.0.0 and netmask = 0.0.0.0/0
+	defaultDST := &net.IPNet{
+		IP:   net.IPv4(0, 0, 0, 0),
+		Mask: net.CIDRMask(0, 32),
 	}
-
-	return routes[0].GatewayIP, nil
-}
-
-type Route struct {
-	Destination   string
-	GatewayIP     net.IP
-	Flags         string
-	InterfaceName string
-}
-
-func (r Route) IsSpecified() bool {
-	return r.GatewayIP != nil && !r.GatewayIP.IsUnspecified()
-}
-
-func GetDefaultRoutes() (routes []Route, err error) {
-	return doGetDefaultRoutes(true)
-}
-
-// doGetDefaultRoutes returns all main routes
-//
-//	 getAllDefRoutes == false:
-//			returns "default" route
-//	 getAllDefRoutes == true:
-//			returns all "default" and "0/1" routes
-func doGetDefaultRoutes(getAllDefRoutes bool) (routes []Route, err error) {
-	// Expected output of "netstat -nr" command:
-	//	Routing tables
-	//	Internet:
-	//	Destination        Gateway            Flags        Netif Expire
-	//	0/1                10.56.40.1         UGSc      	 utun
-	//	default            192.168.1.1        UGSc           en0
-	//	127                127.0.0.1          UCS            lo0
-	// ...
-
-	routes = make([]Route, 0, 3)
-
-	log.Info("Checking default getaway info ...")
-	cmd := exec.Command("/usr/sbin/netstat", "-nr", "-f", "inet")
-	out, err := cmd.CombinedOutput()
+	gwIp, _, err := findRouteByDestination(*defaultDST)
 	if err != nil {
-		return nil, fmt.Errorf("unable to obtain default gateway IP: %w", err)
-	}
-	if len(out) == 0 {
-		return nil, fmt.Errorf("unable to obtain default gateway IP (netstat returns no data)")
+		return nil, fmt.Errorf("unable to find default gateway IP: %w", err)
 	}
 
-	//default            192.168.1.1        UGSc           en0
-	// (?m) enables multiline mode, which makes ^ and $ match the start and end of each line (not just the start and end of the entire string).
-	regExpString := `(?m)^\s*((default)|(default))\s+([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\s*([A-Za-z]*)\s+([A-Za-z0-9]*)`
-	if getAllDefRoutes {
-		regExpString = `(?m)^\s*((0/1)|(default))\s+([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\s*([A-Za-z]*)\s+([A-Za-z0-9]*)`
+	if gwIp != nil {
+		return gwIp, nil
 	}
 
-	outRegexp := regexp.MustCompile(regExpString)
+	return nil, fmt.Errorf("default route not found")
+}
 
-	maches := outRegexp.FindAllStringSubmatch(string(out), -1)
-	for _, m := range maches {
-		if len(m) < 7 {
-			continue
+// const values for parsing route message addresses
+// https://man.openbsd.org/rtrequest.9
+const (
+	RTAX_DST     = 0 // destination sockaddr presents
+	RTAX_GATEWAY = 1 // gateway sockaddr present
+	RTAX_NETMASK = 2 // netmask sockaddr present
+)
+
+// findRouteByDestination finds the route that matches the given destination network.
+// It returns the gateway IP and the interface index for the matching route,
+// or (nil, -1, nil) if no route matches.
+func findRouteByDestination(dst net.IPNet) (gatewayIP net.IP, interfaceIndex int, err error) {
+	// Fetch the IPv4 routing table
+	rib, err := route.FetchRIB(syscall.AF_INET, route.RIBTypeRoute, 0)
+	if err != nil {
+		return nil, -1, fmt.Errorf("unable to fetch routing table: %w", err)
+	}
+
+	// Parse the routing table
+	msgs, err := route.ParseRIB(route.RIBTypeRoute, rib)
+	if err != nil {
+		return nil, -1, fmt.Errorf("unable to parse routing table: %w", err)
+	}
+
+	// Iterate through the routing table entries
+	for _, msg := range msgs {
+		if m, ok := msg.(*route.RouteMessage); ok {
+			if isRouteMatch(m, dst) {
+				if r_gw, ok := m.Addrs[RTAX_GATEWAY].(*route.Inet4Addr); ok {
+					return net.IP(r_gw.IP[:]), m.Index, nil
+				}
+			}
 		}
-
-		destination := strings.Trim(m[1], " \n\r\t")
-		gatewayIP := net.ParseIP(strings.Trim(m[4], " \n\r\t"))
-		flags := strings.Trim(m[5], " \n\r\t")
-		interfaceName := strings.Trim(m[6], " \n\r\t")
-
-		if gatewayIP == nil {
-			continue
-		}
-		if len(interfaceName) == 0 {
-			continue
-		}
-
-		routes = append(routes, Route{Destination: destination, GatewayIP: gatewayIP, InterfaceName: interfaceName, Flags: flags})
 	}
 
-	if len(routes) <= 0 {
-		return nil, fmt.Errorf("unable to obtain default gateway IP")
+	return nil, -1, nil
+}
+
+// isRouteMatch checks if the route message matches the given destination network.
+func isRouteMatch(m *route.RouteMessage, dst net.IPNet) bool {
+	if m.Flags&syscall.RTF_IFSCOPE != 0 {
+		return false
+	}
+	if len(m.Addrs) <= RTAX_NETMASK || m.Addrs[RTAX_NETMASK] == nil || m.Addrs[RTAX_DST] == nil {
+		return false
 	}
 
-	return routes, nil
+	r_dst, ok := m.Addrs[RTAX_DST].(*route.Inet4Addr)
+	if !ok {
+		return false
+	}
+	r_mask, ok := m.Addrs[RTAX_NETMASK].(*route.Inet4Addr)
+	if !ok {
+		return false
+	}
+
+	routeDst := net.IPNet{
+		IP:   net.IP(r_dst.IP[:]),
+		Mask: r_mask.IP[:],
+	}
+	return routeDst.String() == dst.String()
 }
