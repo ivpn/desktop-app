@@ -87,8 +87,7 @@ function enable_firewall {
     set -e
 
     pfctl -a ${ANCHOR_NAME} -f - <<_EOF
-      block drop out on ! lo0 all
-      block drop in on ! lo0 all
+      block drop on ! lo0 all
 
       table <${EXCEPTIONS_TABLE}> persist
       table <${USER_EXCEPTIONS_TABLE}> persist
@@ -96,7 +95,7 @@ function enable_firewall {
       pass out quick from any to <${EXCEPTIONS_TABLE}>
       pass in quick from <${EXCEPTIONS_TABLE}> to any
 
-      pass out quick from any to <${USER_EXCEPTIONS_TABLE}>
+      pass out quick from any to <${USER_EXCEPTIONS_TABLE}> flags any keep state
       pass in quick from <${USER_EXCEPTIONS_TABLE}> to any
 
       pass out inet proto udp from 0.0.0.0 to 255.255.255.255 port = 67
@@ -115,6 +114,9 @@ _EOF
 
       quit
 _EOF
+
+    # Flush the state table (NAT and filter) 
+    sudo pfctl -Fs
 
     set +e
 
@@ -223,6 +225,9 @@ function main {
 
       shift
       pfctl -a "${ANCHOR_NAME}" -t "${USER_EXCEPTIONS_TABLE}" -T replace $@
+
+      # Flush the state table (NAT and filter) 
+      sudo pfctl -Fs
 
     elif [[ $1 = "-connected" ]]; then       
         
