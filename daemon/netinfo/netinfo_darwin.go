@@ -32,12 +32,6 @@ import (
 
 // IsDefaultRoutingInterface - Check if interface is default IPv4 routing interface ('default' or '0/1'+'128/1' route)
 func IsDefaultRoutingInterface(interfaceName string) (bool, error) {
-	// get interface info by name (to know the interface index)
-	iface, err := net.InterfaceByName(interfaceName)
-	if err != nil {
-		return false, fmt.Errorf("unable to get interface by name: %w", err)
-	}
-
 	// Check "0/1" and "128/1" routes (they are more specific than "default" route)
 	_, dst0, err := net.ParseCIDR("0.0.0.0/1") // "0/1" route
 	if err != nil {
@@ -51,46 +45,52 @@ func IsDefaultRoutingInterface(interfaceName string) (bool, error) {
 	if gwIp0 != nil {
 		gwIp1, ifIdx1, _ := findRouteByDestination(*dst1)
 		if gwIp1 != nil {
-			// Check if the interface index is the same as the one we are looking for and the gateways are equal
-			if iface.Index == ifIdx0 && ifIdx0 == ifIdx1 && gwIp0.Equal(gwIp1) {
-				return true, nil
+			// We are interested of routes ("0/1" and "128/1") that have the same interface index and gateway IP
+			if ifIdx0 == ifIdx1 && gwIp0.Equal(gwIp1) {
+				// Check if the interface name is the same as the one we are looking for
+				iface, _ := net.InterfaceByIndex(ifIdx0)
+				if iface != nil {
+					return iface.Name == interfaceName, nil
+				}
+				return false, nil
 			}
 		}
 	}
 
 	// Check "default" route (destination = 0.0.0.0 and netmask = 0.0.0.0/0)
-	defaultDST := &net.IPNet{
-		IP:   net.IPv4(0, 0, 0, 0),
-		Mask: net.CIDRMask(0, 32),
-	}
-	_, ifIdx, _ := findRouteByDestination(*defaultDST)
-	if ifIdx >= 0 {
-		// Check if the interface index is the same as the one we are looking for
-		if iface.Index == ifIdx {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	_, _, ifName, _ := GetDefaultRouteInfo()
+	return ifName == interfaceName, nil
 }
 
-// doDefaultGatewayIP - returns: 'default' IPv4 gateway IP address
-func doDefaultGatewayIP() (defGatewayIP net.IP, err error) {
+func GetDefaultRouteInfo() (gatewayIP net.IP, interfaceIdx int, interfaceName string, err error) {
 	// 'default' route: destination = 0.0.0.0 and netmask = 0.0.0.0/0
 	defaultDST := &net.IPNet{
 		IP:   net.IPv4(0, 0, 0, 0),
 		Mask: net.CIDRMask(0, 32),
 	}
-	gwIp, _, err := findRouteByDestination(*defaultDST)
+	gwIp, ifIdx, err := findRouteByDestination(*defaultDST)
 	if err != nil {
-		return nil, fmt.Errorf("unable to find default gateway IP: %w", err)
+		return nil, -1, "", fmt.Errorf("unable to find default route: %w", err)
 	}
 
-	if gwIp != nil {
-		return gwIp, nil
+	gatewayIP = gwIp
+	interfaceIdx = ifIdx
+
+	if ifIdx >= 0 {
+		iface, err := net.InterfaceByIndex(ifIdx)
+		if err != nil {
+			return nil, -1, "", fmt.Errorf("unable to get interface by index: %w", err)
+		}
+		interfaceName = iface.Name
 	}
 
-	return nil, fmt.Errorf("default route not found")
+	return gatewayIP, interfaceIdx, interfaceName, nil
+}
+
+// doDefaultGatewayIP - returns: 'default' IPv4 gateway IP address
+func doDefaultGatewayIP() (defGatewayIP net.IP, err error) {
+	gwIP, _, _, err := GetDefaultRouteInfo()
+	return gwIP, err
 }
 
 // const values for parsing route message addresses
@@ -123,6 +123,8 @@ func findRouteByDestination(dst net.IPNet) (gatewayIP net.IP, interfaceIndex int
 			if isRouteMatch(m, dst) {
 				if r_gw, ok := m.Addrs[RTAX_GATEWAY].(*route.Inet4Addr); ok {
 					return net.IP(r_gw.IP[:]), m.Index, nil
+				} else {
+					return nil, m.Index, nil
 				}
 			}
 		}
