@@ -883,7 +883,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 	// (note: it is important to call this code after 'vpnProc.Init()')
 	var sInfo VpnSessionInfo
 	log.Info("Detecting outbound IP addresses...")
-	if sInfo.OutboundIPv4, sInfo.OutboundIPv6, err = WaitAndGetOutboundIPs(time.Minute); err != nil {
+	if sInfo.OutboundIPv4, sInfo.OutboundIPv6, err = s.WaitAndGetOutboundIPs(time.Minute); err != nil {
 		log.Error(fmt.Errorf("failed to detect outbound IP addresses: %w", err))
 	} else {
 		log.Info(fmt.Sprintf("Detected outbound IP addresses: %v, %v", sInfo.OutboundIPv4, sInfo.OutboundIPv6))

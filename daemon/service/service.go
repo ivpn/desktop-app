@@ -186,7 +186,7 @@ func (s *Service) init() error {
 	go func() {
 		defer close(_ipStackInitializationWaiter) // ip stack initialized (or timeout)
 		log.Info("Waiting for IP stack initialization ...")
-		if outIpv4, outIPv6, err := WaitAndGetOutboundIPs(time.Minute * 2); err != nil {
+		if outIpv4, outIPv6, err := s.WaitAndGetOutboundIPs(time.Minute * 2); err != nil {
 			log.Error(fmt.Errorf("IP stack initialization waiter error: %w", err))
 		} else {
 			log.Info("IP stack initialized")
@@ -323,10 +323,14 @@ func (s *Service) init() error {
 	return nil
 }
 
-func WaitAndGetOutboundIPs(timeout time.Duration) (outIpv4, outIPv6 net.IP, err error) {
+func (s *Service) WaitAndGetOutboundIPs(timeout time.Duration) (outIpv4, outIPv6 net.IP, err error) {
 	endTime := time.Now().Add(timeout)
 	var err4, err6 error
 	for {
+		if s._vpn != nil && s._requiredVpnState == Disconnect {
+			return outIpv4, outIPv6, fmt.Errorf("cancelled")
+		}
+
 		outIpv4, err4 = netinfo.GetOutboundIP(false)
 		outIPv6, err6 = netinfo.GetOutboundIP(true)
 		if (!outIpv4.IsUnspecified() && err4 == nil) || (!outIPv6.IsUnspecified() && err6 == nil) {
