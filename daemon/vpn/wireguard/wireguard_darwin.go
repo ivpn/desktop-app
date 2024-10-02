@@ -378,17 +378,33 @@ func (wg *WireGuard) initializeConfiguration() error {
 // example command: ipconfig set utun7 MANUAL 10.0.0.121 12
 // example command: ipconfig set utun7 MANUAL-V6 fd00:4956:504e:ffff::ac1a:704b 96
 func (wg *WireGuard) initializeUnunInterface() error {
+	var err error = nil
+
 	// initialize IPv4 interface for tunnel
-	if err := shell.Exec(log, "/usr/sbin/ipconfig", "set", wg.getTunnelName(), "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask); err != nil {
+	for i := 0; i < 5 && !wg.internals.isGoingToStop; i++ {
+		if err = shell.Exec(log, "/usr/sbin/ipconfig", "set", wg.getTunnelName(), "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask); err != nil {
+			time.Sleep(time.Second)
+			continue
+		}
+		break
+	}
+	if err != nil {
 		return fmt.Errorf("failed to set the IPv4 address for interface: %w", err)
 	}
 
 	// initialize IPv6 interface for tunnel
 	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
 	if ipv6LocalIP != nil {
-		if err := shell.Exec(log, "/usr/sbin/ipconfig", "set", wg.getTunnelName(), "MANUAL-V6", ipv6LocalIP.String(), subnetMaskPrefixLenIPv6); err != nil {
-			return fmt.Errorf("failed to set the IPv6 address for interface: %w", err)
+		for i := 0; i < 5 && !wg.internals.isGoingToStop; i++ {
+			if err = shell.Exec(log, "/usr/sbin/ipconfig", "set", wg.getTunnelName(), "MANUAL-V6", ipv6LocalIP.String(), subnetMaskPrefixLenIPv6); err != nil {
+				time.Sleep(time.Second)
+				continue
+			}
+			break
 		}
+	}
+	if err != nil {
+		return fmt.Errorf("failed to set the IPv6 address for interface: %w", err)
 	}
 	return nil
 }
