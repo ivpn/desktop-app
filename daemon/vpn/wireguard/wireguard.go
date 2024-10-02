@@ -350,3 +350,13 @@ func (wg *WireGuard) OnRoutingChanged() error {
 func (wg *WireGuard) IsIPv6InTunnel() bool {
 	return len(wg.connectParams.GetIPv6ClientLocalIP()) > 0
 }
+
+func (wg *WireGuard) IsReconnectRequiredOnRoutingChange() bool {
+	return wg.isReconnectRequiredOnRoutingChange()
+}
+
+// If VPN changes "default" route, this function returns gateway IP address of the modified "default route",
+// otherwise - nil (system default route keeps unchanged for this VPN connection)
+func (wg *WireGuard) DefaultRouteGatewayIP() net.IP {
+	return wg.defaultRouteGatewayIP()
+}

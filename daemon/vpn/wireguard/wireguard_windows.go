@@ -24,6 +24,7 @@ package wireguard
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -578,5 +579,13 @@ func (wg *WireGuard) uninstallService() error {
 
 func (wg *WireGuard) onRoutingChanged() error {
 	// do nothing for Windows
+	return nil
+}
+
+func (wg *WireGuard) isReconnectRequiredOnRoutingChange() bool {
+	return true
+}
+
+func (wg *WireGuard) defaultRouteGatewayIP() net.IP {
 	return nil
 }

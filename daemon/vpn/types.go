@@ -214,7 +214,11 @@ type Process interface {
 
 	IsIPv6InTunnel() bool
 
-	OnRoutingChanged() error
+	IsReconnectRequiredOnRoutingChange() bool // If true, then reconnect required on routing change
+	OnRoutingChanged() error                  // This function must be called when routing changes detected
+	// If VPN changes "default" route, this function returns gateway IP address of the modified "default route",
+	// otherwise - nil (system default route keeps unchanged for this VPN connection)
+	DefaultRouteGatewayIP() net.IP
 }
 
 // ReconnectionRequiredError object can be returned by vpn.Process.Connect() function

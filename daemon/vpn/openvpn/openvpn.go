@@ -619,3 +619,14 @@ func (o *OpenVPN) OnRoutingChanged() error {
 func (o *OpenVPN) IsIPv6InTunnel() bool {
 	return false
 }
+
+func (o *OpenVPN) IsReconnectRequiredOnRoutingChange() bool {
+	return true
+}
+
+// If VPN changes "default" route, this function returns gateway IP address of the modified "default route",
+// otherwise - nil (system default route keeps unchanged for this VPN connection)
+func (o *OpenVPN) DefaultRouteGatewayIP() net.IP {
+	// OpenVPN does not change default route
+	return nil
+}

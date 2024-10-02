@@ -454,9 +454,7 @@ func (wg *WireGuard) setWgConfiguration() error {
 func (wg *WireGuard) setRoutes() error {
 	log.Info("Modifying routing table...")
 
-	// Update routing to remote server (remote_server default_router 255.255.255)
-	// example command:	route	-n	add	-inet 145.239.239.55	192.168.1.1
-	//					route	-n	add	-inet 51.77.91.106		-gateway	192.168.1.1
+	// route	-n	add	-inet 145.239.239.55	192.168.1.1
 	if !net.IPv4(127, 0, 0, 1).Equal(wg.connectParams.hostIP) {
 		// do not create route for 'hostIP' if it is '127.0.0.1'
 		if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", wg.connectParams.hostIP.String(), wg.internals.defGateway.String()); err != nil {
@@ -470,13 +468,12 @@ func (wg *WireGuard) setRoutes() error {
 	}
 
 	// sudo route -n delete -inet default
-	if err := shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "default"); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "default", wg.internals.defGateway.String()); err != nil {
 		return fmt.Errorf("delete default route shell comand error : %w", err)
 	}
 
 	// sudo route -n add -inet default host_local_IP
-	// OR: sudo route -n add -inet default -interface utun8
-	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", wg.connectParams.hostLocalIP.String()); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", wg.defaultRouteGatewayIP().String()); err != nil {
 		return fmt.Errorf("adding default route shell comand error : %w", err)
 	}
 
@@ -499,15 +496,24 @@ func (wg *WireGuard) setRoutes() error {
 func (wg *WireGuard) removeRoutes() error {
 	log.Info("Restoring routing table...")
 
-	if err := shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", wg.connectParams.hostIP.String()); err != nil {
-		log.Warning(fmt.Sprintf("Failed to delete route to remote server: %v", err))
+	if !net.IPv4(127, 0, 0, 1).Equal(wg.connectParams.hostIP) {
+		if err := shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", wg.connectParams.hostIP.String()); err != nil {
+			log.Warning(fmt.Sprintf("Failed to delete route to remote server: %v", err))
+		}
 	}
+
 	if err := shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "default", wg.internals.defGateway.String(), "-ifscope", wg.internals.defInterfaceName); err != nil {
 		log.Warning(fmt.Sprintf("Failed to delete default (-ifscope) route: %v", err))
 	}
-	if err := shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "default", wg.connectParams.hostLocalIP.String()); err != nil {
-		log.Warning(fmt.Sprintf("Failed to delete default route: %v", err))
-	}
+
+	// NOTE: do not remove manually the default route to VPN server as it destroys automatically after VPN interface is down.
+	// Otherwise, it can lead to strange behavior when OS can not initialise new default route after switching between WiFi networks
+	// (if remove route in same time when WiFi network is switching).
+	//
+	//    if err := shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "default", wg.defaultRouteGatewayIP().String()); err != nil {
+	//	    log.Warning(fmt.Sprintf("Failed to delete default route: %v", err))
+	//    }
+
 	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", wg.internals.defGateway.String()); err != nil {
 		log.Warning(fmt.Sprintf("Failed to add default route: %v", err))
 	}
@@ -530,17 +536,18 @@ func (wg *WireGuard) onRoutingChanged() error {
 		log.Error(fmt.Sprintf("onRoutingChanged: Failed to detect default route: %s", err))
 		return err
 	}
+
 	if defGateway == nil || defInterfaceName == "" {
 		log.Warning(fmt.Sprintf("onRoutingChanged: Unable to detect default gateway/iface"))
 		return err
 	}
 
-	if wg.internals.defGateway.Equal(wg.connectParams.hostIP) || defInterfaceName == wg.getTunnelName() {
+	if defGateway.Equal(wg.defaultRouteGatewayIP()) || defInterfaceName == wg.getTunnelName() {
 		// do not change routes if we have 'default' connection to the remote server / VPN tunnel
 		return nil
 	}
 
-	log.Info(fmt.Sprintf("Default gateway changed: %s(%s) -> %s(%s). Updating routes...", wg.internals.defGateway.String(), wg.internals.defInterfaceName, defGateway.String(), defInterfaceName))
+	log.Info(fmt.Sprintf("Default gateway changed: %s(%s) -> %s(%s). Updating routes...", wg.internals.defGateway, wg.internals.defInterfaceName, defGateway, defInterfaceName))
 	wg.removeRoutes()
 	wg.internals.defGateway = defGateway
 	wg.internals.defInterfaceName = defInterfaceName
@@ -621,4 +628,8 @@ func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg
 
 func (wg *WireGuard) isReconnectRequiredOnRoutingChange() bool {
 	return false
+}
+
+func (wg *WireGuard) defaultRouteGatewayIP() net.IP {
+	return wg.connectParams.hostLocalIP
 }

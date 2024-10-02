@@ -393,3 +393,11 @@ func (wg *WireGuard) onRoutingChanged() error {
 	// do nothing for Linux
 	return nil
 }
+
+func (wg *WireGuard) isReconnectRequiredOnRoutingChange() bool {
+	return true
+}
+
+func (wg *WireGuard) defaultRouteGatewayIP() net.IP {
+	return nil
+}
