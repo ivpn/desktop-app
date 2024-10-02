@@ -744,6 +744,12 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 						// Disable routing-change detector when reconnecting
 						s._netChangeDetector.UnInit()
 
+						if v2rayWrapper != nil {
+							if err := s.updateV2RayRoute(v2rayWrapper, true); err != nil {
+								log.Error(fmt.Errorf("failed to update V2Ray route: %w", err))
+							}
+						}
+
 						// Add host IP to firewall exceptions
 						// Some OS-specific implementations (e.g. macOS) can remove server host from firewall rules after connection established
 						// We have to allow it's IP to be able to reconnect
@@ -845,6 +851,11 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 						}()
 
 						log.Info("Route change detected. Reconnecting...")
+						if v2rayWrapper != nil {
+							if err := s.updateV2RayRoute(v2rayWrapper, true); err != nil {
+								log.Error(fmt.Errorf("failed to update V2Ray route: %w", err))
+							}
+						}
 						s.reconnect()
 					}()
 
@@ -959,6 +970,22 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 	}
 
 	return nil
+}
+func (s *Service) updateV2RayRoute(v2rayWrapper *v2r.V2RayWrapper, force bool) error {
+	if v2rayWrapper == nil || s._vpn == nil {
+		return nil
+	}
+	defGwIp, err := netinfo.DefaultGatewayIP()
+	if err != nil || defGwIp == nil {
+		return fmt.Errorf("failed to get default gateway info: %w", err)
+	}
+	vpnDefGwIp := s._vpn.DefaultRouteGatewayIP()
+	if vpnDefGwIp != nil && defGwIp.Equal(vpnDefGwIp) {
+		// Current default route is VPN route - do not update route to V2Ray server
+		return fmt.Errorf("default gateway IP is not changed")
+	}
+
+	return v2rayWrapper.UpdateMainRoute(defGwIp, force)
 }
 
 // startV2Ray start V2Ray connection

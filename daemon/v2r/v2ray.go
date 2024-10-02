@@ -73,7 +73,6 @@ type V2RayWrapper struct {
 	config         *V2RayConfig
 	command        *exec.Cmd
 	mutex          sync.Mutex
-	stoppedChan    chan struct{}
 
 	routeStatusMutex sync.Mutex
 	// IP address of the default gateway which was used for static route to V2Ray server
@@ -127,6 +126,10 @@ func (v *V2RayWrapper) Stop() error {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 
+	return v.stop()
+}
+
+func (v *V2RayWrapper) stop() error {
 	cmd := v.command
 	if cmd == nil {
 		return nil
@@ -137,116 +140,100 @@ func (v *V2RayWrapper) Stop() error {
 	}
 
 	// wait to stop
-	if v.stoppedChan != nil {
-		<-v.stoppedChan
-	}
+	cmd.Wait()
 
 	return nil
 }
 
-func (v *V2RayWrapper) Start() error {
+func (v *V2RayWrapper) Start(defaultGateway net.IP) error {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 
-	if v.command != nil {
-		return fmt.Errorf("v2ray already started")
+	return v.start(defaultGateway)
+}
+
+func (v *V2RayWrapper) Restart() error {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
+	if err := v.stop(); err != nil {
+		return err
 	}
 
-	return v.start()
+	gwIP, _ := v.getSavedServerRoute()
+	return v.start(gwIP)
 }
 
 // UpdateMainRoute - updates the route to V2Ray server.
 // This method must be called when the default route was changed (e.g. chnaged WiFi network)
-func (v *V2RayWrapper) UpdateMainRoute() error {
+func (v *V2RayWrapper) UpdateMainRoute(defaultGateway net.IP, force bool) error {
+	if defaultGateway == nil {
+		return fmt.Errorf("default gateway is empty")
+	}
+
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 
-	var curDefaultGeteway net.IP
-	var curLocalInterfaceIp net.IP
-	func() {
-		// lock access to defaultGeteway and localInterfaceIp
-		v.routeStatusMutex.Lock()
-		defer v.routeStatusMutex.Unlock()
-		curDefaultGeteway = v.defaultGeteway
-		curLocalInterfaceIp = v.localInterfaceIp
-	}()
+	return v.updateMainRoute(defaultGateway, force)
+}
 
-	// check: do we need to update route to V2Ray server? (due to it was changed or removed)
-	isRouteChanged := false
-	if curLocalInterfaceIp != nil {
-		if lInterfaceIp, err := v.getMainRouteLocalInfAddress(); err == nil {
-			if !curLocalInterfaceIp.Equal(lInterfaceIp) {
-				isRouteChanged = true
+func (v *V2RayWrapper) updateMainRoute(defaultGateway net.IP, force bool) error {
+	if defaultGateway == nil {
+		return fmt.Errorf("default gateway is empty")
+	}
+
+	if !force {
+		ifChanged := false
+		curGwIp, curLocalInterfaceIp := v.getSavedServerRoute()
+		if curLocalInterfaceIp != nil {
+			lInterfaceIp, err := v.getLocalInterfaceIpInUseToAccessServer()
+			if err != nil || !curLocalInterfaceIp.Equal(lInterfaceIp) {
+				ifChanged = true
 			}
 		}
-	}
 
-	if !isRouteChanged && curDefaultGeteway == nil {
-		return nil
-	}
-
-	// check: do we need to update route to V2Ray server? (due to change of default gateway)
-	isGatewayChanged := false
-	gwIp, err := netinfo.DefaultGatewayIP()
-	if err != nil {
-		return fmt.Errorf("failed to check V2Ray route consistency: %w", err)
-	}
-	if !curDefaultGeteway.Equal(gwIp) {
-		isGatewayChanged = true
-	}
-
-	if !isGatewayChanged && !isRouteChanged {
-		return nil // nothing to update
+		if !ifChanged && curGwIp != nil && curGwIp.Equal(defaultGateway) {
+			return nil
+		}
 	}
 
 	log.Info("Updating route to V2Ray server...")
 	if err := v.deleteMainRoute(); err != nil {
 		log.Error(err)
 	}
-	return v.setMainRoute(gwIp)
+	return v.setMainRoute(defaultGateway)
 }
 
 func (v *V2RayWrapper) setMainRoute(defaultGateway net.IP) error {
-	var err error
 	if defaultGateway == nil {
-		defaultGateway, err = netinfo.DefaultGatewayIP()
-		if err != nil {
-			return fmt.Errorf("getting default gateway ip error : %w", err)
-		}
+		return fmt.Errorf("default gateway is empty")
 	}
-	if err := v.implSetMainRoute(defaultGateway); err == nil {
-		// lock access to defaultGeteway and localInterfaceIp
-		v.routeStatusMutex.Lock()
-		defer v.routeStatusMutex.Unlock()
 
-		v.defaultGeteway = defaultGateway
+	if err := v.implSetMainRoute(defaultGateway); err == nil {
 		// save IP address of local interface which is in use for communication with V2Ray server
-		v.localInterfaceIp, err = v.getMainRouteLocalInfAddress()
+		lIfaceIp, err := v.getLocalInterfaceIpInUseToAccessServer()
+		v.saveServerRoute(defaultGateway, lIfaceIp)
 		if err != nil {
 			return fmt.Errorf("unable to obtain local interface info for V2Ray connection: %w", err)
 		}
 	}
-	return err
+	return nil
 }
 
 func (v *V2RayWrapper) deleteMainRoute() error {
-	func() {
-		// lock access to defaultGeteway and localInterfaceIp
-		v.routeStatusMutex.Lock()
-		defer v.routeStatusMutex.Unlock()
-		v.defaultGeteway = nil
-		v.localInterfaceIp = nil
-	}()
+	v.saveServerRoute(nil, nil)
 	return v.implDeleteMainRoute()
 }
 
-func (v *V2RayWrapper) start() (retError error) {
+func (v *V2RayWrapper) start(defaultGateway net.IP) (retError error) {
 	defer func() {
 		if retError != nil {
 			log.Error(retError)
 			// ensure process is stopped
-			if err := shell.Kill(v.command); err != nil {
-				log.Error(fmt.Errorf("error stopping V2Ray process: %w", err))
+			if v.command != nil {
+				if err := shell.Kill(v.command); err != nil {
+					log.Error(fmt.Errorf("error stopping V2Ray process: %w", err))
+				}
 			}
 		}
 	}()
@@ -285,7 +272,7 @@ func (v *V2RayWrapper) start() (retError error) {
 	}
 
 	// Apply route to remote endpoint
-	if err := v.setMainRoute(nil); err != nil {
+	if err := v.setMainRoute(defaultGateway); err != nil {
 		return fmt.Errorf("error applying route to remote V2Ray endpoint: %w", err)
 	}
 	defer func() {
@@ -343,12 +330,6 @@ func (v *V2RayWrapper) start() (retError error) {
 	if err := v.command.Start(); err != nil {
 		return fmt.Errorf("failed to start client: %w", err)
 	}
-	// wait for process to finish (in separate routine)
-	v.stoppedChan = make(chan struct{}, 1)
-	go func() {
-		v.command.Wait()
-		close(v.stoppedChan) // notify as stopped
-	}()
 
 	configuredPort, configuredPortIsTCP := v.config.GetLocalPort()
 	configuredPortStr := fmt.Sprintf("%d:UDP", configuredPort)
@@ -368,46 +349,24 @@ func (v *V2RayWrapper) start() (retError error) {
 		return fmt.Errorf("V2Ray start timeout (port %s)", configuredPortStr)
 	}
 
-	// routine alive until process finished
-	go func() {
-		for {
-			select {
-			case <-time.After(time.Second * 20):
-				// Periodically checking the IP address of the local interface used for communication with the V2Ray server
-				// and update/restore route, if necessary
-				if v.isMainRouteLocalInfAddressChanged() {
-					log.Info("The IP address of the local interface used for communication with the V2Ray server has changed")
-					if err := v.UpdateMainRoute(); err != nil {
-						log.Error(err)
-					}
-				}
-			case <-v.stoppedChan:
-				v.implDeleteMainRoute() // ensure route is deleted
-				log.Info(fmt.Sprintf("V2Ray client stopped (port %s)", configuredPortStr))
-				return
-			}
-		}
-	}()
-
 	log.Info(fmt.Sprintf("V2Ray client started (port %s)", configuredPortStr))
+	go func() {
+		v.command.Wait()
+		v.deleteMainRoute() // ensure route is deleted
+		log.Info(fmt.Sprintf("V2Ray client stopped (port %s)", configuredPortStr))
+	}()
 	return nil
 }
 
 func (v *V2RayWrapper) isMainRouteLocalInfAddressChanged() bool {
-	var curLocalInterfaceIp net.IP
-	func() {
-		// lock access to defaultGeteway and localInterfaceIp
-		v.routeStatusMutex.Lock()
-		defer v.routeStatusMutex.Unlock()
-		curLocalInterfaceIp = v.localInterfaceIp
-	}()
+	_, curLocalInterfaceIp := v.getSavedServerRoute()
 
 	if curLocalInterfaceIp == nil {
 		return false
 	}
 
 	// check: do we need to update route to V2Ray server? (due to it was changed or removed)
-	if lInterfaceIp, err := v.getMainRouteLocalInfAddress(); err == nil {
+	if lInterfaceIp, err := v.getLocalInterfaceIpInUseToAccessServer(); err == nil {
 		if !curLocalInterfaceIp.Equal(lInterfaceIp) {
 			return true
 		}
@@ -417,10 +376,22 @@ func (v *V2RayWrapper) isMainRouteLocalInfAddressChanged() bool {
 
 // Get IP address of local interface which is in use for communication with V2Ray server
 // (it depends of routing table)
-func (v *V2RayWrapper) getMainRouteLocalInfAddress() (net.IP, error) {
+func (v *V2RayWrapper) getLocalInterfaceIpInUseToAccessServer() (net.IP, error) {
 	remoteHost, _, err := v.getRemoteEndpoint()
 	if err != nil {
 		return nil, err
 	}
 	return netinfo.GetOutboundIPEx(remoteHost)
+}
+
+func (v *V2RayWrapper) getSavedServerRoute() (gateway net.IP, localIp net.IP) {
+	v.routeStatusMutex.Lock()
+	defer v.routeStatusMutex.Unlock()
+	return v.defaultGeteway, v.localInterfaceIp
+}
+func (v *V2RayWrapper) saveServerRoute(gateway net.IP, localIp net.IP) {
+	v.routeStatusMutex.Lock()
+	defer v.routeStatusMutex.Unlock()
+	v.defaultGeteway = gateway
+	v.localInterfaceIp = localIp
 }

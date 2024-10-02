@@ -38,12 +38,9 @@ func (v *V2RayWrapper) implSetMainRoute(defaultGateway net.IP) error {
 	if err != nil {
 		return fmt.Errorf("getting remote endpoint error : %w", err)
 	}
-
-	// ip route add 144.217.233.114/32 via 192.168.0.1 dev eth0
-	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "-net", remoteHost.String(), defaultGateway.String(), "255.255.255.255"); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", remoteHost.String(), defaultGateway.String()); err != nil {
 		return fmt.Errorf("adding route shell comand error : %w", err)
 	}
-
 	return nil
 }
 
@@ -52,7 +49,6 @@ func (v *V2RayWrapper) implDeleteMainRoute() error {
 	if err != nil {
 		return fmt.Errorf("getting remote endpoint error : %w", err)
 	}
-
-	shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "-net", remoteHost.String())
+	shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", remoteHost.String())
 	return nil
 }

@@ -65,6 +65,11 @@ func Start(binary string,
 		return nil, errors.New("unknown outbound type")
 	}
 
+	defGwIp, err := netinfo.DefaultGatewayIP()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get default gateway IP: %v", err)
+	}
+
 	var lastError error
 	// Do 3 attemps to start v2ray with different ports (for the situation when port is already in use)
 	for i := 0; i < 3; i++ {
@@ -90,7 +95,7 @@ func Start(binary string,
 		cfg.SetLocalPort(port, isTcpLocalPort)
 
 		v := CreateV2RayWrapper(binary, tmpConfigFile, cfg)
-		err = v.Start()
+		err = v.Start(defGwIp)
 		if err != nil {
 			lastError = err
 			continue
