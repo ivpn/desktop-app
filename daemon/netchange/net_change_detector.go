@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/service"
 )
 
 var log *logger.Logger
@@ -40,6 +41,21 @@ func init() {
 // delayBeforeNotify - To avoid multiple notifications of multiple changes - the  'DelayBeforeNotify' is in use
 // (notification will occur after 'DelayBeforeNotify' elapsed since last detected change)
 const delayBeforeNotify = time.Second * 3
+
+type RouteChangeMessage struct {
+	interfaceLeakDetected bool   // interfaceLeakDetected is TRUE if the default routing is NOT over the 'interfaceToProtect' anymore.
+	newDefaultGateway     net.IP // newDefaultRoute contains the new IP address of the default gateway if the 'default' route changed. (optional; see implementation for specific platform)
+}
+
+// IsInterfaceLeak - returns TRUE if the default routing is NOT over the 'interfaceToProtect' anymore.
+func (rm RouteChangeMessage) IsInterfaceLeak() bool {
+	return rm.interfaceLeakDetected
+}
+
+// NewDefaultRoute - returns the new IP address of the default gateway if the 'default' route changed.
+func (rm RouteChangeMessage) NewDefaultGateway() net.IP {
+	return rm.newDefaultGateway
+}
 
 // Detector - object is detecting routing changes on a PC.
 // To avoid multiple notifications of multiple changes - the  'DelayBeforeNotify' is in use
@@ -53,10 +69,8 @@ type Detector struct {
 	isStarted     bool
 	locker        sync.Mutex
 
-	// Signaling when the default routing is NOT over the 'interfaceToProtect' anymore
-	routingChangeNotifyChan chan<- struct{}
-	// Signaling when there were some routing changes but 'interfaceToProtect' is still is the default route or 'interfaceToProtect' not defined
-	routingUpdateNotifyChan chan<- struct{}
+	// Signaling when routing table has changed
+	onRoutesChangedChan chan<- service.INetChangeDetectorMessage
 
 	// Must be implemented (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	props osSpecificProperties
@@ -81,10 +95,8 @@ func Create() *Detector {
 	return detector
 }
 
-// Start - start route change detector (asynchronous)
-//
-//	'routingUpdateChan' is the channel for notifying when there were some routing changes (but 'interfaceToProtect' is still is the default route or 'interfaceToProtect' not defined)
-func (d *Detector) Init(routingChangeChan chan<- struct{}, routingUpdateChan chan<- struct{}, currentDefaultInterface *net.Interface) error {
+// Init - init route change detector
+func (d *Detector) Init(routesChangedChan chan<- service.INetChangeDetectorMessage, currentDefaultInterface *net.Interface) error {
 	// Ensure that detector is stopped
 	d.Stop()
 
@@ -92,8 +104,7 @@ func (d *Detector) Init(routingChangeChan chan<- struct{}, routingUpdateChan cha
 	defer d.locker.Unlock()
 
 	// set notification channel (it is important to do it after we are ensure that timer is stopped)
-	d.routingChangeNotifyChan = routingChangeChan
-	d.routingUpdateNotifyChan = routingUpdateChan
+	d.onRoutesChangedChan = routesChangedChan
 
 	// save current default interface
 	d.interfaceToProtect = currentDefaultInterface
@@ -150,36 +161,48 @@ func (d *Detector) Stop() error {
 
 // Must be called when routing change detected (called from platform-specific sources)
 // It notifies about routing change with delay 'd.DelayBeforeNotify()'. This reduces amount of multiple consecutive notifications
-func (d *Detector) routingChangeDetected() {
+func (d *Detector) notifyRoutingChangeWithDelay() {
 	d.timerNotifyAfterDelay.Reset(d.delayBeforeNotify)
 }
 
 // Immediately notify about routing change.
-// Consider using routingChangeDetected() instead
+// Consider using notifyRoutingChangeWithDelay() instead
 func (d *Detector) notifyRoutingChange() {
-	if d.routingChangeNotifyChan == nil {
+	if d.onRoutesChangedChan == nil {
 		return
 	}
 
-	var changed bool = false
-	var err error = nil
+	var msg RouteChangeMessage
 
 	if d.interfaceToProtect != nil {
 		// Method should be implemented in platform-specific file
 		// It must compare current routing configuration with configuration which was when 'doStart()' called
-		if changed, err = d.isRoutingChanged(); err != nil {
+		var err error = nil
+		if msg.interfaceLeakDetected, err = d.isRoutingChanged(); err != nil {
 			return
+		}
+
+		if msg.interfaceLeakDetected {
+			//  the default routing is NOT over the 'interfaceToProtect' anymore
+			log.Info("Route change detected. Internet traffic is no longer being routed through the VPN.")
 		}
 	}
 
-	channelToNotify := d.routingUpdateNotifyChan // there were some routing changes but 'interfaceToProtect' is still is the default route
-	if changed {
-		log.Info("Route change detected. Internet traffic is no longer being routed through the VPN.")
-		channelToNotify = d.routingChangeNotifyChan //  the default routing is NOT over the 'interfaceToProtect' anymore
+	select {
+	case d.onRoutesChangedChan <- msg:
+		// notified
+	default:
+		// channel is full
+	}
+}
+
+func (d *Detector) notifyRoutingChangeEx(msg RouteChangeMessage) {
+	if d.onRoutesChangedChan == nil {
+		return
 	}
 
 	select {
-	case channelToNotify <- struct{}{}:
+	case d.onRoutesChangedChan <- msg:
 		// notified
 	default:
 		// channel is full

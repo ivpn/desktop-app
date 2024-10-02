@@ -684,10 +684,10 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 		log.Info("VPN process stopped")
 	}()
 
-	// Signaling when the default routing is NOT over the 'interfaceToProtect' anymore
-	routingChangeChan := make(chan struct{}, 1)
-	// Signaling when there were some routing changes but 'interfaceToProtect' is still is the default route
-	routingUpdateChan := make(chan struct{}, 1)
+	// channel for notifying when there were some routing changes:
+	//	TRUE - the default route is bypassing VPN tunnel
+	//	FALSE - other route changed
+	routesChangedChan := make(chan INetChangeDetectorMessage, 1)
 
 	destinationIpAddresses := make([]net.IP, 0)
 	// Add VPN server IP to firewall exceptions
@@ -762,10 +762,10 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 
 					case vpn.INITIALISED:
 						// start routing change detection
-						if netInterface, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
+						if netInterfaceToProtect, err := netinfo.InterfaceByIPAddr(state.ClientIP); err != nil {
 							log.Error(fmt.Sprintf("Unable to initialize routing change detection. Failed to get interface '%s'", state.ClientIP.String()))
 						} else {
-							if err := s._netChangeDetector.Init(routingChangeChan, routingUpdateChan, netInterface); err != nil {
+							if err := s._netChangeDetector.Init(routesChangedChan, netInterfaceToProtect); err != nil {
 								log.Error(fmt.Errorf("failed to init route change detection: %w", err))
 							}
 							if s._preferences.IsInverseSplitTunneling() {
@@ -836,20 +836,33 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 		}()
 
 		for isRuning := true; isRuning; {
+			needToReconnect := false // true - need to reconnect VPN
+			var routeMsg INetChangeDetectorMessage
+
 			select {
-			case <-routingChangeChan: // routing changed (the default routing is NOT over the 'interfaceToProtect' anymore)
+			case routeMsg = <-routesChangedChan:
+				if routeMsg.IsInterfaceLeak() {
+					needToReconnect = s._vpn.IsReconnectRequiredOnRoutingChange()
+				}
+			case <-stopChannel:
+				isRuning = false
+			}
+
+			if !isRuning {
+				break
+			}
+
+			if needToReconnect {
 				if s._vpn.IsPaused() {
 					log.Info("Route change ignored due to Paused state.")
 				} else {
-					// Disconnect (client will request then reconnection, because of unexpected disconnection)
-					// reconnect in separate routine (do not block current thread)
+					// Reconnect in separate routine (do not block current thread)
 					go func() {
 						defer func() {
 							if r := recover(); r != nil {
 								log.Error("PANIC: ", r)
 							}
 						}()
-
 						log.Info("Route change detected. Reconnecting...")
 						if v2rayWrapper != nil {
 							if err := s.updateV2RayRoute(v2rayWrapper, true); err != nil {
@@ -858,28 +871,33 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 						}
 						s.reconnect()
 					}()
-
-					isRuning = false
+					break
 				}
-			case <-routingUpdateChan: // there were some routing changes but 'interfaceToProtect' is still is the default route
-				// If V2Ray is in use - we must update route to V2Ray server each time when default gateway IP was chnaged
-				if v2rayWrapper != nil {
-					if err := v2rayWrapper.UpdateMainRoute(); err != nil {
-						log.Error(err)
-					}
-				}
-				s._vpn.OnRoutingChanged()
-				go func() {
-					// Ensure that current DNS configuration is correct. If not - it re-apply the required configuration.
-					// Currently, it is in use for macOS - like a DNS change monitor.
-					err := dns.UpdateDnsIfWrongSettings()
-					if err != nil {
-						log.Error(fmt.Errorf("failed to update DNS settings: %w", err))
-					}
-				}()
-			case <-stopChannel: // triggered when the stopChannel is closed
-				isRuning = false
 			}
+
+			// If V2Ray is in use - we must update route to V2Ray server each time when default gateway IP was chnaged
+			// Must be done before 's._vpn.OnRoutingChanged()' because it can change the default route
+			var v2RayErr error = nil
+			if v2rayWrapper != nil {
+				force := routeMsg.NewDefaultGateway() != nil
+				v2RayErr = s.updateV2RayRoute(v2rayWrapper, force)
+			}
+
+			// Notify VPN object about routing changes
+			// Currently, it is in use for macOS + WireGuard
+			// Note: it can change the default route!
+			if v2RayErr == nil {
+				s._vpn.OnRoutingChanged()
+			}
+
+			// Ensure that current DNS configuration is correct. If not - it re-apply the required configuration.
+			// Currently, it is in use for macOS - like a DNS change monitor.
+			go func() {
+				err := dns.UpdateDnsIfWrongSettings()
+				if err != nil {
+					log.Error(fmt.Errorf("failed to update DNS settings: %w", err))
+				}
+			}()
 		}
 	}()
 

@@ -48,12 +48,16 @@ type IServersUpdater interface {
 	UpdateNotifierChannel() chan struct{}
 }
 
+type INetChangeDetectorMessage interface {
+	IsInterfaceLeak() bool
+	NewDefaultGateway() net.IP
+}
+
 // INetChangeDetector - object is detecting routing changes on a PC
 type INetChangeDetector interface {
-	// Init - Initialise route change detector
-	//    'routingChangeChan' is the channel for notifying when the default routing is NOT over the 'interfaceToProtect' anymore
-	//    'routingUpdateChan' is the channel for notifying when there were some routing changes but 'interfaceToProtect' is still is the default route
-	Init(routingChangeChan chan<- struct{}, routingUpdateChan chan<- struct{}, currentDefaultInterface *net.Interface) error
+	// Init - init route change detector
+	// 'routesChangedChan' is the channel for notifying when there were some routing changes
+	Init(routesChangedChan chan<- INetChangeDetectorMessage, currentDefaultInterface *net.Interface) error
 	UnInit() error
 	Start() error // Start - Starts route change detector (asynchronous)
 	Stop() error

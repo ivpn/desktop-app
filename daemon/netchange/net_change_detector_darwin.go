@@ -23,6 +23,7 @@
 package netchange
 
 import (
+	"net"
 	"os"
 	"syscall"
 
@@ -50,6 +51,7 @@ func (d *Detector) isRoutingChanged() (bool, error) {
 	}
 
 	return !isDefaultRoute, nil
+
 }
 
 func (d *Detector) doStart() {
@@ -72,7 +74,10 @@ func (d *Detector) doStart() {
 		nr, err := syscall.Read(d.props.socket, b)
 		if err != nil {
 			if d.props.socket == 0 {
-				break
+				break // Manually stopped
+			}
+			if err == syscall.EINTR {
+				continue // Interrupted by a signal, retry the read
 			}
 			log.Error("Route change detector (error on socket read):", err)
 			return
@@ -88,7 +93,17 @@ func (d *Detector) doStart() {
 			case *route.RouteMessage:
 				switch rmsg.Type {
 				case syscall.RTM_ADD, syscall.RTM_CHANGE, syscall.RTM_DELETE:
-					d.routingChangeDetected()
+
+					if newGw := checkMsgIsDefaultIPv4RouteAdded(rmsg); newGw != nil {
+						//log.Debug("----------- ======== DEFAULT ROUTE ADD  =========== ---------", newGw.String())
+						var msg RouteChangeMessage
+						msg.newDefaultGateway = newGw
+						msg.interfaceLeakDetected, _ = d.isRoutingChanged()
+						d.notifyRoutingChangeEx(msg)
+					} else {
+						d.notifyRoutingChangeWithDelay()
+					}
+
 				}
 			}
 		}
@@ -101,4 +116,51 @@ func (d *Detector) doStop() {
 	if s != 0 {
 		syscall.Close(s)
 	}
+}
+
+// checkMsgIsDefaultIPv4RouteAdded - check if the message is about adding the default IPv4 route.
+// Return new default IPv4 Gateway IP address, nil otherwise.
+func checkMsgIsDefaultIPv4RouteAdded(rmsg *route.RouteMessage) net.IP {
+	if rmsg == nil {
+		return nil
+	}
+	// Ignore ifscope routes
+	if rmsg.Flags&syscall.RTF_IFSCOPE != 0 {
+		return nil
+	}
+
+	if rmsg.Type != syscall.RTM_ADD { // rmsg.Type != syscall.RTM_CHANGE
+		return nil
+	}
+
+	const (
+		RTAX_DST     = 0 // destination sockaddr present
+		RTAX_GATEWAY = 1 // gateway sockaddr present
+		RTAX_NETMASK = 2 // netmask sockaddr present
+	)
+
+	// Check DST address is 0.0.0.0
+	if len(rmsg.Addrs) > RTAX_DST && rmsg.Addrs[RTAX_DST] != nil {
+		if a, ok := rmsg.Addrs[RTAX_DST].(*route.Inet4Addr); !ok || !net.IP(a.IP[:]).Equal(net.IPv4zero) {
+			return nil
+		}
+	} else {
+		return nil
+	}
+	// Check Netmask is 0.0.0.0/0
+	if len(rmsg.Addrs) > RTAX_NETMASK && rmsg.Addrs[RTAX_NETMASK] != nil {
+		if a, ok := rmsg.Addrs[RTAX_NETMASK].(*route.Inet4Addr); !ok || !net.IP(a.IP[:]).Equal(net.IPv4zero) {
+			return nil
+		}
+	} else {
+		return nil
+	}
+	// Return Gateway IP address
+	if len(rmsg.Addrs) > RTAX_GATEWAY && rmsg.Addrs[RTAX_GATEWAY] != nil {
+		if a, ok := rmsg.Addrs[RTAX_GATEWAY].(*route.Inet4Addr); ok {
+			return net.IP(a.IP[:])
+		}
+	}
+
+	return nil
 }

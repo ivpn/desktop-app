@@ -116,7 +116,7 @@ func (d *Detector) doStart() {
 		}
 
 		// notify about routing change
-		d.routingChangeDetected()
+		d.notifyRoutingChangeWithDelay()
 	}
 }
 
