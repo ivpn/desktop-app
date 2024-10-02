@@ -85,6 +85,7 @@ type Service interface {
 	SetKillSwitchAllowLANMulticast(isAllowLanMulticast bool) error
 	SetKillSwitchAllowLAN(isAllowLan bool) error
 	SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error
+	SetKillSwitchAllowAppleServices(isAllowAppleServices bool) error
 	SetKillSwitchUserExceptions(exceptions string, ignoreParsingErrors bool) error
 
 	GetConnectionParams() service_types.ConnectionParams
@@ -702,6 +703,20 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 
+		// send the response to the requestor
+		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
+		// all clients will be notified in case of successful change by OnKillSwitchStateChanged() handler
+
+	case "KillSwitchSetAllowAppleServices":
+		var req types.KillSwitchSetAllowAppleServices
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		if err := p._service.SetKillSwitchAllowAppleServices(req.IsAllowAppleServices); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
 		// send the response to the requestor
 		p.sendResponse(conn, &types.EmptyResp{}, req.Idx)
 		// all clients will be notified in case of successful change by OnKillSwitchStateChanged() handler

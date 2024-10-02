@@ -177,6 +177,10 @@ func implClientDisconnected() error {
 	return shell.Exec(nil, platform.FirewallScript(), "-disconnected")
 }
 
+func implAllowAppleServices(isAllowAPIServers bool) error {
+	return nil // do nothing for Linux
+}
+
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
 	return doAllowLAN(isAllowLAN, isAllowLanMulticast)
 }

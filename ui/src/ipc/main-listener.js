@@ -118,6 +118,12 @@ ipcMain.handle(
   }
 );
 ipcMain.handle(
+  "renderer-request-KillSwitchSetAllowAppleServices",
+  async (event, enable) => {
+    return await client.KillSwitchSetAllowAppleServices(enable);
+  }
+);
+ipcMain.handle(
   "renderer-request-KillSwitchSetAllowLANMulticast",
   async (event, enable) => {
     return await client.KillSwitchSetAllowLANMulticast(enable);

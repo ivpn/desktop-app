@@ -80,6 +80,7 @@ const daemonRequests = Object.freeze({
   KillSwitchGetStatus: "KillSwitchGetStatus",
   KillSwitchSetEnabled: "KillSwitchSetEnabled",
   KillSwitchSetAllowApiServers: "KillSwitchSetAllowApiServers",
+  KillSwitchSetAllowAppleServices: "KillSwitchSetAllowAppleServices",
   KillSwitchSetAllowLANMulticast: "KillSwitchSetAllowLANMulticast",
   KillSwitchSetAllowLAN: "KillSwitchSetAllowLAN",
   KillSwitchSetIsPersistent: "KillSwitchSetIsPersistent",
@@ -1439,6 +1440,12 @@ async function KillSwitchSetAllowApiServers(IsAllowApiServers) {
     IsAllowApiServers,
   });
 }
+async function KillSwitchSetAllowAppleServices(IsAllowAppleServices) {
+  await sendRecv({
+    Command: daemonRequests.KillSwitchSetAllowAppleServices,
+    IsAllowAppleServices,
+  });
+}
 
 async function KillSwitchSetAllowLANMulticast(AllowLANMulticast) {
   await sendRecv({
@@ -1907,6 +1914,7 @@ export default {
 
   EnableFirewall,
   KillSwitchSetAllowApiServers,
+  KillSwitchSetAllowAppleServices,
   KillSwitchSetAllowLANMulticast,
   KillSwitchSetAllowLAN,
   KillSwitchSetIsPersistent,

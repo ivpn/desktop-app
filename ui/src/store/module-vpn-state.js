@@ -67,6 +67,7 @@ export default {
       IsAllowLAN: null,
       IsAllowMulticast: null,
       IsAllowApiServers: null,
+      IsAllowAppleServices: null,
       UserExceptions: "",
     },
 

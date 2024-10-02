@@ -119,6 +119,11 @@ type KillSwitchSetAllowApiServers struct {
 	IsAllowApiServers bool
 }
 
+type KillSwitchSetAllowAppleServices struct {
+	RequestBase
+	IsAllowAppleServices bool
+}
+
 // KillSwitchSetEnabled request to enable\disable kill-switch
 type KillSwitchSetEnabled struct {
 	RequestBase

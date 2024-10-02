@@ -153,6 +153,12 @@ export default {
       isEnable
     );
   },
+  KillSwitchSetAllowAppleServices: async (isEnable) => {
+    return await invoke(
+      "renderer-request-KillSwitchSetAllowAppleServices",
+      isEnable
+    );
+  },
   KillSwitchSetAllowLANMulticast: async (isEnable) => {
     return await invoke(
       "renderer-request-KillSwitchSetAllowLANMulticast",

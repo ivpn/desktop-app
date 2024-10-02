@@ -23,12 +23,13 @@
 package types
 
 type KillSwitchStatus struct {
-	IsEnabled         bool   // FW state
-	IsPersistent      bool   // configuration: true - when persistent
-	IsAllowLAN        bool   // configuration: 'Allow LAN'
-	IsAllowMulticast  bool   // configuration: 'Allow multicast'
-	IsAllowApiServers bool   // configuration: 'Allow API servers'
-	UserExceptions    string // configuration: Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
+	IsEnabled            bool   // FW state
+	IsPersistent         bool   // configuration: true - when persistent
+	IsAllowLAN           bool   // configuration: 'Allow LAN'
+	IsAllowMulticast     bool   // configuration: 'Allow multicast'
+	IsAllowApiServers    bool   // configuration: 'Allow API servers'
+	IsAllowAppleServices bool   // configuration: 'Bypass Apple services'
+	UserExceptions       string // configuration: Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
 
 	StateLanAllowed bool // real state of 'Allow LAN'
 }

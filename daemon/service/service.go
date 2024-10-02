@@ -246,7 +246,10 @@ func (s *Service) init() error {
 		log.Error("Failed to initialize firewall with AllowLAN preference value: ", err)
 	}
 
-	//log.Info("Applying firewal exceptions (user configuration)")
+	if err := firewall.AllowAppleServices(s._preferences.IsFwAllowAppleServices); err != nil {
+		log.Error("Failed to initialize firewall with AppleServices preference value: ", err)
+	}
+
 	if err := firewall.SetUserExceptions(s._preferences.FwUserExceptions, true); err != nil {
 		log.Error("Failed to apply firewall exceptions: ", err)
 	}
@@ -1077,13 +1080,14 @@ func (s *Service) KillSwitchState() (status types.KillSwitchStatus, err error) {
 	enabled, isLanAllowed, _, err := firewall.GetState()
 
 	return types.KillSwitchStatus{
-		IsEnabled:         enabled,
-		IsPersistent:      prefs.IsFwPersistant,
-		IsAllowLAN:        prefs.IsFwAllowLAN,
-		IsAllowMulticast:  prefs.IsFwAllowLANMulticast,
-		IsAllowApiServers: prefs.IsFwAllowApiServers,
-		UserExceptions:    prefs.FwUserExceptions,
-		StateLanAllowed:   isLanAllowed,
+		IsEnabled:            enabled,
+		IsPersistent:         prefs.IsFwPersistant,
+		IsAllowLAN:           prefs.IsFwAllowLAN,
+		IsAllowMulticast:     prefs.IsFwAllowLANMulticast,
+		IsAllowApiServers:    prefs.IsFwAllowApiServers,
+		IsAllowAppleServices: prefs.IsFwAllowAppleServices,
+		UserExceptions:       prefs.FwUserExceptions,
+		StateLanAllowed:      isLanAllowed,
 	}, err
 }
 
@@ -1159,6 +1163,18 @@ func (s *Service) SetKillSwitchAllowAPIServers(isAllowAPIServers bool) error {
 	s.onKillSwitchStateChanged()
 	s.updateAPIAddrInFWExceptions()
 	return nil
+}
+
+func (s *Service) SetKillSwitchAllowAppleServices(isAllowAppleServices bool) error {
+	prefs := s._preferences
+	prefs.IsFwAllowAppleServices = isAllowAppleServices
+	s.setPreferences(prefs)
+
+	err := firewall.AllowAppleServices(isAllowAppleServices)
+	if err == nil {
+		s.onKillSwitchStateChanged()
+	}
+	return err
 }
 
 // SetKillSwitchUserExceptions set ip/mask to be excluded from FW block

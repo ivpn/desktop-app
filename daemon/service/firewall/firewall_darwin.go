@@ -41,7 +41,8 @@ import (
 var (
 	// key: is a string representation of allowed IP
 	// value: true - if exception rule is persistant (persistant, means will stay available even client is disconnected)
-	allowedHosts map[string]bool
+	allowedHosts       map[string]bool
+	allowAppleServices bool
 )
 
 func init() {
@@ -130,6 +131,15 @@ func implClientDisconnected() error {
 	}
 
 	return shell.Exec(nil, platform.FirewallScript(), "-disconnected")
+}
+
+func implAllowAppleServices(isAllowAPIServers bool) error {
+	allowAppleServices = isAllowAPIServers
+	if allowAppleServices {
+		return shell.Exec(log, platform.FirewallScript(), "-allow_apple_services_on")
+	} else {
+		return shell.Exec(log, platform.FirewallScript(), "-allow_apple_services_off")
+	}
 }
 
 func implAllowLAN(isAllowLAN bool, isAllowLanMulticast bool) error {
@@ -269,6 +279,14 @@ func reApplyExceptions() error {
 		log.Error(err2)
 		if err == nil {
 			err = err2
+		}
+	}
+
+	err3 := implAllowAppleServices(allowAppleServices)
+	if err3 != nil {
+		log.Error(err3)
+		if err == nil {
+			err = err3
 		}
 	}
 	return err
