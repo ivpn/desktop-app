@@ -103,12 +103,6 @@ func flagsToString(flags int) string {
 	if flags&syscall.RTF_IFREF != 0 {
 		flagStrings = append(flagStrings, "IFREF")
 	}
-	if flags&syscall.RTF_PROXY != 0 {
-		flagStrings = append(flagStrings, "PROXY")
-	}
-	if flags&syscall.RTF_ROUTER != 0 {
-		flagStrings = append(flagStrings, "ROUTER")
-	}
 	return strings.Join(flagStrings, "|")
 }
 
