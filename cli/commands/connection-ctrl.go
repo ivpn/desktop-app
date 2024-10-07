@@ -40,6 +40,7 @@ func (c *CmdConnectionControl) Init() {
 	c.KeepArgsOrderInHelp = true
 
 	c.Initialize("connection", "Managing active connection")
+	c.IntVar(&c.pause, "p", 0, "DURATION", "Temporarily pause the connection for a specified duration\n  (DURATION: [1-1440] minutes)")
 	c.IntVar(&c.pause, "pause", 0, "DURATION", "Temporarily pause the connection for a specified duration\n  (DURATION: [1-1440] minutes)")
 	c.BoolVar(&c.resume, "resume", false, "Resume a paused connection")
 
