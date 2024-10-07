@@ -210,7 +210,7 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		}
 	}()
 
-	// start
+	// Start WG process
 	if err := wg.internals.command.Start(); err != nil {
 		log.Error(err.Error())
 		return fmt.Errorf("failed to start WireGuard process: %w", err)
@@ -218,42 +218,46 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 
 	var initError error = nil
 
-	// waiting to start and initialize
+	// Waiting to start and initialize
+	select {
+	case <-isStartedChannel: // Process started. Perform initialization...
+		if initError = wg.initialize(); initError == nil {
+			initError = wg.waitHandshakeAndNotifyConnected(stateChan)
+		}
+	case <-time.After(time.Second * 5): // stop process if WG not successfully started during 5 sec
+		initError = fmt.Errorf("WireGuard process initialization timeout")
+	}
+	if initError != nil {
+		log.Error(initError)
+		log.Error("Stopping process manually...")
+		if err := wg.disconnect(); err != nil {
+			log.Error("Failed to stop process: ", err)
+		}
+	}
+
+	// Monitor the interface status and terminate the process if the interface goes down
 	routineStopWaiter.Add(1)
 	go func() {
 		defer routineStopWaiter.Done()
-		isHaveToBeStopped := false
-
-		select {
-		case <-isStartedChannel:
-			// Process started. Perform initialization...
-			if initError = wg.initialize(); initError != nil {
-				// (return initialization error as a result of connect)
-				log.ErrorTrace(initError)
-				isHaveToBeStopped = true
-			} else {
-				// Initialised
-				err := wg.waitHandshakeAndNotifyConnected(stateChan)
+		log.Info(fmt.Sprintf("Started: monitoring '%s' interface status", wg.internals.utunName))
+		defer log.Info(fmt.Sprintf("Stopped: monitoring '%s' interface status", wg.internals.utunName))
+		for {
+			if wg.internals.isGoingToStop {
+				return
+			}
+			select {
+			case <-time.After(time.Second * 3):
+				isUp, err := isInterfaceUp(wg.internals.utunName)
 				if err != nil {
-					log.ErrorTrace(err)
-					isHaveToBeStopped = true
+					return
 				}
-			}
-
-		case <-time.After(time.Second * 5):
-			// stop process if WG not successfully started during 5 sec
-			err = fmt.Errorf("WireGuard process initialization timeout")
-			if initError == nil {
-				initError = err
-			}
-			log.Error(err)
-			isHaveToBeStopped = true
-		}
-
-		if isHaveToBeStopped {
-			log.Error("Stopping process manually...")
-			if err := wg.disconnect(); err != nil {
-				log.Error("Failed to stop process: ", err)
+				if !isUp {
+					log.Info("Interface is down, terminating WireGuard process")
+					if err := wg.disconnect(); err != nil {
+						log.Error(err)
+					}
+					return
+				}
 			}
 		}
 	}()
@@ -291,6 +295,15 @@ func (wg *WireGuard) internalDisconnect() error {
 
 	log.Info("Stopping")
 	return cmd.Process.Kill()
+}
+
+// isInterfaceUp checks if the specified interface is up
+func isInterfaceUp(ifname string) (bool, error) {
+	iface, err := net.InterfaceByName(ifname)
+	if err != nil {
+		return false, err
+	}
+	return iface.Flags&net.FlagUp != 0, nil
 }
 
 func (wg *WireGuard) isPaused() bool {
@@ -530,6 +543,10 @@ func (wg *WireGuard) removeRoutes() error {
 }
 
 func (wg *WireGuard) onRoutingChanged() error {
+	if wg.internals.isPaused {
+		return nil
+	}
+
 	// get default Gateway IP and interface name
 	defGateway, _, defInterfaceName, err := netinfo.GetDefaultRouteInfo()
 	if err != nil {
