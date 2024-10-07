@@ -117,9 +117,6 @@ _EOF
       quit
 _EOF
 
-    # Flush the state table (NAT and filter) 
-    sudo pfctl -Fs
-
     set +e
 
     echo "IVPN Firewall enabled"
@@ -211,14 +208,11 @@ function allow_apple_services_on {
         pass out quick proto tcp from any to 2403:300:a51::/48  port { 443, 2197, 5223 } flags any keep state
         pass out quick proto tcp from any to 2a01:b740:a42::/48 port { 443, 2197, 5223 } flags any keep state
 _EOF
-    # Flush the state table (NAT and filter) 
-    sudo pfctl -Fs
+
 }
 
 function allow_apple_services_off {
     pfctl -a ${ANCHOR_NAME}/apple_services -Fr
-    # Flush the state table (NAT and filter) 
-    sudo pfctl -Fs
 }
 ####
 
@@ -260,9 +254,6 @@ function main {
       shift
       pfctl -a "${ANCHOR_NAME}" -t "${USER_EXCEPTIONS_TABLE}" -T replace $@
 
-      # Flush the state table (NAT and filter) 
-      sudo pfctl -Fs
-
     elif [[ $1 = "-connected" ]]; then       
         
         IFACE=$2  
@@ -285,12 +276,13 @@ function main {
         set_dns $2
 
     elif [[ $1 = "-allow_apple_services_on" ]]; then    
-       
+
        allow_apple_services_on
-       
-       #return 0
+
     elif [[ $1 = "-allow_apple_services_off" ]]; then    
-      allow_apple_services_off          
+
+      allow_apple_services_off
+
     else
         echo "Unknown command"
         return 2
