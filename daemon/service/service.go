@@ -77,6 +77,9 @@ const (
 
 // Service - IVPN service
 type Service struct {
+	// on service initialisation: channel closes as soon as IP stack initialized OR after timeout
+	_ipStackInitializationWaiter chan struct{}
+
 	_evtReceiver       IServiceEventsReceiver
 	_api               *api.API
 	_serversUpdater    IServersUpdater
@@ -158,14 +161,15 @@ func CreateService(evtReceiver IServiceEventsReceiver,
 	}
 
 	serv := &Service{
-		_preferences:       *preferences.Create(),
-		_evtReceiver:       evtReceiver,
-		_api:               api,
-		_serversUpdater:    updater,
-		_netChangeDetector: netChDetector,
-		_wgKeysMgr:         wgKeysMgr,
-		_globalEvents:      globalEvents,
-		_systemLog:         systemLog,
+		_preferences:                 *preferences.Create(),
+		_evtReceiver:                 evtReceiver,
+		_api:                         api,
+		_serversUpdater:              updater,
+		_netChangeDetector:           netChDetector,
+		_wgKeysMgr:                   wgKeysMgr,
+		_globalEvents:                globalEvents,
+		_systemLog:                   systemLog,
+		_ipStackInitializationWaiter: make(chan struct{}),
 	}
 
 	// register the current service as a 'Connectivity checker' for API object
@@ -180,11 +184,9 @@ func CreateService(evtReceiver IServiceEventsReceiver,
 
 func (s *Service) init() error {
 	// Start waiting for IP stack initialization
-	//
-	// _ipStackInitializationWaiter - channel closes as soon as IP stack initialized OR after timeout
-	_ipStackInitializationWaiter := make(chan struct{})
 	go func() {
-		defer close(_ipStackInitializationWaiter) // ip stack initialized (or timeout)
+		defer close(s._ipStackInitializationWaiter) // IP stack INITIALIZED (OR TIMEOUT)
+
 		log.Info("Waiting for IP stack initialization ...")
 		if outIpv4, outIPv6, err := s.WaitAndGetOutboundIPs(time.Minute * 2); err != nil {
 			log.Error(fmt.Errorf("IP stack initialization waiter error: %w", err))
@@ -200,7 +202,7 @@ func (s *Service) init() error {
 
 	// Start periodically updating (downloading) servers in background
 	go func() {
-		<-_ipStackInitializationWaiter // Wait for IP stack initialization
+		<-s._ipStackInitializationWaiter // Wait for IP stack initialization
 		if err := s._serversUpdater.StartUpdater(); err != nil {
 			log.Error("Failed to start servers-list updater: ", err)
 		}
@@ -231,7 +233,7 @@ func (s *Service) init() error {
 		log.Warning(fmt.Errorf("Split-Tunnelling initialization error : %w", err))
 	} else {
 		go func() {
-			<-_ipStackInitializationWaiter // Wait for IP stack initialization
+			<-s._ipStackInitializationWaiter // Wait for IP stack initialization
 			// apply Split Tunneling configuration
 			s.splitTunnelling_ApplyConfig()
 		}()
@@ -267,7 +269,7 @@ func (s *Service) init() error {
 	} else {
 
 		go func() {
-			<-_ipStackInitializationWaiter // Wait for IP stack initialization
+			<-s._ipStackInitializationWaiter // Wait for IP stack initialization
 
 			if err := s._wgKeysMgr.StartKeysRotation(); err != nil {
 				log.Error("Failed to start WG keys rotation:", err)
@@ -281,7 +283,7 @@ func (s *Service) init() error {
 
 	// Start session status checker
 	go func() {
-		<-_ipStackInitializationWaiter // Wait for IP stack initialization
+		<-s._ipStackInitializationWaiter // Wait for IP stack initialization
 		s.startSessionChecker()
 	}()
 
@@ -313,13 +315,13 @@ func (s *Service) init() error {
 	// 'Auto-connect on launch' functionality: auto-connect if necessary
 	// 'trusted-wifi' functionality: auto-connect if necessary
 	go func() {
-		<-_ipStackInitializationWaiter // Wait for IP stack initialization
+		<-s._ipStackInitializationWaiter // Wait for IP stack initialization
 		s.autoConnectIfRequired(OnDaemonStarted, nil)
 	}()
 
 	// Start processing power events in separate routine (Windows)
 	go func() {
-		<-_ipStackInitializationWaiter // Wait for IP stack initialization
+		<-s._ipStackInitializationWaiter // Wait for IP stack initialization
 		s.startProcessingPowerEvents()
 	}()
 
@@ -1277,26 +1279,7 @@ func (s *Service) SetConnectionParams(params types.ConnectionParams) error {
 		s._tmpParamsMutex.Unlock()
 		return nil
 	}
-
-	prefs := s._preferences
-
-	isOldParamsDefined := prefs.LastConnectionParams.CheckIsDefined() == nil
-
-	retErr := s.setConnectionParams(params)
-
-	if !isOldParamsDefined && prefs.LastConnectionParams.CheckIsDefined() != nil {
-		// if it is first initialization of connection parameters - run auto-connection rules
-		// (seems, it is first start after app version upgrade)
-
-		prefs := s.Preferences()
-		const checkOnlyUiClients = true
-		if prefs.Session.IsLoggedIn() && s._evtReceiver.IsClientConnected(checkOnlyUiClients) {
-			log.Info("Applying auto-connection rules (reason: first initialization of connection parameters) ...")
-			s.autoConnectIfRequired(OnUiClientConnected, nil)
-		}
-	}
-
-	return retErr
+	return s.setConnectionParams(params)
 }
 
 func (s *Service) setConnectionParams(params types.ConnectionParams) error {

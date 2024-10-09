@@ -399,7 +399,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	log.Info("[<--] ", p.connLogID(conn), reqCmd.Command, fmt.Sprintf(" [%d]%s", reqCmd.Idx, cmdExtraInfo))
 
 	isDoSkipParanoidMode := func(commandName string) bool {
-
 		switch commandName {
 		case "Hello",
 			"GetVPNState",
@@ -413,7 +412,6 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			"AccountStatus":
 			return true
 		}
-
 		return false
 	}
 
@@ -462,7 +460,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			}
 
 			// We are here. So we are authenticated.
-			// mark connection as authenticated
+			// Mark connection as authenticated.
 			p.clientSetAuthenticated(conn)
 		}
 	}
