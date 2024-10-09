@@ -99,6 +99,12 @@ func (s *Service) OnAuthenticatedClient(t protocolTypes.ClientTypeEnum) {
 		// "auto-connect on app launch" is applicable only for UI client
 		return
 	}
+
+	// Wait for IP stack initialization.
+	// We need it for the situations when UI connected to service on startup
+	// and IP stack not initialized yet
+	<-s._ipStackInitializationWaiter
+
 	s.autoConnectIfRequired(OnUiClientConnected, nil)
 }
 
