@@ -122,9 +122,6 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 }
 
 func (p *Protocol) clientSetAuthenticated(c net.Conn) {
-	// contains information about just connected client (first authentication) or nil
-	var justConnectedClientInfo *connectionInfo
-
 	// separate anonymous function for correct mutex unlock
 	func() {
 		p._connectionsMutex.Lock()
@@ -132,19 +129,17 @@ func (p *Protocol) clientSetAuthenticated(c net.Conn) {
 
 		if cInfo, ok := p._connections[c]; ok {
 			if !cInfo.IsAuthenticated {
+				// connected client (first authentication)
 				cInfo.IsAuthenticated = true
 				p._connections[c] = cInfo
 
-				justConnectedClientInfo = &cInfo
+				go func() {
+					// notifying service about authenticated client (autoconnect if needed)
+					p._service.OnAuthenticatedClient(cInfo.Type)
+				}()
 			}
 		}
 	}()
-
-	if justConnectedClientInfo != nil {
-		go func() {
-			p._service.OnAuthenticatedClient(justConnectedClientInfo.Type)
-		}()
-	}
 
 	if len(p._lastConnectionErrorToNotifyClient) > 0 {
 		log.Info("Sending delayed error to client: ", p._lastConnectionErrorToNotifyClient)
