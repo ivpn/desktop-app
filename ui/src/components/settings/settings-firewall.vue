@@ -53,38 +53,6 @@
       >
     </div>
 
-    <!-- Bypass apple services -->
-    <div class="param" tabindex="0">
-      <input
-        type="checkbox"
-        id="firewallBypassAppleServices"
-        v-model="firewallBypassAppleServices"
-      />
-      <label class="defColor" for="firewallBypassAppleServices"
-        >Bypass VPN for Apple Services Traffic</label
-      >
-      <button class="noBordersBtn flexRow" title="Help" v-on:click="$refs.helpBypassAppleServices.showModal()">
-            <img src="@/assets/question.svg" />
-      </button>
-      <ComponentDialog ref="helpBypassAppleServices" header="Info">
-        <div>
-          <p>
-            Since macOS Sequoia (15.0), certain Apple apps (like Messages) may not function correctly 
-            when the IVPN Firewall is enabled because Apple does not respect the system's default routing configuration.
-          </p>
-          <p>
-            Enabling this option allows traffic from Apple services to bypass the IVPN Firewall, 
-            permitting specific Apple IP ranges through, and this traffic may be routed outside the VPN tunnel.
-          </p>
-          <div class="settingsGrayLongDescriptionFont">            
-            This is a temporary workaround until Apple resolves the issue.
-            <br />        
-            Note! This option is applicable only for the WireGuard protocol.
-          </div>
-        </div>
-      </ComponentDialog>
-    </div>
-
     <!-- On-demand Firewall -->
     <div class="settingsBoldFont" tabindex="0">On-demand Firewall:</div>
 
@@ -318,14 +286,6 @@ export default {
       },
       async set(value) {
         await sender.KillSwitchSetAllowApiServers(value);
-      },
-    },
-    firewallBypassAppleServices: {
-      get() {
-        return this.$store.state.vpnState.firewallState.IsAllowAppleServices;
-      },
-      async set(value) {
-        await sender.KillSwitchSetAllowAppleServices(value);
       },
     },
     firewallAllowLan: {

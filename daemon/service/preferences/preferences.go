@@ -82,7 +82,6 @@ type Preferences struct {
 	IsFwAllowLAN             bool
 	IsFwAllowLANMulticast    bool
 	IsFwAllowApiServers      bool
-	IsFwAllowAppleServices   bool   // Bypass VPN for Apple Services Traffic. Enabling this option allows traffic from Apple services to bypass the IVPN Firewall, permitting specific Apple IP ranges through, and this traffic may be routed outside the VPN tunnel.
 	FwUserExceptions         string // Firewall exceptions: comma separated list of IP addresses (masks) in format: x.x.x.x[/xx]
 	IsStopOnClientDisconnect bool
 

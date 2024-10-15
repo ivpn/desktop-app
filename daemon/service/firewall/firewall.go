@@ -235,12 +235,6 @@ func RemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent bool
 	return err
 }
 
-func AllowAppleServices(isAllowAPIServers bool) error {
-	mutex.Lock()
-	defer mutex.Unlock()
-	return implAllowAppleServices(isAllowAPIServers)
-}
-
 // AllowLAN - allow/forbid LAN communication
 func AllowLAN(allowLan bool, allowLanMulticast bool) error {
 	mutex.Lock()

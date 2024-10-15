@@ -185,10 +185,6 @@ func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent 
 	return nil
 }
 
-func implAllowAppleServices(isAllowAPIServers bool) error {
-	return nil // do nothing for Windows
-}
-
 // AllowLAN - allow/forbid LAN communication
 func implAllowLAN(allowLan bool, allowLanMulticast bool) error {
 

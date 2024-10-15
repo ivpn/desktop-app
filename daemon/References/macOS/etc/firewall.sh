@@ -5,7 +5,6 @@
 #   sudo pfctl -s rules
 # Show all rules for "ivpn_firewall" anchor
 #   sudo pfctl -a "ivpn_firewall" -s rules
-#   sudo pfctl -a "ivpn_firewall/apple_services" -s rules
 #   sudo pfctl -a "ivpn_firewall/tunnel" -s rules
 #   sudo pfctl -a "ivpn_firewall/dns" -s rules
 # Show table
@@ -102,7 +101,6 @@ function enable_firewall {
       pass out inet proto udp from 0.0.0.0 to 255.255.255.255 port = 67
       pass in proto udp from any to any port = 68
 
-      anchor apple_services all
       anchor tunnel all
       anchor dns all
 _EOF
@@ -130,8 +128,6 @@ function disable_firewall {
     pfctl -a ${ANCHOR_NAME} -t ${EXCEPTIONS_TABLE} -T flush
     pfctl -a ${ANCHOR_NAME} -t ${USER_EXCEPTIONS_TABLE} -T flush
 
-    # remove all rules in tun anchor
-    pfctl -a ${ANCHOR_NAME}/apple_services -Fr
     # remove all rules in tun anchor
     pfctl -a ${ANCHOR_NAME}/tunnel -Fr
     # remove all rules in dns anchor
@@ -188,33 +184,6 @@ _EOF
         block drop out proto tcp from any to ! ${DNS} port = 53
 _EOF
 }
-####
-function allow_apple_services_on {
-    # Ports: https://support.apple.com/en-us/103229    
-    #   443  TCP - Secure Sockets Layer (SSL or HTTPS): TLS websites, iTunes Store, Software Update, Spotlight Suggestions, Mac App Store, Maps, FaceTime, Game Center, iCloud authentication and DAV Services (Contacts, Calendars, Bookmarks), iCloud backup and apps (Calendars, Contacts, Find My iPhone, Find My Friends, Mail, iMessage, Documents & Photo Stream), iCloud Key Value Store (KVS), AirPlay, macOS Internet Recovery, Dictation, Siri, Xcode Server (hosted and remote Git HTTPS, remote SVN HTTPS, Apple Developer registration), Push notifications (if necessary)
-    #   2197 TCP - Apple Push Notification Service (APNS)
-    #   5223 TCP - Apple Push Notification Service (APNS): iCloud DAV Services (Contacts, Calendars, Bookmarks), Push Notifications, FaceTime, iMessage, Game Center, Photo Stream
-    #
-    # IP addresses: https://support.apple.com/en-us/HT210060
-    pfctl -a ${ANCHOR_NAME}/apple_services -f - <<_EOF
-        pass out quick proto tcp from any to 17.249.0.0/16      port { 443, 2197, 5223 } flags any keep state
-        pass out quick proto tcp from any to 17.252.0.0/16      port { 443, 2197, 5223 } flags any keep state
-        pass out quick proto tcp from any to 17.57.144.0/22     port { 443, 2197, 5223 } flags any keep state
-        pass out quick proto tcp from any to 17.188.128.0/18    port { 443, 2197, 5223 } flags any keep state
-        pass out quick proto tcp from any to 17.188.20.0/23     port { 443, 2197, 5223 } flags any keep state
-
-        pass out quick proto tcp from any to 2620:149:a44::/48  port { 443, 2197, 5223 } flags any keep state
-        pass out quick proto tcp from any to 2403:300:a42::/48  port { 443, 2197, 5223 } flags any keep state
-        pass out quick proto tcp from any to 2403:300:a51::/48  port { 443, 2197, 5223 } flags any keep state
-        pass out quick proto tcp from any to 2a01:b740:a42::/48 port { 443, 2197, 5223 } flags any keep state
-_EOF
-
-}
-
-function allow_apple_services_off {
-    pfctl -a ${ANCHOR_NAME}/apple_services -Fr
-}
-####
 
 function main {
 
@@ -274,15 +243,6 @@ function main {
         get_firewall_enabled || return 0
 
         set_dns $2
-
-    elif [[ $1 = "-allow_apple_services_on" ]]; then    
-
-       allow_apple_services_on
-
-    elif [[ $1 = "-allow_apple_services_off" ]]; then    
-
-      allow_apple_services_off
-
     else
         echo "Unknown command"
         return 2
