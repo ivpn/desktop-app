@@ -54,7 +54,7 @@
     </div>
 
     <!-- Bypass apple services -->
-    <div class="param" tabindex="0" v-show="isMacOS" >
+    <div class="param" tabindex="0">
       <input
         type="checkbox"
         id="firewallBypassAppleServices"
@@ -202,7 +202,6 @@
 <script>
 import { isValidIpOrMask } from "@/helpers/helpers";
 import ComponentDialog from "@/components/component-dialog.vue";
-import { Platform, PlatformEnum } from "@/platform/platform";
 
 const sender = window.ipcSender;
 
@@ -310,9 +309,6 @@ export default {
     },
   },
   computed: {
-    isMacOS() {
-      return Platform() === PlatformEnum.macOS;
-    },
     IsPersistent: function () {
       return this.$store.state.vpnState.firewallState.IsPersistent;
     },
