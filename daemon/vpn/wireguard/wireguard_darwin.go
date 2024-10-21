@@ -486,7 +486,8 @@ func (wg *WireGuard) setRoutes() error {
 	}
 
 	// sudo route -n add -inet default host_local_IP
-	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", wg.defaultRouteGatewayIP().String()); err != nil {
+	//if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", wg.defaultRouteGatewayIP().String()); err != nil {
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", "-interface", wg.GetTunnelName()); err != nil {
 		return fmt.Errorf("adding default route shell comand error : %w", err)
 	}
 
