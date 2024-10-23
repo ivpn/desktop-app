@@ -256,7 +256,7 @@ func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent 
 }
 
 // OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
-func implOnChangeDNS(addr net.IP) error {
+func implOnChangeDNS(addr net.IP, isInternal bool) error {
 	addrStr := ""
 	if addr != nil {
 		if addr.To4() == nil {

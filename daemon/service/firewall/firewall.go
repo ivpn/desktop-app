@@ -262,14 +262,12 @@ func GetDnsInfo() (dns.DnsSettings, bool) {
 	return *dnsConfig, true
 }
 
-func getDnsIP() net.IP {
+func getDnsIP() (addr net.IP, isInternal bool) {
 	cfg := dnsConfig
-
-	var dnsIP net.IP
 	if cfg != nil && cfg.Encryption == dns.EncryptionNone {
-		dnsIP = cfg.Ip()
+		return cfg.Ip(), cfg.Metadata().IsInternalDnsServer
 	}
-	return dnsIP
+	return nil, false
 }
 
 // OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
@@ -288,12 +286,14 @@ func OnChangeDNS(newDnsCfg *dns.DnsSettings) error {
 	}
 
 	var addr net.IP = nil
+	var isInternal bool = false
 	if newDnsCfg != nil && newDnsCfg.Encryption == dns.EncryptionNone {
 		// for DoH/DoT - no sense to allow DNS port (53)
 		addr = net.ParseIP(newDnsCfg.DnsHost)
+		isInternal = newDnsCfg.Metadata().IsInternalDnsServer
 	}
 
-	err := implOnChangeDNS(addr)
+	err := implOnChangeDNS(addr, isInternal)
 	if err != nil {
 		log.Error(err)
 	} else {

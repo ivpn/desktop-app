@@ -981,18 +981,18 @@ func (s *Service) getAntiTrackerDns(isHardcore bool, antiTrackerPlusList string)
 		for _, atp_svr := range servers.Config.AntiTrackerPlus.DnsServers {
 			if strings.ToLower(strings.TrimSpace(atp_svr.Name)) == atListName {
 				if isHardcore {
-					return dns.DnsSettings{DnsHost: atp_svr.Hardcore}, nil
+					return dns.DnsSettingsCreate(net.ParseIP(atp_svr.Hardcore)), nil
 				}
-				return dns.DnsSettings{DnsHost: atp_svr.Normal}, nil
+				return dns.DnsSettingsCreate(net.ParseIP(atp_svr.Normal)), nil
 			}
 		}
 	}
 
 	// If AntiTracker Plus block list not found - ignore 'antiTrackerPlusList' and use old-style AntiTracker DNS
 	if isHardcore {
-		return dns.DnsSettings{DnsHost: servers.Config.Antitracker.Hardcore.IP}, nil
+		return dns.DnsSettingsCreate(net.ParseIP(servers.Config.Antitracker.Hardcore.IP)), nil
 	}
-	return dns.DnsSettings{DnsHost: servers.Config.Antitracker.Default.IP}, nil
+	return dns.DnsSettingsCreate(net.ParseIP(servers.Config.Antitracker.Default.IP)), nil
 }
 
 // Get AntiTracker info according to DNS settings

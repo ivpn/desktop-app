@@ -207,7 +207,7 @@ func implAllowLAN(allowLan bool, allowLanMulticast bool) error {
 }
 
 // OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
-func implOnChangeDNS(addr net.IP) error {
+func implOnChangeDNS(addr net.IP, isInternal bool) error {
 	if addr.Equal(customDNS) {
 		return nil
 	}

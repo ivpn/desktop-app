@@ -90,18 +90,28 @@ const (
 	EncryptionDnsOverHttps DnsEncryption = 2
 )
 
+type DnsMetadata struct {
+	IsInternalDnsServer bool // FALSE if DNS settings are custom (defined by user)
+}
+
 type DnsSettings struct {
 	DnsHost     string // DNS host IP address
 	Encryption  DnsEncryption
 	DohTemplate string // DoH/DoT template URI (for Encryption = DnsOverHttps or Encryption = DnsOverTls)
+
+	metadata DnsMetadata
 }
 
-// create  DnsSettings object with no encryption
+func (d DnsSettings) Metadata() DnsMetadata {
+	return d.metadata
+}
+
+// Create DnsSettings object with no encryption
 func DnsSettingsCreate(ip net.IP) DnsSettings {
 	if ip == nil {
 		return DnsSettings{}
 	}
-	return DnsSettings{DnsHost: ip.String()}
+	return DnsSettings{DnsHost: ip.String(), metadata: DnsMetadata{IsInternalDnsServer: true}}
 }
 
 func (d DnsSettings) Equal(x DnsSettings) bool {

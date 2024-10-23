@@ -178,13 +178,18 @@ func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent 
 }
 
 // OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
-func implOnChangeDNS(addr net.IP) error {
+// 'addr' - new DNS address
+// 'isInternal' - TRUE if DNS is internal (in VPN network)
+func implOnChangeDNS(addr net.IP, isInternal bool) error {
 	var dnsVal string
 	if addr != nil {
 		dnsVal = addr.String()
 	}
-	log.Info("-set_dns ", dnsVal)
-	return shell.Exec(nil, platform.FirewallScript(), "-set_dns", dnsVal)
+
+	// isLAN - TRUE if DNS is custom local non-routable IP (not in VPN network)
+	isLAN := !isInternal && netinfo.IsLocalNonRoutableIP(addr)
+	log.Info(fmt.Sprintf("-set_dns %v %v", isLAN, dnsVal))
+	return shell.Exec(nil, platform.FirewallScript(), "-set_dns", fmt.Sprint(isLAN), dnsVal)
 }
 
 // implOnUserExceptionsUpdated() called when 'userExceptions' value were updated. Necessary to update firewall rules.
