@@ -118,7 +118,6 @@ function enable_firewall {
       scrub all fragment reassemble
       
       nat-anchor ${ROUTE_SA_INIT} all
-      nat-anchor ${ROUTE_SA_ALL} all
 
       table <${TBL_EXCEPTIONS}>       persist
       table <${TBL_USER_EXCEPTIONS}>  persist
@@ -166,6 +165,12 @@ function disable_firewall {
     # remove all entries in exceptions table
     pfctl -a ${ANCHOR} -t ${TBL_EXCEPTIONS}      -T flush
     pfctl -a ${ANCHOR} -t ${TBL_USER_EXCEPTIONS} -T flush
+
+    if (( ${IS_DO_ROUTING} == 1 )) ; then
+      pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -t ${ROUTE_TBL_DNS}        -T flush
+      pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -t ${TBL_EXCEPTIONS}       -T flush
+      pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -t ${TBL_USER_EXCEPTIONS}  -T flush
+    fi
 
     # remove all rules from SA_BLOCK_DNS anchor
     pfctl -a ${ANCHOR}/${SA_BLOCK_DNS} -Fr
@@ -269,9 +274,6 @@ function client_disconnected {
     pfctl -a ${ANCHOR}/${SA_TUNNEL} -Fr
     
     if (( ${IS_DO_ROUTING} == 1 )) ; then
-      pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -t ${ROUTE_TBL_DNS}        -T flush
-      pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -t ${TBL_EXCEPTIONS}       -T flush
-      pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -t ${TBL_USER_EXCEPTIONS}  -T flush
       pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -Fn
       pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -Fr
       pfctl -a ${ANCHOR}/${ROUTE_SA_ALL} -Fr
@@ -347,7 +349,7 @@ function main {
       pfctl -a "${ANCHOR}" -t "${TBL_EXCEPTIONS}" -T add $@
       
       if (( ${IS_DO_ROUTING} == 1 )) ; then
-        pfctl -a "${ANCHOR}/${ROUTE_SA_ALL}" -t "${TBL_EXCEPTIONS}" -T add $@
+        pfctl -a "${ANCHOR}/${ROUTE_SA_INIT}" -t "${TBL_EXCEPTIONS}" -T add $@
       fi
 
     elif [[ $1 = "-remove_exceptions" ]]; then    
@@ -356,7 +358,7 @@ function main {
       pfctl -a "${ANCHOR}" -t "${TBL_EXCEPTIONS}" -T delete $@
 
       if (( ${IS_DO_ROUTING} == 1 )) ; then
-        pfctl -a "${ANCHOR}/${ROUTE_SA_ALL}" -t "${TBL_EXCEPTIONS}" -T delete $@
+        pfctl -a "${ANCHOR}/${ROUTE_SA_INIT}" -t "${TBL_EXCEPTIONS}" -T delete $@
       fi
     
     elif [[ $1 = "-set_user_exceptions" ]]; then    
@@ -365,7 +367,7 @@ function main {
       pfctl -a "${ANCHOR}" -t "${TBL_USER_EXCEPTIONS}" -T replace $@
 
       if (( ${IS_DO_ROUTING} == 1 )) ; then
-        pfctl -a "${ANCHOR}/${ROUTE_SA_ALL}" -t "${TBL_USER_EXCEPTIONS}" -T replace $@
+        pfctl -a "${ANCHOR}/${ROUTE_SA_INIT}" -t "${TBL_USER_EXCEPTIONS}" -T replace $@
       fi
 
     elif [[ $1 = "-connected" ]]; then       
