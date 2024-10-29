@@ -96,11 +96,17 @@ function get_firewall_enabled {
     fi
 
     # Checks if rules are present in the anchor
-    if [[ -n `pfctl -a $ANCHOR -sr` ]] ; then
-      return 0
+    # Checks if rules are present in the anchor
+    if [[ -z `pfctl -a $ANCHOR -sr` ]] ; then
+      return 1 
+    fi
+    if (( ${IS_DO_ROUTING} == 1 )) ; then
+      if [[ -z `pfctl -a $ANCHOR -sn` ]] ; then
+        return 1
+      fi
     fi
 
-    return 1
+    return 0
 }
 
 # Load rules into the anchor and enable the firewall if disabled
