@@ -855,6 +855,7 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 			if needToReconnect {
 				if s._vpn.IsPaused() {
 					log.Info("Route change ignored due to Paused state.")
+					continue
 				} else {
 					// Reconnect in separate routine (do not block current thread)
 					go func() {
@@ -893,6 +894,9 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 			// Ensure that current DNS configuration is correct. If not - it re-apply the required configuration.
 			// Currently, it is in use for macOS - like a DNS change monitor.
 			go func() {
+				if s._vpn.IsPaused() {
+					return
+				}
 				err := dns.UpdateDnsIfWrongSettings()
 				if err != nil {
 					log.Error(fmt.Errorf("failed to update DNS settings: %w", err))
