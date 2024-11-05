@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.14.29 - 2024-10-05
+
+[FIX] (macOS) iCloud synchronization issues (for WireGuard connection)  
+[FIX] (macOS) Issues with the iMessage app on macOS 15.0 (for WireGuard connection)  
+[FIX] (macOS) App failing to connect at launch on macOS 15.x  
+[FIX] (macOS) Rare error when connecting via WireGuard: “failed to set the IPv4 address for interface”  
+[FIX] (macOS) Other internal improvements  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.14.29.dmg)  
+SHA256: 74c4466f858ffd584d04d3c51d5ad51289dca7a73ff89b5db7818d4179e18acf  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.14.29-arm64.dmg)  
+SHA256: 96aab10b7436473951131a06350291726b6387b4413e6a74b6a85cd0a8ac7a3c  
+
+
 ## Version 3.14.17 - 2024-09-19
 
 [IMPROVED] GUI: Account ID and QR code are blurred by default in account settings  
