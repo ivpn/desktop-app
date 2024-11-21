@@ -33,6 +33,7 @@
             :onFirewallSettings="onFirewallSettings"
             :onAntiTrackerSettings="onAntitrackerSettings"
             :onDefaultView="onDefaultLeftView"
+            :onDnsSettings="onDnsSettings"
             id="left"
           ></component>
         </transition>
@@ -130,6 +131,9 @@ export default {
     },
     onAntitrackerSettings: function () {
       sender.ShowAntitrackerSettings();
+    },
+    onDnsSettings: function () {
+      sender.ShowDnsSettings();
     },
     onDefaultLeftView: function (isDefaultView) {
       this.isCanShowMinimizedButtons = isDefaultView;

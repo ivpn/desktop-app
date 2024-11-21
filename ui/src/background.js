@@ -139,6 +139,9 @@ ipcMain.on("renderer-request-show-settings-antitracker", () => {
 ipcMain.on("renderer-request-show-settings-SplitTunnel", () => {
   showSettings("splittunnel");
 });
+ipcMain.on("renderer-request-show-settings-dns", () => {
+  showSettings("dns");
+});
 ipcMain.handle("renderer-request-connect-to-daemon", async () => {
   return await connectToDaemon();
 });

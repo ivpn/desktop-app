@@ -94,6 +94,20 @@
       </div>
     </transition>
 
+    <!-- DNS -->
+    <transition name="fade">
+      <div>
+        <div class="horizontalLine" />
+        <SelectButtonControl
+          class="leftPanelBlock"
+          :click="dnsStateOnClicked"
+          v-bind:text="DNSdescription"
+          :description="'DNS'"          
+          title="DNS settings"
+        />
+      </div>
+    </transition>
+
     <!-- GEOLOCATOIN INFO -->
     <transition name="fade" tabindex="0">
       <div v-if="$store.state.settings.minimizedUI">
@@ -115,7 +129,7 @@ import SplitTunnelControl from "@/components/controls/control-split-tunnel.vue";
 
 const sender = window.ipcSender;
 import { enumValueName } from "@/helpers/helpers";
-import { VpnTypeEnum, PortTypeEnum, VpnStateEnum } from "@/store/types";
+import { VpnTypeEnum, PortTypeEnum, VpnStateEnum, DnsEncryption } from "@/store/types";
 
 function processError(e) {
   console.error(e);
@@ -138,6 +152,7 @@ export default {
     "onShowWifiConfig",
     "onShowFirewallConfig",
     "onShowAntiTrackerConfig",
+    "onShowDnsConfig",
   ],
   data: function () {
     return {
@@ -213,6 +228,27 @@ export default {
       if (this.isTrustedNetworksControlActive == true) return NOTRUSTSTATUS;
       return NOTRUSTSTATUS;
     },
+    DNSdescription: function () {
+      let at = this.$store.state.settings.antiTracker;
+      if (at && at.Enabled) {
+        let description = "AntiTracker";// (" + at.AntiTrackerBlockListName +")";
+        if (at.Hardcore) description += " Hardcore";
+
+        return description + " (" + at.AntiTrackerBlockListName+")";
+      }
+      let customDNS = this.$store.state.settings.dnsCustomCfg;
+      if (customDNS && this.$store.state.settings.dnsIsCustom) {
+        switch (customDNS.Encryption) {
+          case DnsEncryption.DnsOverHttps:
+            return "Custom (DoH): " + customDNS.DnsHost;
+          case DnsEncryption.DnsOverTls:
+            return "Custom (DoT): " + customDNS.DnsHost;
+          default:
+            return "Custom: " + customDNS.DnsHost;
+        }
+      }      
+      return "Default";
+    },
     IsPaused: function () {
       return this.$store.getters["vpnState/isPaused"];
     },
@@ -262,6 +298,20 @@ export default {
         this.firewallIsProgress = false;
       }
     },
+    async dnsStateOnClicked() {
+      try {
+        let at = this.$store.state.settings.antiTracker;
+        if (at && at.Enabled && this.onShowAntiTrackerConfig) {
+          await this.onShowAntiTrackerConfig();
+          return;
+        }
+        if (this.onShowDnsConfig)
+          await this.onShowDnsConfig();
+      } catch (e) {
+        processError(e);
+      }
+    },
+
     getCurrentWiFiConfig() {
       let curWifiInfo = this.$store.state.vpnState.currentWiFiInfo;
       if (curWifiInfo == null || curWifiInfo.SSID == "") return null;

@@ -328,6 +328,9 @@ export default {
   ShowSplitTunnelSettings: function () {
     ipcRenderer.send("renderer-request-show-settings-SplitTunnel");
   },
+  ShowDnsSettings: function () {
+    ipcRenderer.send("renderer-request-show-settings-dns");
+  },
 
   // CONTEXT MENU
   ShowContextMenuCopy: function () {

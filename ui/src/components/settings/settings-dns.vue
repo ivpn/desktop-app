@@ -207,9 +207,13 @@ export default {
     };
   },
   mounted() {
-    this.requestPredefinedDohConfigs();
-    this.val_linuxDnsIsResolvConfMgmt =
-      this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
+    this.requestPredefinedDohConfigs();   
+    try {
+      this.val_linuxDnsIsResolvConfMgmt =
+        this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
+    } catch (e) {
+      console.error(e);
+    }
   },
   methods: {
     checkIsDisconnectedAndWarn: function () {

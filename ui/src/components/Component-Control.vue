@@ -63,6 +63,7 @@
             :onShowWifiConfig="onShowWifiConfig"
             :onShowFirewallConfig="onFirewallSettings"
             :onShowAntiTrackerConfig="onAntiTrackerSettings"
+            :onShowDnsConfig="onDnsSettings"
           />
 
           <transition name="fade">
@@ -122,6 +123,7 @@ export default {
     onFirewallSettings: Function,
     onAntiTrackerSettings: Function,
     onDefaultView: Function,
+    onDnsSettings: Function,
   },
 
   components: {
