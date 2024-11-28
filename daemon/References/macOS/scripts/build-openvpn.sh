@@ -62,7 +62,7 @@ fi
 echo "************************************************"
 echo "******** Compiling OpenSSL..."
 echo "************************************************"
-make
+make -j $(sysctl -n hw.logicalcpu)
 
 echo "************************************************"
 echo "******** Copying OpenSSL include folder and static libraries..."
@@ -84,7 +84,7 @@ cd lzo-${LZO_VER}
 echo "************************************************"
 echo "******** Compiling LZO..."
 echo "************************************************"
-CLFAGS="-mmacosx-version-min=10.6" ./configure --prefix="${INSTALL_DIR}" && make && make install
+./configure --prefix="${INSTALL_DIR}" && make -j $(sysctl -n hw.logicalcpu) && make install
 
 echo "************************************************"
 echo "******** Cloning OpenVPN sources..."
@@ -98,10 +98,11 @@ echo "******** Checkout OpenVPN version (${OPEN_VPN_VER})..."
 echo "************************************************"
 git checkout ${OPEN_VPN_VER}
 
-echo "************************************************"
-echo "******** Patching OpenVPN..."
-echo "************************************************"
-patch -p2 < $BASE_DIR/patches/openvpn-osx-lion.patch
+# echo "************************************************"
+# echo "******** Patching OpenVPN..."
+# echo "************************************************"
+# patch -p2 < $BASE_DIR/patches/openvpn-osx-lion.patch
+# ! Patching causes error on macOS 15.2 Beta (24C5089c)
 
 echo "************************************************"
 echo "******** OpenVPN: Updating generated configuration files..."
@@ -111,16 +112,20 @@ autoreconf -ivf
 echo "************************************************"
 echo "******** Configuring OpenVPN..."
 echo "************************************************"
-CFLAGS="-mmacosx-version-min=10.6 -I${INSTALL_DIR}/include" \
-    LDFLAGS="-L${INSTALL_DIR}/lib" \
-    ./configure --disable-debug --disable-server --enable-password-save \
-    --disable-lz4
+OPENSSL_LIBS="-L${INSTALL_DIR}/lib -lssl -lcrypto" \
+OPENSSL_CFLAGS="-I${INSTALL_DIR}/include" \
+CFLAGS="-I${INSTALL_DIR}/include" \
+LDFLAGS="-L${INSTALL_DIR}/lib" \
+./configure --disable-debug \
+    --disable-server \
+    --enable-password-save \
+    # --disable-lz4 \
     # disabling lz4 compression algorithm (there is compilation error on macOS M1 when LZ4 enabled)
 
 echo "************************************************"
 echo "******** Compiling OpenVPN..."
 echo "************************************************"
-make
+make -j $(sysctl -n hw.logicalcpu)
 
 echo "********************************"
 echo "******** BUILD COMPLETE ********"
