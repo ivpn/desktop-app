@@ -40,7 +40,7 @@ echo "************************************************"
 echo "******** Downloading OpenSSL sources..."
 echo "************************************************"
 cd ${BUILD_DIR}
-curl https://www.openssl.org/source/openssl-${OPEN_SSL_VER}.tar.gz | tar zx
+curl -L https://www.openssl.org/source/openssl-${OPEN_SSL_VER}.tar.gz | tar zx
 
 # ##############################################################################
 # Compilation OpenSSl info:
