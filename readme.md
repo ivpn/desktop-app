@@ -60,7 +60,7 @@ These instructions enable you to get the project up and running on your local ma
 
 #### macOS
 
-[Go 1.21+](https://golang.org/); Git; [npm](https://www.npmjs.com/get-npm); [Node.js (18)](https://nodejs.org/); Xcode Command Line Tools.  
+[Go 1.21-1.22.9](https://golang.org/); Git; [npm](https://www.npmjs.com/get-npm); [Node.js (18)](https://nodejs.org/); Xcode Command Line Tools.  
 To compile the OpenVPN/OpenSSL binaries locally, additional packages are required:  
 ```bash
 brew install autoconf automake libtool
