@@ -40,6 +40,7 @@ type HostInfoBase struct {
 	MultihopPort int     `json:"multihop_port"`
 	Load         float32 `json:"load"`
 	V2RayHost    string  `json:"v2ray"`
+	ISP          string  `json:"isp"`
 }
 
 func (h HostInfoBase) GetHostInfoBase() HostInfoBase {
