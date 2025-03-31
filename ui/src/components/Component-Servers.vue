@@ -204,6 +204,7 @@
                 isFastestServerConfig === true ? '202px' : null
               "
               :server="server"
+              :isCanShowIspInfo="this.$store.state.settings.showHosts !== true || isFastestServerConfig === true"
               :isFavoriteServersView="isFavoritesView"
               :isCountryFirst="sortTypeStr === 'Country'"
               :onExpandClick="onServerExpandClick"
@@ -282,6 +283,17 @@
                     </div>
                   </div>
                 </div>
+                <!-- per-host ISP info -->
+                <div v-if="host.isp && showISPInfo" style="
+                  display: flex;
+                  font-size: 12px;
+                  color: grey;
+                  overflow: hidden;
+                  white-space: nowrap;
+                  padding-left: 40px; margin-bottom: 4px; margin-top: -2px;">
+                  ISP: {{ host.isp }}
+                </div>
+                
               </button>
             </div>
           </div>
@@ -387,6 +399,9 @@ export default {
     },
     isShowFavoriteDescriptionBlock: function () {
       return this.isFavoritesView === true && this.favorites.length == 0;
+    },
+    showISPInfo: function () {
+      return this.$store.state.settings.showISPInfo;
     },
     servers: function () {
       return this.$store.getters["vpnState/activeServers"];
