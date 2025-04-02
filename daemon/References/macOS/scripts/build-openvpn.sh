@@ -17,8 +17,11 @@ set -e
 cd "$(dirname "$0")"
 BASE_DIR="$(pwd)" #set base folder of script location
 
+# Determine number of CPU cores for parallel compilation
+CPU_CORES=$(sysctl -n hw.logicalcpu)
+
 BUILD_DIR=${BASE_DIR}/../_deps/openvpn_build # work directory
-INSTALL_DIR=${BUILD_DIR}/../openvpn_inst
+INSTALL_DIR=${BASE_DIR}/../_deps/openvpn_inst
 
 echo "******** Creating work-folder (${BUILD_DIR})..."
 rm -rf ${BUILD_DIR}
@@ -40,7 +43,7 @@ echo "************************************************"
 echo "******** Downloading OpenSSL sources..."
 echo "************************************************"
 cd ${BUILD_DIR}
-curl https://www.openssl.org/source/openssl-${OPEN_SSL_VER}.tar.gz | tar zx
+curl -L https://www.openssl.org/source/openssl-${OPEN_SSL_VER}.tar.gz | tar zx
 
 # ##############################################################################
 # Compilation OpenSSl info:
@@ -54,15 +57,15 @@ echo "************************************************"
 cd ${BUILD_DIR}/openssl-${OPEN_SSL_VER}
 
 if [ ${_ARCH} = "arm64" ]; then
-  ./Configure darwin64-arm64-cc shared enable-ec_nistp_64_gcc_128 no-ssl2 no-ssl3 no-comp --openssldir=/usr/local/ssl/macos-arm64
+  ./Configure darwin64-arm64-cc shared enable-ec_nistp_64_gcc_128 no-ssl2 no-ssl3 no-comp --openssldir=/usr/local/ssl/macos-arm64 -mmacosx-version-min=10.14
 else
-  ./Configure darwin64-x86_64-cc shared enable-ec_nistp_64_gcc_128 no-ssl2 no-ssl3 no-comp --openssldir=/usr/local/ssl/macos-x86_64
+  ./Configure darwin64-x86_64-cc shared enable-ec_nistp_64_gcc_128 no-ssl2 no-ssl3 no-comp --openssldir=/usr/local/ssl/macos-x86_64 -mmacosx-version-min=10.14
 fi
 
 echo "************************************************"
 echo "******** Compiling OpenSSL..."
 echo "************************************************"
-make
+make -j$CPU_CORES
 
 echo "************************************************"
 echo "******** Copying OpenSSL include folder and static libraries..."
@@ -84,24 +87,14 @@ cd lzo-${LZO_VER}
 echo "************************************************"
 echo "******** Compiling LZO..."
 echo "************************************************"
-CLFAGS="-mmacosx-version-min=10.6" ./configure --prefix="${INSTALL_DIR}" && make && make install
+CFLAGS="-mmacosx-version-min=10.14" ./configure --prefix="${INSTALL_DIR}" && make -j$CPU_CORES && make install
 
 echo "************************************************"
-echo "******** Cloning OpenVPN sources..."
+echo "******** Cloning OpenVPN sources (version ${OPEN_VPN_VER})..."
 echo "************************************************"
 cd ${BUILD_DIR}
-git clone https://github.com/OpenVPN/openvpn.git
+git clone --branch "${OPEN_VPN_VER}" --depth 1 https://github.com/OpenVPN/openvpn.git
 cd openvpn
-
-echo "************************************************"
-echo "******** Checkout OpenVPN version (${OPEN_VPN_VER})..."
-echo "************************************************"
-git checkout ${OPEN_VPN_VER}
-
-echo "************************************************"
-echo "******** Patching OpenVPN..."
-echo "************************************************"
-patch -p2 < $BASE_DIR/patches/openvpn-osx-lion.patch
 
 echo "************************************************"
 echo "******** OpenVPN: Updating generated configuration files..."
@@ -111,7 +104,9 @@ autoreconf -ivf
 echo "************************************************"
 echo "******** Configuring OpenVPN..."
 echo "************************************************"
-CFLAGS="-mmacosx-version-min=10.6 -I${INSTALL_DIR}/include" \
+OPENSSL_LIBS="-L${INSTALL_DIR}/lib -lssl -lcrypto" \
+OPENSSL_CFLAGS="-I${INSTALL_DIR}/include" \
+CFLAGS="-mmacosx-version-min=10.14 -I${INSTALL_DIR}/include" \
     LDFLAGS="-L${INSTALL_DIR}/lib" \
     ./configure --disable-debug --disable-server --enable-password-save \
     --disable-lz4
@@ -120,7 +115,7 @@ CFLAGS="-mmacosx-version-min=10.6 -I${INSTALL_DIR}/include" \
 echo "************************************************"
 echo "******** Compiling OpenVPN..."
 echo "************************************************"
-make
+make -j$CPU_CORES
 
 echo "********************************"
 echo "******** BUILD COMPLETE ********"
