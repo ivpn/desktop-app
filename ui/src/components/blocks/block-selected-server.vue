@@ -23,6 +23,7 @@
               :isLargeText="true"
               :server="this.server"
               :serverHostName="this.serverHostName"
+              :isCanShowIspInfo="true"
               :isFastestServer="isFastestServer"
               :isRandomServer="isRandomServer"
               :isShowPingPicture="!(isFastestServer || isRandomServer)"

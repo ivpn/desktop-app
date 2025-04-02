@@ -82,6 +82,8 @@ export default {
     isFastestServer: Boolean,
     isRandomServer: Boolean,
 
+    isCanShowIspInfo: Boolean,
+    
     onExpandClick: Function,
     isExpanded: Boolean,
     SecondLineMaxWidth: String,
@@ -116,16 +118,40 @@ export default {
         return `${this.server.city}, ${this.server.country_code}`;
       }
     },
+    selectedHost: function () {
+      if (!this.serverHostName) return null;
+      const hostId  = this.serverHostName.split(".")[0];
+      if (this.server && this.server.hosts && hostId) {
+        return this.server.hosts.find((h) => h.hostname.startsWith(hostId+"."));
+      }
+      return null;
+    },
     selectedHostInfo: function () {
       if (!this.serverHostName) return "";
       return "(" + this.serverHostName.split(".")[0] + ")";
     },
     isp: function () {
-      if (!this.server || !this.server.isp) return "";
-      return "(ISP: " + this.server.isp + ")";
+      const selectedHost = this.selectedHost;
+      if (selectedHost && selectedHost.isp) 
+      {
+        // return ISP info for selected host
+        return "(ISP: " + selectedHost.isp + ")";
+      } 
+      else if (this.server && this.server.isp) 
+      {
+        // check if all hosts have the same ISP
+        // if yes, return ISP info for the server
+        const allSameISP = this.server.hosts.every(
+          (h) => h.isp === this.server.hosts[0].isp
+        );
+        if (allSameISP) 
+          return "(ISP: " + this.server.isp + ")";
+         else 
+          return "";       
+      }
     },
     showISPInfo: function () {
-      return this.$store.state.settings.showISPInfo;
+      return this.$store.state.settings.showISPInfo && this.isCanShowIspInfo === true;
     },
 
     multilineFirstLine: function () {
