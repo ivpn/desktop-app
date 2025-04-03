@@ -26,7 +26,9 @@ setup_go_env() {
     
     # Get system architecture
     local ARCH="$(uname -m)"
-    if [ "${ARCH}" != "x86_64" ] && [ "${ARCH}" != "arm64" ]; then
+    if [ "${ARCH}" = "x86_64" ]; then
+        ARCH="amd64"
+    elif [ "${ARCH}" != "arm64" ]; then
         echo "ERROR: Unsupported architecture: ${ARCH}"
         exit 1
     fi
@@ -47,7 +49,7 @@ setup_go_env() {
     fi
 
     # Use the temporary Go installation
-    export PATH="${TEMP_GOROOT}/bin:$PATH"
+    export PATH="${TEMP_GOROOT}/bin:${PATH}"
     export GOROOT="${TEMP_GOROOT}"
     export GOPATH="${TEMP_GOPATH}"
     
