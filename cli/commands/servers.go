@@ -156,9 +156,11 @@ func (c *CmdServers) Run() error {
 
 		firstHostStr := ""
 		firstHostLoadStr := ""
+		firstHostIspStr := ""
 		if c.hosts {
 			firstHostStr = "\t"
 			if len(s.hosts) > 0 {
+				firstHostIspStr = s.hosts[0].isp
 				firstHostStr = s.hosts[0].hostname + "\t"
 				if c.load {
 
@@ -167,7 +169,21 @@ func (c *CmdServers) Run() error {
 			}
 		}
 
-		str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s\t%s%s%s", s.protocol, s.gateway, s.city, s.countryCode, s.country, s.isp, IPvInfo, pingStr, firstHostStr, firstHostLoadStr)
+		// Get ISP for first host (as it represent the server when we don't show hosts)
+		// if all hosts have the same ISP, show it, otherwise show "<multiple ISPs>"
+		if !c.hosts {
+			for i, h := range s.hosts {
+				if i == 0 {
+					firstHostIspStr = h.isp
+				}
+				if strings.Compare(firstHostIspStr, h.isp) != 0 {
+					firstHostIspStr = "<multiple ISPs>"
+					break
+				}
+			}
+		}
+
+		str = fmt.Sprintf("%s\t%s\t%s (%s)\t %s\t%s\t%s\t%s%s%s", s.protocol, s.gateway, s.city, s.countryCode, s.country, firstHostIspStr, IPvInfo, pingStr, firstHostStr, firstHostLoadStr)
 		fmt.Fprintln(w, str)
 
 		if c.hosts && len(s.hosts) > 1 {
@@ -183,7 +199,7 @@ func (c *CmdServers) Run() error {
 				if c.load {
 					loadStr = fmt.Sprintf("%d", int(h.load+0.5)) + "%\t"
 				}
-				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s\t%s%s%s", "", "", "", "", "", "", "", pingStr, h.hostname+"\t", loadStr)
+				str = fmt.Sprintf("%s\t%s\t%s %s\t %s\t%s\t%s\t%s%s%s", "", "", "", "", "", h.isp, "", pingStr, h.hostname+"\t", loadStr)
 				fmt.Fprintln(w, str)
 			}
 		}
@@ -242,7 +258,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 				if len(h.IPv6.LocalIP) > 0 {
 					isIPv6Tunnel = true
 				}
-				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load})
+				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load, isp: h.ISP})
 			}
 			ret = append(ret, serverDesc{protocol: ProtoName_WireGuard, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, isp: s.ISP, hosts: hosts, isIPv6Tunnel: isIPv6Tunnel})
 		}
@@ -253,7 +269,7 @@ func serversListByVpnType(servers apitypes.ServersInfoResponse, t vpn.Type) []se
 			hosts := make([]hostDesc, 0, len(s.Hosts))
 
 			for _, h := range s.Hosts {
-				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load})
+				hosts = append(hosts, hostDesc{host: strings.TrimSpace(h.Host), hostname: strings.TrimSpace(h.Hostname), load: h.Load, isp: h.ISP})
 			}
 			ret = append(ret, serverDesc{protocol: ProtoName_OpenVPN, gateway: s.Gateway, city: s.City, countryCode: s.CountryCode, country: s.Country, isp: s.ISP, hosts: hosts})
 		}
@@ -381,6 +397,7 @@ type hostDesc struct {
 	host     string // ip
 	pingMs   int
 	load     float32
+	isp      string
 }
 
 type serverDesc struct {
