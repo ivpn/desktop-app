@@ -23,9 +23,11 @@ jobs:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
         days-before-pr-stale: 36500 # 100 years. PRs - effectively disabled. 
+        
+        operations-per-run: 250     # Increase max operations. 
 
-        days-before-stale: 1095  # 3 years
-        days-before-close: 7    # 1 week
+        days-before-stale: 1095     # 3 years
+        days-before-close: 7        # 1 week
 
         stale-issue-message: |
             This issue has been automatically marked as inactive because it has not had activity in the past three years.
