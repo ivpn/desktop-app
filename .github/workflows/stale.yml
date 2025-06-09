@@ -21,8 +21,6 @@ jobs:
     - uses: actions/stale@v9
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-        
-        debug-only: true # Set to true to enable debug logging
 
         days-before-pr-stale: 36500 # 100 years. PRs - effectively disabled. 
 
