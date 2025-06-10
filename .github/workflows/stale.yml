@@ -24,13 +24,13 @@ jobs:
 
         days-before-pr-stale: 36500 # 100 years. PRs - effectively disabled. 
         
-        operations-per-run: 250     # Increase max operations. 
+        operations-per-run: 330     # Increase max operations. 
 
-        days-before-stale: 1095     # 3 years
+        days-before-stale: 730      # 2 years
         days-before-close: 7        # 1 week
 
         stale-issue-message: |
-            This issue has been automatically marked as inactive because it has not had activity in the past three years.
+            This issue has been automatically marked as inactive because it has not had activity in the past two years.
             
             If no further activity occurs, this issue will be automatically closed in one week in order to increase our focus on active topics.
 
