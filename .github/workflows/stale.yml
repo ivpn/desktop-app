@@ -26,11 +26,11 @@ jobs:
         
         operations-per-run: 330     # Increase max operations. 
 
-        days-before-stale: 730      # 2 years
-        days-before-close: 7        # 1 week
+        days-before-stale: 365      # 1 year
+        days-before-close: 6        # Since the action scheduled to run once a week, we set this to 6 days to ensure it closes issues after 7 days of inactivity.
 
         stale-issue-message: |
-            This issue has been automatically marked as inactive because it has not had activity in the past two years.
+            This issue has been automatically marked as inactive because it has not had activity in the past year.
             
             If no further activity occurs, this issue will be automatically closed in one week in order to increase our focus on active topics.
 
