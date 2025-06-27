@@ -130,12 +130,16 @@ function test()
             return 1; 
         fi
     fi
-    if ! mount | grep "/sys/fs/cgroup/net_cls" &>/dev/null ; then
-        echo "Mounting CGROUP subsystem '/sys/fs/cgroup/net_cls'..."
+    if findmnt -n -t cgroup2 /sys/fs/cgroup &>/dev/null ; then
+        echo "Using mounted CGROUP v2 subsystem..."
+    else
+        if ! findmnt -n -t cgroup /sys/fs/cgroup/net_cls &>/dev/null ; then
+            echo "Mounting CGROUP v1 subsystem '/sys/fs/cgroup/net_cls'..."
         if ! mount -t cgroup -o net_cls net_cls /sys/fs/cgroup/net_cls ; then
             echo "ERROR: Failed to mount CGROUP subsystem (net_cls)" 1>&2
             return 2; 
         fi
+    fi
     fi
 
     if ! command -v ${_bin_iptables} &>/dev/null ;   then echo "ERROR: Binary Not Found (${_bin_iptables})" 1>&2; return 1; fi
