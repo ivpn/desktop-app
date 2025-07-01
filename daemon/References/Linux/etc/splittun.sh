@@ -25,10 +25,21 @@
 
 # Split Tunneling cgroup parameters
 _cgroup_name=ivpn-exclude
-_cgroup_classid=0x4956504e      # Anything from 0x00000001 to 0xFFFFFFFF
-_cgroup_folder=/sys/fs/cgroup/net_cls/${_cgroup_name}
+_cgroup_v1_classid=0x4956504e      # Anything from 0x00000001 to 0xFFFFFFFF
 
-# Routing tabel configuration for packets coming from Split-Tunneling environment
+# Detect CGROUP VERSION and initialize version-dependent variables
+if [ -f /sys/fs/cgroup/cgroup.controllers ]; then    
+    _cgroup_version=2
+    _cgroup_folder_root="/sys/fs/cgroup"
+    _iptables_cgroupOpt="--path ${_cgroup_name}"
+else # cgroup v1 (legacy hierarchy)
+    _cgroup_version=1
+    _cgroup_folder_root="/sys/fs/cgroup/net_cls"
+    _iptables_cgroupOpt="--cgroup ${_cgroup_v1_classid}"
+fi
+_cgroup_folder="${_cgroup_folder_root}/${_cgroup_name}"
+
+# Routing table configuration for packets coming from Split-Tunneling environment
 _routing_table_name=ivpn-exclude-tbl
 _routing_table_weight=17            # Anything from 1 to 252
 
@@ -118,23 +129,30 @@ vercomp () {
 
 function test()
 {
-    # TODO: the real mount path have to be taken from /proc/mounts
-    # It has format: <devtype> <mount path> <fstype> <options>
-    # Example: cgroup /sys/fs/cgroup/net_cls,net_prio cgroup rw,nosuid,nodev,noexec,relatime,net_cls,net_prio 0 0
-    # We have to check <fstype>=='cgroup'; <options> contain 'net_cls'
+    # Check cgroup support based on version
+    if [ ${_cgroup_version} -eq 2 ]; then
+        # cgroup v2 - version already detected, no additional checks needed
+        echo "cgroup v2 unified hierarchy detected"
+    else
+        # cgroup v1 (legacy hierarchy)
+        # TODO: the real mount path have to be taken from /proc/mounts
+        # It has format: <devtype> <mount path> <fstype> <options>
+        # Example: cgroup /sys/fs/cgroup/net_cls,net_prio cgroup rw,nosuid,nodev,noexec,relatime,net_cls,net_prio 0 0
+        # We have to check <fstype>=='cgroup'; <options> contain 'net_cls'
 
-    if [ ! -d /sys/fs/cgroup/net_cls ]; then
-        echo "Creating '/sys/fs/cgroup/net_cls' folder ..."
-        if ! mkdir -p /sys/fs/cgroup/net_cls;   then 
-            echo "ERROR: Failed to create CGROUP folder Not Found (/sys/fs/cgroup/net_cls)" 1>&2
-            return 1; 
+        if [ ! -d /sys/fs/cgroup/net_cls ]; then
+            echo "Creating '/sys/fs/cgroup/net_cls' folder ..."
+            if ! mkdir -p /sys/fs/cgroup/net_cls;   then 
+                echo "ERROR: Failed to create CGROUP folder Not Found (/sys/fs/cgroup/net_cls)" 1>&2
+                return 1; 
+            fi
         fi
-    fi
-    if ! mount | grep "/sys/fs/cgroup/net_cls" &>/dev/null ; then
-        echo "Mounting CGROUP subsystem '/sys/fs/cgroup/net_cls'..."
-        if ! mount -t cgroup -o net_cls net_cls /sys/fs/cgroup/net_cls ; then
-            echo "ERROR: Failed to mount CGROUP subsystem (net_cls)" 1>&2
-            return 2; 
+        if ! mount | grep "/sys/fs/cgroup/net_cls" &>/dev/null ; then
+            echo "Mounting CGROUP subsystem '/sys/fs/cgroup/net_cls'..."
+            if ! mount -t cgroup -o net_cls net_cls /sys/fs/cgroup/net_cls ; then
+                echo "ERROR: Failed to mount CGROUP subsystem (net_cls)" 1>&2
+                return 2; 
+            fi
         fi
     fi
 
@@ -190,45 +208,47 @@ function init_iptables()
     # in Inverse mode - we are inversing firewall rules:
     # 'splitted' apps use only VPN connection, all the rest apps use default connection settings (bypassing VPN)
     local inverseOption=""
+    
     if [ ${_is_inversed} -eq 1 ]; then
         inverseOption=" ! "
     fi
+    
     ##############################################
     # Firewall rules for packets coming from cgroup
     ##############################################    
     # NOTE! All rules here added with "-I" parameter. "-I" means insert rule at the top.
     # So, the original rules sequence will be the reverse sequence to the list below.
 
-    ${bin_iptables} -w ${LOCKWAITTIME} -N ${POSTROUTING_mangle}
-    ${bin_iptables} -w ${LOCKWAITTIME} -N ${OUTPUT_mangle}
-    ${bin_iptables} -w ${LOCKWAITTIME} -N ${PREROUTING_mangle}
-    ${bin_iptables} -w ${LOCKWAITTIME} -N ${POSTROUTING_nat}
-    ${bin_iptables} -w ${LOCKWAITTIME} -N ${OUTPUT}
-    ${bin_iptables} -w ${LOCKWAITTIME} -N ${INPUT}
+    ${bin_iptables} -w ${_iptables_locktime} -N ${POSTROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -N ${OUTPUT_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -N ${PREROUTING_mangle}
+    ${bin_iptables} -w ${_iptables_locktime} -N ${POSTROUTING_nat}
+    ${bin_iptables} -w ${_iptables_locktime} -N ${OUTPUT}
+    ${bin_iptables} -w ${_iptables_locktime} -N ${INPUT}
 
     # Save packets mark (to be able to restore mark for incoming packets of the same connection)
     ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_mangle} -j CONNMARK --save-mark    
     # Change the source IP address of packets to the IP address of the interface they're going out on
     # Do this only if default interface is defined (for example: IPv6 interface may be empty when IPv6 not configured on the system)
     if [ ! -z ${def_inf_name} ]; then
-        ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_nat} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -o ${def_inf_name} -j MASQUERADE
+        ${bin_iptables} -w ${_iptables_locktime} -I ${POSTROUTING_nat} -m cgroup ${inverseOption} ${_iptables_cgroupOpt} -o ${def_inf_name} -j MASQUERADE
     fi
-    # Add mark on packets of classid ${_cgroup_classid}
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j MARK --set-mark ${_packets_fwmark_value}
+    # Add mark on packets of classid ${_cgroup_v1_classid}
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} ${_iptables_cgroupOpt} -j MARK --set-mark ${_packets_fwmark_value}
     # Important! Process DNS request before setting mark rule (DNS request should not be marked)
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p tcp --dport 53 -j RETURN
-    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -p udp --dport 53 -j RETURN
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} ${_iptables_cgroupOpt} -p tcp --dport 53 -j RETURN
+    ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT_mangle} -m cgroup ${inverseOption} ${_iptables_cgroupOpt} -p udp --dport 53 -j RETURN
 
     # Allow packets from/to cgroup (bypass IVPN firewall)
     if [ ! -z ${def_inf_name} ]; then
-        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j ACCEPT
-        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} ${_iptables_cgroupOpt} -j ACCEPT
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup ${inverseOption} ${_iptables_cgroupOpt} -j ACCEPT   # this rule is not effective, so we use 'mark' (see the next rule)
         ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m mark --mark ${_packets_fwmark_value} -j ACCEPT
     else
         # If local interface not defined - block all packets from/to cgroup
         # (for example: IPv6 interface may be empty when IPv6 not configured on the system)
-        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j DROP
-        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup ${inverseOption} --cgroup ${_cgroup_classid} -j DROP   # this rule is not effective, so we use 'mark' (see the next rule)
+        ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${inverseOption} ${_iptables_cgroupOpt} -j DROP
+        ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup ${inverseOption} ${_iptables_cgroupOpt} -j DROP   # this rule is not effective, so we use 'mark' (see the next rule)
         ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m mark --mark ${_packets_fwmark_value} -j DROP
     fi
     
@@ -241,8 +261,8 @@ function init_iptables()
         # Allow or block communication for 'splitted' apps in inverse mode
         # E.g.: If we want to block 'splitted' apps when VPN not connected -  'inverse_block' must be '1'
         if [ ${inverse_block} -eq 1 ]; then
-            ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup --cgroup ${_cgroup_classid} -j DROP
-            ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup --cgroup ${_cgroup_classid} -j DROP
+            ${bin_iptables} -w ${_iptables_locktime} -I ${OUTPUT} -m cgroup ${_iptables_cgroupOpt} -j DROP
+            ${bin_iptables} -w ${_iptables_locktime} -I ${INPUT}  -m cgroup ${_iptables_cgroupOpt} -j DROP
         fi 
     fi 
 
@@ -333,7 +353,10 @@ function init()
     ##############################################
     if [ ! -d ${_cgroup_folder} ]; then
         mkdir -p ${_cgroup_folder}
-        echo ${_cgroup_classid} > ${_cgroup_folder}/net_cls.classid
+        # Only set classid for cgroup v1
+        if [ ${_cgroup_version} -eq 1 ]; then
+            echo ${_cgroup_v1_classid} > ${_cgroup_folder}/net_cls.classid
+        fi
     fi
     
     ##############################################
@@ -519,7 +542,7 @@ function removeAllPids()
 {    
     while IFS= read -r line
     do
-        echo $line >> /sys/fs/cgroup/net_cls/cgroup.procs
+        echo $line >> ${_cgroup_folder_root}/cgroup.procs
     done < "${_cgroup_folder}/cgroup.procs"
 }
 
@@ -531,7 +554,7 @@ function removepid()
         exit 1
     fi   
     echo "[+] Removing PID ${_pid} from Split Tunneling group..."
-    echo ${_pid} >> /sys/fs/cgroup/net_cls/cgroup.procs
+    echo ${_pid} >> ${_cgroup_folder_root}/cgroup.procs
 }
 
 function addpid()
@@ -618,8 +641,17 @@ function info()
         echo "[*] cgroup folder NOT exists: '${_cgroup_folder}'"
     else
         echo "[*] cgroup folder exists: '${_cgroup_folder}'"
-        echo "[*] File '${_cgroup_folder}/net_cls.classid':"
-        cat ${_cgroup_folder}/net_cls.classid
+        echo "[*] cgroup version: ${_cgroup_version}"
+        if [ ${_cgroup_version} -eq 1 ] && [ -f ${_cgroup_folder}/net_cls.classid ]; then
+            echo "[*] File '${_cgroup_folder}/net_cls.classid':"
+            cat ${_cgroup_folder}/net_cls.classid
+        elif [ ${_cgroup_version} -eq 2 ]; then
+            echo "[*] cgroup v2 unified hierarchy detected"
+            if [ -f ${_cgroup_folder}/cgroup.procs ]; then
+                echo "[*] Processes in cgroup:"
+                cat ${_cgroup_folder}/cgroup.procs
+            fi
+        fi
     fi
     
     echo ---------------------------------
