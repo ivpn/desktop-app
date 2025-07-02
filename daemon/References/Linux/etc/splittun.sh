@@ -118,24 +118,8 @@ vercomp () {
 
 function test()
 {
-    # TODO: the real mount path have to be taken from /proc/mounts
-    # It has format: <devtype> <mount path> <fstype> <options>
-    # Example: cgroup /sys/fs/cgroup/net_cls,net_prio cgroup rw,nosuid,nodev,noexec,relatime,net_cls,net_prio 0 0
-    # We have to check <fstype>=='cgroup'; <options> contain 'net_cls'
-
-    if [ ! -d /sys/fs/cgroup/net_cls ]; then
-        echo "Creating '/sys/fs/cgroup/net_cls' folder ..."
-        if ! mkdir -p /sys/fs/cgroup/net_cls;   then 
-            echo "ERROR: Failed to create CGROUP folder Not Found (/sys/fs/cgroup/net_cls)" 1>&2
-            return 1; 
-        fi
-    fi
-    if ! mount | grep "/sys/fs/cgroup/net_cls" &>/dev/null ; then
-        echo "Mounting CGROUP subsystem '/sys/fs/cgroup/net_cls'..."
-        if ! mount -t cgroup -o net_cls net_cls /sys/fs/cgroup/net_cls ; then
-            echo "ERROR: Failed to mount CGROUP subsystem (net_cls)" 1>&2
-            return 2; 
-        fi
+    if [ -f /sys/fs/cgroup/cgroup.controllers ]; then    
+        echo "Warning: CGROUP v2 detected!"
     fi
 
     if ! command -v ${_bin_iptables} &>/dev/null ;   then echo "ERROR: Binary Not Found (${_bin_iptables})" 1>&2; return 1; fi
@@ -312,6 +296,31 @@ function init()
         fi
     fi
 
+    ##############################################
+    # Mount net_cls cgroup subsystem
+    # NOTE: CGROUP v1 is in use!
+    ##############################################
+
+    # TODO: the real mount path have to be taken from /proc/mounts
+    # It has format: <devtype> <mount path> <fstype> <options>
+    # Example: cgroup /sys/fs/cgroup/net_cls,net_prio cgroup rw,nosuid,nodev,noexec,relatime,net_cls,net_prio 0 0
+    # We have to check <fstype>=='cgroup'; <options> contain 'net_cls'
+
+    if [ ! -d /sys/fs/cgroup/net_cls ]; then
+        echo "Creating '/sys/fs/cgroup/net_cls' folder ..."
+        if ! mkdir -p /sys/fs/cgroup/net_cls;   then 
+            echo "ERROR: Failed to create CGROUP folder (/sys/fs/cgroup/net_cls)" 1>&2
+            return 1; 
+        fi
+    fi
+    if ! mount | grep "/sys/fs/cgroup/net_cls" &>/dev/null ; then
+        echo "Mounting CGROUP subsystem '/sys/fs/cgroup/net_cls'..."
+        if ! mount -t cgroup -o net_cls net_cls /sys/fs/cgroup/net_cls ; then
+            echo "ERROR: Failed to mount CGROUP subsystem (net_cls)" 1>&2
+            return 2; 
+        fi
+    fi
+    
     ##############################################
     # Ensure previous configuration erased
     ##############################################
@@ -691,6 +700,11 @@ function info()
 
     echo ---------------------------------
     status
+    
+    if [ -f /sys/fs/cgroup/cgroup.controllers ]; then    
+        echo ---------------------------------
+        echo "Warning: CGROUP v2 detected!"        
+    fi
 }
 
 function parseInputArgs()
