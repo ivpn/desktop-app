@@ -3,7 +3,7 @@ module github.com/ivpn/desktop-app/daemon
 go 1.24.0
 
 require (
-	github.com/fsnotify/fsnotify v1.8.0
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/uuid v1.6.0
 	github.com/parsiya/golnk v0.0.0-20221103095132-740a4c27c4ff
 	github.com/stretchr/testify v1.10.0
