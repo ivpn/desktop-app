@@ -208,3 +208,72 @@ export function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
 function deg2rad(deg) {
   return deg * (Math.PI / 180);
 }
+
+/**
+ * Splits two arrays so they share no values, removing the minimal
+ * number of elements and keeping both results non-empty. Conflicts
+ * are split randomly between the two.
+ *
+ * @template T
+ * @param {T[]} arrayA  First input array (all elements unique)
+ * @param {T[]} arrayB  Second input array (all elements unique)
+ * @returns {[T[], T[]]}  Tuple of new arrays [A_noConflict, B_noConflict]
+ * 
+ * @example
+ * // Suppose you have:
+ * //   arrayA = [1, 8, 3, 4]
+ * //   arrayB = [3, 4, 7, 6]
+ * // One possible result is:
+ * //   resultA = [1, 8, 3]
+ * //   resultB = [4, 7, 6]
+ * // (Here 3 was removed from B, 4 from A; total removals = 2)
+ */
+export function resolveArrayConflicts(arrayA, arrayB) {
+  // Input validation
+  if (!Array.isArray(arrayA) || !Array.isArray(arrayB)) {
+    throw new Error('Both parameters must be arrays');
+  }
+  
+  if (arrayA.length === 0 || arrayB.length === 0) {
+    return [arrayA, arrayB];
+  }
+
+  const setB = new Set(arrayB);
+  const conflicts = arrayA.filter(item => setB.has(item));
+  const conflictCount = conflicts.length;
+  
+  if (conflictCount === 0) {
+    return [arrayA, arrayB];
+  }
+
+  // Calculate removal bounds
+  const minRemoveA = Math.max(0, conflictCount - (arrayB.length - 1));
+  const maxRemoveA = Math.min(conflictCount, arrayA.length - 1);
+
+  if (minRemoveA > maxRemoveA) {
+    throw new Error('Cannot resolve conflicts: removal constraints cannot be satisfied');
+  }
+
+  // Shuffle conflicts
+  if (conflictCount > 1) {
+    for (let i = conflictCount - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [conflicts[i], conflicts[j]] = [conflicts[j], conflicts[i]];
+    }
+  }
+
+  // Aim for balanced removal (approximately half from each array)
+  const idealRemoveA = Math.floor(conflictCount / 2);
+  // Clamp the ideal value within the valid bounds
+  const removeCountA = Math.max(minRemoveA, Math.min(maxRemoveA, idealRemoveA));
+
+  // Create sets for efficient filtering
+  const removeFromA = new Set(conflicts.slice(0, removeCountA));
+  const removeFromB = new Set(conflicts.slice(removeCountA));
+
+  // Filter arrays and return results
+  const resultA = arrayA.filter(item => !removeFromA.has(item));
+  const resultB = arrayB.filter(item => !removeFromB.has(item));
+
+  return [resultA, resultB];
+}

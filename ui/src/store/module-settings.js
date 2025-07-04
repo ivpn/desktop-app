@@ -474,6 +474,13 @@ export default {
   },
 
   getters: {
+    selectedEntryHost: (state) => {
+      return getServerHostById(state.serverEntry, state.serverEntryHostId);
+    },
+    selectedExitHost: (state) => {
+      return getServerHostById(state.serverExit, state.serverExitHostId);
+    },
+
     vpnType: (state) => {
       return state.vpnType;
     },
@@ -1368,7 +1375,7 @@ function getServerHostByIp(server, hostIP) {
 }
 
 function getServerHostById(server, hostId) {
-  if (!hostId) return null;
+  if (!hostId || !server) return null;
   hostId = hostId.split(".")[0]; // convert hostname to hostId (if necessary)
   for (const h of server.hosts) {
     if (h.hostname.startsWith(hostId + ".")) return h;

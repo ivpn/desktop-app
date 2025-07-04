@@ -247,6 +247,7 @@
                 class="serverHostSelectBtn"
                 v-on:click.stop
                 v-on:click="onServerHostSelected(server, host)"
+                v-bind:class="{disabledButton: isInaccessibleServer(server, host) !== null}"
               >
                 <div style="display: flex; margin-top: 2px; margin-bottom: 6px">
                   <div
@@ -579,16 +580,16 @@ export default {
       }, 0);
     },
 
-    checkAndNotifyInaccessibleServer: async function (server) {
-      return CheckAndNotifyInaccessibleServer(this.isExitServer, server);
+    checkAndNotifyInaccessibleServer: async function (server, host = null) {
+      return CheckAndNotifyInaccessibleServer(this.isExitServer, server, host);
     },
     // isInaccessibleServer returns:
     // - null if server is acceptble
     // - object { sameGateway: true } - servers have same gateway
     // - object { sameCountry: true } - servers are from same country (only if this.$store.state.settings.multihopWarnSelectSameCountries === true)
     // - objext { sameISP: true }     - servers are operated by same ISP (only if this.$store.state.settings.multihopWarnSelectSameISPs === true)
-    isInaccessibleServer: function (server) {
-      return CheckIsInaccessibleServer(this.isExitServer, server);
+    isInaccessibleServer: function (server, host = null) {
+      return CheckIsInaccessibleServer(this.isExitServer, server, host);
     },
 
     onServerSelected: async function (server) {
@@ -604,7 +605,7 @@ export default {
       this.onBack();
     },
     onServerHostSelected: async function (server, host) {
-      if ((await this.checkAndNotifyInaccessibleServer(server)) == false)
+      if ((await this.checkAndNotifyInaccessibleServer(server, host)) == false)
         return;
       this.onServerChanged(server, this.isExitServer != null, host.hostname);
       this.onBack();
