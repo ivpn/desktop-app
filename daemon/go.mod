@@ -5,12 +5,12 @@ go 1.24.0
 require (
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/google/uuid v1.6.0
-	github.com/mdlayher/wifi v0.0.0-00010101000000-000000000000
+	github.com/mdlayher/wifi v0.5.1-0.20250704183335-1b2199ae492f
 	github.com/parsiya/golnk v0.0.0-20221103095132-740a4c27c4ff
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/net v0.38.0
 	golang.org/x/sync v0.12.0
-	golang.org/x/sys v0.32.0
+	golang.org/x/sys v0.33.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
 	golang.zx2c4.com/wireguard/windows v0.5.3
 )
@@ -26,13 +26,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/crypto v0.39.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-// Replace the original wifi package with a fork that supports Linux nl80211 Robust Security Network Information Elements
-// (the RSN support is implemented in commit 669f8f6f406ddd933985c985971dcf81477a8c06)
-//
-// TODO: Remove this when this PR is merged in the original package: https://github.com/mdlayher/wifi/pull/126
-replace github.com/mdlayher/wifi => github.com/stenya/wifi-linux-nl80211 v0.5.1-0.20250703182619-669f8f6f406d
