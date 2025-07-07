@@ -50,27 +50,27 @@ echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 #   ldd -r -v <binary_file> # check shared libraries dependencies
 #
 # TODO: think how to avoid using CGO
-if [ ! -z "$IVPN_BUILD_SKIP_GLIBC_VER_CHECK" ] || [ ! -z "$GITHUB_ACTIONS" ]; 
-then
-  echo "[!] ! GLIBC version check skipped (according to env vars configuration) !"
-else
-  GLIBC_VER_MAX_REQUIRED="2.31"
-  GLIBC_VER=$(ldd --version | grep "ldd (" | awk '{print $(NF)}')
-  if [[ "${GLIBC_VER}" > "${GLIBC_VER_MAX_REQUIRED}" ]]; 
-  then
-      echo "[!] GLIBC version '${GLIBC_VER}' is greater than reqired '${GLIBC_VER_MAX_REQUIRED}'"
-      echo "[!] Compiling with the new GLIBC version will not allow the program to start on systems with the old GLIBC."
-      echo "[ ] (you can define env var 'IVPN_BUILD_SKIP_GLIBC_VER_CHECK' to skip this check"
-      read -p "[?] Do you want to continue? [y\n] (N - default): " yn
-      case $yn in
-        [Yy]* ) ;;
-        * ) 
-        echo "[!] Build interrupted by user"
-        exit 1
-        ;;
-      esac
-  fi
-fi
+#if [ ! -z "$IVPN_BUILD_SKIP_GLIBC_VER_CHECK" ] || [ ! -z "$GITHUB_ACTIONS" ]; 
+#then
+#  echo "[!] ! GLIBC version check skipped (according to env vars configuration) !"
+#else
+#  GLIBC_VER_MAX_REQUIRED="2.31"
+#  GLIBC_VER=$(ldd --version | grep "ldd (" | awk '{print $(NF)}')
+#  if [[ "${GLIBC_VER}" > "${GLIBC_VER_MAX_REQUIRED}" ]]; 
+#  then
+#      echo "[!] GLIBC version '${GLIBC_VER}' is greater than reqired '${GLIBC_VER_MAX_REQUIRED}'"
+#      echo "[!] Compiling with the new GLIBC version will not allow the program to start on systems with the old GLIBC."
+#      echo "[ ] (you can define env var 'IVPN_BUILD_SKIP_GLIBC_VER_CHECK' to skip this check"
+#      read -p "[?] Do you want to continue? [y\n] (N - default): " yn
+#      case $yn in
+#        [Yy]* ) ;;
+#        * ) 
+#        echo "[!] Build interrupted by user"
+#        exit 1
+#        ;;
+#      esac
+#  fi
+#fi
 
 # Build
 cd $SCRIPT_DIR/../../../
@@ -88,7 +88,7 @@ if [ ! -z "$IVPN_NO_WIFI" ]; then
   BUILDTAG_NOWIFI="nowifi"
 fi
 
-go build -buildmode=pie -tags "${BUILDTAG_DEBUG} ${BUILDTAG_NOWIFI}" -o "$OUT_FILE" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
+CGO_ENABLED=0 go build -buildmode=pie -tags "${BUILDTAG_DEBUG} ${BUILDTAG_NOWIFI}" -o "$OUT_FILE" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
 
 echo "Compiled binary: '$OUT_FILE'"
 
