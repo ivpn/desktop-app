@@ -127,20 +127,22 @@ export function InitConnectionParamsObject() {
   if (settings.multihopWarnSelectSameISPs === true) {
     const entryHosts = vpnParamsObj?.EntryVpnServer?.Hosts;
     const exitHosts = vpnParamsObj?.MultihopExitServer?.Hosts;
-    const uniqueEntryISPs = [...new Set(entryHosts.map(host => host.isp))];
-    const uniqueExitISPs = [...new Set(exitHosts.map(host => host.isp))];
+   
+    if (entryHosts && exitHosts) {
+      const uniqueEntryISPs = [...new Set(entryHosts.map(host => host.isp).filter(isp => isp && isp.trim()))];
+      const uniqueExitISPs = [...new Set(exitHosts.map(host => host.isp).filter(isp => isp && isp.trim()))];
+      try {
+        // Remove intersections between entry and exit ISPs
+        // and return new arrays of ISPs for entry and exit servers
+        const [newEntryISPs, newExitISPs] = resolveArrayConflicts(uniqueEntryISPs, uniqueExitISPs);
 
-    try {
-      // Remove intersections between entry and exit ISPs
-      // and return new arrays of ISPs for entry and exit servers
-      const [newEntryISPs, newExitISPs] = resolveArrayConflicts(uniqueEntryISPs, uniqueExitISPs);
-
-      vpnParamsObj.EntryVpnServer.Hosts = entryHosts.filter(host => newEntryISPs.includes(host.isp));
-      vpnParamsObj.MultihopExitServer.Hosts = exitHosts.filter(host => newExitISPs.includes(host.isp));
-    } catch (err) {
-      // function resolveArrayConflicts can throw an error if conflicts cannot be resolved
-      // in this case we will not change the hosts
-      console.warn("Unable to resolve ISP conflicts:", err);
+        vpnParamsObj.EntryVpnServer.Hosts = entryHosts.filter(host => newEntryISPs.includes(host.isp));
+        vpnParamsObj.MultihopExitServer.Hosts = exitHosts.filter(host => newExitISPs.includes(host.isp));
+      } catch (err) {
+        // function resolveArrayConflicts can throw an error if conflicts cannot be resolved
+        // in this case we will not change the hosts
+        console.warn("Unable to resolve ISP conflicts:", err);
+      }
     }
   }
 
