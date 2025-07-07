@@ -11,7 +11,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
