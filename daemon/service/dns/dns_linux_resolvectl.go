@@ -162,10 +162,17 @@ func rctl_stopDnsChangeMonitor() {
 
 func rctl_startDnsChangeMonitor() {
 	go func() {
+		// Recover from panic (if any)
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error(fmt.Sprintf("!!! PANIC !!! [recovered]: %v", r))
+			}
+		}()
+
 		rctl_stopDnsChangeMonitor()
 
 		if rctl_localInterfaceIp.IsUnspecified() || manualDNS.IsEmpty() {
-			log.Warning(fmt.Sprintf("unable to start DNS-change monitoring: dns configuration is not defined"))
+			log.Warning("unable to start DNS-change monitoring: dns configuration is not defined")
 			return
 		}
 
