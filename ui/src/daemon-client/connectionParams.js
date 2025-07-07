@@ -1,5 +1,6 @@
 import store from "@/store";
 import { VpnTypeEnum, DnsEncryption } from "@/store/types";
+import { resolveArrayConflicts } from "@/helpers/helpers";
 
 const ServerSelectionEnum = Object.freeze({
   Default: 0, // Server is manually defined
@@ -120,6 +121,28 @@ export function InitConnectionParamsObject() {
     metadata.ServerSelectionExit = ServerSelectionEnum.Random;
 
   let fwOn = store.state.settings.firewallActivateOnConnect === true;
+
+  // If multihopWarnSelectSameISPs is true, 
+  // we need to ensure that service will not connect to hosts with the same ISP.
+  if (settings.multihopWarnSelectSameISPs === true) {
+    const entryHosts = vpnParamsObj?.EntryVpnServer?.Hosts;
+    const exitHosts = vpnParamsObj?.MultihopExitServer?.Hosts;
+    const uniqueEntryISPs = [...new Set(entryHosts.map(host => host.isp))];
+    const uniqueExitISPs = [...new Set(exitHosts.map(host => host.isp))];
+
+    try {
+      // Remove intersections between entry and exit ISPs
+      // and return new arrays of ISPs for entry and exit servers
+      const [newEntryISPs, newExitISPs] = resolveArrayConflicts(uniqueEntryISPs, uniqueExitISPs);
+
+      vpnParamsObj.EntryVpnServer.Hosts = entryHosts.filter(host => newEntryISPs.includes(host.isp));
+      vpnParamsObj.MultihopExitServer.Hosts = exitHosts.filter(host => newExitISPs.includes(host.isp));
+    } catch (err) {
+      // function resolveArrayConflicts can throw an error if conflicts cannot be resolved
+      // in this case we will not change the hosts
+      console.warn("Unable to resolve ISP conflicts:", err);
+    }
+  }
 
   return {
     Metadata: metadata,

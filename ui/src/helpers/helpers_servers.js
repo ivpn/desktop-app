@@ -33,14 +33,46 @@ export function IsServerSupportIPv6(server) {
   return false;
 }
 
+// Each server's host has an ISP property, so this function
+// returns an array of unique ISPs 
+// NOTE: we should not use server.isp property anymore!
+export function GetSreverISPs(server) {
+  if (!server || !server.hosts) return [];
+
+  const isps = new Set();
+  for (const host of server.hosts) {
+    if (host && host.isp) {
+      isps.add(host.isp);
+    }
+  }
+  return Array.from(isps);
+}
+
 // CheckIsInaccessibleServer returns:
 // - null if server is acceptble
 // - object { sameGateway: true } - servers have same gateway
 // - object { sameCountry: true } - servers are from same country (only if store.state.settings.multihopWarnSelectSameCountries === true)
 // - objext { sameISP: true }     - servers are operated by same ISP (only if store.state.settings.multihopWarnSelectSameISPs === true)
-export function CheckIsInaccessibleServer(isExitServer, server) {
+export function CheckIsInaccessibleServer(isExitServer, server, host = null) {
+  const settings = store.state.settings;
+  if (!settings) return null;
+
   if (store == null || server == null) return null;
-  if (store.state.settings.isMultiHop === false) return null;
+  if (settings.isMultiHop === false) return null;
+    
+  let getSingleSvrISP = function (server) {
+    if (!server || !server.hosts) return null;
+    const isps = GetSreverISPs(server);
+    if (isps.length === 1) {
+      return isps[0];
+    }
+    return null; // Multiple ISPs, cannot determine a single ISP
+  }
+
+  // if ispCheck is not provided, means we can skip ISP check
+  // since the server has multiple ISPs
+  let ispCheck = (host)? host.isp : getSingleSvrISP(server);
+
   let ccSkip = "";
   let ispSkip = "";
   let gatewaySkip = false;
@@ -49,21 +81,24 @@ export function CheckIsInaccessibleServer(isExitServer, server) {
   if (
     // ENTRY SERVER
     !isExitServer &&
-    store.state.settings.serverExit &&
-    (connected || !store.state.settings.isRandomExitServer)
+    settings.serverExit &&
+    (connected || !settings.isRandomExitServer)
   ) {
-    ccSkip = store.state.settings.serverExit.country_code;
-    ispSkip = store.state.settings.serverExit.isp;
-    gatewaySkip = store.state.settings.serverExit.gateway;
+    ccSkip = settings.serverExit.country_code;
+    gatewaySkip = settings.serverExit.gateway;    
+    const selectedExitHost = store.getters["settings/selectedExitHost"];
+    ispSkip = (selectedExitHost)? selectedExitHost.isp : getSingleSvrISP(settings.serverExit);
+
   } else if (
     // EXIT SERVER
     isExitServer &&
-    store.state.settings.serverEntry &&
-    (connected || !store.state.settings.isRandomServer)
+    settings.serverEntry &&
+    (connected || !settings.isRandomServer)
   ) {
-    ccSkip = store.state.settings.serverEntry.country_code;
-    ispSkip = store.state.settings.serverEntry.isp;
-    gatewaySkip = store.state.settings.serverEntry.gateway;
+    ccSkip = settings.serverEntry.country_code;    
+    gatewaySkip = settings.serverEntry.gateway;
+    const selectedEntryHost = store.getters["settings/selectedEntryHost"];
+    ispSkip = (selectedEntryHost)? selectedEntryHost.isp : getSingleSvrISP(settings.serverEntry);
   }
 
   if (server.gateway === gatewaySkip)
@@ -74,7 +109,7 @@ export function CheckIsInaccessibleServer(isExitServer, server) {
     };
 
   if (
-    store.state.settings.multihopWarnSelectSameCountries === true &&
+    settings.multihopWarnSelectSameCountries === true &&
     server.country_code === ccSkip
   )
     return {
@@ -85,8 +120,8 @@ export function CheckIsInaccessibleServer(isExitServer, server) {
     };
 
   if (
-    store.state.settings.multihopWarnSelectSameISPs === true &&
-    server.isp === ispSkip
+    settings.multihopWarnSelectSameISPs === true &&
+    ispCheck && ispSkip && ispCheck === ispSkip
   )
     return {
       sameISP: true,
@@ -98,7 +133,7 @@ export function CheckIsInaccessibleServer(isExitServer, server) {
   return null;
 }
 
-export async function CheckAndNotifyInaccessibleServer(isExitServer, server) {
+export async function CheckAndNotifyInaccessibleServer(isExitServer, server, host = null) {
   let showMessageBoxFunc = null;
   if (IsRenderer()) {
     // renderer
@@ -117,7 +152,7 @@ export async function CheckAndNotifyInaccessibleServer(isExitServer, server) {
     return true;
   }
 
-  let svrInaccessibleInfo = CheckIsInaccessibleServer(isExitServer, server);
+  let svrInaccessibleInfo = CheckIsInaccessibleServer(isExitServer, server, host);
   if (svrInaccessibleInfo !== null) {
     if (svrInaccessibleInfo.sameGateway === true) {
       await showMessageBoxFunc({

@@ -145,7 +145,7 @@ export default {
           (h) => h.isp === this.server.hosts[0].isp
         );
         if (allSameISP) 
-          return "(ISP: " + this.server.isp + ")";
+          return "(ISP: " + this.server.hosts[0].isp + ")";
          else 
           return "";       
       }

@@ -696,7 +696,7 @@ async function menuItemConnect(entrySvr, exitSvr, entryHost, exitHost) {
   try {
     if (
       exitSvr &&
-      (await CheckAndNotifyInaccessibleServer(true, exitSvr)) !== true
+      (await CheckAndNotifyInaccessibleServer(true, exitSvr, exitHost)) !== true
     )
       return;
 
