@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -40,12 +41,9 @@ var (
 	resolvBackupFile       string      = "/etc/resolv.conf.ivpnsave"
 	defaultFilePermissions os.FileMode = 0644
 
-	done chan struct{}
+	done       chan struct{}
+	done_mutex sync.Mutex
 )
-
-func init() {
-	done = make(chan struct{})
-}
 
 // implInitialize doing initialization stuff (called on application start)
 func rconf_implInitialize() error {
@@ -87,7 +85,14 @@ func rconf_implResume(localInterfaceIP net.IP) error {
 // Set manual DNS.
 // 'localInterfaceIP' - not in use for Linux implementation
 func rconf_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
-	rconf_stopDNSChangeMonitoring()
+	func() {
+		done_mutex.Lock()
+		defer done_mutex.Unlock()
+		if done != nil {
+			close(done) // stop previous monitoring (if any)
+		}
+		done = make(chan struct{})
+	}()
 
 	if dnsCfg.IsEmpty() {
 		return DnsSettings{}, rconf_implDeleteManual(nil)
@@ -138,6 +143,7 @@ func rconf_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFo
 		return DnsSettings{}, err
 	}
 
+	stopChan := done
 	// enable file change monitoring
 	go func() {
 		w, err := fsnotify.NewWatcher()
@@ -164,7 +170,7 @@ func rconf_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFo
 			var evt fsnotify.Event
 			select {
 			case evt = <-w.Events:
-			case <-done:
+			case <-stopChan:
 				// monitoring stopped
 				return
 			}
@@ -177,7 +183,7 @@ func rconf_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFo
 			// wait 2 seconds for reaction (in case if we are stopping of when multiple consecutive file changes)
 			select {
 			case <-time.After(time.Second * 2):
-			case <-done:
+			case <-stopChan:
 				// monitoring stopped
 				return
 			}
@@ -202,13 +208,16 @@ func rconf_implDeleteManual(localInterfaceIP net.IP) error {
 }
 
 func rconf_stopDNSChangeMonitoring() {
-	// stop file change monitoring
-	select {
-	case done <- struct{}{}:
-		break
-	default:
-		break
+	done_mutex.Lock()
+	defer done_mutex.Unlock()
+
+	if done == nil {
+		return // already stopped
 	}
+
+	// close the channel to stop monitoring
+	close(done)
+	done = nil
 }
 
 func rconf_isBackupExists() bool {

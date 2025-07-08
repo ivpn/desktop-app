@@ -30,6 +30,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -43,12 +44,12 @@ import (
 // 	https://blogs.gnome.org/mcatanzaro/2020/12/17/understanding-systemd-resolved-split-dns-and-vpn-configuration/
 
 var (
-	rctl_dnsChange_chan_done chan struct{}
-	rctl_localInterfaceIp    net.IP
+	rctl_done             chan struct{}
+	rctl_done_mutex       sync.Mutex
+	rctl_localInterfaceIp net.IP
 )
 
 func rctl_implInitialize() error {
-	rctl_dnsChange_chan_done = make(chan struct{})
 	return nil
 }
 
@@ -151,16 +152,27 @@ func rctl_error(err error) error {
 }
 
 func rctl_stopDnsChangeMonitor() {
-	// stop file change monitoring
-	select {
-	case rctl_dnsChange_chan_done <- struct{}{}:
-		break
-	default:
-		break
+	rctl_done_mutex.Lock()
+	defer rctl_done_mutex.Unlock()
+
+	if rctl_done == nil {
+		return // already stopped
 	}
+
+	// close the channel to stop monitoring
+	close(rctl_done)
+	rctl_done = nil
 }
 
 func rctl_startDnsChangeMonitor() {
+	rctl_done_mutex.Lock()
+	defer rctl_done_mutex.Unlock()
+	if rctl_done != nil {
+		close(rctl_done) // stop previous monitoring (if any)
+	}
+	rctl_done = make(chan struct{})
+
+	stopChan := rctl_done
 	go func() {
 		// Recover from panic (if any)
 		defer func() {
@@ -168,8 +180,6 @@ func rctl_startDnsChangeMonitor() {
 				log.Error(fmt.Sprintf("!!! PANIC !!! [recovered]: %v", r))
 			}
 		}()
-
-		rctl_stopDnsChangeMonitor()
 
 		if rctl_localInterfaceIp.IsUnspecified() || manualDNS.IsEmpty() {
 			log.Warning("unable to start DNS-change monitoring: dns configuration is not defined")
@@ -220,7 +230,7 @@ func rctl_startDnsChangeMonitor() {
 			var evt fsnotify.Event
 			select {
 			case evt = <-w.Events:
-			case <-rctl_dnsChange_chan_done:
+			case <-stopChan:
 				// monitoring stopped
 				return
 			}
@@ -228,7 +238,7 @@ func rctl_startDnsChangeMonitor() {
 			// wait 2 seconds for reaction (needed to avoid multiple reactions on the changes in short period of time)
 			select {
 			case <-time.After(time.Second * 2):
-			case <-done:
+			case <-stopChan:
 				// monitoring stopped
 				return
 			}
