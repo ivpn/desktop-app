@@ -64,6 +64,62 @@ try_systemd_stop() {
     fi
 }
 
+# Remove AppArmor local override rules that were added for IVPN.
+# This function cleans up IVPN-specific AppArmor rules from local override files
+# and removes empty override files. The main AppArmor profiles remain untouched.
+uninstall_apparmor_rules() {
+  if ! silent command -v apparmor_parser; then
+    return 0
+  fi
+
+  # AppArmor profile names to check
+  local PROFILE_NAMES="
+    openvpn
+    usr.sbin.openvpn
+  "
+  local APPARMOR_DIR="/etc/apparmor.d"
+  local APPARMOR_LOCAL_DIR="$APPARMOR_DIR/local"
+  
+  # Find the first existing OpenVPN AppArmor profile
+  local PROFILE_NAME=""
+  for name in $PROFILE_NAMES; do
+    if [ -f "$APPARMOR_DIR/$name" ]; then
+      PROFILE_NAME="$name"
+      break
+    fi
+  done
+  
+  if [ -z "$PROFILE_NAME" ]; then
+    return 0
+  fi
+  
+  local LOCAL_OVERRIDE="$APPARMOR_LOCAL_DIR/$PROFILE_NAME"
+  
+  # Check if our rules are present
+  if [ ! -f "$LOCAL_OVERRIDE" ] || ! grep -q "# IVPN rules - START" "$LOCAL_OVERRIDE"; then
+    return 0
+  fi
+  
+  echo "[i] Found OpenVPN AppArmor profile: $APPARMOR_DIR/$PROFILE_NAME"
+  
+  # Remove our rules using sed (delete from START to END markers, inclusive)
+  sed -i '/# IVPN rules - START/,/# IVPN rules - END/d' "$LOCAL_OVERRIDE"
+  echo "[+] Removed IVPN rules from $LOCAL_OVERRIDE"
+  
+  # Remove the file if it's empty (ignoring whitespace)
+  if [ -f "$LOCAL_OVERRIDE" ] && [ ! -s "$LOCAL_OVERRIDE" ] || [ "$(grep -v '^[[:space:]]*$' "$LOCAL_OVERRIDE" | wc -l)" -eq 0 ]; then
+    rm "$LOCAL_OVERRIDE"
+    echo "[+] Removed empty local override file $LOCAL_OVERRIDE"
+  fi
+  
+  # Reload the AppArmor profile
+  if silent apparmor_parser -r "$APPARMOR_DIR/$PROFILE_NAME"; then
+    echo "[+] Successfully reloaded OpenVPN AppArmor profile"
+  else
+    echo "[!] Warning: Failed to reload OpenVPN AppArmor profile"
+  fi
+}
+
 uninstall_bash_completion() {
     # get bash completion folder (according to https://github.com/scop/bash-completion)
     bash_competion_folder=$(pkg-config --variable=completionsdir bash-completion 2>&1) 
@@ -78,6 +134,8 @@ uninstall_bash_completion() {
 
 # stop & disable service
 try_systemd_stop
+
+uninstall_apparmor_rules
 
 uninstall_bash_completion
 
