@@ -87,6 +87,10 @@ export default {
     onExpandClick: Function,
     isExpanded: Boolean,
     SecondLineMaxWidth: String,
+
+    // When isShowServerISP==true, the ISP info will be shown for the selected server (location) 
+    // if all server hosts have the same ISP.
+    isShowServerISP: Boolean,
   },
   data: () => ({
     isImgLoadError: false,
@@ -137,7 +141,7 @@ export default {
         // return ISP info for selected host
         return "(ISP: " + selectedHost.isp + ")";
       } 
-      else if (this.server && this.server.isp) 
+      else if (this.isShowServerISP && this.server && this.server.isp) 
       {
         // check if all hosts have the same ISP
         // if yes, return ISP info for the server
