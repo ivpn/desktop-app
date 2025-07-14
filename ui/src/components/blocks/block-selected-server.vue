@@ -27,6 +27,7 @@
               :isFastestServer="isFastestServer"
               :isRandomServer="isRandomServer"
               :isShowPingPicture="!(isFastestServer || isRandomServer)"
+              :isShowServerISP="false"
             />
           </div>
         </div>
