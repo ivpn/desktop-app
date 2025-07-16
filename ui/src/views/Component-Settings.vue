@@ -368,7 +368,7 @@ div.row {
   width: 100vw;
 }
 
-.rightPanel * {
+.rightPanel {
   @extend .settingsDefaultText;
 }
 
