@@ -153,19 +153,21 @@ if [[ $ISSUES -eq 0 ]]; then
     echo "✓ All binaries compatible with GLIBC $GLIBC_VER_MAX_REQUIRED"
 else
     echo    "⚠ $ISSUES binaries need attention"
-    echo    ""
-    echo    "[!] Some binaries require newer GLIBC than $GLIBC_VER_MAX_REQUIRED"
+    echo    "    Some binaries require newer GLIBC than $GLIBC_VER_MAX_REQUIRED"
     echo    "    These binaries may not work on older Linux distributions."
-    read -p "[?] Continue anyway? [y/N]: " yn
-    case $yn in
-        [Yy]* ) 
-            echo "[i] Continuing with build despite GLIBC compatibility issues..."
-            ;;
-        * ) 
-            echo "[ ] Build stopped by user due to GLIBC compatibility concerns"
-            exit 1
-            ;;
-    esac
+    if [ -z "$IVPN_BUILD_SKIP_GLIBC_VER_CHECK" ] && [ -z "$GITHUB_ACTIONS" ]; 
+    then
+      read -p "[?] Continue anyway? [y/N]: " yn
+      case $yn in
+          [Yy]* ) 
+              echo "[i] Continuing with build despite GLIBC compatibility issues..."
+              ;;
+          * ) 
+              echo "[ ] Build stopped by user due to GLIBC compatibility concerns"
+              exit 1
+              ;;
+      esac
+    fi
 fi
 echo "======================================================"
 
