@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 SCRIPT_DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 OUT_DIR="$SCRIPT_DIR/_out_bin"
 
-GLIBC_VER_MAX_REQUIRED="2.27"
+GLIBC_VER_MAX_REQUIRED="2.31" # GLIBC v2.31 is the default version in Ubuntu 20.04 LTS (Focal Fossa)
 
 set -e
 
