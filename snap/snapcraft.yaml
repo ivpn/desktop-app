@@ -18,7 +18,7 @@
 #
 # **********************************************
 # Installation:
-#     $ sudo snap install <filename>.snap --danderous
+#     $ sudo snap install <filename>.snap --dangerous
 #
 # After package installed:
 #   (this is not required, since the SnapStore enabled auto-connection
@@ -171,10 +171,8 @@ parts:
   daemon:
     plugin: nil
     build-snaps:
-      - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
+      - go/1.24/stable
     build-packages:
-      - libiw30           # libiw for wifiNotifier functionality
-      - libiw-dev         # libiw for wifiNotifier functionality
       - curl
       - systemd           # getting 'resolvectl' binary from there
     stage-packages:
@@ -193,7 +191,7 @@ parts:
   cli:
     plugin: nil
     build-snaps:
-      - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
+      - go/1.24/stable
     build-packages:
       - git
     source: .
@@ -208,7 +206,7 @@ parts:
   wireguard-tools:
     plugin: nil
     build-snaps:
-    - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
+    - go/1.24/stable
     build-packages:
     - git
     source: ./daemon/References/Linux
@@ -222,7 +220,7 @@ parts:
   dnscrypt-proxy:
     plugin: nil
     build-snaps:
-    - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
+    - go/1.24/stable
     build-packages:
     - git
     source: ./daemon/References/Linux
@@ -235,7 +233,7 @@ parts:
   obfs4proxy:
     plugin: nil
     build-snaps:
-    - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
+    - go/1.24/stable
     build-packages:
     - git
     source: ./daemon/References/Linux
@@ -248,7 +246,7 @@ parts:
   v2ray:
     plugin: nil
     build-snaps:
-    - go/1.20/stable # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
+    - go/1.24/stable
     build-packages:
     - git
     source: ./daemon/References/Linux
@@ -261,7 +259,7 @@ parts:
   kemhelper:
     plugin: nil
     build-snaps:
-    - go/1.20/stable # go # v2ray can not be compiled with go 1.21 yet (all other parts must be compiled with the same go version!)
+    - go/1.24/stable
     build-packages:
     - git
     - astyle
