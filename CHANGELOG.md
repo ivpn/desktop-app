@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.14.34 - 2025-07-21
+
+[NEW] Displaying ISP information for each host  
+[FIX] (Linux) Improved compatibility with modern Linux kernels
+
+[Download IVPN Client for Windows](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.14.34.exe)  
+SHA256: 619bfd062feaf9f2bcbed73cf27ad384aeeda7d0b51fa126b79aa59d1c8614ee  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.14.34.dmg)  
+SHA256: a1024b219174d3fccaac592be8129cc43f9690fb1a6dcb3ecbcad6b1e610a4aa  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.14.34-arm64.dmg)  
+SHA256: 08cfa04033591a7320ed2c06697ecc34e9666e9a0f026babc7c4b665bf4c0303  
+
+[Download IVPN Client for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.14.34_amd64.deb)  
+SHA256: 5f96db5af1eaf7bf2db2393ee61451fe8e2e0ba33366def5d9e79b73a1598c42  
+[Download IVPN Client for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.14.34-1.x86_64.rpm)  
+SHA256: 91127c4f14bea92ee90b219c09497f169237cbd821185a2494a34a72dd7ffb8b  
+
+[Download IVPN Client UI for Linux (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.14.34_amd64.deb)  
+SHA256: d0e99f7b482867065f17f86989aa7d2feb66ea345f6d74874164761a27bb2ac5  
+[Download IVPN Client UI for Linux (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.14.34-1.x86_64.rpm)  
+SHA256: 03cde206dc599779f2f6683d845a741e69ce4cd4bf63ce004ec61e9512ec5db0  
+
+
 ## Version 3.14.29 - 2024-10-05
 
 [FIX] (macOS) iCloud synchronization issues (for WireGuard connection)  
