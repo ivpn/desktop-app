@@ -155,25 +155,22 @@ func (c *CmdDns) Run() error {
 	var servers *apitypes.ServersInfoResponse
 	// do we have to change custom DNS configuration ?
 	if c.reset || len(c.dns) > 0 {
-		// get default connection parameters (dns, anti-tracker, ... etc.)
-		defConnCfg, err := _proto.GetDefConnectionParams()
-		if err != nil {
-			return err
-		}
-		defManualDns := defConnCfg.Params.ManualDNS
+		// erase DNS settings
+		defManualDns := dns.DnsSettings{}
 
-		if c.reset {
-			defManualDns = dns.DnsSettings{}
-		} else {
-			defManualDns.DnsHost = c.dns
+		if len(c.dns) > 0 {
+			dnsSvr := dns.DnsServerConfig{Address: c.dns}
+
 			if len(c.dohTemplate) > 0 {
-				defManualDns.Encryption = dns.EncryptionDnsOverHttps
-				defManualDns.DohTemplate = c.dohTemplate
+				dnsSvr.Encryption = dns.EncryptionDnsOverHttps
+				dnsSvr.Template = c.dohTemplate
 			}
 			if len(c.dotTemplate) > 0 {
-				defManualDns.Encryption = dns.EncryptionDnsOverTls
-				defManualDns.DohTemplate = c.dotTemplate
+				dnsSvr.Encryption = dns.EncryptionDnsOverTls
+				dnsSvr.Template = c.dotTemplate
 			}
+
+			defManualDns = dns.DnsSettings{Servers: []dns.DnsServerConfig{dnsSvr}}
 		}
 
 		if err := _proto.SetManualDNS(defManualDns, service_types.AntiTrackerMetadata{}); err != nil {

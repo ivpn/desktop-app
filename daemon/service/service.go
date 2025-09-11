@@ -809,7 +809,7 @@ func (s *Service) saveDefaultDnsParams(dnsCfg dns.DnsSettings, antiTrackerCfg ty
 	return s.setConnectionParams(defaultParams)
 }
 
-// GetActiveDNS() eeturns DNS active settings for current VPN connection:
+// GetActiveDNS() returns DNS active settings for current VPN connection:
 // - if 'antiTracker' is enabled - returns DNS of AntiTracker server
 // - else if manual DNS is defined - returns manual DNS
 // - else returns default DNS configuration for current VPN connection
@@ -997,7 +997,8 @@ func (s *Service) getAntiTrackerDns(isHardcore bool, antiTrackerPlusList string)
 
 // Get AntiTracker info according to DNS settings
 func (s *Service) getAntiTrackerInfo(dnsVal dns.DnsSettings) (types.AntiTrackerMetadata, error) {
-	if dnsVal.IsEmpty() || dnsVal.Encryption != dns.EncryptionNone {
+	// If uses encrypted DNS or multiple DNS servers - it is custom DNS, no AntiTracker info
+	if dnsVal.IsEmpty() || dnsVal.UseEncryption() || len(dnsVal.Servers) != 1 {
 		return types.AntiTrackerMetadata{}, nil
 	}
 
@@ -1006,7 +1007,7 @@ func (s *Service) getAntiTrackerInfo(dnsVal dns.DnsSettings) (types.AntiTrackerM
 		return types.AntiTrackerMetadata{}, fmt.Errorf("failed to determine AntiTracker parameters: %w", err)
 	}
 
-	dnsHost := strings.ToLower(strings.TrimSpace(dnsVal.DnsHost))
+	dnsHost := strings.ToLower(strings.TrimSpace(dnsVal.Servers[0].Address))
 	if dnsHost == "" {
 		return types.AntiTrackerMetadata{}, nil
 	}
@@ -1480,8 +1481,11 @@ func (s *Service) splitTunnelling_ApplyConfig() (retError error) {
 			return fmt.Errorf("failed to apply the firewall rule to allow DNS requests only to the IVPN server: %w", err)
 		}
 		if !dnsCfg.IsEmpty() {
-			if err := firewall.SingleDnsRuleOn(dnsCfg.Ip()); err != nil {
-				return fmt.Errorf("failed to apply the firewall rule to allow DNS requests only to the IVPN server: %w", err)
+			dnsAddrUnencrypted := dnsCfg.GetUnencryptedServersAddresses()
+			if len(dnsAddrUnencrypted) > 0 {
+				if err := firewall.SingleDnsRuleOn(dnsAddrUnencrypted); err != nil {
+					return fmt.Errorf("failed to apply the firewall rule to allow DNS requests only to the IVPN server: %w", err)
+				}
 			}
 		}
 	}

@@ -848,16 +848,11 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 				break
 			}
 
-			// wrapper around strings.Fields(). Returns only first field or empty string.
-			getSingleField := func(s string) string {
-				fields := strings.Fields(s)
-				if len(fields) <= 0 {
-					return ""
-				}
-				return fields[0]
+			// validate DNS configuration
+			if err := req.Dns.ValidateAndNormalize(); err != nil {
+				p.sendErrorResponse(conn, reqCmd, fmt.Errorf("invalid DNS configuration: %w", err))
+				break
 			}
-			req.Dns.DnsHost = getSingleField(req.Dns.DnsHost)
-			req.Dns.DohTemplate = getSingleField(req.Dns.DohTemplate)
 
 			_, err := p._service.SetManualDNS(req.Dns, req.AntiTracker)
 			if err != nil {

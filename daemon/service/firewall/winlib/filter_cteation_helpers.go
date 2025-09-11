@@ -300,7 +300,7 @@ func NewFilterBlockDNS(
 	keySublayer syscall.GUID,
 	dispName string,
 	dispDescription string,
-	exceptionIP net.IP,
+	exceptionIPs []net.IP,
 	isPersistent bool) Filter {
 
 	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
@@ -313,9 +313,16 @@ func NewFilterBlockDNS(
 	}
 
 	f.AddCondition(&ConditionIPRemotePort{Match: FwpMatchEqual, Port: 53})
-
-	if exceptionIP != nil && len(exceptionIP) > 0 && exceptionIP.To4() != nil {
-		f.AddCondition(&ConditionIPRemoteAddressV4{Match: FwpMatchNotEqual, IP: exceptionIP, Mask: net.IPv4(255, 255, 255, 255)})
+	for _, exceptionIP := range exceptionIPs {
+		if len(exceptionIP) > 0 {
+			if exceptionIP.To4() != nil {
+				f.AddCondition(&ConditionIPRemoteAddressV4{Match: FwpMatchNotEqual, IP: exceptionIP, Mask: net.IPv4(255, 255, 255, 255)})
+			} else {
+				var ipBytes [16]byte
+				copy(ipBytes[:], exceptionIP)
+				f.AddCondition(&ConditionIPRemoteAddressV6{Match: FwpMatchNotEqual, IP: ipBytes, PrefixLen: 128})
+			}
+		}
 	}
 	return f
 }

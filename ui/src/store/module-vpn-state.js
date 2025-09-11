@@ -686,9 +686,9 @@ function saveDnsSettings(context, dnsStatus) {
   // dnsStatus:
   //{
   //  Dns: {
-  //    DnsHost: "",
-  //    Encryption: DnsEncryption.None,
-  //    DohTemplate: "",
+  //    Servers: [
+  //      { Address: ..., Encryption: ..., Template: ... },
+  //    ],     
   //  },
   //  AntiTrackerStatus: {
   //    Enabled: false, //bool
@@ -716,7 +716,7 @@ function saveDnsSettings(context, dnsStatus) {
     // Since AntiTracker has higher priority than custom DNS settings -
     // update custom DNS settings only if AntiTracker is disabled (custom DNS settings are in use)
     // This allows to keep custom DNS settings when AntiTracker is enabled/disabled
-    let isCustomDns = !!dnsStatus.Dns && !!dnsStatus.Dns.DnsHost;
+    let isCustomDns = !!dnsStatus.Dns?.Servers?.[0]?.Address;
 
     context.dispatch("settings/dnsIsCustom", isCustomDns, {
       root: true,

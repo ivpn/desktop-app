@@ -100,7 +100,7 @@
                     position: fixed;
                     width: 12px;
                     margin-left: 5px;
-                    margin-top: 10px;
+                    margin-top: 8px;
                   "
                   src="@/assets/arrow-bottom.svg"
                 />
@@ -160,13 +160,23 @@ import { Platform, PlatformEnum } from "@/platform/platform";
 
 const sender = window.ipcSender;
 
+function checkIPv4List(ipListString) {
+  if (!ipListString || ipListString.trim() === '') return false;
+  // Split by comma and validate each IP
+  const ips = ipListString.split(',').map(ip => ip.trim());
+  const singleIPRegex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
+  return ips.every(ip => singleIPRegex.test(ip));
+}
+
 function checkIsDnsIPError(dnsIpString) {
   // IPv4 or IPv6
   //var expression = /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/;
 
   // IPv4
-  var expression = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
-  return !expression.test(dnsIpString.trim());
+  //var expression = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
+  //return !expression.test(dnsIpString.trim());
+
+  return !checkIPv4List(dnsIpString);
 }
 
 function processError(e) {
@@ -204,9 +214,16 @@ export default {
       isDnsValueChanged: false,
       thePredefinedDohConfigSelected: null,
       val_linuxDnsIsResolvConfMgmt: false,
+
+      // Since UI currently has single input for DNS IPs - we need to keep string with comma-separated IPs
+      // This is temporary solution until UI will be updated to have multiple inputs for DNS IPs
+      _dnsAddressesString: "",
+      _encryption: DnsEncryption.None,
+      _template: "",
     };
   },
   mounted() {
+    this.updateLocalDnsSettings();
     this.requestPredefinedDohConfigs();
     this.val_linuxDnsIsResolvConfMgmt =
       this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
@@ -228,6 +245,7 @@ export default {
       return false;
     },
 
+    // Validate and APPLY changes
     async applyChanges(e) {
       this.isEditingFinished = true;
       // when component closing ->  update changed DNS (if necessary)
@@ -250,6 +268,20 @@ export default {
 
       if (this.isDnsValueChanged !== true) return true;
       try {
+        // convert value to comma-separated list of IPs
+        let ipList = this._dnsAddressesString.split(',').map(ip => ip.trim()).filter(ip => ip !== '');            
+        // update newDnsCfg.Servers for all provided IPs
+        let newDnsCfg = Object.assign({}, this.$store.state.settings.dnsCustomCfg);
+        newDnsCfg.Servers = ipList.map(ip => ({
+          Address: ip,
+          Encryption: this.dnsEncryptionValue || DnsEncryption.None,
+          Template: this.dnsDohTemplate || ""
+        }));
+
+        console.debug('Applying DNS :', this._dnsAddressesString, " => ", ipList, " => ", newDnsCfg);
+        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+
+        // Apply changes
         await sender.SetDNS();
         this.isDnsValueChanged = false;
       } catch (e) {
@@ -265,13 +297,10 @@ export default {
       const newVal = this.thePredefinedDohConfigSelected;
       if (newVal && newVal.DnsHost && newVal.DohTemplate) {
         this.isDnsValueChanged = true;
-        let newDnsCfg = Object.assign(
-          {},
-          this.$store.state.settings.dnsCustomCfg,
-        );
-        newDnsCfg.DnsHost = newVal.DnsHost;
-        newDnsCfg.DohTemplate = newVal.DohTemplate;
-        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+        
+        this._dnsAddressesString = newVal.DnsHost;
+        this._encryption = DnsEncryption.DnsOverHttps;
+        this._template = newVal.DohTemplate;
       }
     },
     requestPredefinedDohConfigs() {
@@ -280,6 +309,16 @@ export default {
       setTimeout(() => {
         sender.RequestDnsPredefinedConfigs();
       }, 0);
+    },
+
+    updateLocalDnsSettings() {
+      const dnsServers = this.dnsCustomCfg.Servers || [];
+       // Since UI currently has single input for DNS IPs - we need to keep string with comma-separated IPs
+      // This is temporary solution until UI will be updated to have multiple inputs for DNS IPs
+      this._dnsAddressesString = dnsServers.map(server => server.Address).join(', ');
+       // Take into account only first server (have to be changed in future when full support of multiple servers will be implemented)
+      this._encryption = this.$store.state.settings.dnsCustomCfg?.Servers?.[0]?.Encryption || DnsEncryption.None;
+      this._template = this.$store.state.settings.dnsCustomCfg?.Servers?.[0]?.Template || "";
     },
   },
   watch: {
@@ -290,12 +329,19 @@ export default {
       this.val_linuxDnsIsResolvConfMgmt =
         this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
     },
+    dnsCustomCfg() {
+      this.updateLocalDnsSettings();
+    },
   },
 
   computed: {
     // needed for 'watch'
     daemonSettings() {
       return this.$store.state.settings.daemonSettings;
+    },
+
+    dnsCustomCfg() {
+      return this.$store.state.settings.dnsCustomCfg;
     },
 
     isShowDnsproxyDescription() {
@@ -334,13 +380,7 @@ export default {
           return false;
 
         const dSettings = this.$store.state.settings.daemonSettings;
-        if (
-          !dSettings ||
-          !dSettings.UserPrefs ||
-          !dSettings.UserPrefs.Linux ||
-          dSettings.UserPrefs.Linux.IsDnsMgmtOldStyle == undefined ||
-          dSettings.UserPrefs.Linux.IsDnsMgmtOldStyle == null
-        )
+        if (dSettings?.UserPrefs?.Linux?.IsDnsMgmtOldStyle == null)
           return false;
 
         return true;
@@ -388,10 +428,7 @@ export default {
 
     dnsIsEncrypted: {
       get() {
-        return (
-          this.$store.state.settings.dnsCustomCfg.Encryption !==
-          DnsEncryption.None
-        );
+        return this._encryption  !==  DnsEncryption.None;
       },
     },
 
@@ -404,30 +441,21 @@ export default {
 
     dnsHost: {
       get() {
-        return this.$store.state.settings.dnsCustomCfg.DnsHost;
+        return this._dnsAddressesString; 
       },
       set(value) {
         this.isDnsValueChanged = true;
-        let newDnsCfg = Object.assign(
-          {},
-          this.$store.state.settings.dnsCustomCfg,
-        );
-        newDnsCfg.DnsHost = value.trim();
-
-        if (
-          this.$store.state.settings.dnsCustomCfg.Encryption ===
-          DnsEncryption.None
-        ) {
-          newDnsCfg.DohTemplate = "";
-        }
-
-        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+        this._dnsAddressesString = value;
       },
     },
-
+    dnsEncryptionValue: {
+      get() {
+        return this._encryption;
+      },
+    },
     dnsEncryption: {
       get() {
-        switch (this.$store.state.settings.dnsCustomCfg.Encryption) {
+        switch (this.dnsEncryptionValue) {
           case DnsEncryption.DnsOverTls:
             return "DoT";
           case DnsEncryption.DnsOverHttps:
@@ -447,29 +475,21 @@ export default {
             break;
           default:
             enc = DnsEncryption.None;
+            this._template = "";
         }
         this.isDnsValueChanged = true;
-        let newDnsCfg = Object.assign(
-          {},
-          this.$store.state.settings.dnsCustomCfg,
-        );
-        newDnsCfg.Encryption = enc;
-        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+        this._encryption = enc;
       },
     },
 
     dnsDohTemplate: {
       get() {
-        return this.$store.state.settings.dnsCustomCfg.DohTemplate;
+        return this._template;
       },
       set(value) {
         this.isDnsValueChanged = true;
-        let newDnsCfg = Object.assign(
-          {},
-          this.$store.state.settings.dnsCustomCfg,
-        );
-        newDnsCfg.DohTemplate = value.trim();
-        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+        this._encryption = DnsEncryption.DnsOverHttps;
+        this._template = value;
       },
     },
 
@@ -481,12 +501,11 @@ export default {
         // We show "paste" image even when selected not-encrypted DNS
         let cfgs = this.$store.state.dnsPredefinedConfigurations;
         if (!cfgs) return false;
+
         if (!this.dnsIsEncrypted && cfgs.length > 0) return true;
 
         // check if there are any predefined configuration available (for current encryption)
-        return this.predefinedDohConfigs && this.predefinedDohConfigs.length > 0
-          ? true
-          : false;
+        return this.predefinedDohConfigs && this.predefinedDohConfigs.length > 0;        
       },
     },
     predefinedDohConfigs: {
@@ -495,7 +514,7 @@ export default {
         let cfgs = this.$store.state.dnsPredefinedConfigurations;
         if (!cfgs) return null;
 
-        const expectedEnc = this.$store.state.settings.dnsCustomCfg.Encryption;
+        const expectedEnc = this._encryption;
         let filtered = cfgs.filter(
           (cfg) =>
             cfg.Encryption === expectedEnc &&

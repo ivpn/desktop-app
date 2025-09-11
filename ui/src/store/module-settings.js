@@ -161,9 +161,9 @@ const getDefaultState = () => {
     // dns
     dnsIsCustom: false,
     dnsCustomCfg: {
-      DnsHost: "",
-      Encryption: DnsEncryption.None,
-      DohTemplate: "",
+      Servers: [
+        { Address: "", Encryption: DnsEncryption.None, Template: "" }
+      ],       
     },
 
     // firewall
@@ -403,9 +403,7 @@ export default {
       else {
         state.dnsIsCustom = false;
         state.dnsCustomCfg = {
-          DnsHost: "",
-          Encryption: DnsEncryption.None,
-          DohTemplate: "",
+          Servers: [ { Address: "", Encryption: DnsEncryption.None, Template: "" }],
         };
       }
     },

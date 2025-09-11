@@ -303,8 +303,12 @@ func (wg *WireGuard) getServiceName() string {
 func (wg *WireGuard) getOSSpecificConfigParams() (interfaceCfg []string, peerCfg []string) {
 	manualDNS := wg.internals.manualDNSRequired
 	if !manualDNS.IsEmpty() {
-		if manualDNS.Encryption == dns.EncryptionNone {
-			interfaceCfg = append(interfaceCfg, "DNS = "+manualDNS.Ip().String())
+		if !manualDNS.UseEncryption() {
+			addresses := make([]string, 0, len(manualDNS.Servers))
+			for _, srv := range manualDNS.Servers {
+				addresses = append(addresses, srv.Address)
+			}
+			interfaceCfg = append(interfaceCfg, "DNS = "+strings.Join(addresses, ", "))
 		} else {
 			interfaceCfg = append(interfaceCfg, "DNS = "+wg.DefaultDNS().String())
 			log.Info("(info) The DoH/DoT custom DNS configuration will be applied after connection established")

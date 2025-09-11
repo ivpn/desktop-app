@@ -33,7 +33,7 @@ const configSvrName = "ivpnmanualconfig"
 // SaveConfigFile - update template file 'configFileTemplate's with required data
 // and save result into 'configFileOut'
 // The implementation is very simple and based in replacing specific lines in template.
-func SaveConfigFile(dnsSvrStamp, configFileTemplate, configFileOut string) error {
+func SaveConfigFile(dnsSvrStamps []string, configFileTemplate, configFileOut string) error {
 	if _, err := os.Stat(configFileTemplate); err != nil {
 		return err
 	}
@@ -44,23 +44,35 @@ func SaveConfigFile(dnsSvrStamp, configFileTemplate, configFileOut string) error
 	}
 
 	lines := strings.Split(string(input), "\n")
+	out := strings.Builder{}
 
 	isUpdated_server_names := false
 	isUpdated_static_myserver := false
 	isUpdated_stamp := false
 
-	for i, line := range lines {
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
 		if strings.HasPrefix(line, "# server_names = ") {
-			lines[i] = fmt.Sprintf("server_names = ['%s']", configSvrName)
+			server_names := make([]string, 0, len(dnsSvrStamps))
+			for i := 1; i <= len(dnsSvrStamps); i++ {
+				server_names = append(server_names, fmt.Sprintf("'%s%d'", configSvrName, i))
+			}
+			out.WriteString(fmt.Sprintf("server_names = [%s]\n", strings.Join(server_names, ", ")))
 			isUpdated_server_names = true
+
 		} else if strings.HasPrefix(line, "# [static.'myserver']") {
-			lines[i] = fmt.Sprintf("[static.'%s']", configSvrName)
+			for j, stamp := range dnsSvrStamps {
+				out.WriteString(fmt.Sprintf("\n[static.'%s%d']\n", configSvrName, j+1))
+				out.WriteString(fmt.Sprintf("stamp = '%s'\n", stamp))
+			}
 			isUpdated_static_myserver = true
-		} else if strings.HasPrefix(line, "#") && strings.Contains(line, "stamp =") {
-			lines[i] = fmt.Sprintf("stamp = '%s'", dnsSvrStamp)
 			isUpdated_stamp = true
+
+		} else if strings.HasPrefix(line, "#") && strings.Contains(line, "stamp =") && isUpdated_static_myserver {
+			continue
+		} else {
+			out.WriteString(line + "\n")
 		}
 	}
 
@@ -68,8 +80,7 @@ func SaveConfigFile(dnsSvrStamp, configFileTemplate, configFileOut string) error
 		return fmt.Errorf("failed to update configuration from template file")
 	}
 
-	output := strings.Join(lines, "\n")
-	err = os.WriteFile(configFileOut, []byte(output), 0600) // read only for owner
+	err = os.WriteFile(configFileOut, []byte(out.String()), 0600) // read only for owner
 	if err != nil {
 		return err
 	}

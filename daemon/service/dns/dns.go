@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
@@ -80,89 +79,6 @@ func wrapErrorIfFailed(err error) error {
 		return err
 	}
 	return &DnsError{Err: err}
-}
-
-type DnsEncryption int
-
-const (
-	EncryptionNone         DnsEncryption = 0
-	EncryptionDnsOverTls   DnsEncryption = 1
-	EncryptionDnsOverHttps DnsEncryption = 2
-)
-
-type DnsMetadata struct {
-	IsInternalDnsServer bool // FALSE if DNS settings are custom (defined by user)
-}
-
-type DnsSettings struct {
-	DnsHost     string // DNS host IP address
-	Encryption  DnsEncryption
-	DohTemplate string // DoH/DoT template URI (for Encryption = DnsOverHttps or Encryption = DnsOverTls)
-
-	metadata DnsMetadata
-}
-
-func (d DnsSettings) Metadata() DnsMetadata {
-	return d.metadata
-}
-
-// Create DnsSettings object with no encryption
-func DnsSettingsCreate(ip net.IP) DnsSettings {
-	if ip == nil {
-		return DnsSettings{}
-	}
-	return DnsSettings{DnsHost: ip.String(), metadata: DnsMetadata{IsInternalDnsServer: true}}
-}
-
-func (d DnsSettings) Equal(x DnsSettings) bool {
-	if d.Encryption != x.Encryption ||
-		d.DohTemplate != x.DohTemplate ||
-		d.DnsHost != x.DnsHost {
-		return false
-	}
-	return true
-}
-
-func (d DnsSettings) IsIPv6() bool {
-	ip := d.Ip()
-	if ip == nil {
-		return false
-	}
-	return ip.To4() == nil
-}
-
-func (d DnsSettings) Ip() net.IP {
-	return net.ParseIP(d.DnsHost)
-}
-
-func (d DnsSettings) IsEmpty() bool {
-	if strings.TrimSpace(d.DnsHost) == "" {
-		return true
-	}
-	ip := d.Ip()
-	if ip == nil || ip.Equal(net.IPv4zero) || ip.Equal(net.IPv4bcast) || ip.Equal(net.IPv6zero) {
-		return true
-	}
-	return false
-}
-
-func (d DnsSettings) InfoString() string {
-	if d.IsEmpty() {
-		return "<none>"
-	}
-	host := strings.TrimSpace(d.DnsHost)
-	template := strings.TrimSpace(d.DohTemplate)
-
-	switch d.Encryption {
-	case EncryptionDnsOverTls:
-		return host + " (DoT " + template + ")"
-	case EncryptionDnsOverHttps:
-		return host + " (DoH " + template + ")"
-	case EncryptionNone:
-		return host
-	default:
-		return host + " (UNKNOWN ENCRYPTION)"
-	}
 }
 
 // Initialize is doing initialization stuff
@@ -284,8 +200,10 @@ func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 		}
 	}()
 
-	if dnsCfg.Encryption != EncryptionDnsOverHttps {
-		return fmt.Errorf("unsupported DNS encryption type")
+	for _, svr := range dnsCfg.Servers {
+		if svr.Encryption != EncryptionNone && svr.Encryption != EncryptionDnsOverHttps {
+			return fmt.Errorf("dnscryptProxyProcessStart: unsupported DNS encryption type %d", svr.Encryption)
+		}
 	}
 
 	binPath, configPathTemplate, configPathMutable, logfile := platform.DnsCryptProxyInfo()
@@ -294,34 +212,42 @@ func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 	}
 
 	// Configure + start dnscrypt-proxy
+	stamps := make([]string, 0, len(dnsCfg.Servers))
+	for _, svr := range dnsCfg.Servers {
+		stamp := dnscryptproxy.ServerStamp{ServerAddrStr: svr.Address, Proto: dnscryptproxy.StampProtoTypePlain}
 
-	stamp := dnscryptproxy.ServerStamp{Proto: dnscryptproxy.StampProtoTypeDoH}
-	//stamp.Props |= dnscryptproxy.ServerInformalPropertyDNSSEC
-	//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoLog
-	//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoFilter
+		if svr.Encryption == EncryptionDnsOverHttps {
+			u, err := url.Parse(svr.Template)
+			if err != nil {
+				return err
+			}
+			if u.Scheme != "https" {
+				return fmt.Errorf("bad template URL scheme: %q", u.Scheme)
+			}
+			stamp.Proto = dnscryptproxy.StampProtoTypeDoH
+			stamp.Path = u.Path
+		}
 
-	stamp.ServerAddrStr = dnsCfg.DnsHost
+		//stamp.Props |= dnscryptproxy.ServerInformalPropertyDNSSEC
+		//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoLog
+		//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoFilter
 
-	u, err := url.Parse(dnsCfg.DohTemplate)
-	if err != nil {
-		return err
+		stamps = append(stamps, stamp.String())
 	}
-
-	if u.Scheme != "https" {
-		return fmt.Errorf("bad template URL scheme: " + u.Scheme)
-	}
-	stamp.ProviderName = u.Host
-	stamp.Path = u.Path
 
 	// generate dnscrypt-proxy configuration
-	if err = dnscryptproxy.SaveConfigFile(stamp.String(), configPathTemplate, configPathMutable); err != nil {
+	if err := dnscryptproxy.SaveConfigFile(stamps, configPathTemplate, configPathMutable); err != nil {
 		return err
 	}
 
-	dnscryptproxy.Init(binPath, configPathMutable, logfile)
+	if err := dnscryptproxy.Init(binPath, configPathMutable, logfile); err != nil {
+		return err
+	}
 
-	if err = dnscryptproxy.Start(); err != nil {
-		dnscryptproxy.Stop()
+	if err := dnscryptproxy.Start(); err != nil {
+		if stopErr := dnscryptproxy.Stop(); stopErr != nil {
+			log.Warning("failed to stop dnscrypt-proxy: ", stopErr)
+		}
 		return err
 	}
 
