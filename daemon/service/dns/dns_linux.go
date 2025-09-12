@@ -160,12 +160,12 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 	}
 
 	// start encrypted DNS configuration (if required)
-	if !dnsCfg.IsEmpty() && dnsCfg.Encryption != EncryptionNone {
+	if !dnsCfg.IsEmpty() && dnsCfg.UseEncryption() {
 		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
 			return DnsSettings{}, err
 		}
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
-		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
+		dnsCfg = DnsSettings{Servers: []DnsServerConfig{{Address: "127.0.0.1", Encryption: EncryptionNone, Template: ""}}}
 	}
 
 	return f_implSetManual(dnsCfg, localInterfaceIP)

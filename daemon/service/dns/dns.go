@@ -226,6 +226,7 @@ func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 			}
 			stamp.Proto = dnscryptproxy.StampProtoTypeDoH
 			stamp.Path = u.Path
+			stamp.ProviderName = u.Hostname()
 		}
 
 		//stamp.Props |= dnscryptproxy.ServerInformalPropertyDNSSEC
@@ -239,6 +240,7 @@ func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 	if err := dnscryptproxy.SaveConfigFile(stamps, configPathTemplate, configPathMutable); err != nil {
 		return err
 	}
+	log.Debug(fmt.Sprintf("dnscrypt-proxy config: %q", configPathMutable))
 
 	if err := dnscryptproxy.Init(binPath, configPathMutable, logfile); err != nil {
 		return err

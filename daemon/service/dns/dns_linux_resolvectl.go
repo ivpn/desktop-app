@@ -30,6 +30,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -112,7 +113,7 @@ func rctl_implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFor
 func rctl_applySetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
 	//resolvectl domain privacy0 '~.'
 	//resolvectl default-route privacy0 true
-	//resolvectl dns privacy0 8.8.8.8
+	//resolvectl dns privacy0 1.1.1.1 1.0.0.1
 
 	if localInterfaceIP == nil || localInterfaceIP.IsUnspecified() {
 		log.Info("'Set DNS' call ignored due to no local address initialized")
@@ -133,7 +134,12 @@ func rctl_applySetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoFo
 	if err != nil {
 		return DnsSettings{}, rctl_error(err)
 	}
-	err = shell.Exec(log, binPath, "dns", localInterfaceName, dnsCfg.DnsHost)
+
+	args := []string{"dns", localInterfaceName}
+	for _, svr := range dnsCfg.Servers {
+		args = append(args, svr.Address)
+	}
+	err = shell.Exec(log, binPath, args...)
 	if err != nil {
 		return DnsSettings{}, rctl_error(err)
 	}
@@ -181,13 +187,13 @@ func rctl_startDnsChangeMonitor() {
 			}
 		}()
 
-		if rctl_localInterfaceIp.IsUnspecified() || manualDNS.IsEmpty() {
+		if rctl_localInterfaceIp == nil || rctl_localInterfaceIp.IsUnspecified() || manualDNS.IsEmpty() {
 			log.Warning("unable to start DNS-change monitoring: dns configuration is not defined")
 			return
 		}
 
 		// Files to be monitored for changes
-		var filesToMonotor = [...]string{"/run/systemd/resolve/stub-resolv.conf", "/run/systemd/resolve/resolv.conf", "/etc/resolv.conf"}
+		var filesToMonitor = [...]string{"/run/systemd/resolve/stub-resolv.conf", "/run/systemd/resolve/resolv.conf", "/etc/resolv.conf"}
 
 		w, err := fsnotify.NewWatcher()
 		if err != nil {
@@ -204,12 +210,12 @@ func rctl_startDnsChangeMonitor() {
 		for {
 			// Remove files from monitoring (if they are)
 			// We have to remove/add files each time after file change detection
-			for _, fpath := range filesToMonotor {
+			for _, fpath := range filesToMonitor {
 				w.Remove(fpath)
 			}
 			// Start looking for files change
 			isMonitoringStarted := false
-			for _, fpath := range filesToMonotor {
+			for _, fpath := range filesToMonitor {
 				if _, err := os.Stat(fpath); err != nil {
 					log.Info(fmt.Sprintf("unable to start file-change monitoring for file '%s': %s", fpath, err.Error()))
 				} else {
@@ -295,7 +301,11 @@ func rctl_configOk() (bool, error) {
 	binPath := platform.ResolvectlBinPath()
 	outText, _, _, _, _ := shell.ExecAndGetOutput(nil, 1024*5, "", binPath, "status", localInterfaceName)
 
-	regExpCurDns, err := regexp.Compile(fmt.Sprintf("(?i)[ \t\n\r]+DNS Servers:[ \t]*%s[ \t\n\r]+", manualDNS.DnsHost))
+	svrsLineRegexp := strings.Builder{}
+	for _, svr := range manualDNS.Servers {
+		svrsLineRegexp.WriteString(fmt.Sprintf("[ \t]*%s[ \t\n\r]+", svr.Address))
+	}
+	regExpCurDns, err := regexp.Compile(fmt.Sprintf("(?i)[ \t\n\r]+DNS Servers:%s", svrsLineRegexp.String()))
 	if err != nil {
 		return false, err
 	}
