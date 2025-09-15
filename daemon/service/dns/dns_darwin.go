@@ -25,6 +25,7 @@ package dns
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
@@ -73,15 +74,25 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 
 	dnscryptproxy.Stop()
 	// start encrypted DNS configuration (if required)
-	if dnsCfg.Encryption != EncryptionNone {
+	if !dnsCfg.IsEmpty() && dnsCfg.UseEncryption() {
 		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
 			return DnsSettings{}, err
 		}
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
-		dnsCfg = DnsSettings{DnsHost: "127.0.0.1"}
+		dnsCfg = DnsSettings{Servers: []DnsServerConfig{{Address: "127.0.0.1"}}}
 	}
 
-	err := shell.Exec(log, platform.DNSScript(), "-set_alternate_dns", dnsCfg.Ip().String())
+	ip := strings.Builder{} // space-separated list of IPs
+	for _, svr := range dnsCfg.Servers {
+		if len(svr.Address) == 0 {
+			continue
+		}
+		if ip.Len() > 0 {
+			ip.WriteString(",")
+		}
+		ip.WriteString(svr.Address)
+	}
+	err := shell.Exec(log, platform.DNSScript(), []string{"-set_alternate_dns", ip.String()}...)
 	if err != nil {
 		return DnsSettings{}, fmt.Errorf("set manual DNS: Failed to change DNS: %w", err)
 	}

@@ -210,12 +210,14 @@ function is_alternate_ivpn_dns_defined {
 }
 
 function define_alternate_ivpn_dns {
-  DOMAIN_NAME=$1
-  VPN_DNS=$2
+  DOMAIN_NAME=$1  
+  VPN_DNS=$2 # VPN_DNS must be comma-separated list of DNS IPs (e.g. "1.1.1.1,8.8.4.4")
+  
+  # Convert comma-separated list to space-separated list
+  VPN_DNS=${VPN_DNS//,/ }
 
   #echo "DOMAIN: $DOMAIN_NAME"
   echo "Set IVPN DNS: $VPN_DNS"
-
   scutil <<_EOF
       d.init
       d.add ServerAddresses * ${VPN_DNS}
@@ -228,12 +230,14 @@ _EOF
 
 function define_ivpn_dns {
   DOMAIN_NAME=$1
-  VPN_DNS=$2
+  VPN_DNS=$2 # VPN_DNS must be comma-separated list of DNS IPs (e.g. "1.1.1.1,8.8.4.4")
+  
+  # Convert comma-separated list to space-separated list
+  VPN_DNS=${VPN_DNS//,/ }
 
   #echo "DOMAIN: $DOMAIN_NAME"
   echo "Set IVPN DNS: $VPN_DNS"
 
-  # save IVPN DNS parameters
   scutil <<_EOF
       d.init
       d.add ServerAddresses * ${VPN_DNS}
@@ -297,7 +301,7 @@ if [ "$1" = "-up" ] ; then
 elif [ "$1" = "-up_set_dns" ] ; then
 
         DOMAIN_NAME="ivpn-client"
-        VPN_DNS=$2 #DNS IP
+        VPN_DNS=$2 #DNS IP: comma-separated list of DNS IPs
 
         define_ivpn_dns $DOMAIN_NAME $VPN_DNS
 
@@ -331,7 +335,7 @@ elif [ "$1" = "-update" ] ; then
 elif [ "$1" = "-set_alternate_dns" ] ; then
 
   DOMAIN_NAME="ivpn-client"
-  VPN_DNS=$2 #DNS IP
+  VPN_DNS=$2 #DNS IP: comma-separated list of DNS IPs
 
   define_alternate_ivpn_dns $DOMAIN_NAME $VPN_DNS
 
