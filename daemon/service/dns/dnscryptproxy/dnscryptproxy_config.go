@@ -61,9 +61,9 @@ func SaveConfigFile(dnsSvrStamps []string, configFileTemplate, configFileOut str
 			out.WriteString(fmt.Sprintf("server_names = [%s]\n", strings.Join(server_names, ", ")))
 			isUpdated_server_names = true
 
-		} else if strings.HasPrefix(line, "# [static.'myserver']") {
+		} else if strings.HasPrefix(line, "# [static.myserver]") {
 			for j, stamp := range dnsSvrStamps {
-				out.WriteString(fmt.Sprintf("\n[static.'%s%d']\n", configSvrName, j+1))
+				out.WriteString(fmt.Sprintf("\n[static.%s%d]\n", configSvrName, j+1))
 				out.WriteString(fmt.Sprintf("stamp = '%s'\n", stamp))
 			}
 			isUpdated_static_myserver = true
