@@ -12,14 +12,20 @@
 
       <div v-bind:class="{ disabled: dnsIsCustom === false }">
         <div class="flexRow paramProps" tabindex="0">
-          <div class="defColor paramName">IP address:</div>
+          <div class="defColor paramName" style="align-self: flex-start;">IP address:</div>
 
-          <input
-            class="settingsTextInput"
-            v-bind:class="{ badData: isIPError === true }"
-            placeholder="0.0.0.0"
-            v-model="dnsHost"
-          />
+          <div style="width: 100%">
+            <input
+              class="settingsTextInput"
+              v-bind:class="{ badData: isIPError === true }"
+              placeholder="0.0.0.0"
+              v-model="dnsHost"
+              style="width: 100%"
+            />            
+            <div class="fwDescription" style="margin-left: 0px; margin-top: 4px;" tabindex="0">
+              Enter one or several IP addresses, separated by commas
+            </div>
+          </div>
         </div>
 
         <div v-if="CanUseDnsOverHttps || CanUseDnsOverTls">
@@ -160,23 +166,17 @@ import { Platform, PlatformEnum } from "@/platform/platform";
 
 const sender = window.ipcSender;
 
-function checkIPv4List(ipListString) {
-  if (!ipListString || ipListString.trim() === '') return false;
-  // Split by comma and validate each IP
-  const ips = ipListString.split(',').map(ip => ip.trim());
-  const singleIPRegex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
-  return ips.every(ip => singleIPRegex.test(ip));
+function splitStringToIPList(input) {
+  // Split by comma or whitespace and trim each IP
+  return input.split(/[,\s]+/).map(ip => ip.trim()).filter(ip => ip !== '');
 }
 
 function checkIsDnsIPError(dnsIpString) {
-  // IPv4 or IPv6
-  //var expression = /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/;
-
-  // IPv4
-  //var expression = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
-  //return !expression.test(dnsIpString.trim());
-
-  return !checkIPv4List(dnsIpString);
+  if (!dnsIpString || dnsIpString.trim() === '') return true; // Error if empty
+  const ips = splitStringToIPList(dnsIpString);
+  
+  const singleIPRegex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
+  return !ips.every(ip => singleIPRegex.test(ip)); // Return true if any IP is invalid
 }
 
 function processError(e) {
@@ -269,7 +269,7 @@ export default {
       if (this.isDnsValueChanged !== true) return true;
       try {
         // convert value to comma-separated list of IPs
-        let ipList = this._dnsAddressesString.split(',').map(ip => ip.trim()).filter(ip => ip !== '');            
+        let ipList = splitStringToIPList(this._dnsAddressesString)
         // update newDnsCfg.Servers for all provided IPs
         let newDnsCfg = Object.assign({}, this.$store.state.settings.dnsCustomCfg);
         newDnsCfg.Servers = ipList.map(ip => ({
