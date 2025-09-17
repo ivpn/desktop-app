@@ -33,7 +33,7 @@ const configSvrName = "ivpnmanualconfig"
 // SaveConfigFile - update template file 'configFileTemplate's with required data
 // and save result into 'configFileOut'
 // The implementation is very simple and based in replacing specific lines in template.
-func SaveConfigFile(dnsSvrStamps []string, configFileTemplate, configFileOut string) error {
+func SaveConfigFile(dnsSvrStamps []string, configFileTemplate, configFileOut, logFilePath string) error {
 	if _, err := os.Stat(configFileTemplate); err != nil {
 		return err
 	}
@@ -71,6 +71,10 @@ func SaveConfigFile(dnsSvrStamps []string, configFileTemplate, configFileOut str
 
 		} else if strings.HasPrefix(line, "#") && strings.Contains(line, "stamp =") && isUpdated_static_myserver {
 			continue
+
+		} else if strings.HasPrefix(line, "# log_file =") && len(logFilePath) > 0 {
+			out.WriteString(fmt.Sprintf("log_file = '%s'\n", logFilePath))
+
 		} else {
 			out.WriteString(line + "\n")
 		}

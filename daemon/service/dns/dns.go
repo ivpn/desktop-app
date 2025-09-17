@@ -237,7 +237,7 @@ func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
 	}
 
 	// generate dnscrypt-proxy configuration
-	if err := dnscryptproxy.SaveConfigFile(stamps, configPathTemplate, configPathMutable); err != nil {
+	if err := dnscryptproxy.SaveConfigFile(stamps, configPathTemplate, configPathMutable, logfile); err != nil {
 		return err
 	}
 	log.Debug(fmt.Sprintf("dnscrypt-proxy config: %q", configPathMutable))

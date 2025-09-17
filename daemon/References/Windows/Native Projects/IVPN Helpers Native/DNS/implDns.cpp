@@ -287,217 +287,257 @@ DWORD DoSetDNSByLocalIP(std::string interfaceLocalAddr, std::string dnsIP, Opera
     return 0;
 }
 
+// Helper structure to hold DNS server information
+struct DnsServerInfo
+{
+    std::wstring address;
+    bool isDoH;
+    std::wstring dohTemplate;
+    
+    DnsServerInfo(const std::wstring& addr, bool doh = false, const std::wstring& tmpl = L"")
+        : address(addr), isDoH(doh), dohTemplate(tmpl) {}
+};
+
+// Helper function to read current DNS settings and parse server information
+static std::vector<DnsServerInfo> ReadCurrentDnsServers(const GUID& ifcGUID)
+{
+    std::vector<DnsServerInfo> servers;
+    
+    DNS_INTERFACE_SETTINGS3 currDnsCfg{ 0 };
+    if (IsDnsOverHttpsAccessible())
+        currDnsCfg.Version = DNS_INTERFACE_SETTINGS_VERSION3;
+    else
+        currDnsCfg.Version = DNS_INTERFACE_SETTINGS_VERSION1;
+
+    DWORD err = callGetInterfaceDnsSettings(ifcGUID, (DNS_INTERFACE_SETTINGS*)&currDnsCfg);
+    if (err != NO_ERROR)
+        return servers; // Return empty vector on error
+
+    // Parse current NameServer
+    std::vector<std::wstring> nameServers;
+    if (currDnsCfg.NameServer != NULL)
+    {
+        std::wstring temp;
+        std::wstringstream nameserver;
+        nameserver << currDnsCfg.NameServer;
+        while (std::getline(nameserver, temp, L','))
+            nameServers.push_back(temp);
+    }
+
+    // Create server info with DoH status
+    for (size_t i = 0; i < nameServers.size(); ++i)
+    {
+        bool isDoH = false;
+        std::wstring dohTemplate;
+        
+        if (currDnsCfg.ServerProperties != NULL)
+        {
+            for (ULONG j = 0; j < currDnsCfg.cServerProperties; ++j)
+            {
+                if (currDnsCfg.ServerProperties[j].ServerIndex == i &&
+                    currDnsCfg.ServerProperties[j].Type == DNS_SERVER_PROPERTY_TYPE::DnsServerDohProperty)
+                {
+                    isDoH = true;
+                    if (currDnsCfg.ServerProperties[j].Property.DohSettings != NULL &&
+                        currDnsCfg.ServerProperties[j].Property.DohSettings->Template != NULL)
+                    {
+                        dohTemplate = currDnsCfg.ServerProperties[j].Property.DohSettings->Template;
+                    }
+                    break;
+                }
+            }
+        }
+        
+        servers.emplace_back(nameServers[i], isDoH, dohTemplate);
+    }
+
+    callFreeInterfaceDnsSettings((DNS_INTERFACE_SETTINGS*)&currDnsCfg);
+    return servers;
+}
+
+// Helper function to build final server list based on operation
+static std::vector<DnsServerInfo> BuildFinalServerList(
+    const std::vector<DnsServerInfo>& currentServers,
+    const std::wstring& dnsIPwstr,
+    bool isDoH,
+    const std::wstring& dohTemplateWstr,
+    Operation operation)
+{
+    std::vector<DnsServerInfo> finalServers;
+    
+    if (operation == Operation::Set)
+    {
+        finalServers.emplace_back(dnsIPwstr, isDoH, dohTemplateWstr);
+        return finalServers;
+    }
+    
+    if (operation == Operation::Add)
+    {
+        // Add new DNS at first position
+        finalServers.emplace_back(dnsIPwstr, isDoH, dohTemplateWstr);
+    }
+    
+    // Add existing DNS servers (except the one being removed)
+    for (const auto& server : currentServers)
+    {
+        std::wstring curVal = server.address;
+        toLowerWStr(&curVal);
+        std::wstring targetVal = dnsIPwstr;
+        toLowerWStr(&targetVal);
+        
+        if (curVal == targetVal)
+            continue; // Skip if removing or if duplicate when adding
+            
+        finalServers.push_back(server);
+    }
+    
+    return finalServers;
+}
+
+// Helper function to create DoH properties from server list
+static std::vector<DNS_SERVER_PROPERTY> CreateDohProperties(const std::vector<DnsServerInfo>& servers)
+{
+    std::vector<DNS_SERVER_PROPERTY> properties;
+    
+    for (size_t i = 0; i < servers.size(); ++i)
+    {
+        if (!servers[i].isDoH)
+            continue;
+            
+        DNS_SERVER_PROPERTY prop = { 0 };
+        prop.Version = DNS_SERVER_PROPERTY_VERSION1;
+        prop.Type = DNS_SERVER_PROPERTY_TYPE::DnsServerDohProperty;
+        prop.ServerIndex = (ULONG)i;
+        
+        prop.Property.DohSettings = new DNS_DOH_SERVER_SETTINGS{ 0 };
+        if (servers[i].dohTemplate.empty())
+        {
+            prop.Property.DohSettings->Flags = DNS_DOH_SERVER_SETTINGS_ENABLE_AUTO;
+            prop.Property.DohSettings->Template = NULL;
+        }
+        else
+        {
+            prop.Property.DohSettings->Flags = DNS_DOH_SERVER_SETTINGS_ENABLE;
+            size_t templateLen = servers[i].dohTemplate.length();
+            prop.Property.DohSettings->Template = new WCHAR[templateLen + 1]{ 0 };
+            wcscpy_s(prop.Property.DohSettings->Template, templateLen + 1, servers[i].dohTemplate.c_str());
+        }
+        
+        properties.push_back(prop);
+    }
+    
+    return properties;
+}
+
+// Helper function to build NameServer string from server list
+static std::wstring BuildNameServerString(const std::vector<DnsServerInfo>& servers)
+{
+    std::wstring result;
+    for (size_t i = 0; i < servers.size(); ++i)
+    {
+        if (i > 0)
+            result += L",";
+        result += servers[i].address;
+    }
+    return result;
+}
+
+// Helper function to cleanup DoH properties
+static void CleanupDohProperties(DNS_SERVER_PROPERTY* properties, ULONG count)
+{
+    if (properties == nullptr || count == 0)
+        return;
+        
+    for (ULONG i = 0; i < count; ++i)
+    {
+        if (properties[i].Property.DohSettings != NULL)
+        {
+            if (properties[i].Property.DohSettings->Template != NULL)
+            {
+                delete[] properties[i].Property.DohSettings->Template;
+                properties[i].Property.DohSettings->Template = NULL;
+            }
+            delete properties[i].Property.DohSettings;
+            properties[i].Property.DohSettings = NULL;
+        }
+    }
+    delete[] properties;
+}
+
 DWORD DoSetDNSByLocalIPEx(std::string interfaceLocalAddr, std::string dnsIP, bool isDoH, std::string dohTemplate, Operation operation, bool ipv6)
 {
+    // Input validation
     if (isDoH && !IsDnsOverHttpsAccessible())
         return ERROR_INVALID_PARAMETER;
-
     if (interfaceLocalAddr.empty())
         return -1;
     if (dnsIP.empty() && (operation == Operation::Add || operation == Operation::Remove))
         return (HRESULT)0; // nothing to add or remove
 
+    // Prepare strings
     toLowerStr(&dnsIP);
     std::wstring dnsIPwstr(dnsIP.begin(), dnsIP.end());
-    std::wstring dohTemplateWstr = std::wstring(dohTemplate.begin(), dohTemplate.end());
+    std::wstring dohTemplateWstr(dohTemplate.begin(), dohTemplate.end());
 
-    // Get GUID of the interface with localIP==interfaceLocalAddr
+    // Get interface GUID
     GUID ifcGUID{ 0 };
     DWORD ret = getInterfaceGUIDByLocalIP(interfaceLocalAddr, ifcGUID);
     if (ret != 0)
         return ret;
 
-    // ------------------------------------------
-    // Configure new values: NameServer/cServerProperties/ServerProperties
-    // ------------------------------------------
-
-    std::wstring newNameServer;
-    ULONG newCServerProperties = 0;
-    DNS_SERVER_PROPERTY* newServerProperties = NULL;
-    ULONG svrPropertiesCntToDestroy = 0;
-
-    if (isDoH && operation == Operation::Set)
+    // Build final server list
+    std::vector<DnsServerInfo> finalServers;
+    if (operation == Operation::Set)
     {
-        // First element in newServerProperties is reserved for current (new) DNS settings
-        svrPropertiesCntToDestroy = newCServerProperties = 1;
-        newServerProperties = new DNS_SERVER_PROPERTY[1]{ 0 };
+        finalServers.emplace_back(dnsIPwstr, isDoH, dohTemplateWstr);
     }
-    else if (operation == Operation::Add || operation == Operation::Remove)
+    else // Add or Remove
     {
-        // We have to keep the rest user-defined settings. Therefore doing changes with currect DNS settings     
-
-        // Get current DNS settings
-        DNS_INTERFACE_SETTINGS3 currDnsCfg{ 0 };
-        if (IsDnsOverHttpsAccessible())
-            currDnsCfg.Version = DNS_INTERFACE_SETTINGS_VERSION3;
-        else
-            currDnsCfg.Version = DNS_INTERFACE_SETTINGS_VERSION1;
-
-        DWORD err = callGetInterfaceDnsSettings(ifcGUID, (DNS_INTERFACE_SETTINGS*)&currDnsCfg);
-        if (err != NO_ERROR)
-            return err;
-
-        // Get and parse current NameServer        
-        std::vector<std::wstring> curDnsNameServer;
-        if (currDnsCfg.NameServer != NULL)
-        {
-            std::wstring temp;
-            std::wstringstream nameserver;
-            nameserver << currDnsCfg.NameServer;
-            // loop over all coma-separated elements in current settings of NameServer
-            while (std::getline(nameserver, temp, L','))
-                curDnsNameServer.push_back(temp);
-        }
-
-        // Due to we can remove dnsIPwstr from the the current configuration, indexes in DoH config can be changed.
-        // Therefore, we are saving new indexes.
-        std::map <ULONG/*old index*/, ULONG/*new index*/> newDohIndexes;
-
-        // make new NameServer: all configured DNS servers except the current one
-        for (ULONG i = 0; i < curDnsNameServer.size(); i++)
-        {
-            std::wstring curVal = curDnsNameServer[i];
-            toLowerWStr(&curVal);
-            if (curVal == dnsIPwstr)
-                continue;
-
-            if (!newNameServer.empty())
-                newNameServer += L",";
-            newNameServer += curVal;
-            newDohIndexes[i] = (ULONG)newDohIndexes.size() + ((operation == Operation::Add) ? 1 : 0);
-        }
-
-        // Get (copy) current ServerProperties (we have to keep the rest user-defined settings)        
-        if (isDoH && operation == Operation::Add && (currDnsCfg.cServerProperties <= 0 || currDnsCfg.ServerProperties == NULL))
-        {
-            // First element in newServerProperties is reserved for current (new) DNS settings       
-            svrPropertiesCntToDestroy = newCServerProperties = 1;
-            newServerProperties = new DNS_SERVER_PROPERTY[1]{ 0 };
-        }
-        else
-        {
-            // in case of 'Add' - first element in newServerProperties is reserved for current (new) DNS settings            
-            newCServerProperties = (isDoH && operation == Operation::Add) ? 1 : 0;
-            svrPropertiesCntToDestroy = newCServerProperties + currDnsCfg.cServerProperties;
-            if (svrPropertiesCntToDestroy > 0)
-            {
-                newServerProperties = new DNS_SERVER_PROPERTY[svrPropertiesCntToDestroy]{ 0 };
-
-                for (ULONG i = 0; i < currDnsCfg.cServerProperties; i++)
-                {
-                    if (newDohIndexes.find(currDnsCfg.ServerProperties[i].ServerIndex) == newDohIndexes.end())
-                        continue;
-
-                    newServerProperties[newCServerProperties] = currDnsCfg.ServerProperties[i];
-                    newServerProperties[newCServerProperties].ServerIndex = newDohIndexes[currDnsCfg.ServerProperties[i].ServerIndex];
-
-                    if (currDnsCfg.ServerProperties[i].Property.DohSettings != NULL)
-                    {
-                        size_t templateLen = wcslen(currDnsCfg.ServerProperties[i].Property.DohSettings->Template);
-
-                        newServerProperties[newCServerProperties].Property.DohSettings = new DNS_DOH_SERVER_SETTINGS{ 0 };
-                        newServerProperties[newCServerProperties].Property.DohSettings->Flags = currDnsCfg.ServerProperties[i].Property.DohSettings->Flags;
-                        newServerProperties[newCServerProperties].Property.DohSettings->Template = new WCHAR[templateLen + 1]{ 0 };
-                        wcscpy_s(
-                            newServerProperties[newCServerProperties].Property.DohSettings->Template,
-                            templateLen + 1,
-                            currDnsCfg.ServerProperties[i].Property.DohSettings->Template);
-                    }
-                    newCServerProperties++;
-                }
-            }
-        }
-
-        callFreeInterfaceDnsSettings((DNS_INTERFACE_SETTINGS*)&currDnsCfg);
+        std::vector<DnsServerInfo> currentServers = ReadCurrentDnsServers(ifcGUID);
+        finalServers = BuildFinalServerList(currentServers, dnsIPwstr, isDoH, dohTemplateWstr, operation);
     }
 
-    if (operation == Operation::Set || operation == Operation::Add)
+    // Build NameServer string and DoH properties
+    std::wstring newNameServer = BuildNameServerString(finalServers);
+    std::vector<DNS_SERVER_PROPERTY> dohPropertiesVec = CreateDohProperties(finalServers);
+    
+    // Convert to array for Windows API
+    ULONG newCServerProperties = (ULONG)dohPropertiesVec.size();
+    DNS_SERVER_PROPERTY* newServerProperties = nullptr;
+    if (newCServerProperties > 0)
     {
-        // set new DNS on a first position
-        if (newNameServer.empty())
-            newNameServer = dnsIPwstr;
-        else
-            newNameServer = dnsIPwstr + L"," + newNameServer;
-
-        // Set new DNS serverProperties (dnsIP+dohTemplate) as main config
-        // The newServerProperties[0] already created for it
-        if (isDoH && newServerProperties != NULL && newCServerProperties > 0)
-        {
-            // An array of DNS_SERVER_PROPERTY structures, containing cServerProperties elements. 
-            // Only DNS - over - HTTPS properties are supported, with the additional restriction of at most 1 property for each server specified in the NameServer member.
-            newServerProperties[0].Version = DNS_SERVER_PROPERTY_VERSION1;
-            newServerProperties[0].Type = DNS_SERVER_PROPERTY_TYPE::DnsServerDohProperty;
-            newServerProperties[0].ServerIndex = 0; // The ServerIndex member of the DNS_SERVER_PROPERTY must be set to the index of the corresponding DNS server from the NameServer member.
-
-            newServerProperties[0].Property.DohSettings = new DNS_DOH_SERVER_SETTINGS{ 0 };
-            if (dohTemplateWstr.empty())
-            {
-                // load URI template from the system DNS-over-HTTPS system list
-                newServerProperties[0].Property.DohSettings->Flags = DNS_DOH_SERVER_SETTINGS_ENABLE_AUTO;
-                newServerProperties[0].Property.DohSettings->Template = NULL;
-            }
-            else
-            {
-                newServerProperties[0].Property.DohSettings->Flags = DNS_DOH_SERVER_SETTINGS_ENABLE;
-                size_t templateLen = dohTemplateWstr.length();
-                newServerProperties[0].Property.DohSettings->Template = new WCHAR[templateLen + 1]{ 0 };
-                wcscpy_s(
-                    newServerProperties[0].Property.DohSettings->Template,
-                    templateLen + 1,
-                    const_cast<PWSTR>(dohTemplateWstr.c_str()));
-            }
-        }
+        newServerProperties = new DNS_SERVER_PROPERTY[newCServerProperties];
+        for (ULONG i = 0; i < newCServerProperties; ++i)
+            newServerProperties[i] = dohPropertiesVec[i];
     }
 
-    // ------------------------------------------
-    // Creating DNS_INTERFACE_SETTINGS3 structure
-    // ------------------------------------------
+    // Create DNS settings structure
     DNS_INTERFACE_SETTINGS3 newDnsSettingsV3{ 0 };
     newDnsSettingsV3.ServerProperties = newServerProperties;
     newDnsSettingsV3.cServerProperties = newCServerProperties;
     newDnsSettingsV3.NameServer = const_cast<PWSTR>(newNameServer.c_str());
+    
     if (IsDnsOverHttpsAccessible())
     {
         newDnsSettingsV3.Version = DNS_INTERFACE_SETTINGS_VERSION3;
-        newDnsSettingsV3.Flags = DNS_SETTING_NAMESERVER | DNS_SETTING_DOH; // [NameServer , cServerProperties , ServerProperties ]
-    } 
-    else 
+        newDnsSettingsV3.Flags = DNS_SETTING_NAMESERVER | DNS_SETTING_DOH;
+    }
+    else
     {
         newDnsSettingsV3.Version = DNS_INTERFACE_SETTINGS_VERSION1;
-        newDnsSettingsV3.Flags = DNS_SETTING_NAMESERVER; // [NameServer]
+        newDnsSettingsV3.Flags = DNS_SETTING_NAMESERVER;
     }
+    
     if (ipv6)
         newDnsSettingsV3.Flags |= DNS_SETTING_IPV6;
 
-    // ------------------------------------------
-    // Set new DNS configuration
-    // ------------------------------------------
+    // Apply DNS configuration
     DWORD applyDnsErr = callSetInterfaceDnsSettings(ifcGUID, (const DNS_INTERFACE_SETTINGS*)&newDnsSettingsV3);
 
-    // Erase currServerProperties
-    if (svrPropertiesCntToDestroy > 0 && newServerProperties != NULL)
-    {
-        for (ULONG i = 0; i < svrPropertiesCntToDestroy; i++)
-        {
-            if (newServerProperties[i].Property.DohSettings != NULL)
-            {
-                if (newServerProperties[i].Property.DohSettings->Template != NULL)
-                {
-                    delete[] newServerProperties[i].Property.DohSettings->Template;
-                    newServerProperties[i].Property.DohSettings->Template = NULL;
-                }
-                delete newServerProperties[i].Property.DohSettings;
-                newServerProperties[i].Property.DohSettings = NULL;
-            }
-        }
-        delete[] newServerProperties;
-        newServerProperties = NULL;
-    }
+    // Cleanup
+    CleanupDohProperties(newServerProperties, newCServerProperties);
 
-    if (applyDnsErr != NO_ERROR)
-        return applyDnsErr;
-
-    return 0;
+    return applyDnsErr;
 }
 
 // DoH support implemented since Windows 11. But this library can be used from Windows 10 too.

@@ -220,7 +220,7 @@ lb_estimator = true
 
 ## When using a log file, only keep logs from the most recent launch.
 
-# log_file_latest = true
+log_file_latest = true
 
 
 ## Use the system logger (syslog on Unix, Event Log on Windows)
