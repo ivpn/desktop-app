@@ -1,142 +1,45 @@
 <template>
-  <div>
+  <div style="min-height: 100%; display: flex; flex-direction: column;">
     <div class="settingsTitle" tabindex="0">DNS SETTINGS</div>
 
-    <div>
-      <div class="param" tabindex="0">
-        <input type="checkbox" id="dnsIsCustom" v-model="dnsIsCustom" />
-        <label class="defColor" for="dnsIsCustom"
+    <div class="param" tabindex="0" style="margin-bottom: 4px;">
+      <input type="checkbox" id="dnsIsCustom" v-model="_dnsIsCustom" @input="isDnsValueChanged = true"/>
+      <label class="defColor" for="dnsIsCustom"
           >Use custom DNS server when connected to IVPN</label
-        >
-      </div>
-
-      <div v-bind:class="{ disabled: dnsIsCustom === false }">
-        <div class="flexRow paramProps" tabindex="0">
-          <div class="defColor paramName" style="align-self: flex-start;">IP address:</div>
-
-          <div style="width: 100%">
-            <input
-              class="settingsTextInput"
-              v-bind:class="{ badData: isIPError === true }"
-              placeholder="0.0.0.0"
-              v-model="dnsHost"
-              style="width: 100%"
-            />            
-            <div class="fwDescription" style="margin-left: 0px; margin-top: 4px;" tabindex="0">
-              Enter one or several IP addresses, separated by commas
-            </div>
-          </div>
-        </div>
-
-        <div v-if="CanUseDnsOverHttps || CanUseDnsOverTls">
-          <div class="paramProps">
-            <div class="flexRow paramBlock" tabindex="0">
-              <div class="defColor paramName">DNS encryption:</div>
-              <div class="settingsRadioBtnEx">
-                <input
-                  style="margin-left: 0px"
-                  type="radio"
-                  id="dnsEncryptionNone"
-                  name="dnsEnc"
-                  v-model="dnsEncryption"
-                  value="None"
-                />
-                <label class="defColor" for="dnsEncryptionNone">None</label>
-              </div>
-              <div class="settingsRadioBtnEx" v-if="CanUseDnsOverHttps">
-                <input
-                  type="radio"
-                  id="dnsEncryptionHttps"
-                  name="dnsEnc"
-                  v-model="dnsEncryption"
-                  value="DoH"
-                />
-                <label class="defColor" for="dnsEncryptionHttps"
-                  >DNS over HTTPS</label
-                >
-              </div>
-              <div class="settingsRadioBtnEx" v-if="CanUseDnsOverTls">
-                <input
-                  type="radio"
-                  id="dnsEncryptionTls"
-                  name="dnsEnc"
-                  v-model="dnsEncryption"
-                  value="DoT"
-                />
-                <label class="defColor" for="dnsEncryptionTls"
-                  >DNS over TLS</label
-                >
-              </div>
-            </div>
-          </div>
-
-          <div
-            class="flexRowAlignTop paramProps" tabindex="0"
-            v-bind:class="{ disabled: dnsIsEncrypted === false }"
+      >
+          <button
+            class="noBordersBtn flexRow"
+            title="Help"
+            v-on:click="$refs.helpCustomDns.showModal()"
           >
-            <div class="defColor paramName">
-              {{ dnsEncryptionNameLabel }} URI template:
-            </div>
+            <img src="@/assets/question.svg" />
+          </button>
+          <ComponentDialog ref="helpCustomDns" header="Info">
+            <div>
+              <p>
+                You can specify one or more custom DNS servers to be used when connected to IVPN.<br/>
+                When multiple DNS servers are specified, there is no guarantee that they will be used in the order listed.
+              </p>
+              <p>
+                <strong>DNS over HTTPS (DoH)</strong> can be enabled for each DNS server individually. 
+                DoH is a protocol that performs Domain Name System (DNS) resolution via HTTPS, 
+                designed to increase user privacy and security by preventing eavesdropping and manipulation of DNS data.
+              </p>
+              <p>
+                <strong>Important:</strong> When enabling DoH for a DNS server, ensure that:
+              </p>
+              <ul>
+                <li>The server supports DNS over HTTPS</li>
+                <li>You provide a valid DoH template URI specific to your chosen DNS provider (check your provider's documentation for the correct endpoint)</li>
+              </ul>
 
-            <div style="width: 100%">
-              <input
-                style="width: 100%; padding-right: 24px; margin-top: 0px"
-                class="settingsTextInput"
-                v-bind:class="{ badData: isTemplateURIError === true }"
-                placeholder="https://..."
-                v-model="dnsDohTemplate"
-                spellcheck="false"
-              />
-              <div v-if="isShowDnsproxyDescription" class="fwDescription">
-                DNS over HTTPS (DoH) is implemented using dnscrypt-proxy from
+              <p v-if="isShowDnsproxyDescription" class="fwDescription">
+                <strong>Implementation:</strong> DNS over HTTPS (DoH) is implemented using dnscrypt-proxy from
                 the DNSCrypt project. Your DNS settings will be configured to
-                send requests to dnscrypt-proxy listening on localhost
-                (127.0.0.1).
-              </div>
+                send requests to dnscrypt-proxy listening on localhost (127.0.0.1).
+              </p>
             </div>
-
-            <!-- Predefined DoH/DoT configs -->
-            <div
-              v-bind:class="{ HiddenDiv: isHasPredefinedDohConfigs !== true }"
-              style="margin-left: 5px"
-            >
-              <div>
-                <img
-                  style="
-                    position: fixed;
-                    width: 12px;
-                    margin-left: 5px;
-                    margin-top: 8px;
-                  "
-                  src="@/assets/arrow-bottom.svg"
-                />
-                <!-- Popup -->
-                <select
-                  title="Predefined DoH configurations"
-                  @change="onPredefinedDohConfigSelected()"
-                  v-model="thePredefinedDohConfigSelected"
-                  style="cursor: pointer; width: 24px; height: 22px; opacity: 0"
-                >
-                  <option
-                    v-for="m in predefinedDohConfigs"
-                    v-bind:key="m.DohTemplate + m.DnsHost"
-                    style="color: black; background-color: white"
-                    v-bind:value="m"
-                  >
-                    {{ m.DnsHost }} ({{ m.DohTemplate }})
-                  </option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="paramProps">
-        <div class="fwDescription" tabindex="0">
-          AntiTracker will override the custom DNS when enabled.
-        </div>
-      </div>
+          </ComponentDialog>
     </div>
 
     <div v-if="linuxIsShowResolvConfMgmtOption">
@@ -157,26 +60,137 @@
         directly modify the '/etc/resolv.conf' file.
       </div>
     </div>
+
+    <div v-bind:class="{ disabled: dnsIsCustom === false }" style="overflow-y: auto; ">
+
+      <div style="padding-left: 20px;">
+      
+      <!-- List of custom DNS servers -->
+      <ul style="list-style: none; padding-left: 0px;">
+        <li
+          v-for="(svr, idx) in _dnsCustomCfg.Servers"
+          style="margin-bottom: 10px;"
+        >
+          <div style="display: flex; ">
+            <div style="font-weight: bold; flex: 1;"> 
+              DNS Server {{ idx + 1 }} 
+            </div>
+
+            <button
+              class="noBordersBtn flexRow remove-btn"
+              v-on:click="removeServer(svr)"
+            >
+              <img src="@/assets/trash.svg" width="16" style="margin-right: 4px;"/>
+              Remove
+            </button>
+          </div>
+
+          <div>
+            <div class="flexRow">
+              <input
+                  class="settingsTextInput"
+                  style="width: 100%"
+                  v-model.trim="svr.Address"
+                  @input="isDnsValueChanged = true"
+                  v-bind:class="{ badData: isIpAddressError(svr.Address) }"
+                  :placeholder="'IP address'"              
+                />              
+            </div>
+
+            <div class="flexRow" >
+              <div 
+                title="DNS encryption: DoH (DNS over HTTPS)"
+                style="display: flex; flex: 1; align-items: center; min-height: 30px; "
+                >
+                  <input 
+                    style="margin-left: 0px;"
+                    type="checkbox"
+                    :id="`doh-checkbox-${idx}`"
+                    :checked="idDoH(svr.Encryption)"
+                    @input="updateServerEncryption(svr, $event.target.checked)"
+                  />
+                  <label :for="`doh-checkbox-${idx}`">DNS over HTTPS</label>
+
+                  <!-- Input with drop-down button of Predefined DoH configs-->
+                  <div style="position: relative; display: flex; flex: 1;">                    
+                    <input v-if="svr.Encryption !== 0"                      
+                      class="settingsTextInput"
+                      style="flex: 1; margin-left: 5px; padding-right: 22px;"                      
+                      :placeholder="'DNS over HTTPS template URI'"
+                      v-model.trim="svr.Template"
+                      @input="isDnsValueChanged = true"
+                      v-bind:class="{ badData: isDohTemplateURIError(svr.Encryption, svr.Template) }"
+                    />
+                                        
+                    <!-- Predefined DoH/DoT configs -->
+                    <div v-bind:class="{ HiddenDiv: svr.Encryption === 0 || isHasPredefinedDohConfigs !== true }"
+                      style="margin-left: 5px;                      
+                            position: absolute; 
+                            top: 60%; 
+                            right: 0px; 
+                            transform: translateY(-50%); 
+                            cursor: pointer;"
+                    >                      
+                      <div>
+                        <!-- drop-down image -->
+                        <img
+                          style="position: fixed; width: 12px; margin-left: 5px; margin-top: 8px;                          "
+                          src="@/assets/arrow-bottom.svg"
+                        />
+                        <!-- Popup -->
+                        <select
+                          title="Predefined DoH configurations"                          
+                          style="cursor: pointer; width: 24px; height: 22px; opacity: 0"
+                          @change="applyPredefinedConfig($event.target.value, svr)"
+                        >
+                          <option
+                            v-for="m in predefinedDohConfigs"
+                            v-bind:key="m.DohTemplate + m.DnsHost"                            
+                            v-bind:value="JSON.stringify(m)"
+                          >
+                            {{ m.DnsHost }} ({{ m.DohTemplate }})
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+              </div>
+            </div>
+          </div>          
+        </li>
+      </ul>
+      
+      <button title="Add new DNS server"
+        @click="addServer" 
+        class="likeText"
+        style="padding-left: 0px;"
+      >
+        + Add custom DNS server
+      </button>
+
+      </div>
+
+    </div>
+
+    <div class="paramProps"  style="margin-top: auto; margin-bottom: 20px;">
+      <div class="fwDescription" tabindex="0">
+        AntiTracker will override the custom DNS when enabled.
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { DnsEncryption, VpnStateEnum } from "@/store/types";
 import { Platform, PlatformEnum } from "@/platform/platform";
+import ComponentDialog from "@/components/component-dialog.vue";
 
 const sender = window.ipcSender;
 
-function splitStringToIPList(input) {
-  // Split by comma or whitespace and trim each IP
-  return input.split(/[,\s]+/).map(ip => ip.trim()).filter(ip => ip !== '');
-}
-
 function checkIsDnsIPError(dnsIpString) {
-  if (!dnsIpString || dnsIpString.trim() === '') return true; // Error if empty
-  const ips = splitStringToIPList(dnsIpString);
-  
+  if (!dnsIpString || dnsIpString.trim() === '') return true;
   const singleIPRegex = /^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)(\.(?!$)|$)){4}$/;
-  return !ips.every(ip => singleIPRegex.test(ip)); // Return true if any IP is invalid
+  return !singleIPRegex.test(dnsIpString.trim());
 }
 
 function processError(e) {
@@ -190,6 +204,9 @@ function processError(e) {
 }
 
 export default {
+  components: {
+    ComponentDialog,
+  },
   props: { registerBeforeCloseHandler: Function },
   created() {
     // We have to call applyChanges() even when Settings window was closed by user
@@ -212,21 +229,25 @@ export default {
     return {
       isEditingFinished: false,
       isDnsValueChanged: false,
-      thePredefinedDohConfigSelected: null,
-      val_linuxDnsIsResolvConfMgmt: false,
-
-      // Since UI currently has single input for DNS IPs - we need to keep string with comma-separated IPs
-      // This is temporary solution until UI will be updated to have multiple inputs for DNS IPs
-      _dnsAddressesString: "",
-      _encryption: DnsEncryption.None,
-      _template: "",
+      
+      _dnsIsCustom: false,
+      _dnsCustomCfg: { Servers: [] },
+      _linuxDnsIsResolvConfMgmt: false,
     };
   },
+
   mounted() {
-    this.updateLocalDnsSettings();
+    const storeDnsCfg = this.getDnsCustomCfg() || {};
+    this._dnsCustomCfg = JSON.parse(JSON.stringify(storeDnsCfg));
+    this._dnsIsCustom = this.getDnsIsCustom() || false;
+    this._linuxDnsIsResolvConfMgmt =
+      this.daemonSettings?.UserPrefs?.Linux?.IsDnsMgmtOldStyle || false;
+
+    // Remove empty servers (if any)
+    this._dnsCustomCfg.Servers = this._dnsCustomCfg.Servers.filter(svr => svr && svr.Address);
+
     this.requestPredefinedDohConfigs();
-    this.val_linuxDnsIsResolvConfMgmt =
-      this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
+
   },
   methods: {
     checkIsDisconnectedAndWarn: function () {
@@ -248,9 +269,23 @@ export default {
     // Validate and APPLY changes
     async applyChanges(e) {
       this.isEditingFinished = true;
-      // when component closing ->  update changed DNS (if necessary)
 
-      if (this.dnsIsCustom && (this.isTemplateURIError || this.isIPError)) {
+      let ipError = false;
+      let isTemplateError = false;
+      for (const svr of this._dnsCustomCfg.Servers) {
+        if (svr.Encryption === DnsEncryption.None) {
+          svr.Template = "" // Template must be empty when encryption is 'None'
+        }
+
+        if (this.isIpAddressError(svr.Address)) {
+          ipError = true;
+        }
+        if (this.isDohTemplateURIError(svr.Encryption, svr.Template)) {
+          isTemplateError = true;
+        }
+      }
+
+      if (this._dnsIsCustom && (isTemplateError || ipError)) {
         sender.showMessageBoxSync({
           type: "warning",
           buttons: ["OK"],
@@ -268,81 +303,109 @@ export default {
 
       if (this.isDnsValueChanged !== true) return true;
       try {
-        // convert value to comma-separated list of IPs
-        let ipList = splitStringToIPList(this._dnsAddressesString)
-        // update newDnsCfg.Servers for all provided IPs
-        let newDnsCfg = Object.assign({}, this.$store.state.settings.dnsCustomCfg);
-        newDnsCfg.Servers = ipList.map(ip => ({
-          Address: ip,
-          Encryption: this.dnsEncryptionValue || DnsEncryption.None,
-          Template: this.dnsDohTemplate || ""
-        }));
-
-        console.debug('Applying DNS :', this._dnsAddressesString, " => ", ipList, " => ", newDnsCfg);
-        this.$store.dispatch("settings/dnsCustomCfg", newDnsCfg);
+        this.$store.dispatch("settings/dnsCustomCfg", this._dnsCustomCfg);
+        this.$store.dispatch("settings/dnsIsCustom", this._dnsIsCustom);
 
         // Apply changes
         await sender.SetDNS();
         this.isDnsValueChanged = false;
-      } catch (e) {
-        processError(e);
+      } catch (err) {
+        processError(err);
         // it is 'beforeunload' handler. Prevent closing window.
-        e.preventDefault();
-        e.returnValue = "";
+        if (e && typeof e.preventDefault === "function") {
+          e.preventDefault();
+          e.returnValue = "";
+        }
       }
       return true;
     },
 
-    onPredefinedDohConfigSelected() {
-      const newVal = this.thePredefinedDohConfigSelected;
-      if (newVal && newVal.DnsHost && newVal.DohTemplate) {
-        this.isDnsValueChanged = true;
-        
-        this._dnsAddressesString = newVal.DnsHost;
-        this._encryption = DnsEncryption.DnsOverHttps;
-        this._template = newVal.DohTemplate;
-      }
-    },
     requestPredefinedDohConfigs() {
-      if (!this.CanUseDnsOverHttps && !this.CanUseDnsOverTls) return;
+      if (!this.CanUseDnsOverHttps) return;
       if (this.$store.state.dnsPredefinedConfigurations) return; // configurations already initialized - no sense to request them again
+       // Request predefined DoH configurations from main process
       setTimeout(() => {
         sender.RequestDnsPredefinedConfigs();
       }, 0);
     },
 
-    updateLocalDnsSettings() {
-      const dnsServers = this.dnsCustomCfg.Servers || [];
-       // Since UI currently has single input for DNS IPs - we need to keep string with comma-separated IPs
-      // This is temporary solution until UI will be updated to have multiple inputs for DNS IPs
-      this._dnsAddressesString = dnsServers.map(server => server.Address).join(', ');
-       // Take into account only first server (have to be changed in future when full support of multiple servers will be implemented)
-      this._encryption = this.$store.state.settings.dnsCustomCfg?.Servers?.[0]?.Encryption || DnsEncryption.None;
-      this._template = this.$store.state.settings.dnsCustomCfg?.Servers?.[0]?.Template || "";
+    getDnsCustomCfg() {
+      return this.$store.state.settings.dnsCustomCfg;
+    },
+
+    getDnsIsCustom() {
+        return this.$store.state.settings.dnsIsCustom;
+    },
+
+    idDoH(encryption) {
+      return encryption === DnsEncryption.DnsOverHttps;
+    },
+
+    updateServerEncryption(server, isChecked) {
+      this.isDnsValueChanged = true;
+      server.Encryption = isChecked ? DnsEncryption.DnsOverHttps : DnsEncryption.None;
+    },
+
+    removeServer(server) {
+      this.isDnsValueChanged = true;
+      let cfg = this._dnsCustomCfg;
+      if (!cfg || !cfg.Servers) return;
+      const index = cfg.Servers.indexOf(server);
+      if (index > -1) {
+        cfg.Servers.splice(index, 1);
+      }
+    },
+
+    addServer() {
+      this.isDnsValueChanged = true;
+      this._dnsCustomCfg.Servers.push({
+        Address: "",
+        Encryption: 0,
+        Template: ""
+      });
+    },
+
+    applyPredefinedConfig(config, svr) {
+      if (!config || !svr) return;
+    
+      try {     
+        const cfg = JSON.parse(config);
+        this.isDnsValueChanged = true;
+
+        svr.Template = cfg.DohTemplate;
+        svr.Address = cfg.DnsHost;
+        svr.Encryption = DnsEncryption.DnsOverHttps;
+      } catch (e) {
+        console.error('Error parsing predefined config:', e);
+      }
+    },
+
+    isIpAddressError(address) {
+      if (!this.isEditingFinished) return false;
+      return checkIsDnsIPError(address);
+    },
+
+    isDohTemplateURIError(dnsEncryption, template) {
+      if (!this.isEditingFinished) return false;
+      if (!dnsEncryption) return false; // no error when encryption is 'None'
+      if (!template || template.trim() === "") return true; // error when empty
+      // Basic validation of URI template
+      const uriRegex = /^(https?:\/\/)?([\w.-]+)(:\d+)?(\/.*)?$/i;
+      return !uriRegex.test(template);
     },
   },
   watch: {
-    dnsIsEncrypted() {
-      this.requestPredefinedDohConfigs();
-    },
     daemonSettings() {
-      this.val_linuxDnsIsResolvConfMgmt =
+      this._linuxDnsIsResolvConfMgmt =
         this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
-    },
-    dnsCustomCfg() {
-      this.updateLocalDnsSettings();
-    },
+    },    
   },
 
   computed: {
     // needed for 'watch'
     daemonSettings() {
       return this.$store.state.settings.daemonSettings;
-    },
-
-    dnsCustomCfg() {
-      return this.$store.state.settings.dnsCustomCfg;
-    },
+    },   
 
     isShowDnsproxyDescription() {
       return Platform() !== PlatformEnum.Windows;
@@ -360,11 +423,11 @@ export default {
 
     dnsIsCustom: {
       get() {
-        return this.$store.state.settings.dnsIsCustom;
+        return this._dnsIsCustom;
       },
       async set(value) {
         this.isDnsValueChanged = true;
-        this.$store.dispatch("settings/dnsIsCustom", value);
+        this._dnsIsCustom = value;
       },
     },
 
@@ -392,7 +455,7 @@ export default {
 
     linuxDnsIsResolvConfMgmt: {
       get() {
-        return this.val_linuxDnsIsResolvConfMgmt;
+        return this._linuxDnsIsResolvConfMgmt;
       },
       async set(value) {
         const clone = function (obj) {
@@ -402,7 +465,7 @@ export default {
         try {
           // We need to erase value in order to the check-box be updated correctly according to confirmation response from daemon
           // The value will be updated in "watch: daemonSettings()"
-          this.val_linuxDnsIsResolvConfMgmt = null;
+          this._linuxDnsIsResolvConfMgmt = null;
 
           if (!this.checkIsDisconnectedAndWarn()) {
             return;
@@ -419,131 +482,34 @@ export default {
           processError(e);
         } finally {
           setTimeout(() => {
-            this.val_linuxDnsIsResolvConfMgmt =
+            this._linuxDnsIsResolvConfMgmt =
               this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
           }, 0);
         }
       },
     },
 
-    dnsIsEncrypted: {
-      get() {
-        return this._encryption  !==  DnsEncryption.None;
-      },
-    },
-
-    dnsEncryptionNameLabel: {
-      get() {
-        if (this.dnsEncryption === DnsEncryption.DnsOverTls) return "DoT";
-        return "DoH";
-      },
-    },
-
-    dnsHost: {
-      get() {
-        return this._dnsAddressesString; 
-      },
-      set(value) {
-        this.isDnsValueChanged = true;
-        this._dnsAddressesString = value;
-      },
-    },
-    dnsEncryptionValue: {
-      get() {
-        return this._encryption;
-      },
-    },
-    dnsEncryption: {
-      get() {
-        switch (this.dnsEncryptionValue) {
-          case DnsEncryption.DnsOverTls:
-            return "DoT";
-          case DnsEncryption.DnsOverHttps:
-            return "DoH";
-          default:
-            return "None";
-        }
-      },
-      set(value) {
-        let enc = DnsEncryption.None;
-        switch (value) {
-          case "DoT":
-            enc = DnsEncryption.DnsOverTls;
-            break;
-          case "DoH":
-            enc = DnsEncryption.DnsOverHttps;
-            break;
-          default:
-            enc = DnsEncryption.None;
-            this._template = "";
-        }
-        this.isDnsValueChanged = true;
-        this._encryption = enc;
-      },
-    },
-
-    dnsDohTemplate: {
-      get() {
-        return this._template;
-      },
-      set(value) {
-        this.isDnsValueChanged = true;
-        this._encryption = DnsEncryption.DnsOverHttps;
-        this._template = value;
-      },
-    },
-
     isHasPredefinedDohConfigs: {
       get() {
         if (!this.CanUseDnsOverHttps && !this.CanUseDnsOverTls) return false;
-
-        // Next group of check is more for 'nice UI'
-        // We show "paste" image even when selected not-encrypted DNS
-        let cfgs = this.$store.state.dnsPredefinedConfigurations;
-        if (!cfgs) return false;
-
-        if (!this.dnsIsEncrypted && cfgs.length > 0) return true;
-
-        // check if there are any predefined configuration available (for current encryption)
         return this.predefinedDohConfigs && this.predefinedDohConfigs.length > 0;        
       },
     },
+
     predefinedDohConfigs: {
       get() {
-        if (!this.dnsIsEncrypted) return null;
         let cfgs = this.$store.state.dnsPredefinedConfigurations;
         if (!cfgs) return null;
 
-        const expectedEnc = this._encryption;
         let filtered = cfgs.filter(
           (cfg) =>
-            cfg.Encryption === expectedEnc &&
+            cfg.Encryption === DnsEncryption.DnsOverHttps &&
             cfg.DnsHost &&
             cfg.DohTemplate &&
             !checkIsDnsIPError(cfg.DnsHost),
         );
         return filtered;
       },
-    },
-
-    isTemplateURIError: function () {
-      if (this.isEditingFinished !== true) return false;
-      if (!this.dnsIsCustom) return false;
-      if (this.dnsIsEncrypted !== true) return false;
-      try {
-        new URL(this.dnsDohTemplate);
-      } catch (_) {
-        return true;
-      }
-      return !this.dnsDohTemplate.toLowerCase().startsWith("https://");
-    },
-    isIPError: function () {
-      if (this.isEditingFinished !== true) return false;
-      if (!this.dnsHost) {
-        if (this.dnsIsCustom) return true;
-        return false;
-      }
-      return checkIsDnsIPError(this.dnsHost);
     },
   },
 };
@@ -607,5 +573,27 @@ div.HiddenDiv > * {
   opacity: 0;
   pointer-events: none;
   cursor: default;
+}
+
+button.likeText {
+  border: none; 
+  background: none;
+  color: #0066cc; 
+  cursor: pointer; 
+  font-size: inherit;
+}
+
+// Hide remove button by default
+li .remove-btn {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+// Show remove button on li hover or focus
+li:hover .remove-btn,
+li:focus-within .remove-btn {
+  opacity: 1;
+  visibility: visible;
 }
 </style>
