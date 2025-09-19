@@ -258,7 +258,8 @@ func implSetManual(dnsCfg DnsSettings, vpnInterfaceIP net.IP) (dnsInfoForFirewal
 		}
 
 		for _, network := range lNetworks {
-			for _, svr := range dnsCfg.Servers {
+			for i := len(dnsCfg.Servers) - 1; i >= 0; i-- {
+				svr := dnsCfg.Servers[i]
 				if !network.Contains(svr.Ip()) { // 'svr.Ip()' is not in 'network'
 					continue
 				}
@@ -271,7 +272,8 @@ func implSetManual(dnsCfg DnsSettings, vpnInterfaceIP net.IP) (dnsInfoForFirewal
 	}
 
 	// Apply DNS servers which were not applied yet to the VPN interface
-	for _, svr := range dnsCfg.Servers {
+	for i := len(dnsCfg.Servers) - 1; i >= 0; i-- {
+		svr := dnsCfg.Servers[i]
 		if _, ok := appliedServers[svr]; ok {
 			continue
 		}
