@@ -53,7 +53,7 @@
           >Force management of DNS using resolv.conf</label
         >
       </div>
-      <div class="paramProps fwDescription">
+      <div class="paramProps fwDescription" style="margin-bottom: 0px;">
         By default IVPN manages DNS resolvers using the 'systemd-resolved'
         daemon which is the correct method for systems based on Systemd. This
         option enables you to override this behavior and allow the IVPN app to
