@@ -32,13 +32,12 @@ import (
 
 // filter Weights
 const (
-	// IMPORTANT! Use only for Local IP/IPv6 of VPN connection
-	weightAllowLocalIP            = 10
-	weightAllowRemoteLocalhostDNS = 10 // allow DNS requests to 127.0.0.1:53
+	// Weights priority: 0..16 (16 - highest, 0 - lowest)
+
+	weightAllowLocalIP            = 8  // use only for Local IP of VPN connection; ( < weightBlockDNS )
+	weightAllowRemoteLocalhostDNS = 10 // allow unencrypted DNS requests to specific IP; ( > weightBlockDNS)
 	weightAllowApplication        = 10 // must have higher priority than weightBlockDNS (to allow port UDP:53 for VPN connections)
 
-	// IMPORTANT! Blocking DNS must have highest priority
-	// (only VPN connection have higher priority: weightAllowLocalIP;weightAllowLocalIPV6) //5
 	weightBlockDNS = 9
 
 	weightAllowLocalPort = 3
