@@ -30,15 +30,12 @@ import (
 	"syscall"
 )
 
-// filter Weights
+// Filter Weights. Weights priority: 0..16 (16 - highest, 0 - lowest)
 const (
-	// IMPORTANT! Use only for Local IP/IPv6 of VPN connection
-	weightAllowLocalIP            = 10
-	weightAllowRemoteLocalhostDNS = 10 // allow DNS requests to 127.0.0.1:53
-	weightAllowApplication        = 10 // must have higher priority than weightBlockDNS (to allow port UDP:53 for VPN connections)
+	weightAllowLocalIP     = 8  // use only for Local IP of VPN connection; ( < weightBlockDNS )
+	weightAllowDNS         = 10 // allow unencrypted DNS requests to specific IP; ( > weightBlockDNS)
+	weightAllowApplication = 10 // must have higher priority than weightBlockDNS (to allow port UDP:53 for VPN connections)
 
-	// IMPORTANT! Blocking DNS must have highest priority
-	// (only VPN connection have higher priority: weightAllowLocalIP;weightAllowLocalIPV6) //5
 	weightBlockDNS = 9
 
 	weightAllowLocalPort = 3
@@ -48,7 +45,13 @@ const (
 	// NOTE: If split-tunnelling not enabled (driver not registered callouts) - this filter will BLOCK everything
 	// But it is ok since ST-filters weight = weightBlockAll + 1
 	// weightAllowSplittedApps = 3
+)
 
+type IpVersion bool
+
+const (
+	IPv4 IpVersion = false
+	IPv6 IpVersion = true
 )
 
 // NewFilterAllowLocalPort creates a filter to allow local port
@@ -73,31 +76,6 @@ func NewFilterAllowLocalPort(
 	f.AddCondition(&ConditionIPLocalPort{Match: FwpMatchEqual, Port: port})
 	return f
 }
-
-/*
-// NewFilterAllowRemotePort creates a filter to allow remote port
-func NewFilterAllowRemotePort(
-	keyProvider syscall.GUID,
-	keyLayer syscall.GUID,
-	keySublayer syscall.GUID,
-	dispName string,
-	dispDescription string,
-	port uint16,
-	isPersistent bool) Filter {
-
-	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
-	f.Weight = weightAllowRemotePort
-	f.Action = FwpActionPermit
-
-	f.Flags = FwpmFilterFlagClearActionRight
-	if isPersistent {
-		f.Flags = f.Flags | FwpmFilterFlagPersistent
-	}
-
-	f.AddCondition(&ConditionIPRemotePort{Match: FwpMatchEqual, Port: port})
-	return f
-}
-*/
 
 // NewFilterAllowApplication creates a filter to allow application
 func NewFilterAllowApplication(
@@ -146,20 +124,19 @@ func NewFilterAllowRemoteIP(
 	return f
 }
 
-// AllowRemoteLocalhostDNS allow DNS requests to 127.0.0.1:53
-func AllowRemoteLocalhostDNS(
+// AllowRemoteDNS allow unencrypted DNS requests to a specific IP
+func NewFilterAllowDNS(
 	keyProvider syscall.GUID,
 	keyLayer syscall.GUID,
 	keySublayer syscall.GUID,
 	dispName string,
 	dispDescription string,
+	dnsResolversIp []net.IP,
+	ipVer IpVersion,
 	isPersistent bool) Filter {
 
-	ip := net.ParseIP("127.0.0.1")
-	mask := net.ParseIP("255.255.255.255")
-
 	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
-	f.Weight = weightAllowRemoteLocalhostDNS
+	f.Weight = weightAllowDNS
 	f.Action = FwpActionPermit
 
 	f.Flags = FwpmFilterFlagClearActionRight
@@ -167,9 +144,29 @@ func AllowRemoteLocalhostDNS(
 		f.Flags = f.Flags | FwpmFilterFlagPersistent
 	}
 
-	f.AddCondition(&ConditionIPRemoteAddressV4{Match: FwpMatchEqual, IP: ip, Mask: mask})
 	f.AddCondition(&ConditionIPRemotePort{Match: FwpMatchEqual, Port: 53})
+
+	for _, ip := range dnsResolversIp {
+		if ipVer == IPv4 && ip.To4() != nil {
+			f.AddCondition(&ConditionIPRemoteAddressV4{Match: FwpMatchEqual, IP: ip, Mask: net.IPv4(255, 255, 255, 255)})
+		} else if ipVer == IPv6 && ip.To16() != nil {
+			var ipBytes [16]byte
+			copy(ipBytes[:], ip)
+			f.AddCondition(&ConditionIPRemoteAddressV6{Match: FwpMatchEqual, IP: ipBytes, PrefixLen: 128})
+		}
+	}
+
 	return f
+}
+
+func NewFilterAllowLocalhostDNS(
+	keyProvider syscall.GUID,
+	keyLayer syscall.GUID,
+	keySublayer syscall.GUID,
+	dispName string,
+	dispDescription string,
+	isPersistent bool) Filter {
+	return NewFilterAllowDNS(keyProvider, keyLayer, keySublayer, dispName, dispDescription, []net.IP{net.ParseIP("127.0.0.1")}, IPv4, isPersistent)
 }
 
 // NewFilterAllowRemoteIPV6 creates a filter to allow remote IP v6
@@ -268,7 +265,7 @@ func NewFilterBlockAll(
 	keySublayer syscall.GUID,
 	dispName string,
 	dispDescription string,
-	isIPv6 bool,
+	ipVer IpVersion,
 	isPersistent bool, isBootTime bool) Filter {
 
 	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
@@ -282,7 +279,7 @@ func NewFilterBlockAll(
 		f.Flags = f.Flags | FwpmFilterFlagBoottime
 	}
 
-	if !isIPv6 {
+	if ipVer == IPv4 {
 		f.AddCondition(&ConditionIPRemoteAddressV4{Match: FwpMatchEqual, IP: net.IPv4(0, 0, 0, 0), Mask: net.IPv4(0, 0, 0, 0)})
 	} else {
 		var ipBytes [16]byte
@@ -300,7 +297,6 @@ func NewFilterBlockDNS(
 	keySublayer syscall.GUID,
 	dispName string,
 	dispDescription string,
-	exceptionIPs []net.IP,
 	isPersistent bool) Filter {
 
 	f := NewFilter(keyProvider, keyLayer, keySublayer, dispName, dispDescription)
@@ -313,16 +309,5 @@ func NewFilterBlockDNS(
 	}
 
 	f.AddCondition(&ConditionIPRemotePort{Match: FwpMatchEqual, Port: 53})
-	for _, exceptionIP := range exceptionIPs {
-		if len(exceptionIP) > 0 {
-			if exceptionIP.To4() != nil {
-				f.AddCondition(&ConditionIPRemoteAddressV4{Match: FwpMatchNotEqual, IP: exceptionIP, Mask: net.IPv4(255, 255, 255, 255)})
-			} else {
-				var ipBytes [16]byte
-				copy(ipBytes[:], exceptionIP)
-				f.AddCondition(&ConditionIPRemoteAddressV6{Match: FwpMatchNotEqual, IP: ipBytes, PrefixLen: 128})
-			}
-		}
-	}
 	return f
 }
