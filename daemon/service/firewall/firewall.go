@@ -288,7 +288,7 @@ func OnChangeDNS(newDnsCfg *dns.DnsSettings) error {
 
 	var addresses []net.IP = nil
 	var isInternal bool = false
-	if newDnsCfg != nil && !newDnsCfg.UseEncryption() {
+	if newDnsCfg != nil {
 		// for DoH/DoT - no sense to allow DNS port (53)
 		addresses = newDnsCfg.GetUnencryptedServersAddresses()
 		isInternal = newDnsCfg.Metadata().IsInternalDnsConfig
