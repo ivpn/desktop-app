@@ -319,21 +319,21 @@ func doEnable() (retErr error) {
 	// IPv6 filters
 	for _, layer := range v6Layers {
 		// block all
-		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all", true, isPersistant, false))
+		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all", winlib.IPv6, isPersistant, false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block all IPv6': %w", err)
 		}
 		if isPersistant {
 			// For 'persistant' state we have to add boot-time blocking rule
 			bootTime := true
-			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all (boot time)", true, false, bootTime))
+			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all (boot time)", winlib.IPv6, false, bootTime))
 			if err != nil {
 				return fmt.Errorf("failed to add boot-time filter 'block all IPv6': %w", err)
 			}
 		}
 
 		// block DNS
-		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "Block DNS", nil, isPersistant))
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "Block DNS", isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
 		}
@@ -386,26 +386,34 @@ func doEnable() (retErr error) {
 	// IPv4 filters
 	for _, layer := range v4Layers {
 		// block all
-		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all", false, isPersistant, false))
+		_, err := manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all", winlib.IPv4, isPersistant, false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block all': %w", err)
 		}
 		if isPersistant {
 			// For 'persistant' state we have to add boot-time blocking rule
 			bootTime := true
-			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all (boot time)", false, false, bootTime))
+			_, err = manager.AddFilter(winlib.NewFilterBlockAll(providerKey, layer, sublayerKey, filterDName, "Block all (boot time)", winlib.IPv4, false, bootTime))
 			if err != nil {
 				return fmt.Errorf("failed to add boot-time filter 'block all': %w", err)
 			}
 		}
 
-		// block DNS
-		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "Block DNS", customDnsAddresses, isPersistant))
+		// Block all DNS requests
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "Block DNS", isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
 		}
+		// Allow DNS requests to specified DNS server
+		if haveIPv4Dns, _ := checkIpAddrVersionPresence(customDnsAddresses); haveIPv4Dns {
+			_, err = manager.AddFilter(winlib.NewFilterAllowDNS(providerKey, layer, sublayerKey, sublayerDName, "Allow DNS", customDnsAddresses, winlib.IPv4, isPersistant))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow dns': %w", err)
+			}
+		}
+
 		// allow DNS requests to 127.0.0.1:53
-		_, err = manager.AddFilter(winlib.AllowRemoteLocalhostDNS(providerKey, layer, sublayerKey, sublayerDName, "", isPersistant))
+		_, err = manager.AddFilter(winlib.NewFilterAllowLocalhostDNS(providerKey, layer, sublayerKey, sublayerDName, "", isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow localhost dns': %w", err)
 		}
@@ -722,34 +730,41 @@ func implSingleDnsRuleOn(dnsAddresses []net.IP) (retErr error) {
 		}
 	}
 
-	var ipv6DnsIpExceptions []net.IP = nil
-	var ipv4DnsIpExceptions []net.IP = nil
-	for _, dnsAddr := range dnsAddresses {
-		if dnsAddr.To4() != nil {
-			ipv4DnsIpExceptions = append(ipv4DnsIpExceptions, dnsAddr)
-		} else {
-			ipv6DnsIpExceptions = append(ipv6DnsIpExceptions, dnsAddr)
-		}
-	}
+	haveIPv4Dns, haveIPv6Dns := checkIpAddrVersionPresence(dnsAddresses)
 
 	// IPv6 filters
 	for _, layer := range v6Layers {
-		// block DNS
-		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", ipv6DnsIpExceptions, false))
+		// Block all DNS requests
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
+		}
+		// Allow DNS requests to specified DNS server
+		if haveIPv6Dns {
+			_, err = manager.AddFilter(winlib.NewFilterAllowDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Allow DNS", customDnsAddresses, winlib.IPv6, false))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow dns': %w", err)
+			}
 		}
 	}
 
 	// IPv4 filters
 	for _, layer := range v4Layers {
-		// block DNS
-		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", ipv4DnsIpExceptions, false))
+		// Block all DNS requests
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
 		}
+		// Allow DNS requests to specified DNS server
+		if haveIPv4Dns {
+			_, err = manager.AddFilter(winlib.NewFilterAllowDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Allow DNS", customDnsAddresses, winlib.IPv4, false))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow dns': %w", err)
+			}
+		}
+
 		// allow DNS requests to 127.0.0.1:53
-		_, err = manager.AddFilter(winlib.AllowRemoteLocalhostDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "", false))
+		_, err = manager.AddFilter(winlib.NewFilterAllowLocalhostDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "", false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow localhost dns': %w", err)
 		}
@@ -760,4 +775,15 @@ func implSingleDnsRuleOn(dnsAddresses []net.IP) (retErr error) {
 		}
 	}
 	return nil
+}
+
+func checkIpAddrVersionPresence(ipAddresses []net.IP) (hasIPv4, hasIPv6 bool) {
+	for _, ip := range ipAddresses {
+		if ip.To4() != nil {
+			hasIPv4 = true
+		} else if ip.To16() != nil {
+			hasIPv6 = true
+		}
+	}
+	return
 }
