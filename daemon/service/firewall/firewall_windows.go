@@ -392,13 +392,21 @@ func doEnable() (retErr error) {
 			}
 		}
 
-		// block DNS
-		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "Block DNS", customDNS, isPersistant))
+		// Block all DNS requests
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKey, layer, sublayerKey, sublayerDName, "Block DNS", nil, isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
 		}
+		// Allow DNS requests to specified DNS server
+		if customDNS.To4() != nil {
+			_, err = manager.AddFilter(winlib.NewFilterAllowDNS(providerKey, layer, sublayerKey, sublayerDName, "Allow DNS", customDNS, isPersistant))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow dns': %w", err)
+			}
+		}
+
 		// allow DNS requests to 127.0.0.1:53
-		_, err = manager.AddFilter(winlib.AllowRemoteLocalhostDNS(providerKey, layer, sublayerKey, sublayerDName, "", isPersistant))
+		_, err = manager.AddFilter(winlib.NewFilterAllowLocalhostDNS(providerKey, layer, sublayerKey, sublayerDName, "", isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow localhost dns': %w", err)
 		}
@@ -725,22 +733,37 @@ func implSingleDnsRuleOn(dnsAddr net.IP) (retErr error) {
 
 	// IPv6 filters
 	for _, layer := range v6Layers {
-		// block DNS
-		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", ipv6DnsIpException, false))
+		// Block all DNS requests
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", nil, false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
+		}
+		// Allow DNS requests to specified DNS server
+		if ipv6DnsIpException.To16() != nil {
+			_, err = manager.AddFilter(winlib.NewFilterAllowDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Allow DNS", ipv6DnsIpException, false))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow dns': %w", err)
+			}
 		}
 	}
 
 	// IPv4 filters
 	for _, layer := range v4Layers {
-		// block DNS
-		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", ipv4DnsIpException, false))
+		// Block all DNS requests
+		_, err = manager.AddFilter(winlib.NewFilterBlockDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Block DNS", nil, false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'block dns': %w", err)
 		}
+		// Allow DNS requests to specified DNS server
+		if ipv4DnsIpException.To4() != nil {
+			_, err = manager.AddFilter(winlib.NewFilterAllowDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "Allow DNS", ipv4DnsIpException, false))
+			if err != nil {
+				return fmt.Errorf("failed to add filter 'allow dns': %w", err)
+			}
+		}
+
 		// allow DNS requests to 127.0.0.1:53
-		_, err = manager.AddFilter(winlib.AllowRemoteLocalhostDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "", false))
+		_, err = manager.AddFilter(winlib.NewFilterAllowLocalhostDNS(providerKeySingleDns, layer, sublayerKeySingleDns, filterDNameSingleDns, "", false))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow localhost dns': %w", err)
 		}
