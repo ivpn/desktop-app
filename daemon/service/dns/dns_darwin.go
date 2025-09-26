@@ -27,7 +27,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
@@ -68,18 +67,19 @@ func implGetDnsEncryptionAbilities() (dnsOverHttps, dnsOverTls bool, err error) 
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
 	defer func() {
 		if retErr != nil {
-			dnscryptproxy.Stop()
+			ResolversTeardown()
 		}
 	}()
 
-	dnscryptproxy.Stop()
+	ResolversTeardown()
 	// start encrypted DNS configuration (if required)
-	if !dnsCfg.IsEmpty() && dnsCfg.UseEncryption() {
-		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
+	if dnsCfg.UseEncryption() {
+		confs, err := ResolversSetup(dnsCfg)
+		if err != nil {
 			return DnsSettings{}, err
 		}
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
-		dnsCfg = DnsSettings{Servers: []DnsServerConfig{{Address: "127.0.0.1"}}}
+		dnsCfg = DnsSettings{Servers: confs}
 	}
 
 	ip := strings.Builder{} // space-separated list of IPs
@@ -103,7 +103,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 // DeleteManual - reset manual DNS configuration to default (DHCP)
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
-	dnscryptproxy.Stop()
+	ResolversTeardown()
 
 	err := shell.Exec(log, platform.DNSScript(), "-delete_alternate_dns")
 	if err != nil {

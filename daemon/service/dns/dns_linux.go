@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
@@ -118,7 +117,7 @@ func implGetPredefinedDnsConfigurations() ([]DnsSettings, error) {
 }
 
 func implPause(localInterfaceIP net.IP) error {
-	dnscryptproxy.Stop()
+	ResolversTeardown()
 	isPaused = true
 	return f_implPause(localInterfaceIP)
 }
@@ -144,14 +143,14 @@ func implResume(defaultDNS DnsSettings, localInterfaceIP net.IP) error {
 func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirewall DnsSettings, retErr error) {
 	defer func() {
 		if retErr != nil {
-			dnscryptproxy.Stop()
+			ResolversTeardown()
 		}
 	}()
 
 	// keep info about current manual DNS configuration (can be used for pause/resume/restore)
 	manualDNS = dnsCfg
 
-	dnscryptproxy.Stop()
+	ResolversTeardown()
 
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config
@@ -160,12 +159,14 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 	}
 
 	// start encrypted DNS configuration (if required)
-	if !dnsCfg.IsEmpty() && dnsCfg.UseEncryption() {
-		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
+	if dnsCfg.UseEncryption() {
+		confs, err := ResolversSetup(dnsCfg)
+		if err != nil {
 			return DnsSettings{}, err
 		}
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
-		dnsCfg = DnsSettings{Servers: []DnsServerConfig{{Address: "127.0.0.1"}}}
+		dnsCfg = DnsSettings{Servers: confs}
+		manualDNS = dnsCfg
 	}
 
 	return f_implSetManual(dnsCfg, localInterfaceIP)
@@ -175,7 +176,7 @@ func implSetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) (dnsInfoForFirew
 // 'localInterfaceIP' (obligatory only for Windows implementation) - local IP of VPN interface
 func implDeleteManual(localInterfaceIP net.IP) error {
 	manualDNS = DnsSettings{}
-	dnscryptproxy.Stop()
+	ResolversTeardown()
 
 	if isPaused {
 		// in case of PAUSED state -> just save manualDNS config

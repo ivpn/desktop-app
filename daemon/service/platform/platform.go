@@ -69,8 +69,8 @@ var (
 
 	dnscryptproxyBinPath        string
 	dnscryptproxyConfigTemplate string
-	dnscryptproxyConfig         string
-	dnscryptproxyLog            string
+	dnscryptproxyConfigDir      string // for temporary dnscryptproxy config files
+	dnscryptproxyLogDir         string // for dnscryptproxy log files. If empty - do not set 'log_file' parameter in dnscryptproxy config
 )
 
 func init() {
@@ -350,8 +350,8 @@ func WGConfigFilePath() string {
 	return wgConfigFilePath
 }
 
-func DnsCryptProxyInfo() (binPath, configPathTemplate, configPathMutable, logPath string) {
-	return dnscryptproxyBinPath, dnscryptproxyConfigTemplate, dnscryptproxyConfig, dnscryptproxyLog
+func DnsCryptProxyInfo() (binPath, configPathTemplate, configDir, logDir string) {
+	return dnscryptproxyBinPath, dnscryptproxyConfigTemplate, dnscryptproxyConfigDir, dnscryptproxyLogDir
 }
 
 func KemHelperBinaryPath() string {

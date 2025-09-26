@@ -36,7 +36,7 @@
               <p v-if="isShowDnsproxyDescription" class="fwDescription">
                 <strong>Implementation:</strong> DNS over HTTPS (DoH) is implemented using dnscrypt-proxy from
                 the DNSCrypt project. Your DNS settings will be configured to
-                send requests to dnscrypt-proxy listening on localhost (127.0.0.1).
+                send requests to dnscrypt-proxy listening on localhost (127.0.0.x).
               </p>
             </div>
           </ComponentDialog>
@@ -52,16 +52,30 @@
         <label class="defColor" for="linuxDnsIsResolvConfMgmt"
           >Force management of DNS using resolv.conf</label
         >
-      </div>
-      <div class="paramProps fwDescription" style="margin-bottom: 0px;">
-        By default IVPN manages DNS resolvers using the 'systemd-resolved'
-        daemon which is the correct method for systems based on Systemd. This
-        option enables you to override this behavior and allow the IVPN app to
-        directly modify the '/etc/resolv.conf' file.
+
+        <button
+            class="noBordersBtn flexRow"
+            title="Help"
+            v-on:click="$refs.helpForceResolveConf.showModal()"
+          >
+            <img src="@/assets/question.svg" />
+          </button>
+          <ComponentDialog ref="helpForceResolveConf" header="Info">
+            <div>
+              <p>
+                By default IVPN manages DNS resolvers using the 'systemd-resolved'
+                daemon which is the correct method for systems based on Systemd.
+                </p>
+                <p>
+                This option enables you to override this behavior and allow the IVPN app to
+                directly modify the '/etc/resolv.conf' file.
+              </p>
+            </div>
+          </ComponentDialog>
       </div>
     </div>
 
-    <div v-bind:class="{ disabled: dnsIsCustom === false }" style="overflow-y: auto; ">
+    <div v-bind:class="{ disabled: dnsIsCustom === false }" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column;">
 
       <div style="padding-left: 20px;">
       
@@ -164,12 +178,11 @@
         @click="addServer" 
         class="likeText"
         style="padding-left: 0px;"
+        v-if="_dnsCustomCfg.Servers.length < 4"
       >
         + Add custom DNS server
       </button>
-
       </div>
-
     </div>
 
     <div class="paramProps"  style="margin-top: auto; margin-bottom: 20px;">
@@ -541,11 +554,6 @@ div.param {
 div.paramName {
   min-width: 120px;
   max-width: 120px;
-}
-
-label {
-  margin-left: 1px;
-  font-weight: 500;
 }
 
 input.badData {

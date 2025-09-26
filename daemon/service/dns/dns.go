@@ -25,11 +25,8 @@ package dns
 import (
 	"fmt"
 	"net"
-	"net/url"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
-	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
-	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
 type FuncDnsChangeFirewallNotify func(dns *DnsSettings) error
@@ -141,6 +138,10 @@ func notifyFirewall(dnsCfg DnsSettings) error {
 // 'dnsCfg' parameter - DNS configuration
 // 'localInterfaceIP' - local IP of VPN interface
 func SetManual(dnsCfg DnsSettings, localInterfaceIP net.IP) error {
+	if len(dnsCfg.Servers) > 8 {
+		return fmt.Errorf("too many DNS servers defined")
+	}
+
 	dnsForFirewallRules, err := implSetManual(dnsCfg, localInterfaceIP)
 	if err == nil {
 		lastManualDNS = dnsCfg
@@ -182,76 +183,4 @@ func GetPredefinedDnsConfigurations() ([]DnsSettings, error) {
 // Currently, it is in use for macOS - like a DNS change monitor.
 func UpdateDnsIfWrongSettings() error {
 	return implUpdateDnsIfWrongSettings()
-}
-
-func dnscryptProxyProcessStart(dnsCfg DnsSettings) (retErr error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("PANIC (recovered): ", r)
-			retErr = fmt.Errorf("%v", r)
-			if err, ok := r.(error); ok {
-				log.ErrorTrace(err)
-			}
-		}
-
-		if retErr != nil {
-			dnscryptproxy.Stop()
-			retErr = fmt.Errorf("failed to start dnscrypt-proxy: %w", retErr)
-		}
-	}()
-
-	for _, svr := range dnsCfg.Servers {
-		if svr.Encryption != EncryptionNone && svr.Encryption != EncryptionDnsOverHttps {
-			return fmt.Errorf("dnscryptProxyProcessStart: unsupported DNS encryption type %d", svr.Encryption)
-		}
-	}
-
-	binPath, configPathTemplate, configPathMutable, logfile := platform.DnsCryptProxyInfo()
-	if len(binPath) == 0 || len(configPathTemplate) == 0 || len(configPathMutable) == 0 {
-		return fmt.Errorf("configuration not defined")
-	}
-
-	// Configure + start dnscrypt-proxy
-	stamps := make([]string, 0, len(dnsCfg.Servers))
-	for _, svr := range dnsCfg.Servers {
-		stamp := dnscryptproxy.ServerStamp{ServerAddrStr: svr.Address, Proto: dnscryptproxy.StampProtoTypePlain}
-
-		if svr.Encryption == EncryptionDnsOverHttps {
-			u, err := url.Parse(svr.Template)
-			if err != nil {
-				return err
-			}
-			if u.Scheme != "https" {
-				return fmt.Errorf("bad template URL scheme: %q", u.Scheme)
-			}
-			stamp.Proto = dnscryptproxy.StampProtoTypeDoH
-			stamp.Path = u.Path
-			stamp.ProviderName = u.Hostname()
-		}
-
-		//stamp.Props |= dnscryptproxy.ServerInformalPropertyDNSSEC
-		//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoLog
-		//stamp.Props |= dnscryptproxy.ServerInformalPropertyNoFilter
-
-		stamps = append(stamps, stamp.String())
-	}
-
-	// generate dnscrypt-proxy configuration
-	if err := dnscryptproxy.SaveConfigFile(stamps, configPathTemplate, configPathMutable, logfile); err != nil {
-		return err
-	}
-	log.Debug(fmt.Sprintf("dnscrypt-proxy config: %q", configPathMutable))
-
-	if err := dnscryptproxy.Init(binPath, configPathMutable, logfile); err != nil {
-		return err
-	}
-
-	if err := dnscryptproxy.Start(); err != nil {
-		if stopErr := dnscryptproxy.Stop(); stopErr != nil {
-			log.Warning("failed to stop dnscrypt-proxy: ", stopErr)
-		}
-		return err
-	}
-
-	return nil
 }

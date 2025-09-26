@@ -33,7 +33,6 @@ import (
 	"unsafe"
 
 	"github.com/ivpn/desktop-app/daemon/netinfo"
-	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 )
 
@@ -191,13 +190,13 @@ func implSetManual(dnsCfg DnsSettings, vpnInterfaceIP net.IP) (dnsInfoForFirewal
 	defer catchPanic(&retErr)
 	defer func() {
 		if retErr != nil {
-			if err := dnscryptproxy.Stop(); err != nil {
+			if err := ResolversTeardown(); err != nil {
 				log.Error("failed to stop dnscrypt-proxy: ", err)
 			}
 		}
 	}()
 
-	if err := dnscryptproxy.Stop(); err != nil {
+	if err := ResolversTeardown(); err != nil {
 		log.Error("failed to stop dnscrypt-proxy: ", err)
 	}
 
@@ -213,16 +212,14 @@ func implSetManual(dnsCfg DnsSettings, vpnInterfaceIP net.IP) (dnsInfoForFirewal
 		return DnsSettings{}, fmt.Errorf("unable to change DNS (configuration is not defined)")
 	}
 
-	useOnlyVpnInterface := false
-
 	// If system does not support encrypted DNS natively - start dnscrypt-proxy for encrypted DNS
 	if dnsCfg.UseEncryption() && !fIsCanUseNativeDnsOverHttps() {
-		if err := dnscryptProxyProcessStart(dnsCfg); err != nil {
+		confs, err := ResolversSetup(dnsCfg)
+		if err != nil {
 			return DnsSettings{}, err
 		}
 		// the local DNS must be configured to the dnscrypt-proxy (localhost)
-		dnsCfg = DnsSettings{Servers: []DnsServerConfig{{Address: "127.0.0.1"}}}
-		useOnlyVpnInterface = true
+		dnsCfg = DnsSettings{Servers: confs}
 	}
 
 	// Logging
@@ -250,24 +247,23 @@ func implSetManual(dnsCfg DnsSettings, vpnInterfaceIP net.IP) (dnsInfoForFirewal
 	//
 	// Note: Do not apply DNS to the VPN interface if the DNS server is in the local network.
 	// Otherwise, it can cause delays in DNS resolution.
-	if !useOnlyVpnInterface {
-		// All local networks
-		lNetworks, err := getLocalNetworks(nil)
-		if err != nil {
-			return DnsSettings{}, fmt.Errorf("error receiving local addresses: %w", err)
-		}
 
-		for _, network := range lNetworks {
-			for i := len(dnsCfg.Servers) - 1; i >= 0; i-- {
-				svr := dnsCfg.Servers[i]
-				if !network.Contains(svr.Ip()) { // 'svr.Ip()' is not in 'network'
-					continue
-				}
-				if err := fSetDNSByLocalIP(network.IP, svr, OperationAdd); err != nil {
-					return DnsSettings{}, fmt.Errorf("failed to add DNS config %q for interface: %w", svr.InfoString(), err)
-				}
-				appliedServers[svr] = struct{}{}
+	// All local networks
+	lNetworks, err := getLocalNetworks(nil)
+	if err != nil {
+		return DnsSettings{}, fmt.Errorf("error receiving local addresses: %w", err)
+	}
+
+	for _, network := range lNetworks {
+		for i := len(dnsCfg.Servers) - 1; i >= 0; i-- {
+			svr := dnsCfg.Servers[i]
+			if !network.Contains(svr.Ip()) { // 'svr.Ip()' is not in 'network'
+				continue
 			}
+			if err := fSetDNSByLocalIP(network.IP, svr, OperationAdd); err != nil {
+				return DnsSettings{}, fmt.Errorf("failed to add DNS config %q for interface: %w", svr.InfoString(), err)
+			}
+			appliedServers[svr] = struct{}{}
 		}
 	}
 
@@ -291,7 +287,7 @@ func implSetManual(dnsCfg DnsSettings, vpnInterfaceIP net.IP) (dnsInfoForFirewal
 func implDeleteManual(vpnInterfaceIP net.IP) (retErr error) {
 	defer catchPanic(&retErr)
 
-	if err := dnscryptproxy.Stop(); err != nil {
+	if err := ResolversTeardown(); err != nil {
 		log.Error("failed to stop dnscrypt-proxy: ", err)
 	}
 

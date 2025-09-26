@@ -39,18 +39,11 @@ import (
 
 const _WIN_SERVICE_NAME = "dnscrypt-proxy"
 
-type dnsCryptProxy struct {
-	binaryPath     string
-	configFilePath string
-	logFilePath    string
-}
-
-func implInit(theBinaryPath, configFilePath, logFilePath string) *dnsCryptProxy {
-	return &dnsCryptProxy{binaryPath: theBinaryPath, configFilePath: configFilePath, logFilePath: logFilePath}
+type extraParams struct {
 }
 
 // Start - asynchronously start
-func (p *dnsCryptProxy) implStart() (retErr error) {
+func (p *DnsCryptProxy) implStart() (retErr error) {
 	defer func() {
 		if retErr != nil {
 			log.Error(retErr)
@@ -101,7 +94,7 @@ func (p *dnsCryptProxy) implStart() (retErr error) {
 	return nil
 }
 
-func (p *dnsCryptProxy) implStop() error {
+func (p *DnsCryptProxy) implStop() error {
 
 	isInstalled, isRunning, statusErr := p.checkIsServiceRunning()
 	if !isInstalled && !isRunning && statusErr == nil {
@@ -128,7 +121,7 @@ func (p *dnsCryptProxy) implStop() error {
 	return reterr
 }
 
-func (p *dnsCryptProxy) checkIsServiceRunning() (isInstalled bool, isRunning bool, retErr error) {
+func (p *DnsCryptProxy) checkIsServiceRunning() (isInstalled bool, isRunning bool, retErr error) {
 	// connect to service maneger
 	m, err := mgr.Connect()
 	if err != nil {
@@ -154,7 +147,7 @@ func (p *dnsCryptProxy) checkIsServiceRunning() (isInstalled bool, isRunning boo
 	return true, false, nil
 }
 
-func (p *dnsCryptProxy) getFatalErrorFromLog() (string, error) {
+func (p *DnsCryptProxy) getFatalErrorFromLog() (string, error) {
 	if _, err := os.Stat(p.logFilePath); err != nil {
 		if os.IsNotExist(err) {
 			return "", nil
