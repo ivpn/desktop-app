@@ -24,6 +24,7 @@ package dnscryptproxy
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 )
@@ -37,15 +38,19 @@ func init() {
 type DnsCryptProxy struct {
 	binaryPath     string
 	configFilePath string
-	logFilePath    string      // optional
+	listenAddr     net.IP      // address where dnscrypt-proxy will listen
+	logFilePath    string      // optional. If empty, logging to file is disabled
 	extra          extraParams // platform-specific extra params
 }
 
+var preStartHook func(p *DnsCryptProxy) error
+
 // Start - create and start dnscrypt-proxy instance asynchronously
-func Start(binaryPath, configFile, logFilePath string) (obj *DnsCryptProxy, retErr error) {
+func Start(binaryPath, configFile, logFilePath string, listenAddr net.IP) (obj *DnsCryptProxy, retErr error) {
 	p := &DnsCryptProxy{
 		binaryPath:     binaryPath,
 		configFilePath: configFile,
+		listenAddr:     listenAddr,
 		logFilePath:    logFilePath,
 	}
 
@@ -55,6 +60,12 @@ func Start(binaryPath, configFile, logFilePath string) (obj *DnsCryptProxy, retE
 			p.implStop()
 		}
 	}()
+
+	if preStartHook != nil {
+		if err := preStartHook(p); err != nil {
+			return nil, fmt.Errorf("pre-start hook failed: %w", err)
+		}
+	}
 
 	return p, p.implStart()
 }

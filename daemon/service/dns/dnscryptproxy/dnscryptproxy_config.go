@@ -48,6 +48,10 @@ func (c Config) ID() string {
 	return nonAlphanumericRegex.ReplaceAllString(s, "_")
 }
 
+func (c Config) ListenAddress() net.IP {
+	return c.listen_address
+}
+
 func NewConfig(listenAddress net.IP, resolvers []Resolver) (*Config, error) {
 	if listenAddress == nil || listenAddress.IsUnspecified() {
 		return nil, fmt.Errorf("invalid listen address")

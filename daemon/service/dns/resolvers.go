@@ -138,7 +138,7 @@ func startDnscryptProxyInstances(configs []*dnscryptproxy.Config) (retErr error)
 			return fmt.Errorf("failed to save dnscrypt-proxy config file: %w", err)
 		}
 
-		proxy, err := dnscryptproxy.Start(binPath, configFileOut, logFilePath)
+		proxy, err := dnscryptproxy.Start(binPath, configFileOut, logFilePath, cfg.ListenAddress())
 		if err != nil {
 			return fmt.Errorf("failed to start dnscrypt-proxy: %w", err)
 		}
