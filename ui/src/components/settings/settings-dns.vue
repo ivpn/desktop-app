@@ -250,14 +250,12 @@ export default {
   },
 
   mounted() {
-    const storeDnsCfg = this.getDnsCustomCfg() || {};
-    this._dnsCustomCfg = JSON.parse(JSON.stringify(storeDnsCfg));
     this._dnsIsCustom = this.getDnsIsCustom() || false;
     this._linuxDnsIsResolvConfMgmt =
       this.daemonSettings?.UserPrefs?.Linux?.IsDnsMgmtOldStyle || false;
 
-    // Remove empty servers (if any)
-    this._dnsCustomCfg.Servers = this._dnsCustomCfg.Servers.filter(svr => svr && svr.Address);
+    // Clone DNS servers from the store      
+    this.updateServers();
 
     this.requestPredefinedDohConfigs();
 
@@ -341,11 +339,7 @@ export default {
         sender.RequestDnsPredefinedConfigs();
       }, 0);
     },
-
-    getDnsCustomCfg() {
-      return this.$store.state.settings.dnsCustomCfg;
-    },
-
+    
     getDnsIsCustom() {
         return this.$store.state.settings.dnsIsCustom;
     },
@@ -406,12 +400,24 @@ export default {
       const uriRegex = /^(https?:\/\/)?([\w.-]+)(:\d+)?(\/.*)?$/i;
       return !uriRegex.test(template);
     },
+
+    updateServers() {
+      const storeDnsCfg = this.dnsCustomCfg || {};
+      this._dnsCustomCfg = JSON.parse(JSON.stringify(storeDnsCfg));
+      // Remove empty servers (if any)
+      this._dnsCustomCfg.Servers = this._dnsCustomCfg.Servers.filter(svr => svr && svr.Address);
+    }
   },
   watch: {
     daemonSettings() {
       this._linuxDnsIsResolvConfMgmt =
         this.daemonSettings.UserPrefs.Linux.IsDnsMgmtOldStyle;
-    },    
+    },
+    
+    dnsCustomCfg() {
+      if (this.isDnsValueChanged) return; // do not overwrite unsaved changes
+      this.updateServers()
+    },
   },
 
   computed: {
@@ -419,6 +425,10 @@ export default {
     daemonSettings() {
       return this.$store.state.settings.daemonSettings;
     },   
+
+    dnsCustomCfg() {
+      return this.$store.state.settings.dnsCustomCfg;
+    },
 
     isShowDnsproxyDescription() {
       return Platform() !== PlatformEnum.Windows;
