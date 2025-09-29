@@ -37,6 +37,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/obfsproxy"
+	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/platform"
 	service_types "github.com/ivpn/desktop-app/daemon/service/types"
 	"github.com/ivpn/desktop-app/daemon/version"
@@ -284,14 +285,39 @@ func (p *Preferences) LoadPreferences() error {
 				Version  obfsproxy.ObfsProxyVersion
 			}
 		}
-		var tmp_Settings_v3_11_15 tmp_type_Settings_v3_11_15
-		err = json.Unmarshal(data, &tmp_Settings_v3_11_15)
-		if err == nil && tmp_Settings_v3_11_15.Obfs4proxy.Version > obfsproxy.None {
+		var old tmp_type_Settings_v3_11_15
+		err = json.Unmarshal(data, &old)
+		if err == nil && old.Obfs4proxy.Version > obfsproxy.None {
 			p.LastConnectionParams.OpenVpnParameters.Obfs4proxy = obfsproxy.Config{
-				Version:  tmp_Settings_v3_11_15.Obfs4proxy.Version,
-				Obfs4Iat: tmp_Settings_v3_11_15.Obfs4proxy.Obfs4Iat,
+				Version:  old.Obfs4proxy.Version,
+				Obfs4Iat: old.Obfs4proxy.Obfs4Iat,
 			}
+		}
+	}
 
+	// Convert parameters from v3.14.34 and releases older
+	// Migration of manual DNS settings to support multiple DNS servers
+	if compareVersions(p.Version, "3.14.34") <= 0 && len(p.LastConnectionParams.ManualDNS.Servers) == 0 {
+		type tmp_type_Settings_v3_14_34 struct {
+			LastConnectionParams struct {
+				ManualDNS struct {
+					DnsHost     string
+					Encryption  dns.DnsEncryption
+					DohTemplate string
+				}
+			}
+		}
+		var old tmp_type_Settings_v3_14_34
+		err = json.Unmarshal(data, &old)
+		if err == nil && len(old.LastConnectionParams.ManualDNS.DnsHost) > 0 {
+			DnsServerConfigs := []dns.DnsServerConfig{
+				{
+					Address:    old.LastConnectionParams.ManualDNS.DnsHost,
+					Encryption: dns.DnsEncryption(old.LastConnectionParams.ManualDNS.Encryption),
+					Template:   old.LastConnectionParams.ManualDNS.DohTemplate,
+				},
+			}
+			p.LastConnectionParams.ManualDNS.Servers = DnsServerConfigs
 		}
 	}
 

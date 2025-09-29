@@ -256,15 +256,19 @@ func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent 
 }
 
 // OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
-func implOnChangeDNS(addr net.IP, isInternal bool) error {
-	addrStr := ""
-	if addr != nil {
-		if addr.To4() == nil {
-			return fmt.Errorf("DNS is not IPv4 address")
+func implOnChangeDNS(addr []net.IP, isInternal bool) error {
+	ipStrBuff := strings.Builder{}
+	for _, ip := range addr {
+		if ip.To4() == nil {
+			return fmt.Errorf("the %q is not IPv4 DNS address", ip.String())
 		}
-		addrStr = addr.String()
+		if ipStrBuff.Len() > 0 {
+			ipStrBuff.WriteString(",")
+		}
+		ipStrBuff.WriteString(ip.String())
 	}
 
+	addrStr := ipStrBuff.String()
 	log.Info("-set_dns", " ", addrStr)
 	return shell.Exec(nil, platform.FirewallScript(), "-set_dns", addrStr)
 }
@@ -308,13 +312,21 @@ func implSingleDnsRuleOff() (retErr error) {
 	return shell.Exec(log, platform.FirewallScript(), "-only_dns_off")
 }
 
-func implSingleDnsRuleOn(dnsAddr net.IP) (retErr error) {
+func implSingleDnsRuleOn(dnsAddr []net.IP) (retErr error) {
 	exceptions := ""
 	if prioritized, _ := getAllowedIpExceptions(); len(prioritized) > 0 {
 		exceptions = strings.Join(prioritized, ",")
 	}
 
-	return shell.Exec(log, platform.FirewallScript(), "-only_dns", dnsAddr.String(), exceptions)
+	dnsIPs := strings.Builder{}
+	for _, ip := range dnsAddr {
+		if dnsIPs.Len() > 0 {
+			dnsIPs.WriteString(",")
+		}
+		dnsIPs.WriteString(ip.String())
+	}
+
+	return shell.Exec(log, platform.FirewallScript(), "-only_dns", dnsIPs.String(), exceptions)
 }
 
 //---------------------------------------------------------------------
@@ -383,7 +395,7 @@ func reApplyExceptions() error {
 	const onlyIcmpFALSE = false
 
 	// define DNS rules
-	err := implOnChangeDNS(getDnsIP())
+	err := implOnChangeDNS(getDnsIpAddresses())
 	if err != nil {
 		log.Error(err)
 	}

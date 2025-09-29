@@ -180,16 +180,32 @@ func implRemoveHostsFromExceptions(IPs []net.IP, onlyForICMP bool, isPersistent 
 // OnChangeDNS - must be called on each DNS change (to update firewall rules according to new DNS configuration)
 // 'addr' - new DNS address
 // 'isInternal' - TRUE if DNS is internal (in VPN network)
-func implOnChangeDNS(addr net.IP, isInternal bool) error {
-	var dnsVal string
-	if addr != nil {
-		dnsVal = addr.String()
+func implOnChangeDNS(addr []net.IP, isInternal bool) error {
+
+	// Comma-separated list of IPs (must be routed through VPN interface)
+	var dns_ip_pub []string
+	// Comma-separated list of custom local non-routable IP (not in VPN network)
+	// These IP's must be skipped from NAT-ing and routing through VPN interface
+	var dns_ip_lan []string
+
+	for _, svr := range addr {
+		if !isInternal && netinfo.IsLocalNonRoutableIP(svr) {
+			dns_ip_lan = append(dns_ip_lan, svr.String())
+		} else {
+			dns_ip_pub = append(dns_ip_pub, svr.String())
+		}
 	}
 
-	// isLAN - TRUE if DNS is custom local non-routable IP (not in VPN network)
-	isLAN := !isInternal && netinfo.IsLocalNonRoutableIP(addr)
-	log.Info(fmt.Sprintf("-set_dns %v %v", isLAN, dnsVal))
-	return shell.Exec(nil, platform.FirewallScript(), "-set_dns", fmt.Sprint(isLAN), dnsVal)
+	var arg1_public = strings.TrimSpace(strings.Join(dns_ip_pub, ","))
+	var arg2_local = strings.TrimSpace(strings.Join(dns_ip_lan, ","))
+	if len(arg1_public) > 0 {
+		arg1_public = "--ip " + arg1_public
+	}
+	if len(arg2_local) > 0 {
+		arg2_local = "--ip_local " + arg2_local
+	}
+
+	return shell.Exec(log, platform.FirewallScript(), []string{"-set_dns", arg1_public, arg2_local}...)
 }
 
 // implOnUserExceptionsUpdated() called when 'userExceptions' value were updated. Necessary to update firewall rules.
@@ -261,7 +277,7 @@ func reApplyExceptions() error {
 		log.Error(err)
 	}
 
-	err1 := implOnChangeDNS(getDnsIP())
+	err1 := implOnChangeDNS(getDnsIpAddresses())
 	if err1 != nil {
 		log.Error(err1)
 		if err == nil {
@@ -353,6 +369,6 @@ func implSingleDnsRuleOff() (retErr error) {
 	return nil // nothing to do for this platform
 }
 
-func implSingleDnsRuleOn(dnsAddr net.IP) (retErr error) {
+func implSingleDnsRuleOn(dnsAddr []net.IP) (retErr error) {
 	return nil // nothing to do for this platform
 }

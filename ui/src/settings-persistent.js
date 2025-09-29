@@ -76,6 +76,20 @@ export function InitPersistentSettings() {
         console.error("InitPersistentSettings (obfsproxyConfig upd.): ", e);
       }
 
+      // UPGRADING from OLD SETTINGS (from v3.14.34 and older)
+      if (settings.dnsCustomCfg?.DnsHost !== undefined) {
+        let new_dnsCustomCfg = {
+          Servers: [
+            { 
+              Address: settings.dnsCustomCfg.DnsHost, 
+              Encryption: settings.dnsCustomCfg.Encryption, 
+              Template: settings.dnsCustomCfg.DohTemplate
+            }
+          ]
+        };
+        settings.dnsCustomCfg = new_dnsCustomCfg
+      }
+
       // apply settings data
       const mergedState = merge(store.state.settings, settings, {
         arrayMerge: combineMerge,

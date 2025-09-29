@@ -41,30 +41,28 @@ type startedCmd struct {
 	exitError error
 }
 
-type dnsCryptProxy struct {
-	binaryPath     string
-	configFilePath string
-	proc           *startedCmd
-}
-
-func implInit(theBinaryPath, configFilePath, logFilePath string) *dnsCryptProxy {
-	return &dnsCryptProxy{binaryPath: theBinaryPath, configFilePath: configFilePath}
+type extraParams struct {
+	proc *startedCmd
 }
 
 // Start - asynchronously start
-func (p *dnsCryptProxy) implStart() (err error) {
+func (p *DnsCryptProxy) implStart() (err error) {
+	if len(p.logFilePath) > 0 {
+		return errors.New("log file path is not supported on this platform")
+	}
+
 	command, err := p.start()
 	if err != nil {
 		return err
 	}
 
-	p.proc = command
+	p.extra.proc = command
 
 	return nil
 }
 
-func (p *dnsCryptProxy) implStop() error {
-	prc := p.proc
+func (p *DnsCryptProxy) implStop() error {
+	prc := p.extra.proc
 	if prc == nil {
 		return nil
 	}
@@ -72,7 +70,7 @@ func (p *dnsCryptProxy) implStop() error {
 	return shell.Kill(prc.command)
 }
 
-func (p *dnsCryptProxy) start() (command *startedCmd, err error) {
+func (p *DnsCryptProxy) start() (command *startedCmd, err error) {
 	cmd := exec.Command(p.binaryPath, "-child", "-config", p.configFilePath)
 
 	defer func() {
@@ -83,12 +81,24 @@ func (p *dnsCryptProxy) start() (command *startedCmd, err error) {
 		}
 	}()
 
+	pidLogStr := ""
+	getPidLogStr := func() string {
+		if len(pidLogStr) > 0 {
+			return pidLogStr
+		}
+		if cmd.Process != nil {
+			pidLogStr = fmt.Sprintf("<%d> ", cmd.Process.Pid)
+		}
+		return pidLogStr
+	}
+
 	var lastOutError error = nil
 	isInitialized := false
 	// output example:
 	// 	[NOTICE] [ivpnmanualconfig] OK
 	outputParseFunc := func(text string, isError bool) {
-		log.Info("[OUT] ", text)
+		log.Info(getPidLogStr(), "[OUT] ", text)
+
 		// check if dnscrypt-proxy ready to use
 		if strings.Contains(text, "[NOTICE] Now listening to") {
 			isInitialized = true
@@ -101,13 +111,13 @@ func (p *dnsCryptProxy) start() (command *startedCmd, err error) {
 
 	// register colsole output reader for a process
 	if err := shell.StartConsoleReaders(cmd, outputParseFunc); err != nil {
-		log.Error("Failed to init dnscrypt-proxy command: ", err.Error())
+		log.Error(getPidLogStr(), "Failed to init dnscrypt-proxy command: ", err.Error())
 		return nil, err
 	}
 
 	// Start process
 	if err := cmd.Start(); err != nil {
-		log.Error("Failed to start dnscrypt-proxy: ", err.Error())
+		log.Error(getPidLogStr(), "Failed to start dnscrypt-proxy: ", err.Error())
 		return nil, err
 	}
 
@@ -115,7 +125,7 @@ func (p *dnsCryptProxy) start() (command *startedCmd, err error) {
 	var procStoppedError error
 	go func() {
 		procStoppedError = cmd.Wait()
-		log.Info("dnscrypt-proxy stopped")
+		log.Info(getPidLogStr(), "dnscrypt-proxy stopped")
 		stoppedChan <- struct{}{}
 		close(stoppedChan)
 	}()
@@ -145,6 +155,6 @@ func (p *dnsCryptProxy) start() (command *startedCmd, err error) {
 		}
 	}
 
-	log.Info("dnscrypt-proxy started")
+	log.Info(getPidLogStr(), "dnscrypt-proxy started")
 	return &startedCmd{command: cmd, stopped: stoppedChan, exitError: procStoppedError}, nil
 }

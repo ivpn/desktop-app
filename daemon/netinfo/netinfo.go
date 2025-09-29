@@ -239,14 +239,28 @@ func GetInterfaceByIndex(index int) (*net.Interface, error) {
 // GetAllLocalV4Addresses - returns IPv4 addresses of all local interfaces
 // Note: it returns only non-routable local addresses!
 func GetAllLocalV4Addresses() ([]net.IPNet, error) {
-	return getAllLocalAddresses(nil, false)
+	return getAllLocalAddresses(nil, ipTypeIPv4)
 }
 
 // GetAllLocalV6Addresses - returns IPv6 addresses of all local interfaces
 // Note: it returns only non-routable local addresses!
 func GetAllLocalV6Addresses() ([]net.IPNet, error) {
-	return getAllLocalAddresses(nil, true)
+	return getAllLocalAddresses(nil, ipTypeIPv6)
 }
+
+// GetAllLocalAddresses - returns all local addresses of all available interfaces
+// Note: it returns only non-routable local addresses!
+func GetAllLocalAddresses() ([]net.IPNet, error) {
+	return getAllLocalAddresses(nil, ipTypeAny)
+}
+
+type ipType int
+
+const (
+	ipTypeAny ipType = iota
+	ipTypeIPv4
+	ipTypeIPv6
+)
 
 // getAllLocalAddresses - returns all local addresses of all available interfaces.
 //
@@ -254,8 +268,8 @@ func GetAllLocalV6Addresses() ([]net.IPNet, error) {
 // (this prevents potential vulnerabilities when attacker can manipulate with routing table)
 //
 // * ifaces - list of interfaces to check, if nil then all available interfaces will be checked;
-// * if isIPv6 is true, then IPv6 addresses will be returned, otherwise IPv4;
-func getAllLocalAddresses(ifaces []net.Interface, isIPv6 bool) ([]net.IPNet, error) {
+// * ipVer - type of IP addresses to return (IPv4/IPv6/Any)
+func getAllLocalAddresses(ifaces []net.Interface, ipVer ipType) ([]net.IPNet, error) {
 	ret := make([]net.IPNet, 0, 8)
 
 	var err error
@@ -295,8 +309,12 @@ func getAllLocalAddresses(ifaces []net.Interface, isIPv6 bool) ([]net.IPNet, err
 			}
 
 			isIPv6Addr := ip.IP.To4() == nil // check address is IPv6
-			if isIPv6Addr != isIPv6 {
-				continue // ignore unexpected IP address family (v4 or v6)
+			if ipVer == ipTypeIPv4 && isIPv6Addr {
+				continue // ignore IPv6 address
+			} else if ipVer == ipTypeIPv6 && !isIPv6Addr {
+				continue // ignore IPv4 address
+			} else if ipVer == ipTypeAny {
+				// accept any IP address version
 			}
 
 			ret = append(ret, *ip)

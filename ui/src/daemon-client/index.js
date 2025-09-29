@@ -415,18 +415,15 @@ async function processResponse(response) {
         // Save DNS abilities
         store.commit("dnsAbilities", obj.Dns);
         // If the dns abilities does not fit the current custom dns configuration - reset custom dns configuration
-        let curDnsEncryption = store.state.settings.dnsCustomCfg.Encryption;
-        if (
-          (curDnsEncryption === DnsEncryption.DnsOverTls &&
-            obj.Dns.CanUseDnsOverTls !== true) ||
-          (curDnsEncryption === DnsEncryption.DnsOverHttps &&
-            obj.Dns.CanUseDnsOverHttps !== true)
-        ) {
+        let isBadDnsConf = store.state.settings.dnsCustomCfg?.Servers?.some((item) => 
+          (obj.Dns.CanUseDnsOverTls !== true && item.Encryption === DnsEncryption.DnsOverTls) ||
+          (obj.Dns.CanUseDnsOverHttps !== true && item.Encryption === DnsEncryption.DnsOverHttps)
+        );
+        if (isBadDnsConf) {
+          console.log("Current custom DNS configuration is not supported by the daemon. Resetting custom DNS configuration.");        
           store.commit("settings/dnsIsCustom", false);
           store.commit("settings/dnsCustomCfg", {
-            DnsHost: "",
-            Encryption: DnsEncryption.None,
-            DohTemplate: "",
+            Servers: [ { Address: "", Encryption: DnsEncryption.None, Template: "" }],
           });
         }
       }

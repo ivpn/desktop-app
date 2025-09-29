@@ -135,18 +135,18 @@ func GetState() (isEnabled, isLanAllowed, isMulticatsAllowed bool, err error) {
 	return ret, stateAllowLan, stateAllowLanMulticast, err
 }
 
-// SingleDnsRuleOn - add rule to allow DNS communication with specified IP only
-// (usefull for Inverse Split Tunneling feature)
+// SingleDnsRuleOn - add rule to allow DNS communication with specified IPs only
+// (useful for Inverse Split Tunneling feature)
 // Returns error if IVPN firewall is enabled.
 // As soon as IVPN firewall enables - this rule will be removed
-func SingleDnsRuleOn(dnsAddr net.IP) (retErr error) {
+func SingleDnsRuleOn(dnsAddr []net.IP) (retErr error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	return implSingleDnsRuleOn(dnsAddr)
 }
 
 // SingleDnsRuleOff - remove rule (if exist) to allow DNS communication with specified IP only defined by SingleDnsRuleOn()
-// (usefull for Inverse Split Tunneling feature)
+// (useful for Inverse Split Tunneling feature)
 func SingleDnsRuleOff() (retErr error) {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -262,10 +262,11 @@ func GetDnsInfo() (dns.DnsSettings, bool) {
 	return *dnsConfig, true
 }
 
-func getDnsIP() (addr net.IP, isInternal bool) {
+// getDnsIpAddresses - return list of IP addresses that are used in current DNS configuration without encryption
+func getDnsIpAddresses() (addr []net.IP, isInternal bool) {
 	cfg := dnsConfig
-	if cfg != nil && cfg.Encryption == dns.EncryptionNone {
-		return cfg.Ip(), cfg.Metadata().IsInternalDnsServer
+	if cfg != nil {
+		return cfg.GetUnencryptedServersAddresses(), cfg.Metadata().IsInternalDnsConfig
 	}
 	return nil, false
 }
@@ -285,15 +286,15 @@ func OnChangeDNS(newDnsCfg *dns.DnsSettings) error {
 		return nil
 	}
 
-	var addr net.IP = nil
+	var addresses []net.IP = nil
 	var isInternal bool = false
-	if newDnsCfg != nil && newDnsCfg.Encryption == dns.EncryptionNone {
+	if newDnsCfg != nil {
 		// for DoH/DoT - no sense to allow DNS port (53)
-		addr = net.ParseIP(newDnsCfg.DnsHost)
-		isInternal = newDnsCfg.Metadata().IsInternalDnsServer
+		addresses = newDnsCfg.GetUnencryptedServersAddresses()
+		isInternal = newDnsCfg.Metadata().IsInternalDnsConfig
 	}
 
-	err := implOnChangeDNS(addr, isInternal)
+	err := implOnChangeDNS(addresses, isInternal)
 	if err != nil {
 		log.Error(err)
 	} else {

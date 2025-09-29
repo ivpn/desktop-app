@@ -40,6 +40,7 @@ import (
 type CmdDns struct {
 	flags.CmdInfo
 	reset                bool
+	add                  bool
 	dns                  string
 	dohTemplate          string
 	dotTemplate          string
@@ -57,6 +58,7 @@ const (
 	ArgName_DoH        = "doh"
 	ArgName_DoT        = "dot"
 	ArgName_Management = "management"
+	ArgName_Add        = "add"
 )
 
 func IsParamApplicable_LinuxForceModifyResolvconf() (bool, error) {
@@ -80,10 +82,28 @@ func IsParamApplicable_LinuxForceModifyResolvconf() (bool, error) {
 	return true, nil
 }
 
+func getCurrentCustomDnsSettings() (dns.DnsSettings, error) {
+	state, connected, err := _proto.GetVPNState()
+	if err != nil {
+		return dns.DnsSettings{}, err
+	}
+
+	if state == vpn.CONNECTED {
+		return connected.Dns.Dns, nil
+	}
+	defConnCfg, err := _proto.GetDefConnectionParams()
+	if err != nil {
+		return dns.DnsSettings{}, err
+	}
+	return defConnCfg.Params.ManualDNS, nil
+}
+
 func (c *CmdDns) Init() {
 	c.Initialize("dns", "DNS management for VPN connection\nDNS_IP - optional parameter used to set custom dns value (ignored when AntiTracker enabled)")
 	c.DefaultStringVar(&c.dns, "DNS_IP")
 	c.BoolVar(&c.reset, ArgName_Off, false, "Reset DNS server to a default")
+
+	c.BoolVar(&c.add, ArgName_Add, false, "Add a custom DNS server to the existing custom DNS configuration (if any)\nExample: ivpn dns -add 8.8.8.8\n         ivpn dns -add -doh https://cloudflare-dns.com/dns-query 1.1.1.1")
 
 	if cliplatform.IsDnsOverHttpsSupported() {
 		c.StringVar(&c.dohTemplate, ArgName_DoH, "", "URI", "DNS-over-HTTPS URI template\n  Example: ivpn dns -doh https://cloudflare-dns.com/dns-query 1.1.1.1")
@@ -155,25 +175,37 @@ func (c *CmdDns) Run() error {
 	var servers *apitypes.ServersInfoResponse
 	// do we have to change custom DNS configuration ?
 	if c.reset || len(c.dns) > 0 {
-		// get default connection parameters (dns, anti-tracker, ... etc.)
-		defConnCfg, err := _proto.GetDefConnectionParams()
-		if err != nil {
-			return err
-		}
-		defManualDns := defConnCfg.Params.ManualDNS
+		// erase DNS settings
+		defManualDns := dns.DnsSettings{}
 
-		if c.reset {
-			defManualDns = dns.DnsSettings{}
-		} else {
-			defManualDns.DnsHost = c.dns
+		if len(c.dns) > 0 {
+			if c.add {
+				dns, err := getCurrentCustomDnsSettings()
+				if err != nil {
+					return err
+				}
+				defManualDns = dns
+			}
+
+			if defManualDns.Servers == nil {
+				defManualDns.Servers = make([]dns.DnsServerConfig, 0)
+			}
+
+			dnsSvr := dns.DnsServerConfig{Address: c.dns}
 			if len(c.dohTemplate) > 0 {
-				defManualDns.Encryption = dns.EncryptionDnsOverHttps
-				defManualDns.DohTemplate = c.dohTemplate
+				dnsSvr.Encryption = dns.EncryptionDnsOverHttps
+				dnsSvr.Template = c.dohTemplate
 			}
 			if len(c.dotTemplate) > 0 {
-				defManualDns.Encryption = dns.EncryptionDnsOverTls
-				defManualDns.DohTemplate = c.dotTemplate
+				dnsSvr.Encryption = dns.EncryptionDnsOverTls
+				dnsSvr.Template = c.dotTemplate
 			}
+
+			if len(defManualDns.Servers) >= 4 {
+				return fmt.Errorf("the maximum allowed number of custom DNS servers is 4")
+			}
+			// add new DNS server
+			defManualDns.Servers = append(defManualDns.Servers, dnsSvr)
 		}
 
 		if err := _proto.SetManualDNS(defManualDns, service_types.AntiTrackerMetadata{}); err != nil {

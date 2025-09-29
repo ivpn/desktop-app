@@ -39,18 +39,11 @@ import (
 
 const _WIN_SERVICE_NAME = "dnscrypt-proxy"
 
-type dnsCryptProxy struct {
-	binaryPath     string
-	configFilePath string
-	logFilePath    string
-}
-
-func implInit(theBinaryPath, configFilePath, logFilePath string) *dnsCryptProxy {
-	return &dnsCryptProxy{binaryPath: theBinaryPath, configFilePath: configFilePath, logFilePath: logFilePath}
+type extraParams struct {
 }
 
 // Start - asynchronously start
-func (p *dnsCryptProxy) implStart() (retErr error) {
+func (p *DnsCryptProxy) implStart() (retErr error) {
 	defer func() {
 		if retErr != nil {
 			log.Error(retErr)
@@ -89,19 +82,19 @@ func (p *dnsCryptProxy) implStart() (retErr error) {
 		// read fatal errors from log
 		errText, err := p.getFatalErrorFromLog()
 		if err == nil && len(errText) > 0 {
-			return fmt.Errorf("dnscrypt-proxy service not started: " + errText)
+			return fmt.Errorf("dnscrypt-proxy service not started: %q", errText)
 		}
 		return fmt.Errorf("dnscrypt-proxy service not started")
 	}
 	// read fatal errors from log
 	errText, err := p.getFatalErrorFromLog()
 	if err == nil && len(errText) > 0 {
-		return fmt.Errorf(errText)
+		return fmt.Errorf("%s", errText)
 	}
 	return nil
 }
 
-func (p *dnsCryptProxy) implStop() error {
+func (p *DnsCryptProxy) implStop() error {
 
 	isInstalled, isRunning, statusErr := p.checkIsServiceRunning()
 	if !isInstalled && !isRunning && statusErr == nil {
@@ -128,7 +121,7 @@ func (p *dnsCryptProxy) implStop() error {
 	return reterr
 }
 
-func (p *dnsCryptProxy) checkIsServiceRunning() (isInstalled bool, isRunning bool, retErr error) {
+func (p *DnsCryptProxy) checkIsServiceRunning() (isInstalled bool, isRunning bool, retErr error) {
 	// connect to service maneger
 	m, err := mgr.Connect()
 	if err != nil {
@@ -154,22 +147,33 @@ func (p *dnsCryptProxy) checkIsServiceRunning() (isInstalled bool, isRunning boo
 	return true, false, nil
 }
 
-func (p *dnsCryptProxy) getFatalErrorFromLog() (string, error) {
+func (p *DnsCryptProxy) getFatalErrorFromLog() (string, error) {
+	if _, err := os.Stat(p.logFilePath); err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("stat log file: %w", err)
+	}
+
 	file, err := os.Open(p.logFilePath)
 	if err != nil {
-		log.Debug(p.logFilePath)
-		log.Debug(err)
+		log.Debug(fmt.Sprintf("From log %q: %q", p.logFilePath, err.Error()))
 		return "", err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
-	for scanner.Scan() {
+	buf := make([]byte, 256)
+	scanner.Buffer(buf, 1024) // limit line size to 1024 bytes
+
+	// limit number of lines to read (500 lines max)
+	lineCount := 0
+	for scanner.Scan() && lineCount < 500 {
 		text := scanner.Text()
 		if strings.Contains(text, " [FATAL] ") {
 			return text, nil
 		}
+		lineCount++
 	}
 
 	return "", nil

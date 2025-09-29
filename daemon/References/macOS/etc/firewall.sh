@@ -288,12 +288,15 @@ function client_disconnected {
 
 function set_dns {
   
-  # IS_LAN: "true" or "false":
-  #  - if "true" then DNS is custom local non-routable IP (not in VPN network)
-  #    This IP must be skipped from NAT-ing and routing through VPN interface
-  #  - if "false" then DNS must be routed through VPN interface
-  IS_LAN=$1 
-  DNS=$2  
+  # Comma-separated list of IPs (must be routed through VPN interface)
+  DNS=$1
+  # Comma-separated list of custom local non-routable IP (not in VPN network)
+  # These IP's must be skipped from NAT-ing and routing through VPN interface
+  DNS_LOCAL=$2 
+
+  # Convert comma-separated list to space-separated list
+  DNS_SPACES=${DNS//,/ }
+  DNS_LOCAL_SPACES=${DNS_LOCAL//,/ }
 
   # remove all rules in ${SA_BLOCK_DNS} anchor
   pfctl -a ${ANCHOR}/${SA_BLOCK_DNS} -Fr
@@ -312,16 +315,25 @@ _EOF
   fi
 
   if (( ${IS_DO_ROUTING} == 1 )) ; then
-    if [[ "${IS_LAN}" = "false" ]] ; then
+    if [[ -n "${DNS_SPACES}" ]]; then    
       # Add DNS server to the table of addresses that need to be NAT-ed (and routed through VPN interface)
       # DNS server is accessible only via VPN interface
-      pfctl -a "${ANCHOR}/${ROUTE_SA_INIT}" -t "${ROUTE_TBL_DNS}"       -T replace ${DNS}
+      pfctl -a "${ANCHOR}/${ROUTE_SA_INIT}" -t "${ROUTE_TBL_DNS}"       -T replace ${DNS_SPACES} 
     fi
   fi
 
   # Block all DNS requests except to the specified DNS server
+  local rules=""
+  for dns_ip in ${DNS_SPACES}; do
+    rules="${rules} pass out quick proto {udp, tcp} from any to ${dns_ip} port = 53"$'\n'
+  done
+  for dns_ip in ${DNS_LOCAL_SPACES}; do
+    rules="${rules} pass out quick proto {udp, tcp} from any to ${dns_ip} port = 53"$'\n'
+  done
+  rules="${rules} block return out quick proto {udp, tcp} from any to any port = 53"$'\n'
+
   pfctl -a "${ANCHOR}/${SA_BLOCK_DNS}" -f - <<_EOF
-        block return out quick proto { udp, tcp } from any to ! ${DNS}  port = 53
+       ${rules}
 _EOF
 
 }
@@ -392,12 +404,20 @@ function main {
         client_disconnected
     elif [[ $1 = "-set_dns" ]]; then    
 
-        get_firewall_enabled || return 0
-        
-        IS_LAN=$2 # "true" or "false"; if true, then DNS is custom local non-routable IP (not in VPN network)
-        IP=$3
+        # Comma-separated list of IPs (must be routed through VPN interface)
+        local IP="" 
+        # Comma-separated list of custom local non-routable IP (not in VPN network)
+	      # These IP's must be skipped from NAT-ing and routing through VPN interface
+        local IP_LOCAL=""
+        while [[ $# -gt 1 ]]; do
+            case $2 in
+                --ip)       IP="$3";       shift 2 ;;
+                --ip_local) IP_LOCAL="$3"; shift 2 ;;
+                *) shift ;;
+            esac
+        done
 
-        set_dns ${IS_LAN} ${IP}
+        set_dns "${IP}" "${IP_LOCAL}"
 
     else
         echo "Unknown command"

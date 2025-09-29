@@ -209,7 +209,8 @@ function onWindowReady(win) {
 
 // INITIALIZATION
 if (gotTheLock && isAllowedToStart) {
-  InitPersistentSettings();  
+  // TODO: get rid of persistent settings in UI. It should get all data from the daemon
+  InitPersistentSettings(); 
   connectToDaemon();
   
   // INIT COLOR SCHEME

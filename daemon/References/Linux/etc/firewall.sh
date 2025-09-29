@@ -124,12 +124,20 @@ function only_dns {
   # Allow communication with IP addresses from EXCEPTION_IP list (if defined)
   # It avoids situation of blocking communication with VPN server over port 53 (e.g. connection trough V2Ray/QUICK on UDP 53)
   if [ ! -z ${EXCEPTION_IP} ]; then
-    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -d ${EXCEPTION_IP} -p udp --dport 53 -j ACCEPT
+    for dns_server in ${EXCEPTION_IP}; do
+      ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -d ${dns_server} -p udp --dport 53 -j ACCEPT
+    done 
   fi
 
   ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -o lo -j ACCEPT  
-  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} ! -d ${DNSIP} -p tcp --dport 53 -j DROP
-  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} ! -d ${DNSIP} -p udp --dport 53 -j DROP
+  # allow only specific addresses
+  for dns_server in ${DNSIP}; do
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -d ${dns_server} -p udp --dport 53 -j ACCEPT
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -d ${dns_server} -p tcp --dport 53 -j ACCEPT
+  done
+  # then block everything else
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -p udp --dport 53 -j DROP
+  ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IVPN_OUT_DNSONLY} -p tcp --dport 53 -j DROP
 
   set +e
 }
@@ -626,8 +634,19 @@ function main {
         ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
       else
         # block everything except defined address
-        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p udp --dport 53 -j DROP
-        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p tcp --dport 53 -j DROP
+        #echo ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p udp --dport 53 -j DROP
+        #${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p udp --dport 53 -j DROP
+        #echo ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p tcp --dport 53 -j DROP
+        #${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p tcp --dport 53 -j DROP
+
+        # allow only specific addresses
+        for dns_server in "$@"; do
+          ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -d ${dns_server} -p udp --dport 53 -j ACCEPT
+          ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -d ${dns_server} -p tcp --dport 53 -j ACCEPT
+        done
+        # then block everything else
+        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
+        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
       fi
 
     # icmp exceptions

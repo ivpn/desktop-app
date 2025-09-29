@@ -3,7 +3,7 @@
 setlocal
 
 rem TODO: define here dnscrypt-proxy version to build
-set _VERSION=2.1.5
+set _VERSION=2.1.14
 
 set SCRIPTDIR=%~dp0
 

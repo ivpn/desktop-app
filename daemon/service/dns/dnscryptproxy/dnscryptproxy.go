@@ -24,7 +24,7 @@ package dnscryptproxy
 
 import (
 	"fmt"
-	"sync"
+	"net"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 )
@@ -35,50 +35,42 @@ func init() {
 	log = logger.NewLogger("dnscrt")
 }
 
-type iDnsCryptProxy interface {
-	implStart() error
-	implStop() error
+type DnsCryptProxy struct {
+	binaryPath     string
+	configFilePath string
+	listenAddr     net.IP      // address where dnscrypt-proxy will listen
+	logFilePath    string      // optional. If empty, logging to file is disabled
+	extra          extraParams // platform-specific extra params
 }
 
-var (
-	_dnsCryptObjMutex sync.Mutex
-	_dnsCryptObj      iDnsCryptProxy = nil
-)
+var preStartHook func(p *DnsCryptProxy) error
 
-func Init(theBinaryPath, configFilePath, logFilePath string) error {
-	if err := Stop(); err != nil {
-		return err
+// Start - create and start dnscrypt-proxy instance asynchronously
+func Start(binaryPath, configFile, logFilePath string, listenAddr net.IP) (obj *DnsCryptProxy, retErr error) {
+	p := &DnsCryptProxy{
+		binaryPath:     binaryPath,
+		configFilePath: configFile,
+		listenAddr:     listenAddr,
+		logFilePath:    logFilePath,
 	}
 
-	_dnsCryptObjMutex.Lock()
-	defer _dnsCryptObjMutex.Unlock()
-	_dnsCryptObj = implInit(theBinaryPath, configFilePath, logFilePath)
-
-	return nil
-}
-
-// Start - asynchronously start
-func Start() (err error) {
-	_dnsCryptObjMutex.Lock()
-	defer _dnsCryptObjMutex.Unlock()
-
-	log.Info("Starting dnscrypt-proxy")
 	defer func() {
-		if err != nil {
-			err = fmt.Errorf("error starting dnscrypt-proxy: %w", err)
-			//log.Error(err)
-			_dnsCryptObj.implStop()
+		if retErr != nil {
+			retErr = fmt.Errorf("error starting dnscrypt-proxy: %w", retErr)
+			p.implStop()
 		}
 	}()
 
-	return _dnsCryptObj.implStart()
+	if preStartHook != nil {
+		if err := preStartHook(p); err != nil {
+			return nil, fmt.Errorf("pre-start hook failed: %w", err)
+		}
+	}
+
+	return p, p.implStart()
 }
-
-func Stop() (err error) {
-	_dnsCryptObjMutex.Lock()
-	defer _dnsCryptObjMutex.Unlock()
-
-	if _dnsCryptObj == nil {
+func (p *DnsCryptProxy) Stop() (err error) {
+	if p == nil {
 		return nil
 	}
 
@@ -89,9 +81,9 @@ func Stop() (err error) {
 		}
 	}()
 
-	ret := _dnsCryptObj.implStop()
+	ret := p.implStop()
 	if ret == nil {
-		_dnsCryptObj = nil
+		p = nil
 	}
 	return ret
 }

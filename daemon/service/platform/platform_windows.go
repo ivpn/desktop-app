@@ -111,8 +111,8 @@ func doOsInit() (warnings []string, errors []error, logInfo []string) {
 
 	dnscryptproxyBinPath = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.exe")
 	dnscryptproxyConfigTemplate = path.Join(settingsDirCommon, "dnscrypt-proxy-template.toml")
-	dnscryptproxyConfig = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.toml")
-	dnscryptproxyLog = path.Join(_installDir, "dnscrypt-proxy/dnscrypt-proxy.log")
+	dnscryptproxyConfigDir = path.Join(_installDir, "dnscrypt-proxy")
+	dnscryptproxyLogDir = path.Join(dnscryptproxyConfigDir, "log")
 
 	kemHelperBinaryPath = path.Join(_installDir, "kem/kem-helper.exe")
 
