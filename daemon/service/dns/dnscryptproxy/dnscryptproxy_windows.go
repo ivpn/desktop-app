@@ -58,7 +58,7 @@ func (p *DnsCryptProxy) implStart() (retErr error) {
 	}
 
 	log.Info("Installing dnscrypt-proxy service...")
-	err := shell.Exec(nil, p.binaryPath, "-service", "install")
+	err := shell.Exec(nil, p.binaryPath, "-service", "install", "-config", p.configFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to install service: %w", err)
 	}
