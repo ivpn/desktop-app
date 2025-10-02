@@ -19,9 +19,9 @@ jobs:
       GO111MODULE: on
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.22.5
+        uses: securego/gosec@v2.22.9
         with:
           # we let the report trigger content trigger a failure using the GitHub Security features.
           args: '-exclude=G104,G307 -no-fail -fmt sarif -out results.sarif ./...'
