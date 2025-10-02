@@ -455,7 +455,7 @@ func doEnable() (retErr error) {
 			return fmt.Errorf("failed to add filter 'allow application - V2Ray': %w", err)
 		}
 		// allow dnscrypt-proxy
-		dnscryptProxyBin, _, _, _ := platform.DnsCryptProxyInfo()
+		dnscryptProxyBin, _, _ := platform.DnsCryptProxyInfo()
 		_, err = manager.AddFilter(winlib.NewFilterAllowApplication(providerKey, layer, sublayerKey, sublayerDName, "", dnscryptProxyBin, isPersistant))
 		if err != nil {
 			return fmt.Errorf("failed to add filter 'allow application - dnscrypt-proxy': %w", err)

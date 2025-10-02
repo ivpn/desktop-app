@@ -39,19 +39,17 @@ type DnsCryptProxy struct {
 	binaryPath     string
 	configFilePath string
 	listenAddr     net.IP      // address where dnscrypt-proxy will listen
-	logFilePath    string      // optional. If empty, logging to file is disabled
 	extra          extraParams // platform-specific extra params
 }
 
 var preStartHook func(p *DnsCryptProxy) error
 
 // Start - create and start dnscrypt-proxy instance asynchronously
-func Start(binaryPath, configFile, logFilePath string, listenAddr net.IP) (obj *DnsCryptProxy, retErr error) {
+func Start(binaryPath, configFile string, listenAddr net.IP) (obj *DnsCryptProxy, retErr error) {
 	p := &DnsCryptProxy{
 		binaryPath:     binaryPath,
 		configFilePath: configFile,
 		listenAddr:     listenAddr,
-		logFilePath:    logFilePath,
 	}
 
 	defer func() {
