@@ -20,8 +20,8 @@
 //  along with the Daemon for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
-//go:build darwin || linux
-// +build darwin linux
+//go:build darwin || linux || windows
+// +build darwin linux windows
 
 package dnscryptproxy
 
@@ -47,10 +47,6 @@ type extraParams struct {
 
 // Start - asynchronously start
 func (p *DnsCryptProxy) implStart() (err error) {
-	if len(p.logFilePath) > 0 {
-		return errors.New("log file path is not supported on this platform")
-	}
-
 	command, err := p.start()
 	if err != nil {
 		return err
