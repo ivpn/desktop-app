@@ -63,11 +63,19 @@ func (p *DnsCryptProxy) implStart() (err error) {
 
 func (p *DnsCryptProxy) implStop() error {
 	prc := p.extra.proc
-	if prc == nil {
+	if prc == nil || prc.command == nil {
 		return nil
 	}
 
-	return shell.Kill(prc.command)
+	err := shell.Kill(prc.command)
+	if err != nil {
+		return err
+	}
+
+	// wait until process is stopped
+	<-prc.stopped
+
+	return err
 }
 
 func (p *DnsCryptProxy) start() (command *startedCmd, err error) {
