@@ -2,47 +2,7 @@
   <div style="min-height: 100%; display: flex; flex-direction: column;">
     <div class="settingsTitle" tabindex="0">DNS SETTINGS</div>
 
-    <div class="param" tabindex="0" style="margin-bottom: 4px;">
-      <input type="checkbox" id="dnsIsCustom" v-model="_dnsIsCustom" @input="isDnsValueChanged = true"/>
-      <label class="defColor" for="dnsIsCustom"
-          >Use custom DNS server when connected to IVPN</label
-      >
-          <button
-            class="noBordersBtn flexRow"
-            title="Help"
-            v-on:click="$refs.helpCustomDns.showModal()"
-          >
-            <img src="@/assets/question.svg" />
-          </button>
-          <ComponentDialog ref="helpCustomDns" header="Info">
-            <div>
-              <p>
-                You can specify one or more custom DNS servers to be used when connected to IVPN.<br/>
-                When multiple DNS servers are specified, there is no guarantee that they will be used in the order listed.
-              </p>
-              <p>
-                <strong>DNS over HTTPS (DoH)</strong> can be enabled for each DNS server individually. 
-                DoH is a protocol that performs Domain Name System (DNS) resolution via HTTPS, 
-                designed to increase user privacy and security by preventing eavesdropping and manipulation of DNS data.
-              </p>
-              <p>
-                <strong>Important:</strong> When enabling DoH for a DNS server, ensure that:
-              </p>
-              <ul>
-                <li>The server supports DNS over HTTPS</li>
-                <li>You provide a valid DoH template URI specific to your chosen DNS provider (check your provider's documentation for the correct endpoint)</li>
-              </ul>
-
-              <p v-if="isShowDnsproxyDescription" class="fwDescription">
-                <strong>Implementation:</strong> DNS over HTTPS (DoH) is implemented using dnscrypt-proxy from
-                the DNSCrypt project. Your DNS settings will be configured to
-                send requests to dnscrypt-proxy listening on localhost (127.0.0.x).
-              </p>
-            </div>
-          </ComponentDialog>
-    </div>
-
-    <div v-if="linuxIsShowResolvConfMgmtOption">
+    <div v-if="linuxIsShowResolvConfMgmtOption" style="margin-top: 0px;">
       <div class="param">
         <input
           type="checkbox"
@@ -73,6 +33,46 @@
             </div>
           </ComponentDialog>
       </div>
+    </div>
+
+    <div class="param" tabindex="0" style="margin-bottom: 4px;">
+      <input type="checkbox" id="dnsIsCustom" v-model="_dnsIsCustom" @input="isDnsValueChanged = true"/>
+      <label class="defColor" for="dnsIsCustom"
+          >Use custom DNS server when connected to IVPN</label
+      >
+          <button
+            class="noBordersBtn flexRow"
+            title="Help"
+            v-on:click="$refs.helpCustomDns.showModal()"
+          >
+            <img src="@/assets/question.svg" />
+          </button>
+          <ComponentDialog ref="helpCustomDns" header="Custom DNS information">
+            <div>
+              <p>
+                You can specify one or more custom DNS servers to be used when connected to IVPN.
+                When multiple DNS servers are specified, the servers will be registered in the order you defined, 
+                but your operating system may select a resolver based on its own logic.
+              </p>
+              <p>
+                <strong>DNS over HTTPS (DoH)</strong> can be enabled for each DNS server individually.
+                DoH is a protocol that performs Domain Name System (DNS) resolution via HTTPS for better privacy and security.
+              </p>
+              <p>
+                When enabling DoH for a DNS server, ensure that:
+              </p>
+              <ul>
+                <li>The server supports DNS over HTTPS</li>
+                <li>You provide a valid DoH template URI specific to your chosen DNS provider</li>
+                <li>For DNS resolvers with multiple IP addresses used, they are added as separate entries with the same URI </li>
+              </ul>
+
+              <p v-if="isShowDnsproxyDescription" class="fwDescription">
+                <strong>Implementation:</strong> DNS over HTTPS (DoH) is implemented using dnscrypt-proxy from the DNSCrypt project. 
+                Your DNS settings will be configured to send requests to dnscrypt-proxy listening on localhost (127.0.0.x).
+              </p>
+            </div>
+          </ComponentDialog>
     </div>
 
     <div v-bind:class="{ disabled: dnsIsCustom === false }" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column;">
@@ -182,14 +182,15 @@
       >
         + Add custom DNS server
       </button>
+
+      <div class="fwDescription" tabindex="0">
+        Your OS may not follow the configured DNS order.<br/>
+        AntiTracker will override the custom DNS when enabled.
+      </div>
+
       </div>
     </div>
 
-    <div class="paramProps"  style="margin-top: auto; margin-bottom: 20px;">
-      <div class="fwDescription" tabindex="0">
-        AntiTracker will override the custom DNS when enabled.
-      </div>
-    </div>
   </div>
 </template>
 
