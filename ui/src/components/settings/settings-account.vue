@@ -104,24 +104,7 @@
             </button>
           </div>
         </div>
-      </div>
-
-      <div class="proAcountDescriptionBlock" v-if="IsCanUpgradeToPro" tabindex="0">
-        <p>
-          <strong>IVPN PRO</strong> gives you more possibilities to stay safe
-          and protected:
-        </p>
-
-        <div>
-          <div class="i">*</div>
-          Connect up to <strong>7 devices</strong>
-        </div>
-        <div>
-          <div class="i">*</div>
-          Use <strong>Multi-Hop</strong> connections
-        </div>
-        <p>Login to the website to change subscription plan</p>
-      </div>
+      </div>      
     </div>
 
     <div class="flexRow">
@@ -305,9 +288,7 @@ export default {
     IsCanUpgradeToPro: function () {
       return (
         this.IsAccountStateExists &&
-        this.$store.state.account.accountStatus.Upgradable &&
-        this.$store.state.account.accountStatus.CurrentPlan.toLowerCase() !=
-          "ivpn pro"
+        this.$store.state.account.accountStatus.Upgradable
       );
     },
   },
@@ -351,40 +332,6 @@ export default {
 
 .subscriptionDetails {
   margin-bottom: 40px;
-}
-
-.accountDescription * {
-  font-size: 12px;
-  line-height: 14px;
-  letter-spacing: -0.4px;
-
-  color: #3e6894;
-}
-
-.proAcountDescriptionBlock {
-  @extend .accountDescription;
-  background: rgba(57, 143, 230, 0.1);
-  border-radius: 8px;
-  padding-left: 14px;
-  padding-right: 14px;
-  padding-top: 7px;
-  padding-bottom: 6px;
-}
-
-.accountDescription strong {
-  font-weight: 600;
-}
-
-.accountDescription .i {
-  color: #398fe6;
-  display: inline;
-
-  margin-left: 2px;
-  margin-right: 4px;
-}
-
-.accountDescription div {
-  margin-top: 6px;
 }
 
 #accountID {
