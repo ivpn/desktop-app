@@ -24,43 +24,83 @@ package shell
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 type LogInterface interface {
 	Info(v ...interface{})
+	Debug(v ...interface{})
 	Error(v ...interface{})
 }
+type noOpLogger struct{}
 
-// Exec - execute external process
-// Synchronous operation. Waits until process finished
+func (noOpLogger) Info(v ...interface{})  {}
+func (noOpLogger) Debug(v ...interface{}) {}
+func (noOpLogger) Error(v ...interface{}) {}
+
+var lockExec sync.Mutex
+
+// Exec executes an external shell command synchronously with a 1-minute timeout.
+//
+// This function is designed for SHORT-RUNNING COMMANDS ONLY. Avoid using it for
+// long-lasting commands as it will block other shell operations and may timeout.
+//
+// This function is globally serialized - only one Exec call can be active at a time
+// across the entire application. If another execution is in progress, this call will
+// block until the previous one completes.
+//
+// The command is automatically killed after 1 minute to prevent hanging processes.
+//
+// Parameters:
+//   - logger: Optional logger interface for execution logging. Pass nil to disable logging.
+//   - name: Command name or full path to executable
+//   - args: Command line arguments (variadic)
+//
+// Returns:
+//   - error: nil on successful execution with zero exit code
+//   - error: describes failure reason for start errors, timeouts, or non-zero exit codes
+//
+// Examples:
+//
+//	err := shell.Exec(logger, "echo", "hello world")
+//	err := shell.Exec(nil, "ls", "-la")
+//	err := shell.Exec(logger, "ping", "-c", "1", "google.com")
 func Exec(logger LogInterface, name string, args ...string) error {
-	if logger != nil {
-		logger.Info("Shell exec: ", append([]string{name}, args...))
+	prefStrForLog := "Shell exec: " + strings.Join(append([]string{name}, args...), " ")
+	if logger == nil {
+		logger = noOpLogger{} // use no-op logger if none provided
 	}
 
-	cmd := exec.Command(name, args...)
-
-	if err := cmd.Start(); err != nil {
-		if logger != nil {
-			logger.Error("Shell exec: ", err)
-		}
-		return err
+	// only one Exec at a time
+	if !lockExec.TryLock() {
+		logger.Debug(prefStrForLog + ": another Exec call is already active. Waiting for it to complete...")
+		lockExec.Lock()
 	}
+	defer lockExec.Unlock()
 
-	if err := cmd.Wait(); err != nil {
-		if logger != nil {
-			logger.Error("Shell exec: ", err)
+	logger.Info(prefStrForLog)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, name, args...)
+
+	if err := cmd.Run(); err != nil {
+		logger.Error(prefStrForLog+": ", err)
+
+		if err := ctx.Err(); err == context.DeadlineExceeded {
+			return fmt.Errorf("process killed due to timeout: %w", err)
 		}
 
 		exCode, e := GetCmdExitCode(err)
 		if e != nil {
 			return fmt.Errorf("ExitCode=%d: %w", exCode, e)
 		}
-
 		return err
 	}
 
