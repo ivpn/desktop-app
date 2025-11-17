@@ -32,6 +32,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
@@ -55,7 +56,7 @@ const subnetMaskPrefixLenIPv6 string = "64"
 type internalVariables struct {
 	// WG running process (shell command)
 	command       *exec.Cmd
-	isGoingToStop bool
+	isGoingToStop atomic.Bool
 	utunName      string
 
 	defGateway       net.IP
@@ -84,7 +85,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) (err error) {
 		// if we disconnected without any 'disconnect' request.
 		// Therefore, in case of 'pause' we just stopping real connection
 		// and waiting for 'resume' command to return control to the owner service.
-		if wg.internals.isPaused && !wg.internals.isGoingToStop {
+		if wg.internals.isPaused && !wg.internals.isGoingToStop.Load() {
 			// waiting to 'resume' event
 			<-wg.internals.omResumedChan
 			err = &vpn.ReconnectionRequiredError{Err: err}
@@ -102,7 +103,7 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 	// if we are trying to connect when no connectivity (WiFi off?) -
 	// waiting until network appears
 	// Retry to check each 5 seconds (sending RECONNECTING event)
-	for !wg.internals.isGoingToStop {
+	for !wg.internals.isGoingToStop.Load() {
 		if dns.IsPrimaryInterfaceFound() {
 			break
 		}
@@ -110,7 +111,7 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 
 		stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "No connectivity")
 		pauseEnd := time.Now().Add(time.Second * 5)
-		for time.Now().Before(pauseEnd) && !wg.internals.isGoingToStop {
+		for time.Now().Before(pauseEnd) && !wg.internals.isGoingToStop.Load() {
 			time.Sleep(time.Millisecond * 50)
 		}
 	}
@@ -127,7 +128,7 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		return err
 	}
 
-	if wg.internals.isGoingToStop {
+	if wg.internals.isGoingToStop.Load() {
 		return nil
 	}
 
@@ -242,7 +243,7 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		log.Info(fmt.Sprintf("Started: monitoring '%s' interface status", wg.internals.utunName))
 		defer log.Info(fmt.Sprintf("Stopped: monitoring '%s' interface status", wg.internals.utunName))
 		for {
-			if wg.internals.isGoingToStop {
+			if wg.internals.isGoingToStop.Load() {
 				return
 			}
 			select {
@@ -262,13 +263,13 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		}
 	}()
 
-	if wg.internals.isGoingToStop {
+	if wg.internals.isGoingToStop.Load() {
 		wg.disconnect()
 	}
 
 	if err := wg.internals.command.Wait(); err != nil {
 		// error will be received anyway. We are logging it only if process was stopped unexpectedly
-		if !wg.internals.isGoingToStop {
+		if !wg.internals.isGoingToStop.Load() {
 			log.Error(err.Error())
 			return fmt.Errorf("WireGuard process error: %w", err)
 		}
@@ -277,7 +278,7 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 }
 
 func (wg *WireGuard) disconnect() error {
-	wg.internals.isGoingToStop = true
+	wg.internals.isGoingToStop.Store(true)
 	log.Info("Stopping")
 	wg.resume()
 	return wg.internalDisconnect()
@@ -293,7 +294,7 @@ func (wg *WireGuard) internalDisconnect() error {
 		return nil // nothing to stop
 	}
 
-	log.Info("Stopping")
+	log.Info("Killing WireGuard process")
 	return cmd.Process.Kill()
 }
 
@@ -394,7 +395,7 @@ func (wg *WireGuard) initializeUnunInterface() error {
 	var err error = nil
 
 	// initialize IPv4 interface for tunnel
-	for i := 0; i < 5 && !wg.internals.isGoingToStop; i++ {
+	for i := 0; i < 5 && !wg.internals.isGoingToStop.Load(); i++ {
 		if err = shell.Exec(log, "/usr/sbin/ipconfig", "set", wg.getTunnelName(), "MANUAL", wg.connectParams.clientLocalIP.String(), subnetMask); err != nil {
 			time.Sleep(time.Second)
 			continue
@@ -408,7 +409,7 @@ func (wg *WireGuard) initializeUnunInterface() error {
 	// initialize IPv6 interface for tunnel
 	ipv6LocalIP := wg.connectParams.GetIPv6ClientLocalIP()
 	if ipv6LocalIP != nil {
-		for i := 0; i < 5 && !wg.internals.isGoingToStop; i++ {
+		for i := 0; i < 5 && !wg.internals.isGoingToStop.Load(); i++ {
 			if err = shell.Exec(log, "/usr/sbin/ipconfig", "set", wg.getTunnelName(), "MANUAL-V6", ipv6LocalIP.String(), subnetMaskPrefixLenIPv6); err != nil {
 				time.Sleep(time.Second)
 				continue
@@ -465,6 +466,10 @@ func (wg *WireGuard) setWgConfiguration() error {
 }
 
 func (wg *WireGuard) setRoutes() error {
+	if wg.internals.isGoingToStop.Load() {
+		return nil
+	}
+
 	log.Info("Modifying routing table...")
 
 	// route	-n	add	-inet 145.239.239.55	192.168.1.1
@@ -547,6 +552,10 @@ func (wg *WireGuard) onRoutingChanged() error {
 	if wg.internals.isPaused {
 		return nil
 	}
+	if wg.internals.isGoingToStop.Load() {
+		log.Debug("onRoutingChanged: skipping to modify routing table (going to stop)")
+		return nil
+	}
 
 	// get default Gateway IP and interface name
 	defGateway, _, defInterfaceName, err := netinfo.GetDefaultRouteInfo()
@@ -556,7 +565,7 @@ func (wg *WireGuard) onRoutingChanged() error {
 	}
 
 	if defGateway == nil || defInterfaceName == "" {
-		log.Warning(fmt.Sprintf("onRoutingChanged: Unable to detect default gateway/iface"))
+		log.Warning("onRoutingChanged: Unable to detect default gateway/iface")
 		return err
 	}
 
