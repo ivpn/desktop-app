@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"path"
-	"strings"
 	"sync"
 
 	"github.com/ivpn/desktop-app/daemon/service/dns/dnscryptproxy"
@@ -16,34 +15,31 @@ var (
 	dnsCryptProxyInstances []*dnscryptproxy.DnsCryptProxy
 )
 
-// SetupDnsResolvers initializes DNS configuration:
-// - if plain DNS servers are available, return them as is
-// - if DoH resolvers available, start dnscrypt-proxy instance(s) and return their local listener addresses
+// ResolversSetup initializes DNS configuration for both plain and encrypted DNS servers.
+// For encrypted DNS (DoH), it starts local dnscrypt-proxy instances as local resolvers.
+// For plain DNS servers, it returns them unchanged.
 //
-// Returns: list of plain DNS servers ready to apply as system resolvers
-// (including started local dnscrypt-proxy servers, if any)
+// Parameters:
+//   - dnsCfg: DNS configuration containing servers with various encryption types
+//
+// Returns:
+//   - []DnsServerConfig: List of DNS server configurations ready to apply as system resolvers.
+//     This includes plain DNS servers and local dnscrypt-proxy listeners (127.0.0.x) for encrypted DNS.
+//   - error: Error if configuration creation or dnscrypt-proxy startup fails
 func ResolversSetup(dnsCfg DnsSettings) ([]DnsServerConfig, error) {
-	// group DNS servers into sets for separate dnscrypt-proxy instances (if needed)
-	cfgGroups, err := groupConfigs(dnsCfg.Servers)
-	if err != nil {
-		return nil, fmt.Errorf("failed to group DNS server configs: %w", err)
-	}
-
 	// return slice of DNS server configs
-	ret := make([]DnsServerConfig, 0, len(cfgGroups))
-	dnsCryptConfigs := make([]*dnscryptproxy.Config, 0, len(cfgGroups))
+	ret := make([]DnsServerConfig, 0, len(dnsCfg.Servers))
+	dnsCryptConfigs := make([]*dnscryptproxy.Config, 0, len(dnsCfg.Servers))
 
-	for _, resolversGroup := range cfgGroups {
-		if len(resolversGroup) == 0 {
-			continue
-		}
-		if resolversGroup[0].Encryption == EncryptionNone {
+	for _, svr := range dnsCfg.Servers {
+
+		if svr.Encryption == EncryptionNone {
 			// plain DNS server - return as is (only one server must be in this group)
-			ret = append(ret, resolversGroup[0])
+			ret = append(ret, svr)
 			continue
 		}
-		if resolversGroup[0].Encryption != EncryptionDnsOverHttps {
-			return nil, fmt.Errorf("unsupported DNS encryption type %d", resolversGroup[0].Encryption)
+		if svr.Encryption != EncryptionDnsOverHttps {
+			return nil, fmt.Errorf("unsupported DNS encryption type %d", svr.Encryption)
 		}
 		// DoH servers - start dnscrypt-proxy instance for this group
 
@@ -52,7 +48,7 @@ func ResolversSetup(dnsCfg DnsSettings) ([]DnsServerConfig, error) {
 		// add local dnscrypt-proxy listener as a system DNS server
 		ret = append(ret, DnsServerConfig{Address: localIp.String()})
 
-		cfg, err := createDnscryptProxyConfig(localIp, resolversGroup)
+		cfg, err := createDnscryptProxyConfig(localIp, []DnsServerConfig{svr})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create dnscrypt-proxy config: %w", err)
 		}
@@ -141,103 +137,4 @@ func startDnscryptProxyInstances(configs []*dnscryptproxy.Config) (retErr error)
 		dnsCryptProxyInstances = append(dnsCryptProxyInstances, proxy)
 	}
 	return nil
-}
-
-// groupConfigs sorts DNS servers into groups based on their type and properties.
-// Each group is later represented as a single DNS resolver in the system's DNS settings.
-//
-// Grouping rules:
-//   - Plain DNS servers are each placed in their own group.
-//   - DoH (DNS-over-HTTPS) servers are grouped together to be handled by a single dnscrypt-proxy instance.
-//   - A new group is created for a DoH server if its URI is already present in the current group.
-//     This is necessary because dnscrypt-proxy de-duplicates DoH resolvers with the same URI,
-//     which would prevent failover.
-//
-// Example:
-// Input DNS servers (in order):
-//   - 8.8.8.8 (DoH, https://dns.google/dns-query)
-//   - 9.9.9.9 (DoH, https://dns.quad9.net/dns-query)
-//   - 8.8.4.4 (Plain)
-//   - 1.2.3.4 (Plain)
-//   - 1.1.1.1 (DoH, https://cloudflare-dns.com/dns-query)
-//   - 1.0.0.1 (DoH, https://cloudflare-dns.com/dns-query) <- Same URI as 1.1.1.1
-//   - 4.4.4.4 (DoH, https://dns.google/dns-query)      <- Same URI as 8.8.8.8
-//
-// Resulting groups:
-//   - [8.8.8.8 (DoH), 9.9.9.9 (DoH)] -> dnscrypt-proxy instance 1
-//   - [8.8.4.4 (Plain)]              -> Direct use
-//   - [1.2.3.4 (Plain)]              -> Direct use
-//   - [1.1.1.1 (DoH)]                -> dnscrypt-proxy instance 2
-//   - [1.0.0.1 (DoH), 4.4.4.4 (DoH)] -> dnscrypt-proxy instance 3
-func groupConfigs(servers []DnsServerConfig) (groups [][]DnsServerConfig, retErr error) {
-	if len(servers) == 0 {
-		return nil, fmt.Errorf("no DNS servers provided")
-	}
-
-	groups = make([][]DnsServerConfig, 0)
-	var (
-		processedServers   = make(map[string]struct{}) // track processed servers to skip duplicates
-		currentGroup       = make([]DnsServerConfig, 0)
-		currentUsedDoHUris = make(map[string]struct{}) // track DoH URIs in current group
-	)
-
-	for _, server := range servers {
-		server.Template = strings.TrimSpace(server.Template)
-
-		// create a unique key for this server to detect duplicates
-		var serverKey string
-		if server.Encryption == EncryptionDnsOverHttps {
-			serverKey = fmt.Sprintf("doh:%s:%s", server.Address, server.Template)
-		} else {
-			serverKey = fmt.Sprintf("plain:%s", server.Address)
-		}
-
-		// skip duplicate servers
-		if _, exists := processedServers[serverKey]; exists {
-			continue
-		}
-		processedServers[serverKey] = struct{}{}
-
-		// validate encryption type
-		if server.Encryption != EncryptionNone && server.Encryption != EncryptionDnsOverHttps {
-			return nil, fmt.Errorf("unsupported DNS encryption type %d", server.Encryption)
-		}
-
-		// handle plain DNS servers - each gets its own group
-		if server.Encryption == EncryptionNone {
-			// finalize current DoH group if it exists
-			if len(currentGroup) > 0 {
-				groups = append(groups, currentGroup)
-				currentGroup = make([]DnsServerConfig, 0)
-				currentUsedDoHUris = make(map[string]struct{})
-			}
-			// create a single-server group for plain DNS
-			groups = append(groups, []DnsServerConfig{server})
-			continue
-		}
-
-		// handle DoH servers
-		if server.Encryption == EncryptionDnsOverHttps {
-			// check if this DoH URI is already in the current group
-			if _, exists := currentUsedDoHUris[server.Template]; exists {
-				// finalize current group and start a new one
-				if len(currentGroup) > 0 {
-					groups = append(groups, currentGroup)
-					currentGroup = make([]DnsServerConfig, 0)
-					currentUsedDoHUris = make(map[string]struct{})
-				}
-			}
-
-			// add server to current group
-			currentGroup = append(currentGroup, server)
-			currentUsedDoHUris[server.Template] = struct{}{}
-		}
-	}
-
-	// finalize the last group if it exists
-	if len(currentGroup) > 0 {
-		groups = append(groups, currentGroup)
-	}
-
-	return groups, nil
 }
