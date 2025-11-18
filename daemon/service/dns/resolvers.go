@@ -31,6 +31,8 @@ func ResolversSetup(dnsCfg DnsSettings) ([]DnsServerConfig, error) {
 	ret := make([]DnsServerConfig, 0, len(dnsCfg.Servers))
 	dnsCryptConfigs := make([]*dnscryptproxy.Config, 0, len(dnsCfg.Servers))
 
+	nextResolverIP := net.IPv4(127, 0, 0, 1)
+
 	for _, svr := range dnsCfg.Servers {
 
 		if svr.Encryption == EncryptionNone {
@@ -43,8 +45,17 @@ func ResolversSetup(dnsCfg DnsSettings) ([]DnsServerConfig, error) {
 		}
 		// DoH servers - start dnscrypt-proxy instance for this group
 
-		// assign a unique local listening IP for this instance (127.0.0.x)
-		localIp := net.IPv4(127, 0, 0, byte(1+len(dnsCryptConfigs)))
+		// Get free local address for dnscrypt-proxy listener
+		localIp, err := dnscryptproxy.GetFreeLocalAddressForDNS(nextResolverIP)
+		if err != nil {
+			log.Warning("Failed to get free local address for dnscrypt-proxy: ", err)
+			// Failed to get free local address for dnscrypt-proxy.
+			// Anyway, try to use nextResolverIP
+			localIp = nextResolverIP
+		}
+		// increment last byte for next resolver
+		nextResolverIP = net.IPv4(127, 0, 0, localIp.To4()[3]+1)
+
 		// add local dnscrypt-proxy listener as a system DNS server
 		ret = append(ret, DnsServerConfig{Address: localIp.String()})
 
