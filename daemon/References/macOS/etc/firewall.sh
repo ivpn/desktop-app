@@ -305,7 +305,7 @@ function set_dns {
     pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -t ${ROUTE_TBL_DNS}       -T flush
   fi
 
-  if [[ -z "${DNS}" ]] ; then
+  if [[ -z "${DNS}" && -z "${DNS_LOCAL}" ]] ; then
       # DNS not defined. Block all connections to port 53
       pfctl -a ${ANCHOR}/${SA_BLOCK_DNS} -f - <<_EOF
         block return out quick proto udp from any to port = 53
