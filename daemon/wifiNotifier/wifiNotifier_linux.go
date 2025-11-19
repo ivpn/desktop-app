@@ -162,15 +162,18 @@ func implSetWifiNotifier(cb func()) error {
 		return fmt.Errorf("callback function not defined")
 	}
 
-	onNetChange := make(chan struct{}, 1)
-
-	if err := netlink.RegisterLanChangeListener(onNetChange); err != nil {
+	onNetChange, err := netlink.RegisterLanChangeListener()
+	if err != nil {
 		return err
 	}
 
 	go func() {
 		for {
-			<-onNetChange
+			_, ok := <-onNetChange
+			if !ok {
+				log.Warning("Network change monitor stopped for WiFi notifier")
+				break
+			}
 			cb()
 		}
 	}()
