@@ -33,27 +33,62 @@ import (
 )
 
 func init() {
-	preStartHook = thePreStartHook
+	// On macOS, if we plan to use 127.0.0.x (x != 1), we need to add an alias
+	// to the loopback interface first
+	hookInitLoopbackIP = InitLoopbackAlias
 }
 
-func thePreStartHook(p *DnsCryptProxy) error {
-	if !p.listenAddr.IsLoopback() || p.listenAddr.IsUnspecified() {
+func InitLoopbackAlias(loopbackIP net.IP) error {
+	if !loopbackIP.IsLoopback() || loopbackIP.IsUnspecified() {
 		return nil
 	}
 
-	if p.listenAddr.Equal(net.IPv4(127, 0, 0, 1)) {
+	if loopbackIP.Equal(net.IPv4(127, 0, 0, 1)) {
 		return nil
 	}
 
-	// On macOS, if we plan to listen on 127.0.0.x (x != 1), we need to add an alias
+	exists, err := isAliasExists("lo0", loopbackIP)
+	if err != nil {
+		return fmt.Errorf("failed to check loopback alias: %w", err)
+	}
+	if exists {
+		return nil // alias already exists
+	}
+
+	// On macOS, if we plan to use 127.0.0.x (x != 1), we need to add an alias
 	// to the loopback interface first
-	cmd := []string{"ifconfig", "lo0", "alias", p.listenAddr.String()}
+	cmd := []string{"ifconfig", "lo0", "alias", loopbackIP.String()}
 
 	log.Debug("Adding loopback alias: ", fmt.Sprintf("%v", cmd))
 	execCmd := exec.Command(cmd[0], cmd[1:]...)
 	if output, err := execCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to add loopback alias %s: %v - %s", p.listenAddr.String(), err, strings.TrimSpace(string(output)))
+		return fmt.Errorf("failed to add loopback alias %s: %v - %s", loopbackIP.String(), err, strings.TrimSpace(string(output)))
 	}
 
 	return nil
+}
+
+// isAliasExists checks if the given IP is already assigned to the interface
+func isAliasExists(interfaceName string, ip net.IP) (bool, error) {
+	iface, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return false, err
+	}
+
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return false, err
+	}
+
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if !ok {
+			continue
+		}
+		if ipNet.IP.Equal(ip) {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
