@@ -38,6 +38,7 @@ IN_IVPN=IVPN-IN
 OUT_IVPN=IVPN-OUT
 FORWARD_IVPN=IVPN-FORWARD
 # chain for DNS rules
+IN_IVPN_DNS=IVPN-IN-DNS
 OUT_IVPN_DNS=IVPN-OUT-DNS
 # IVPN chains for VPN interface rules (applicable when VPN enabled)
 # Chanin is processing before OUT_IVPN_DNS in order to allow connections to port 53
@@ -259,6 +260,7 @@ function enable_firewall {
     create_chain ${IPv4BIN} ${IN_IVPN_IF0}
     create_chain ${IPv4BIN} ${OUT_IVPN_IF0}
 
+    create_chain ${IPv4BIN} ${IN_IVPN_DNS}
     create_chain ${IPv4BIN} ${OUT_IVPN_DNS}
 
     create_chain ${IPv4BIN} ${IN_IVPN_IF1}
@@ -305,6 +307,7 @@ function enable_firewall {
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_IF0}
 
     # block DNS by default
+    ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN} -j ${IN_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN} -j ${OUT_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
     ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
@@ -361,7 +364,8 @@ function disable_firewall {
     ${IPv4BIN} -w ${LOCKWAITTIME} -D FORWARD -j ${FORWARD_IVPN}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_IF0}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF0}    
-    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_DNS}    
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_DNS} 
+    ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${OUT_IVPN} -j ${OUT_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${IN_IVPN} -j ${IN_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -D ${FORWARD_IVPN} -j ${FORWARD_IVPN_IF}    
@@ -376,6 +380,7 @@ function disable_firewall {
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF0}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF0}    
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_DNS}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${OUT_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${IN_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -F ${FORWARD_IVPN_IF}
@@ -392,6 +397,7 @@ function disable_firewall {
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_IF0}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF0}    
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_DNS}
+    ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_DNS}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${OUT_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${IN_IVPN_IF1}
     ${IPv4BIN} -w ${LOCKWAITTIME} -X ${FORWARD_IVPN_IF}
@@ -626,28 +632,23 @@ function main {
 
       shift
 
+      clean_chain ${IPv4BIN} ${IN_IVPN_DNS}
       clean_chain ${IPv4BIN} ${OUT_IVPN_DNS}
 
-      if [[ -z "$@" ]] ; then
-        # block DNS
-        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
-        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
-      else
-        # block everything except defined address
-        #echo ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p udp --dport 53 -j DROP
-        #${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p udp --dport 53 -j DROP
-        #echo ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p tcp --dport 53 -j DROP
-        #${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} ! -d $@ -p tcp --dport 53 -j DROP
-
+      if [[ -n "$@" ]] ; then
         # allow only specific addresses
         for dns_server in "$@"; do
+          ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN_DNS} -s ${dns_server} -p udp --sport 53 -j ACCEPT
+          ${IPv4BIN} -w ${LOCKWAITTIME} -A ${IN_IVPN_DNS} -s ${dns_server} -p tcp --sport 53 -j ACCEPT
+
           ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -d ${dns_server} -p udp --dport 53 -j ACCEPT
           ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -d ${dns_server} -p tcp --dport 53 -j ACCEPT
         done
-        # then block everything else
-        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
-        ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
       fi
+
+      # then block everything else
+      ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p udp --dport 53 -j DROP
+      ${IPv4BIN} -w ${LOCKWAITTIME} -A ${OUT_IVPN_DNS} -p tcp --dport 53 -j DROP
 
     # icmp exceptions
     elif [[ $1 = "-add_exceptions_icmp" ]]; then
