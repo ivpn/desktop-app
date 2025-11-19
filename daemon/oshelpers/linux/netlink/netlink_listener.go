@@ -45,7 +45,7 @@ import (
 //			fmt.Println("Could not read netlink messages: %s", err)
 //		}
 //		for _, m := range msgs {
-//			if IsNewAddr(&m) || IsDelAddr(&m) {
+//			if m.Header.Type == syscall.RTM_NEWADDR  || m.Header.Type == syscall.RTM_DELADDR {
 //				fmt.Println("Address changed")
 //			}
 //		}
@@ -57,9 +57,18 @@ type Listener struct {
 
 // CreateListener creates new NetlinkListener object
 func CreateListener() (*Listener, error) {
+	// Subscribe to link for events:
+	// syscall.RTM_NEWADDR - new address added
+	// syscall.RTM_DELADDR - address deleted
+	// syscall.RTM_NEWROUTE - new route added
+	// syscall.RTM_DELROUTE - route deleted
+	// syscall.RTM_NEWLINK - link updated
+	// syscall.RTM_DELLINK - link deleted
 	groups := (1 << (syscall.RTNLGRP_LINK - 1)) |
 		(1 << (syscall.RTNLGRP_IPV4_IFADDR - 1)) |
-		(1 << (syscall.RTNLGRP_IPV6_IFADDR - 1))
+		(1 << (syscall.RTNLGRP_IPV6_IFADDR - 1)) |
+		(1 << (syscall.RTNLGRP_IPV4_ROUTE - 1)) |
+		(1 << (syscall.RTNLGRP_IPV6_ROUTE - 1))
 
 	s, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_DGRAM,
 		syscall.NETLINK_ROUTE)
@@ -102,18 +111,12 @@ func (l *Listener) ReadMsgs() ([]syscall.NetlinkMessage, error) {
 	return msgs, nil
 }
 
-// IsNewAddr checking message type for syscall.RTM_NEWADDR
-func IsNewAddr(msg *syscall.NetlinkMessage) bool {
-	if msg.Header.Type == syscall.RTM_NEWADDR {
-		return true
+// Close closes the netlink listener and releases resources
+func (l *Listener) Close() error {
+	if l.fd != 0 {
+		err := syscall.Close(l.fd)
+		l.fd = 0
+		return err
 	}
-	return false
-}
-
-// IsDelAddr checking message type for syscall.RTM_RTM_DELADDRNEWADDR
-func IsDelAddr(msg *syscall.NetlinkMessage) bool {
-	if msg.Header.Type == syscall.RTM_DELADDR {
-		return true
-	}
-	return false
+	return nil
 }

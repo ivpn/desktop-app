@@ -22,18 +22,100 @@
 
 package netchange
 
-// structure contains properties required for for macOS implementation
+import (
+	"fmt"
+	"net"
+	"sync"
+
+	"github.com/ivpn/desktop-app/daemon/netinfo"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/linux/netlink"
+)
+
+// structure contains properties required for Linux implementation
 type osSpecificProperties struct {
+	mu       sync.Mutex
+	receiver <-chan netlink.NetChangeEvt
 }
 
+// isRoutingChanged checks if the default routing interface has changed
+// by comparing the current default route interface with the protected interface
 func (d *Detector) isRoutingChanged() (bool, error) {
-	// TODO: not implemented
-	return false, nil
+	infToProtect := d.interfaceToProtect
+	if infToProtect == nil {
+		log.Error("failed to check route change. Initial interface not defined")
+		return false, fmt.Errorf("interface to protect is not configured")
+	}
+
+	// Check current default routing by testing connectivity to known external IPs
+	// Similar approach as used in Windows implementation
+	testIPs := []net.IP{net.IPv4(1, 1, 1, 1), net.IPv4(8, 8, 8, 8)}
+	var lastErr error
+
+	for _, testIP := range testIPs {
+		currentInterface, err := getCurrentRoutingInterface(testIP)
+		if err != nil {
+			log.Error("Failed to get current routing interface:", err)
+			lastErr = err
+			continue
+		}
+
+		if currentInterface != nil && (currentInterface.Index != infToProtect.Index || currentInterface.Name != infToProtect.Name) {
+			log.Info(fmt.Sprintf("Routing change detected. Expected route over '%s' (index %d); current route over '%s' (index %d)",
+				infToProtect.Name, infToProtect.Index, currentInterface.Name, currentInterface.Index))
+			return true, nil
+		}
+	}
+
+	return false, lastErr
 }
 
+// getCurrentRoutingInterface determines which interface would be used to route to a specific IP
+func getCurrentRoutingInterface(destIP net.IP) (*net.Interface, error) {
+	// Get the outbound IP that would be used to connect to destIP
+	outboundIP, err := netinfo.GetOutboundIPEx(destIP)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get outbound IP for %s: %w", destIP, err)
+	}
+	// Find the interface that has this outbound IP
+	return netinfo.InterfaceByIPAddr(outboundIP)
+}
+
+// doStart begins monitoring routing changes
 func (d *Detector) doStart() {
-	// TODO: not implemented
+	d.props.mu.Lock()
+
+	if d.props.receiver != nil {
+		log.Warning("Route change detector already started")
+		d.props.mu.Unlock()
+		return
+	}
+
+	receiver, err := netlink.RegisterLanChangeListener()
+	if err != nil {
+		log.Error("Failed to register LAN change listener:", err)
+		d.props.mu.Unlock()
+		return
+	}
+
+	d.props.receiver = receiver
+	d.props.mu.Unlock()
+
+	log.Info("Route change detector started")
+	defer log.Info("Route change detector stopped")
+
+	for range receiver {
+		d.notifyRoutingChangeWithDelay()
+	}
 }
 
+// doStop stops monitoring routing changes
 func (d *Detector) doStop() {
+	d.props.mu.Lock()
+	receiver := d.props.receiver
+	d.props.receiver = nil
+	d.props.mu.Unlock()
+
+	if receiver != nil {
+		netlink.UnregisterLanChangeListener(receiver)
+	}
 }

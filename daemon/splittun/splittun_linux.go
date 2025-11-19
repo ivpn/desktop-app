@@ -98,15 +98,22 @@ func implInitialize() error {
 	// (for example, when reconnecting WiFi)
 	// Therefore, we must monitor changes in network configuration and update ST routing rules.
 	if funcNotAvailableError == nil {
-		onNetChange := make(chan struct{}, 1)
-		if err := netlink.RegisterLanChangeListener(onNetChange); err != nil {
+		onNetChange, err := netlink.RegisterLanChangeListener()
+		if err != nil {
 			return err
 		}
 		// Wait for network chnages in sepatate routine
 		go func() {
 			var timerDelay *time.Timer
 			for {
-				<-onNetChange
+				_, ok := <-onNetChange
+				if !ok {
+					if timerDelay != nil {
+						timerDelay.Stop()
+					}
+					log.Warning("Network change monitor stopped for Split Tunnel")
+					break
+				}
 				if isActive {
 					if timerDelay != nil {
 						timerDelay.Stop()
