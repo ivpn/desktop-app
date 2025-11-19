@@ -54,7 +54,6 @@ func (d *Detector) isRoutingChanged() (bool, error) {
 	for _, testIP := range testIPs {
 		currentInterface, err := getCurrentRoutingInterface(testIP)
 		if err != nil {
-			log.Error("Failed to get current routing interface:", err)
 			lastErr = err
 			continue
 		}
@@ -66,6 +65,9 @@ func (d *Detector) isRoutingChanged() (bool, error) {
 		}
 	}
 
+	if lastErr != nil {
+		log.Warning("Failed to determine current routing interface")
+	}
 	return false, lastErr
 }
 
@@ -74,7 +76,7 @@ func getCurrentRoutingInterface(destIP net.IP) (*net.Interface, error) {
 	// Get the outbound IP that would be used to connect to destIP
 	outboundIP, err := netinfo.GetOutboundIPEx(destIP)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get outbound IP for %s: %w", destIP, err)
+		return nil, err
 	}
 	// Find the interface that has this outbound IP
 	return netinfo.InterfaceByIPAddr(outboundIP)

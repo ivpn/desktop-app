@@ -780,6 +780,13 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 							}
 						}
 
+						if v2rayWrapper != nil {
+							// Ensure that V2Ray route is correct (e.g. after VPN resume)
+							if err := s.updateV2RayRoute(v2rayWrapper, false); err != nil {
+								log.Error(fmt.Errorf("failed to update V2Ray route: %w", err))
+							}
+						}
+
 					case vpn.CONNECTED:
 						// since we are connected - keep connection (reconnect if unexpected disconnection)
 						if s._requiredVpnState == Connect {
