@@ -472,6 +472,19 @@ func (wg *WireGuard) setRoutes() error {
 
 	log.Info("Modifying routing table...")
 
+	// Routing strategy:
+	// We modify the original "default" route by:
+	// 1. route -n add -inet default -interface <TUNNAME>         # Route all traffic via VPN interface
+	// 2. route -n add -inet default <DEF_GW> -ifscope <DEF_IF>   # Keep original gateway for specific interface only
+	//
+	// We don't use the typical "0/1" and "128.0.0.0/1" split routing approach because on some macOS versions
+	// (notably Sequoia 15.0), Apple's native apps (iMessage, FaceTime, iCloud) ignore more specific routes
+	// and only respect the default route.
+	// (See: https://github.com/ivpn/desktop-app/issues/394, https://github.com/ivpn/desktop-app/issues/101)
+	//
+	// As a fallback, we still add "0/1" and "128.0.0.0/1" routes to help restore connectivity faster
+	// after network changes.
+
 	// route	-n	add	-inet 145.239.239.55	192.168.1.1
 	if !net.IPv4(127, 0, 0, 1).Equal(wg.connectParams.hostIP) {
 		// do not create route for 'hostIP' if it is '127.0.0.1'
@@ -494,6 +507,15 @@ func (wg *WireGuard) setRoutes() error {
 	//if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", wg.defaultRouteGatewayIP().String()); err != nil {
 	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", "-interface", wg.GetTunnelName()); err != nil {
 		return fmt.Errorf("adding default route shell comand error : %w", err)
+	}
+
+	// Optional fallback routes "0/1" and "128.0.0.0/1" help restore connectivity faster after network changes.
+	// These routes are interface-bound and will be removed automatically when the interface goes down.
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "0/1", "-interface", wg.GetTunnelName()); err != nil {
+		log.Warning(fmt.Sprintf("adding default route shell comand error : %q", err))
+	}
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "128.0.0.0/1", "-interface", wg.GetTunnelName()); err != nil {
+		log.Warning(fmt.Sprintf("adding default route shell comand error : %q", err))
 	}
 
 	ipv6HostLocalIP := wg.connectParams.GetIPv6HostLocalIP()
@@ -566,7 +588,7 @@ func (wg *WireGuard) onRoutingChanged() error {
 
 	if defGateway == nil || defInterfaceName == "" {
 		log.Warning("onRoutingChanged: Unable to detect default gateway/iface")
-		return err
+		return fmt.Errorf("onRoutingChanged: unable to detect default gateway/iface")
 	}
 
 	if defGateway.Equal(wg.defaultRouteGatewayIP()) || defInterfaceName == wg.getTunnelName() {

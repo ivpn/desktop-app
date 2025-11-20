@@ -781,9 +781,9 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 						}
 
 						if v2rayWrapper != nil {
-							// Ensure that V2Ray route is correct (e.g. after VPN resume)
+							// Ensure that V2Ray route is correct (e.g. after VPN resume on Linux)
 							if err := s.updateV2RayRoute(v2rayWrapper, false); err != nil {
-								log.Error(fmt.Errorf("failed to update V2Ray route: %w", err))
+								log.Warning(fmt.Sprintf("unable to update V2Ray route: %s", err))
 							}
 						}
 
