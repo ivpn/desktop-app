@@ -71,7 +71,7 @@ jobs:
       - name: Install deps
         run: sudo apt-get install rpm libiw-dev
 
-      - uses: ruby/setup-ruby@4eb9f110bac952a8b68ecf92e3b5c7a987594ba6 # v1.292.0
+      - uses: ruby/setup-ruby@c984c1a20bb35a1cbda04477c816cea024418be9 # v1.294.0
         with:
           ruby-version: 2.7
           bundler-cache: false
