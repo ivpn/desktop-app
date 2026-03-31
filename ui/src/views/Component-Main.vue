@@ -84,11 +84,7 @@ export default {
     },
     currentViewComponent: function () {
       const daemonConnection = this.$store.state.daemonConnectionState;
-      if (
-        daemonConnection == null ||
-        daemonConnection === DaemonConnectionType.NotConnected ||
-        daemonConnection === DaemonConnectionType.Connecting
-      )
+      if (daemonConnection !== DaemonConnectionType.Connected)
         return Init;
       if (this.$store.state.uiState.isParanoidModePasswordView === true)
         return ParanoidModePassword;

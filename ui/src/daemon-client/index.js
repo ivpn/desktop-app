@@ -35,7 +35,6 @@ import { InitConnectionParamsObject } from "@/daemon-client/connectionParams.js"
 import {
   VpnTypeEnum,
   VpnStateEnum,
-  DaemonConnectionType,
   DnsEncryption,
   PortTypeEnum,
 } from "@/store/types";
@@ -763,7 +762,7 @@ async function startNotifyDaemonOnParamsChange() {
   NotifyDaemonConnectionSettings();
 }
 
-async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
+async function ConnectToDaemon(onDisconnected, onDaemonExitingCallback) {
   _onDaemonExitingCallback = onDaemonExitingCallback;
 
   if (socket != null) {
@@ -771,10 +770,7 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
     socket = null;
   }
 
-  if (setConnState === undefined)
-    setConnState = function (state) {
-      store.commit("daemonConnectionState", state);
-    };
+  if (onDisconnected === undefined) onDisconnected = function () {};
 
   // Read information about connection parameters from a file
   let portFile = await GetPortInfoFilePath();
@@ -793,7 +789,6 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
 
   return new Promise((resolve, reject) => {
     if (!portInfo) {
-      setConnState(DaemonConnectionType.NotConnected);
       reject("IVPN daemon connection info is unknown.");
       return;
     }
@@ -817,7 +812,6 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
         try {
           const disconnectDaemonFunc = function (err) {
             if (!err) return;
-            setConnState(DaemonConnectionType.NotConnected);
 
             if (socket) {
               socket.destroy();
@@ -832,8 +826,6 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
             waitForCommandsList: [daemonResponses.ServerListResp],
           };
           let promiseWaiterServers = null;
-
-          setConnState(DaemonConnectionType.Connecting);
 
           if (isNeedConvertSettings !== true)
             promiseWaiterServers = addWaiter(svrListWaiter, 11000);
@@ -865,9 +857,6 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
             return;
           }
 
-          // Saving 'connected' state to a daemon
-          setConnState(DaemonConnectionType.Connected);
-
           // start daemon notification about connection parameters change
           startNotifyDaemonOnParamsChange();
 
@@ -882,8 +871,8 @@ async function ConnectToDaemon(setConnState, onDaemonExitingCallback) {
       .on("data", onDataReceived);
 
     socket.on("close", () => {
-      // Save 'disconnected' state
-      setConnState(DaemonConnectionType.NotConnected);
+      // Notify 'disconnected' state
+      onDisconnected();
       log.debug("Connection closed");
 
       socket = null;

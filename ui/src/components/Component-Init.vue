@@ -1,13 +1,15 @@
 <template>
   <div class="flexColumn">
-  
-    <div v-if="isInitialization" class="main small_text"></div>
-    <div class="main" v-else-if="isDaemonInstalling">
+
+    <div class="main" v-if="isDaemonInstalling">
       Installing IVPN Daemon ...
       <div class="small_text" style="margin-top: 10px">
         Please follow the instructions in the dialog
       </div>
     </div>
+
+    <div v-else-if="isInitialization" class="main small_text"></div>
+
     <div v-else class="flexColumn">
       <div class="main">
         <div class="large_text">Error connecting to IVPN daemon</div>
@@ -61,26 +63,18 @@
 </template>
 
 <script>
+
 import { Platform, PlatformEnum } from "@/platform/platform";
-import { DaemonConnectionType } from "@/store/types";
-const sender = window.ipcSender;
 import config from "@/config";
+
+const sender = window.ipcSender;
 
 export default {
   components: { },
   data: function () {
-    return {
-      isDelayElapsedAfterMount: false,
-    };
+    return { };
   },
-  mounted() {
-    // In order to avoid text blinking, we are showing blank view first few seconds
-    // untill 'daemonConnectionState' will not be initialised.
-    // The blank view also will be visible first few seconds even after 'daemonConnectionState' was intialized by 'Connecting'
-    setTimeout(() => {
-      this.isDelayElapsedAfterMount = true;
-    }, 3000);
-  },
+  mounted() { },
   methods: {
     async ConnectToDaemon() {
       try {
@@ -101,14 +95,7 @@ export default {
       return this.$store.state.daemonIsInstalling;
     },
     isInitialization: function () {
-      if (this.isDelayElapsedAfterMount) return false;
-      return this.isConnecting || (this.$store.state.daemonConnectionState == null && !this.isDaemonInstalling);
-    },
-    isConnecting: function () {
-      return (
-        this.$store.state.daemonConnectionState ===
-        DaemonConnectionType.Connecting
-      );
+      return this.$store.state.daemonConnectionState == null;
     },
     minRequiredVer: function () {
       return config.MinRequiredDaemonVer;

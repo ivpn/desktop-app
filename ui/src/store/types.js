@@ -22,7 +22,6 @@
 
 export const DaemonConnectionType = Object.freeze({
   NotConnected: 0,
-  Connecting: 1,
   Connected: 2,
 });
 
