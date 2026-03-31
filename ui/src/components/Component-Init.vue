@@ -1,7 +1,6 @@
 <template>
   <div class="flexColumn">
-    <spinner :loading="isProcessing" />
-
+  
     <div v-if="isInitialization" class="main small_text"></div>
     <div class="main" v-else-if="isDaemonInstalling">
       Installing IVPN Daemon ...
@@ -9,7 +8,6 @@
         Please follow the instructions in the dialog
       </div>
     </div>
-    <div v-else-if="isConnecting" class="main small_text">Connecting ...</div>
     <div v-else class="flexColumn">
       <div class="main">
         <div class="large_text">Error connecting to IVPN daemon</div>
@@ -63,19 +61,15 @@
 </template>
 
 <script>
-import spinner from "@/components/controls/control-spinner.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import { DaemonConnectionType } from "@/store/types";
 const sender = window.ipcSender;
 import config from "@/config";
 
 export default {
-  components: {
-    spinner,
-  },
+  components: { },
   data: function () {
     return {
-      isProcessing: false,
       isDelayElapsedAfterMount: false,
     };
   },
@@ -107,12 +101,8 @@ export default {
       return this.$store.state.daemonIsInstalling;
     },
     isInitialization: function () {
-      return (
-        (this.$store.state.daemonConnectionState == null &&
-          !this.isDaemonInstalling &&
-          this.isDelayElapsedAfterMount == false) ||
-        (this.isConnecting && this.isDelayElapsedAfterMount == false)
-      );
+      if (this.isDelayElapsedAfterMount) return false;
+      return this.isConnecting || (this.$store.state.daemonConnectionState == null && !this.isDaemonInstalling);
     },
     isConnecting: function () {
       return (
@@ -131,11 +121,6 @@ export default {
     },
     isMacOS: function () {
       return Platform() === PlatformEnum.macOS;
-    },
-  },
-  watch: {
-    isConnecting() {
-      this.isProcessing = this.isConnecting;
     },
   },
 };
@@ -186,8 +171,16 @@ export default {
   line-height: 20px;
   text-align: center;
   letter-spacing: -0.4px;
-  color: #6d849a;
+  color: #556574; // #6d849a;
 
   cursor: pointer;
+  opacity: 0.8;
+}
+.btn:hover {
+  opacity: 1;
+  border-color: #5a7a94;
+}
+.btn:active {
+  opacity: 0.75;
 }
 </style>
