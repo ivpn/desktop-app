@@ -1,5 +1,6 @@
 <template>
   <div class="flexColumn">
+    <spinner :loading="spinnerVisible" />
 
     <div class="main" v-if="isDaemonInstalling">
       Installing IVPN Daemon ...
@@ -64,13 +65,14 @@
 
 <script>
 
+import spinner from "@/components/controls/control-spinner.vue";
 import { Platform, PlatformEnum } from "@/platform/platform";
 import config from "@/config";
 
 const sender = window.ipcSender;
 
 export default {
-  components: { },
+  components: { spinner, },
   data: function () {
     return { };
   },
@@ -96,6 +98,9 @@ export default {
     },
     isInitialization: function () {
       return this.$store.state.daemonConnectionState == null;
+    },
+    spinnerVisible: function () {
+      return this.isDaemonInstalling && this.$store.state.daemonConnectionState != null;
     },
     minRequiredVer: function () {
       return config.MinRequiredDaemonVer;
