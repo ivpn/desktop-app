@@ -41,25 +41,29 @@ func doPrepareToRun() error {
 		log.Error("Failed to initialize syslog: ", err)
 	} else {
 		systemLog = make(chan service.SystemLogMessage, 1)
-		go func() {
-			for {
-				mes := <-systemLog
-				switch mes.Type {
-				case service.Info:
-					sysLogWriter.Info(mes.Message)
-				case service.Warning:
-					sysLogWriter.Warning("WARNING: " + mes.Message)
-				case service.Error:
-					sysLogWriter.Err("ERROR: " + mes.Message)
-				}
+	go func() {
+		for mes := range systemLog {
+			switch mes.Type {
+			case service.Info:
+				sysLogWriter.Info(mes.Message)
+			case service.Warning:
+				sysLogWriter.Warning("WARNING: " + mes.Message)
+			case service.Error:
+				sysLogWriter.Err("ERROR: " + mes.Message)
 			}
-		}()
+		}
+		sysLogWriter.Close()
+	}()
 	}
 
 	return nil
 }
 
 func doStopped() {
+	if systemLog != nil {
+		close(systemLog)
+		systemLog = nil
+	}
 }
 
 func doCheckIsAdmin() bool {
