@@ -139,6 +139,8 @@ const daemonResponses = Object.freeze({
   WiFiAvailableNetworksResp: "WiFiAvailableNetworksResp",
   WiFiCurrentNetworkResp: "WiFiCurrentNetworkResp",
 
+  TunnelHealthResp: "TunnelHealthResp",
+
   ServiceExitingResp: "ServiceExitingResp",
 });
 
@@ -470,10 +472,12 @@ async function processResponse(response) {
 
         store.dispatch(`vpnState/connectionInfo`, connectionInfo);
         store.commit("uiState/isPauseResumeInProgress", false);
-        
-        if (!connectionInfo.IsUnhealthy)
-          requestGeoLookupAsync();
+        requestGeoLookupAsync();
       }
+      break;
+
+    case daemonResponses.TunnelHealthResp:
+      store.commit("vpnState/tunnelIsUnhealthy", obj.IsUnhealthy);
       break;
 
     case daemonResponses.DisconnectedResp:

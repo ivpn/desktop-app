@@ -174,7 +174,8 @@ export function InitTray(
         case "uiState/isParanoidModePasswordView":
         case "vpnState/connectionState":
         case "vpnState/connectionInfo":
-        case "vpnState/disconnected": {
+        case "vpnState/disconnected":
+        case "vpnState/tunnelIsUnhealthy": {
           updateTrayMenu();
           updateTrayIcon();
           break;

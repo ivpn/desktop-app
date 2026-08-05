@@ -344,12 +344,6 @@ func (wg *WireGuard) newStateInfoConnected() vpn.StateInfo {
 	return si
 }
 
-func (wg *WireGuard) newStateInfoConnectedUnhealthy() vpn.StateInfo {
-	si := wg.newStateInfoConnected()
-	si.IsUnhealthy = true
-	return si
-}
-
 func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
 	wg.startHealthCheck(stateChan)
 	stateChan <- wg.newStateInfoConnected()
@@ -377,16 +371,13 @@ func (wg *WireGuard) startHealthCheck(stateChan chan<- vpn.StateInfo) {
 
 	go func() {
 		err := c.run(func(ctx context.Context, isHealthy bool) {
-			var state vpn.StateInfo
 			if isHealthy {
 				log.Info("Connection health restored to healthy")
-				state = wg.newStateInfoConnected()
 			} else {
 				log.Warning("Connection health: unhealthy - tunnel appears dead")
-				state = wg.newStateInfoConnectedUnhealthy()
 			}
 			select {
-			case stateChan <- state:
+			case stateChan <- vpn.StateInfo{State: vpn.TUNNEL_HEALTH, IsUnhealthy: !isHealthy}:
 			case <-ctx.Done():
 			}
 		})

@@ -63,18 +63,19 @@ type State int
 //	CONNECTED
 //	EXITING
 const (
-	DISCONNECTED State = iota
-	CONNECTING   State = iota // OpenVPN's initial state.
-	WAIT         State = iota // (Client only) Waiting for initial response from server.
-	AUTH         State = iota // (Client only) Authenticating with server.
-	GETCONFIG    State = iota // (Client only) Downloading configuration options from server.
-	ASSIGNIP     State = iota // Assigning IP address to virtual network interface.
-	ADDROUTES    State = iota // Adding routes to system.
-	CONNECTED    State = iota // Initialization Sequence Completed.
-	RECONNECTING State = iota // A restart has occurred.
-	TCP_CONNECT  State = iota // TCP_CONNECT
-	EXITING      State = iota // A graceful exit is in progress.
-	INITIALISED  State = iota // Interface initialised (WireGuard: but connection handshake still not detected)
+	DISCONNECTED  State = iota
+	CONNECTING    State = iota // OpenVPN's initial state.
+	WAIT          State = iota // (Client only) Waiting for initial response from server.
+	AUTH          State = iota // (Client only) Authenticating with server.
+	GETCONFIG     State = iota // (Client only) Downloading configuration options from server.
+	ASSIGNIP      State = iota // Assigning IP address to virtual network interface.
+	ADDROUTES     State = iota // Adding routes to system.
+	CONNECTED     State = iota // Initialization Sequence Completed.
+	RECONNECTING  State = iota // A restart has occurred.
+	TCP_CONNECT   State = iota // TCP_CONNECT
+	EXITING       State = iota // A graceful exit is in progress.
+	INITIALISED   State = iota // Interface initialised (WireGuard: but connection handshake still not detected)
+	TUNNEL_HEALTH State = iota // WireGuard-specific: tunnel health status notification (not a connection state change)
 )
 
 func (s State) IsConnecting() bool {
@@ -87,7 +88,7 @@ func (s State) IsConnecting() bool {
 }
 
 func (s State) String() string {
-	if s < DISCONNECTED || s > INITIALISED {
+	if s < DISCONNECTED || s > TUNNEL_HEALTH {
 		return "<Unknown>"
 	}
 
@@ -103,7 +104,8 @@ func (s State) String() string {
 		"RECONNECTING",
 		"TCP_CONNECT",
 		"EXITING",
-		"INITIALISED"}[s]
+		"INITIALISED",
+		"TUNNEL_HEALTH"}[s]
 }
 
 // ParseState - Converts string representation of OpenVPN state to vpn.State
@@ -155,7 +157,7 @@ type StateInfo struct {
 	ExitHostname string                 // applicable only for 'CONNECTED' state
 	Mtu          int                    // applicable only for 'CONNECTED' state (WireGuard)
 	IsAuthError  bool                   // applicable only for 'EXITING' state
-	IsUnhealthy  bool                   // applicable only for 'CONNECTED' state; true when active probing detects no peer response (WireGuard-specific)
+	IsUnhealthy  bool                   // applicable only for 'TUNNEL_HEALTH' state; true when active probing detects no peer response (WireGuard-specific)
 
 	// TODO: try to avoid using this protocol-specific parameter in future
 	// Currently, in use by OpenVPN connection to inform about "RECONNECTING" reason (e.g. "tls-error", "init_instance"...)

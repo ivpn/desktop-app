@@ -798,10 +798,6 @@ func (s *Service) connect(originalEntryServerInfo *svrConnInfo, vpnProc vpn.Proc
 						}
 
 					case vpn.CONNECTED:
-						if state.IsUnhealthy {
-							break // Ignore "connection unhealthy" notification
-						}
-
 						// since we are connected - keep connection (reconnect if unexpected disconnection)
 						if s._requiredVpnState == Connect {
 							s._requiredVpnState = KeepConnection

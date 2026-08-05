@@ -38,6 +38,10 @@ export default {
   state: {
     connectionState: VpnStateEnum.DISCONNECTED,
 
+    // Tunnel health: true when daemon reported unhealthy (no peer response).
+    // Separate from connectionState - does not affect CONNECTED/DISCONNECTED flow.
+    tunnelIsUnhealthy: false,
+
     connectionInfo: null /*{
       VpnType: VpnTypeEnum.OpenVPN,
       TimeSecFrom1970: new Date(),
@@ -55,7 +59,6 @@ export default {
       Mtu:        int ,  // (for WireGuard connections)	 
       IsPaused:   bool,  // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"   
       PausedTill  string, // pausedTill.Format(time.RFC3339)
-      IsUnhealthy: bool,
     }*/,
 
     disconnectedInfo: {
@@ -199,6 +202,7 @@ export default {
       if (ci != null) {
         state.connectionState = VpnStateEnum.CONNECTED;
         state.disconnectedInfo = null;
+        state.tunnelIsUnhealthy = false; // every new connection is healthy until proven otherwise
 
         // convert 'PausedTill' string to Date object
         let pausedTill = state.connectionInfo.PausedTill;
@@ -209,6 +213,7 @@ export default {
       state.disconnectedInfo = { ReasonDescription: disconnectionReason };
       state.connectionState = VpnStateEnum.DISCONNECTED;
       state.connectionInfo = null;
+      state.tunnelIsUnhealthy = false;
     },
     setServersData(state, serversObj /*{servers,serversHashed}*/) {
       if (!serversObj || !serversObj.servers || !serversObj.serversHashed) {
@@ -240,6 +245,9 @@ export default {
     availableWiFiNetworks(state, availableWiFiNetworks) {
       state.availableWiFiNetworks = availableWiFiNetworks;
     },
+    tunnelIsUnhealthy(state, val) {
+      state.tunnelIsUnhealthy = val;
+    },
   },
 
   getters: {
@@ -263,9 +271,7 @@ export default {
     },
     isConnectionUnhealthy: (state) => {
       if (state.connectionInfo?.IsPaused) return false;
-      if (state.connectionState == VpnStateEnum.CONNECTED && state.connectionInfo?.IsUnhealthy)
-        return true;
-      return false;
+      return state.connectionState == VpnStateEnum.CONNECTED && state.tunnelIsUnhealthy;
     },
 
     isConnecting: (state) => {

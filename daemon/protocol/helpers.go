@@ -103,7 +103,6 @@ func (p *Protocol) createConnectedResponse(state vpn.StateInfo) *types.Connected
 			Mtu:             state.Mtu,
 			IsPaused:        p._service.IsPaused(),
 			PausedTill:      pausedTillStr,
-			IsUnhealthy:     state.IsUnhealthy,
 			VpnType:         ivpnclient.VpnType(state.VpnType),
 		},
 
