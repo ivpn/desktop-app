@@ -30,6 +30,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -58,6 +59,12 @@ func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 	etcDirCommon := path.Join(installDir, "References/common/etc")
 	installDir = path.Join(installDir, "References/Linux")
 
+	// Determine architecture suffix for _deps directory
+	arch := runtime.GOARCH
+	if arch == "amd64" {
+		arch = "x86_64"
+	}
+
 	firewallScript = path.Join(etcDir, "firewall.sh")
 	splitTunScript = path.Join(etcDir, "splittun.sh")
 	openvpnCaKeyFile = path.Join(etcDirCommon, "ca.crt")
@@ -66,19 +73,19 @@ func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 	openvpnDownScript = path.Join(etcDir, "client.down")
 	serversFileBundled = path.Join(etcDirCommon, "servers.json")
 
-	obfsproxyStartScript = path.Join(installDir, "_deps/obfs4proxy_inst/obfs4proxy")
+	obfsproxyStartScript = path.Join(installDir, "_deps", arch, "obfs4proxy_inst/obfs4proxy")
 
-	v2rayBinaryPath = path.Join(installDir, "_deps/v2ray_inst/v2ray")
+	v2rayBinaryPath = path.Join(installDir, "_deps", arch, "v2ray_inst/v2ray")
 	v2rayConfigTmpFile = path.Join(tmpDir, "v2ray.json")
 
-	wgBinaryPath = path.Join(installDir, "_deps/wireguard-tools_inst/wg-quick")
-	wgToolBinaryPath = path.Join(installDir, "_deps/wireguard-tools_inst/wg")
+	wgBinaryPath = path.Join(installDir, "_deps", arch, "wireguard-tools_inst/wg-quick")
+	wgToolBinaryPath = path.Join(installDir, "_deps", arch, "wireguard-tools_inst/wg")
 
-	dnscryptproxyBinPath = path.Join(installDir, "_deps/dnscryptproxy_inst/dnscrypt-proxy")
+	dnscryptproxyBinPath = path.Join(installDir, "_deps", arch, "dnscryptproxy_inst/dnscrypt-proxy")
 	dnscryptproxyConfigTemplate = path.Join(etcDirCommon, "dnscrypt-proxy-template.toml")
 	dnscryptproxyConfigDir = tmpDir
 
-	kemHelperBinaryPath = path.Join(installDir, "_deps/kem-helper/kem-helper-bin/kem-helper")
+	kemHelperBinaryPath = path.Join(installDir, "_deps", arch, "kem-helper/kem-helper-bin/kem-helper")
 
 	settingsFile = path.Join(tmpDir, "settings.json")
 	openvpnConfigFile = path.Join(tmpDir, "openvpn.cfg")
