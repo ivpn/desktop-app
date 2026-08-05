@@ -23,11 +23,13 @@
 package wireguard
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/ivpn/desktop-app/daemon/helpers"
 	"github.com/ivpn/desktop-app/daemon/logger"
@@ -108,6 +110,13 @@ type WireGuard struct {
 	isDisconnected        bool
 	isDisconnectRequested bool
 
+	// Guards healthChecker: it is (re)started on every CONNECTED notification and stopped on
+	// RECONNECTING/DISCONNECTED/Disconnect, so its lifetime always matches an actual CONNECTED period.
+	// A fresh *healthChecker is created per start, so a goroutine's self-cleanup (see startHealthCheck)
+	// can never clear a later generation's checker.
+	healthCheckerMutex sync.Mutex
+	healthChecker      *healthChecker
+
 	// Must be implemented (AND USED) in correspond file for concrete platform. Must contain platform-specified properties (or can be empty struct)
 	internals internalVariables
 }
@@ -161,6 +170,7 @@ func (wg *WireGuard) Connect(stateChan chan<- vpn.StateInfo) error {
 	wg.isDisconnectRequested = false
 	stateChan <- vpn.NewStateInfo(vpn.CONNECTING, "")
 	defer func() {
+		wg.stopHealthCheck()
 		wg.isDisconnected = true
 		stateChan <- vpn.NewStateInfo(vpn.DISCONNECTED, disconnectDescription)
 	}()
@@ -188,6 +198,7 @@ func (wg *WireGuard) Connect(stateChan chan<- vpn.StateInfo) error {
 // Disconnect stops the connection
 func (wg *WireGuard) Disconnect() error {
 	wg.isDisconnectRequested = true
+	wg.stopHealthCheck()
 	return wg.disconnect()
 }
 
@@ -333,8 +344,77 @@ func (wg *WireGuard) newStateInfoConnected() vpn.StateInfo {
 	return si
 }
 
+func (wg *WireGuard) newStateInfoConnectedUnhealthy() vpn.StateInfo {
+	si := wg.newStateInfoConnected()
+	si.IsUnhealthy = true
+	return si
+}
+
 func (wg *WireGuard) notifyConnectedStat(stateChan chan<- vpn.StateInfo) {
+	wg.startHealthCheck(stateChan)
 	stateChan <- wg.newStateInfoConnected()
+}
+
+func (wg *WireGuard) notifyReconnectingStat(stateChan chan<- vpn.StateInfo, description string) {
+	wg.stopHealthCheck()
+	stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, description)
+}
+
+// startHealthCheck (re)starts the connection status checker. Its lifetime is scoped to the
+// current CONNECTED period: it is stopped via stopHealthCheck() on every RECONNECTING/DISCONNECTED
+// transition, so it never reports health for a tunnel that isn't actually up, and each restart
+// begins with fresh RX/TX counters instead of carrying stale values across a reconnect.
+func (wg *WireGuard) startHealthCheck(stateChan chan<- vpn.StateInfo) {
+	wg.healthCheckerMutex.Lock()
+	defer wg.healthCheckerMutex.Unlock()
+
+	if wg.healthChecker != nil {
+		return // already running
+	}
+
+	c := newHealthChecker(wg.GetTunnelName(), wg.connectParams.hostLocalIP, wg.connectParams.clientLocalIP)
+	wg.healthChecker = c
+
+	go func() {
+		err := c.run(func(ctx context.Context, isHealthy bool) {
+			var state vpn.StateInfo
+			if isHealthy {
+				log.Info("Connection health restored to healthy")
+				state = wg.newStateInfoConnected()
+			} else {
+				log.Warning("Connection health: unhealthy - tunnel appears dead")
+				state = wg.newStateInfoConnectedUnhealthy()
+			}
+			select {
+			case stateChan <- state:
+			case <-ctx.Done():
+			}
+		})
+
+		// Self-cleanup so a future startHealthCheck() call can actually restart monitoring.
+		// Only clear wg.healthChecker if it still points to this goroutine's own generation -
+		// a newer start/stop cycle may have already replaced it.
+		wg.healthCheckerMutex.Lock()
+		if wg.healthChecker == c {
+			wg.healthChecker = nil
+		}
+		wg.healthCheckerMutex.Unlock()
+
+		if err != nil {
+			log.Error("Connection health checker stopped unexpectedly: ", err)
+		}
+	}()
+}
+
+// stopHealthCheck stops the connection status checker started by startHealthCheck, if running.
+func (wg *WireGuard) stopHealthCheck() {
+	wg.healthCheckerMutex.Lock()
+	defer wg.healthCheckerMutex.Unlock()
+
+	if wg.healthChecker != nil {
+		wg.healthChecker.Stop()
+		wg.healthChecker = nil
+	}
 }
 
 func (wg *WireGuard) notifyInitialisedStat(stateChan chan<- vpn.StateInfo) {

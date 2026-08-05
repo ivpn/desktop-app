@@ -22,6 +22,7 @@ type ConnectedResp struct {
 	Mtu             int    // (for WireGuard connections)
 	IsPaused        bool   // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"
 	PausedTill      string // pausedTill.Format(time.RFC3339)
+	IsUnhealthy     bool   // When "true" - WireGuard tunnel health checks failed; no peer response detected
 	VpnType         VpnType
 	// NOTE: this is not all fields that IVPN client sends, add more if needed
 }

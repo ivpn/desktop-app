@@ -2,11 +2,24 @@
   <div class="left_panel_block" style="margin-top: 26px">
     <div style="display: flex; justify-content: space-between">
       <div>
+        
         <div class="small_text" tabindex="0" >Your status is</div>
         <!-- `role="status" allows screen readers to read the text when it changes -->
         <div role="status">
-          <div class="large_text" tabindex="0">
-            {{ protectedText }}
+          <div class="large_text" tabindex="0" style="display: flex;">
+            {{ protectedText }}  
+            
+            <!-- Unhealthy connection notification. -->
+            <button v-if="isConnectionUnhealthy" class="noBordersBtn connectionWarningBtn" style="margin-left: 4px;">
+              <img src="@/assets/connection-break.svg" height="28"/>
+              <span class="connectionWarningPopup">
+                <strong>Unhealthy connection.</strong>
+                <br />
+                No traffic detected on the VPN interface. 
+                Possible cause: local connectivity issue (e.g. Wi-Fi disconnected or no internet access).
+              </span>
+            </button>
+
           </div>          
         </div>
       </div>
@@ -251,6 +264,9 @@ export default {
     isCanShowPauseMenu: function () {
       return this.isCanPause && this.isPauseMenuAllowed;
     },
+    isConnectionUnhealthy: function() {
+      return this.$store.getters["vpnState/isConnectionUnhealthy"];
+    }
   },
   watch: {
     isPaused() {
@@ -380,6 +396,57 @@ $shadow:
   @extend .popup_menu_block;
   cursor: pointer;
 }
+
+//----------------- Unhealthy connection -------------------------------------
+
+.connectionWarningBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin: 0px; 
+  padding: 0px;
+}
+
+.connectionWarningBtn:hover .connectionWarningPopup {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+.connectionWarningPopup {
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s linear 1.5s, opacity 0.3s ease 0.2s;
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 240px;
+  max-width: 240px;
+  background-color: var(--background-color);
+  border-radius: 14px;
+  box-shadow: 0px 0px 34px rgba(0, 0, 0, var(--shadow-opacity-koef));
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: normal;
+  text-align: left;
+  z-index: 4;
+}
+
+// upward-pointing arrow centered on icon
+.connectionWarningPopup::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  margin-left: -12px;
+  border-width: 0 12px 12px 12px;
+  border-style: solid;
+  border-color: transparent transparent var(--background-color) transparent;
+}
+
 //------------------------------------------------------
 // in use for minimalistic UI
 // (reduced width and position shifted left)

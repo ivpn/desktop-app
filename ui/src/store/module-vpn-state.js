@@ -40,7 +40,7 @@ export default {
 
     connectionInfo: null /*{
       VpnType: VpnTypeEnum.OpenVPN,
-      ConnectedSince: new Date(),
+      TimeSecFrom1970: new Date(),
       ClientIP: "",
       ClientIPv6: "",
       ServerIP: "",
@@ -54,7 +54,8 @@ export default {
       IsTCP:      false,
       Mtu:        int ,  // (for WireGuard connections)	 
       IsPaused:   bool,  // When "true" - the actual connection may be "disconnected" (depending on the platform and VPN protocol), but the daemon responds "connected"   
-      PausedTill  string // pausedTill.Format(time.RFC3339)
+      PausedTill  string, // pausedTill.Format(time.RFC3339)
+      IsUnhealthy: bool,
     }*/,
 
     disconnectedInfo: {
@@ -260,6 +261,13 @@ export default {
     isDisconnected: (state) => {
       return state.connectionState === VpnStateEnum.DISCONNECTED;
     },
+    isConnectionUnhealthy: (state) => {
+      if (state.connectionInfo?.IsPaused) return false;
+      if (state.connectionState == VpnStateEnum.CONNECTED && state.connectionInfo?.IsUnhealthy)
+        return true;
+      return false;
+    },
+
     isConnecting: (state) => {
       switch (state.connectionState) {
         case VpnStateEnum.CONNECTING:

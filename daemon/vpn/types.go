@@ -155,6 +155,7 @@ type StateInfo struct {
 	ExitHostname string                 // applicable only for 'CONNECTED' state
 	Mtu          int                    // applicable only for 'CONNECTED' state (WireGuard)
 	IsAuthError  bool                   // applicable only for 'EXITING' state
+	IsUnhealthy  bool                   // applicable only for 'CONNECTED' state; true when active probing detects no peer response (WireGuard-specific)
 
 	// TODO: try to avoid using this protocol-specific parameter in future
 	// Currently, in use by OpenVPN connection to inform about "RECONNECTING" reason (e.g. "tls-error", "init_instance"...)

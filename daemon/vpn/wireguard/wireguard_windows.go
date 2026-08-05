@@ -88,7 +88,7 @@ func (wg *WireGuard) getTunnelName() string {
 	return strings.TrimSuffix(filepath.Base(wg.configFilePath), filepath.Ext(wg.configFilePath)) // IVPN
 }
 
-// connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
+// connect - SYNCHRONOUSLY execute WireGuard process (wait until it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	if wg.internals.isDisconnectRequested {
 		return fmt.Errorf("disconnection already requested for this object. To make a new connection, please, initialize new one")
@@ -206,7 +206,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 		if wg.internals.isRestartRequired {
 			wg.internals.isRestartRequired = false
 
-			stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "Reconnecting with new connection parameters")
+			wg.notifyReconnectingStat(stateChan, "Reconnecting with new connection parameters")
 
 			log.Info("Restarting...")
 			if err := wg.uninstallService(); err != nil {

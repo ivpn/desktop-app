@@ -470,7 +470,9 @@ async function processResponse(response) {
 
         store.dispatch(`vpnState/connectionInfo`, connectionInfo);
         store.commit("uiState/isPauseResumeInProgress", false);
-        requestGeoLookupAsync();
+        
+        if (!connectionInfo.IsUnhealthy)
+          requestGeoLookupAsync();
       }
       break;
 

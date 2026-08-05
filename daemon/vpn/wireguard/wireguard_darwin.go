@@ -95,7 +95,7 @@ func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) (err error) {
 	return wg.internalConnect(stateChan)
 }
 
-// connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
+// connect - SYNCHRONOUSLY execute WireGuard process (wait until it finished)
 func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 
 	var routineStopWaiter sync.WaitGroup
@@ -109,7 +109,7 @@ func (wg *WireGuard) internalConnect(stateChan chan<- vpn.StateInfo) error {
 		}
 		log.Info("No connectivity. Waiting 5 sec to retry...")
 
-		stateChan <- vpn.NewStateInfo(vpn.RECONNECTING, "No connectivity")
+		wg.notifyReconnectingStat(stateChan, "No connectivity")
 		pauseEnd := time.Now().Add(time.Second * 5)
 		for time.Now().Before(pauseEnd) && !wg.internals.isGoingToStop.Load() {
 			time.Sleep(time.Millisecond * 50)
