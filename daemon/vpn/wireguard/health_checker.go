@@ -34,6 +34,8 @@ const (
 	IdleTimeout = 120 * time.Second
 	// If we are actively probing (pinging) and no response for this timeout → declare connection dead
 	ConnDeadAfterPingTimeout = 10 * time.Second
+	// Interval between ICMP probe packets during active probing.
+	PingInterval = 3 * time.Second
 )
 
 // healthChecker monitors WireGuard tunnel liveness by watching the peer's RX/TX byte
@@ -93,6 +95,7 @@ func (h *healthChecker) run(onHealthChanged func(ctx context.Context, isHealthy 
 		lastTxBytes        int64
 		waitingForResponse bool
 		probingStartTime   time.Time
+		lastPingTime       time.Time
 		isConnectionDead   bool
 	)
 	lastRxTime = now
@@ -174,8 +177,12 @@ func (h *healthChecker) run(onHealthChanged func(ctx context.Context, isHealthy 
 			// Source IP is set to the client's tunnel IP to force traffic through the WG interface
 			// rather than the default route (important when Inverse Split Tunnel is enabled).
 			// The ping reply is not checked here - any resulting RX activity is detected above.
-			if err := sendPing(h.hostLocalIP, h.clientLocalIP); err != nil {
-				h.log.Error("Failed to send probe ping: ", err)
+			if now.Sub(lastPingTime) >= PingInterval {
+				if err := sendPing(h.hostLocalIP, h.clientLocalIP); err != nil {
+					h.log.Error("Failed to send probe ping: ", err)
+				} else {
+					lastPingTime = now
+				}
 			}
 		}
 	}
