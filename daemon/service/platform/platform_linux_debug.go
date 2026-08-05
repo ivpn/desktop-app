@@ -61,9 +61,6 @@ func doOsInitForBuild() (warnings []string, errors []error, logInfo []string) {
 
 	// Determine architecture suffix for _deps directory
 	arch := runtime.GOARCH
-	if arch == "amd64" {
-		arch = "x86_64"
-	}
 
 	firewallScript = path.Join(etcDir, "firewall.sh")
 	splitTunScript = path.Join(etcDir, "splittun.sh")
