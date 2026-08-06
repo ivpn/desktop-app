@@ -38,6 +38,10 @@
                       (daemon v{{ versionDaemon }}; UI v{{ versionUI }})
                     </div>
                   </div>
+                  <!-- OS-incompatible update exists -->
+                  <div v-if="isOsIncompatible" class="small_text" style="margin-top: 10px; color: orange">
+                    Version {{ versionLatestGeneric }} is available but requires OS version {{ latestVersionInfo.generic.minOsVersion }} or later.
+                  </div>
                 </div>
                 <div class="buttons">
                   <button class="slave btn" v-on:click="onCancel">Close</button>
@@ -247,7 +251,14 @@ export default {
     isCheckingUpdate: function () {
       return this.updateState == AppUpdateStage.CheckingForUpdates;
     },
+    isOsCompatible: function () {
+      return this.$store.state.latestVersionInfo?._isOsCompatible !== false;
+    },
+    isOsIncompatible: function () {
+      return !this.isOsCompatible && !!this.versionLatestGeneric;
+    },
     isHasUpgrade: function () {
+      if (!this.isOsCompatible) return false;
       if (this.versionLatestGeneric) {
         return (
           IsNewVersion(this.versionDaemon, this.versionLatestGeneric) ||
