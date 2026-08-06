@@ -104,6 +104,8 @@
                   class="releaseNotes scrollableColumnContainer"
                   style="max-height: 350px"
                 >
+                  <!-- generic.notes: optional free-text shown above release notes -->
+                  <div v-if="latestVersionInfo.generic && latestVersionInfo.generic.notes" class="relNotesPreText" style="white-space: pre-wrap; margin-bottom: 10px;">{{ latestVersionInfo.generic.notes }}</div>
                   <!--release notes GENERIC-->
                   <div v-if="versionLatestGeneric">
                     <div class="relNotesPreText">Release notes:</div>
