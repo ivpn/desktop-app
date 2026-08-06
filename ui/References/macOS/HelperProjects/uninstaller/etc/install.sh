@@ -11,6 +11,10 @@ _app_path="/Applications/IVPN.app"
 _app_plist="${_app_path}/Contents/Info.plist"
 _app_backup="${_app_path}.old"
 
+# Ensure copied files are created with user-readable defaults even if parent process
+# runs with a restrictive umask (e.g. 077).
+umask 022
+
 function echoerr
 {
   echo "[!] ERROR: $@" 1>&2;
@@ -102,6 +106,15 @@ function CheckSignature
     return 0
 }
 
+function FixInstalledAppPermissions
+{
+    # Make app bundle traversable/readable for normal users while preserving
+    # executable bits for binaries and scripts.
+    chown -R root:wheel "${_app_path}" || return 1
+    chmod -R a+rX,go-w "${_app_path}" || return 1
+    return 0
+}
+
 if [ -z "${_source_dmg}" ]; then
   echoerr "Source dmg file not defined."
   exit 64
@@ -179,6 +192,9 @@ fi
 
 echo "[+] Copying ..."
 cp -R "${_app_path_src}" "${_app_path}" || { echoerr "Failed to install the update"; RestoreBackup; UnmountDMG; exit 72; }
+
+echo "[+] Fixing permissions ..."
+FixInstalledAppPermissions || { echoerr "Failed to fix application permissions"; RestoreBackup; UnmountDMG; exit 73; }
 
 RemoveBackup
 UnmountDMG
