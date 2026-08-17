@@ -124,7 +124,9 @@ func (p *Protocol) clientDisconnected(c net.Conn) *connectionInfo {
 		return ret
 	}()
 
-	interoperability.ClientDisconnected(ret.Type)
+	if ret != nil {
+		interoperability.ClientDisconnected(ret.Type)
+	}
 
 	if !isPortmasterConnected {
 		p._service.SplitTunnelling_SetDisabledReason("")
