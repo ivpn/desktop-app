@@ -119,12 +119,14 @@ if (Platform() === PlatformEnum.Linux && !process.env.SNAP) {
   app.setDesktopName("IVPN.desktop");
 }
 
-// macOS: use the mock keychain backend to avoid repeated Keychain prompts after
-// Electron upgrades (the app signature changes and existing entries are revalidated).
-// This is acceptable here because sensitive data is not stored in Chromium-managed
-// browser storage, and app.safeStorage is not used.
+// Prevent Chromium from storing its cookie encryption key in the OS keychain.
+// Sensitive data is not stored in Chromium-managed browser storage, and app.safeStorage is not used.
 if (Platform() === PlatformEnum.macOS) {
+  // Avoid repeated Keychain prompts after Electron upgrades (app signature changes trigger revalidation).
   app.commandLine.appendSwitch('use-mock-keychain');
+} else if (Platform() === PlatformEnum.Linux) {
+  // Prevent Chromium from creating entries in gnome-keyring/kwallet to store its cookie encryption key.
+  app.commandLine.appendSwitch('password-store', 'basic');
 }
 
 // abortController can be used to cancel active messageBox dialogs when app exiting.
