@@ -121,6 +121,18 @@ export function IsNeedSkipThisVersion(updatesInfo) {
   );
 }
 
+// minOsVersion format: "X", "X.Y", or "X.Y.Z"  (e.g. "12" = macOS 12+, "10.0.19041" = Win10 build 19041+)
+export function IsOsCompatible(updatesInfo) {
+  const minVer = updatesInfo?.generic?.minOsVersion;
+  if (!minVer) return true;
+  try {
+    return !IsNewVersion(process.getSystemVersion(), minVer);
+  } catch (e) {
+    console.warn("[updater] OS version check failed:", e);
+    return true; // fail-open: never silently block an update
+  }
+}
+
 function setState(updateState) {
   // logging
   try {

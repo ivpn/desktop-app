@@ -66,6 +66,12 @@ export function IsNewerVersion(updatesInfo, currDaemonVer, currUiVer) {
   return updater.IsNewerVersion(updatesInfo, currDaemonVer, currUiVer);
 }
 
+export function IsOsCompatible(updatesInfo) {
+  const updater = getUpdater();
+  if (!updater?.IsOsCompatible) return true;
+  return updater.IsOsCompatible(updatesInfo);
+}
+
 export function StartUpdateChecker(onHasUpdateCallback) {
   if (!onHasUpdateCallback) {
     console.warn("Unable to start update checker: callback not defined");
@@ -94,6 +100,9 @@ export function StartUpdateChecker(onHasUpdateCallback) {
         if (updater.IsNewerVersion(updatesInfo, currDaemonVer, currUiVer)) {
           if (updater.IsNeedSkipThisVersion(updatesInfo)) {
             return;
+          }
+          if (updater.IsOsCompatible && !updater.IsOsCompatible(updatesInfo)) {
+            return; // OS does not meet minimum required version — skip silently
           }
 
           onHasUpdateCallback(updatesInfo, currDaemonVer, currUiVer);
@@ -134,6 +143,10 @@ export async function CheckUpdates(isAutomaticCheck) {
       isAutomaticCheck,
       settingsUpdates ? settingsUpdates.isBetaProgram : null
     );
+    // _isOsCompatible is a runtime-computed flag, not part of server JSON
+    if (updatesInfo && updater?.IsOsCompatible) {
+      updatesInfo._isOsCompatible = updater.IsOsCompatible(updatesInfo);
+    }
     store.commit("latestVersionInfo", updatesInfo);
 
     setState({

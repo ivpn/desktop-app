@@ -11,6 +11,10 @@ _app_path="/Applications/IVPN.app"
 _app_plist="${_app_path}/Contents/Info.plist"
 _app_backup="${_app_path}.old"
 
+# Ensure copied files are created with user-readable defaults even if parent process
+# runs with a restrictive umask (e.g. 077).
+umask 022
+
 function echoerr
 {
   echo "[!] ERROR: $@" 1>&2;
@@ -101,6 +105,33 @@ function CheckSignature
     rm "${_signature_file_tmp_decoded}"
     return 0
 }
+
+# Can be executed after the update is installed, but before the app is started. 
+#
+# What this function used to do:
+# 1) Recursively set owner/group of all files in IVPN.app to root:wheel.
+# 2) Recursively normalize permissions for all paths except
+#    Contents/Resources/etc using: chmod a+rX,go-w
+#    - add read for everyone
+#    - add execute only to directories (and already executable files)
+#    - remove write for group/others
+# 3) Return non-zero on failure so update script could rollback.
+#
+# WARNING:
+# Permission/ownership normalization from updater can conflict with daemon
+# file-rights policy and silently create late regressions after updates.
+# Example: static files in Contents/Resources/etc must keep strict modes
+# expected by daemon checks (e.g. 0400). Broad chmod/chown logic may alter
+# those assumptions over time.
+#
+# function FixInstalledAppPermissions
+# {
+#     chown -R root:wheel "${_app_path}" || return 1
+#     find "${_app_path}" \
+#         -path "${_app_path}/Contents/Resources/etc" -prune \
+#         -o -exec chmod a+rX,go-w {} + || return 1
+#     return 0
+# }
 
 if [ -z "${_source_dmg}" ]; then
   echoerr "Source dmg file not defined."
