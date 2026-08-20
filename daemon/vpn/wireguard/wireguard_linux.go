@@ -115,7 +115,7 @@ func (wg *WireGuard) getTunnelName() string {
 	return strings.TrimSuffix(filepath.Base(wg.configFilePath), filepath.Ext(wg.configFilePath))
 }
 
-// connect - SYNCHRONOUSLY execute openvpn process (wait until it finished)
+// connect - SYNCHRONOUSLY execute WireGuard process (wait until it finished)
 func (wg *WireGuard) connect(stateChan chan<- vpn.StateInfo) error {
 	wg.internals.isRunning.Store(true)
 

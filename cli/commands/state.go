@@ -59,6 +59,11 @@ func showState() error {
 		return err
 	}
 
+	health, err := _proto.GetTunnelHealthState()
+	if err != nil {
+		return err
+	}
+
 	serverInfo := ""
 	exitServerInfo := ""
 
@@ -74,7 +79,7 @@ func showState() error {
 	}
 
 	w := printAccountInfo(nil, _proto.GetHelloResponse().Session.AccountID)
-	printState(w, state, connected, serverInfo, exitServerInfo, _proto.GetHelloResponse())
+	printState(w, state, connected, health, serverInfo, exitServerInfo, _proto.GetHelloResponse())
 	if state == vpn.CONNECTED {
 		printDNSState(w, connected.Dns, &servers)
 	}

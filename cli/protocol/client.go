@@ -487,6 +487,15 @@ func (c *Client) GetVPNState() (vpn.State, types.ConnectedResp, error) {
 	return vpn.DISCONNECTED, respConnected, fmt.Errorf("failed to receive VPN state (not expected return type)")
 }
 
+func (c *Client) GetTunnelHealthState() (ivpnclient.TunnelHealthResp, error) {
+	req := ivpnclient.GetTunnelHealth{}
+	var resp ivpnclient.TunnelHealthResp
+	if err := c._client.SendRecv(&req, &resp); err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
 // DisconnectVPN disconnect active VPN connection
 func (c *Client) DisconnectVPN() error {
 	req := types.Disconnect{}

@@ -26,6 +26,18 @@ type ConnectedResp struct {
 	// NOTE: this is not all fields that IVPN client sends, add more if needed
 }
 
+// TunnelHealthResp notifies about tunnel health transitions while connected.
+// Sent as a dedicated message, separate from ConnectedResp, so the connection state flow is unaffected.
+// IsUnhealthy=true: tunnel appears dead (no peer response). IsUnhealthy=false: traffic resumed.
+type TunnelHealthResp struct {
+	CommandBase
+	IsUnhealthy bool
+}
+
+type GetTunnelHealth struct {
+	RequestBase
+}
+
 type DisconnectionReason int
 
 // Disconnection reason types

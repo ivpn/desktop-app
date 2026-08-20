@@ -174,7 +174,8 @@ export function InitTray(
         case "uiState/isParanoidModePasswordView":
         case "vpnState/connectionState":
         case "vpnState/connectionInfo":
-        case "vpnState/disconnected": {
+        case "vpnState/disconnected":
+        case "vpnState/tunnelIsUnhealthy": {
           updateTrayMenu();
           updateTrayIcon();
           break;
@@ -231,7 +232,7 @@ function updateTrayIcon() {
       break;
   }
 
-  if (store.getters["vpnState/isConnecting"]) {
+  if (store.getters["vpnState/isConnecting"] || store.getters["vpnState/isConnectionUnhealthy"]) {
     let icons = iconsConnecting;
     if (isLightIcons === false) icons = iconsConnecting_ForLightTheme;
     tray.setImage(icons[iconConnectingIdx % icons.length]);
@@ -593,6 +594,8 @@ function GetStatusText() {
   if (store.getters["vpnState/isConnected"]) {
     retStr += `Connected: ${serverName()}`;
     if (store.getters["vpnState/isPaused"]) retStr += ` (connection Paused)`;
+    else if (store.getters["vpnState/isConnectionUnhealthy"])
+      retStr += ` (connection Unhealthy)`;
   } else if (store.getters["vpnState/isConnecting"]) retStr += "Connecting...";
   else if (store.getters["vpnState/isDisconnecting"])
     retStr += "Disconnecting...";

@@ -30,6 +30,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -54,6 +55,12 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 		installDir = installDir[:idx+len(rootDir)]
 	}
 
+	// Determine architecture suffix for _deps directory
+	arch := runtime.GOARCH
+	if arch == "amd64" {
+		arch = "x86_64"
+	}
+
 	// macOS-specific variable initialization
 	firewallScript = path.Join(installDir, "References/macOS/etc/firewall.sh")
 	dnsScript = path.Join(installDir, "References/macOS/etc/dns.sh")
@@ -66,25 +73,25 @@ func doOsInitForBuild() (warnings []string, errors []error) {
 	openvpnProxyAuthFile = path.Join(settingsDir, "proxyauth.txt")
 	wgConfigFilePath = path.Join(settingsDir, "wireguard.conf")
 
-	openVpnBinaryPath = path.Join(installDir, "References/macOS/_deps/openvpn_inst/bin/openvpn")
+	openVpnBinaryPath = path.Join(installDir, "References/macOS/_deps", arch, "openvpn_inst/bin/openvpn")
 	openvpnCaKeyFile = path.Join(installDir, "References/common/etc/ca.crt")
 	openvpnTaKeyFile = path.Join(installDir, "References/common/etc/ta.key")
 	openvpnUpScript = path.Join(installDir, "References/macOS/etc/dns.sh -up")
 	openvpnDownScript = path.Join(installDir, "References/macOS/etc/dns.sh -down")
 
-	obfsproxyStartScript = path.Join(installDir, "References/macOS/_deps/obfs4proxy_inst/obfs4proxy")
+	obfsproxyStartScript = path.Join(installDir, "References/macOS/_deps", arch, "obfs4proxy_inst/obfs4proxy")
 
-	v2rayBinaryPath = path.Join(installDir, "References/macOS/_deps/v2ray_inst/v2ray")
+	v2rayBinaryPath = path.Join(installDir, "References/macOS/_deps", arch, "v2ray_inst/v2ray")
 	v2rayConfigTmpFile = path.Join(settingsDir, "v2ray.json")
 
-	wgBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wireguard-go")
-	wgToolBinaryPath = path.Join(installDir, "References/macOS/_deps/wg_inst/wg")
+	wgBinaryPath = path.Join(installDir, "References/macOS/_deps", arch, "wg_inst/wireguard-go")
+	wgToolBinaryPath = path.Join(installDir, "References/macOS/_deps", arch, "wg_inst/wg")
 
-	dnscryptproxyBinPath = path.Join(installDir, "References/macOS/_deps/dnscryptproxy_inst/dnscrypt-proxy")
+	dnscryptproxyBinPath = path.Join(installDir, "References/macOS/_deps", arch, "dnscryptproxy_inst/dnscrypt-proxy")
 	dnscryptproxyConfigTemplate = path.Join(installDir, "References/common/etc/dnscrypt-proxy-template.toml")
 	dnscryptproxyConfigDir = settingsDir
 
-	kemHelperBinaryPath = path.Join(installDir, "References/macOS/_deps/kem-helper/kem-helper-bin/kem-helper")
+	kemHelperBinaryPath = path.Join(installDir, "References/macOS/_deps", arch, "kem-helper/kem-helper-bin/kem-helper")
 
 	return nil, nil
 }

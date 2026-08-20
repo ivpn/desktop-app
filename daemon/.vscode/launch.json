@@ -14,6 +14,10 @@
                 "console": "integratedTerminal", // required to debug as root
                 "asRoot": true, // required to debug as root
             },
+            "osx": {
+                "console": "integratedTerminal", // required to debug as root
+                "asRoot": true, // required to debug as root
+            },
 
             "program": "${workspaceRoot}",
             "env": {},

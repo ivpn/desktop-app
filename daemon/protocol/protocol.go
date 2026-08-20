@@ -193,6 +193,9 @@ type Protocol struct {
 
 	// keep info about last VPN state
 	_lastVPNState vpn.StateInfo
+	// Cached WireGuard tunnel health: true when last TUNNEL_HEALTH notification was unhealthy.
+	// Used to push health status to clients that connect after an unhealthy event.
+	_lastTunnelUnhealthy bool
 	// Keep info about last sent VPN remote endpoint
 	// The real endpoint info of VPN server, obfsproxy or V2Ray server we are connected to.
 	// nil - means that VPN not connected
@@ -446,10 +449,18 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		return false
 	}
 
+	sendTunHealthState := func(reqIdx uint32) {
+		p.sendResponse(conn, &ivpnclient.TunnelHealthResp{IsUnhealthy: p._lastTunnelUnhealthy}, reqIdx)
+	}
+
 	sendState := func(reqIdx uint32, isOnlyIfConnected bool) {
 		vpnState := p._lastVPNState
 		if vpnState.State == vpn.CONNECTED {
 			p.sendResponse(conn, p.createConnectedResponse(vpnState), reqIdx)
+			// Push cached health status so the client has the full picture immediately.
+			if p._lastTunnelUnhealthy {
+				sendTunHealthState(reqIdx)
+			}
 		} else if !isOnlyIfConnected {
 			if vpnState.State == vpn.DISCONNECTED {
 				p.sendResponse(conn, &ivpnclient.DisconnectedResp{IsStateInfo: true, Failure: false, Reason: 0, ReasonDescription: ""}, reqIdx)
@@ -576,6 +587,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	case "GetVPNState":
 		// send VPN connection  state
 		sendState(reqCmd.Idx, false)
+
+	case "GetTunnelHealth":
+		sendTunHealthState(reqCmd.Idx)
 
 	case "GetServers":
 		var req types.GetServers
@@ -1371,16 +1385,27 @@ func (p *Protocol) notifyVpnStateChanged(stateObj *vpn.StateInfo) {
 
 	state := p._lastVPNState
 	if stateObj != nil {
-		p._lastVPNState = *stateObj
+		if stateObj.State != vpn.TUNNEL_HEALTH {
+			// Do not overwrite _lastVPNState with health notifications; it must always reflect actual connection state.
+			p._lastVPNState = *stateObj
+		}
 		state = *stateObj
 	}
 
 	switch state.State {
 	case vpn.CONNECTED:
+		p._lastTunnelUnhealthy = false
 		p.notifyClients(p.createConnectedResponse(state))
 	case vpn.DISCONNECTED:
+		p._lastTunnelUnhealthy = false
 		// Do not send DISCONNECTED event notification.
 		// It will be sent to the client only after finishing the synchronous function processConnectRequest().
+	case vpn.TUNNEL_HEALTH:
+		if !state.IsUnhealthy && !p._lastTunnelUnhealthy {
+			return // already healthy - no transition to report
+		}
+		p._lastTunnelUnhealthy = state.IsUnhealthy
+		p.notifyClients(&ivpnclient.TunnelHealthResp{IsUnhealthy: state.IsUnhealthy})
 	default:
 		p.notifyClients(&types.VpnStateResp{StateVal: state.State, State: state.State.String(), StateAdditionalInfo: state.StateAdditionalInfo})
 	}
