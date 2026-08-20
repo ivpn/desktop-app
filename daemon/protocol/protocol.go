@@ -449,13 +449,17 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		return false
 	}
 
+	sendTunHealthState := func(reqIdx uint32) {
+		p.sendResponse(conn, &ivpnclient.TunnelHealthResp{IsUnhealthy: p._lastTunnelUnhealthy}, reqIdx)
+	}
+
 	sendState := func(reqIdx uint32, isOnlyIfConnected bool) {
 		vpnState := p._lastVPNState
 		if vpnState.State == vpn.CONNECTED {
 			p.sendResponse(conn, p.createConnectedResponse(vpnState), reqIdx)
 			// Push cached health status so the client has the full picture immediately.
 			if p._lastTunnelUnhealthy {
-				p.sendResponse(conn, &ivpnclient.TunnelHealthResp{IsUnhealthy: true}, 0)
+				sendTunHealthState(reqIdx)
 			}
 		} else if !isOnlyIfConnected {
 			if vpnState.State == vpn.DISCONNECTED {
@@ -583,6 +587,9 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	case "GetVPNState":
 		// send VPN connection  state
 		sendState(reqCmd.Idx, false)
+
+	case "GetTunnelHealth":
+		sendTunHealthState(reqCmd.Idx)
 
 	case "GetServers":
 		var req types.GetServers

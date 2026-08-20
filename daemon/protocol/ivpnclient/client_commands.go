@@ -34,6 +34,10 @@ type TunnelHealthResp struct {
 	IsUnhealthy bool
 }
 
+type GetTunnelHealth struct {
+	RequestBase
+}
+
 type DisconnectionReason int
 
 // Disconnection reason types

@@ -61,7 +61,7 @@ func printAccountInfo(w *tabwriter.Writer, accountID string) *tabwriter.Writer {
 	return w
 }
 
-func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedResp, serverInfo string, exitServerInfo string, helloResp types.HelloResp) *tabwriter.Writer {
+func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedResp, health ivpnclient.TunnelHealthResp, serverInfo string, exitServerInfo string, helloResp types.HelloResp) *tabwriter.Writer {
 
 	if w == nil {
 		w = tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
@@ -79,6 +79,10 @@ func printState(w *tabwriter.Writer, state vpn.State, connected types.ConnectedR
 	}
 
 	fmt.Fprintf(w, "VPN\t:\t%v\n", stateStr)
+
+	if state == vpn.CONNECTED && health.IsUnhealthy {
+		fmt.Fprintf(w, "\t\tWARNING! Unhealthy Connection (no traffic detected for a while)\n")
+	}
 
 	if len(serverInfo) > 0 {
 		fmt.Fprintf(w, "\t\t%v\n", serverInfo)
