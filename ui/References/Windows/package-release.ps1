@@ -16,17 +16,13 @@
       - Prints a notice that binaries and installer are not signed
 
     Signed (CERT_SHA1 set via env var or -CertSha1 parameter):
-      - Validates all expected binaries exist
+      - Verifies SHA256 checksums of vendor files (before any signing)
       - Prompts once to connect EV USB dongle
-      - Signs all IVPN-owned binaries via signtool
-      - Verifies SHA256 checksums of vendor files
-      - Verifies all staged .exe signatures
+      - Signs all staged .exe and .dll files via signtool
+      - Verifies all staged .exe and .dll signatures
       - Runs makensis to build installer from signed binaries
       - Signs the installer
       - Prints summary of signed outputs
-
-    Does NOT re-sign vendor pre-signed binaries (OpenVPN, OpenSSL DLLs,
-    TAP driver, devcon).
 
 .PARAMETER CertSha1
     SHA1 thumbprint of the EV code-signing certificate.
@@ -193,30 +189,6 @@ if (-not (Test-StagedFiles -ManifestFile $ManifestFile -StagingDir $InstallerTmp
 Write-Host ""
 
 # ---------------------------------------------------------------------------
-# Binaries to sign in the staging directory.
-# All IVPN-compiled binaries (including vendor tools built from source) are signed.
-# Only truly pre-compiled (and pre-signed) binaries are excluded.
-# ---------------------------------------------------------------------------
-# Helper function to build list of binaries to sign in staging directory.
-function Get-BinariesToSign {
-    return @(
-        Join-Path $InstallerTmpDir 'IVPN Service.exe'
-        Join-Path $InstallerTmpDir 'cli\ivpn.exe'
-        Join-Path $InstallerTmpDir 'OpenVPN\obfsproxy\obfs4proxy.exe'
-        Join-Path $InstallerTmpDir 'v2ray\v2ray.exe'
-        Join-Path $InstallerTmpDir 'dnscrypt-proxy\dnscrypt-proxy.exe'
-        Join-Path $InstallerTmpDir 'WireGuard\wg.exe'
-        Join-Path $InstallerTmpDir 'WireGuard\wireguard.exe'
-        Join-Path $InstallerTmpDir 'kem\kem-helper.exe'
-        Join-Path $InstallerTmpDir 'IVPN Helpers Native.dll'
-        Join-Path $InstallerTmpDir 'IVPN Firewall Native.dll'
-        Join-Path $InstallerTmpDir 'ui\IVPN Client.exe'
-    )
-}
-
-$BinariesToSign = Get-BinariesToSign
-
-# ---------------------------------------------------------------------------
 # Helper: sign one or more files in a single signtool invocation.
 # Passing all paths at once means the PIN is requested only once.
 # ---------------------------------------------------------------------------
@@ -230,38 +202,7 @@ function Invoke-Sign([string[]]$FilePaths) {
 }
 
 # ---------------------------------------------------------------------------
-# SIGNED path
-# ---------------------------------------------------------------------------
-if ($Signing) {
-
-    # Phase 1 - Validate all staged binaries exist before touching the dongle
-    Write-Host "[*] Validating binaries to sign ..."
-    $missing = @()
-    foreach ($file in $BinariesToSign) {
-        if (-not (Test-Path $file)) { $missing += $file }
-    }
-    if ($missing.Count -gt 0) {
-        Write-Host ""
-        Write-Host "[!] Missing binaries to sign - run build.bat first:"
-        $missing | ForEach-Object { Write-Host "      $_" }
-        exit 1
-    }
-    Write-Host "    All binaries to sign are present."
-    Write-Host ""
-
-    # Phase 2 - Single dongle prompt
-    Write-Host "Connect the EV USB dongle, then press Enter to begin signing ..."
-    $null = Read-Host
-    Write-Host ""
-
-    # Phase 3 - Sign IVPN-built binaries directly in staging (single PIN prompt)
-    Write-Host "[*] Signing IVPN binaries in staging directory ..."
-    Invoke-Sign $BinariesToSign
-    Write-Host ""
-}
-
-# ---------------------------------------------------------------------------
-# SHA256 checksum verification (vendor files - always run regardless of signing)
+# SHA256 checksum verification - runs before signing so hashes are on original bytes
 # ---------------------------------------------------------------------------
 Write-Host "[*] Verifying vendor file checksums ..."
 foreach ($line in (Get-Content $Sha256ListFile)) {
@@ -291,21 +232,62 @@ foreach ($line in (Get-Content $Sha256ListFile)) {
 Write-Host ""
 
 # ---------------------------------------------------------------------------
-# Signature verification of all staged .exe files (signed path only)
+# SIGNED path
 # ---------------------------------------------------------------------------
 if ($Signing) {
+
+    # Dongle prompt
+    Write-Host "Connect the EV USB dongle, then press Enter to begin signing ..."
+    $null = Read-Host
+    Write-Host ""
+
+    # Sign all staged .exe and .dll files in a single signtool invocation
+    $filesToSign = @(Get-ChildItem -Path $InstallerTmpDir -Recurse -Include '*.exe', '*.dll' |
+        Select-Object -ExpandProperty FullName)
+    Write-Host "[*] Signing all staged binaries ..."
+    Invoke-Sign $filesToSign
+    Write-Host "    Signed $($filesToSign.Count) files."
+    Write-Host ""
+
+    # ---------------------------------------------------------------------------
+    # Signature verification of all staged .exe and .dll files
+    # ---------------------------------------------------------------------------
     Write-Host "[*] Verifying staged binary signatures ..."
     $signErrors = @()
-    Get-ChildItem -Path $InstallerTmpDir -Filter '*.exe' -Recurse | ForEach-Object {
-        signtool.exe verify /pa $_.FullName > $null 2>&1
-        if ($LASTEXITCODE -ne 0) { $signErrors += $_.FullName }
+    $verified = 0
+    $certThumb = $CertSha1.ToLower()
+    $allBinaries = @(Get-ChildItem -Path $InstallerTmpDir -Recurse -Include '*.exe', '*.dll')
+    foreach ($file in $allBinaries) {
+        $relPath = $file.FullName.Substring($InstallerTmpDir.Length).TrimStart('\')
+        $sig = Get-AuthenticodeSignature -FilePath $file.FullName
+        $cn = if ($sig.SignerCertificate) {
+            $m = [regex]::Match($sig.SignerCertificate.Subject, 'CN=([^,]+)')
+            if ($m.Success) { $m.Groups[1].Value.Trim('"') } else { $sig.SignerCertificate.Subject }
+        } else { 'unknown' }
+
+        if ($sig.Status -ne 'Valid') {
+            Write-Host "  [FAIL] $relPath  (not valid: $($sig.Status))"
+            $signErrors += $file.FullName
+        } elseif ($sig.SignerCertificate.Thumbprint.ToLower() -eq $certThumb) {
+            Write-Host "  [OK]   $relPath  ($cn)"
+            $verified++
+        } elseif ($sig.SignatureType -eq 'Catalog') {
+            # Catalog-signed Microsoft redistributable; our embedded signature is also present
+            Write-Host "  [OK]   $relPath  ($cn) [catalog]"
+            $verified++
+        } else {
+            Write-Host "  [FAIL] $relPath  (unexpected signer: $cn)"
+            $signErrors += $file.FullName
+        }
     }
+    Write-Host ""
+    Write-Host "    Verified $verified / $($allBinaries.Count) files."
     if ($signErrors.Count -gt 0) {
+        Write-Host ""
         Write-Host "[!] Signature verification FAILED for:"
         $signErrors | ForEach-Object { Write-Host "      $_" }
         exit 1
     }
-    Write-Host "    All staged signatures valid."
     Write-Host ""
 }
 
@@ -354,9 +336,7 @@ if ($Signing) {
 # Summary
 # ---------------------------------------------------------------------------
 if ($Signing) {
-    Write-Host "[*] Release packaging complete. Signed IVPN-built binaries:"
-    Write-Host ""
-    foreach ($file in $BinariesToSign) { Write-Host "  $file" }
+    Write-Host "[*] Release packaging complete."
     Write-Host ""
     Write-Host "  Installer ($Arch) : $InstallerFile"
 } else {
