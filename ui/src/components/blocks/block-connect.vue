@@ -11,12 +11,12 @@
             
             <!-- Unhealthy connection notification. -->
             <button v-if="isConnectionUnhealthy" class="noBordersBtn connectionWarningBtn" style="margin-left: 4px;">
-              <img src="@/assets/connection-break.svg" height="28"/>
+              <img src="@/assets/warning.svg" height="28"/>
               <span class="connectionWarningPopup">
                 <strong>Unhealthy connection.</strong>
                 <br />
-                No traffic detected on the VPN interface. 
-                Possible cause: local connectivity issue (e.g. Wi-Fi disconnected or no internet access).
+                No traffic detected on the VPN tunnel.
+                This may be caused by a connectivity issue, network restriction, or a temporary disruption.
               </span>
             </button>
 
