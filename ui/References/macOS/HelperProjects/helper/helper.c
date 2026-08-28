@@ -34,11 +34,13 @@ int is_safe_dir(char *dir) {
         if(stat(path, &statBuf))
             goto unsafe;
 
-        if(statBuf.st_uid != 0 && statBuf.st_gid != 0) {
+        if(statBuf.st_uid != 0 || statBuf.st_gid != 0) {
             printf("[helper] unsafe: %s not owned by root:wheel\n", path);
             goto unsafe;
         }
 
+        // TODO: It looks like there is no sense checking access rights for each file in the directory. 
+        //       Consider removing this check and only check the directory itself.
         if(statBuf.st_mode & S_IWOTH) {
             printf("[helper] unsafe: %s must not be writable by others\n", path);
             goto unsafe;
