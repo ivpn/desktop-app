@@ -3,6 +3,11 @@
 
 SetCompressor lzma
 
+; Sign the uninstaller PE before it is embedded in the installer.
+!ifdef UNINST_SIGN_CMD
+!uninstfinalize '${UNINST_SIGN_CMD} "%1"'
+!endif
+
 ; -----------------
 ; include Modern UI
 ; -----------------
@@ -178,7 +183,7 @@ Var STR_RETURN_VAR
         Exch $R1
     FunctionEnd
 !macroend
-!insertmacro Func_StrRepl ""
+;!insertmacro Func_StrRepl ""  ; installer never calls StrRepl; only un.StrRepl is used
 !insertmacro Func_StrRepl "un."
 ;---------------------------
 
