@@ -6,7 +6,7 @@
 
 .DESCRIPTION
     Must be run AFTER build.bat has produced a complete staged output in
-    ui/References/Windows/bin/temp/.
+    `ui/References/Windows/bin/temp/` (or `ui/References/Windows/bin/temp-arm64/` for arm64).
 
     Modes
     -----
@@ -20,7 +20,7 @@
       - Prompts once to connect EV USB dongle
       - Signs all staged .exe and .dll files via signtool
       - Verifies all staged .exe and .dll signatures
-      - Runs makensis to build installer from signed binaries
+      - Runs makensis to build installer (uninstaller PE is signed automatically via !uninstfinalize)
       - Signs the installer
       - Prints summary of signed outputs
 
@@ -28,18 +28,26 @@
     SHA1 thumbprint of the EV code-signing certificate.
     Overrides the CERT_SHA1 environment variable when provided.
 
+.PARAMETER Arch
+    Target architecture: x86_64 (default) or arm64.
+    Selects the staging directory (bin/temp or bin/temp-arm64) and output filename.
+
 .EXAMPLE
-    # Unsigned installer only:
+    # Unsigned x86_64 installer:
     .\package-release.ps1
 
 .EXAMPLE
-    # Signed release via env var:
+    # Unsigned arm64 installer:
+    .\package-release.ps1 -Arch arm64
+
+.EXAMPLE
+    # Signed x86_64 release via env var:
     $env:CERT_SHA1 = 'abcd1234...'
     .\package-release.ps1
 
 .EXAMPLE
-    # Signed release via parameter:
-    .\package-release.ps1 -CertSha1 'abcd1234...'
+    # Signed arm64 release via parameter:
+    .\package-release.ps1 -Arch arm64 -CertSha1 'abcd1234...'
 #>
 
 param(
@@ -108,7 +116,9 @@ $Sha256ListFile = if ($Arch -eq 'arm64') {
     Join-Path $InstallerNsiDir 'release-files-SHA256.txt'
 }
 
-$Signing = -not [string]::IsNullOrWhiteSpace($CertSha1)
+$Signing  = -not [string]::IsNullOrWhiteSpace($CertSha1)
+# Signing arguments for signtool.exe
+$SignArgs  = @('sign', '/tr', $TIMESTAMP_SERVER, '/td', 'sha256', '/fd', 'sha256', '/sha1', $CertSha1, '/v')
 
 Write-Host "    APPVER       : $version"
 Write-Host "    ARCH         : $Arch"
@@ -194,7 +204,7 @@ Write-Host ""
 # ---------------------------------------------------------------------------
 function Invoke-Sign([string[]]$FilePaths) {
     foreach ($f in $FilePaths) { Write-Host "  [>] $f" }
-    signtool.exe sign /tr $TIMESTAMP_SERVER /td sha256 /fd sha256 /sha1 $CertSha1 /v $FilePaths
+    signtool.exe @SignArgs $FilePaths
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[!] signtool failed."
         exit $LASTEXITCODE
@@ -305,6 +315,10 @@ $nsisArgs = @(
 if ($Arch -eq 'arm64') {
     $nsisArgs += '/DTARGET_ARCH=arm64'
     $nsisArgs += '/DTARGET_ARM64'
+}
+if ($Signing) {
+    # Pass signtool command to NSIS for signing the uninstaller PE via !uninstfinalize
+    $nsisArgs += "/DUNINST_SIGN_CMD=signtool.exe $($SignArgs -join ' ')"
 }
 
 $prevLocation = Get-Location
