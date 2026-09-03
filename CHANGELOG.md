@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.  
 
+## Version 3.15.15 - 2026-09-03
+
+**Breaking Change (macOS): This release requires macOS 12 Monterey or later.** If you are using an earlier version of macOS, please do not update, as this version of the app is not compatible with your system.
+
+[NEW] Added automatic health checks for WireGuard connections  
+[IMPROVED] Skip update notifications when OS version requirements aren't met  
+[IMPROVED] (Windows) All binary files now signed before embedding installer  
+[FIX] Prevented daemon crash from unauthenticated local client connections  
+[FIX] (macOS, Linux) Blocked Chromium from accessing OS keychains  
+[FIX] (macOS) Improved permission handling during app updates  
+
+[Download IVPN Client for Windows x86_64](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.15.15.exe)  
+SHA256: 3937206b2b6e0541a298aa3d0bae66745e48f5b2c91d4ff5cde239b09254106b  
+[Download IVPN Client for Windows arm64](https://repo.ivpn.net/windows/bin/IVPN-Client-v3.15.15-arm64.exe)  
+SHA256: b187202d530cef5579d438d7bef868cb92ab4300292ab2e01d7901e4af0a05a2  
+
+[Download IVPN Client for macOS (Intel)](https://repo.ivpn.net/macos/bin/IVPN-3.15.15.dmg)  
+SHA256: 6692fac6196a8c7b801a9a05a9d6324e52701bf5c52a2d8eda024ad82b9551bf  
+[Download IVPN Client for macOS (M1)](https://repo.ivpn.net/macos/bin/IVPN-3.15.15-arm64.dmg)  
+SHA256: 8212b21653c665faef41f2234ed535bf3e29c678d9cee768c8f26bd0c1f7b438  
+
+[Download IVPN Client for Linux x86_64 (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.15.15_amd64.deb)  
+SHA256: 5f6bfe9ecaef20667abd3621293e9cda124277cc6b6797a101819f87509fa55e  
+[Download IVPN Client UI for Linux x86_64 (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.15.15_amd64.deb)  
+SHA256: a70303ddb5bd0365862b6b49a7b82c7e90388ea01fd10cd19d08a017e3729045  
+
+[Download IVPN Client for Linux x86_64 (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.15.15-1.x86_64.rpm)  
+SHA256: 4a325bb51955b2834c4c6d095b9aa00b5a3093d17e0aba4b4698245bab47e260  
+[Download IVPN Client UI for Linux x86_64 (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.15.15-1.x86_64.rpm)  
+SHA256: 6da7dfdb94f33fd5e93b5a24a9fc13bf22fdc4674ec1124d94e2b986bc52949f  
+
+[Download IVPN Client for Linux arm64 (DEB)](https://repo.ivpn.net/stable/pool/ivpn_3.15.15_arm64.deb)  
+SHA256: 78242de3c3ef4128eb107bc5c10254f0df97bbc3e04d43cc1b62c5c05409bb7d  
+[Download IVPN Client UI for Linux arm64 (DEB)](https://repo.ivpn.net/stable/pool/ivpn-ui_3.15.15_arm64.deb)  
+SHA256: 3d88dd0d87860828c21c41a55f49ea05f638609ee3772179ca32d9de171bc04d  
+
+[Download IVPN Client for Linux arm64 (RPM)](https://repo.ivpn.net/stable/pool/ivpn-3.15.15-1.aarch64.rpm)  
+SHA256: c7813f82b1cfd6dc27dad545584fafce20293dd4f6a4c01c11603cdd4ca3a043  
+[Download IVPN Client UI for Linux arm64 (RPM)](https://repo.ivpn.net/stable/pool/ivpn-ui-3.15.15-1.aarch64.rpm)  
+SHA256: 0e19d29d804a0d469a9f091a9fb10e0e2a3afe9ce34ab525467364a11408ba83
+
 ## Version 3.15.13 - 2026-07-15
 
 **Breaking Change (macOS): This release requires macOS 12 Monterey or later.** If you are using an earlier version of macOS, please do not update, as this version of the app is not compatible with your system.
