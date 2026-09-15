@@ -28,10 +28,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
+	"text/tabwriter"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/api"
@@ -69,9 +71,6 @@ type IProtocol interface {
 
 // Launch -  initialize and start service
 func Launch() {
-	warnings, errors, logInfo := platform.Init()
-	logger.Init(platform.LogFile())
-
 	// Logging enabled from command line argument ('-logging').
 	// Logging can be enabled from command line or from previously saved daemon preferences
 	isLoggingEnabledArgument := false
@@ -83,14 +82,19 @@ func Launch() {
 		arg = strings.ToLower(arg)
 		if arg == "-logging" || arg == "--logging" {
 			isLoggingEnabledArgument = true
-		}
-		if arg == "-cleanup" || arg == "--cleanup" {
+		} else if arg == "-cleanup" || arg == "--cleanup" {
 			// Cleanup requested.
-			// IMPORTANT! This operation must be executed ONLY when no any daemon instances running!
+			// IMPORTANT! This operation must be executed ONLY when no other daemon instances are running!
 			isLoggingEnabledArgument = true
 			isCleanupArgument = true
+		} else if arg == "-h" {
+			printUsage()
+			return
 		}
 	}
+
+	warnings, errors, logInfo := platform.Init()
+	logger.Init(platform.LogFile())
 
 	if isLoggingEnabledArgument {
 		logger.Enable(true)
@@ -320,4 +324,13 @@ func launchService(secret uint64, startedOnPort chan<- int) {
 	if err := protocol.Start(secret, startedOnPort, serv); err != nil {
 		log.Error("Protocol stopped with error:", err)
 	}
+}
+
+func printUsage() {
+	fmt.Printf("Usage: %s [OPTIONS...]\n", filepath.Base(os.Args[0]))
+	writer := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+	fmt.Fprintln(writer, fmt.Sprintf("  %s\t- %s", "--logging", "Force logging, regardless of preferences"))
+	fmt.Fprintln(writer, fmt.Sprintf("  %s\t- %s\n\t  %s", "--cleanup", "Clean up without starting the server", "WARNING: This operation must be executed ONLY when no other daemon instances are running!"))
+	fmt.Fprintln(writer, fmt.Sprintf("  %s\t- %s", "-h", "Display this help and exit"))
+	writer.Flush()
 }
