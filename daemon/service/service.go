@@ -482,7 +482,7 @@ func (s *Service) findOpenVpnHost(hostname string, ip net.IP, svrs []api_types.O
 		}
 	}
 
-	return api_types.OpenVPNServerHostInfo{}, fmt.Errorf(fmt.Sprintf("host '%s' not found", hostname))
+	return api_types.OpenVPNServerHostInfo{}, fmt.Errorf("host '%s' not found", hostname)
 }
 
 // ServersListForceUpdate returns servers list info.

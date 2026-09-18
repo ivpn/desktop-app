@@ -32,3 +32,16 @@ BOOL STPathMatchesAny(NSString *path, NSArray<NSString *> *excludedPaths) {
     }
     return NO;
 }
+
+NSSet<NSString *> * STBundleIdentifiersForPaths(NSArray<NSString *> *paths) {
+    NSMutableSet<NSString *> *identifiers = [NSMutableSet set];
+    for (NSString *path in paths) {
+        NSString *trimmed = [path hasSuffix:@"/"] ? [path substringToIndex:path.length - 1] : path;
+        if (![trimmed hasSuffix:@".app"]) { continue; }
+        NSString *identifier = [NSBundle bundleWithPath:trimmed].bundleIdentifier;
+        if (identifier.length > 0) {
+            [identifiers addObject:identifier];
+        }
+    }
+    return identifiers;
+}

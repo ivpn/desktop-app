@@ -75,6 +75,9 @@ NS_ASSUME_NONNULL_BEGIN
 // The apps currently excluded from the VPN. Replaced wholesale (never
 // mutated in place) so reads from any relay queue don't need extra locking.
 @property (atomic, copy) NSArray<NSString *> *excludedPaths;
+// CFBundleIdentifiers derived from excludedPaths, kept in sync with it -
+// the secondary match key, see STBundleIdentifiersForPaths().
+@property (atomic, copy) NSSet<NSString *> *excludedBundleIdentifiers;
 
 // Lock-protected access to activeFlows/tcpConnectionsByFlow/udpFlowStates -
 // every touch of those three collections must go through these instead of

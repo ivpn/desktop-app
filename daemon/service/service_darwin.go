@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -70,17 +71,20 @@ const macOwnAppBundlePathPrefix = "/Applications/IVPN.app"
 // A bare executable with no ".app" ancestor (e.g. "/usr/local/bin/mytool") is
 // returned unchanged, matching the extension's own exact-path fallback.
 func macAppBundlePath(path string) string {
-	for dir := path; len(dir) > 1 && dir != "/" && dir != "."; {
+	for dir := filepath.Clean(path); dir != "/" && dir != "."; dir = filepath.Dir(dir) {
 		if strings.HasSuffix(dir, ".app") {
 			return dir
 		}
-		parent := dir[:strings.LastIndex(dir, "/")]
-		if len(parent) == 0 || parent == dir {
-			break
-		}
-		dir = parent
 	}
 	return path
+}
+
+// isMacOwnAppBundlePath reports whether path is our own bundle or something
+// inside it. The separator matters: a plain prefix test would also reject
+// unrelated paths like "/Applications/IVPN.app.bak".
+func isMacOwnAppBundlePath(path string) bool {
+	return path == macOwnAppBundlePathPrefix ||
+		strings.HasPrefix(path, macOwnAppBundlePathPrefix+"/")
 }
 
 func (s *Service) implSplitTunnelling_AddApp(binaryFile string) (requiredCmdToExec string, isAlreadyRunning bool, err error) {
@@ -98,7 +102,7 @@ func (s *Service) implSplitTunnelling_AddApp(binaryFile string) (requiredCmdToEx
 	// helper/XPC binary inside the bundle.
 	binaryFile = macAppBundlePath(binaryFile)
 
-	if strings.HasPrefix(binaryFile, macOwnAppBundlePathPrefix) {
+	if isMacOwnAppBundlePath(binaryFile) {
 		return "", false, fmt.Errorf("Split-Tunnelling for IVPN binaries is forbidden (%s)", binaryFile)
 	}
 	if _, err := os.Stat(binaryFile); os.IsNotExist(err) {

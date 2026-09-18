@@ -51,6 +51,7 @@ static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
         _udpFlowStates = [NSMapTable strongToStrongObjectsMapTable];
         _tcpConnectionsByFlow = [NSMapTable strongToStrongObjectsMapTable];
         _excludedPaths = @[]; // exclude nothing until the host configures this via `excludedPaths`
+        _excludedBundleIdentifiers = [NSSet set];
         _interfaceSelector = [[STPhysicalInterfaceSelector alloc] init];
     }
     return self;
@@ -73,6 +74,7 @@ static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
     NSArray<NSString *> *startExcluded = options[@"excludedPaths"];
     if ([startExcluded isKindOfClass:[NSArray class]]) {
         self.excludedPaths = startExcluded;
+        self.excludedBundleIdentifiers = STBundleIdentifiersForPaths(startExcluded);
     }
     NSError *interfaceError = [self.interfaceSelector resolveFromOptions:options];
     if (interfaceError) {
@@ -306,11 +308,19 @@ static const NSTimeInterval kUDPIdleSweepInterval = 60.0;
         return NO;
     }
 
+    NSString *signingIdentifier = flow.metaData.sourceAppSigningIdentifier;
+    BOOL isExcluded = STPathMatchesAny(path, self.excludedPaths) ||
+                      (signingIdentifier.length > 0 &&
+                       [self.excludedBundleIdentifiers containsObject:signingIdentifier]);
+
     // Called for every new flow on the whole machine - keep this at debug
     // level, an info-level line here would drown out everything else.
-    if (!STPathMatchesAny(path, self.excludedPaths)) {
-        STLogDebug(@"Flow from %@ not excluded, passing through", path ?: @"(unknown)");
+    if (!isExcluded) {
+        STLogDebug(@"Flow from %@ not excluded, passing through", path ?: signingIdentifier ?: @"(unknown)");
         return NO;
+    }
+    if (path.length == 0) {
+        path = signingIdentifier; // pid -> path lookup failed; log what we matched on
     }
 
     if ([flow isKindOfClass:[NEAppProxyTCPFlow class]]) {
