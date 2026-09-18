@@ -95,6 +95,10 @@ function Init(onStateChangedCallback) {
     }
   });
   applyDaemonStatus(store.state.vpnState.splitTunnelling);
+
+  // initialState above is the addon's own cache ("notInstalled" on a fresh
+  // process); ask the OS for the real state - it arrives via onStateChanged.
+  addon.refreshExtensionState();
 }
 
 // cfg is the resolved Split Tunnel state computed by the daemon, forwarded
@@ -162,12 +166,12 @@ function UninstallExtensionAndWait(onDone) {
   addon.uninstallExtension();
 }
 
-// Called by background.js whenever the main window regains focus. macOS only
-// notifies this process of an approval change via a fresh activation request
-// (getExtensionState() just returns a cached value, it doesn't re-query OS
-// approval state) - so re-submit one, but only while the user is actually
-// mid-approval, to avoid spamming OSSystemExtensionRequest on every focus.
+// Called by background.js whenever the main window regains focus. The addon's
+// state is a cache, so returning from System Settings after clicking "Allow"
+// needs an explicit re-query - but only while the user is actually
+// mid-approval, to avoid probing the OS on every focus.
 function RecheckApprovalOnFocus() {
   if (_lastExtensionState !== SplitTunnelMacExtStateEnum.NeedsUserApproval) return;
-  InstallExtension();
+  const addon = getAddon();
+  if (addon) addon.refreshExtensionState();
 }

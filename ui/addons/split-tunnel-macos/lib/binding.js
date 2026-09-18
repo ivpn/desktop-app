@@ -25,6 +25,8 @@ const addon = require("../build/Release/split-tunnel-macos-native");
 module.exports = {
   // "notInstalled" | "installing" | "needsUserApproval" | "needsReboot" | "installed" | "error"
   getExtensionState: () => addon.ExtensionGetState(),
+  // Queries the OS for the real extension state; result arrives via onStateChanged().
+  refreshExtensionState: () => addon.ExtensionRefreshState(),
   installExtension: () => addon.ExtensionActivate(),
   uninstallExtension: () => addon.ExtensionDeactivate(),
   // "invalid" | "disconnected" | "connecting" | "connected" | "reasserting" | "disconnecting"

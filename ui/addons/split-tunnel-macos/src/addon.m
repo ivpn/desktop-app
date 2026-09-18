@@ -96,6 +96,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 - (NSString *)lastErrorMessage;
 - (void)activateExtension;
 - (void)deactivateExtension;
+- (void)refreshExtensionState;
 - (void)applyConfigJSON:(NSString *)json;
 - (void)stopSession;
 @end
@@ -111,6 +112,10 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     BOOL _observingVPNStatus;
     NETransparentProxyManager * _Nullable _lastManager;
     NSDictionary * _Nullable _lastOptions;
+    // Non-nil while a properties request (see -refreshExtensionState) is in
+    // flight - it shares the delegate callbacks below with activation requests,
+    // so they are told apart by request identity.
+    OSSystemExtensionRequest * _Nullable _propertiesRequest;
 }
 
 + (instancetype)sharedInstance {
@@ -180,6 +185,20 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     }];
 }
 
+// Asks the OS for the extension's actual state. Without this, _extState is a
+// process-local cache that starts at "notInstalled" on every launch, so an
+// already-installed extension stays misreported until some request completes.
+// Unlike an activation request, this never prompts the user.
+- (void)refreshExtensionState {
+    if (_propertiesRequest || _extState == STExtStateInstalling) { return; } // a request is already in flight and owns the state
+
+    OSSystemExtensionRequest *request = [OSSystemExtensionRequest propertiesRequestForExtension:[self extensionBundleID]
+                                                                                          queue:dispatch_get_main_queue()];
+    request.delegate = self;
+    _propertiesRequest = request;
+    [[OSSystemExtensionManager sharedManager] submitRequest:request];
+}
+
 #pragma mark - OSSystemExtensionRequestDelegate
 
 - (OSSystemExtensionReplacementAction)request:(OSSystemExtensionRequest *)request
@@ -194,13 +213,28 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     [self notifyStateChanged];
 }
 
+// Only sent for a properties request (-refreshExtensionState).
+- (void)request:(OSSystemExtensionRequest *)request foundProperties:(NSArray<OSSystemExtensionProperties *> *)properties {
+    STExtState state = STExtStateNotInstalled; // also covers "installed but disabled": resubmitting activation is the recovery path
+    for (OSSystemExtensionProperties *p in properties) {
+        if (p.isUninstalling) { continue; }
+        if (p.isEnabled) { state = STExtStateInstalled; break; }
+        if (p.isAwaitingUserApproval) { state = STExtStateNeedsUserApproval; }
+    }
+    if (state == _extState) { return; }
+    _extState = state;
+    [self notifyStateChanged];
+}
+
 - (void)request:(OSSystemExtensionRequest *)request didFailWithError:(NSError *)error {
+    if (request == _propertiesRequest) { _propertiesRequest = nil; return; } // probe failed - keep the known state
     _extState = STExtStateError;
     _lastError = error.localizedDescription;
     [self notifyStateChanged];
 }
 
 - (void)request:(OSSystemExtensionRequest *)request didFinishWithResult:(OSSystemExtensionRequestResult)result {
+    if (request == _propertiesRequest) { _propertiesRequest = nil; return; } // state already applied in -request:foundProperties:
     if (result == OSSystemExtensionRequestWillCompleteAfterReboot) {
         _extState = STExtStateNeedsReboot;
         [self notifyStateChanged];
@@ -403,6 +437,11 @@ static napi_value ExtensionGetState(napi_env env, napi_callback_info info) {
     return CreateJSString(env, [[STSplitTunnelController sharedInstance] extensionStateString]);
 }
 
+static napi_value ExtensionRefreshState(napi_env env, napi_callback_info info) {
+    [[STSplitTunnelController sharedInstance] refreshExtensionState];
+    return NULL;
+}
+
 static napi_value SessionGetStatus(napi_env env, napi_callback_info info) {
     return CreateJSString(env, [[STSplitTunnelController sharedInstance] sessionStatusString]);
 }
@@ -469,6 +508,7 @@ napi_value Init(napi_env env, napi_value exports) {
         DECLARE_NAPI_METHOD("ExtensionActivate", ExtensionActivate),
         DECLARE_NAPI_METHOD("ExtensionDeactivate", ExtensionDeactivate),
         DECLARE_NAPI_METHOD("ExtensionGetState", ExtensionGetState),
+        DECLARE_NAPI_METHOD("ExtensionRefreshState", ExtensionRefreshState),
         DECLARE_NAPI_METHOD("SessionGetStatus", SessionGetStatus),
         DECLARE_NAPI_METHOD("SessionApplyConfig", SessionApplyConfig),
         DECLARE_NAPI_METHOD("SessionStop", SessionStop),
