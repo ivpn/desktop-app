@@ -149,7 +149,6 @@ function applyDaemonStatus(status) {
   ApplyConfig({
     isInversed: status.IsInversed, // not yet consumed by the extension - reserved for a future inverse-mode implementation
     excludedPaths: status.SplitTunnelApps,
-    physicalInterface: status.PhysicalInterface, // when empty, the extension auto-detects it
   });
 }
 

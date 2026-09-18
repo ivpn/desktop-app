@@ -11,16 +11,19 @@
 //  host applies any change by stopping and restarting the session with new
 //  options rather than pushing a live update.
 //
-//  Which physical interface to pin relay connections to (an explicit
-//  interface, an explicit type, or auto-detection) and keeping that live
-//  for the rest of the session is entirely owned by
+//  Which physical interface to pin relay connections to and keeping that
+//  live for the rest of the session is entirely owned by
 //  STPhysicalInterfaceSelector - see that class for the tier precedence and
-//  self-healing rationale. A requested interface/type that isn't currently
-//  available never fails the whole proxy start; relay connections are
-//  simply refused (see STProxyProvider+TCPRelay.m / +UDPRelay.m) until the
-//  selector confirms it's live again - no restart needed. Only a genuinely
-//  malformed `physicalInterfaceType` value still fails the start, since
-//  that can never self-heal.
+//  self-healing rationale. By default it resolves the interface itself (from
+//  the 'default' route) rather than taking it from the host, so a network
+//  change refreshes it immediately; a `physicalInterface` start option can
+//  still override that, though nothing supplies one today. Relay connections
+//  are refused (see STProxyProvider+TCPRelay.m / +UDPRelay.m) only while no
+//  usable interface is live - blocking an excluded app is the fail-closed
+//  choice there, since silently routing it into the tunnel would violate the
+//  exclusion the user asked for. Only a genuinely malformed
+//  `physicalInterfaceType` value fails the start, since that can never
+//  self-heal.
 //
 #import "STProxyProvider+Private.h"
 #import "STPhysicalInterfaceSelector.h"

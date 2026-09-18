@@ -1130,8 +1130,7 @@ func (s *Service) SplitTunnelling_GetStatus() (protocolTypes.SplitTunnelStatus, 
 		IsAllowWhenNoVpn:            isAllowWhenNoVpn,
 		IsCanGetAppIconForBinary:    oshelpers.IsCanGetAppIconForBinary(),
 		SplitTunnelApps:             prefs.SplitTunnelApps,
-		RunningApps:                 runningProcesses,
-		PhysicalInterface:           splittun.GetPhysicalInterfaceName()}
+		RunningApps:                 runningProcesses}
 
 	return ret, nil
 }

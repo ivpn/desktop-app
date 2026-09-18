@@ -82,7 +82,6 @@ export default {
       IsAnyDns: false, // (only for Inverse Split Tunnel) When false: Allow only DNS servers specified by the IVPN application
       IsAllowWhenNoVpn: false, // (only for Inverse Split Tunnel) When true: Allow network access when VPN is not connected
       IsCanGetAppIconForBinary: false,
-      PhysicalInterface: "", // (applicable for macOS) network interface the excluded apps' traffic has to leave over
       // Split-Tunnelling (SplitTunnelStatus)
       // IsEnabled bool                     - Is ST enabled
       // IsInversed bool                    - Inversed split-tunneling (only 'splitted' apps use VPN tunnel)
