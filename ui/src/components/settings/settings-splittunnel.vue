@@ -925,6 +925,15 @@ Do you want to enable Inverse mode for Split Tunnel?",
       return Platform() === PlatformEnum.macOS;
     },
 
+    // Mirrors the gate in os-helpers/macos/split-tunnel-helper.js: the extension
+    // session only runs while the VPN is actually carrying traffic.
+    isVpnActive: function () {
+      return (
+        this.$store.getters["vpnState/isConnected"] &&
+        !this.$store.getters["vpnState/isPaused"]
+      );
+    },
+
     // macOS only: last state reported by the Split Tunnel system extension/session addon
     macOSExtState: function () {
       return this.$store.state.uiState?.splitTunnelMacOS || {};
@@ -946,6 +955,12 @@ Do you want to enable Inverse mode for Split Tunnel?",
         case SplitTunnelMacExtStateEnum.Error:
           return `Split Tunnel system extension error: ${this.macOSExtState.lastError || "unknown error"}`;
         case SplitTunnelMacExtStateEnum.Installed:
+          // These two mirror the gates in split-tunnel-helper.js's
+          // applyDaemonStatus() - without them "starting..." would be shown
+          // permanently, since in both cases the session is stopped on purpose.
+          if (!this.isVpnActive)
+            return "Split Tunnel will start when the VPN is connected.";
+          if (!this.STConfig?.SplitTunnelApps?.length) return "";
           if (sessionStatus !== SplitTunnelMacSessionStatusEnum.Connected)
             return "Split Tunnel is starting...";
           return "";

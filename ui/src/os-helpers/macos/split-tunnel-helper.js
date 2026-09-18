@@ -91,9 +91,18 @@ function Init(onStateChangedCallback) {
   // Self-contained, like wifi-helper.js: watch the store for the daemon's
   // resolved Split Tunnel status ourselves, rather than daemon-client.js
   // reaching into this module - keeps daemon-client.js platform-agnostic.
+  // VPN state changes have to re-trigger this too (see applyDaemonStatus):
+  // the daemon's SplitTunnelStatus payload is identical whether the VPN is up
+  // or down, so it alone never signals a transition.
+  const stRetriggerMutations = [
+    "vpnState/splitTunnelling",
+    "vpnState/connectionState",
+    "vpnState/connectionInfo",
+    "vpnState/disconnected",
+  ];
   store.subscribe((mutation) => {
-    if (mutation.type === "vpnState/splitTunnelling") {
-      applyDaemonStatus(mutation.payload);
+    if (stRetriggerMutations.includes(mutation.type)) {
+      applyDaemonStatus(store.state.vpnState.splitTunnelling);
     }
   });
   applyDaemonStatus(store.state.vpnState.splitTunnelling);
@@ -145,6 +154,18 @@ function applyDaemonStatus(status) {
   if (!_extensionActivationRequested) {
     _extensionActivationRequested = true;
     InstallExtension();
+  }
+  // Same two gates Windows applies (isDriverMustBeDisabled in
+  // daemon/splittun/splittun_windows.go): a running session is offered every
+  // flow on the machine, so it must have both a tunnel to bypass and
+  // something to exclude. Deliberately after InstallExtension() above, so
+  // enabling Split Tunnel still raises the approval prompt right away rather
+  // than mid-connect later.
+  const isVpnActive =
+    store.getters["vpnState/isConnected"] && !store.getters["vpnState/isPaused"];
+  if (!isVpnActive || !status.SplitTunnelApps?.length) {
+    Stop();
+    return;
   }
   ApplyConfig({
     isInversed: status.IsInversed, // not yet consumed by the extension - reserved for a future inverse-mode implementation
