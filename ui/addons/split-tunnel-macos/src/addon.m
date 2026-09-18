@@ -172,12 +172,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     // Also drop the VPN-preferences registration first - otherwise a stale
     // NETransparentProxyManager entry survives even after the extension itself
     // is deactivated below. Best-effort: proceeds to deactivation either way.
-    [NETransparentProxyManager loadAllFromPreferencesWithCompletionHandler:^(NSArray<NETransparentProxyManager *> * _Nullable managers, NSError * _Nullable error) {
-        NETransparentProxyManager *found = nil;
-        for (NETransparentProxyManager *m in managers) {
-            NETunnelProviderProtocol *proto = (NETunnelProviderProtocol *)m.protocolConfiguration;
-            if ([proto.providerBundleIdentifier isEqualToString:bundleID]) { found = m; break; }
-        }
+    [self findManagerWithCompletion:^(NETransparentProxyManager * _Nullable found, NSError * _Nullable error) {
         if (!found) { submitDeactivationRequest(); return; }
         [found removeFromPreferencesWithCompletionHandler:^(NSError * _Nullable removeError) {
             submitDeactivationRequest();
@@ -251,16 +246,25 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 
 #pragma mark - Session lifecycle (NETransparentProxyManager / NETunnelProviderSession)
 
-- (void)loadOrCreateManagerWithCompletion:(void (^)(NETransparentProxyManager * _Nullable, NSError * _Nullable))completion {
+// Finds the proxy configuration already registered with the OS, if any.
+// Never creates one: saving a new configuration raises the system's
+// "IVPN would like to add proxy configurations" authorization prompt.
+- (void)findManagerWithCompletion:(void (^)(NETransparentProxyManager * _Nullable, NSError * _Nullable))completion {
     NSString *bundleID = [self extensionBundleID];
     [NETransparentProxyManager loadAllFromPreferencesWithCompletionHandler:^(NSArray<NETransparentProxyManager *> * _Nullable managers, NSError * _Nullable error) {
         if (error) { completion(nil, error); return; }
-
-        NETransparentProxyManager *found = nil;
         for (NETransparentProxyManager *m in managers) {
             NETunnelProviderProtocol *proto = (NETunnelProviderProtocol *)m.protocolConfiguration;
-            if ([proto.providerBundleIdentifier isEqualToString:bundleID]) { found = m; break; }
+            if ([proto.providerBundleIdentifier isEqualToString:bundleID]) { completion(m, nil); return; }
         }
+        completion(nil, nil);
+    }];
+}
+
+- (void)loadOrCreateManagerWithCompletion:(void (^)(NETransparentProxyManager * _Nullable, NSError * _Nullable))completion {
+    NSString *bundleID = [self extensionBundleID];
+    [self findManagerWithCompletion:^(NETransparentProxyManager * _Nullable found, NSError * _Nullable error) {
+        if (error) { completion(nil, error); return; }
 
         // Always the config actually registered with the OS, never an
         // in-memory pointer kept across calls - the session is a
@@ -331,7 +335,9 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 
 - (void)stopSession {
     __weak typeof(self) weakSelf = self;
-    [self loadOrCreateManagerWithCompletion:^(NETransparentProxyManager * _Nullable manager, NSError * _Nullable error) {
+    // Load-only: no configuration registered means there is nothing to stop,
+    // and creating one here would prompt every user on every launch.
+    [self findManagerWithCompletion:^(NETransparentProxyManager * _Nullable manager, NSError * _Nullable error) {
         __strong typeof(self) strongSelf = weakSelf;
         if (!strongSelf || !manager) { return; }
         strongSelf->_lastManager = manager;
