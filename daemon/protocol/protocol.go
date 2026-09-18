@@ -892,6 +892,24 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		}
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 
+	case "SplitTunnelMacExtensionState":
+		var req types.SplitTunnelMacExtensionState
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		// Reuses the existing disabled-reason mechanism (the same one already
+		// used e.g. for the Portmaster-conflict check) rather than a
+		// parallel macOS-only availability concept - this keeps
+		// SplitTunnelStatus.NoFuncReason authoritative from a single source.
+		reason := ""
+		if !req.IsReady {
+			reason = req.Reason
+		}
+		p._service.SplitTunnelling_SetDisabledReason(reason)
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+		// all clients will be notified about the status change by service in OnSplitTunnelStatusChanged() handler
+
 	case "GenerateDiagnostics":
 		if log, log0, extraInfo, err := p._service.GetDiagnosticLogs(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)

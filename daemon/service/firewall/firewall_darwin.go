@@ -94,31 +94,71 @@ func implSetPersistant(persistant bool) error {
 
 // ClientConnected - allow communication for local vpn/client IP address
 func implClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) error {
-	inf, err := netinfo.InterfaceByIPAddr(clientLocalIPAddress)
-	if err != nil {
-		return fmt.Errorf("failed to get local interface by IP: %w", err)
-	}
-
-	protocol := "udp"
-	if isTCP {
-		protocol = "tcp"
-	}
-	scriptArgs := fmt.Sprintf("-connected %s %s %d %s %d %s",
-		inf.Name,
-		clientLocalIPAddress,
-		clientPort,
-		serverIP,
-		serverPort,
-		protocol)
-	err = shell.Exec(nil, platform.FirewallScript(), scriptArgs)
-	if err != nil {
-		return fmt.Errorf("failed to add rule for current connection directions: %w", err)
+	// Split Tunnel's enabled state isn't known here - splittun_darwin.go's
+	// implApplyConfig() always runs right after and calls
+	// ApplySplitTunnelRouting() with the real value (see there).
+	const isSplitTunnelEnabled = false
+	if err := applyConnectedRules(isSplitTunnelEnabled); err != nil {
+		return err
 	}
 
 	// Connection already established. The rule for VPN interface is defined.
 	// Removing host IP from exceptions
 	isPersistent := false
 	return removeHostsFromExceptions([]string{serverIP.String()}, isPersistent)
+}
+
+// applyConnectedRules (re-)invokes firewall.sh's '-connected' for the
+// currently connected client (tracked by the connected* package vars, set by
+// ClientConnected()/ClientDisconnected()) with the given Split Tunnel state.
+// No-op if not currently connected.
+func applyConnectedRules(isSplitTunnelEnabled bool) error {
+	if connectedClientInterfaceIP == nil {
+		return nil
+	}
+	inf, err := netinfo.InterfaceByIPAddr(connectedClientInterfaceIP)
+	if err != nil {
+		return fmt.Errorf("failed to get local interface by IP: %w", err)
+	}
+
+	protocol := "udp"
+	if connectedIsTCP {
+		protocol = "tcp"
+	}
+	// "1" = apply the intentional-routing NAT/route-to rules as before; "0" =
+	// skip them because Split Tunnel is enabled (macOS's pf cannot condition
+	// a NAT rule on the relaying process's group, so the only way to stop it
+	// from also NAT-ing/rerouting the Split Tunnel extension's relayed
+	// traffic is to not apply intentional routing at all while Split Tunnel
+	// is on - the base kill switch, SA_TUNNEL anchor, is unaffected).
+	natRoutingAllowed := "1"
+	if isSplitTunnelEnabled {
+		natRoutingAllowed = "0"
+	}
+	scriptArgs := fmt.Sprintf("-connected %s %s %d %s %d %s %s",
+		inf.Name,
+		connectedClientInterfaceIP,
+		connectedClientPort,
+		connectedHostIP,
+		connectedHostPort,
+		protocol,
+		natRoutingAllowed)
+	if err := shell.Exec(nil, platform.FirewallScript(), scriptArgs); err != nil {
+		return fmt.Errorf("failed to add rule for current connection directions: %w", err)
+	}
+	return nil
+}
+
+// ApplySplitTunnelRouting reapplies the '-connected' rule for the currently
+// active VPN connection (if any) with the given Split Tunnel enabled state,
+// so firewall.sh's intentional-routing bypass takes effect immediately
+// without requiring a VPN reconnect. Called only from splittun_darwin.go's
+// implApplyConfig() - darwin-only by construction (both files are
+// platform-suffixed), so no stub is needed on other platforms.
+func ApplySplitTunnelRouting(isSplitTunnelEnabled bool) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+	return applyConnectedRules(isSplitTunnelEnabled)
 }
 
 // ClientDisconnected - Disable communication for local vpn/client IP address

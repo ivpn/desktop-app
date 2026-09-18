@@ -3,7 +3,7 @@
 //  https://github.com/ivpn/desktop-app
 //
 //  Created by Stelnykovych Alexandr.
-//  Copyright (c) 2023 IVPN Limited.
+//  Copyright (c) 2026 IVPN Limited.
 //
 //  This file is part of the Daemon for IVPN Client Desktop.
 //
@@ -24,36 +24,87 @@ package splittun
 
 import (
 	"fmt"
+	"sync"
+
+	"github.com/ivpn/desktop-app/daemon/oshelpers/macos/darwinhelpers"
+	"github.com/ivpn/desktop-app/daemon/service/firewall"
 )
 
+// macOS does not implement Split Tunnel in the daemon itself: the actual
+// interception/relaying happens in a NETransparentProxyProvider system
+// extension, driven from the Electron main process (ui/addons/split-tunnel-macos)
+// because OSSystemExtensionManager/NETransparentProxyManager require a
+// user-session process inside an app bundle - the root daemon cannot call
+// either API. Everything the extension needs (enabled state, inverse flag,
+// app list) already flows to the UI unchanged via the existing
+// cross-platform SplitTunnelStatus fields, so this file has nothing left to
+// resolve - it only checks OS-version availability and tells the firewall to
+// adjust its intentional-routing rules (see implApplyConfig() below and
+// firewall_darwin.go's ApplySplitTunnelRouting()).
+
 var (
-	notImplementedError = fmt.Errorf("Split-Tunnelling is not implemented for this platform")
+	mutexMac sync.Mutex
+
+	osVersionError error // set once by implInitialize(), nil if the OS is new enough
+
+	// Milestone 1 ships exclusion mode only - inverse mode is a separate,
+	// later milestone.
+	inverseModeNotAvailableError = fmt.Errorf("Inverse Split Tunnel is not yet supported on macOS")
 )
 
 func implInitialize() error {
-	return notImplementedError
+	mutexMac.Lock()
+	defer mutexMac.Unlock()
+
+	majorVer, err := darwinhelpers.GetOsMajorVersion()
+	if err != nil {
+		osVersionError = fmt.Errorf("Split Tunnel: unable to determine macOS version: %w", err)
+		return osVersionError
+	}
+	if majorVer < 12 {
+		osVersionError = fmt.Errorf("Split Tunnel requires macOS 12 or later (detected major version %d)", majorVer)
+		return osVersionError
+	}
+	osVersionError = nil
+
+	return nil
 }
 
 func implFuncNotAvailableError() (generalStError, inversedStError error) {
-	return notImplementedError, fmt.Errorf("Inversed Split-Tunnelling is not implemented for this platform")
+	mutexMac.Lock()
+	defer mutexMac.Unlock()
+
+	// Extension/session readiness is not tracked here - it's reported by the
+	// UI-side addon via SplitTunnelMacExtensionState and routed into the
+	// daemon's existing SplitTunnelling_SetDisabledReason() mechanism (the
+	// same one already used e.g. for the Portmaster-conflict check), so it
+	// surfaces through SplitTunnelStatus.NoFuncReason instead of a second,
+	// parallel availability concept here.
+	return osVersionError, inverseModeNotAvailableError
 }
 
 func implReset() error {
-	return notImplementedError
+	return nil
 }
 
+// The extension is driven entirely from the Electron main process
+// (ui/addons/split-tunnel-macos), which already gets the enabled/inverse
+// flags and app list via the existing SplitTunnelStatus fields - there is
+// nothing left for the daemon to resolve or store here. The only real
+// daemon-side effect is telling the firewall to skip its intentional-routing
+// NAT/route-to rules while Split Tunnel is enabled (see firewall_darwin.go).
 func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	return notImplementedError
+	return firewall.ApplySplitTunnelRouting(isStEnabled)
 }
 
+// Linux-only by contract - macOS is path-based (like Windows), not launch-based.
 func implAddPid(pid int, commandToExecute string) error {
-	return notImplementedError
+	return fmt.Errorf("function not applicable for this platform")
 }
-
 func implRemovePid(pid int) error {
-	return notImplementedError
+	return fmt.Errorf("function not applicable for this platform")
+}
+func implGetRunningApps() ([]RunningApp, error) {
+	return nil, nil
 }
 
-func implGetRunningApps() ([]RunningApp, error) {
-	return nil, notImplementedError
-}

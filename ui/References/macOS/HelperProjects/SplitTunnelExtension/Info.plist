@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<!-- Must match the compiled binary's name inside Contents/MacOS/ -->
+	<key>CFBundleExecutable</key>
+	<string>SplitTunnelExtension</string>
+	<!-- Must be a "child" of the host app's bundle id (com.electron.ivpn-ui) -->
+	<key>CFBundleIdentifier</key>
+	<string>com.electron.ivpn-ui.SplitTunnel</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>IVPN Split Tunnel</string>
+	<!-- SYSX (not APPL) marks this bundle as a system extension -->
+	<key>CFBundlePackageType</key>
+	<string>SYSX</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<!-- Bump this on every release that changes extension code - macOS refuses to
+	     load a "replacement" extension with the same CFBundleVersion as the one
+	     already installed. -->
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>12.0</string>
+	<!-- Some macOS versions check for this on the extension bundle itself, not
+	     just on the containing app - harmless to have in both places. -->
+	<key>NSSystemExtensionUsageDescription</key>
+	<string>IVPN uses a system extension to enable Split Tunnel, allowing selected apps to bypass the VPN tunnel.</string>
+	<!-- This is the block that actually registers us as a NetworkExtension
+	     provider with the OS. -->
+	<key>NetworkExtension</key>
+	<dict>
+		<!-- Must be prefixed by (here: exactly equal to) an App Group declared in
+		     the com.apple.security.application-groups entitlement - a plain
+		     "<TeamID>.<bundleID>" string is rejected by nesessionmanager. -->
+		<key>NEMachServiceName</key>
+		<string>group.com.electron.ivpn-ui</string>
+		<key>NEProviderClasses</key>
+		<dict>
+			<!-- "app-proxy" is the extension point for both NEAppProxyProvider
+			     and NETransparentProxyProvider; the class below decides which
+			     one we actually are. -->
+			<key>com.apple.networkextension.app-proxy</key>
+			<string>STProxyProvider</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

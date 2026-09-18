@@ -23,6 +23,7 @@ module.exports = {
       SUPublicDSAKeyFile: "dsa_pub.pem",
       NSLocationUsageDescription: "IVPN requires location access to correctly detect WIFI network info",
       NSLocationAlwaysAndWhenInUseUsageDescription: "IVPN requires location access to correctly detect WIFI network info",
+      NSSystemExtensionUsageDescription: "IVPN uses a system extension to enable Split Tunnel, allowing selected apps to bypass the VPN tunnel.",
     },
   },
   win: {

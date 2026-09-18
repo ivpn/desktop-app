@@ -157,3 +157,16 @@ type SplitTunnelRemoveApp struct {
 	// (applicable for Windows) full path to the app binary to be excluded from ST
 	Exec string
 }
+
+// SplitTunnelMacExtensionState (request, macOS only) reports the current
+// state of the client-side Split Tunnel system extension/proxy session.
+// Routed by the daemon into the existing SplitTunnelling_SetDisabledReason()
+// mechanism (the same one already used e.g. for the Portmaster-conflict
+// check), so this reuses SplitTunnelStatus.NoFuncReason rather than
+// introducing a parallel availability concept.
+type SplitTunnelMacExtensionState struct {
+	RequestBase
+	IsReady bool
+	Reason  string // description of why not, when IsReady == false
+}
+

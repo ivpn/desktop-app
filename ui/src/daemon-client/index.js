@@ -91,6 +91,7 @@ const daemonRequests = Object.freeze({
   SplitTunnelAddApp: "SplitTunnelAddApp",
   SplitTunnelRemoveApp: "SplitTunnelRemoveApp",
   SplitTunnelAddedPidInfo: "SplitTunnelAddedPidInfo",
+  SplitTunnelMacExtensionState: "SplitTunnelMacExtensionState",
   GetInstalledApps: "GetInstalledApps",
   GetAppIcon: "GetAppIcon",
 
@@ -1494,6 +1495,17 @@ async function SplitTunnelGetStatus() {
   );
   return ret;
 }
+
+// macOS only: reports the Split Tunnel system extension/session state, as
+// observed by the addon (ui/addons/split-tunnel-macos), so the daemon can
+// keep SplitTunnelStatus.NoFuncReason authoritative.
+async function SplitTunnelMacExtensionState(isReady, reason) {
+  await sendRecv({
+    Command: daemonRequests.SplitTunnelMacExtensionState,
+    IsReady: isReady === true,
+    Reason: reason || "",
+  });
+}
 async function SplitTunnelSetConfig(
   IsEnabled,
   IsInversed,
@@ -1932,6 +1944,7 @@ export default {
   SplitTunnelSetConfig,
   SplitTunnelAddApp,
   SplitTunnelRemoveApp,
+  SplitTunnelMacExtensionState,
   GetInstalledApps,
   GetAppIcon,
 

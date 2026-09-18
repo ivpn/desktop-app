@@ -10,5 +10,17 @@
 	<true/>
 	<key>com.apple.security.cs.disable-executable-page-protection</key>
 	<true/>
+	<key>com.apple.developer.networking.networkextension</key>
+	<array>
+		<string>app-proxy-provider-systemextension</string>
+	</array>
+	<!-- Required for the host app to call OSSystemExtensionRequest at all
+	     (distinct from the networkextension entitlement above). -->
+	<key>com.apple.developer.system-extension.install</key>
+	<true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.electron.ivpn-ui</string>
+	</array>
 </dict>
 </plist>

@@ -59,6 +59,7 @@ import { join } from 'path'
 import { StartUpdateChecker, CheckUpdates } from "@/app-updater";
 import { WasOpenedAtLogin } from "@/auto-launch";
 import wifiHelperMacOS from "@/os-helpers/macos/wifi-helper.js";
+import splitTunnelHelperMacOS from "@/os-helpers/macos/split-tunnel-helper.js";
 
 
 // default copy/edit context menu event handlers
@@ -92,6 +93,13 @@ if (process.argv.find(arg => arg === 'uninstall-agent')) {
 } else if (process.argv.find(arg => arg === 'install-agent')) {
   console.log("'install-agent' argument detected. Installing agent...");
   wifiHelperMacOS.InstallAgent();
+} else if (process.argv.find(arg => arg === 'st-deactivate-and-quit')) {
+  // Invoked by uninstaller to deactivate Split Tunnel system extension before
+  // removing /Applications/IVPN.app. Runs as a throwaway process after main app quits.
+  console.log("'st-deactivate-and-quit' argument detected. Deactivating Split Tunnel extension and exiting...");
+  splitTunnelHelperMacOS.UninstallExtensionAndWait(() => app.quit());
+  setTimeout(() => app.quit(), 10000); // safety net only - in case the addon never reports completion
+  isAllowedToStart = false;
 }
 
 // Only one instance of application can be started
@@ -238,6 +246,19 @@ if (gotTheLock && isAllowedToStart) {
   // TODO: get rid of persistent settings in UI. It should get all data from the daemon
   InitPersistentSettings(); 
   connectToDaemon();
+
+  // MACOS ONLY: track and report Split Tunnel system extension readiness to
+  // the daemon. Extension activation itself only happens once Split Tunnel
+  // is actually enabled (see split-tunnel-helper.js).
+  if (Platform() === PlatformEnum.macOS) {
+    splitTunnelHelperMacOS.Init((s) => {
+      const isReady = s.extensionState === "installed";
+      const reason = isReady ? "" : s.lastError || s.extensionState || "not ready";
+      daemonClient.SplitTunnelMacExtensionState(isReady, reason).catch((e) => {
+        console.error("SplitTunnelMacExtensionState report failed:", e);
+      });
+    });
+  }
   
   // INIT COLOR SCHEME
   try {
@@ -780,6 +801,13 @@ function createWindow(doNotShowWhenReady) {
   // Block user drag-resizing on Windows (see IsResizableWindow()).
   // Note: 'will-resize' fires only on Windows and macOS, not on Linux.
   win.on("will-resize", (event) => { event.preventDefault(); });
+
+  // MACOS ONLY: re-check Split Tunnel extension approval whenever the user
+  // brings the window back into focus (e.g. after approving it in System
+  // Settings) - getExtensionState() alone won't notice the change on its own.
+  if (Platform() === PlatformEnum.macOS) {
+    win.on("focus", () => splitTunnelHelperMacOS.RecheckApprovalOnFocus());
+  }
 
   // restore window position
   let lastPos = store.state.settings.windowRestorePosition;

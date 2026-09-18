@@ -304,6 +304,15 @@ int quitApp() {
   return 0;
 }
 
+// Launches IVPN.app with 'st-deactivate-and-quit' flag to deactivate the Split Tunnel
+// system extension before uninstall. Must run after quitApp(). Non-fatal if it fails.
+int deactivateSplitTunnelExtension() {
+  printf("[ ] Deactivating Split Tunnel system extension...\n");
+  if (system("/usr/bin/open -n -W -a \"/Applications/IVPN.app\" --args st-deactivate-and-quit"))
+    logmes(LOG_WARNING, "WARNING: Split Tunnel extension deactivation did not complete cleanly (continuing uninstall).");
+  return 0;
+}
+
 int uninstall() {
       logmes(LOG_INFO, "Uninstalling IVPN ...");
       const char *homeDir = getenv("HOME");
@@ -332,6 +341,7 @@ int uninstall() {
       disconnectApp();
       int ret = quitApp();
       if (ret) return ret;
+      deactivateSplitTunnelExtension();
 
       printf("[ ] Logout ...\n");
       system("/Applications/IVPN.app/Contents/MacOS/cli/ivpn logout");

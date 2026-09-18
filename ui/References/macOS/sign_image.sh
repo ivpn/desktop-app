@@ -115,3 +115,25 @@ do
   codesign --verbose=4 --force --sign "${_SIGN_CERT}" --options runtime "$f" --deep --entitlements build_HarderingEntitlements.plist
   CheckLastResult "Signing failed"
 done
+
+# IVPN.app's --deep pass above just re-signed everything nested inside it, including
+# the Split Tunnel system extension - overwriting its distinct entitlements
+# (NetworkExtension/App Groups only, no Hardened Runtime relaxations) with
+# build_HarderingEntitlements.plist's. Re-sign it here to restore the correct ones.
+_ST_EXT_BUNDLE="${_IMAGE_DIR}/IVPN.app/Contents/Library/SystemExtensions/com.electron.ivpn-ui.SplitTunnel.systemextension"
+if [ -d "${_ST_EXT_BUNDLE}" ]; then
+  echo "[+] Re-signing Split Tunnel system extension (own entitlements)..."
+  codesign --verbose=4 --force --timestamp --sign "${_SIGN_CERT}" --options runtime \
+    --entitlements "HelperProjects/SplitTunnelExtension/splittunnel.entitlements" "${_ST_EXT_BUNDLE}"
+  CheckLastResult "Signing failed"
+
+  # IVPN.app's own CodeResources sealed the extension's previous (pre-re-sign) bytes -
+  # changing them above now makes `codesign --verify --deep` fail with "a sealed
+  # resource is missing or invalid" (confirmed empirically). Re-sign IVPN.app once
+  # more, WITHOUT --deep, so it reseals around the extension's now-final signature
+  # instead of re-signing (and re-clobbering) it again.
+  echo "[+] Re-signing IVPN.app (no --deep) to reseal around the extension's final signature..."
+  codesign --verbose=4 --force --sign "${_SIGN_CERT}" --options runtime \
+    --entitlements build_HarderingEntitlements.plist "${_IMAGE_DIR}/IVPN.app"
+  CheckLastResult "Signing failed"
+fi
