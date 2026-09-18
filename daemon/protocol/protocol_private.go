@@ -32,10 +32,16 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
+// Sources for Service.SplitTunnelling_SetDisabledReason(): the checks are independent,
+// so each one owns its own slot and can only withdraw its own objection.
+const (
+	stDisabledReasonPortmaster   = "portmaster"
+	stDisabledReasonMacExtension = "macos-extension"
+)
+
 func getConnectionName(c net.Conn) string {
 	return strings.TrimSpace(strings.Replace(c.RemoteAddr().String(), "127.0.0.1:", "", 1))
 }
-
 func (p *Protocol) connLogID(c net.Conn) string {
 	if c == nil {
 		return ""
@@ -95,7 +101,7 @@ func (p *Protocol) clientConnected(c net.Conn, cType ivpnclient.ClientTypeEnum) 
 	interoperability.ClientConnected(cType)
 
 	if cType == ivpnclient.ClientPortmaster {
-		p._service.SplitTunnelling_SetDisabledReason("Split Tunnel functionality is currently disabled for compatibility with Portmaster, which has been detected as running on this system.")
+		p._service.SplitTunnelling_SetDisabledReason(stDisabledReasonPortmaster, "Split Tunnel functionality is currently disabled for compatibility with Portmaster, which has been detected as running on this system.")
 	}
 }
 
@@ -129,7 +135,7 @@ func (p *Protocol) clientDisconnected(c net.Conn) *connectionInfo {
 	}
 
 	if !isPortmasterConnected {
-		p._service.SplitTunnelling_SetDisabledReason("")
+		p._service.SplitTunnelling_SetDisabledReason(stDisabledReasonPortmaster, "")
 	}
 
 	return ret

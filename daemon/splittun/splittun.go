@@ -25,6 +25,7 @@ package splittun
 import (
 	"net"
 	"sync"
+	"sync/atomic"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
 )
@@ -37,7 +38,21 @@ func init() {
 
 var (
 	mutex sync.Mutex
+
+	// Set by implApplyConfig() on platforms that need it (macOS), empty elsewhere.
+	physicalInterfaceName atomic.Pointer[string]
 )
+
+// GetPhysicalInterfaceName returns the name of the physical network interface resolved
+// by the last ApplyConfig() call, or "" when not resolved / not applicable.
+// (applicable for macOS: forwarded to the Split Tunnel system extension, which pins
+// the connections it relays to that interface)
+func GetPhysicalInterfaceName() string {
+	if name := physicalInterfaceName.Load(); name != nil {
+		return *name
+	}
+	return ""
+}
 
 type ConfigAddresses struct {
 	IPv4Public net.IP // OutboundIPv4

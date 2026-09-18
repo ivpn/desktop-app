@@ -112,6 +112,9 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     BOOL _observingVPNStatus;
     NETransparentProxyManager * _Nullable _lastManager;
     NSDictionary * _Nullable _lastOptions;
+    // Start options waiting for the session to finish tearing down; consumed by
+    // -vpnStatusDidChange: (see -reconcileSessionWithOptions:).
+    NSDictionary * _Nullable _pendingStartOptions;
     // Non-nil while a properties request (see -refreshExtensionState) is in
     // flight - it shares the delegate callbacks below with activation requests,
     // so they are told apart by request identity.
@@ -304,6 +307,14 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 }
 
 - (void)vpnStatusDidChange:(NSNotification *)note {
+    if (_pendingStartOptions) {
+        NETunnelProviderSession *session = (NETunnelProviderSession *)_lastManager.connection;
+        if (session.status == NEVPNStatusDisconnected || session.status == NEVPNStatusInvalid) {
+            NSDictionary *options = _pendingStartOptions;
+            _pendingStartOptions = nil;
+            [self startSessionWithOptions:options];
+        }
+    }
     [self notifyStateChanged];
 }
 
@@ -340,6 +351,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     [self findManagerWithCompletion:^(NETransparentProxyManager * _Nullable manager, NSError * _Nullable error) {
         __strong typeof(self) strongSelf = weakSelf;
         if (!strongSelf || !manager) { return; }
+        strongSelf->_pendingStartOptions = nil; // an explicit stop cancels a pending restart
         strongSelf->_lastManager = manager;
         [strongSelf ensureObservingVPNStatus];
         // Triggers -[STProxyProvider stopProxyWithReason:completionHandler:] on the extension side.
@@ -365,27 +377,39 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 // goes through this same path.
 - (void)reconcileSessionWithOptions:(NSDictionary *)options {
     NETunnelProviderSession *session = (NETunnelProviderSession *)_lastManager.connection;
-    __weak typeof(self) weakSelf = self;
-    void (^start)(void) = ^{
-        __strong typeof(self) strongSelf = weakSelf;
-        if (!strongSelf) { return; }
-        NSError *startError = nil;
-        // This is the call that actually makes the OS launch (or reuse) the
-        // extension process and invoke -[STProxyProvider
-        // startProxyWithOptions:completionHandler:] on it, with `options`
-        // passed through unchanged as its `options` parameter.
-        [session startTunnelWithOptions:options andReturnError:&startError];
-        if (startError) { strongSelf->_lastError = startError.localizedDescription; }
-        [strongSelf notifyStateChanged];
-    };
     if (session.status == NEVPNStatusDisconnected || session.status == NEVPNStatusInvalid) {
-        start();
-    } else {
-        // Triggers -[STProxyProvider stopProxyWithReason:completionHandler:]
-        // on the extension side; `start` (above) re-triggers startProxyWithOptions:.
-        [session stopTunnel];
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), start);
+        [self startSessionWithOptions:options];
+        return;
     }
+
+    // Restarting can only be done once the provider has actually torn down, and how
+    // long that takes is up to the provider - so wait for the status change rather
+    // than guessing a delay (-vpnStatusDidChange: consumes this).
+    _pendingStartOptions = [options copy];
+    // Triggers -[STProxyProvider stopProxyWithReason:completionHandler:] on the extension side.
+    [session stopTunnel];
+
+    // Safety net: a provider that never reports Disconnected must not leave Split
+    // Tunnel silently off.
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        __strong typeof(self) strongSelf = weakSelf;
+        if (!strongSelf || !strongSelf->_pendingStartOptions) { return; }
+        NSDictionary *pending = strongSelf->_pendingStartOptions;
+        strongSelf->_pendingStartOptions = nil;
+        [strongSelf startSessionWithOptions:pending];
+    });
+}
+
+// This is the call that actually makes the OS launch (or reuse) the extension
+// process and invoke -[STProxyProvider startProxyWithOptions:completionHandler:]
+// on it, with `options` passed through unchanged as its `options` parameter.
+- (void)startSessionWithOptions:(NSDictionary *)options {
+    NETunnelProviderSession *session = (NETunnelProviderSession *)_lastManager.connection;
+    NSError *startError = nil;
+    [session startTunnelWithOptions:options andReturnError:&startError];
+    if (startError) { _lastError = startError.localizedDescription; }
+    [self notifyStateChanged];
 }
 
 - (void)notifyStateChanged {

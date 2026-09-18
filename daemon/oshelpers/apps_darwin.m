@@ -55,23 +55,41 @@ int app_bundle_info(const char *bundlePath, char **outDisplayName, char **outExe
 int app_icon_png(const char *bundlePath, int maxSizePx, unsigned char **outData, long *outLen) {
     if (outData) *outData = NULL;
     if (outLen) *outLen = 0;
-    if (!bundlePath) return 1;
+    if (!bundlePath || maxSizePx <= 0) return 1;
 
     @autoreleasepool {
         NSString *path = [NSString stringWithUTF8String:bundlePath];
         NSImage *icon = [[NSWorkspace sharedWorkspace] iconForFile:path];
         if (!icon) return 1;
 
-        NSSize targetSize = NSMakeSize(maxSizePx, maxSizePx);
-        NSImage *resized = [[NSImage alloc] initWithSize:targetSize];
-        [resized lockFocus];
-        [icon drawInRect:NSMakeRect(0, 0, targetSize.width, targetSize.height)
+        // Rendered into an offscreen bitmap on purpose: -[NSImage lockFocus] needs a
+        // window-server connection, which the daemon (root LaunchDaemon, no GUI
+        // session) does not have.
+        NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+                                                                       pixelsWide:maxSizePx
+                                                                       pixelsHigh:maxSizePx
+                                                                    bitsPerSample:8
+                                                                  samplesPerPixel:4
+                                                                         hasAlpha:YES
+                                                                         isPlanar:NO
+                                                                   colorSpaceName:NSDeviceRGBColorSpace
+                                                                      bytesPerRow:0
+                                                                     bitsPerPixel:0];
+        if (!rep) return 1;
+        rep.size = NSMakeSize(maxSizePx, maxSizePx);
+
+        NSGraphicsContext *context = [NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
+        if (!context) return 1;
+
+        [NSGraphicsContext saveGraphicsState];
+        [NSGraphicsContext setCurrentContext:context];
+        [icon drawInRect:NSMakeRect(0, 0, maxSizePx, maxSizePx)
                 fromRect:NSZeroRect
                operation:NSCompositingOperationSourceOver
                 fraction:1.0];
-        [resized unlockFocus];
+        [context flushGraphics];
+        [NSGraphicsContext restoreGraphicsState];
 
-        NSBitmapImageRep *rep = [NSBitmapImageRep imageRepWithData:[resized TIFFRepresentation]];
         NSData *png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
         if (!png || png.length == 0) return 1;
 

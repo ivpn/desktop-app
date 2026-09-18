@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/oshelpers/macos/darwinhelpers"
 	"github.com/ivpn/desktop-app/daemon/service/firewall"
 	"github.com/ivpn/desktop-app/daemon/shell"
@@ -144,7 +145,27 @@ func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpn
 	}
 	mutexMac.Unlock()
 
+	resolvePhysicalInterfaceName()
+
 	return firewall.ApplySplitTunnelRouting(stGroupId)
+}
+
+// resolvePhysicalInterfaceName determines which interface the extension has to pin the
+// traffic it relays to, and publishes it for SplitTunnelStatus.PhysicalInterface.
+//
+// The 'default' route stays on the physical interface even while the VPN is connected:
+// both OpenVPN ('redirect-gateway def1') and WireGuard capture traffic with the more
+// specific '0/1' + '128/1' pair instead of replacing the default route (this is the same
+// distinction netinfo.IsDefaultRoutingInterface() relies on).
+func resolvePhysicalInterfaceName() {
+	name := ""
+	if _, _, ifName, err := netinfo.GetDefaultRouteInfo(); err != nil {
+		log.Error(fmt.Errorf("Split Tunnel: unable to resolve the physical network interface: %w", err))
+	} else {
+		name = ifName
+	}
+	// Empty value is not an error for the extension - it falls back to auto-detection.
+	physicalInterfaceName.Store(&name)
 }
 
 // Linux-only by contract - macOS is path-based (like Windows), not launch-based.

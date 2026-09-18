@@ -99,6 +99,9 @@ type SplitTunnelStatus struct {
 	// Information about active applications running in Split-Tunnel environment
 	// (applicable for Linux)
 	RunningApps []splittun.RunningApp
+	// Name of the physical network interface the excluded apps' traffic has to leave over
+	// (applicable for macOS; empty when not resolved - the extension then auto-detects it)
+	PhysicalInterface string
 }
 
 // SplitTunnelAddApp (request) add application to SplitTunneling

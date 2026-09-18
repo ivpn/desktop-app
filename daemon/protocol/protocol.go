@@ -96,7 +96,7 @@ type Service interface {
 	SetConnectionParams(params service_types.ConnectionParams) error
 	SetWiFiSettings(params preferences.WiFiParams) error
 
-	SplitTunnelling_SetDisabledReason(reason string)
+	SplitTunnelling_SetDisabledReason(source, reason string)
 	SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, isAllowWhenNoVpn, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
 	SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error)
@@ -906,7 +906,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		if !req.IsReady {
 			reason = req.Reason
 		}
-		p._service.SplitTunnelling_SetDisabledReason(reason)
+		p._service.SplitTunnelling_SetDisabledReason(stDisabledReasonMacExtension, reason)
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
 		// all clients will be notified about the status change by service in OnSplitTunnelStatusChanged() handler
 

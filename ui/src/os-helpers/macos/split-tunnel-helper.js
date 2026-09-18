@@ -74,8 +74,10 @@ function Init(onStateChangedCallback) {
     if (onStateChangedCallback) onStateChangedCallback(s);
     // Activation completing is not a daemon status change, so nothing else
     // re-triggers the config applied while the extension was still installing.
-    if (!wasInstalled && s.extensionState === SplitTunnelMacExtStateEnum.Installed)
+    if (!wasInstalled && s.extensionState === SplitTunnelMacExtStateEnum.Installed) {
+      _lastAppliedConfig = null; // that config never reached a running extension
       applyDaemonStatus(store.state.vpnState.splitTunnelling);
+    }
   });
   const initialState = {
     extensionState: addon.getExtensionState(),
@@ -106,6 +108,15 @@ function Init(onStateChangedCallback) {
 function ApplyConfig(cfg) {
   const addon = getAddon();
   if (!addon) return;
+
+  // The daemon broadcasts SplitTunnelStatus on many unrelated events (VPN
+  // connect, DNS change, login...) and applying a config always restarts the
+  // session, which force-closes every relayed connection - so only act on a
+  // config that actually differs.
+  const serialized = JSON.stringify(cfg || {});
+  if (serialized === _lastAppliedConfig) return;
+  _lastAppliedConfig = serialized;
+
   addon.applyConfig(cfg || {});
 }
 
@@ -119,6 +130,10 @@ let _extensionActivationRequested = false;
 // initial getExtensionState() read) - used by RecheckApprovalOnFocus() below
 // so it doesn't need to touch the store/getter from this main-process module.
 let _lastExtensionState = SplitTunnelMacExtStateEnum.NotInstalled;
+
+// Serialized options of the last config actually handed to the addon, or null
+// when the session is stopped (see ApplyConfig/Stop).
+let _lastAppliedConfig = null;
 
 // Maps the daemon's SplitTunnelStatus shape onto the addon's start options.
 function applyDaemonStatus(status) {
@@ -134,12 +149,14 @@ function applyDaemonStatus(status) {
   ApplyConfig({
     isInversed: status.IsInversed, // not yet consumed by the extension - reserved for a future inverse-mode implementation
     excludedPaths: status.SplitTunnelApps,
+    physicalInterface: status.PhysicalInterface, // when empty, the extension auto-detects it
   });
 }
 
 function Stop() {
   const addon = getAddon();
   if (!addon) return;
+  _lastAppliedConfig = null;
   addon.stop();
 }
 

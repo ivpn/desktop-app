@@ -1712,6 +1712,10 @@ async function GetInstalledApps() {
         EnvVar_XDG_DATA_DIRS: XDG_DATA_DIRS,
         EnvVar_HOME: HOME,
       });
+    } else if (Platform() == PlatformEnum.macOS) {
+      // macOS: the daemon runs as root, so it can only enumerate '~/Applications'
+      // if the user's home directory is passed to it.
+      extraArgsJson = JSON.stringify({ EnvVar_HOME: process.env["HOME"] });
     }
 
     const responseTimeoutMs = 25 * 1000;
