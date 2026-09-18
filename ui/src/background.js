@@ -46,7 +46,7 @@ import "./ipc/main-listener";
 
 import store from "@/store";
 import { AutoLaunchSet, AutoLaunchIsEnabled } from "@/auto-launch";
-import { DaemonConnectionType, ColorTheme } from "@/store/types";
+import { DaemonConnectionType, ColorTheme, SplitTunnelMacExtStateEnum } from "@/store/types";
 import daemonClient from "./daemon-client";
 import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
@@ -241,6 +241,36 @@ function onWindowReady(win) {
   wifiHelperMacOS.InitWifiHelper(win, () => {showSettings("networks");} );
 }
 
+// MACOS ONLY: last Split Tunnel extension readiness report; kept so it can be
+// (re)sent whenever the daemon connection is established.
+let _lastStExtensionReport = null;
+
+// Only states the user cannot get out of by waiting disable the functionality
+// in the daemon (SplitTunnelStatus.NoFuncReason). Transient lifecycle states
+// (installing/notInstalled/needsUserApproval) are shown by the Settings page
+// banner instead - reporting them here would disable Split Tunnel and so
+// prevent the extension activation that resolves them.
+function macOSStExtensionDisabledReason(s) {
+  switch (s.extensionState) {
+    case SplitTunnelMacExtStateEnum.NeedsReboot:
+      return "Restart your Mac to finish installing the Split Tunnel system extension.";
+    case SplitTunnelMacExtStateEnum.Error:
+      return `Split Tunnel system extension error: ${s.lastError || "unknown error"}`;
+    default:
+      return "";
+  }
+}
+
+function reportStExtensionState() {
+  if (!_lastStExtensionReport) return;
+  if (store.state.daemonConnectionState !== DaemonConnectionType.Connected) return;
+  daemonClient
+    .SplitTunnelMacExtensionState(_lastStExtensionReport.isReady, _lastStExtensionReport.reason)
+    .catch((e) => {
+      console.error("SplitTunnelMacExtensionState report failed:", e);
+    });
+}
+
 // INITIALIZATION
 if (gotTheLock && isAllowedToStart) {
   // TODO: get rid of persistent settings in UI. It should get all data from the daemon
@@ -252,11 +282,9 @@ if (gotTheLock && isAllowedToStart) {
   // is actually enabled (see split-tunnel-helper.js).
   if (Platform() === PlatformEnum.macOS) {
     splitTunnelHelperMacOS.Init((s) => {
-      const isReady = s.extensionState === "installed";
-      const reason = isReady ? "" : s.lastError || s.extensionState || "not ready";
-      daemonClient.SplitTunnelMacExtensionState(isReady, reason).catch((e) => {
-        console.error("SplitTunnelMacExtensionState report failed:", e);
-      });
+      const reason = macOSStExtensionDisabledReason(s);
+      _lastStExtensionReport = { isReady: reason === "", reason };
+      reportStExtensionState();
     });
   }
   
@@ -1123,6 +1151,9 @@ async function connectToDaemon() {
 
     store.commit("daemonConnectionState", DaemonConnectionType.Connected);
     store.commit("daemonIsInstalling", false);
+    // The report may have been produced before the socket was up (or lost on a
+    // previous disconnect) - the daemon has no other source for this state.
+    reportStExtensionState();
     // Connection is live. When the socket closes unexpectedly,
     // onDisconnected() will fire and scheduleReconnect() will be called.
   } catch (e) {

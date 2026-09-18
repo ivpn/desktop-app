@@ -440,6 +440,10 @@
 const sender = window.ipcSender;
 
 import { Platform, PlatformEnum } from "@/platform/platform";
+import {
+  SplitTunnelMacExtStateEnum,
+  SplitTunnelMacSessionStatusEnum,
+} from "@/store/types";
 
 import Image_search_windows from "@/assets/search-windows.svg";
 import Image_search_macos from "@/assets/search-macos.svg";
@@ -932,17 +936,18 @@ Do you want to enable Inverse mode for Split Tunnel?",
       const extState = this.macOSExtState.extensionState;
       const sessionStatus = this.macOSExtState.sessionStatus;
       switch (extState) {
-        case "notInstalled":
-        case "installing":
+        case SplitTunnelMacExtStateEnum.NotInstalled:
+        case SplitTunnelMacExtStateEnum.Installing:
           return "Installing the Split Tunnel system extension...";
-        case "needsUserApproval":
+        case SplitTunnelMacExtStateEnum.NeedsUserApproval:
           return "Split Tunnel needs to be approved in System Settings before it can start.";
-        case "needsReboot":
+        case SplitTunnelMacExtStateEnum.NeedsReboot:
           return "Restart your Mac to finish installing the Split Tunnel system extension.";
-        case "error":
+        case SplitTunnelMacExtStateEnum.Error:
           return `Split Tunnel system extension error: ${this.macOSExtState.lastError || "unknown error"}`;
-        case "installed":
-          if (sessionStatus !== "connected") return "Split Tunnel is starting...";
+        case SplitTunnelMacExtStateEnum.Installed:
+          if (sessionStatus !== SplitTunnelMacSessionStatusEnum.Connected)
+            return "Split Tunnel is starting...";
           return "";
         default:
           return "";

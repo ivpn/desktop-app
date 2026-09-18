@@ -38,6 +38,7 @@ export default {
 };
 
 import { Platform, PlatformEnum } from "@/platform/platform";
+import { SplitTunnelMacExtStateEnum } from "@/store/types";
 import store from "@/store";
 
 function isApplicable() {
@@ -67,9 +68,14 @@ function Init(onStateChangedCallback) {
   if (!addon) return;
 
   addon.onStateChanged((s) => {
+    const wasInstalled = _lastExtensionState === SplitTunnelMacExtStateEnum.Installed;
     _lastExtensionState = s.extensionState;
     store.commit("uiState/splitTunnelMacOS", s);
     if (onStateChangedCallback) onStateChangedCallback(s);
+    // Activation completing is not a daemon status change, so nothing else
+    // re-triggers the config applied while the extension was still installing.
+    if (!wasInstalled && s.extensionState === SplitTunnelMacExtStateEnum.Installed)
+      applyDaemonStatus(store.state.vpnState.splitTunnelling);
   });
   const initialState = {
     extensionState: addon.getExtensionState(),
@@ -108,7 +114,7 @@ let _extensionActivationRequested = false;
 // Mirrors the extensionState from the last onStateChanged callback (or the
 // initial getExtensionState() read) - used by RecheckApprovalOnFocus() below
 // so it doesn't need to touch the store/getter from this main-process module.
-let _lastExtensionState = "notInstalled";
+let _lastExtensionState = SplitTunnelMacExtStateEnum.NotInstalled;
 
 // Maps the daemon's SplitTunnelStatus shape onto the addon's start options.
 function applyDaemonStatus(status) {
@@ -162,6 +168,6 @@ function UninstallExtensionAndWait(onDone) {
 // approval state) - so re-submit one, but only while the user is actually
 // mid-approval, to avoid spamming OSSystemExtensionRequest on every focus.
 function RecheckApprovalOnFocus() {
-  if (_lastExtensionState !== "needsUserApproval") return;
+  if (_lastExtensionState !== SplitTunnelMacExtStateEnum.NeedsUserApproval) return;
   InstallExtension();
 }

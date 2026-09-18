@@ -27,6 +27,28 @@ export const DaemonConnectionType = Object.freeze({
 
 export const VpnTypeEnum = Object.freeze({ OpenVPN: 0, WireGuard: 1 });
 
+// MACOS ONLY: lifecycle state of the Split Tunnel system extension.
+// Values must stay in sync with StringForExtState() in ui/addons/split-tunnel-macos/src/addon.m
+export const SplitTunnelMacExtStateEnum = Object.freeze({
+  NotInstalled: "notInstalled", // no activation request has completed yet (initial state)
+  Installing: "installing", // activation request submitted, waiting for the OS
+  NeedsUserApproval: "needsUserApproval", // blocked by the OS until the user allows it in System Settings
+  NeedsReboot: "needsReboot", // activation will complete only after a restart
+  Installed: "installed", // activated and enabled; ready to run the proxy session
+  Error: "error", // activation request failed (details in 'lastError')
+});
+
+// MACOS ONLY: status of the Split Tunnel proxy session (NEVPNStatus).
+// Values must stay in sync with StringForVPNStatus() in ui/addons/split-tunnel-macos/src/addon.m
+export const SplitTunnelMacSessionStatusEnum = Object.freeze({
+  Invalid: "invalid", // no proxy configuration registered with the OS
+  Disconnected: "disconnected", // configuration exists, but the proxy is not running
+  Connecting: "connecting", // the extension is starting up
+  Connected: "connected", // the proxy is running and intercepting flows
+  Reasserting: "reasserting", // running, but the extension is re-establishing itself
+  Disconnecting: "disconnecting", // the extension is shutting down
+});
+
 export const DnsEncryption = Object.freeze({
   None: 0,
   DnsOverTls: 1,
