@@ -33,9 +33,11 @@ TBL_USER_EXCEPTIONS="user_exceptions"
 # This helps resolve issues like those in macOS 15.0, where certain apps (such as iMessage and FaceTime) stop working when the VPN is connected.
 # These services ignore the routing configuration and continue using the "en0" interface, bypassing the VPN.
 #
-# Split Tunnel traffic can't be excepted from this check, so client_connected()
-# skips the whole block above (NAT_ROUTING_ALLOWED=0) while it's enabled; the
-# kill switch (${SA_TUNNEL} anchor) is unaffected either way.
+# The Split Tunnel extension's relayed traffic can not be excepted from the NAT rules
+# (pf has no 'group'/'user' match for 'nat' rules), so client_connected() skips the whole
+# block above while Split Tunnel is enabled and instead explicitly allows the traffic of
+# the Split Tunnel extension (it runs under a dedicated group). Everything else that
+# bypasses the VPN routing stays blocked by the kill switch.
 IS_DO_ROUTING=1
 
 ROUTE_SA_INIT="route_init"
@@ -203,8 +205,9 @@ function client_connected {
     DST_ADDR=$4
     DST_PORT=$5
     PROTOCOL=$6
-    # 1=normal, 0=Split Tunnel enabled (see IS_DO_ROUTING comment above).
-    NAT_ROUTING_ALLOWED=${7}
+    # GID the Split Tunnel extension runs under; 0 (or not defined) = Split Tunnel
+    # is not active (see the IS_DO_ROUTING comment above).
+    ST_GROUP_ID=${7:-0}
 
     # FILTER RULES (TUNNEL)
     pfctl -a ${ANCHOR}/${SA_TUNNEL} -f - <<_EOF
@@ -213,7 +216,7 @@ function client_connected {
 _EOF
 
     if (( ${IS_DO_ROUTING} == 1 )) ; then
-      if (( ${NAT_ROUTING_ALLOWED} == 1 )) ; then
+      if (( ${ST_GROUP_ID} == 0 )) ; then
         # NAT & ROUTING RULES
         #
         # All traffic will be intentionally routed through the VPN interface:
@@ -281,12 +284,20 @@ _EOF
           pass out quick route-to ${IFACE} inet6 all flags S/SA keep state
 _EOF
       else
-        # Split Tunnel traffic can't be excepted from this check, so it's
-        # skipped entirely while Split Tunnel is on; kill switch is unaffected.
+        # SPLIT TUNNEL IS ACTIVE: no intentional routing (see IS_DO_ROUTING comment above).
         # -Fn/-Fr only flush rules - tables/exceptions are untouched.
         pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -Fn
         pfctl -a ${ANCHOR}/${ROUTE_SA_INIT} -Fr
-        pfctl -a ${ANCHOR}/${ROUTE_SA_ALL} -Fr
+
+        # Allow the Split Tunnel extension to communicate over the physical interface.
+        # Without this rule its traffic matches no 'pass' rule and is dropped by the
+        # final 'block ... quick all' rules of the ${ANCHOR} anchor.
+        # This anchor must be the last one in the list of anchors:
+        #  - all allowed traffic must be already passed
+        #  - all unwanted traffic must be already blocked (e.g. DNS requests)
+        pfctl -a ${ANCHOR}/${ROUTE_SA_ALL} -f - <<_EOF
+          pass out quick all group ${ST_GROUP_ID} keep state
+_EOF
       fi
     fi
 }
@@ -411,9 +422,9 @@ function main {
         DST_ADDR=$5
         DST_PORT=$6
         PROTOCOL=$7
-        NAT_ROUTING_ALLOWED=$8
+        ST_GROUP_ID=${8:-0}
 
-        client_connected ${IFACE} ${SRC_ADDR} ${SRC_PORT} ${DST_ADDR} ${DST_PORT} ${PROTOCOL} ${NAT_ROUTING_ALLOWED}
+        client_connected ${IFACE} ${SRC_ADDR} ${SRC_PORT} ${DST_ADDR} ${DST_PORT} ${PROTOCOL} ${ST_GROUP_ID}
 
     elif [[ $1 = "-disconnected" ]]; then
         shift

@@ -16,7 +16,31 @@
 #import <Foundation/Foundation.h>
 #import <NetworkExtension/NetworkExtension.h>
 #import <os/log.h>
+#import <errno.h>
+#import <grp.h>
+#import <string.h>
+#import <unistd.h>
 #import "STLog.h"
+
+// Must match 'extensionGroupName' in daemon/splittun/splittun_darwin.go (the daemon
+// creates this group). The IVPN firewall allows the traffic relayed by this extension
+// to leave over the physical interface by matching on this group; every other way out
+// of the tunnel stays blocked. Must be done before any socket is created.
+static void SwitchToSplitTunnelGroup(void) {
+    static const char *groupName = "ivpn-st";
+
+    struct group *grp = getgrnam(groupName);
+    if (grp == NULL) {
+        STLogError(@"Group '%s' not found - relayed traffic will be blocked while the IVPN firewall is enabled", groupName);
+        return;
+    }
+    if (setgid(grp->gr_gid) != 0) {
+        STLogError(@"setgid(%d) failed (%s) - relayed traffic will be blocked while the IVPN firewall is enabled",
+                   (int)grp->gr_gid, strerror(errno));
+        return;
+    }
+    STLogInfo(@"Running under group '%s' (gid %d)", groupName, (int)grp->gr_gid);
+}
 
 int main(int argc, char *argv[]) {
     @autoreleasepool {
@@ -40,8 +64,7 @@ int main(int argc, char *argv[]) {
 
         STLogSetMinLevel(STLogLevelDebug);
 
-        // Info: No setgid() here: pf can't except NAT rules by group, so firewall.sh
-        //       skips NAT/route-to entirely while Split Tunnel is enabled instead.
+        SwitchToSplitTunnelGroup();
 
         [NEProvider startSystemExtensionMode];
     }

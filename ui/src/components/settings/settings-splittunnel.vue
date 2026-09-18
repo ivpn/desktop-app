@@ -202,11 +202,11 @@
       />
     </div>
 
-    <!-- MACOS: kill switch NAT-hardening trade-off disclosure (not cosmetic - always shown while enabled) -->
+    <!-- MACOS: kill switch interaction disclosure (not cosmetic - always shown while enabled) -->
     <div v-if="isMacOS && IsEnabled" class="warningBlock" tabindex="0">
-      Enabling Split Tunneling disables the additional protection against apps
-      (such as iMessage/FaceTime) that bypass VPN routing on some macOS
-      versions.
+      While Split Tunneling is enabled, applications that ignore the VPN routing
+      (such as iMessage or FaceTime on some macOS versions) may be unable to
+      connect when the IVPN Firewall is enabled.
     </div>
 
     <!-- INVERSE MODE-->

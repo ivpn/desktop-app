@@ -42,6 +42,10 @@ var (
 	// key: is a string representation of allowed IP
 	// value: true - if exception rule is persistant (persistant, means will stay available even client is disconnected)
 	allowedHosts map[string]bool
+
+	// GID the Split Tunnel extension runs under (0 - Split Tunnel is not active).
+	// Set by ApplySplitTunnelRouting(); kept here so it survives VPN reconnects.
+	splitTunnelGroupId int
 )
 
 func init() {
@@ -94,11 +98,7 @@ func implSetPersistant(persistant bool) error {
 
 // ClientConnected - allow communication for local vpn/client IP address
 func implClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) error {
-	// Split Tunnel's enabled state isn't known here - splittun_darwin.go's
-	// implApplyConfig() always runs right after and calls
-	// ApplySplitTunnelRouting() with the real value (see there).
-	const isSplitTunnelEnabled = false
-	if err := applyConnectedRules(isSplitTunnelEnabled); err != nil {
+	if err := applyConnectedRules(); err != nil {
 		return err
 	}
 
@@ -110,9 +110,9 @@ func implClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net
 
 // applyConnectedRules (re-)invokes firewall.sh's '-connected' for the
 // currently connected client (tracked by the connected* package vars, set by
-// ClientConnected()/ClientDisconnected()) with the given Split Tunnel state.
+// ClientConnected()/ClientDisconnected()) and the current Split Tunnel state.
 // No-op if not currently connected.
-func applyConnectedRules(isSplitTunnelEnabled bool) error {
+func applyConnectedRules() error {
 	if connectedClientInterfaceIP == nil {
 		return nil
 	}
@@ -125,40 +125,36 @@ func applyConnectedRules(isSplitTunnelEnabled bool) error {
 	if connectedIsTCP {
 		protocol = "tcp"
 	}
-	// "1" = apply the intentional-routing NAT/route-to rules as before; "0" =
-	// skip them because Split Tunnel is enabled (macOS's pf cannot condition
-	// a NAT rule on the relaying process's group, so the only way to stop it
-	// from also NAT-ing/rerouting the Split Tunnel extension's relayed
-	// traffic is to not apply intentional routing at all while Split Tunnel
-	// is on - the base kill switch, SA_TUNNEL anchor, is unaffected).
-	natRoutingAllowed := "1"
-	if isSplitTunnelEnabled {
-		natRoutingAllowed = "0"
-	}
-	scriptArgs := fmt.Sprintf("-connected %s %s %d %s %d %s %s",
+	scriptArgs := fmt.Sprintf("-connected %s %s %d %s %d %s %d",
 		inf.Name,
 		connectedClientInterfaceIP,
 		connectedClientPort,
 		connectedHostIP,
 		connectedHostPort,
 		protocol,
-		natRoutingAllowed)
+		splitTunnelGroupId)
 	if err := shell.Exec(nil, platform.FirewallScript(), scriptArgs); err != nil {
 		return fmt.Errorf("failed to add rule for current connection directions: %w", err)
 	}
 	return nil
 }
 
-// ApplySplitTunnelRouting reapplies the '-connected' rule for the currently
-// active VPN connection (if any) with the given Split Tunnel enabled state,
-// so firewall.sh's intentional-routing bypass takes effect immediately
-// without requiring a VPN reconnect. Called only from splittun_darwin.go's
-// implApplyConfig() - darwin-only by construction (both files are
-// platform-suffixed), so no stub is needed on other platforms.
-func ApplySplitTunnelRouting(isSplitTunnelEnabled bool) error {
+// ApplySplitTunnelRouting updates the firewall rules for the current VPN connection
+// (if any) according to the Split Tunnel state, so the change takes effect immediately
+// without requiring a VPN reconnect.
+//
+// stExtensionGroupId is the GID the Split Tunnel extension runs under, or 0 when Split
+// Tunnel is not active. When it is not 0, the intentional-routing NAT/route-to rules are
+// skipped (they would reroute the extension's relayed traffic back into the tunnel) and
+// the extension's traffic is allowed to leave over the physical interface instead.
+//
+// Called only from splittun_darwin.go's implApplyConfig() - darwin-only by construction
+// (both files are platform-suffixed), so no stub is needed on other platforms.
+func ApplySplitTunnelRouting(stExtensionGroupId int) error {
 	mutex.Lock()
 	defer mutex.Unlock()
-	return applyConnectedRules(isSplitTunnelEnabled)
+	splitTunnelGroupId = stExtensionGroupId
+	return applyConnectedRules()
 }
 
 // ClientDisconnected - Disable communication for local vpn/client IP address

@@ -24,10 +24,13 @@ package splittun
 
 import (
 	"fmt"
+	"os/user"
+	"strconv"
 	"sync"
 
 	"github.com/ivpn/desktop-app/daemon/oshelpers/macos/darwinhelpers"
 	"github.com/ivpn/desktop-app/daemon/service/firewall"
+	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 // macOS does not implement Split Tunnel in the daemon itself: the actual
@@ -42,10 +45,18 @@ import (
 // adjust its intentional-routing rules (see implApplyConfig() below and
 // firewall_darwin.go's ApplySplitTunnelRouting()).
 
+// The Split Tunnel extension changes its group to this one on start. It is the only
+// way for the firewall to distinguish the traffic relayed by the extension (which has
+// to leave over the physical interface) from the traffic of any other process.
+const extensionGroupName = "ivpn-st"
+
 var (
 	mutexMac sync.Mutex
 
 	osVersionError error // set once by implInitialize(), nil if the OS is new enough
+
+	// GID of 'extensionGroupName' (0 if the group is not available)
+	extensionGroupId int
 
 	// Milestone 1 ships exclusion mode only - inverse mode is a separate,
 	// later milestone.
@@ -67,7 +78,39 @@ func implInitialize() error {
 	}
 	osVersionError = nil
 
+	// Not a fatal error: without the group the firewall can not tell the extension's traffic
+	// apart, so the intentional-routing rules just stay applied (excluded apps keep using the
+	// tunnel instead of bypassing it) - which is the safe fallback.
+	if extensionGroupId, err = ensureExtensionGroup(); err != nil {
+		log.Error(fmt.Errorf("Split Tunnel: unable to prepare the '%s' group: %w", extensionGroupName, err))
+	}
+
 	return nil
+}
+
+// ensureExtensionGroup creates 'extensionGroupName' (if not created yet) and returns its GID.
+func ensureExtensionGroup() (int, error) {
+	if gid, err := extensionGroupIdByName(); err == nil {
+		return gid, nil
+	}
+
+	if err := shell.Exec(nil, "/usr/sbin/dseditgroup", "-o", "create", "-q", extensionGroupName); err != nil {
+		return 0, fmt.Errorf("failed to create group: %w", err)
+	}
+
+	return extensionGroupIdByName()
+}
+
+func extensionGroupIdByName() (int, error) {
+	group, err := user.LookupGroup(extensionGroupName)
+	if err != nil {
+		return 0, err
+	}
+	gid, err := strconv.Atoi(group.Gid)
+	if err != nil || gid <= 0 {
+		return 0, fmt.Errorf("unexpected GID value '%s'", group.Gid)
+	}
+	return gid, nil
 }
 
 func implFuncNotAvailableError() (generalStError, inversedStError error) {
@@ -91,10 +134,17 @@ func implReset() error {
 // (ui/addons/split-tunnel-macos), which already gets the enabled/inverse
 // flags and app list via the existing SplitTunnelStatus fields - there is
 // nothing left for the daemon to resolve or store here. The only real
-// daemon-side effect is telling the firewall to skip its intentional-routing
-// NAT/route-to rules while Split Tunnel is enabled (see firewall_darwin.go).
+// daemon-side effect is updating the firewall rules for the traffic of the
+// extension (see firewall_darwin.go).
 func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
-	return firewall.ApplySplitTunnelRouting(isStEnabled)
+	mutexMac.Lock()
+	stGroupId := 0
+	if isStEnabled {
+		stGroupId = extensionGroupId
+	}
+	mutexMac.Unlock()
+
+	return firewall.ApplySplitTunnelRouting(stGroupId)
 }
 
 // Linux-only by contract - macOS is path-based (like Windows), not launch-based.
