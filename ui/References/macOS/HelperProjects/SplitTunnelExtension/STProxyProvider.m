@@ -190,11 +190,13 @@ static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
     os_unfair_lock_unlock(&_flowsLock);
 }
 
-- (void)st_unregisterTCPFlow:(NEAppProxyTCPFlow *)flow {
+- (BOOL)st_unregisterTCPFlow:(NEAppProxyTCPFlow *)flow {
     os_unfair_lock_lock(&_flowsLock);
+    BOOL wasRegistered = [self.activeFlows containsObject:flow];
     [self.tcpConnectionsByFlow removeObjectForKey:flow];
     [self.activeFlows removeObject:flow];
     os_unfair_lock_unlock(&_flowsLock);
+    return wasRegistered;
 }
 
 - (nw_connection_t)st_connectionForTCPFlow:(NEAppProxyTCPFlow *)flow {

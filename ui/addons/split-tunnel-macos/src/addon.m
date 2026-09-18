@@ -233,6 +233,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 
 - (void)request:(OSSystemExtensionRequest *)request didFinishWithResult:(OSSystemExtensionRequestResult)result {
     if (request == _propertiesRequest) { _propertiesRequest = nil; return; } // state already applied in -request:foundProperties:
+    _lastError = nil; // the request succeeded - don't keep reporting an error from an earlier attempt
     if (result == OSSystemExtensionRequestWillCompleteAfterReboot) {
         _extState = STExtStateNeedsReboot;
         [self notifyStateChanged];
@@ -408,7 +409,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     NETunnelProviderSession *session = (NETunnelProviderSession *)_lastManager.connection;
     NSError *startError = nil;
     [session startTunnelWithOptions:options andReturnError:&startError];
-    if (startError) { _lastError = startError.localizedDescription; }
+    _lastError = startError.localizedDescription; // nil on success, so a stale error never sticks
     [self notifyStateChanged];
 }
 
@@ -509,6 +510,11 @@ static napi_value SetStateChangedCallback(napi_env env, napi_callback_info info)
     if (status != napi_ok || argc < 1) {
         napi_throw_error(env, NULL, "SetStateChangedCallback requires a callback argument");
         return NULL;
+    }
+
+    if (stateChangedCallback != NULL) {
+        napi_release_threadsafe_function(stateChangedCallback, napi_tsfn_release);
+        stateChangedCallback = NULL;
     }
 
     napi_value resourceName;

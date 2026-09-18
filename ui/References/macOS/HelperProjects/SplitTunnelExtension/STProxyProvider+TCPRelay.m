@@ -198,10 +198,13 @@
 // the connection itself has ended, not for the network-side half-close
 // handled in pumpConnection:toFlow:'s finishOrContinue above.
 - (void)teardownTCPFlow:(NEAppProxyTCPFlow *)flow connection:(nw_connection_t)connection {
+    // Unregister first: the cancel below re-enters here via the connection's
+    // nw_connection_state_cancelled handler, and this atomic removal is what
+    // makes that second pass a no-op instead of re-closing a closed flow.
+    if (![self st_unregisterTCPFlow:flow]) { return; }
     if (connection) { nw_connection_cancel(connection); }
     [flow closeReadWithError:nil];
     [flow closeWriteWithError:nil];
-    [self st_unregisterTCPFlow:flow];
 }
 
 @end

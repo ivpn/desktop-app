@@ -80,7 +80,9 @@ NS_ASSUME_NONNULL_BEGIN
 // every touch of those three collections must go through these instead of
 // the properties above directly.
 - (void)st_registerTCPFlow:(NEAppProxyTCPFlow *)flow connection:(nw_connection_t)connection;
-- (void)st_unregisterTCPFlow:(NEAppProxyTCPFlow *)flow;
+// Returns NO if the flow was already unregistered - the caller is then a
+// duplicate teardown and must do nothing more (see -teardownTCPFlow:connection:).
+- (BOOL)st_unregisterTCPFlow:(NEAppProxyTCPFlow *)flow;
 - (nw_connection_t _Nullable)st_connectionForTCPFlow:(NEAppProxyTCPFlow *)flow;
 - (void)st_registerUDPFlow:(NEAppProxyUDPFlow *)flow state:(STUDPFlowState *)state;
 - (void)st_unregisterUDPFlow:(NEAppProxyUDPFlow *)flow;
