@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
         // CFBundleIdentifier rather than hardcoded, so it can't drift out of
         // sync with whatever this bundle is actually signed/installed as.
         // `log stream --predicate 'subsystem == "<this bundle's id>"' --level debug`
+        // (`log stream --predicate 'subsystem == "com.electron.ivpn-ui.SplitTunnel"' --level debug`)
         // shows this regardless of whether the host app's window is open.
         NSString *subsystem = [NSBundle mainBundle].bundleIdentifier ?: @"SplitTunnelExtension";
         os_log_t extensionLog = os_log_create(subsystem.UTF8String, "proxy");

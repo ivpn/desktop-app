@@ -97,7 +97,9 @@ func getBinaryIconBase64(binaryPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return base64.StdEncoding.EncodeToString(pngData), nil
+	// The UI binds this straight into an <img src>, so it has to be a data URL
+	// (same as the Linux/Windows implementations).
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngData), nil
 }
 
 // appBundleInfo reads CFBundleDisplayName/CFBundleName (falling back to the

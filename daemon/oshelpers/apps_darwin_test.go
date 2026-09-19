@@ -3,7 +3,12 @@
 
 package oshelpers
 
-import "testing"
+import (
+	"bytes"
+	"encoding/base64"
+	"strings"
+	"testing"
+)
 
 // Minimal smoke test for the cgo bridge to NSBundle/NSWorkspace: confirms the
 // daemon can actually enumerate installed apps and extract an icon at
@@ -33,7 +38,18 @@ func TestGetInstalledApps_Smoke(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetBinaryIconBase64(%q) failed: %v", apps[0].AppBinaryPath, err)
 	}
-	if len(icon) == 0 {
-		t.Fatalf("GetBinaryIconBase64(%q) returned an empty string", apps[0].AppBinaryPath)
+	// The UI binds this straight into an <img src>, so the data-URL prefix is
+	// part of the contract, not decoration.
+	const pngDataURLPrefix = "data:image/png;base64,"
+	payload, ok := strings.CutPrefix(icon, pngDataURLPrefix)
+	if !ok {
+		t.Fatalf("GetBinaryIconBase64(%q) is not prefixed with %q", apps[0].AppBinaryPath, pngDataURLPrefix)
+	}
+	raw, err := base64.StdEncoding.DecodeString(payload)
+	if err != nil {
+		t.Fatalf("GetBinaryIconBase64(%q) payload is not valid base64: %v", apps[0].AppBinaryPath, err)
+	}
+	if !bytes.HasPrefix(raw, []byte("\x89PNG\r\n\x1a\n")) {
+		t.Fatalf("GetBinaryIconBase64(%q) payload is not a PNG", apps[0].AppBinaryPath)
 	}
 }
