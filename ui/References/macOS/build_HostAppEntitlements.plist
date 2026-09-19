@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Entitlements for IVPN.app ONLY (see sign_image.sh).
+
+	     The three Split Tunnel keys below are restricted entitlements: at launch
+	     AMFI requires them to be authorised by an embedded provisioning profile,
+	     and kills the process with "Code Signature Invalid" if they are not. Only
+	     IVPN.app ships a Contents/embedded.provisionprofile, so these keys must
+	     never reach any other binary; in particular they must never be passed to
+	     codesign's "deep" mode, which applies them to every nested bundle.
+	     Everything else is signed with build_HarderingEntitlements.plist. -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<true/>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+	<key>com.apple.security.cs.disable-executable-page-protection</key>
+	<true/>
+	<key>com.apple.developer.networking.networkextension</key>
+	<array>
+		<string>app-proxy-provider-systemextension</string>
+	</array>
+	<!-- Required for the host app to call OSSystemExtensionRequest at all
+	     (distinct from the networkextension entitlement above). -->
+	<key>com.apple.developer.system-extension.install</key>
+	<true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.electron.ivpn-ui</string>
+	</array>
+</dict>
+</plist>

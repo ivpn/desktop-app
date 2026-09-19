@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Hardened Runtime exceptions needed by Electron/V8. codesign's "deep" mode
+	     hands these to every nested binary, so this file must contain only
+	     entitlements that need no provisioning profile. The Split Tunnel ones live
+	     in build_HostAppEntitlements.plist, applied to IVPN.app alone. -->
 	<key>com.apple.security.cs.allow-jit</key>
 	<true/>
 	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
@@ -10,17 +14,5 @@
 	<true/>
 	<key>com.apple.security.cs.disable-executable-page-protection</key>
 	<true/>
-	<key>com.apple.developer.networking.networkextension</key>
-	<array>
-		<string>app-proxy-provider-systemextension</string>
-	</array>
-	<!-- Required for the host app to call OSSystemExtensionRequest at all
-	     (distinct from the networkextension entitlement above). -->
-	<key>com.apple.developer.system-extension.install</key>
-	<true/>
-	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.com.electron.ivpn-ui</string>
-	</array>
 </dict>
 </plist>
