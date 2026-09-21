@@ -119,6 +119,10 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     // flight - it shares the delegate callbacks below with activation requests,
     // so they are told apart by request identity.
     OSSystemExtensionRequest * _Nullable _propertiesRequest;
+    // Bumped synchronously on entry to -applyConfigJSON: and -stopSession. Their
+    // asynchronous completions act only if still current, so of several
+    // commands issued in quick succession only the last one takes effect.
+    NSUInteger _commandGeneration;
 }
 
 + (instancetype)sharedInstance {
@@ -329,11 +333,13 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 - (void)applyConfigJSON:(NSString *)json {
     NSDictionary *cfg = ParseJSONDictionary(json);
     _lastOptions = cfg;
+    _pendingStartOptions = nil; // superseded: only the options below may start a session
+    NSUInteger generation = ++_commandGeneration;
 
     __weak typeof(self) weakSelf = self;
     [self loadOrCreateManagerWithCompletion:^(NETransparentProxyManager * _Nullable manager, NSError * _Nullable error) {
         __strong typeof(self) strongSelf = weakSelf;
-        if (!strongSelf) { return; }
+        if (!strongSelf || generation != strongSelf->_commandGeneration) { return; }
         if (!manager) {
             strongSelf->_lastError = error.localizedDescription ?: @"Unable to load the Split Tunnel proxy configuration";
             [strongSelf notifyStateChanged];
@@ -346,13 +352,15 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 }
 
 - (void)stopSession {
+    _pendingStartOptions = nil; // an explicit stop cancels a pending restart
+    NSUInteger generation = ++_commandGeneration;
+
     __weak typeof(self) weakSelf = self;
     // Load-only: no configuration registered means there is nothing to stop,
     // and creating one here would prompt every user on every launch.
     [self findManagerWithCompletion:^(NETransparentProxyManager * _Nullable manager, NSError * _Nullable error) {
         __strong typeof(self) strongSelf = weakSelf;
-        if (!strongSelf || !manager) { return; }
-        strongSelf->_pendingStartOptions = nil; // an explicit stop cancels a pending restart
+        if (!strongSelf || !manager || generation != strongSelf->_commandGeneration) { return; }
         strongSelf->_lastManager = manager;
         [strongSelf ensureObservingVPNStatus];
         // Triggers -[STProxyProvider stopProxyWithReason:completionHandler:] on the extension side.

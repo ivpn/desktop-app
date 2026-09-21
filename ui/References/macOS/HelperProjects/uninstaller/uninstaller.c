@@ -2,6 +2,7 @@
 #include <Security/Security.h>
 #include <syslog.h>
 #include <string.h>
+#include <unistd.h>
 
 #define HELPER_LABEL "net.ivpn.client.Helper"
 #define HELPER_INSTALLED_PLIST_PATH "/Library/LaunchDaemons/net.ivpn.client.Helper.plist"
@@ -301,6 +302,9 @@ int quitApp() {
     system( "/usr/bin/osascript -e 'display alert \"IVPN Uninstaller\" message \"Please, close IVPN application and try again.\"'");
     return 4;
   }
+  // 'quit app' returns as soon as the quit event is delivered; the app may still be
+  // running (confirmation dialogs, Split Tunnel session shutdown). Wait for it to exit.
+  for (int i = 0; i < 20 && system("/usr/bin/pgrep -xq IVPN") == 0; i++) usleep(500000);
   return 0;
 }
 
@@ -310,6 +314,13 @@ int deactivateSplitTunnelExtension() {
   printf("[ ] Deactivating Split Tunnel system extension...\n");
   if (system("/usr/bin/open -n -W -a \"/Applications/IVPN.app\" --args st-deactivate-and-quit"))
     logmes(LOG_WARNING, "WARNING: Split Tunnel extension deactivation did not complete cleanly (continuing uninstall).");
+
+  // The app is about to be deleted; an extension that is still registered can then
+  // only be removed by hand, so tell the user how.
+  if (system("/usr/bin/systemextensionsctl list 2>/dev/null | /usr/bin/grep 'ivpn-ui.SplitTunnel' | /usr/bin/grep -q 'activated enabled'") == 0) {
+    logmes(LOG_WARNING, "WARNING: Split Tunnel system extension is still active.");
+    system("/usr/bin/osascript -e 'display alert \"IVPN Uninstaller\" message \"The Split Tunnel system extension could not be deactivated.\n\nTo remove it manually, open System Settings > General > Login Items & Extensions > Network Extensions and remove IVPN Split Tunnel.\"'");
+  }
   return 0;
 }
 

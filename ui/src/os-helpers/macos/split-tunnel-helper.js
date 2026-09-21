@@ -39,7 +39,7 @@ export default {
 };
 
 import { Platform, PlatformEnum } from "@/platform/platform";
-import { SplitTunnelMacExtStateEnum } from "@/store/types";
+import { SplitTunnelMacExtStateEnum, DaemonConnectionType } from "@/store/types";
 import store from "@/store";
 
 // Set by StopAndWait(); invoked from the addon.onStateChanged() handler in
@@ -101,6 +101,7 @@ function Init(onStateChangedCallback) {
   // the daemon's SplitTunnelStatus payload is identical whether the VPN is up
   // or down, so it alone never signals a transition.
   const stRetriggerMutations = [
+    "daemonConnectionState",
     "vpnState/splitTunnelling",
     "vpnState/connectionState",
     "vpnState/connectionInfo",
@@ -152,6 +153,11 @@ let _lastAppliedConfig = null;
 
 // Maps the daemon's SplitTunnelStatus shape onto the addon's start options.
 function applyDaemonStatus(status) {
+  // While the daemon is not connected the store holds defaults, not facts
+  // (every connect attempt resets the VPN state to "disconnected"), so acting
+  // on them would stop the session on every reconnect. The real state arrives
+  // with the connection and re-triggers this via "daemonConnectionState".
+  if (store.state.daemonConnectionState !== DaemonConnectionType.Connected) return;
   if (!status) return;
   if (!status.IsEnabled) {
     Stop();

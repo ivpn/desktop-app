@@ -99,21 +99,28 @@ if (process.argv.find(arg => arg === 'uninstall-agent')) {
   // removing /Applications/IVPN.app. Runs as a throwaway process after main app quits.
   console.log("'st-deactivate-and-quit' argument detected. Deactivating Split Tunnel extension and exiting...");
   splitTunnelHelperMacOS.UninstallExtensionAndWait(() => app.quit());
-  setTimeout(() => app.quit(), 10000); // safety net only - in case the addon never reports completion
+  // Safety net only - in case the addon never reports completion. Deactivation
+  // can wait on the OS administrator password prompt, so this must be generous.
+  setTimeout(() => app.quit(), 120000);
   isAllowedToStart = false;
 }
 
-// Only one instance of application can be started
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  console.log("Another instance of application is running.");
-  app.quit();
-} else {
-  app.on("second-instance", () => {
-    // Someone tried to run a second instance, we should focus our window.
-    console.log("The second app instance was tried to start.");
-    menuOnShow();
-  });
+// Only one instance of application can be started.
+// Maintenance runs (isAllowedToStart == false) do not take part: they must not
+// be turned away because the main instance has not finished quitting yet.
+let gotTheLock = false;
+if (isAllowedToStart) {
+  gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    console.log("Another instance of application is running.");
+    app.quit();
+  } else {
+    app.on("second-instance", () => {
+      // Someone tried to run a second instance, we should focus our window.
+      console.log("The second app instance was tried to start.");
+      menuOnShow();
+    });
+  }
 }
 
 // Specify locale. We do not use other languages, so we can remove all other languages from "locales" folder in production build

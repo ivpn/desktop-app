@@ -19,6 +19,7 @@
 #import <errno.h>
 #import <grp.h>
 #import <string.h>
+#import <sys/resource.h>
 #import <unistd.h>
 #import "STLog.h"
 
@@ -39,6 +40,27 @@ static void SwitchToSplitTunnelGroup(void) {
         return;
     }
     STLogInfo(@"Running under group '%s' (gid %d)", groupName, (int)grp->gr_gid);
+}
+
+// Every relayed TCP flow and every UDP peer costs one socket. The default
+// soft limit (256) is exhausted by a single browser; past it every new
+// excluded flow fails with EMFILE. OPEN_MAX is the highest value the kernel
+// accepts for the soft limit.
+static void RaiseFileDescriptorLimit(void) {
+    struct rlimit limit;
+    if (getrlimit(RLIMIT_NOFILE, &limit) != 0) {
+        STLogError(@"getrlimit(RLIMIT_NOFILE) failed (%s)", strerror(errno));
+        return;
+    }
+    rlim_t target = (limit.rlim_max == RLIM_INFINITY || limit.rlim_max > OPEN_MAX) ? OPEN_MAX : limit.rlim_max;
+    if (limit.rlim_cur < target) {
+        limit.rlim_cur = target;
+        if (setrlimit(RLIMIT_NOFILE, &limit) != 0) {
+            STLogError(@"setrlimit(RLIMIT_NOFILE, %llu) failed (%s)", (unsigned long long)target, strerror(errno));
+            return;
+        }
+    }
+    STLogInfo(@"File descriptor limit: %llu", (unsigned long long)limit.rlim_cur);
 }
 
 int main(int argc, char *argv[]) {
@@ -65,6 +87,7 @@ int main(int argc, char *argv[]) {
         STLogSetMinLevel(STLogLevelDebug);
 
         SwitchToSplitTunnelGroup();
+        RaiseFileDescriptorLimit();
 
         [NEProvider startSystemExtensionMode];
     }
