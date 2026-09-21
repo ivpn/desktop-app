@@ -102,8 +102,17 @@ func (s *Service) implSplitTunnelling_AddApp(binaryFile string) (requiredCmdToEx
 	if isMacOwnAppBundlePath(binaryFile) {
 		return "", false, fmt.Errorf("Split-Tunnelling for IVPN binaries is forbidden (%s)", binaryFile)
 	}
-	if _, err := os.Stat(binaryFile); os.IsNotExist(err) {
+	// Accept only an application bundle or an executable file. The extension
+	// applies a prefix match to bundles, so a plain directory (e.g. "/") in the
+	// list would exclude every process on the machine.
+	fi, err := os.Stat(binaryFile)
+	if err != nil {
 		return "", false, err
+	}
+	isBundle := fi.IsDir() && strings.HasSuffix(binaryFile, ".app")
+	isExecutable := fi.Mode().IsRegular() && fi.Mode()&0111 != 0
+	if !isBundle && !isExecutable {
+		return "", false, fmt.Errorf("not an application bundle or an executable file: %s", binaryFile)
 	}
 
 	prefs := s._preferences

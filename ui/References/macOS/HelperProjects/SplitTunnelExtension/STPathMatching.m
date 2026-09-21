@@ -33,8 +33,10 @@ BOOL STPathMatchesAny(NSString *path, NSArray<NSString *> *excludedPaths) {
     if (path.length == 0) { return NO; }
     for (NSString *candidate in excludedPaths) {
         if ([path isEqualToString:candidate]) { return YES; }
-        NSString *prefix = [candidate hasSuffix:@"/"] ? candidate : [candidate stringByAppendingString:@"/"];
-        if ([path hasPrefix:prefix]) { return YES; }
+        // Only an application bundle covers the binaries inside it. Anything
+        // else must match exactly, so a plain directory (e.g. "/") in the
+        // list can never match every process on the machine.
+        if ([candidate hasSuffix:@".app"] && [path hasPrefix:[candidate stringByAppendingString:@"/"]]) { return YES; }
     }
     return NO;
 }

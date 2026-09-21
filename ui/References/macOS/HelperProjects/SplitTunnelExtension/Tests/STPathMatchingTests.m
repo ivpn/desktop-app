@@ -64,11 +64,13 @@ static void KillIfSpawned(pid_t pid) {
 }
 
 static void TestPathMatching(void) {
-    NSArray *excluded = @[@"/Applications/Firefox.app", @"/usr/bin/curl"];
+    NSArray *excluded = @[@"/Applications/Firefox.app", @"/usr/bin/curl", @"/", @"/usr/local"];
     EXPECT(STPathMatchesAny(@"/Applications/Firefox.app/Contents/MacOS/firefox", excluded), @"bundle prefix");
     EXPECT(STPathMatchesAny(@"/usr/bin/curl", excluded), @"bare executable, exact");
     EXPECT(!STPathMatchesAny(@"/usr/bin/curl-config", excluded), @"bare executable is not a prefix");
     EXPECT(!STPathMatchesAny(@"/Applications/Firefox.app.bak/x", excluded), @"bundle prefix needs a separator");
+    EXPECT(!STPathMatchesAny(@"/usr/local/bin/tool", excluded), @"plain directory is not a prefix");
+    EXPECT(!STPathMatchesAny(@"/bin/ls", excluded), @"root directory is not a prefix");
     EXPECT(!STPathMatchesAny(nil, excluded), @"nil path");
     EXPECT(!STPathMatchesAny(@"/x", @[]), @"empty list");
 }
