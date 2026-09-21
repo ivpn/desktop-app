@@ -25,7 +25,13 @@ package cliplatform
 import "runtime"
 
 func IsSplitTunSupported() bool {
-	return runtime.GOOS == "windows" || runtime.GOOS == "linux"
+	return runtime.GOOS == "windows" || runtime.GOOS == "linux" || runtime.GOOS == "darwin"
+}
+
+// IsSplitTunAppBundles reports whether applications are added as '.app'
+// bundle directories rather than executable files (macOS).
+func IsSplitTunAppBundles() bool {
+	return runtime.GOOS == "darwin"
 }
 func IsSplitTunRunsApp() bool {
 	if !IsSplitTunSupported() {

@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -99,18 +100,23 @@ func doAddApp(args []string, eaaPass string, isHashedPass bool) error {
 	// Description of Split Tunneling commands sequence to run the application:
 	//	[client]					          [daemon]
 	//	SplitTunnelAddApp		    ->
-	//							            <-	windows:	types.EmptyResp (success)
-	//							            <-	linux:		types.SplitTunnelAddAppCmdResp (some operations required on client side)
-	//	<windows: done>
+	//							            <-	windows/macOS:	types.EmptyResp (success)
+	//							            <-	linux:			types.SplitTunnelAddAppCmdResp (some operations required on client side)
+	//	<windows/macOS: done>
 	// 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
 	//  SplitTunnelAddedPidInfo	->
 	// 							            <-	types.EmptyResp (success)
 
-	binary := args[0]
-
-	binary, err := exec.LookPath(binary)
+	binary, err := exec.LookPath(args[0])
 	if err != nil {
-		return err
+		// macOS: an application bundle ('.app') is a directory, not an executable file
+		info, statErr := os.Stat(args[0])
+		if !cliplatform.IsSplitTunAppBundles() || statErr != nil || !info.IsDir() {
+			return err
+		}
+		if binary, err = filepath.Abs(args[0]); err != nil {
+			return err
+		}
 	}
 
 	if len(eaaPass) > 0 {
@@ -123,7 +129,7 @@ func doAddApp(args []string, eaaPass string, isHashedPass bool) error {
 
 	// Quote the resolved binary path when it contains spaces.
 	// The Linux daemon parses Exec as a command string and requires quoting.
-	// The Windows daemon strips surrounding quotes before using the path (see implSplitTunnelling_AddApp).
+	// The Windows and macOS daemons strip surrounding quotes before using the path (see implSplitTunnelling_AddApp).
 	execBin := binary
 	if strings.ContainsAny(execBin, " \t") {
 		execBin = `"` + strings.ReplaceAll(execBin, `"`, `\"`) + `"`
@@ -135,7 +141,7 @@ func doAddApp(args []string, eaaPass string, isHashedPass bool) error {
 	}
 
 	if !isRequiredToExecuteCommand {
-		// (Windows) Success. No other operations required
+		// (Windows, macOS) Success. No other operations required
 		return nil
 	}
 
@@ -201,10 +207,15 @@ func (c *SplitTun) Init() {
 	c.BoolVar(&c.status, "status", false, "(default) Show Split Tunnel status and configuration")
 
 	if !cliplatform.IsSplitTunRunsApp() {
-		// Windows
+		// Windows, macOS
 		c.BoolVar(&c.reset, "clean", false, "Erase configuration (remove applications from configuration and disable Split Tunnel)")
-		c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to binary)")
-		c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to binary)")
+		if cliplatform.IsSplitTunAppBundles() {
+			c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to the application bundle)\nExample:\n    ivpn splittun -appadd /Applications/Firefox.app")
+			c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to the application bundle)")
+		} else {
+			c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to binary)")
+			c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to binary)")
+		}
 	} else {
 		// Linux
 		c.BoolVar(&c.statusFull, "status_full", false, "(extended status info) Show detailed Split Tunnel status")
