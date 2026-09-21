@@ -61,8 +61,8 @@ static BOOL STReadProcessInfo(pid_t pid, struct proc_bsdinfo *info) {
     return proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, info, sizeof(*info)) == (int)sizeof(*info);
 }
 
-// A process cannot be older than its parent. If it is, the ppid we read
-// belongs to an unrelated process that was assigned the recycled pid.
+// A process cannot be older than its parent or its responsible process. If
+// it is, the pid we read was recycled and now names an unrelated process.
 static BOOL STStartedAfter(const struct proc_bsdinfo *a, const struct proc_bsdinfo *b) {
     if (a->pbi_start_tvsec != b->pbi_start_tvsec) {
         return a->pbi_start_tvsec > b->pbi_start_tvsec;
@@ -79,22 +79,27 @@ NSString * STAncestorPathMatchingAny(pid_t pid, NSArray<NSString *> *excludedPat
         return nil;
     }
 
+    struct proc_bsdinfo child;
+    if (!STReadProcessInfo(pid, &child)) {
+        return nil; // the process is already gone
+    }
+
     // 1. Responsible process. One syscall, and the most likely match: for a
-    //    whole tree of helpers it is the top-level app itself.
+    //    whole tree of helpers it is the top-level app itself. The kernel
+    //    keeps this pid after the process exits, hence the start-time check.
     pid_t responsible = STResponsibleProcessForPid(pid);
     if (responsible > 1 && responsible != pid) {
-        NSString *path = STExecutablePathForPid(responsible);
-        if (STPathMatchesAny(path, excludedPaths)) {
-            return path;
+        struct proc_bsdinfo info;
+        if (STReadProcessInfo(responsible, &info) && !STStartedAfter(&info, &child)) {
+            NSString *path = STExecutablePathForPid(responsible);
+            if (STPathMatchesAny(path, excludedPaths)) {
+                return path;
+            }
         }
     }
 
     // 2. Parent chain, for excluded bare executables in the middle of a tree
     //    and as the fallback when the responsible-process API is missing.
-    struct proc_bsdinfo child;
-    if (!STReadProcessInfo(pid, &child)) {
-        return nil; // the process is already gone
-    }
     for (int depth = 0; depth < kMaxAncestryDepth; depth++) {
         pid_t parentPid = child.pbi_ppid;
         if (parentPid <= 1) {
