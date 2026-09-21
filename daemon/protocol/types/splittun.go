@@ -169,4 +169,3 @@ type SplitTunnelMacExtensionState struct {
 	IsReady bool
 	Reason  string // description of why not, when IsReady == false
 }
-

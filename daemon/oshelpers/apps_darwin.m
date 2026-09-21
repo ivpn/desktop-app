@@ -30,9 +30,8 @@
 #include <string.h>
 #import <AppKit/AppKit.h>
 
-int app_bundle_info(const char *bundlePath, char **outDisplayName, char **outExecutableName) {
+int app_bundle_info(const char *bundlePath, char **outDisplayName) {
     if (outDisplayName) *outDisplayName = NULL;
-    if (outExecutableName) *outExecutableName = NULL;
     if (!bundlePath) return 1;
 
     @autoreleasepool {
@@ -44,10 +43,6 @@ int app_bundle_info(const char *bundlePath, char **outDisplayName, char **outExe
         if (displayName.length == 0) displayName = [bundle objectForInfoDictionaryKey:@"CFBundleName"];
         if (displayName.length == 0) displayName = [[path lastPathComponent] stringByDeletingPathExtension];
         if (outDisplayName) *outDisplayName = strdup(displayName.UTF8String);
-
-        NSString *executable = [bundle objectForInfoDictionaryKey:@"CFBundleExecutable"];
-        if (executable.length > 0 && outExecutableName) *outExecutableName = strdup(executable.UTF8String);
-
         return 0;
     }
 }

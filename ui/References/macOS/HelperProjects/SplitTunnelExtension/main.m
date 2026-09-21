@@ -22,10 +22,9 @@
 #import <unistd.h>
 #import "STLog.h"
 
-// Must match 'extensionGroupName' in daemon/splittun/splittun_darwin.go (the daemon
-// creates this group). The IVPN firewall allows the traffic relayed by this extension
-// to leave over the physical interface by matching on this group; every other way out
-// of the tunnel stays blocked. Must be done before any socket is created.
+// The group is created by the IVPN daemon. The IVPN firewall lets the traffic of this
+// group leave over the physical interface while every other way out of the tunnel stays
+// blocked, so the switch must happen before any socket is created.
 static void SwitchToSplitTunnelGroup(void) {
     static const char *groupName = "ivpn-st";
 

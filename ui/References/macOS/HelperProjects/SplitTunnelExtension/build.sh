@@ -20,8 +20,7 @@ function CheckLastResult
   fi
 }
 
-# Must match CFBundleIdentifier in Info.plist
-_BUNDLE_ID="com.electron.ivpn-ui.SplitTunnel"
+_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "${_SCRIPT_DIR}/Info.plist")"
 
 _VERSION=""
 # Embedded provisioning profile: optional here - a dev/CI build can skip it, but a real

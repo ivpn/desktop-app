@@ -120,7 +120,8 @@ done
 # the Split Tunnel system extension - overwriting its distinct entitlements
 # (NetworkExtension/App Groups only, no Hardened Runtime relaxations) with
 # build_HarderingEntitlements.plist's. Re-sign it here to restore the correct ones.
-_ST_EXT_BUNDLE="${_IMAGE_DIR}/IVPN.app/Contents/Library/SystemExtensions/com.electron.ivpn-ui.SplitTunnel.systemextension"
+_ST_EXT_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "HelperProjects/SplitTunnelExtension/Info.plist")"
+_ST_EXT_BUNDLE="${_IMAGE_DIR}/IVPN.app/Contents/Library/SystemExtensions/${_ST_EXT_BUNDLE_ID}.systemextension"
 if [ -d "${_ST_EXT_BUNDLE}" ]; then
   echo "[+] Re-signing Split Tunnel system extension (own entitlements)..."
   codesign --verbose=4 --force --timestamp --sign "${_SIGN_CERT}" --options runtime \

@@ -155,7 +155,7 @@
           <!-- functionality description: MACOS -->
           <div v-else-if="isMacOS">
             <p>
-              <span style="font-weight: bold">Permanent limitations:</span>
+              <span style="font-weight: bold">Limitations:</span>
               Safari and other WebKit-based browsers cannot be excluded (their
               network traffic is attributed to WebKit's own processes, not the
               browser app). Raw-socket traffic such as <i>ping</i> is not
@@ -206,7 +206,7 @@
 
     <!-- MACOS: kill switch interaction disclosure (not cosmetic - always shown while enabled) -->
     <div v-if="isMacOS && IsEnabled" class="warningBlock" tabindex="0">
-      While Split Tunneling is enabled, applications that ignore the VPN routing
+      While Split Tunnel is enabled, applications that ignore the VPN routing
       (such as iMessage or FaceTime on some macOS versions) may be unable to
       connect when the IVPN Firewall is enabled.
     </div>

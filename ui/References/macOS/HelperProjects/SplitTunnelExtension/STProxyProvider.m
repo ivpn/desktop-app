@@ -5,7 +5,7 @@
 //  per-flow exclude/pass-through decision. The actual relaying is split out
 //  into STProxyProvider+TCPRelay.m / STProxyProvider+UDPRelay.m.
 //
-//  Settings (excluded-app list, mode, interface) are applied only via
+//  Settings (excluded-app list, interface) are applied only via
 //  startProxyWithOptions: - NETransparentProxyProvider does not reliably
 //  deliver app messages sent while a session is already running, so the
 //  host applies any change by stopping and restarting the session with new
@@ -33,12 +33,12 @@
 // STUDPFlowState is implemented in STProxyProvider+UDPRelay.m, next to its
 // only consumer.
 
-// Every IVPN-shipped binary (daemon, UI, CLI, wireguard-go, openvpn,
-// obfs4proxy, v2ray, dnscrypt-proxy, kem-helper) and this extension itself
-// live under this one bundle - relaying our own VPN/daemon traffic would
-// create an immediate routing loop, so this is checked before anything else
-// in -handleNewFlow:, regardless of what the (host-supplied) excludedPaths
-// list contains.
+// Every IVPN-shipped binary (daemon, UI, CLI, VPN backends) lives under this
+// one bundle - relaying IVPN's own traffic would create an immediate routing
+// loop, so this is checked before anything else in -handleNewFlow:,
+// regardless of what the host-supplied excludedPaths list contains. (The
+// activated extension itself runs from /Library/SystemExtensions and is never
+// offered its own flows by NetworkExtension.)
 static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
 
 @implementation STProxyProvider
@@ -62,7 +62,7 @@ static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
 // Called once when the host starts the proxy session. This is where we
 // tell the OS which traffic to even offer us via -handleNewFlow: below -
 // nothing is intercepted until this succeeds.
-// [Invoked] Invoked by the OS in response to the host app calling `session
+// Invoked by the OS in response to the host app calling `session
 // startTunnelWithOptions:` - never merely as a result of saving/reloading
 // the proxy configuration, which starts nothing on its own.
 - (void)startProxyWithOptions:(NSDictionary<NSString *, id> *)options
@@ -90,7 +90,8 @@ static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
     // state has a head start on the first flows that arrive once
     // interception turns on, below.
     [self.interfaceSelector start];
-    STLogInfo(@"Starting proxy, excludedPaths=%@", self.excludedPaths);
+    STLogInfo(@"Starting proxy, %lu excluded path(s)", (unsigned long)self.excludedPaths.count);
+    STLogDebug(@"excludedPaths=%@", self.excludedPaths);
 
     NETransparentProxyNetworkSettings *settings =
         [[NETransparentProxyNetworkSettings alloc] initWithTunnelRemoteAddress:@"127.0.0.1"];
@@ -153,7 +154,7 @@ static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
     }];
 }
 
-// [Invoked] Invoked by the OS in response to the host app calling `session stopTunnel`.
+// Invoked by the OS in response to the host app calling `session stopTunnel`.
 - (void)stopProxyWithReason:(NEProviderStopReason)reason
            completionHandler:(void (^)(void))completionHandler {
     STLogInfo(@"Stopping proxy (reason=%ld), closing %lu active flow(s)", (long)reason, (unsigned long)[self st_activeFlowsSnapshot].count);
@@ -252,7 +253,7 @@ static const NSTimeInterval kUDPIdleSweepInterval = 60.0;
 
 - (void)st_startUDPIdleWatchdog {
     if (_udpIdleWatchdog) { return; } // already running
-    dispatch_queue_t queue = dispatch_queue_create("udp.idle-watchdog", DISPATCH_QUEUE_SERIAL);
+    dispatch_queue_t queue = dispatch_queue_create("net.ivpn.splittunnel.udp-idle-watchdog", DISPATCH_QUEUE_SERIAL);
     dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, queue);
     dispatch_source_set_timer(timer,
                                dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kUDPIdleSweepInterval * NSEC_PER_SEC)),

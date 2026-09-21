@@ -23,6 +23,7 @@
 package splittun
 
 import (
+	"errors"
 	"fmt"
 	"os/user"
 	"strconv"
@@ -33,17 +34,12 @@ import (
 	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
-// macOS does not implement Split Tunnel in the daemon itself: the actual
-// interception/relaying happens in a NETransparentProxyProvider system
-// extension, driven from the Electron main process (ui/addons/split-tunnel-macos)
-// because OSSystemExtensionManager/NETransparentProxyManager require a
-// user-session process inside an app bundle - the root daemon cannot call
-// either API. Everything the extension needs (enabled state, inverse flag,
-// app list) already flows to the UI unchanged via the existing
-// cross-platform SplitTunnelStatus fields, so this file has nothing left to
-// resolve - it only checks OS-version availability and tells the firewall to
-// adjust its intentional-routing rules (see implApplyConfig() below and
-// firewall_darwin.go's ApplySplitTunnelRouting()).
+// On macOS, Split Tunnel is implemented by a NETransparentProxyProvider system extension
+// driven from the Electron main process (ui/addons/split-tunnel-macos): the
+// OSSystemExtensionManager/NETransparentProxyManager APIs require a user-session process
+// inside an app bundle, which the root daemon is not. The extension receives its
+// configuration through the cross-platform SplitTunnelStatus. The daemon only validates
+// the OS version and adjusts the firewall rules (firewall.ApplySplitTunnelRouting).
 
 // The Split Tunnel extension changes its group to this one on start. It is the only
 // way for the firewall to distinguish the traffic relayed by the extension (which has
@@ -58,9 +54,8 @@ var (
 	// GID of 'extensionGroupName' (0 if the group is not available)
 	extensionGroupId int
 
-	// Milestone 1 ships exclusion mode only - inverse mode is a separate,
-	// later milestone.
-	inverseModeNotAvailableError = fmt.Errorf("Inverse Split Tunnel is not yet supported on macOS")
+	// Inverse mode is not implemented on macOS.
+	inverseModeNotAvailableError = errors.New("Inverse Split Tunnel mode is not supported on macOS")
 )
 
 func implInitialize() error {
@@ -130,12 +125,8 @@ func implReset() error {
 	return nil
 }
 
-// The extension is driven entirely from the Electron main process
-// (ui/addons/split-tunnel-macos), which already gets the enabled/inverse
-// flags and app list via the existing SplitTunnelStatus fields - there is
-// nothing left for the daemon to resolve or store here. The only real
-// daemon-side effect is updating the firewall rules for the traffic of the
-// extension (see firewall_darwin.go).
+// The only daemon-side effect of the configuration is the firewall rule set for the
+// extension's traffic (see firewall_darwin.go); the extension itself is configured by the UI.
 func implApplyConfig(isStEnabled, isStInversed, isStInverseAllowWhenNoVpn, isVpnEnabled bool, addrConfig ConfigAddresses, splitTunnelApps []string) error {
 	mutexMac.Lock()
 	stGroupId := 0
@@ -157,4 +148,3 @@ func implRemovePid(pid int) error {
 func implGetRunningApps() ([]RunningApp, error) {
 	return nil, nil
 }
-

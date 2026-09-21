@@ -23,7 +23,6 @@
 package openvpn
 
 import (
-	"fmt"
 	"net"
 
 	"github.com/ivpn/desktop-app/daemon/netinfo"
@@ -51,13 +50,13 @@ func (o *OpenVPN) implOnConnected() error {
 	if err != nil || gatewayIP == nil || len(interfaceName) == 0 {
 		// Not fatal: only Split Tunnel needs this route, so a failure here must not
 		// bring down an otherwise healthy VPN connection.
-		log.Warning(fmt.Sprintf("unable to determine the default route (%v): Split Tunnel will not work for this connection", err))
+		log.Warning("unable to determine the default route (", err, "): Split Tunnel will not work for this connection")
 		return nil
 	}
 
 	// sudo route -n add -inet default 192.168.1.1 -ifscope en0
 	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", gatewayIP.String(), "-ifscope", interfaceName); err != nil {
-		log.Warning(fmt.Sprintf("failed to add the interface-scoped default route for '%s' (%v): Split Tunnel will not work for this connection", interfaceName, err))
+		log.Warning("failed to add the interface-scoped default route for '", interfaceName, "' (", err, "): Split Tunnel will not work for this connection")
 		return nil
 	}
 
@@ -73,7 +72,7 @@ func (o *OpenVPN) implOnDisconnected() error {
 
 	if err := shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "default",
 		o.psProps.scopedDefaultGateway.String(), "-ifscope", o.psProps.scopedDefaultInterface); err != nil {
-		log.Warning(fmt.Sprintf("failed to delete the interface-scoped default route for '%s': %v", o.psProps.scopedDefaultInterface, err))
+		log.Warning("failed to delete the interface-scoped default route for '", o.psProps.scopedDefaultInterface, "': ", err)
 	}
 
 	o.psProps.scopedDefaultGateway = nil

@@ -276,7 +276,7 @@ cp -R "${_HELPERS}/uninstaller/bin/${ARCH_TARGET}/IVPN Installer.app"   "${_D}" 
 cp -R "${_HELPERS}/uninstaller/bin/${ARCH_TARGET}/IVPN Uninstaller.app" "${_PATH_IMAGE_FOLDER}"   || CheckLastResult
 
 echo "[+] Copying Split Tunnel system extension..."
-_ST_EXT_BUNDLE_ID="com.electron.ivpn-ui.SplitTunnel" # must match SplitTunnelExtension/Info.plist
+_ST_EXT_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "${_HELPERS}/SplitTunnelExtension/Info.plist")"
 mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/Library/SystemExtensions"
 cp -R "${_HELPERS}/SplitTunnelExtension/bin/${ARCH_TARGET}/${_ST_EXT_BUNDLE_ID}.systemextension" \
       "${_PATH_UI_COMPILED_IMAGE}/Contents/Library/SystemExtensions/" || CheckLastResult

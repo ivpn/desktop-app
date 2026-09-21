@@ -208,7 +208,7 @@ static const nw_interface_type_t kPhysicalInterfaceType = nw_interface_type_wifi
 // value that isn't recognized - the only interface-selection failure that
 // still aborts the whole proxy start, since it can never self-heal by
 // waiting (see -resolveFromOptions: below).
-static NSString * const kSTInterfaceSelectionErrorDomain = @"STProxyProvider.InterfaceSelection";
+static NSString * const kSTInterfaceSelectionErrorDomain = @"STPhysicalInterfaceSelector";
 
 // Which precedence tier -resolveFromOptions: locked in for this session -
 // drives which nw_path_monitor_t(s) -start keeps alive for the rest of it.
@@ -282,8 +282,8 @@ typedef struct {
 //      BSD name ("en0") or a local IP address currently assigned to one.
 //      A hard requirement: an explicitly requested interface that is down
 //      blocks excluded-app traffic rather than silently using another one.
-//      NOT CURRENTLY SUPPLIED BY THE HOST - kept working (and proven in the
-//      PoC) for a future "always relay over this interface" setting.
+//      Not supplied by the host today; reserved for a future "always relay
+//      over this interface" setting.
 //   2. `physicalInterfaceType` option - "wired" or "wifi". A manual override;
 //      normally absent.
 //   3. Auto-detect (today's only live path): the interface owning the
@@ -291,13 +291,12 @@ typedef struct {
 //      network change - see STDefaultRouteInterfaceName above. Falls back to
 //      whichever of wired/Wi-Fi is up (wired preferred) if that lookup fails.
 //
-// Tier 3 deliberately does NOT take the interface from the host: the daemon
-// can only re-resolve it when the VPN state changes, so a plain network
-// change (docking from Wi-Fi to Ethernet while WireGuard stays connected)
-// would leave a host-supplied value permanently stale. Resolving it here
-// means the path monitor that notices the change is also what refreshes the
-// answer. Tier 1 is exempt from that reasoning: it is an explicit standing
-// choice, not a snapshot of current network state.
+// Tier 3 deliberately does NOT take the interface from the host: a
+// host-supplied value would go stale on a plain network change (docking from
+// Wi-Fi to Ethernet while the VPN stays up). Resolving it here means the path
+// monitor that notices the change is also what refreshes the answer. Tier 1
+// is exempt from that reasoning: it is an explicit standing choice, not a
+// snapshot of current network state.
 //
 // This only picks the TIER/parameters - it never blocks or checks live
 // availability (that's -start's job, kept alive for the whole session so a
@@ -344,11 +343,11 @@ typedef struct {
 #pragma mark - Live monitoring
 
 // Starts whichever persistent nw_path_monitor_t(s) _selectionMode needs to
-// keep _pinnedInterfaceHandle/_requiredInterfaceType/_requirementSatisfied
+// keep _resolvedInterfaceHandle/_requiredInterfaceType/_requirementSatisfied
 // live for the rest of the session. Callbacks run on their own queue and
 // only ever touch state through _lock.
 - (void)start {
-    dispatch_queue_t queue = dispatch_queue_create("st.interface-monitor", DISPATCH_QUEUE_SERIAL);
+    dispatch_queue_t queue = dispatch_queue_create("net.ivpn.splittunnel.interface-monitor", DISPATCH_QUEUE_SERIAL);
     __weak typeof(self) weakSelf = self;
 
     switch (_selectionMode) {

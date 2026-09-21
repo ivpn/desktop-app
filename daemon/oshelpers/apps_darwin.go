@@ -9,7 +9,7 @@ package oshelpers
 
 #include <stdlib.h>
 
-int app_bundle_info(const char *bundlePath, char **outDisplayName, char **outExecutableName);
+int app_bundle_info(const char *bundlePath, char **outDisplayName);
 int app_icon_png(const char *bundlePath, int maxSizePx, unsigned char **outData, long *outLen);
 void app_free(void *ptr);
 */
@@ -74,7 +74,7 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 				continue // never offer IVPN's own app as a Split-Tunnel candidate
 			}
 
-			displayName, _ := appBundleInfo(bundlePath)
+			displayName := appBundleInfo(bundlePath)
 			if len(displayName) == 0 {
 				displayName = strings.TrimSuffix(e.Name(), ".app")
 			}
@@ -104,24 +104,20 @@ func getBinaryIconBase64(binaryPath string) (string, error) {
 
 // appBundleInfo reads CFBundleDisplayName/CFBundleName (falling back to the
 // executable name) via NSBundle, which transparently handles both XML and
-// binary plist formats - no plist parser of our own needed.
-func appBundleInfo(bundlePath string) (displayName string, executableName string) {
+// binary plist formats.
+func appBundleInfo(bundlePath string) (displayName string) {
 	cBundlePath := C.CString(bundlePath)
 	defer C.free(unsafe.Pointer(cBundlePath))
 
-	var cDisplayName, cExecutableName *C.char
-	if C.app_bundle_info(cBundlePath, &cDisplayName, &cExecutableName) != 0 {
-		return "", ""
+	var cDisplayName *C.char
+	if C.app_bundle_info(cBundlePath, &cDisplayName) != 0 {
+		return ""
 	}
 	if cDisplayName != nil {
 		displayName = C.GoString(cDisplayName)
 		C.app_free(unsafe.Pointer(cDisplayName))
 	}
-	if cExecutableName != nil {
-		executableName = C.GoString(cExecutableName)
-		C.app_free(unsafe.Pointer(cExecutableName))
-	}
-	return displayName, executableName
+	return displayName
 }
 
 func appIconPNG(bundlePath string, maxSizePx int) ([]byte, error) {

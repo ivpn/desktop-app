@@ -35,7 +35,7 @@
     self = [super init];
     if (self) {
         _lock = OS_UNFAIR_LOCK_INIT;
-        _queue = dispatch_queue_create("relay.udp", DISPATCH_QUEUE_SERIAL);
+        _queue = dispatch_queue_create("net.ivpn.splittunnel.relay.udp", DISPATCH_QUEUE_SERIAL);
         _connectionsByEndpointKey = [NSMutableDictionary dictionary];
     }
     return self;
@@ -250,7 +250,7 @@
                                                     ^{ (void)data; });
     nw_connection_send(connection, payload, NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, true, ^(nw_error_t sendError) {
         if (sendError) {
-            STLogError(@"UDP send to %@ over physical interface failed: %@", label, sendError);
+            STLogDebug(@"UDP send to %@ over physical interface failed: %@", label, sendError);
         }
     });
 }

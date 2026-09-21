@@ -24,7 +24,7 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
     // just bridging the destination address/port between the two.
     NWHostEndpoint *remote = (NWHostEndpoint *)flow.remoteEndpoint;
     if (![remote isKindOfClass:[NWHostEndpoint class]] || remote.hostname.length == 0 || remote.port.length == 0) {
-        STLogError(@"Unexpected/incomplete remote endpoint (%@ %@:%@), dropping flow", NSStringFromClass([flow.remoteEndpoint class]), remote.hostname, remote.port);
+        STLogError(@"Unexpected/incomplete remote endpoint (%@), dropping flow", NSStringFromClass([flow.remoteEndpoint class]));
         [flow closeReadWithError:nil];
         [flow closeWriteWithError:nil];
         return;
@@ -37,7 +37,7 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
         // instead of dialing against a requirement that can't succeed right
         // now. Self-heals: the next new flow after the interface/type comes
         // back is relayed normally, no restart needed.
-        STLogInfo(@"Physical interface/type currently unavailable, refusing TCP flow to %@:%@", remote.hostname, remote.port);
+        STLogDebug(@"Physical interface/type currently unavailable, refusing TCP flow to %@:%@", remote.hostname, remote.port);
         [flow closeReadWithError:nil];
         [flow closeWriteWithError:nil];
         return;
@@ -62,7 +62,7 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
     // whole process - lets unrelated flows relay concurrently. Label is only
     // ever seen in the debugger/Instruments/crash logs, nothing external
     // matches on it, so a plain string is fine here.
-    dispatch_queue_t connectionQueue = dispatch_queue_create("relay.tcp", DISPATCH_QUEUE_SERIAL);
+    dispatch_queue_t connectionQueue = dispatch_queue_create("net.ivpn.splittunnel.relay.tcp", DISPATCH_QUEUE_SERIAL);
     nw_connection_set_queue(connection, connectionQueue);
 
     [self st_registerTCPFlow:flow connection:connection];
@@ -130,7 +130,7 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
         if (reachedReady) { return; }
         __strong typeof(self) strongSelf = weakSelf;
         if (!strongSelf) { return; }
-        STLogInfo(@"TCP relay to %@:%@ did not connect within %.0fs, closing the flow",
+        STLogDebug(@"TCP relay to %@:%@ did not connect within %.0fs, closing the flow",
                   remote.hostname, remote.port, kTCPConnectDeadline);
         [strongSelf teardownTCPFlow:flow connection:connection];
     });
@@ -167,7 +167,7 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
                                                         ^{ (void)data; });
         nw_connection_send(connection, payload, NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, true, ^(nw_error_t sendError) {
             if (sendError) {
-                STLogError(@"Send to physical interface failed: %@", sendError);
+                STLogDebug(@"Send to physical interface failed: %@", sendError);
                 dispatch_group_leave(doneGroup); // this direction stops here, same as a clean EOF
                 return;
             }

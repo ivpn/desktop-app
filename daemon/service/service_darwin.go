@@ -56,9 +56,6 @@ func (s *Service) implPingServersStopped(hosts []net.IP) error {
 	return firewall.RemoveHostsFromExceptions(hosts, onlyForICMP, isPersistent)
 }
 
-// macOS is path-based, like Windows: it can exclude already-running apps by
-// executable/bundle path, unlike Linux's launch-based (cgroup) model.
-
 // macOwnAppBundlePathPrefix mirrors the internal bypass list hardcoded in the
 // system extension itself (kInternalBypassPathPrefix in STProxyProvider.m) -
 // the extension enforces this unconditionally regardless of what's stored

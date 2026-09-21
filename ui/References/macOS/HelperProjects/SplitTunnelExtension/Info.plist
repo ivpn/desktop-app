@@ -19,9 +19,9 @@
 	<string>SYSX</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
-	<!-- Bump this on every release that changes extension code - macOS refuses to
-	     load a "replacement" extension with the same CFBundleVersion as the one
-	     already installed. -->
+	<!-- Placeholders: build.sh stamps both version keys with the app version, so every release
+	     carries a new CFBundleVersion (macOS does not replace an installed extension that has
+	     the same CFBundleVersion). -->
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
