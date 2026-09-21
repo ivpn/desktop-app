@@ -95,6 +95,12 @@
                 [strongSelf pumpFlow:flow toConnection:connection doneGroup:doneGroup];
                 [strongSelf pumpConnection:connection toFlow:flow doneGroup:doneGroup];
             }];
+        } else if (state == nw_connection_state_waiting) {
+            // Not an error to Network.framework - it retries forever - but to the
+            // app it is an indefinite hang, so it must not be silent. Usually means
+            // the interface we pinned to has no usable path (`error` says which).
+            STLogDebug(@"TCP relay to %@:%@ is waiting for connectivity on the physical interface: %@",
+                      remote.hostname, remote.port, error);
         } else if (state == nw_connection_state_failed || state == nw_connection_state_cancelled) {
             STLogDebug(@"TCP relay connection ended (state=%ld, error=%@)", (long)state, error);
             [strongSelf teardownTCPFlow:flow connection:connection];

@@ -231,6 +231,8 @@
         if (connState == nw_connection_state_ready) {
             [strongSelf sendData:data overConnection:connection label:key];
             [strongSelf pumpUDPConnection:connection endpoint:remote flow:flow state:state key:key];
+        } else if (connState == nw_connection_state_waiting) {
+            STLogDebug(@"UDP peer connection %@ is waiting for connectivity on the physical interface: %@", key, connError);
         } else if (connState == nw_connection_state_failed || connState == nw_connection_state_cancelled) {
             STLogDebug(@"UDP peer connection %@ ended (state=%ld, error=%@)", key, (long)connState, connError);
             [state removeConnectionForKey:key];

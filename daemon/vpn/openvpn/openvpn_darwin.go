@@ -23,23 +23,61 @@
 package openvpn
 
 import (
+	"fmt"
+	"net"
+
+	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
+	"github.com/ivpn/desktop-app/daemon/shell"
 )
 
 type platformSpecificProperties struct {
-	// no specific properties for macOS implementation
+	// The interface-scoped default route added by implOnConnected() (empty if none was added).
+	scopedDefaultGateway   net.IP
+	scopedDefaultInterface string
 }
 
 func (o *OpenVPN) implInit() error             { return nil }
 func (o *OpenVPN) implIsCanUseParamsV24() bool { return true }
 
+// Split Tunnel relays excluded apps via a socket bound to the physical interface
+// (IP_BOUND_IF), and macOS only routes such sockets using routes scoped to that
+// interface - the plain default route is ignored. OpenVPN's 'redirect-gateway def1'
+// replaces the default route with 0/1 + 128.0.0.0/1, leaving the physical interface
+// without a scoped default, so relayed traffic can't egress. Restore it here, mirroring
+// what setRoutes() does for WireGuard.
 func (o *OpenVPN) implOnConnected() error {
-	// not in use in macOS implementation
+	gatewayIP, _, interfaceName, err := netinfo.GetDefaultRouteInfo()
+	if err != nil || gatewayIP == nil || len(interfaceName) == 0 {
+		// Not fatal: only Split Tunnel needs this route, so a failure here must not
+		// bring down an otherwise healthy VPN connection.
+		log.Warning(fmt.Sprintf("unable to determine the default route (%v): Split Tunnel will not work for this connection", err))
+		return nil
+	}
+
+	// sudo route -n add -inet default 192.168.1.1 -ifscope en0
+	if err := shell.Exec(log, "/sbin/route", "-n", "add", "-inet", "default", gatewayIP.String(), "-ifscope", interfaceName); err != nil {
+		log.Warning(fmt.Sprintf("failed to add the interface-scoped default route for '%s' (%v): Split Tunnel will not work for this connection", interfaceName, err))
+		return nil
+	}
+
+	o.psProps.scopedDefaultGateway = gatewayIP
+	o.psProps.scopedDefaultInterface = interfaceName
 	return nil
 }
 
 func (o *OpenVPN) implOnDisconnected() error {
-	// not in use in macOS implementation
+	if o.psProps.scopedDefaultGateway == nil || len(o.psProps.scopedDefaultInterface) == 0 {
+		return nil
+	}
+
+	if err := shell.Exec(log, "/sbin/route", "-n", "delete", "-inet", "default",
+		o.psProps.scopedDefaultGateway.String(), "-ifscope", o.psProps.scopedDefaultInterface); err != nil {
+		log.Warning(fmt.Sprintf("failed to delete the interface-scoped default route for '%s': %v", o.psProps.scopedDefaultInterface, err))
+	}
+
+	o.psProps.scopedDefaultGateway = nil
+	o.psProps.scopedDefaultInterface = ""
 	return nil
 }
 

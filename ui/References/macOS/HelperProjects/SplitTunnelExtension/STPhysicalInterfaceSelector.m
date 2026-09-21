@@ -8,6 +8,8 @@
 #import <arpa/inet.h>
 #import <ifaddrs.h>
 #import <net/if.h>
+#import <net/if_dl.h>
+#import <net/if_types.h>
 #import <net/route.h>
 #import <netdb.h>
 #import <netinet/in.h>
@@ -45,16 +47,40 @@ static BOOL STIsZeroNetmask(struct sockaddr *mask) {
     return YES;
 }
 
+// Whether `name` is an Ethernet-class link - Wi-Fi, Ethernet, USB tethering and
+// Thunderbolt/bridge interfaces all report IFT_ETHER, while utun/ipsec tunnels
+// report IFT_OTHER. This is what tells a physical egress apart from a tunnel.
+static BOOL STIsPhysicalInterface(const char *name) {
+    struct ifaddrs *list = NULL;
+    if (getifaddrs(&list) != 0) { return NO; }
+
+    BOOL isPhysical = NO;
+    for (struct ifaddrs *ifa = list; ifa != NULL; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_LINK) { continue; }
+        if (strcmp(ifa->ifa_name, name) != 0) { continue; }
+        isPhysical = (((struct sockaddr_dl *)ifa->ifa_addr)->sdl_type == IFT_ETHER);
+        break;
+    }
+    freeifaddrs(list);
+    return isPhysical;
+}
+
 // BSD name (e.g. "en0") of the interface owning the IPv4 'default' route, or nil.
 //
 // Read straight from the kernel routing table - the same source `netstat -rn`
-// uses - because a VPN on macOS does NOT replace 'default': both OpenVPN
-// ('redirect-gateway def1') and WireGuard capture traffic with the more specific
-// '0/1' + '128/1' pair, so 'default' still names the physical interface while the
-// tunnel is up. Hence the /0-netmask test, which rejects '0/1' (mask 128.0.0.0).
+// uses. Several 'default' routes normally coexist, so picking the right one is
+// the whole job here:
 //
-// RTF_IFSCOPE entries must be skipped: a utun carries its own interface-scoped
-// 'default' that would otherwise match (verified on a live machine).
+//   - Only Ethernet-class interfaces are considered (STIsPhysicalInterface). A
+//     VPN CAN own the unscoped 'default' - verified on a live machine with a
+//     third-party tunnel present - so "the first unscoped default" is not a safe
+//     rule on its own.
+//   - RTF_IFSCOPE entries are accepted, but only as a fallback. macOS re-scopes
+//     the physical interface's 'default' to that interface once something else
+//     installs an unscoped one, so the correct answer is frequently a scoped
+//     route. Tunnels also carry scoped defaults, which the type test rejects.
+//   - The /0-netmask test rejects a VPN's '0/1' route (mask 128.0.0.0), which
+//     OpenVPN ('redirect-gateway def1') and WireGuard use to capture traffic.
 static NSString * _Nullable STDefaultRouteInterfaceName(void) {
     int mib[6] = { CTL_NET, PF_ROUTE, 0, AF_INET, NET_RT_DUMP, 0 };
     size_t needed = 0;
@@ -70,13 +96,14 @@ static NSString * _Nullable STDefaultRouteInterfaceName(void) {
         return nil;
     }
 
-    NSString *result = nil;
+    NSString *unscoped = nil;
+    NSString *scoped = nil;
     char *limit = buf + needed;
-    for (char *next = buf; next + sizeof(struct rt_msghdr) <= limit; ) {
+    for (char *next = buf; next + sizeof(struct rt_msghdr) <= limit && unscoped == nil; ) {
         struct rt_msghdr *rtm = (struct rt_msghdr *)next;
         if (rtm->rtm_msglen == 0) { break; }
         next += rtm->rtm_msglen;
-        if ((rtm->rtm_flags & RTF_UP) == 0 || (rtm->rtm_flags & RTF_IFSCOPE) != 0) { continue; }
+        if ((rtm->rtm_flags & RTF_UP) == 0) { continue; }
 
         struct sockaddr *addrs[RTAX_MAX];
         STSplitRouteAddresses(rtm->rtm_addrs, (struct sockaddr *)(rtm + 1), addrs);
@@ -86,13 +113,17 @@ static NSString * _Nullable STDefaultRouteInterfaceName(void) {
         if (((struct sockaddr_in *)dst)->sin_addr.s_addr != 0 || !STIsZeroNetmask(mask)) { continue; }
 
         char name[IF_NAMESIZE];
-        if (if_indextoname(rtm->rtm_index, name) != NULL) {
-            result = [NSString stringWithUTF8String:name];
+        if (if_indextoname(rtm->rtm_index, name) == NULL) { continue; }
+        if (!STIsPhysicalInterface(name)) { continue; }
+
+        if (rtm->rtm_flags & RTF_IFSCOPE) {
+            if (!scoped) { scoped = [NSString stringWithUTF8String:name]; }
+        } else {
+            unscoped = [NSString stringWithUTF8String:name];
         }
-        break;
     }
     free(buf);
-    return result;
+    return unscoped ?: scoped;
 }
 
 // If `addressOrName` parses as an IPv4/IPv6 literal, looks it up via
