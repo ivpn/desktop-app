@@ -10,6 +10,11 @@
 #import "STPhysicalInterfaceSelector.h"
 #import "STLog.h"
 
+// How long a relay connection may take to reach "ready" before we give up on
+// it. Deliberately below the ~75s the kernel spends retransmitting a SYN, so
+// an excluded app never waits longer than it would have without us.
+static const NSTimeInterval kTCPConnectDeadline = 30.0;
+
 @implementation STProxyProvider (TCPRelay)
 
 - (void)relayTCPFlow:(NEAppProxyTCPFlow *)flow {
@@ -62,12 +67,17 @@
 
     [self st_registerTCPFlow:flow connection:connection];
 
+    // Read/written only from `connectionQueue` (both the state-changed handler
+    // and the deadline block below run there), so no atomics needed.
+    __block BOOL reachedReady = NO;
+
     __weak typeof(self) weakSelf = self;
     nw_connection_set_state_changed_handler(connection, ^(nw_connection_state_t state, nw_error_t error) {
         __strong typeof(self) strongSelf = weakSelf;
         if (!strongSelf) { return; }
 
         if (state == nw_connection_state_ready) {
+            reachedReady = YES;
             // Only after the real connection is up do we tell NetworkExtension
             // we're accepting the flow; from this point on the app can
             // actually send/receive data through us.
@@ -108,6 +118,22 @@
     });
 
     nw_connection_start(connection);
+
+    // A connection that never finds a usable path stays in
+    // nw_connection_state_waiting forever - Network.framework retries
+    // indefinitely and never reports `failed` - so nothing above would ever
+    // fire for it. Without this the flow, its connection and its queue would
+    // stay registered for the life of the extension while the app hangs.
+    // Always fires once (dispatch_after can't be cancelled); on a healthy
+    // connection that is a single no-op check.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kTCPConnectDeadline * NSEC_PER_SEC)), connectionQueue, ^{
+        if (reachedReady) { return; }
+        __strong typeof(self) strongSelf = weakSelf;
+        if (!strongSelf) { return; }
+        STLogInfo(@"TCP relay to %@:%@ did not connect within %.0fs, closing the flow",
+                  remote.hostname, remote.port, kTCPConnectDeadline);
+        [strongSelf teardownTCPFlow:flow connection:connection];
+    });
 }
 
 // Reads a chunk from the app (the "flow") and writes it to the real network
