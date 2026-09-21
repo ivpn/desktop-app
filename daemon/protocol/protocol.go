@@ -820,6 +820,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+		if err := p.checkSplitTunnelConfigChangeAllowed(); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
 		if err := p._service.SplitTunnelling_SetConfig(req.IsEnabled, req.IsInversed, req.IsAnyDns, req.IsAllowWhenNoVpn, req.Reset); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
@@ -843,6 +847,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
 		//  SplitTunnelAddedPidInfo	->
 		// 							<-	types.EmptyResp (success)
+		if err := p.checkSplitTunnelConfigChangeAllowed(); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
 		cmdToExecute, isAlreadyRunning, err := p._service.SplitTunnelling_AddApp(req.Exec)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
@@ -869,6 +877,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 	case "SplitTunnelRemoveApp":
 		var req types.SplitTunnelRemoveApp
 		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		if err := p.checkSplitTunnelConfigChangeAllowed(); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}

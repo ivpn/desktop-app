@@ -25,6 +25,7 @@ package protocol
 import (
 	"fmt"
 	"net"
+	"runtime"
 	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/interoperability"
@@ -145,6 +146,27 @@ func (p *Protocol) clientsConnectedCount() int {
 	p._connectionsMutex.RLock()
 	defer p._connectionsMutex.RUnlock()
 	return len(p._connections)
+}
+
+func (p *Protocol) isUiClientConnected() bool {
+	p._connectionsMutex.RLock()
+	defer p._connectionsMutex.RUnlock()
+	for _, cInfo := range p._connections {
+		if cInfo.Type == ivpnclient.ClientUi && cInfo.IsAuthenticated {
+			return true
+		}
+	}
+	return false
+}
+
+// On macOS the Split Tunnel system extension is controlled by the IVPN application
+// (the daemon only stores the configuration), so a change requested while the
+// application is not running would be stored but have no effect.
+func (p *Protocol) checkSplitTunnelConfigChangeAllowed() error {
+	if runtime.GOOS != "darwin" || p.isUiClientConnected() {
+		return nil
+	}
+	return fmt.Errorf("Split Tunnel on macOS is controlled by the IVPN application: start the application and retry")
 }
 
 func (p *Protocol) getConnectionInfo(c net.Conn) (cInfo *connectionInfo) {

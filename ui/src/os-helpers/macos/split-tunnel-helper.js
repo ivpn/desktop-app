@@ -31,6 +31,7 @@ export default {
   Init,
   ApplyConfig,
   Stop,
+  StopAndWait,
   InstallExtension,
   UninstallExtension,
   UninstallExtensionAndWait,
@@ -40,6 +41,10 @@ export default {
 import { Platform, PlatformEnum } from "@/platform/platform";
 import { SplitTunnelMacExtStateEnum } from "@/store/types";
 import store from "@/store";
+
+// Set by StopAndWait(); invoked from the addon.onStateChanged() handler in
+// Init() once the session reports a stopped status.
+let _onSessionStopped = null;
 
 function isApplicable() {
   return Platform() === PlatformEnum.macOS;
@@ -72,6 +77,7 @@ function Init(onStateChangedCallback) {
     _lastExtensionState = s.extensionState;
     store.commit("uiState/splitTunnelMacOS", s);
     if (onStateChangedCallback) onStateChangedCallback(s);
+    if (_onSessionStopped && isSessionStopped(s.sessionStatus)) _onSessionStopped();
     // Activation completing is not a daemon status change, so nothing else
     // re-triggers the config applied while the extension was still installing.
     if (!wasInstalled && s.extensionState === SplitTunnelMacExtStateEnum.Installed) {
@@ -178,6 +184,30 @@ function Stop() {
   if (!addon) return;
   _lastAppliedConfig = null;
   addon.stop();
+}
+
+function isSessionStopped(sessionStatus) {
+  return sessionStatus === "disconnected" || sessionStatus === "invalid";
+}
+
+// Called by background.js on quit. The extension session outlives this
+// process and nothing else controls it (the daemon cannot), so a closed UI
+// must mean no running session - otherwise excluded apps would keep bypassing
+// the VPN (and the kill switch) with no way to change or stop it.
+// Returns false when there is nothing to stop; true when a stop was issued,
+// in which case onDone() is invoked once the session reports stopped, or
+// after a short timeout so quitting can never hang on the extension.
+function StopAndWait(onDone) {
+  const addon = getAddon();
+  if (!addon || isSessionStopped(addon.getSessionStatus())) return false;
+  _onSessionStopped = onDone;
+  // Fallback: the stopped status may never arrive (e.g. the proxy manager
+  // failed to load), and the addon's stop() is asynchronous - so quitting
+  // without waiting at all could exit before the stop request was sent.
+  // Calling onDone() twice is harmless (app.quit() is idempotent).
+  setTimeout(onDone, 3000);
+  Stop();
+  return true;
 }
 
 function InstallExtension() {

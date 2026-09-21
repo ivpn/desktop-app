@@ -71,6 +71,7 @@ let win;
 let settingsWindow;
 let updateWindow;
 let isAppReadyToQuit = false;
+let isStSessionStopRequested = false; // macOS: Split Tunnel session stop already issued on quit
 
 // Variables related to daemon reconnection logic:
 let _reconnectTimer = null; // timer for reconnecting to daemon after connection loss
@@ -503,7 +504,17 @@ if (gotTheLock && isAllowedToStart) {
     // if we are waiting to save settings - save it immediately
     SaveSettings();
 
-    if (isAppReadyToQuit == true) return; // quit
+    if (isAppReadyToQuit == true) {
+      // macOS: stop the Split Tunnel extension session before exiting (see StopAndWait)
+      if (!isStSessionStopRequested) {
+        isStSessionStopRequested = true;
+        if (splitTunnelHelperMacOS.StopAndWait(() => app.quit())) {
+          event.preventDefault();
+          return;
+        }
+      }
+      return; // quit
+    }
 
     // discard exiting
     event.preventDefault();
