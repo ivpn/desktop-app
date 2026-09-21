@@ -299,25 +299,35 @@ static const NSTimeInterval kUDPIdleSweepInterval = 60.0;
 //   - return YES -> "I'm taking this one" - we must then open the flow
 //                   ourselves and move its bytes to/from the real network.
 - (BOOL)handleNewFlow:(NEAppProxyFlow *)flow {
-    NSString *path = STExecutablePathForFlow(flow);
+    pid_t pid = STPidForFlow(flow);
+    NSString *path = STExecutablePathForPid(pid);
 
     if (STPathMatchesAny(path, @[kInternalBypassPathPrefix])) {
         // Never proxy IVPN's own traffic, regardless of excludedPaths -
         // doing so would create an immediate routing loop (see
-        // kInternalBypassPathPrefix above).
+        // kInternalBypassPathPrefix above). Decided on the flow's own path,
+        // before and independently of any ancestry match below.
         return NO;
     }
 
+    // Read the (atomic) list once so the whole decision sees one snapshot.
+    NSArray<NSString *> *excludedPaths = self.excludedPaths;
     NSString *signingIdentifier = flow.metaData.sourceAppSigningIdentifier;
-    BOOL isExcluded = STPathMatchesAny(path, self.excludedPaths) ||
+    BOOL isExcluded = STPathMatchesAny(path, excludedPaths) ||
                       (signingIdentifier.length > 0 &&
                        [self.excludedBundleIdentifiers containsObject:signingIdentifier]);
 
     // Called for every new flow on the whole machine - keep this at debug
     // level, an info-level line here would drown out everything else.
     if (!isExcluded) {
-        STLogDebug(@"Flow from %@ not excluded, passing through", path ?: signingIdentifier ?: @"(unknown)");
-        return NO;
+        // Not an excluded app itself - but it may be running on behalf of
+        // one (Terminal -> curl, Steam -> game). See STAncestorPathMatchingAny.
+        NSString *ancestorPath = STAncestorPathMatchingAny(pid, excludedPaths);
+        if (ancestorPath == nil) {
+            STLogDebug(@"Flow from %@ not excluded, passing through", path ?: signingIdentifier ?: @"(unknown)");
+            return NO;
+        }
+        STLogDebug(@"Flow from %@ excluded through its parent %@", path ?: @"(unknown)", ancestorPath);
     }
     if (path.length == 0) {
         path = signingIdentifier; // pid -> path lookup failed; log what we matched on

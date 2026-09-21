@@ -161,8 +161,10 @@
               browser app). Raw-socket traffic such as <i>ping</i> is not
               proxied and always uses the VPN. macOS system daemons acting on
               an app's behalf (e.g. Messages, FaceTime) are not attributed to
-              that app. Child processes that run outside the parent
-              application's bundle are not covered. Every settings change
+              that app. Programs started by an excluded application (for
+              example commands run from an excluded Terminal) are excluded
+              with it; applications it opens through the system (Finder,
+              <i>open</i>, login items) are not. Every settings change
               briefly interrupts already-open connections for affected
               applications while Split Tunnel restarts.
             </p>
