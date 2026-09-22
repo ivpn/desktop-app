@@ -311,27 +311,35 @@ static const NSUInteger kMaxPendingSendsPerPeer = 64;
         __strong typeof(self) strongSelf = weakSelf;
         if (!strongSelf) { return; }
 
+        void (^finishOrContinue)(void) = ^{
+            if (isComplete || receiveError) {
+                // The dictionary entry alone isn't enough - without an explicit
+                // cancel, this connection's own state-changed handler block
+                // keeps it retained forever (a real socket/memory leak, not
+                // just a theoretical one - the "failed"/"cancelled" branch above
+                // never fires on a *graceful* completion like this).
+                nw_connection_cancel(connection);
+                [state removeConnection:connection forKey:key];
+                return;
+            }
+            [strongSelf pumpUDPConnection:connection endpoint:remote flow:flow state:state key:key]; // keep receiving
+        };
+
         if (content) {
             NSData *data = (NSData *)content;
             [state touchKey:key];
+            // The next receive is issued only once the app has taken this
+            // datagram, so a peer that replies faster than the app reads cannot
+            // pile datagrams up here.
             [flow writeDatagrams:@[data] sentByEndpoints:@[remote] completionHandler:^(NSError * _Nullable writeError) {
                 if (writeError) {
                     STLogError(@"Failed to write UDP data back to the app: %@", writeError);
                 }
+                finishOrContinue();
             }];
+        } else {
+            finishOrContinue();
         }
-
-        if (isComplete || receiveError) {
-            // The dictionary entry alone isn't enough - without an explicit
-            // cancel, this connection's own state-changed handler block
-            // keeps it retained forever (a real socket/memory leak, not
-            // just a theoretical one - the "failed"/"cancelled" branch above
-            // never fires on a *graceful* completion like this).
-            nw_connection_cancel(connection);
-            [state removeConnection:connection forKey:key];
-            return;
-        }
-        [strongSelf pumpUDPConnection:connection endpoint:remote flow:flow state:state key:key]; // keep receiving
         }
     });
 }

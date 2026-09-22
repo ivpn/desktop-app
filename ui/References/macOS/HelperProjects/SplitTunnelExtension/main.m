@@ -74,6 +74,8 @@ int main(int argc, char *argv[]) {
         // `log stream --predicate 'subsystem == "<this bundle's id>"' --level debug`
         // (`log stream --predicate 'subsystem == "com.electron.ivpn-ui.SplitTunnel"' --level debug`)
         // shows this regardless of whether the host app's window is open.
+        // Debug-level lines are emitted only when the session is started with
+        // the `debugLogging` option (see -startProxyWithOptions:).
         NSString *subsystem = [NSBundle mainBundle].bundleIdentifier ?: @"SplitTunnelExtension";
         os_log_t extensionLog = os_log_create(subsystem.UTF8String, "proxy");
 
@@ -84,7 +86,7 @@ int main(int argc, char *argv[]) {
             os_log_with_type(extensionLog, type, "%{public}@", message);
         });
 
-        STLogSetMinLevel(STLogLevelDebug);
+        //STLogSetMinLevel(STLogLevelDebug);
 
         SwitchToSplitTunnelGroup();
         RaiseFileDescriptorLimit();

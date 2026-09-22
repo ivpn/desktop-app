@@ -67,17 +67,34 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
 
     [self st_registerTCPFlow:flow connection:connection];
 
-    // Read/written only from `connectionQueue` (both the state-changed handler
-    // and the deadline block below run there), so no atomics needed.
-    __block BOOL reachedReady = NO;
-
+    // A connection that never finds a usable path stays in
+    // nw_connection_state_waiting forever - Network.framework retries
+    // indefinitely and never reports `failed` - so nothing in the state
+    // handler below would ever fire for it. Without this the flow, its
+    // connection and its queue would stay registered for the life of the
+    // extension while the app hangs. Cancelled as soon as the connection
+    // reaches `ready` (or ends), which also releases everything the handler
+    // captures; a healthy flow therefore holds nothing back after teardown.
+    dispatch_source_t connectDeadline = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, connectionQueue);
+    dispatch_source_set_timer(connectDeadline,
+                              dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kTCPConnectDeadline * NSEC_PER_SEC)),
+                              DISPATCH_TIME_FOREVER, NSEC_PER_SEC);
     __weak typeof(self) weakSelf = self;
+    dispatch_source_set_event_handler(connectDeadline, ^{
+        dispatch_source_cancel(connectDeadline); // one-shot
+        __strong typeof(self) strongSelf = weakSelf;
+        if (!strongSelf) { return; }
+        STLogDebug(@"TCP relay to %@:%@ did not connect within %.0fs, closing the flow",
+                  remote.hostname, remote.port, kTCPConnectDeadline);
+        [strongSelf teardownTCPFlow:flow connection:connection];
+    });
+
     nw_connection_set_state_changed_handler(connection, ^(nw_connection_state_t state, nw_error_t error) {
         __strong typeof(self) strongSelf = weakSelf;
         if (!strongSelf) { return; }
 
         if (state == nw_connection_state_ready) {
-            reachedReady = YES;
+            dispatch_source_cancel(connectDeadline);
             // Only after the real connection is up do we tell NetworkExtension
             // we're accepting the flow; from this point on the app can
             // actually send/receive data through us.
@@ -112,28 +129,14 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
             STLogDebug(@"TCP relay to %@:%@ is waiting for connectivity on the physical interface: %@",
                       remote.hostname, remote.port, error);
         } else if (state == nw_connection_state_failed || state == nw_connection_state_cancelled) {
+            dispatch_source_cancel(connectDeadline);
             STLogDebug(@"TCP relay connection ended (state=%ld, error=%@)", (long)state, error);
             [strongSelf teardownTCPFlow:flow connection:connection];
         }
     });
 
     nw_connection_start(connection);
-
-    // A connection that never finds a usable path stays in
-    // nw_connection_state_waiting forever - Network.framework retries
-    // indefinitely and never reports `failed` - so nothing above would ever
-    // fire for it. Without this the flow, its connection and its queue would
-    // stay registered for the life of the extension while the app hangs.
-    // Always fires once (dispatch_after can't be cancelled); on a healthy
-    // connection that is a single no-op check.
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kTCPConnectDeadline * NSEC_PER_SEC)), connectionQueue, ^{
-        if (reachedReady) { return; }
-        __strong typeof(self) strongSelf = weakSelf;
-        if (!strongSelf) { return; }
-        STLogDebug(@"TCP relay to %@:%@ did not connect within %.0fs, closing the flow",
-                  remote.hostname, remote.port, kTCPConnectDeadline);
-        [strongSelf teardownTCPFlow:flow connection:connection];
-    });
+    dispatch_resume(connectDeadline);
 }
 
 // Reads a chunk from the app (the "flow") and writes it to the real network

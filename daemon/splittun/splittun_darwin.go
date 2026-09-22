@@ -46,6 +46,10 @@ import (
 // to leave over the physical interface) from the traffic of any other process.
 const extensionGroupName = "ivpn-st"
 
+// Split Tunnel needs macOS 12 (Monterey). GetOsMajorVersion() reports the Darwin
+// kernel major, which is 21 for macOS 12.
+const minDarwinMajorVersion = 21
+
 var (
 	mutexMac sync.Mutex
 
@@ -67,8 +71,8 @@ func implInitialize() error {
 		osVersionError = fmt.Errorf("Split Tunnel: unable to determine macOS version: %w", err)
 		return osVersionError
 	}
-	if majorVer < 12 {
-		osVersionError = fmt.Errorf("Split Tunnel requires macOS 12 or later (detected major version %d)", majorVer)
+	if majorVer < minDarwinMajorVersion {
+		osVersionError = fmt.Errorf("Split Tunnel requires macOS 12 or later (detected Darwin kernel version %d)", majorVer)
 		return osVersionError
 	}
 	osVersionError = nil

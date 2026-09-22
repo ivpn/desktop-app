@@ -49,6 +49,14 @@ void runJSStateChangedCallback(const char *jsonUTF8);
 // sync with whatever identity this build is actually signed as.
 static NSString * const kSplitTunnelExtensionSuffix = @".SplitTunnel";
 
+// How long a stopped session may take to report Disconnected before the
+// pending start is issued anyway (see -reconcileSessionWithOptions:).
+static const NSTimeInterval kSessionStopTimeout = 5.0;
+// A session start can fail while the extension process is still tearing
+// down; it is retried this many times, this far apart, before giving up.
+static const NSUInteger kSessionStartAttempts = 3;
+static const NSTimeInterval kSessionStartRetryDelay = 2.0;
+
 typedef NS_ENUM(NSInteger, STExtState) {
     STExtStateNotInstalled,
     STExtStateInstalling,
@@ -123,6 +131,8 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     // Start options waiting for the session to finish tearing down; consumed by
     // -vpnStatusDidChange: (see -reconcileSessionWithOptions:).
     NSDictionary * _Nullable _pendingStartOptions;
+    // Start attempts left for the current options (see -startSessionWithOptions:).
+    NSUInteger _sessionStartAttemptsLeft;
     // Properties requests (see -refreshExtensionState) in flight - they share
     // the delegate callbacks below with activation requests, so they are told
     // apart by request identity. A set, not a single pointer: a probe whose
@@ -431,6 +441,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 // used here), so every settings change - app list, mode, or interface -
 // goes through this same path.
 - (void)reconcileSessionWithOptions:(NSDictionary *)options {
+    _sessionStartAttemptsLeft = kSessionStartAttempts;
     NETunnelProviderSession *session = (NETunnelProviderSession *)_lastManager.connection;
     if (session.status == NEVPNStatusDisconnected || session.status == NEVPNStatusInvalid) {
         [self startSessionWithOptions:options];
@@ -445,11 +456,19 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     [session stopTunnel];
 
     // Safety net: a provider that never reports Disconnected must not leave Split
-    // Tunnel silently off.
+    // Tunnel silently off. Bound to this command: a later apply or stop has its
+    // own, and this one must not fire the options that later command left pending.
+    NSUInteger generation = _commandGeneration;
+    [self startPendingSessionAfter:kSessionStopTimeout ifGeneration:generation];
+}
+
+// Starts the pending session after `delay` unless it was started or cancelled
+// meanwhile, or a newer command superseded the one this timer belongs to.
+- (void)startPendingSessionAfter:(NSTimeInterval)delay ifGeneration:(NSUInteger)generation {
     __weak typeof(self) weakSelf = self;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         __strong typeof(self) strongSelf = weakSelf;
-        if (!strongSelf || !strongSelf->_pendingStartOptions) { return; }
+        if (!strongSelf || !strongSelf->_pendingStartOptions || generation != strongSelf->_commandGeneration) { return; }
         NSDictionary *pending = strongSelf->_pendingStartOptions;
         strongSelf->_pendingStartOptions = nil;
         [strongSelf startSessionWithOptions:pending];
@@ -464,6 +483,15 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     NSError *startError = nil;
     [session startTunnelWithOptions:options andReturnError:&startError];
     if (startError) { NSLog(@"[split-tunnel-macos] session start failed: %@", startError); }
+    if (startError && _sessionStartAttemptsLeft > 0) {
+        // Typically the previous session is still tearing down. Keep the options
+        // pending: the next Disconnected status starts them (-vpnStatusDidChange:),
+        // or the timer does.
+        _sessionStartAttemptsLeft--;
+        _pendingStartOptions = [options copy];
+        [self startPendingSessionAfter:kSessionStartRetryDelay ifGeneration:_commandGeneration];
+        return;
+    }
     _lastError = startError.localizedDescription; // nil on success, so a stale error never sticks
     [self notifyStateChanged];
 }

@@ -216,6 +216,9 @@ function applyDaemonStatus(status) {
   ApplyConfig({
     isInversed: status.IsInversed, // not yet consumed by the extension - reserved for a future inverse-mode implementation
     excludedPaths: status.SplitTunnelApps,
+    // Extension debug logging follows the app's logging setting; a change
+    // takes effect with the next session (re)start.
+    debugLogging: false, //!!store.state.settings.daemonSettings?.IsLogging,
   });
 }
 

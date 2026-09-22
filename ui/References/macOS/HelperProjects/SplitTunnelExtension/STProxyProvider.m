@@ -71,6 +71,11 @@ static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
     // clearing it to empty. Only missing/malformed `options` falls back to
     // whatever default/previous value we already have; an empty array is a
     // legitimate "exclude nothing" request and must not be ignored.
+    
+    // Debug logging is opt-in per session: at debug level every new flow on
+    // the machine formats a line with its executable path into the log.
+    STLogSetMinLevel([options[@"debugLogging"] boolValue] ? STLogLevelDebug : STLogLevelInfo);
+
     NSArray<NSString *> *startExcluded = options[@"excludedPaths"];
     if ([startExcluded isKindOfClass:[NSArray class]]) {
         self.excludedPaths = STPathsWithResolvedSymlinks(startExcluded);

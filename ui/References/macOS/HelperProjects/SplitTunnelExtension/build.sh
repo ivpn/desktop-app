@@ -80,7 +80,7 @@ plutil -replace CFBundleVersion -xml "<string>${_VERSION}</string>" "${_PLIST_IN
 
 echo "[+] Compiling ..."
 mkdir -p "${_BUNDLE}/Contents/MacOS" || CheckLastResult
-clang ${_ARCH_FLAG} -isysroot ${_SDK} -mmacosx-version-min=${_DEPLOY_MIN} -fobjc-arc \
+clang ${_ARCH_FLAG} -isysroot ${_SDK} -mmacosx-version-min=${_DEPLOY_MIN} -fobjc-arc -O2 \
       -framework Foundation -framework NetworkExtension -framework Network -lbsm \
       main.m STLog.m STPathMatching.m STPhysicalInterfaceSelector.m \
       STProxyProvider.m "STProxyProvider+TCPRelay.m" "STProxyProvider+UDPRelay.m" \
