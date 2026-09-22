@@ -73,7 +73,7 @@ static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
     // legitimate "exclude nothing" request and must not be ignored.
     NSArray<NSString *> *startExcluded = options[@"excludedPaths"];
     if ([startExcluded isKindOfClass:[NSArray class]]) {
-        self.excludedPaths = startExcluded;
+        self.excludedPaths = STPathsWithResolvedSymlinks(startExcluded);
         self.excludedBundleIdentifiers = STBundleIdentifiersForPaths(startExcluded);
     }
     NSError *interfaceError = [self.interfaceSelector resolveFromOptions:options];

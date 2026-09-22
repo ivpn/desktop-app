@@ -66,10 +66,15 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 			continue // folder may legitimately not exist (e.g. no ~/Applications)
 		}
 		for _, e := range entries {
-			if !e.IsDir() || !strings.HasSuffix(e.Name(), ".app") {
+			if !strings.HasSuffix(e.Name(), ".app") {
 				continue
 			}
 			bundlePath := filepath.Join(dir, e.Name())
+			// os.Stat follows symlinks, e.IsDir() does not: on recent macOS
+			// some system apps (e.g. Safari) are only symlinks in /Applications.
+			if fi, err := os.Stat(bundlePath); err != nil || !fi.IsDir() {
+				continue
+			}
 			if len(selfBundlePath) > 0 && bundlePath == selfBundlePath {
 				continue // never offer IVPN's own app as a Split-Tunnel candidate
 			}

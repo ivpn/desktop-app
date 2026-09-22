@@ -75,6 +75,27 @@ static void TestPathMatching(void) {
     EXPECT(!STPathMatchesAny(@"/x", @[]), @"empty list");
 }
 
+static void TestResolvedSymlinks(void) {
+    // <tmp>/Real.app/Contents/MacOS, <tmp>/Link.app -> Real.app
+    NSString *dir = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString];
+    NSString *real = [dir stringByAppendingPathComponent:@"Real.app"];
+    NSString *link = [dir stringByAppendingPathComponent:@"Link.app"];
+    NSFileManager *fm = NSFileManager.defaultManager;
+    [fm createDirectoryAtPath:[real stringByAppendingPathComponent:@"Contents/MacOS"] withIntermediateDirectories:YES attributes:nil error:nil];
+    [fm createSymbolicLinkAtPath:link withDestinationPath:@"Real.app" error:nil];
+    // NSTemporaryDirectory() itself may be a symlink (/var -> /private/var).
+    char buf[PATH_MAX];
+    NSString *realResolved = realpath(real.fileSystemRepresentation, buf) ? [NSString stringWithUTF8String:buf] : real;
+
+    NSArray *excluded = STPathsWithResolvedSymlinks(@[link, @"/usr/bin/curl", @"/nonexistent/x"]);
+    EXPECT([excluded containsObject:link], @"literal entry kept");
+    EXPECT([excluded containsObject:realResolved], @"symlink resolved: %@", excluded);
+    EXPECT([excluded containsObject:@"/nonexistent/x"], @"nonexistent entry kept");
+    EXPECT(STPathMatchesAny([realResolved stringByAppendingPathComponent:@"Contents/MacOS/x"], excluded), @"process under the real bundle matches the symlinked entry");
+    EXPECT(STPathsWithResolvedSymlinks(@[@"/usr/bin/curl"]).count == 1, @"regular file is not duplicated");
+    [fm removeItemAtPath:dir error:nil];
+}
+
 static void TestDirectChild(void) {
     // bash -> sleep, with bash kept alive by the trailing command so it
     // forks rather than execs sleep.
@@ -131,6 +152,7 @@ static void TestDetachedChild(void) {
 int main(void) {
     @autoreleasepool {
         TestPathMatching();
+        TestResolvedSymlinks();
         TestDirectChild();
         TestDetachedChild();
         NSLog(@"%@", gFailures == 0 ? @"ALL TESTS PASSED" : [NSString stringWithFormat:@"%d FAILURE(S)", gFailures]);

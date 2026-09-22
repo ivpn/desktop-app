@@ -48,6 +48,14 @@ NSString * _Nullable STAncestorPathMatchingAny(pid_t pid, NSArray<NSString *> * 
 // Exposed for the tests.
 pid_t STResponsibleProcessForPid(pid_t pid);
 
+// Returns `paths` plus, for every entry that is or lies under a symlink, its
+// real path (realpath(3)). The kernel reports a process's executable path
+// already resolved, so a configured path that is itself a symlink - e.g.
+// "/Applications/Safari.app", which on recent macOS points into the system
+// cryptex - would otherwise never match its own process. Call this once, when
+// the excluded-app list changes.
+NSArray<NSString *> * _Nonnull STPathsWithResolvedSymlinks(NSArray<NSString *> * _Nullable paths);
+
 // Reads the CFBundleIdentifier of every ".app" in `paths` (bare executables
 // and unreadable bundles are skipped). Call this once, when the excluded-app
 // list changes - reading Info.plist per flow would be far too expensive.

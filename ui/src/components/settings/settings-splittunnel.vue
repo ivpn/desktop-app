@@ -155,18 +155,26 @@
           <!-- functionality description: MACOS -->
           <div v-else-if="isMacOS">
             <p>
-              <span style="font-weight: bold">Limitations:</span>
-              Safari and other WebKit-based browsers cannot be excluded (their
-              network traffic is attributed to WebKit's own processes, not the
-              browser app). Raw-socket traffic such as <i>ping</i> is not
-              proxied and always uses the VPN. macOS system daemons acting on
-              an app's behalf (e.g. Messages, FaceTime) are not attributed to
-              that app. Programs started by an excluded application (for
-              example commands run from an excluded Terminal) are excluded
-              with it; applications it opens through the system (Finder,
-              <i>open</i>, login items) are not. Every settings change
-              briefly interrupts already-open connections for affected
-              applications while Split Tunnel restarts.
+              <span style="font-weight: bold">Please note:</span>
+              only new connections are excluded. Connections an application
+              already has open keep their current route until the application
+              closes them or is restarted.
+            </p>
+            <p>
+              Programs started by an excluded application (for example,
+              commands run from an excluded terminal) are excluded together
+              with it. Applications it opens through the system (Finder, login
+              items, the <i>open</i> command) are not.
+            </p>
+            <p>
+              Network requests made by system services on behalf of an
+              application (for example, DNS lookups) are not attributed to that
+              application and use the VPN. Raw-socket traffic, such as
+              <i>ping</i>, is not affected and always uses the VPN.
+            </p>
+            <p>
+              Every settings change briefly interrupts the open connections of
+              excluded applications while Split Tunnel restarts.
             </p>
           </div>
           <!-- functionality description: WINDOWS -->

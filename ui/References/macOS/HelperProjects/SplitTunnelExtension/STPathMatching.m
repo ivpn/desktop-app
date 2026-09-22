@@ -6,6 +6,7 @@
 #import <dlfcn.h>           // dlsym()
 #import <libproc.h>         // proc_pidpath(), proc_pidinfo()
 #import <sys/proc_info.h>   // struct proc_bsdinfo
+#import <stdlib.h>          // realpath()
 
 pid_t STPidForFlow(NEAppProxyFlow *flow) {
     NSData *tokenData = flow.metaData.sourceAppAuditToken;
@@ -39,6 +40,22 @@ BOOL STPathMatchesAny(NSString *path, NSArray<NSString *> *excludedPaths) {
         if ([candidate hasSuffix:@".app"] && [path hasPrefix:[candidate stringByAppendingString:@"/"]]) { return YES; }
     }
     return NO;
+}
+
+NSArray<NSString *> * STPathsWithResolvedSymlinks(NSArray<NSString *> *paths) {
+    NSMutableArray<NSString *> *result = [NSMutableArray arrayWithCapacity:paths.count * 2];
+    for (NSString *path in paths) {
+        [result addObject:path];
+        char resolved[PATH_MAX];
+        if (realpath(path.fileSystemRepresentation, resolved) == NULL) {
+            continue; // nonexistent path: keep the literal entry only
+        }
+        NSString *realPath = [NSFileManager.defaultManager stringWithFileSystemRepresentation:resolved length:strlen(resolved)];
+        if (realPath.length > 0 && ![realPath isEqualToString:path]) {
+            [result addObject:realPath];
+        }
+    }
+    return result;
 }
 
 #pragma mark - Process ancestry
