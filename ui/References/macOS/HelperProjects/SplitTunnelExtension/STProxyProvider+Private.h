@@ -33,7 +33,21 @@ NS_ASSUME_NONNULL_BEGIN
 // Marks a key as having just carried traffic (send or receive) - resets its
 // idle clock so the watchdog/LRU eviction below leave it alone.
 - (void)touchKey:(NSString *)key;
-- (void)removeConnectionForKey:(NSString *)key;
+// Bounds the datagrams handed to one peer connection but not yet sent. A
+// peer that is not (or no longer) reachable over the physical interface
+// stays in the "waiting" state and buffers every send indefinitely, and the
+// app-side read loop does not wait for send completions - so without this
+// cap one unreachable peer grows without limit. Returns NO when `connection`
+// is not the current entry for `key` or the cap is reached: the caller drops
+// the datagram (ordinary UDP loss). An accepted send also touches the entry;
+// a dropped one does not, so a peer that never becomes ready is still
+// evicted by the idle watchdog even while the app keeps sending to it.
+- (BOOL)reserveSendForKey:(NSString *)key connection:(nw_connection_t)connection;
+- (void)completeSendForKey:(NSString *)key connection:(nw_connection_t)connection;
+// Removes the entry for `key` only if it still holds `connection`: a peer
+// that failed and was re-created for the same key must not have its
+// replacement removed by the old connection's late callbacks.
+- (void)removeConnection:(nw_connection_t)connection forKey:(NSString *)key;
 // Removes and returns the least-recently-touched connection, or nil if
 // empty - used to make room when a flow's peer cap is reached.
 - (nw_connection_t _Nullable)evictLeastRecentlyUsedConnection;

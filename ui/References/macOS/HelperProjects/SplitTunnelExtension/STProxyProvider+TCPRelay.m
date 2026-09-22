@@ -214,7 +214,15 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
             NSData *data = (NSData *)content;
             [flow writeData:data withCompletionHandler:^(NSError * _Nullable writeError) {
                 if (writeError) {
-                    STLogError(@"Failed to write TCP data back to the app: %@", writeError);
+                    // The app closed its side (e.g. a cancelled download): nothing
+                    // more received from the network can be delivered, so stop
+                    // receiving instead of pulling the rest of the server's data
+                    // over the physical interface. The teardown cancels the
+                    // connection, which ends the other direction as well.
+                    STLogDebug(@"App closed the flow while data was pending (%@), tearing down", writeError);
+                    [strongSelf teardownTCPFlow:flow connection:connection];
+                    dispatch_group_leave(doneGroup);
+                    return;
                 }
                 finishOrContinue();
             }];

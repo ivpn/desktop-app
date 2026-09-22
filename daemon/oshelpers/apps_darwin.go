@@ -4,7 +4,7 @@
 package oshelpers
 
 /*
-#cgo CFLAGS: -x objective-c
+#cgo CFLAGS: -x objective-c -fobjc-arc
 #cgo LDFLAGS: -framework AppKit -framework Foundation
 
 #include <stdlib.h>

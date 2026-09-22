@@ -16,7 +16,14 @@
 @interface STUDPPeerEntry : NSObject
 @property (nonatomic, strong) id connection; // nw_connection_t
 @property (nonatomic, assign) NSTimeInterval lastActivity;
+@property (nonatomic, assign) NSUInteger pendingSends; // see -reserveSendForKey:connection:
 @end
+
+// Datagrams handed to one peer connection but not yet sent (see
+// -reserveSendForKey:connection: in STProxyProvider+Private.h). Generous for
+// a healthy peer, where sends complete within milliseconds, small enough that
+// an unreachable one holds only a few dozen datagrams.
+static const NSUInteger kMaxPendingSendsPerPeer = 64;
 
 @implementation STUDPPeerEntry
 @end
@@ -63,9 +70,32 @@
     os_unfair_lock_unlock(&_lock);
 }
 
-- (void)removeConnectionForKey:(NSString *)key {
+- (BOOL)reserveSendForKey:(NSString *)key connection:(nw_connection_t)connection {
     os_unfair_lock_lock(&_lock);
-    [self.connectionsByEndpointKey removeObjectForKey:key];
+    STUDPPeerEntry *entry = self.connectionsByEndpointKey[key];
+    BOOL accepted = entry.connection == connection && entry.pendingSends < kMaxPendingSendsPerPeer;
+    if (accepted) {
+        entry.pendingSends++;
+        entry.lastActivity = [NSDate timeIntervalSinceReferenceDate];
+    }
+    os_unfair_lock_unlock(&_lock);
+    return accepted;
+}
+
+- (void)completeSendForKey:(NSString *)key connection:(nw_connection_t)connection {
+    os_unfair_lock_lock(&_lock);
+    STUDPPeerEntry *entry = self.connectionsByEndpointKey[key];
+    if (entry.connection == connection && entry.pendingSends > 0) {
+        entry.pendingSends--;
+    }
+    os_unfair_lock_unlock(&_lock);
+}
+
+- (void)removeConnection:(nw_connection_t)connection forKey:(NSString *)key {
+    os_unfair_lock_lock(&_lock);
+    if (self.connectionsByEndpointKey[key].connection == connection) {
+        [self.connectionsByEndpointKey removeObjectForKey:key];
+    }
     os_unfair_lock_unlock(&_lock);
 }
 
@@ -195,8 +225,7 @@
     NSString *key = [[remote.hostname stringByAppendingString:@":"] stringByAppendingString:remote.port];
     nw_connection_t existing = [state connectionForKey:key];
     if (existing) {
-        [state touchKey:key];
-        [self sendData:data overConnection:existing label:key];
+        [self sendData:data overConnection:existing key:key state:state];
         return;
     }
 
@@ -229,19 +258,26 @@
         if (!strongSelf) { return; }
 
         if (connState == nw_connection_state_ready) {
-            [strongSelf sendData:data overConnection:connection label:key];
+            [strongSelf sendData:data overConnection:connection key:key state:state];
             [strongSelf pumpUDPConnection:connection endpoint:remote flow:flow state:state key:key];
         } else if (connState == nw_connection_state_waiting) {
             STLogDebug(@"UDP peer connection %@ is waiting for connectivity on the physical interface: %@", key, connError);
         } else if (connState == nw_connection_state_failed || connState == nw_connection_state_cancelled) {
             STLogDebug(@"UDP peer connection %@ ended (state=%ld, error=%@)", key, (long)connState, connError);
-            [state removeConnectionForKey:key];
+            if (connState == nw_connection_state_failed) {
+                nw_connection_cancel(connection); // releases this handler's retain cycle; "failed" alone does not
+            }
+            [state removeConnection:connection forKey:key];
         }
     });
     nw_connection_start(connection);
 }
 
-- (void)sendData:(NSData *)data overConnection:(nw_connection_t)connection label:(NSString *)label {
+- (void)sendData:(NSData *)data overConnection:(nw_connection_t)connection key:(NSString *)key state:(STUDPFlowState *)state {
+    if (![state reserveSendForKey:key connection:connection]) {
+        STLogDebug(@"UDP peer %@ has too many unsent datagrams (or was replaced), dropping datagram", key);
+        return;
+    }
     // Custom destructor just keeps `data` alive until the send completes,
     // instead of DISPATCH_DATA_DESTRUCTOR_DEFAULT's unconditional memcpy of
     // every datagram relayed.
@@ -249,8 +285,9 @@
                                                     dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
                                                     ^{ (void)data; });
     nw_connection_send(connection, payload, NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, true, ^(nw_error_t sendError) {
+        [state completeSendForKey:key connection:connection];
         if (sendError) {
-            STLogDebug(@"UDP send to %@ over physical interface failed: %@", label, sendError);
+            STLogDebug(@"UDP send to %@ over physical interface failed: %@", key, sendError);
         }
     });
 }
@@ -291,7 +328,7 @@
             // just a theoretical one - the "failed"/"cancelled" branch above
             // never fires on a *graceful* completion like this).
             nw_connection_cancel(connection);
-            [state removeConnectionForKey:key];
+            [state removeConnection:connection forKey:key];
             return;
         }
         [strongSelf pumpUDPConnection:connection endpoint:remote flow:flow state:state key:key]; // keep receiving
