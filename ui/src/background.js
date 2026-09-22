@@ -852,7 +852,7 @@ function createWindow(doNotShowWhenReady) {
   // brings the window back into focus (e.g. after approving it in System
   // Settings) - getExtensionState() alone won't notice the change on its own.
   if (Platform() === PlatformEnum.macOS) {
-    win.on("focus", () => splitTunnelHelperMacOS.RecheckApprovalOnFocus());
+    win.on("focus", () => splitTunnelHelperMacOS.RecheckExtensionStateOnFocus());
   }
 
   // restore window position
@@ -979,6 +979,7 @@ function createSettingsWindow(viewName) {
 
   // Block user drag-resizing on Windows (see IsResizableWindow()).
   settingsWindow.on("will-resize", (event) => { event.preventDefault(); });
+  settingsWindow.on("focus", () => splitTunnelHelperMacOS.RecheckExtensionStateOnFocus());
 
   console.log("ELECTRON_RENDERER_URL: ", process.env['ELECTRON_RENDERER_URL'])
 

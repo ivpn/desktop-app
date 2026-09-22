@@ -35,7 +35,7 @@ export default {
   InstallExtension,
   UninstallExtension,
   UninstallExtensionAndWait,
-  RecheckApprovalOnFocus,
+  RecheckExtensionStateOnFocus,
 };
 
 import { Platform, PlatformEnum } from "@/platform/platform";
@@ -45,6 +45,27 @@ import {
   DaemonConnectionType,
 } from "@/store/types";
 import store from "@/store";
+
+// Tracks whether activation has already been requested this run, so a
+// stream of status updates while ST stays enabled doesn't resubmit the
+// request repeatedly - re-armed on the next launch (see Init below), which
+// is what actually catches a bundled extension version upgrade.
+let _extensionActivationRequested = false;
+
+// Mirrors the extensionState from the last onStateChanged callback (or the
+// initial getExtensionState() read) - used by RecheckExtensionStateOnFocus() below
+// so it doesn't need to touch the store/getter from this main-process module.
+let _lastExtensionState = SplitTunnelMacExtStateEnum.NotInstalled;
+
+// Serialized options of the last config actually handed to the addon, or null
+// when the session is stopped (see ApplyConfig/Stop).
+let _lastAppliedConfig = null;
+
+// Whether the proxy configuration was registered with the OS (or a session
+// applied, which registers it too) since Split Tunnel was enabled. Once per
+// enable cycle: re-registering after the user declined the system prompt
+// would raise that prompt again on every status update.
+let _configRegistrationRequested = false;
 
 // Set by StopAndWait(); invoked from the addon.onStateChanged() handler in
 // Init() once the session reports a stopped status.
@@ -147,29 +168,11 @@ function ApplyConfig(cfg) {
   if (serialized === _lastAppliedConfig) return;
   _lastAppliedConfig = serialized;
 
+  // The extension may have been switched off or removed since it was last
+  // seen; a failed start alone does not tell. Ask the OS alongside the apply.
+  addon.refreshExtensionState();
   addon.applyConfig(cfg || {});
 }
-
-// Tracks whether activation has already been requested this run, so a
-// stream of status updates while ST stays enabled doesn't resubmit the
-// request repeatedly - re-armed on the next launch (see Init above), which
-// is what actually catches a bundled extension version upgrade.
-let _extensionActivationRequested = false;
-
-// Mirrors the extensionState from the last onStateChanged callback (or the
-// initial getExtensionState() read) - used by RecheckApprovalOnFocus() below
-// so it doesn't need to touch the store/getter from this main-process module.
-let _lastExtensionState = SplitTunnelMacExtStateEnum.NotInstalled;
-
-// Serialized options of the last config actually handed to the addon, or null
-// when the session is stopped (see ApplyConfig/Stop).
-let _lastAppliedConfig = null;
-
-// Whether the proxy configuration was registered with the OS (or a session
-// applied, which registers it too) since Split Tunnel was enabled. Once per
-// enable cycle: re-registering after the user declined the system prompt
-// would raise that prompt again on every status update.
-let _configRegistrationRequested = false;
 
 // Maps the daemon's SplitTunnelStatus shape onto the addon's start options.
 function applyDaemonStatus(status) {
@@ -188,21 +191,24 @@ function applyDaemonStatus(status) {
     _extensionActivationRequested = true;
     InstallExtension();
   }
+  // Nothing to start (or register) until the extension is actually installed:
+  // saving the proxy configuration raises a system prompt that makes no sense
+  // while the extension itself is still waiting for the user's approval. The
+  // "installed" transition in Init() re-runs this.
+  if (_lastExtensionState !== SplitTunnelMacExtStateEnum.Installed) return;
   // Same two gates Windows applies (isDriverMustBeDisabled in
   // daemon/splittun/splittun_windows.go): a running session is offered every
   // flow on the machine, so it must have both a tunnel to bypass and
-  // something to exclude. Deliberately after InstallExtension() above, so
-  // enabling Split Tunnel still raises the approval prompt right away rather
-  // than mid-connect later.
+  // something to exclude.
   const isVpnActive =
     store.getters["vpnState/isConnected"] && !store.getters["vpnState/isPaused"];
   if (!isVpnActive || !status.SplitTunnelApps?.length) {
     Stop();
     // Raise the system's "add proxy configurations" prompt now, while the user
     // is still enabling Split Tunnel, rather than on the first VPN connect.
-    if (!_configRegistrationRequested && _lastExtensionState === SplitTunnelMacExtStateEnum.Installed) {
+    if (!_configRegistrationRequested) {
       _configRegistrationRequested = true;
-      getAddon()?.registerConfig();
+      RegisterConfig();
     }
     return;
   }
@@ -253,6 +259,12 @@ function InstallExtension() {
   addon.installExtension();
 }
 
+function RegisterConfig() {
+  const addon = getAddon();
+  if (!addon) return;
+  addon.registerConfig();
+}
+
 function UninstallExtension() {
   const addon = getAddon();
   if (!addon) return;
@@ -270,12 +282,13 @@ function UninstallExtensionAndWait(onDone) {
   addon.uninstallExtension();
 }
 
-// Called by background.js whenever the main window regains focus. The addon's
-// state is a cache, so returning from System Settings after approving,
-// enabling or disabling the extension needs an explicit re-query. Only once
-// activation has been requested, so a user who never enabled Split Tunnel is
-// never probed.
-function RecheckApprovalOnFocus() {
+// Called by background.js whenever an app window regains focus. The addon's
+// state is a cache, so returning from System Settings after enabling,
+// disabling or removing the extension needs an explicit re-query (approval
+// itself is reported by the pending activation request; the addon skips the
+// probe while one is pending). Only once activation has been requested, so a
+// user who never enabled Split Tunnel is never probed.
+function RecheckExtensionStateOnFocus() {
   if (!_extensionActivationRequested) return;
   const addon = getAddon();
   if (addon) addon.refreshExtensionState();

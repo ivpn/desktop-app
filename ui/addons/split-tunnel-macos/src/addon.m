@@ -112,16 +112,22 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     // replacement actually finishes, to restart any active session so the
     // new binary takes over immediately - the OS does not do this on its own.
     BOOL _pendingReplacementRestart;
+    // The activation request from submit until it finishes or fails - which,
+    // while the OS waits for the user's approval, can be a long time. No
+    // properties probe may be submitted meanwhile: the OS would cancel the
+    // activation as superseded, and its completion is what reports approval.
+    OSSystemExtensionRequest * _Nullable _activationRequest;
     BOOL _observingVPNStatus;
     NETransparentProxyManager * _Nullable _lastManager;
     NSDictionary * _Nullable _lastOptions;
     // Start options waiting for the session to finish tearing down; consumed by
     // -vpnStatusDidChange: (see -reconcileSessionWithOptions:).
     NSDictionary * _Nullable _pendingStartOptions;
-    // Non-nil while a properties request (see -refreshExtensionState) is in
-    // flight - it shares the delegate callbacks below with activation requests,
-    // so they are told apart by request identity.
-    OSSystemExtensionRequest * _Nullable _propertiesRequest;
+    // Properties requests (see -refreshExtensionState) in flight - they share
+    // the delegate callbacks below with activation requests, so they are told
+    // apart by request identity. A set, not a single pointer: a probe whose
+    // completion never arrives must not block every later probe.
+    NSMutableSet<OSSystemExtensionRequest *> *_propertiesRequests;
     // Bumped synchronously on entry to -applyConfigJSON: and -stopSession. Their
     // asynchronous completions act only if still current, so of several
     // commands issued in quick succession only the last one takes effect.
@@ -139,6 +145,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     self = [super init];
     if (self) {
         _extState = STExtStateNotInstalled;
+        _propertiesRequests = [NSMutableSet set];
     }
     return self;
 }
@@ -161,12 +168,16 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 // mechanism that keeps an installed extension from silently staying on an
 // old version after an app update.
 - (void)activateExtension {
+    // A second activation while the first is still validating makes sysextd
+    // treat it as a same-version replacement conflict; both then fail.
+    if (_activationRequest) { return; }
     _extState = STExtStateInstalling;
     [self notifyStateChanged];
 
     OSSystemExtensionRequest *request = [OSSystemExtensionRequest activationRequestForExtension:[self extensionBundleID]
                                                                                           queue:dispatch_get_main_queue()];
     request.delegate = self;
+    _activationRequest = request;
     [[OSSystemExtensionManager sharedManager] submitRequest:request];
 }
 
@@ -195,12 +206,12 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 // already-installed extension stays misreported until some request completes.
 // Unlike an activation request, this never prompts the user.
 - (void)refreshExtensionState {
-    if (_propertiesRequest || _extState == STExtStateInstalling) { return; } // a request is already in flight and owns the state
+    if (_activationRequest) { return; } // the activation request owns the state until it completes (see its declaration)
 
     OSSystemExtensionRequest *request = [OSSystemExtensionRequest propertiesRequestForExtension:[self extensionBundleID]
                                                                                           queue:dispatch_get_main_queue()];
     request.delegate = self;
-    _propertiesRequest = request;
+    [_propertiesRequests addObject:request];
     [[OSSystemExtensionManager sharedManager] submitRequest:request];
 }
 
@@ -220,6 +231,9 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 
 // Only sent for a properties request (-refreshExtensionState).
 - (void)request:(OSSystemExtensionRequest *)request foundProperties:(NSArray<OSSystemExtensionProperties *> *)properties {
+    // A probe submitted just before an activation answers after it: its
+    // "not installed" is stale and would trigger another activation.
+    if (_activationRequest) { return; }
     STExtState state = STExtStateNotInstalled;
     for (OSSystemExtensionProperties *p in properties) {
         if (p.isUninstalling) { continue; }
@@ -229,19 +243,26 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
         state = p.isAwaitingUserApproval ? STExtStateNeedsUserApproval : STExtStateDisabled;
     }
     if (state == _extState) { return; }
+    NSLog(@"[split-tunnel-macos] extension state %@ -> %@ (%lu entries)", StringForExtState(_extState), StringForExtState(state), (unsigned long)properties.count);
     _extState = state;
     [self notifyStateChanged];
 }
 
 - (void)request:(OSSystemExtensionRequest *)request didFailWithError:(NSError *)error {
-    if (request == _propertiesRequest) { _propertiesRequest = nil; return; } // probe failed - keep the known state
+    NSLog(@"[split-tunnel-macos] extension request failed: %@", error);
+    if ([_propertiesRequests containsObject:request]) { [_propertiesRequests removeObject:request]; return; } // probe failed - keep the known state
+    if (request == _activationRequest) { _activationRequest = nil; }
+    // Superseded by a newer request for the same extension: that request now
+    // owns the state, nothing went wrong.
+    if ([error.domain isEqualToString:OSSystemExtensionErrorDomain] && error.code == OSSystemExtensionErrorRequestSuperseded) { return; }
     _extState = STExtStateError;
     _lastError = error.localizedDescription;
     [self notifyStateChanged];
 }
 
 - (void)request:(OSSystemExtensionRequest *)request didFinishWithResult:(OSSystemExtensionRequestResult)result {
-    if (request == _propertiesRequest) { _propertiesRequest = nil; return; } // state already applied in -request:foundProperties:
+    if ([_propertiesRequests containsObject:request]) { [_propertiesRequests removeObject:request]; return; } // state already applied in -request:foundProperties:
+    if (request == _activationRequest) { _activationRequest = nil; }
     _lastError = nil; // the request succeeded - don't keep reporting an error from an earlier attempt
     if (result == OSSystemExtensionRequestWillCompleteAfterReboot) {
         _extState = STExtStateNeedsReboot;
@@ -365,6 +386,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
         __strong typeof(self) strongSelf = weakSelf;
         if (!strongSelf || generation != strongSelf->_commandGeneration) { return; }
         if (!manager) {
+            NSLog(@"[split-tunnel-macos] proxy configuration load/save failed: %@", error);
             strongSelf->_lastError = error.localizedDescription ?: @"Unable to load the Split Tunnel proxy configuration";
             [strongSelf notifyStateChanged];
             return;
@@ -441,6 +463,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
     NETunnelProviderSession *session = (NETunnelProviderSession *)_lastManager.connection;
     NSError *startError = nil;
     [session startTunnelWithOptions:options andReturnError:&startError];
+    if (startError) { NSLog(@"[split-tunnel-macos] session start failed: %@", startError); }
     _lastError = startError.localizedDescription; // nil on success, so a stale error never sticks
     [self notifyStateChanged];
 }

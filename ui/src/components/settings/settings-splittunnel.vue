@@ -200,7 +200,7 @@
       <textWithLinkCtrl
         :text="macOSStatusMessage"
         textToUseAsLink="System Settings"
-        link="x-apple.systempreferences:com.apple.preference.security?Security"
+        :link="macOSSystemSettingsLink"
       />
     </div>
 
@@ -920,6 +920,16 @@ Do you want to enable Inverse mode for Split Tunnel?",
     // macOS only: last state reported by the Split Tunnel system extension/session addon
     macOSExtState: function () {
       return this.$store.state.uiState?.splitTunnelMacOS || {};
+    },
+
+    // macOS only: where the system extension is approved/enabled. Since
+    // macOS 13 (Darwin 22) that is General > Login Items & Extensions; before,
+    // Security & Privacy > General.
+    macOSSystemSettingsLink: function () {
+      const darwinMajor = parseInt(sender.osRelease().split(".")[0], 10);
+      return darwinMajor >= 22
+        ? "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
+        : "x-apple.systempreferences:com.apple.preference.security?Security";
     },
 
     // macOS only: status banner text, or "" when nothing to show. Only states
