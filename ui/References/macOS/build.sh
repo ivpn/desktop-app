@@ -49,6 +49,20 @@ while getopts ":v:c:i:P:E:" opt; do
   esac
 done
 
+# The two profiles only work as a pair: a host app without its profile cannot
+# activate the extension, and an extension without its profile fails to load.
+if { [ -n "${_HOST_PROVISION_PROFILE}" ] && [ -z "${_EXT_PROVISION_PROFILE}" ]; } || \
+   { [ -z "${_HOST_PROVISION_PROFILE}" ] && [ -n "${_EXT_PROVISION_PROFILE}" ]; }; then
+  echo "[!] ERROR: -P and -E must be given together (host app and Split Tunnel extension provisioning profiles)."
+  exit 1
+fi
+for _profile in "${_HOST_PROVISION_PROFILE}" "${_EXT_PROVISION_PROFILE}"; do
+  if [ -n "${_profile}" ] && [ ! -f "${_profile}" ]; then
+    echo "[!] ERROR: provisioning profile not found: ${_profile}"
+    exit 1
+  fi
+done
+
 if [ -z "${_VERSION}" ]; then
   _VERSION="$(awk -F'"' '/"version"/{print $4; exit}' "${_SCRIPT_DIR}/../../package.json" 2>/dev/null)"
   if [ -z "${_VERSION}" ]; then
