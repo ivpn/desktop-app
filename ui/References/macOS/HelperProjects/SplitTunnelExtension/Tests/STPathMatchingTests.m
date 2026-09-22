@@ -1,7 +1,8 @@
 //
 //  STPathMatchingTests.m
 //
-//  Standalone tests for the decision logic in STPathMatching.m, run by
+//  Standalone tests for the decision logic in STPathMatching.m (and, from
+//  STDefaultRouteTests.m, the default-route scan), run by
 //  Tests/run_tests.sh. Deliberately no XCTest: the extension has no Xcode
 //  project, and these need nothing but Foundation and real child processes.
 //
@@ -11,6 +12,8 @@
 #import "../STPathMatching.h"
 
 static int gFailures = 0;
+
+int STDefaultRouteTestsRun(void); // Tests/STDefaultRouteTests.m, returns its failure count
 
 #define EXPECT(cond, ...) do { \
     if (!(cond)) { gFailures++; NSLog(@"FAIL line %d: %@", __LINE__, [NSString stringWithFormat:__VA_ARGS__]); } \
@@ -155,6 +158,7 @@ int main(void) {
         TestResolvedSymlinks();
         TestDirectChild();
         TestDetachedChild();
+        gFailures += STDefaultRouteTestsRun();
         NSLog(@"%@", gFailures == 0 ? @"ALL TESTS PASSED" : [NSString stringWithFormat:@"%d FAILURE(S)", gFailures]);
     }
     return gFailures == 0 ? 0 : 1;

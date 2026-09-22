@@ -34,9 +34,18 @@ static void STSplitRouteAddresses(int bitmask, struct sockaddr *sa, struct socka
 }
 
 // A /0 netmask arrives either as a zero-length sockaddr or as an all-zero one.
-// Anything else (notably the VPN's 128.0.0.0 mask for its "0/1" route) is not /0.
-static BOOL STIsZeroNetmask(struct sockaddr *mask) {
+// Anything else (notably the VPN's 128.0.0.0 mask for its "0/1" route, or the
+// "::/1" and "8000::/1" pair on IPv6) is not /0.
+static BOOL STIsZeroNetmask(struct sockaddr *mask, int family) {
     if (mask->sa_len == 0) { return YES; }
+    if (family == AF_INET6) {
+        const unsigned char *bytes = (const unsigned char *)mask;
+        size_t end = MIN((size_t)mask->sa_len, offsetof(struct sockaddr_in6, sin6_addr) + sizeof(struct in6_addr));
+        for (size_t i = offsetof(struct sockaddr_in6, sin6_addr); i < end; i++) {
+            if (bytes[i] != 0) { return NO; }
+        }
+        return YES;
+    }
     if (mask->sa_len >= sizeof(struct sockaddr_in)) {
         return ((struct sockaddr_in *)mask)->sin_addr.s_addr == 0;
     }
@@ -65,7 +74,17 @@ static BOOL STIsPhysicalInterface(const char *name) {
     return isPhysical;
 }
 
-// BSD name (e.g. "en0") of the interface owning the IPv4 'default' route, or nil.
+// Whether a route's destination is the unspecified address ("0.0.0.0" / "::"),
+// i.e. the route is a 'default' candidate once its netmask is confirmed /0.
+static BOOL STIsUnspecifiedDestination(struct sockaddr *dst, int family) {
+    if (family == AF_INET6) {
+        return dst->sa_len >= sizeof(struct sockaddr_in6) &&
+               IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)dst)->sin6_addr);
+    }
+    return ((struct sockaddr_in *)dst)->sin_addr.s_addr == 0;
+}
+
+// BSD name (e.g. "en0") of the interface owning the 'default' route, or nil.
 //
 // Read straight from the kernel routing table - the same source `netstat -rn`
 // uses. Several 'default' routes normally coexist, so picking the right one is
@@ -81,8 +100,42 @@ static BOOL STIsPhysicalInterface(const char *name) {
 //     route. Tunnels also carry scoped defaults, which the type test rejects.
 //   - The /0-netmask test rejects a VPN's '0/1' route (mask 128.0.0.0), which
 //     OpenVPN ('redirect-gateway def1') and WireGuard use to capture traffic.
-static NSString * _Nullable STDefaultRouteInterfaceName(void) {
-    int mib[6] = { CTL_NET, PF_ROUTE, 0, AF_INET, NET_RT_DUMP, 0 };
+//
+// The IPv4 table is consulted first; the IPv6 table only when IPv4 has no
+// physical 'default' at all, i.e. on an IPv6-only network. On a dual-stack
+// network both point at the same interface, so IPv4 alone already answers.
+NSString * _Nullable STDefaultRouteInterfaceNameInTable(const char *table, size_t length, int family) {
+    NSString *unscoped = nil;
+    NSString *scoped = nil;
+    const char *limit = table + length;
+    for (const char *next = table; next + sizeof(struct rt_msghdr) <= limit && unscoped == nil; ) {
+        struct rt_msghdr *rtm = (struct rt_msghdr *)next;
+        if (rtm->rtm_msglen == 0) { break; }
+        next += rtm->rtm_msglen;
+        if ((rtm->rtm_flags & RTF_UP) == 0) { continue; }
+
+        struct sockaddr *addrs[RTAX_MAX];
+        STSplitRouteAddresses(rtm->rtm_addrs, (struct sockaddr *)(rtm + 1), addrs);
+        struct sockaddr *dst = addrs[RTAX_DST];
+        struct sockaddr *mask = addrs[RTAX_NETMASK];
+        if (!dst || !mask || dst->sa_family != family) { continue; }
+        if (!STIsUnspecifiedDestination(dst, family) || !STIsZeroNetmask(mask, family)) { continue; }
+
+        char name[IF_NAMESIZE];
+        if (if_indextoname(rtm->rtm_index, name) == NULL) { continue; }
+        if (!STIsPhysicalInterface(name)) { continue; }
+
+        if (rtm->rtm_flags & RTF_IFSCOPE) {
+            if (!scoped) { scoped = [NSString stringWithUTF8String:name]; }
+        } else {
+            unscoped = [NSString stringWithUTF8String:name];
+        }
+    }
+    return unscoped ?: scoped;
+}
+
+static NSString * _Nullable STDefaultRouteInterfaceNameForFamily(int family) {
+    int mib[6] = { CTL_NET, PF_ROUTE, 0, family, NET_RT_DUMP, 0 };
     size_t needed = 0;
     if (sysctl(mib, 6, NULL, &needed, NULL, 0) < 0 || needed == 0) {
         STLogError(@"Unable to size the routing table: %s", strerror(errno));
@@ -95,35 +148,13 @@ static NSString * _Nullable STDefaultRouteInterfaceName(void) {
         free(buf);
         return nil;
     }
-
-    NSString *unscoped = nil;
-    NSString *scoped = nil;
-    char *limit = buf + needed;
-    for (char *next = buf; next + sizeof(struct rt_msghdr) <= limit && unscoped == nil; ) {
-        struct rt_msghdr *rtm = (struct rt_msghdr *)next;
-        if (rtm->rtm_msglen == 0) { break; }
-        next += rtm->rtm_msglen;
-        if ((rtm->rtm_flags & RTF_UP) == 0) { continue; }
-
-        struct sockaddr *addrs[RTAX_MAX];
-        STSplitRouteAddresses(rtm->rtm_addrs, (struct sockaddr *)(rtm + 1), addrs);
-        struct sockaddr *dst = addrs[RTAX_DST];
-        struct sockaddr *mask = addrs[RTAX_NETMASK];
-        if (!dst || !mask || dst->sa_family != AF_INET) { continue; }
-        if (((struct sockaddr_in *)dst)->sin_addr.s_addr != 0 || !STIsZeroNetmask(mask)) { continue; }
-
-        char name[IF_NAMESIZE];
-        if (if_indextoname(rtm->rtm_index, name) == NULL) { continue; }
-        if (!STIsPhysicalInterface(name)) { continue; }
-
-        if (rtm->rtm_flags & RTF_IFSCOPE) {
-            if (!scoped) { scoped = [NSString stringWithUTF8String:name]; }
-        } else {
-            unscoped = [NSString stringWithUTF8String:name];
-        }
-    }
+    NSString *name = STDefaultRouteInterfaceNameInTable(buf, needed, family);
     free(buf);
-    return unscoped ?: scoped;
+    return name;
+}
+
+static NSString * _Nullable STDefaultRouteInterfaceName(void) {
+    return STDefaultRouteInterfaceNameForFamily(AF_INET) ?: STDefaultRouteInterfaceNameForFamily(AF_INET6);
 }
 
 // If `addressOrName` parses as an IPv4/IPv6 literal, looks it up via

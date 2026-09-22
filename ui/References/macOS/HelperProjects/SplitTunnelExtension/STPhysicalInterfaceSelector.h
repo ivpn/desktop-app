@@ -17,6 +17,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+// Scans one address family's (AF_INET / AF_INET6) kernel routing-table dump
+// (NET_RT_DUMP format) for the 'default' route of a physical interface and
+// returns that interface's BSD name, or nil. Production code feeds it the
+// live table (see STDefaultRouteInterfaceName in the .m); exposed so the tests
+// can feed it a hand-built one.
+NSString * _Nullable STDefaultRouteInterfaceNameInTable(const char *table, size_t length, int family);
+
 @interface STPhysicalInterfaceSelector : NSObject
 
 // Validates `options` and picks a precedence tier (`physicalInterface`,
