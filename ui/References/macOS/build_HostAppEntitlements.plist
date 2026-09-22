@@ -10,14 +10,15 @@
 	     IVPN.app ships a Contents/embedded.provisionprofile, so these keys must
 	     never reach any other binary; in particular they must never be passed to
 	     codesign's "deep" mode, which applies them to every nested bundle.
-	     Everything else is signed with build_HarderingEntitlements.plist. -->
+	     Everything else is signed with build_HarderingEntitlements.plist.
+
+	     Hardened Runtime relaxations: allow-jit ONLY. A process that carries
+	     system-extension.install is refused at launch by AMFI with "Hardened
+	     Runtime relaxation entitlements disallowed on System Extensions" if it
+	     also carries allow-unsigned-executable-memory, disable-library-validation
+	     or disable-executable-page-protection (verified on macOS 15.5 and 26 with
+	     SIP enabled; allow-jit alone is accepted and is all Electron needs). -->
 	<key>com.apple.security.cs.allow-jit</key>
-	<true/>
-	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
-	<true/>
-	<key>com.apple.security.cs.disable-library-validation</key>
-	<true/>
-	<key>com.apple.security.cs.disable-executable-page-protection</key>
 	<true/>
 	<key>com.apple.developer.networking.networkextension</key>
 	<array>
