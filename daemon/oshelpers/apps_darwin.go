@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,7 +44,7 @@ type extraArgsGetInstalledApps struct {
 	EnvVar_HOME string
 }
 
-func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
+func implGetInstalledApps(extraArgsJSON string) ([]apptypes.AppInfo, error) {
 	home := ""
 	if len(extraArgsJSON) > 0 {
 		var extraArgs extraArgsGetInstalledApps
@@ -59,7 +60,7 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 
 	selfBundlePath := ownAppBundlePath()
 
-	retValues := make([]AppInfo, 0, 64)
+	retValues := make([]apptypes.AppInfo, 0, 64)
 	for _, dir := range dirs {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
@@ -86,7 +87,7 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 			// AppBinaryPath is the '.app' bundle path, not an inner executable:
 			// the extension matches by bundle-path prefix, so this is what
 			// Preferences.SplitTunnelApps must store.
-			retValues = append(retValues, AppInfo{AppName: displayName, AppBinaryPath: bundlePath})
+			retValues = append(retValues, apptypes.AppInfo{AppName: displayName, AppBinaryPath: bundlePath})
 		}
 	}
 

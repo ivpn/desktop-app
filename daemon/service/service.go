@@ -40,6 +40,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/firewall"
@@ -1084,7 +1085,7 @@ func (s *Service) SetWiFiSettings(params preferences.WiFiParams) error {
 // SPLIT TUNNEL
 //////////////////////////////////////////////////////////
 
-func (s *Service) GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error) {
+func (s *Service) GetInstalledApps(extraArgsJSON string) ([]apptypes.AppInfo, error) {
 	return oshelpers.GetInstalledApps(extraArgsJSON)
 }
 

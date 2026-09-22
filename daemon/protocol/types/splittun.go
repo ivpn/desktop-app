@@ -23,7 +23,7 @@
 package types
 
 import (
-	"github.com/ivpn/desktop-app/daemon/oshelpers"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 	"github.com/ivpn/desktop-app/daemon/splittun"
 )
 
@@ -46,7 +46,7 @@ type GetInstalledApps struct {
 // InstalledAppsResp (response) contains information about installed applications on the system
 type InstalledAppsResp struct {
 	CommandBase
-	Apps []oshelpers.AppInfo
+	Apps []apptypes.AppInfo
 }
 
 // GetAppIcon (request) requests shell icon for binary file (application)

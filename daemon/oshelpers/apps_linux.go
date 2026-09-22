@@ -29,6 +29,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 	"net/http"
 	"os"
 	"path"
@@ -51,7 +52,7 @@ type extraArgsGetInstalledApps struct {
 
 // Specification:
 // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html
-func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
+func implGetInstalledApps(extraArgsJSON string) ([]apptypes.AppInfo, error) {
 	XDG_DATA_DIRS := ""
 	XDG_CURRENT_DESKTOP := ""
 	HOME := ""
@@ -79,8 +80,8 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 		log.Warning("unable to read icons theme: ", err)
 	}
 
-	// converting results to AppInfo
-	retValues := make([]AppInfo, 0, len(entries))
+	// converting results to apptypes.AppInfo
+	retValues := make([]apptypes.AppInfo, 0, len(entries))
 	for _, e := range entries {
 		if e.Name == "IVPN" {
 			continue
@@ -95,7 +96,7 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 				}
 			}
 		}
-		app := AppInfo{AppName: e.Name, AppBinaryPath: e.Exec, AppIcon: base64Img}
+		app := apptypes.AppInfo{AppName: e.Name, AppBinaryPath: e.Exec, AppIcon: base64Img}
 		retValues = append(retValues, app)
 	}
 

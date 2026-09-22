@@ -41,7 +41,7 @@ import (
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/interoperability"
 	"github.com/ivpn/desktop-app/daemon/logger"
-	"github.com/ivpn/desktop-app/daemon/oshelpers"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
 	"github.com/ivpn/desktop-app/daemon/protocol/ivpnclient"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -103,7 +103,7 @@ type Service interface {
 	SplitTunnelling_RemoveApp(pid int, exec string) (err error)
 	SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error
 
-	GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error)
+	GetInstalledApps(extraArgsJSON string) ([]apptypes.AppInfo, error)
 	GetBinaryIcon(binaryPath string) (string, error)
 
 	Preferences() preferences.Preferences

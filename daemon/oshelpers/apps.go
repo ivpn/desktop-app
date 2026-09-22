@@ -28,30 +28,13 @@ import (
 	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/logger"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 )
 
 var log *logger.Logger
 
 func init() {
 	log = logger.NewLogger("oshlpr")
-}
-
-type AppInfo struct {
-	// Application description: [<AppGroup>/]<AppName>.
-	// Example 1: "Git/Git GUI"
-	// 		AppName  = "Git GUI"
-	// 		AppGroup = "Git"
-	// Example 2: "Firefox"
-	// 		AppName  = "Firefox"
-	// 		AppGroup = null
-	AppName  string
-	AppGroup string // optional
-	// base64 icon of the executable binary
-	AppIcon string
-	// The unique parameter describing an application
-	// Windows: absolute path to application binary
-	// Linux: program to execute, possibly with arguments.
-	AppBinaryPath string
 }
 
 // GetInstalledApps returns a list of installed applications on the system
@@ -63,7 +46,7 @@ type AppInfo struct {
 //		{ "WindowsEnvAppdata": "..." }
 //		Applicable only for Windows: APPDATA environment variable
 //		Needed to know path of current user's (not root) StartMenu folder location
-func GetInstalledApps(extraArgsJSON string) (apps []AppInfo, err error) {
+func GetInstalledApps(extraArgsJSON string) (apps []apptypes.AppInfo, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			apps = nil
@@ -83,7 +66,7 @@ func GetInstalledApps(extraArgsJSON string) (apps []AppInfo, err error) {
 
 	// ensure AppBinaryPath is unique for all elements in the list
 	retMap := make(map[string]struct{})
-	retAppsList := make([]AppInfo, 0, len(appsList))
+	retAppsList := make([]apptypes.AppInfo, 0, len(appsList))
 	for _, v := range appsList {
 		if _, ok := retMap[v.AppBinaryPath]; ok {
 			continue // duplicate
