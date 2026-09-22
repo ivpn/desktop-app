@@ -31,6 +31,9 @@ module.exports = {
   uninstallExtension: () => addon.ExtensionDeactivate(),
   // "invalid" | "disconnected" | "connecting" | "connected" | "reasserting" | "disconnecting"
   getSessionStatus: () => addon.SessionGetStatus(),
+  // Registers the proxy configuration with the OS (raises the system's "add proxy
+  // configurations" prompt the first time) without starting a session.
+  registerConfig: () => addon.SessionRegisterConfig(),
   // cfg is forwarded verbatim as NETunnelProviderSession start options; always a
   // full stop-then-restart of the session, never a live in-place update.
   applyConfig: (cfg) => addon.SessionApplyConfig(JSON.stringify(cfg || {})),

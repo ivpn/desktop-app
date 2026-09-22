@@ -39,7 +39,11 @@ export default {
 };
 
 import { Platform, PlatformEnum } from "@/platform/platform";
-import { SplitTunnelMacExtStateEnum, DaemonConnectionType } from "@/store/types";
+import {
+  SplitTunnelMacExtStateEnum,
+  SplitTunnelMacSessionStatusEnum,
+  DaemonConnectionType,
+} from "@/store/types";
 import store from "@/store";
 
 // Set by StopAndWait(); invoked from the addon.onStateChanged() handler in
@@ -78,10 +82,20 @@ function Init(onStateChangedCallback) {
     store.commit("uiState/splitTunnelMacOS", s);
     if (onStateChangedCallback) onStateChangedCallback(s);
     if (_onSessionStopped && isSessionStopped(s.sessionStatus)) _onSessionStopped();
+    // A session that dies while a config is applied usually means the user
+    // switched the extension off in System Settings - ask the OS.
+    if (_lastAppliedConfig && isSessionStopped(s.sessionStatus)) addon.refreshExtensionState();
     // Activation completing is not a daemon status change, so nothing else
     // re-triggers the config applied while the extension was still installing.
     if (!wasInstalled && s.extensionState === SplitTunnelMacExtStateEnum.Installed) {
       _lastAppliedConfig = null; // that config never reached a running extension
+      applyDaemonStatus(store.state.vpnState.splitTunnelling);
+    }
+    // The extension was removed behind our back (e.g. `systemextensionsctl
+    // uninstall`) after we activated it: activate it again, which brings the
+    // approval prompt and its banner back instead of silently doing nothing.
+    if (s.extensionState === SplitTunnelMacExtStateEnum.NotInstalled && _extensionActivationRequested) {
+      _extensionActivationRequested = false;
       applyDaemonStatus(store.state.vpnState.splitTunnelling);
     }
   });
@@ -151,6 +165,12 @@ let _lastExtensionState = SplitTunnelMacExtStateEnum.NotInstalled;
 // when the session is stopped (see ApplyConfig/Stop).
 let _lastAppliedConfig = null;
 
+// Whether the proxy configuration was registered with the OS (or a session
+// applied, which registers it too) since Split Tunnel was enabled. Once per
+// enable cycle: re-registering after the user declined the system prompt
+// would raise that prompt again on every status update.
+let _configRegistrationRequested = false;
+
 // Maps the daemon's SplitTunnelStatus shape onto the addon's start options.
 function applyDaemonStatus(status) {
   // While the daemon is not connected the store holds defaults, not facts
@@ -160,6 +180,7 @@ function applyDaemonStatus(status) {
   if (store.state.daemonConnectionState !== DaemonConnectionType.Connected) return;
   if (!status) return;
   if (!status.IsEnabled) {
+    _configRegistrationRequested = false;
     Stop();
     return;
   }
@@ -177,8 +198,15 @@ function applyDaemonStatus(status) {
     store.getters["vpnState/isConnected"] && !store.getters["vpnState/isPaused"];
   if (!isVpnActive || !status.SplitTunnelApps?.length) {
     Stop();
+    // Raise the system's "add proxy configurations" prompt now, while the user
+    // is still enabling Split Tunnel, rather than on the first VPN connect.
+    if (!_configRegistrationRequested && _lastExtensionState === SplitTunnelMacExtStateEnum.Installed) {
+      _configRegistrationRequested = true;
+      getAddon()?.registerConfig();
+    }
     return;
   }
+  _configRegistrationRequested = true; // applying a config registers it as well
   ApplyConfig({
     isInversed: status.IsInversed, // not yet consumed by the extension - reserved for a future inverse-mode implementation
     excludedPaths: status.SplitTunnelApps,
@@ -193,7 +221,10 @@ function Stop() {
 }
 
 function isSessionStopped(sessionStatus) {
-  return sessionStatus === "disconnected" || sessionStatus === "invalid";
+  return (
+    sessionStatus === SplitTunnelMacSessionStatusEnum.Disconnected ||
+    sessionStatus === SplitTunnelMacSessionStatusEnum.Invalid
+  );
 }
 
 // Called by background.js on quit. The extension session outlives this
@@ -240,11 +271,12 @@ function UninstallExtensionAndWait(onDone) {
 }
 
 // Called by background.js whenever the main window regains focus. The addon's
-// state is a cache, so returning from System Settings after clicking "Allow"
-// needs an explicit re-query - but only while the user is actually
-// mid-approval, to avoid probing the OS on every focus.
+// state is a cache, so returning from System Settings after approving,
+// enabling or disabling the extension needs an explicit re-query. Only once
+// activation has been requested, so a user who never enabled Split Tunnel is
+// never probed.
 function RecheckApprovalOnFocus() {
-  if (_lastExtensionState !== SplitTunnelMacExtStateEnum.NeedsUserApproval) return;
+  if (!_extensionActivationRequested) return;
   const addon = getAddon();
   if (addon) addon.refreshExtensionState();
 }

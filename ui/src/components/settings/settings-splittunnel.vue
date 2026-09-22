@@ -204,13 +204,6 @@
       />
     </div>
 
-    <!-- MACOS: kill switch interaction disclosure (not cosmetic - always shown while enabled) -->
-    <div v-if="isMacOS && IsEnabled" class="warningBlock" tabindex="0">
-      While Split Tunnel is enabled, applications that ignore the VPN routing
-      (such as iMessage or FaceTime on some macOS versions) may be unable to
-      connect when the IVPN Firewall is enabled.
-    </div>
-
     <!-- INVERSE MODE-->
     <div v-show="isSplitTunnelInverseSupported">
       <!-- Inverse mode -->
@@ -442,10 +435,7 @@
 const sender = window.ipcSender;
 
 import { Platform, PlatformEnum } from "@/platform/platform";
-import {
-  SplitTunnelMacExtStateEnum,
-  SplitTunnelMacSessionStatusEnum,
-} from "@/store/types";
+import { SplitTunnelMacExtStateEnum } from "@/store/types";
 
 import Image_search_windows from "@/assets/search-windows.svg";
 import Image_search_macos from "@/assets/search-macos.svg";
@@ -927,44 +917,29 @@ Do you want to enable Inverse mode for Split Tunnel?",
       return Platform() === PlatformEnum.macOS;
     },
 
-    // Mirrors the gate in os-helpers/macos/split-tunnel-helper.js: the extension
-    // session only runs while the VPN is actually carrying traffic.
-    isVpnActive: function () {
-      return (
-        this.$store.getters["vpnState/isConnected"] &&
-        !this.$store.getters["vpnState/isPaused"]
-      );
-    },
-
     // macOS only: last state reported by the Split Tunnel system extension/session addon
     macOSExtState: function () {
       return this.$store.state.uiState?.splitTunnelMacOS || {};
     },
 
-    // macOS only: human-readable status banner text, or "" when nothing to show
+    // macOS only: status banner text, or "" when nothing to show. Only states
+    // that need the user's attention are shown; normal progress is not.
     macOSStatusMessage: function () {
       if (!this.isMacOS || !this.IsEnabled) return "";
-      const extState = this.macOSExtState.extensionState;
-      const sessionStatus = this.macOSExtState.sessionStatus;
-      switch (extState) {
-        case SplitTunnelMacExtStateEnum.NotInstalled:
-        case SplitTunnelMacExtStateEnum.Installing:
-          return "Installing the Split Tunnel system extension...";
+      const lastError = this.macOSExtState.lastError;
+      switch (this.macOSExtState.extensionState) {
         case SplitTunnelMacExtStateEnum.NeedsUserApproval:
           return "Split Tunnel needs to be approved in System Settings before it can start.";
+        case SplitTunnelMacExtStateEnum.Disabled:
+          return "The Split Tunnel system extension is switched off. Enable it in System Settings to use Split Tunnel.";
         case SplitTunnelMacExtStateEnum.NeedsReboot:
           return "Restart your Mac to finish installing the Split Tunnel system extension.";
         case SplitTunnelMacExtStateEnum.Error:
-          return `Split Tunnel system extension error: ${this.macOSExtState.lastError || "unknown error"}`;
+          return `Split Tunnel system extension error: ${lastError || "unknown error"}`;
         case SplitTunnelMacExtStateEnum.Installed:
-          // These two mirror the gates in split-tunnel-helper.js's
-          // applyDaemonStatus() - without them "starting..." would be shown
-          // permanently, since in both cases the session is stopped on purpose.
-          if (!this.isVpnActive)
-            return "Split Tunnel will start when the VPN is connected.";
-          if (!this.STConfig?.SplitTunnelApps?.length) return "";
-          if (sessionStatus !== SplitTunnelMacSessionStatusEnum.Connected)
-            return "Split Tunnel is starting...";
+          // e.g. the user did not allow adding the proxy configuration
+          if (lastError)
+            return `Split Tunnel could not start: ${lastError}. Disable and re-enable Split Tunnel to retry.`;
           return "";
         default:
           return "";

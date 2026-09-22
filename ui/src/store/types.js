@@ -35,6 +35,7 @@ export const SplitTunnelMacExtStateEnum = Object.freeze({
   NeedsUserApproval: "needsUserApproval", // blocked by the OS until the user allows it in System Settings
   NeedsReboot: "needsReboot", // activation will complete only after a restart
   Installed: "installed", // activated and enabled; ready to run the proxy session
+  Disabled: "disabled", // installed, but switched off by the user in System Settings
   Error: "error", // activation request failed (details in 'lastError')
 });
 

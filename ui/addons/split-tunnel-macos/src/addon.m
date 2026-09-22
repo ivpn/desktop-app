@@ -55,6 +55,7 @@ typedef NS_ENUM(NSInteger, STExtState) {
     STExtStateNeedsUserApproval,
     STExtStateNeedsReboot,
     STExtStateInstalled,
+    STExtStateDisabled,
     STExtStateError,
 };
 
@@ -65,6 +66,7 @@ static NSString *StringForExtState(STExtState s) {
         case STExtStateNeedsUserApproval: return @"needsUserApproval";
         case STExtStateNeedsReboot:       return @"needsReboot";
         case STExtStateInstalled:         return @"installed";
+        case STExtStateDisabled:          return @"disabled";
         case STExtStateError:             return @"error";
     }
     return @"error";
@@ -97,6 +99,7 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 - (void)activateExtension;
 - (void)deactivateExtension;
 - (void)refreshExtensionState;
+- (void)registerConfiguration;
 - (void)applyConfigJSON:(NSString *)json;
 - (void)stopSession;
 @end
@@ -217,11 +220,13 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 
 // Only sent for a properties request (-refreshExtensionState).
 - (void)request:(OSSystemExtensionRequest *)request foundProperties:(NSArray<OSSystemExtensionProperties *> *)properties {
-    STExtState state = STExtStateNotInstalled; // also covers "installed but disabled": resubmitting activation is the recovery path
+    STExtState state = STExtStateNotInstalled;
     for (OSSystemExtensionProperties *p in properties) {
         if (p.isUninstalling) { continue; }
         if (p.isEnabled) { state = STExtStateInstalled; break; }
-        if (p.isAwaitingUserApproval) { state = STExtStateNeedsUserApproval; }
+        // Present but not enabled: still waiting for the user's approval, or
+        // switched off by the user in System Settings after it was enabled.
+        state = p.isAwaitingUserApproval ? STExtStateNeedsUserApproval : STExtStateDisabled;
     }
     if (state == _extState) { return; }
     _extState = state;
@@ -326,6 +331,25 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 - (NSString *)sessionStatusString {
     NETunnelProviderSession *session = (NETunnelProviderSession *)_lastManager.connection;
     return StringForVPNStatus(session.status);
+}
+
+// Registers the proxy configuration with the OS without starting a session.
+// The first save raises the system's "would like to add proxy configurations"
+// prompt; calling this as soon as the extension is installed shows that prompt
+// while the user is still enabling Split Tunnel, not on the first VPN connect.
+- (void)registerConfiguration {
+    __weak typeof(self) weakSelf = self;
+    [self loadOrCreateManagerWithCompletion:^(NETransparentProxyManager * _Nullable manager, NSError * _Nullable error) {
+        __strong typeof(self) strongSelf = weakSelf;
+        if (!strongSelf) { return; }
+        if (manager) {
+            strongSelf->_lastManager = manager;
+            strongSelf->_lastError = nil;
+        } else {
+            strongSelf->_lastError = error.localizedDescription ?: @"Unable to load the Split Tunnel proxy configuration";
+        }
+        [strongSelf notifyStateChanged];
+    }];
 }
 
 // `json` is the resolved Split Tunnel config the daemon computed, forwarded
@@ -485,6 +509,11 @@ static napi_value SessionGetStatus(napi_env env, napi_callback_info info) {
     return CreateJSString(env, [[STSplitTunnelController sharedInstance] sessionStatusString]);
 }
 
+static napi_value SessionRegisterConfig(napi_env env, napi_callback_info info) {
+    [[STSplitTunnelController sharedInstance] registerConfiguration];
+    return NULL;
+}
+
 static napi_value SessionApplyConfig(napi_env env, napi_callback_info info) {
     NSString *json = CopyJSStringArg0(env, info);
     [[STSplitTunnelController sharedInstance] applyConfigJSON:json];
@@ -554,6 +583,7 @@ napi_value Init(napi_env env, napi_value exports) {
         DECLARE_NAPI_METHOD("ExtensionGetState", ExtensionGetState),
         DECLARE_NAPI_METHOD("ExtensionRefreshState", ExtensionRefreshState),
         DECLARE_NAPI_METHOD("SessionGetStatus", SessionGetStatus),
+        DECLARE_NAPI_METHOD("SessionRegisterConfig", SessionRegisterConfig),
         DECLARE_NAPI_METHOD("SessionApplyConfig", SessionApplyConfig),
         DECLARE_NAPI_METHOD("SessionStop", SessionStop),
         DECLARE_NAPI_METHOD("SetStateChangedCallback", SetStateChangedCallback),
