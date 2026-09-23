@@ -68,6 +68,21 @@ type IProtocol interface {
 }
 
 // Launch -  initialize and start service
+func writeServicePortFile(path string, port int, secret uint64) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if err := file.Chmod(0o600); err != nil {
+		log.Error(fmt.Errorf("failed to chmod port info file: %w", err))
+	}
+	if _, err := file.WriteString(fmt.Sprintf("%d:%x", port, secret)); err != nil {
+		log.Error(fmt.Errorf("failed to write port info into file: %w", err))
+	}
+	return nil
+}
+
 func Launch() {
 	warnings, errors, logInfo := platform.Init()
 	logger.Init(platform.LogFile())
@@ -175,16 +190,8 @@ func Launch() {
 		openedPort := <-startedOnPortChan
 
 		// save port info into a file (UI/CLI clients is able to read it)
-		file, err := os.OpenFile(platform.ServicePortFile(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-		if err != nil {
+		if err := writeServicePortFile(platform.ServicePortFile(), openedPort, secret); err != nil {
 			logger.Panic(err.Error())
-		}
-		defer file.Close()
-		if err := file.Chmod(0o600); err != nil {
-			log.Error(fmt.Errorf("failed to chmod port info file: %w", err))
-		}
-		if _, err := file.WriteString(fmt.Sprintf("%d:%x", openedPort, secret)); err != nil {
-			log.Error(fmt.Errorf("failed to write port info into file: %w", err))
 		}
 
 		// inform OS-specific implementation about listener port
