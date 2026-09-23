@@ -173,8 +173,16 @@ func (p *Protocol) notifyClientsDaemonExiting() {
 	p._connections = make(map[net.Conn]*connectionInfo)
 }
 
+func (p *Protocol) clientIsAuthenticated(c net.Conn) bool {
+	p._connectionsMutex.RLock()
+	defer p._connectionsMutex.RUnlock()
+	info := p._connections[c]
+	return info != nil && info.IsAuthenticated
+}
+
 func (p *Protocol) clientSetAuthenticated(c net.Conn) {
 	// separate anonymous function for correct mutex unlock
+	justAuthenticated := false
 	func() {
 		p._connectionsMutex.Lock()
 		defer p._connectionsMutex.Unlock()
@@ -183,6 +191,7 @@ func (p *Protocol) clientSetAuthenticated(c net.Conn) {
 			if !cInfo.IsAuthenticated {
 				// connected client (first authentication)
 				cInfo.IsAuthenticated = true
+				justAuthenticated = true
 
 				go func() {
 					// notifying service about authenticated client (autoconnect if needed)
@@ -191,6 +200,12 @@ func (p *Protocol) clientSetAuthenticated(c net.Conn) {
 			}
 		}
 	}()
+
+	// The first Hello is sent before this flag is set when EAA is on.
+	// Push a full Hello after the password check so the UI can load the session.
+	if justAuthenticated && p._eaa.IsEnabled() {
+		p.sendResponse(c, p.createHelloResponse(), 0)
+	}
 
 	if len(p._lastConnectionErrorToNotifyClient) > 0 {
 		log.Info("Sending delayed error to client: ", p._lastConnectionErrorToNotifyClient)
