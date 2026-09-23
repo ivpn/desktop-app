@@ -7,6 +7,8 @@
 
 #include <syslog.h>
 #include <dispatch/dispatch.h>
+#include <string.h>
+#include <libproc.h>
 
 
 #include "libivpn.h"
@@ -142,6 +144,18 @@ void start_xpc_listener(char *name, int serviceTcpPort, uint64_t serviceSecret) 
 						{
                 syslog(LOG_ALERT, "libivpn: **************** START REQUEST");
 								puts( "libivpn: **************** START REQUEST");
+
+                xpc_connection_t peer = xpc_dictionary_get_remote_connection(event);
+                pid_t peerPid = peer ? xpc_connection_get_pid(peer) : 0;
+                char peerPath[PROC_PIDPATHINFO_MAXSIZE];
+                if (peerPid <= 0 || proc_pidpath(peerPid, peerPath, sizeof(peerPath)) <= 0) {
+                    syslog(LOG_ALERT, "libivpn: reject START_REQUEST: no peer path");
+                    return;
+                }
+                if (strstr(peerPath, "/IVPN.app/") == NULL && strstr(peerPath, "/IVPN ") == NULL) {
+                    syslog(LOG_ALERT, "libivpn: reject START_REQUEST from %s", peerPath);
+                    return;
+                }
 
                 //xpc_object_t message = xpc_dictionary_create(NULL, NULL, 0);
                 xpc_object_t message = xpc_dictionary_create_reply(event);
