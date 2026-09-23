@@ -105,8 +105,18 @@ Messages go to the unified log under the bundle identifier as subsystem:
 
 Info and error levels are always emitted. Debug level, which includes a line
 for every new flow on the machine with its executable path, is emitted only
-for a session started with `debugLogging`; the IVPN app sets it from its
-"logging" setting. In `zsh`, `log` is a shell builtin; use `/usr/bin/log`.
+for a session started with `debugLogging`. The IVPN app sets that option when
+it was launched with the `st-debug-logging` argument. To watch a test
+session:
+
+```sh
+open -a IVPN --args st-debug-logging
+/usr/bin/log stream --predicate 'subsystem == "com.electron.ivpn-ui.SplitTunnel"' --level debug
+```
+
+Start the stream before the traffic you want to see: the system keeps
+debug-level lines in memory only, so `log show` will generally not have them
+afterwards. In `zsh`, `log` is a shell builtin; use `/usr/bin/log`.
 
 ## Tests
 

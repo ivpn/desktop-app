@@ -71,6 +71,12 @@ let _configRegistrationRequested = false;
 // Init() once the session reports a stopped status.
 let _onSessionStopped = null;
 
+// Testing aid: `open -a IVPN --args st-debug-logging` makes every session this
+// process starts log at debug level (one line per new flow on the machine,
+// with its executable path). Read once - the value must not change between
+// the session restarts of one process.
+const _debugLogging = process.argv.includes("st-debug-logging");
+
 function isApplicable() {
   return Platform() === PlatformEnum.macOS;
 }
@@ -218,7 +224,7 @@ function applyDaemonStatus(status) {
     excludedPaths: status.SplitTunnelApps,
     // Extension debug logging follows the app's logging setting; a change
     // takes effect with the next session (re)start.
-    debugLogging: false, //!!store.state.settings.daemonSettings?.IsLogging,
+    debugLogging: _debugLogging,
   });
 }
 

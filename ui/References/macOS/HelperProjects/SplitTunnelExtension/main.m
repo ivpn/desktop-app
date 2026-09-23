@@ -75,7 +75,10 @@ int main(int argc, char *argv[]) {
         // (`log stream --predicate 'subsystem == "com.electron.ivpn-ui.SplitTunnel"' --level debug`)
         // shows this regardless of whether the host app's window is open.
         // Debug-level lines are emitted only when the session is started with
-        // the `debugLogging` option (see -startProxyWithOptions:).
+        // the `debugLogging` option (see -startProxyWithOptions:). They name the
+        // executable behind every new flow on the machine and the destinations
+        // of excluded apps - the same information netstat(1) and ps(1) give any
+        // user, hence logged as public like everything else.
         NSString *subsystem = [NSBundle mainBundle].bundleIdentifier ?: @"SplitTunnelExtension";
         os_log_t extensionLog = os_log_create(subsystem.UTF8String, "proxy");
 
@@ -85,8 +88,6 @@ int main(int argc, char *argv[]) {
             else if (level == STLogLevelDebug) { type = OS_LOG_TYPE_DEBUG; }
             os_log_with_type(extensionLog, type, "%{public}@", message);
         });
-
-        //STLogSetMinLevel(STLogLevelDebug);
 
         SwitchToSplitTunnelGroup();
         RaiseFileDescriptorLimit();

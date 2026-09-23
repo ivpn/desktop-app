@@ -73,7 +73,9 @@ Settings), `error`. Session statuses follow `NEVPNStatus`:
 
 `cfg` is passed to the extension unchanged as the session start options. The
 keys the extension reads are documented in
-`ui/References/macOS/HelperProjects/SplitTunnelExtension/README.md`.
+`ui/References/macOS/HelperProjects/SplitTunnelExtension/README.md`. The
+helper sets `debugLogging` when the app was launched with the
+`st-debug-logging` argument (`open -a IVPN --args st-debug-logging`).
 
 ## Behaviour worth knowing
 

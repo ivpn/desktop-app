@@ -104,6 +104,15 @@ if (process.argv.find(arg => arg === 'uninstall-agent')) {
   setTimeout(() => app.quit(), 120000);
   isAllowedToStart = false;
 }
+if (process.argv.find(arg => arg === 'st-debug-logging')) {
+  // Testing aid: the Split Tunnel extension logs at debug level for every
+  // session this process starts (see split-tunnel-helper.js). Does not change
+  // the startup flow.
+  console.log(
+    "'st-debug-logging' argument detected. Split Tunnel extension debug logging enabled.\n" +
+      "  To watch it: /usr/bin/log stream --predicate 'subsystem == \"com.electron.ivpn-ui.SplitTunnel\"' --level debug"
+  );
+}
 
 // Only one instance of application can be started.
 // Maintenance runs (isAllowedToStart == false) do not take part: they must not
