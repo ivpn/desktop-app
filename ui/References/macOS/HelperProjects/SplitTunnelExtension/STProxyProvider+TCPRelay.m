@@ -100,7 +100,11 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
             // actually send/receive data through us.
             [flow openWithLocalEndpoint:nil completionHandler:^(NSError * _Nullable openError) {
                 if (openError) {
-                    STLogError(@"Failed to open TCP flow after connecting: %@", openError);
+                    if (STIsFlowClosedByApp(openError)) {
+                        STLogDebug(@"App closed the TCP flow before the relay connected (%@)", openError.localizedDescription);
+                    } else {
+                        STLogError(@"Failed to open TCP flow after connecting: %@", openError);
+                    }
                     nw_connection_cancel(connection);
                     return;
                 }
@@ -222,7 +226,11 @@ static const NSTimeInterval kTCPConnectDeadline = 30.0;
                     // receiving instead of pulling the rest of the server's data
                     // over the physical interface. The teardown cancels the
                     // connection, which ends the other direction as well.
-                    STLogDebug(@"App closed the flow while data was pending (%@), tearing down", writeError);
+                    if (STIsFlowClosedByApp(writeError)) {
+                        STLogDebug(@"App closed the TCP flow while data was pending (%@), tearing down", writeError.localizedDescription);
+                    } else {
+                        STLogError(@"Failed to write TCP data back to the app, tearing down: %@", writeError);
+                    }
                     [strongSelf teardownTCPFlow:flow connection:connection];
                     dispatch_group_leave(doneGroup);
                     return;

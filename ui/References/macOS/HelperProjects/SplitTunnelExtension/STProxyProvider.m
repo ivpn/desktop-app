@@ -41,6 +41,11 @@
 // offered its own flows by NetworkExtension.)
 static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
 
+BOOL STIsFlowClosedByApp(NSError *error) {
+    return [error.domain isEqualToString:NEAppProxyErrorDomain] &&
+           (error.code == NEAppProxyFlowErrorNotConnected || error.code == NEAppProxyFlowErrorPeerReset);
+}
+
 @implementation STProxyProvider
 
 - (instancetype)init {

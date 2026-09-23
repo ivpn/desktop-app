@@ -158,8 +158,12 @@ static const NSUInteger kMaxPendingSendsPerPeer = 64;
 
     [flow openWithLocalEndpoint:nil completionHandler:^(NSError * _Nullable openError) {
         if (openError) {
-            STLogError(@"Failed to open UDP flow: %@", openError);
-            [self st_unregisterUDPFlow:flow];
+            if (STIsFlowClosedByApp(openError)) {
+                STLogDebug(@"App closed the UDP flow before it was opened (%@)", openError.localizedDescription);
+            } else {
+                STLogError(@"Failed to open UDP flow: %@", openError);
+            }
+            [self teardownUDPFlow:flow state:state]; // closes the flow and unregisters it; no peers exist yet
             return;
         }
         STLogDebug(@"UDP flow opened - relaying datagrams");
@@ -332,7 +336,7 @@ static const NSUInteger kMaxPendingSendsPerPeer = 64;
             // datagram, so a peer that replies faster than the app reads cannot
             // pile datagrams up here.
             [flow writeDatagrams:@[data] sentByEndpoints:@[remote] completionHandler:^(NSError * _Nullable writeError) {
-                if (writeError) {
+                if (writeError && !STIsFlowClosedByApp(writeError)) {
                     STLogError(@"Failed to write UDP data back to the app: %@", writeError);
                 }
                 finishOrContinue();

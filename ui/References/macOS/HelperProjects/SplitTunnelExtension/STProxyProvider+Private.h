@@ -112,6 +112,12 @@ NS_ASSUME_NONNULL_BEGIN
 // compiler doesn't expect these to be implemented alongside the main
 // @implementation STProxyProvider block - they're implemented in
 // STProxyProvider+TCPRelay.m / +UDPRelay.m instead.
+// Whether `error` means the app closed its side of the flow (or the flow was
+// already closed when the call was made). Routine for short-lived sockets and
+// connection races - a browser closes the losers of every connection attempt
+// it races - so callers log it at debug rather than error level.
+BOOL STIsFlowClosedByApp(NSError * _Nullable error);
+
 @interface STProxyProvider (Relaying)
 - (void)relayTCPFlow:(NEAppProxyTCPFlow *)flow;
 - (void)relayUDPFlow:(NEAppProxyUDPFlow *)flow;
