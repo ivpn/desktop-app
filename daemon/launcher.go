@@ -175,11 +175,14 @@ func Launch() {
 		openedPort := <-startedOnPortChan
 
 		// save port info into a file (UI/CLI clients is able to read it)
-		file, err := os.Create(platform.ServicePortFile())
+		file, err := os.OpenFile(platform.ServicePortFile(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 		if err != nil {
 			logger.Panic(err.Error())
 		}
 		defer file.Close()
+		if err := file.Chmod(0o600); err != nil {
+			log.Error(fmt.Errorf("failed to chmod port info file: %w", err))
+		}
 		if _, err := file.WriteString(fmt.Sprintf("%d:%x", openedPort, secret)); err != nil {
 			log.Error(fmt.Errorf("failed to write port info into file: %w", err))
 		}
