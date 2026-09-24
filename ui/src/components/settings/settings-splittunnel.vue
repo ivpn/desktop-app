@@ -931,11 +931,11 @@ Do you want to enable Inverse mode for Split Tunnel?",
     },
 
     // macOS only: where the system extension is approved/enabled. Since
-    // macOS 13 (Darwin 22) that is General > Login Items & Extensions; before,
-    // Security & Privacy > General.
+    // macOS 15 Sequoia (Darwin 24) that is General > Login Items & Extensions;
+    // on macOS 12-14 (Darwin 21-23) it is Privacy & Security.
     macOSSystemSettingsLink: function () {
       const darwinMajor = parseInt(sender.osRelease().split(".")[0], 10);
-      return darwinMajor >= 22
+      return darwinMajor >= 24
         ? "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
         : "x-apple.systempreferences:com.apple.preference.security?Security";
     },
@@ -947,7 +947,7 @@ Do you want to enable Inverse mode for Split Tunnel?",
       const lastError = this.macOSExtState.lastError;
       switch (this.macOSExtState.extensionState) {
         case SplitTunnelMacExtStateEnum.NeedsUserApproval:
-          return "Split Tunnel needs to be approved in System Settings before it can start.";
+          return "Split Tunnel is enabled but not active yet. Approve the IVPN system extension in System Settings; it starts automatically once approved.";
         case SplitTunnelMacExtStateEnum.Disabled:
           return "The Split Tunnel system extension is switched off. Enable it in System Settings to use Split Tunnel.";
         case SplitTunnelMacExtStateEnum.NeedsReboot:

@@ -141,4 +141,5 @@ open -n -W -a /Applications/IVPN.app --args st-deactivate-and-quit
 ```
 
 Alternatively delete the app bundle and reboot, or switch the extension off
-in System Settings under Login Items & Extensions, Network Extensions.
+in System Settings: General > Login Items & Extensions > Network Extensions on
+macOS 15 and later, Privacy & Security on macOS 12 to 14.
