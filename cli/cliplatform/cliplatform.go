@@ -39,6 +39,13 @@ func IsSplitTunRunsApp() bool {
 	}
 	return runtime.GOOS == "linux"
 }
+
+// IsSplitTunInverseSupported reports whether Inverse Split Tunnel mode (only the
+// selected applications use the VPN) exists on this platform. The daemon refuses
+// it where it does not; this only keeps the corresponding options out of the CLI.
+func IsSplitTunInverseSupported() bool {
+	return IsSplitTunSupported() && runtime.GOOS != "darwin"
+}
 func IsDnsOverHttpsSupported() bool {
 	return true
 }

@@ -202,7 +202,11 @@ func (c *SplitTun) Init() {
 	// register special parse function for '-appadd' (parsing appaddArgs)
 	c.SetParseSpecialFunc(c.specialParse)
 
-	c.Initialize("splittun", "Split Tunnel management\nThis feature allows you to either exclude specific applications' traffic from the VPN tunnel\nor restrict VPN usage to only specified apps.")
+	description := "Split Tunnel management\nThis feature allows you to exclude specific applications' traffic from the VPN tunnel."
+	if cliplatform.IsSplitTunInverseSupported() {
+		description = "Split Tunnel management\nThis feature allows you to either exclude specific applications' traffic from the VPN tunnel\nor restrict VPN usage to only specified apps."
+	}
+	c.Initialize("splittun", description)
 
 	c.BoolVar(&c.status, "status", false, "(default) Show Split Tunnel status and configuration")
 
@@ -224,25 +228,27 @@ func (c *SplitTun) Init() {
 		c.StringVar(&c.appremove, "appremove", "", "PID", "Remove application from Split Tunnel environment\n(argument: Process ID)")
 	}
 
-	c.BoolVar(&c.onInverse, cmd_name_on_inverse, false,
-		`Enable inverse mode. Only specified applications utilize the VPN connection,
+	if cliplatform.IsSplitTunInverseSupported() {
+		c.BoolVar(&c.onInverse, cmd_name_on_inverse, false,
+			`Enable inverse mode. Only specified applications utilize the VPN connection,
 		while all other traffic circumvents the VPN, using the default connection.`)
-	c.BoolVar(&c.offInverse, cmd_name_off_inverse, false, `Disable inverse mode`)
+		c.BoolVar(&c.offInverse, cmd_name_off_inverse, false, `Disable inverse mode`)
 
-	c.StringVar(&c.noVpnConnectivity, cmd_name_no_vpn_connectivity, "", "[on/off]",
-		`Enabling this feature allows applications within the Split Tunnel environment 
+		c.StringVar(&c.noVpnConnectivity, cmd_name_no_vpn_connectivity, "", "[on/off]",
+			`Enabling this feature allows applications within the Split Tunnel environment 
 		to utilize the default network connection when the VPN is disabled,
 		mirroring the behavior of applications outside the Split Tunnel environment.
 		By default, this feature is turned off, and applications within	the Split Tunnel environment
 		won't have access to the default network interface when the VPN is disabled.
 		Note! This functionality only applies in Inverse Split Tunnel mode`)
 
-	c.StringVar(&c.dnsFirewall, cmd_name_dns_firewall, "", "[on/off]",
-		`When this option is enabled, only DNS requests directed to IVPN DNS servers
+		c.StringVar(&c.dnsFirewall, cmd_name_dns_firewall, "", "[on/off]",
+			`When this option is enabled, only DNS requests directed to IVPN DNS servers
 		or user-defined custom DNS servers within the IVPN appsettings will be allowed.
 		All other DNS requests on port 53 will be blocked.
 		Note! The IVPN AntiTracker and custom DNS are not functional when this feature is disabled.
 		Note! This functionality only applies in Inverse Split Tunnel mode when the VPN is connected.`)
+	}
 
 	c.BoolVar(&c.on, "on", false, "Enable: exclude traffic from specific applications from being routed trough the VPN")
 
