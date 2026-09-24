@@ -206,15 +206,8 @@ function applyDaemonStatus(status) {
   // daemon/splittun/splittun_windows.go): a running session is offered every
   // flow on the machine, so it must have both a tunnel to bypass and
   // something to exclude.
-  // The daemon reports CONNECTED only through the connection details message
-  // (the store's connectionInfo mutation sets both), so the server endpoint the
-  // session must bypass (see vpnServerEndpoints) is present whenever the state
-  // is connected. The explicit check keeps the session from ever starting
-  // without it should that ordering change.
   const isVpnActive =
-    store.getters["vpnState/isConnected"] &&
-    !store.getters["vpnState/isPaused"] &&
-    !!store.state.vpnState.connectionInfo;
+    store.getters["vpnState/isConnected"] && !store.getters["vpnState/isPaused"];
   if (!isVpnActive || !status.SplitTunnelApps?.length) {
     Stop();
     // Raise the system's "add proxy configurations" prompt now, while the user
@@ -226,27 +219,27 @@ function applyDaemonStatus(status) {
     return;
   }
   _configRegistrationRequested = true; // applying a config registers it as well
+  // The endpoint the tunnel uses on the physical network (the VPN server, or
+  // the obfuscation proxy in front of it), announced by the daemon before every
+  // connection. The extension excludes it by rule so the tunnel's own packets
+  // are never attached to the proxy; on macOS 12 and 13 declining them per flow
+  // breaks the dual-stack UDP socket V2Ray uses.
+  const remoteEndpoint = store.state.vpnState.remoteEndpoint;
+  if (!remoteEndpoint) {
+    console.warn(
+      "WARNING: (split-tunnel-helper) the daemon did not announce the connection's remote endpoint; starting the session without a bypass rule for it"
+    );
+  }
   ApplyConfig({
     isInversed: status.IsInversed, // not yet consumed by the extension - reserved for a future inverse-mode implementation
     excludedPaths: status.SplitTunnelApps,
-    bypassEndpoints: vpnServerEndpoints(),
+    bypassEndpoints: remoteEndpoint
+      ? [{ host: remoteEndpoint.Address, port: remoteEndpoint.Port }]
+      : [],
     // Extension debug logging follows the app's logging setting; a change
     // takes effect with the next session (re)start.
     debugLogging: _debugLogging,
   });
-}
-
-// The endpoint the tunnel itself talks to over the physical interface: the
-// VPN server, or the obfuscation proxy in front of it (the daemon reports the
-// proxy's address as ServerIP/ServerPort for such connections). The extension
-// excludes it by rule so the tunnel's own packets are never attached to the
-// proxy: on macOS 12 declining them per flow breaks the dual-stack UDP socket
-// V2Ray uses, on any version it saves the per-flow round trip. Empty until the
-// daemon has reported a connection.
-function vpnServerEndpoints() {
-  const ci = store.state.vpnState.connectionInfo;
-  if (!ci || !ci.ServerIP || !ci.ServerPort) return [];
-  return [{ host: ci.ServerIP, port: ci.ServerPort }];
 }
 
 function Stop() {

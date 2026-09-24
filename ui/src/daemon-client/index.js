@@ -124,6 +124,8 @@ const daemonResponses = Object.freeze({
   VpnStateResp: "VpnStateResp",
   ConnectedResp: "ConnectedResp",
   DisconnectedResp: "DisconnectedResp",
+  ConnectionStarting: "ConnectionStarting",
+  ConnectionStopped: "ConnectionStopped",
   ServerListResp: "ServerListResp",
   PingServersResp: "PingServersResp",
   CheckAccessiblePortsResponse: "CheckAccessiblePortsResponse",
@@ -481,6 +483,25 @@ async function processResponse(response) {
       store.commit("vpnState/tunnelIsUnhealthy", obj.IsUnhealthy);
       break;
 
+    // Sent before every connection (and on Hello when GetActiveRemoteEndpoint
+    // is set) with the endpoint the tunnel uses on the physical network; the
+    // matching ConnectionStopped follows the disconnect.
+    case daemonResponses.ConnectionStarting:
+      if (!obj.Address || !obj.Port) {
+        log.error(`Ignoring ConnectionStarting without endpoint: ${response}`);
+        break;
+      }
+      store.commit("vpnState/remoteEndpoint", {
+        Address: obj.Address,
+        Port: obj.Port,
+        Protocol: obj.Protocol,
+      });
+      break;
+
+    case daemonResponses.ConnectionStopped:
+      store.commit("vpnState/remoteEndpoint", null);
+      break;
+
     case daemonResponses.DisconnectedResp:
       store.commit(`vpnState/disconnected`, obj.ReasonDescription);
       store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED); // to properly raise value-changed event
@@ -648,6 +669,7 @@ function makeHelloRequest(isSimpleConnect) {
     helloReq = Object.assign(helloReq, {
       GetServersList: true,
       GetStatus: true,
+      GetActiveRemoteEndpoint: true,
       GetConfigParams: true,
       GetSplitTunnelStatus: true,
       GetWiFiCurrentState: true,
