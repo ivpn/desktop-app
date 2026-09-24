@@ -56,6 +56,7 @@ The host passes a dictionary to `startTunnelWithOptions:`; the provider reads:
 | `debugLogging` | bool | Emit debug-level log lines for this session (off by default, see Logging). |
 | `physicalInterface` | string | Optional. Pin relays to this interface, given as a BSD name or one of its IP addresses. |
 | `physicalInterfaceType` | string | Optional. Pin relays to an interface type instead. |
+| `bypassEndpoints` | array of `{host, port}` | The VPN's own endpoint(s) on the physical network: the server, or the obfuscation proxy in front of it. Excluded by rule so the tunnel's packets are never attached to the proxy (see below). |
 
 Without the two optional keys the interface owning the `default` route is
 used, re-evaluated on every network change. The IPv4 routing table is
@@ -63,6 +64,22 @@ consulted first and the IPv6 table only when IPv4 has no physical default.
 Settings cannot be changed on a running session; the host stops and restarts
 the session for every change, and `stopProxyWithReason:` closes every flow
 that is being relayed.
+
+### Why the VPN endpoint is excluded by rule
+
+Declining a flow in `handleNewFlow:` is not always enough. On macOS 12 and 13
+the kernel cannot return a declined UDP flow to normal delivery when the socket
+is a dual-stack IPv6 socket sending to an IPv4 address, the socket type Go
+programs such as V2Ray create: the second datagram fails with EINVAL and the
+socket is aborted, which kills the tunnel. Excluding the endpoint by rule keeps
+the kernel from attaching those flows in the first place.
+
+Affected versions as known today: reproduced on macOS 12 and 13, not
+reproducible on macOS 26, macOS 14 and 15 not verified. Where the kernel
+handles the declined flow correctly the rule is not required, but it still
+saves the per-flow round trip for the tunnel's own traffic, so it is applied on
+every version. Third-party applications using such sockets remain affected on
+the broken versions while a session runs.
 
 ## Runtime requirements
 

@@ -348,6 +348,11 @@ static NSDictionary *ParseJSONDictionary(NSString *json) {
 }
 
 - (void)vpnStatusDidChange:(NSNotification *)note {
+    // The notification is posted by every live NEVPNConnection object on the
+    // system - other apps' configurations, and every instance of ours that a
+    // past loadAllFromPreferences produced. Only the current one is ours;
+    // without this filter one status change became dozens of reports.
+    if (note.object != _lastManager.connection) { return; }
     if (_pendingStartOptions) {
         NETunnelProviderSession *session = (NETunnelProviderSession *)_lastManager.connection;
         if (session.status == NEVPNStatusDisconnected || session.status == NEVPNStatusInvalid) {

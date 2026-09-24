@@ -300,6 +300,9 @@ if (gotTheLock && isAllowedToStart) {
   if (Platform() === PlatformEnum.macOS) {
     splitTunnelHelperMacOS.Init((s) => {
       const reason = macOSStExtensionDisabledReason(s);
+      // The addon reports every session status change; the daemon only needs
+      // to hear about a change of the readiness verdict.
+      if (_lastStExtensionReport && _lastStExtensionReport.reason === reason) return;
       _lastStExtensionReport = { isReady: reason === "", reason };
       reportStExtensionState();
     });

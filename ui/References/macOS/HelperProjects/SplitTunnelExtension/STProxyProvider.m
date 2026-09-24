@@ -29,6 +29,7 @@
 #import "STPhysicalInterfaceSelector.h"
 #import "STLog.h"
 #import "STPathMatching.h"
+#import <arpa/inet.h>       // inet_pton()
 
 // STUDPFlowState is implemented in STProxyProvider+UDPRelay.m, next to its
 // only consumer.
@@ -44,6 +45,17 @@ static NSString * const kInternalBypassPathPrefix = @"/Applications/IVPN.app";
 BOOL STIsFlowClosedByApp(NSError *error) {
     return [error.domain isEqualToString:NEAppProxyErrorDomain] &&
            (error.code == NEAppProxyFlowErrorNotConnected || error.code == NEAppProxyFlowErrorPeerReset);
+}
+
+// Host-route prefix length for an IP literal: 32 for IPv4, 128 for IPv6,
+// 0 when `host` is not an IP literal.
+static NSUInteger STPrefixLengthForIPLiteral(NSString *host) {
+    if (![host isKindOfClass:[NSString class]] || host.length == 0) { return 0; }
+    struct in_addr v4;
+    struct in6_addr v6;
+    if (inet_pton(AF_INET, host.UTF8String, &v4) == 1) { return 32; }
+    if (inet_pton(AF_INET6, host.UTF8String, &v6) == 1) { return 128; }
+    return 0;
 }
 
 @implementation STProxyProvider
@@ -144,6 +156,37 @@ BOOL STIsFlowClosedByApp(NSError *error) {
                                                                     localPrefix:0
                                                                        protocol:NENetworkRuleProtocolAny
                                                                       direction:NETrafficDirectionOutbound]];
+    }
+
+    // The VPN's own endpoint (the server, or the obfuscation proxy in front of
+    // it) is excluded by rule as well, so the tunnel's packets are never
+    // attached to this proxy at all. Declining them in -handleNewFlow: is not
+    // enough: on macOS 12 and 13 the kernel cannot hand a declined UDP flow
+    // back to normal delivery when the socket is a dual-stack IPv6 socket
+    // sending to an IPv4 address (the socket type Go programs such as V2Ray
+    // create) - the second datagram fails with EINVAL and the tunnel dies.
+    // Reproduced on 12 and 13, not reproducible on 26, 14 and 15 not verified.
+    // Where the kernel handles the declined flow correctly the rule is still
+    // worthwhile: it saves the per-flow round trip to this process for the
+    // tunnel's own traffic.
+    NSArray *bypassEndpoints = options[@"bypassEndpoints"];
+    if ([bypassEndpoints isKindOfClass:[NSArray class]]) {
+        for (NSDictionary *endpoint in bypassEndpoints) {
+            NSString *host = [endpoint isKindOfClass:[NSDictionary class]] ? endpoint[@"host"] : nil;
+            NSInteger port = [endpoint isKindOfClass:[NSDictionary class]] ? [endpoint[@"port"] integerValue] : 0;
+            NSUInteger prefix = STPrefixLengthForIPLiteral(host);
+            if (prefix == 0 || port <= 0 || port > 65535) {
+                STLogError(@"Ignoring malformed bypass endpoint %@", endpoint);
+                continue;
+            }
+            STLogDebug(@"Bypassing VPN endpoint %@:%ld by rule", host, (long)port);
+            [excludedRules addObject:[[NENetworkRule alloc] initWithRemoteNetwork:[NWHostEndpoint endpointWithHostname:host port:[@(port) stringValue]]
+                                                                       remotePrefix:prefix
+                                                                       localNetwork:nil
+                                                                        localPrefix:0
+                                                                           protocol:NENetworkRuleProtocolAny
+                                                                          direction:NETrafficDirectionOutbound]];
+        }
     }
 
     settings.includedNetworkRules = @[matchEverything];
