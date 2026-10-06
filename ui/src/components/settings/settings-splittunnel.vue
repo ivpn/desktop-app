@@ -204,7 +204,7 @@
     </div>
 
     <!-- MACOS: system extension / session status -->
-    <div v-if="isMacOS && macOSStatusMessage" class="warningBlock" tabindex="0">
+    <div v-if="macOSStatusMessage" class="warningBlock" tabindex="0">
       <textWithLinkCtrl
         :text="macOSStatusMessage"
         textToUseAsLink="System Settings"
@@ -443,7 +443,6 @@
 const sender = window.ipcSender;
 
 import { Platform, PlatformEnum } from "@/platform/platform";
-import { SplitTunnelMacExtStateEnum } from "@/store/types";
 
 import Image_search_windows from "@/assets/search-windows.svg";
 import Image_search_macos from "@/assets/search-macos.svg";
@@ -925,11 +924,6 @@ Do you want to enable Inverse mode for Split Tunnel?",
       return Platform() === PlatformEnum.macOS;
     },
 
-    // macOS only: last state reported by the Split Tunnel system extension/session addon
-    macOSExtState: function () {
-      return this.$store.state.uiState?.splitTunnelMacOS || {};
-    },
-
     // macOS only: where the system extension is approved/enabled. Since
     // macOS 15 Sequoia (Darwin 24) that is General > Login Items & Extensions;
     // on macOS 12-14 (Darwin 21-23) it is Privacy & Security.
@@ -940,28 +934,9 @@ Do you want to enable Inverse mode for Split Tunnel?",
         : "x-apple.systempreferences:com.apple.preference.security?Security";
     },
 
-    // macOS only: status banner text, or "" when nothing to show. Only states
-    // that need the user's attention are shown; normal progress is not.
+    // macOS only: status banner text, or "" when nothing to show
     macOSStatusMessage: function () {
-      if (!this.isMacOS || !this.IsEnabled) return "";
-      const lastError = this.macOSExtState.lastError;
-      switch (this.macOSExtState.extensionState) {
-        case SplitTunnelMacExtStateEnum.NeedsUserApproval:
-          return "Split Tunnel is enabled but not active yet. Approve the IVPN system extension in System Settings; it starts automatically once approved.";
-        case SplitTunnelMacExtStateEnum.Disabled:
-          return "The Split Tunnel system extension is switched off. Enable it in System Settings to use Split Tunnel.";
-        case SplitTunnelMacExtStateEnum.NeedsReboot:
-          return "Restart your Mac to finish installing the Split Tunnel system extension.";
-        case SplitTunnelMacExtStateEnum.Error:
-          return `Split Tunnel system extension error: ${lastError || "unknown error"}`;
-        case SplitTunnelMacExtStateEnum.Installed:
-          // e.g. the user did not allow adding the proxy configuration
-          if (lastError)
-            return `Split Tunnel could not start: ${lastError}. Disable and re-enable Split Tunnel to retry.`;
-          return "";
-        default:
-          return "";
-      }
+      return this.$store.getters["uiState/splitTunnelMacOSIssue"];
     },
 
     isSplitTunnelInverseSupported() {

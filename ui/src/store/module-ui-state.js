@@ -20,6 +20,8 @@
 //  along with the UI for IVPN Client Desktop. If not, see <https://www.gnu.org/licenses/>.
 //
 
+import { SplitTunnelMacExtStateEnum } from "./types";
+
 export default {
   namespaced: true,
 
@@ -53,6 +55,34 @@ export default {
     // macOS only: last state reported by the Split Tunnel system extension/session
     // addon (ui/addons/split-tunnel-macos) - { extensionState, sessionStatus, lastError } - or null before it has reported anything
     splitTunnelMacOS: null,
+  },
+
+  getters: {
+    // macOS only: why Split Tunnel is enabled but not working, or "" when it is
+    // (or when it is disabled). Only states the user has to act on; normal
+    // progress (installing) is not reported. Shared by the Settings banner and
+    // the main view, so they never disagree.
+    splitTunnelMacOSIssue(state, getters, rootState) {
+      const extState = state.splitTunnelMacOS;
+      if (!extState || !rootState.vpnState.splitTunnelling?.IsEnabled) return "";
+      switch (extState.extensionState) {
+        case SplitTunnelMacExtStateEnum.NeedsUserApproval:
+          return "Split Tunnel is enabled but not active yet. Approve the IVPN system extension in System Settings; it starts automatically once approved.";
+        case SplitTunnelMacExtStateEnum.Disabled:
+          return "The Split Tunnel system extension is switched off. Enable it in System Settings to use Split Tunnel.";
+        case SplitTunnelMacExtStateEnum.NeedsReboot:
+          return "Restart your Mac to finish installing the Split Tunnel system extension.";
+        case SplitTunnelMacExtStateEnum.Error:
+          return `Split Tunnel system extension error: ${extState.lastError || "unknown error"}`;
+        case SplitTunnelMacExtStateEnum.Installed:
+          // e.g. the user did not allow adding the proxy configuration
+          if (extState.lastError)
+            return `Split Tunnel could not start: ${extState.lastError}. Disable and re-enable Split Tunnel to retry.`;
+          return "";
+        default:
+          return "";
+      }
+    },
   },
 
   mutations: {

@@ -182,12 +182,12 @@
       <!-- PAUSE BUTTON end-->
       <transition name="fade">
         <button
-          v-show="this.$store.getters['vpnState/isInverseSplitTunnel']"
+          v-show="splitTunnelWarningText"
           class="noBordersTextBtn"
           v-on:click="onSplitTunnelInfoClick"
         >
           <div class="small_text_warning">
-            Inverse Split Tunnel mode is active
+            {{ splitTunnelWarningText }}
           </div>
         </button>
       </transition>
@@ -266,7 +266,16 @@ export default {
     },
     isConnectionUnhealthy: function() {
       return this.$store.getters["vpnState/isConnectionUnhealthy"];
-    }
+    },
+    // Single slot for Split Tunnel warnings: the view has room for one line.
+    // Details and the fix are in the Split Tunnel settings (see the click handler).
+    splitTunnelWarningText: function () {
+      if (this.$store.getters["uiState/splitTunnelMacOSIssue"])
+        return "Split Tunnel is not active";
+      if (this.$store.getters["vpnState/isInverseSplitTunnel"])
+        return "Inverse Split Tunnel mode is active";
+      return "";
+    },
   },
   watch: {
     isPaused() {
