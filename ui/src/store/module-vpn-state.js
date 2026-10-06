@@ -42,6 +42,17 @@ export default {
     // Separate from connectionState - does not affect CONNECTED/DISCONNECTED flow.
     tunnelIsUnhealthy: false,
 
+    // The endpoint the tunnel talks to over the physical network: the VPN
+    // server, or the obfuscation proxy (V2Ray, obfsproxy) in front of it.
+    // Reported by the daemon (ConnectionStarting) before every connection and
+    // cleared (ConnectionStopped) after it. Differs from connectionInfo, which
+    // describes the VPN server itself for display.
+    remoteEndpoint: null /*{
+      Address: "",  // string  // IP address
+      Port: 0,      // number
+      Protocol: 17, // number  // 6 - TCP, 17 - UDP
+    }*/,
+
     connectionInfo: null /*{
       VpnType: VpnTypeEnum.OpenVPN,
       TimeSecFrom1970: new Date(),
@@ -213,7 +224,11 @@ export default {
       state.disconnectedInfo = { ReasonDescription: disconnectionReason };
       state.connectionState = VpnStateEnum.DISCONNECTED;
       state.connectionInfo = null;
+      state.remoteEndpoint = null;
       state.tunnelIsUnhealthy = false;
+    },
+    remoteEndpoint(state, endpoint) {
+      state.remoteEndpoint = endpoint;
     },
     setServersData(state, serversObj /*{servers,serversHashed}*/) {
       if (!serversObj || !serversObj.servers || !serversObj.serversHashed) {

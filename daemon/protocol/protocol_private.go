@@ -25,6 +25,7 @@ package protocol
 import (
 	"fmt"
 	"net"
+	"runtime"
 	"strings"
 
 	"github.com/ivpn/desktop-app/daemon/interoperability"
@@ -32,10 +33,16 @@ import (
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
 )
 
+// Sources for Service.SplitTunnelling_SetDisabledReason(): the checks are independent,
+// so each one owns its own slot and can only withdraw its own objection.
+const (
+	stDisabledReasonPortmaster   = "portmaster"
+	stDisabledReasonMacExtension = "macos-extension"
+)
+
 func getConnectionName(c net.Conn) string {
 	return strings.TrimSpace(strings.Replace(c.RemoteAddr().String(), "127.0.0.1:", "", 1))
 }
-
 func (p *Protocol) connLogID(c net.Conn) string {
 	if c == nil {
 		return ""
@@ -95,7 +102,7 @@ func (p *Protocol) clientConnected(c net.Conn, cType ivpnclient.ClientTypeEnum) 
 	interoperability.ClientConnected(cType)
 
 	if cType == ivpnclient.ClientPortmaster {
-		p._service.SplitTunnelling_SetDisabledReason("Split Tunnel functionality is currently disabled for compatibility with Portmaster, which has been detected as running on this system.")
+		p._service.SplitTunnelling_SetDisabledReason(stDisabledReasonPortmaster, "Split Tunnel functionality is currently disabled for compatibility with Portmaster, which has been detected as running on this system.")
 	}
 }
 
@@ -129,7 +136,7 @@ func (p *Protocol) clientDisconnected(c net.Conn) *connectionInfo {
 	}
 
 	if !isPortmasterConnected {
-		p._service.SplitTunnelling_SetDisabledReason("")
+		p._service.SplitTunnelling_SetDisabledReason(stDisabledReasonPortmaster, "")
 	}
 
 	return ret
@@ -139,6 +146,27 @@ func (p *Protocol) clientsConnectedCount() int {
 	p._connectionsMutex.RLock()
 	defer p._connectionsMutex.RUnlock()
 	return len(p._connections)
+}
+
+func (p *Protocol) isUiClientConnected() bool {
+	p._connectionsMutex.RLock()
+	defer p._connectionsMutex.RUnlock()
+	for _, cInfo := range p._connections {
+		if cInfo.Type == ivpnclient.ClientUi && cInfo.IsAuthenticated {
+			return true
+		}
+	}
+	return false
+}
+
+// On macOS the Split Tunnel system extension is controlled by the IVPN application
+// (the daemon only stores the configuration), so a change requested while the
+// application is not running would be stored but have no effect.
+func (p *Protocol) checkSplitTunnelConfigChangeAllowed() error {
+	if runtime.GOOS != "darwin" || p.isUiClientConnected() {
+		return nil
+	}
+	return fmt.Errorf("Split Tunnel on macOS is controlled by the IVPN application: start the application and retry")
 }
 
 func (p *Protocol) getConnectionInfo(c net.Conn) (cInfo *connectionInfo) {

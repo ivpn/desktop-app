@@ -152,6 +152,31 @@
             browsers) must be closed before launching them or they may not be
             excluded from the VPN tunnel.
           </p>
+          <!-- functionality description: MACOS -->
+          <div v-else-if="isMacOS">
+            <p>
+              <span style="font-weight: bold">Please note:</span>
+              only new connections are excluded. Connections an application
+              already has open keep their current route until the application
+              closes them or is restarted.
+            </p>
+            <p>
+              Programs started by an excluded application (for example,
+              commands run from an excluded terminal) are excluded together
+              with it. Applications it opens through the system (Finder, login
+              items, the <i>open</i> command) are not.
+            </p>
+            <p>
+              Network requests made by system services on behalf of an
+              application (for example, DNS lookups) are not attributed to that
+              application and use the VPN. Raw-socket traffic, such as
+              <i>ping</i>, is not affected and always uses the VPN.
+            </p>
+            <p>
+              Every settings change briefly interrupts the open connections of
+              excluded applications while Split Tunnel restarts.
+            </p>
+          </div>
           <!-- functionality description: WINDOWS -->
           <div v-else>
             <p>
@@ -176,6 +201,15 @@
     <div class="fwDescription" tabindex="0">
       Exclude traffic from specific applications from being routed through the
       VPN
+    </div>
+
+    <!-- MACOS: system extension / session status -->
+    <div v-if="isMacOS && macOSStatusMessage" class="warningBlock" tabindex="0">
+      <textWithLinkCtrl
+        :text="macOSStatusMessage"
+        textToUseAsLink="System Settings"
+        :link="macOSSystemSettingsLink"
+      />
     </div>
 
     <!-- INVERSE MODE-->
@@ -409,6 +443,7 @@
 const sender = window.ipcSender;
 
 import { Platform, PlatformEnum } from "@/platform/platform";
+import { SplitTunnelMacExtStateEnum } from "@/store/types";
 
 import Image_search_windows from "@/assets/search-windows.svg";
 import Image_search_macos from "@/assets/search-macos.svg";
@@ -419,6 +454,7 @@ import binaryInfoControl from "@/components/controls/control-app-binary-info.vue
 
 import spinner from "@/components/controls/control-spinner.vue";
 import linkCtrl from "@/components/controls/control-link.vue";
+import textWithLinkCtrl from "@/components/controls/control-text-with-link.vue";
 import ComponentReplacer from "@/components/ComponentReplacer.vue";
 
 function processError(e) {
@@ -444,6 +480,7 @@ export default {
     binaryInfoControl,
     ComponentDialog,
     linkCtrl,
+    textWithLinkCtrl,
     ComponentReplacer,
   },
 
@@ -693,7 +730,8 @@ Do you want to enable Inverse mode for Split Tunnel?",
         let splitTunnelling = this.$store.state.vpnState.splitTunnelling;
         if (Platform() === PlatformEnum.Linux) {
           // Linux:
-          let runningApps = splitTunnelling.RunningApps;
+          // (a nil Go slice serializes to JSON null, not [], so guard before forEach)
+          let runningApps = splitTunnelling.RunningApps || [];
           runningApps.forEach((runningApp) => {
             // check if we can get info from the installed apps list
             let cmdLine = "";
@@ -730,8 +768,9 @@ Do you want to enable Inverse mode for Split Tunnel?",
             }
           });
         } else {
-          // Windows:
-          let configApps = splitTunnelling.SplitTunnelApps;
+          // Windows/macOS:
+          // (a nil Go slice serializes to JSON null, not [], so guard before forEach)
+          let configApps = splitTunnelling.SplitTunnelApps || [];
           configApps.forEach((appPath) => {
             if (!appPath) return;
             // check if we can get info from the installed apps list
@@ -882,6 +921,49 @@ Do you want to enable Inverse mode for Split Tunnel?",
       return Platform() === PlatformEnum.Linux;
     },
 
+    isMacOS: function () {
+      return Platform() === PlatformEnum.macOS;
+    },
+
+    // macOS only: last state reported by the Split Tunnel system extension/session addon
+    macOSExtState: function () {
+      return this.$store.state.uiState?.splitTunnelMacOS || {};
+    },
+
+    // macOS only: where the system extension is approved/enabled. Since
+    // macOS 15 Sequoia (Darwin 24) that is General > Login Items & Extensions;
+    // on macOS 12-14 (Darwin 21-23) it is Privacy & Security.
+    macOSSystemSettingsLink: function () {
+      const darwinMajor = parseInt(sender.osRelease().split(".")[0], 10);
+      return darwinMajor >= 24
+        ? "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
+        : "x-apple.systempreferences:com.apple.preference.security?Security";
+    },
+
+    // macOS only: status banner text, or "" when nothing to show. Only states
+    // that need the user's attention are shown; normal progress is not.
+    macOSStatusMessage: function () {
+      if (!this.isMacOS || !this.IsEnabled) return "";
+      const lastError = this.macOSExtState.lastError;
+      switch (this.macOSExtState.extensionState) {
+        case SplitTunnelMacExtStateEnum.NeedsUserApproval:
+          return "Split Tunnel is enabled but not active yet. Approve the IVPN system extension in System Settings; it starts automatically once approved.";
+        case SplitTunnelMacExtStateEnum.Disabled:
+          return "The Split Tunnel system extension is switched off. Enable it in System Settings to use Split Tunnel.";
+        case SplitTunnelMacExtStateEnum.NeedsReboot:
+          return "Restart your Mac to finish installing the Split Tunnel system extension.";
+        case SplitTunnelMacExtStateEnum.Error:
+          return `Split Tunnel system extension error: ${lastError || "unknown error"}`;
+        case SplitTunnelMacExtStateEnum.Installed:
+          // e.g. the user did not allow adding the proxy configuration
+          if (lastError)
+            return `Split Tunnel could not start: ${lastError}. Disable and re-enable Split Tunnel to retry.`;
+          return "";
+        default:
+          return "";
+      }
+    },
+
     isSplitTunnelInverseSupported() {
       return this.$store.getters["isSplitTunnelInverseEnabled"];
     },
@@ -1006,6 +1088,23 @@ function getFileFolder(appBinPath) {
 
 .defColor {
   @extend .settingsDefaultTextColor;
+}
+
+.warningBlock {
+  font-size: 12px;
+  line-height: 14px;
+  letter-spacing: -0.4px;
+
+  color: #ad6407;
+
+  background: rgba(57, 143, 230, 0.1);
+  border-radius: 8px;
+  padding-left: 14px;
+  padding-right: 14px;
+  padding-top: 7px;
+  padding-bottom: 6px;
+
+  margin-bottom: 10px;
 }
 
 div.fwDescription {

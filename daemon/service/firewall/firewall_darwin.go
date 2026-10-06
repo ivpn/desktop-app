@@ -42,6 +42,10 @@ var (
 	// key: is a string representation of allowed IP
 	// value: true - if exception rule is persistant (persistant, means will stay available even client is disconnected)
 	allowedHosts map[string]bool
+
+	// GID the Split Tunnel extension runs under (0 - Split Tunnel is not active).
+	// Set by ApplySplitTunnelRouting(); kept here so it survives VPN reconnects.
+	splitTunnelGroupId int
 )
 
 func init() {
@@ -94,31 +98,63 @@ func implSetPersistant(persistant bool) error {
 
 // ClientConnected - allow communication for local vpn/client IP address
 func implClientConnected(clientLocalIPAddress net.IP, clientLocalIPv6Address net.IP, clientPort int, serverIP net.IP, serverPort int, isTCP bool) error {
-	inf, err := netinfo.InterfaceByIPAddr(clientLocalIPAddress)
-	if err != nil {
-		return fmt.Errorf("failed to get local interface by IP: %w", err)
-	}
-
-	protocol := "udp"
-	if isTCP {
-		protocol = "tcp"
-	}
-	scriptArgs := fmt.Sprintf("-connected %s %s %d %s %d %s",
-		inf.Name,
-		clientLocalIPAddress,
-		clientPort,
-		serverIP,
-		serverPort,
-		protocol)
-	err = shell.Exec(nil, platform.FirewallScript(), scriptArgs)
-	if err != nil {
-		return fmt.Errorf("failed to add rule for current connection directions: %w", err)
+	if err := applyConnectedRules(); err != nil {
+		return err
 	}
 
 	// Connection already established. The rule for VPN interface is defined.
 	// Removing host IP from exceptions
 	isPersistent := false
 	return removeHostsFromExceptions([]string{serverIP.String()}, isPersistent)
+}
+
+// applyConnectedRules (re-)invokes firewall.sh's '-connected' for the
+// currently connected client (tracked by the connected* package vars, set by
+// ClientConnected()/ClientDisconnected()) and the current Split Tunnel state.
+// No-op if not currently connected.
+func applyConnectedRules() error {
+	if connectedClientInterfaceIP == nil {
+		return nil
+	}
+	inf, err := netinfo.InterfaceByIPAddr(connectedClientInterfaceIP)
+	if err != nil {
+		return fmt.Errorf("failed to get local interface by IP: %w", err)
+	}
+
+	protocol := "udp"
+	if connectedIsTCP {
+		protocol = "tcp"
+	}
+	scriptArgs := fmt.Sprintf("-connected %s %s %d %s %d %s %d",
+		inf.Name,
+		connectedClientInterfaceIP,
+		connectedClientPort,
+		connectedHostIP,
+		connectedHostPort,
+		protocol,
+		splitTunnelGroupId)
+	if err := shell.Exec(nil, platform.FirewallScript(), scriptArgs); err != nil {
+		return fmt.Errorf("failed to add rule for current connection directions: %w", err)
+	}
+	return nil
+}
+
+// ApplySplitTunnelRouting updates the firewall rules for the current VPN connection
+// (if any) according to the Split Tunnel state, so the change takes effect immediately
+// without requiring a VPN reconnect.
+//
+// stExtensionGroupId is the GID the Split Tunnel extension runs under, or 0 when Split
+// Tunnel is not active. When it is not 0, the intentional-routing NAT/route-to rules are
+// skipped (they would reroute the extension's relayed traffic back into the tunnel) and
+// the extension's traffic is allowed to leave over the physical interface instead.
+//
+// Called only from splittun_darwin.go's implApplyConfig() - darwin-only by construction
+// (both files are platform-suffixed), so no stub is needed on other platforms.
+func ApplySplitTunnelRouting(stExtensionGroupId int) error {
+	mutex.Lock()
+	defer mutex.Unlock()
+	splitTunnelGroupId = stExtensionGroupId
+	return applyConnectedRules()
 }
 
 // ClientDisconnected - Disable communication for local vpn/client IP address

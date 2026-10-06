@@ -50,12 +50,14 @@ echo "Commit : $COMMIT"
 
 cd $SCRIPT_DIR/../../
 
+# CGO_ENABLED=0: the CLI needs no native code, and both architectures are
+# built the same way regardless of the host.
 if [[ "$@" == *"-debug"* ]]
 then
     echo "Compiling in DEBUG mode"
-    GOOS=darwin GOARCH=${_GOARCH} go build -tags debug -o "$OUT_FILE" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
+    GOOS=darwin GOARCH=${_GOARCH} CGO_ENABLED=0 go build -tags debug -o "$OUT_FILE" -trimpath -ldflags "-X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
 else
-    GOOS=darwin GOARCH=${_GOARCH} go build -o "$OUT_FILE" -trimpath -ldflags "-s -w -X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
+    GOOS=darwin GOARCH=${_GOARCH} CGO_ENABLED=0 go build -o "$OUT_FILE" -trimpath -ldflags "-s -w -X github.com/ivpn/desktop-app/daemon/version._version=$VERSION -X github.com/ivpn/desktop-app/daemon/version._commit=$COMMIT -X github.com/ivpn/desktop-app/daemon/version._time=$DATE"
 fi
 
 echo "Compiled CLI binary: '$OUT_FILE'"

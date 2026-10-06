@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -99,18 +100,23 @@ func doAddApp(args []string, eaaPass string, isHashedPass bool) error {
 	// Description of Split Tunneling commands sequence to run the application:
 	//	[client]					          [daemon]
 	//	SplitTunnelAddApp		    ->
-	//							            <-	windows:	types.EmptyResp (success)
-	//							            <-	linux:		types.SplitTunnelAddAppCmdResp (some operations required on client side)
-	//	<windows: done>
+	//							            <-	windows/macOS:	types.EmptyResp (success)
+	//							            <-	linux:			types.SplitTunnelAddAppCmdResp (some operations required on client side)
+	//	<windows/macOS: done>
 	// 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
 	//  SplitTunnelAddedPidInfo	->
 	// 							            <-	types.EmptyResp (success)
 
-	binary := args[0]
-
-	binary, err := exec.LookPath(binary)
+	binary, err := exec.LookPath(args[0])
 	if err != nil {
-		return err
+		// macOS: an application bundle ('.app') is a directory, not an executable file
+		info, statErr := os.Stat(args[0])
+		if !cliplatform.IsSplitTunAppBundles() || statErr != nil || !info.IsDir() {
+			return err
+		}
+		if binary, err = filepath.Abs(args[0]); err != nil {
+			return err
+		}
 	}
 
 	if len(eaaPass) > 0 {
@@ -123,7 +129,7 @@ func doAddApp(args []string, eaaPass string, isHashedPass bool) error {
 
 	// Quote the resolved binary path when it contains spaces.
 	// The Linux daemon parses Exec as a command string and requires quoting.
-	// The Windows daemon strips surrounding quotes before using the path (see implSplitTunnelling_AddApp).
+	// The Windows and macOS daemons strip surrounding quotes before using the path (see implSplitTunnelling_AddApp).
 	execBin := binary
 	if strings.ContainsAny(execBin, " \t") {
 		execBin = `"` + strings.ReplaceAll(execBin, `"`, `\"`) + `"`
@@ -135,7 +141,7 @@ func doAddApp(args []string, eaaPass string, isHashedPass bool) error {
 	}
 
 	if !isRequiredToExecuteCommand {
-		// (Windows) Success. No other operations required
+		// (Windows, macOS) Success. No other operations required
 		return nil
 	}
 
@@ -196,15 +202,24 @@ func (c *SplitTun) Init() {
 	// register special parse function for '-appadd' (parsing appaddArgs)
 	c.SetParseSpecialFunc(c.specialParse)
 
-	c.Initialize("splittun", "Split Tunnel management\nThis feature allows you to either exclude specific applications' traffic from the VPN tunnel\nor restrict VPN usage to only specified apps.")
+	description := "Split Tunnel management\nThis feature allows you to exclude specific applications' traffic from the VPN tunnel."
+	if cliplatform.IsSplitTunInverseSupported() {
+		description = "Split Tunnel management\nThis feature allows you to either exclude specific applications' traffic from the VPN tunnel\nor restrict VPN usage to only specified apps."
+	}
+	c.Initialize("splittun", description)
 
 	c.BoolVar(&c.status, "status", false, "(default) Show Split Tunnel status and configuration")
 
 	if !cliplatform.IsSplitTunRunsApp() {
-		// Windows
+		// Windows, macOS
 		c.BoolVar(&c.reset, "clean", false, "Erase configuration (remove applications from configuration and disable Split Tunnel)")
-		c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to binary)")
-		c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to binary)")
+		if cliplatform.IsSplitTunAppBundles() {
+			c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to the application bundle)\nExample:\n    ivpn splittun -appadd /Applications/Firefox.app")
+			c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to the application bundle)")
+		} else {
+			c.StringVar(&c.appadd, "appadd", "", "PATH", "Add application to configuration (use full path to binary)")
+			c.StringVar(&c.appremove, "appremove", "", "PATH", "Delete application from configuration (use full path to binary)")
+		}
 	} else {
 		// Linux
 		c.BoolVar(&c.statusFull, "status_full", false, "(extended status info) Show detailed Split Tunnel status")
@@ -213,25 +228,27 @@ func (c *SplitTun) Init() {
 		c.StringVar(&c.appremove, "appremove", "", "PID", "Remove application from Split Tunnel environment\n(argument: Process ID)")
 	}
 
-	c.BoolVar(&c.onInverse, cmd_name_on_inverse, false,
-		`Enable inverse mode. Only specified applications utilize the VPN connection,
+	if cliplatform.IsSplitTunInverseSupported() {
+		c.BoolVar(&c.onInverse, cmd_name_on_inverse, false,
+			`Enable inverse mode. Only specified applications utilize the VPN connection,
 		while all other traffic circumvents the VPN, using the default connection.`)
-	c.BoolVar(&c.offInverse, cmd_name_off_inverse, false, `Disable inverse mode`)
+		c.BoolVar(&c.offInverse, cmd_name_off_inverse, false, `Disable inverse mode`)
 
-	c.StringVar(&c.noVpnConnectivity, cmd_name_no_vpn_connectivity, "", "[on/off]",
-		`Enabling this feature allows applications within the Split Tunnel environment 
+		c.StringVar(&c.noVpnConnectivity, cmd_name_no_vpn_connectivity, "", "[on/off]",
+			`Enabling this feature allows applications within the Split Tunnel environment 
 		to utilize the default network connection when the VPN is disabled,
 		mirroring the behavior of applications outside the Split Tunnel environment.
 		By default, this feature is turned off, and applications within	the Split Tunnel environment
 		won't have access to the default network interface when the VPN is disabled.
 		Note! This functionality only applies in Inverse Split Tunnel mode`)
 
-	c.StringVar(&c.dnsFirewall, cmd_name_dns_firewall, "", "[on/off]",
-		`When this option is enabled, only DNS requests directed to IVPN DNS servers
+		c.StringVar(&c.dnsFirewall, cmd_name_dns_firewall, "", "[on/off]",
+			`When this option is enabled, only DNS requests directed to IVPN DNS servers
 		or user-defined custom DNS servers within the IVPN appsettings will be allowed.
 		All other DNS requests on port 53 will be blocked.
 		Note! The IVPN AntiTracker and custom DNS are not functional when this feature is disabled.
 		Note! This functionality only applies in Inverse Split Tunnel mode when the VPN is connected.`)
+	}
 
 	c.BoolVar(&c.on, "on", false, "Enable: exclude traffic from specific applications from being routed trough the VPN")
 

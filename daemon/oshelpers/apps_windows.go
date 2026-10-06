@@ -28,6 +28,7 @@ package oshelpers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 	"os"
 	"path"
 	"path/filepath"
@@ -62,7 +63,7 @@ type extraArgsGetInstalledApps struct {
 //		{ "WindowsEnvAppdata": "..." }
 //		Applicable only for Windows: APPDATA environment variable
 //		Needed to know path of current user's (not root) StartMenu folder location
-func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
+func implGetInstalledApps(extraArgsJSON string) ([]apptypes.AppInfo, error) {
 	//startTime := time.Now()
 	//defer func() {
 	//	log.Debug("implGetInstalledApps: ", time.Since(startTime))
@@ -154,7 +155,7 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 		excludeBinPath = strings.ToLower(filepath.Dir(ex))
 	}
 
-	retMap := make(map[string]AppInfo) // [path]description
+	retMap := make(map[string]apptypes.AppInfo) // [path]description
 
 	walkFunc := func(lnkPath string, info os.FileInfo, walkErr error) (err error) {
 		defer func() {
@@ -276,7 +277,7 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 				appGroup := baseDir
 				appName := strings.TrimSuffix(info.Name(), ".lnk")
 				if !isBinaryExists {
-					retMap[targetPathKey] = AppInfo{
+					retMap[targetPathKey] = apptypes.AppInfo{
 						AppBinaryPath: targetPath,
 						AppName:       appName,
 						AppGroup:      appGroup}
@@ -297,7 +298,7 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 		return nil
 	}
 
-	retMapCombined := make(map[string]AppInfo)
+	retMapCombined := make(map[string]apptypes.AppInfo)
 
 	if len(programDataSMDir) > 0 {
 		filepath.Walk(programDataSMDir, walkFunc)
@@ -305,7 +306,7 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 	}
 
 	if len(appDataUserSMDir) > 0 {
-		retMap = make(map[string]AppInfo)
+		retMap = make(map[string]apptypes.AppInfo)
 		filepath.Walk(appDataUserSMDir, walkFunc)
 		for k, v := range retMap {
 			retMapCombined[k] = v
@@ -313,14 +314,14 @@ func implGetInstalledApps(extraArgsJSON string) ([]AppInfo, error) {
 	}
 
 	if len(appDataSMDir) > 0 {
-		retMap = make(map[string]AppInfo)
+		retMap = make(map[string]apptypes.AppInfo)
 		filepath.Walk(appDataSMDir, walkFunc)
 		for k, v := range retMap {
 			retMapCombined[k] = v
 		}
 	}
 
-	retValues := make([]AppInfo, 0, len(retMapCombined))
+	retValues := make([]apptypes.AppInfo, 0, len(retMapCombined))
 	for _, value := range retMapCombined {
 		retValues = append(retValues, value)
 	}

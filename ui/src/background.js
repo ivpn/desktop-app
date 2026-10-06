@@ -46,7 +46,7 @@ import "./ipc/main-listener";
 
 import store from "@/store";
 import { AutoLaunchSet, AutoLaunchIsEnabled } from "@/auto-launch";
-import { DaemonConnectionType, ColorTheme } from "@/store/types";
+import { DaemonConnectionType, ColorTheme, SplitTunnelMacExtStateEnum } from "@/store/types";
 import daemonClient from "./daemon-client";
 import darwinDaemonInstaller from "./daemon-client/darwin-installer";
 import { InitTray } from "./tray";
@@ -59,6 +59,7 @@ import { join } from 'path'
 import { StartUpdateChecker, CheckUpdates } from "@/app-updater";
 import { WasOpenedAtLogin } from "@/auto-launch";
 import wifiHelperMacOS from "@/os-helpers/macos/wifi-helper.js";
+import splitTunnelHelperMacOS from "@/os-helpers/macos/split-tunnel-helper.js";
 
 
 // default copy/edit context menu event handlers
@@ -70,6 +71,7 @@ let win;
 let settingsWindow;
 let updateWindow;
 let isAppReadyToQuit = false;
+let isStSessionStopRequested = false; // macOS: Split Tunnel session stop already issued on quit
 
 // Variables related to daemon reconnection logic:
 let _reconnectTimer = null; // timer for reconnecting to daemon after connection loss
@@ -92,19 +94,42 @@ if (process.argv.find(arg => arg === 'uninstall-agent')) {
 } else if (process.argv.find(arg => arg === 'install-agent')) {
   console.log("'install-agent' argument detected. Installing agent...");
   wifiHelperMacOS.InstallAgent();
+} else if (process.argv.find(arg => arg === 'st-deactivate-and-quit')) {
+  // Invoked by uninstaller to deactivate Split Tunnel system extension before
+  // removing /Applications/IVPN.app. Runs as a throwaway process after main app quits.
+  console.log("'st-deactivate-and-quit' argument detected. Deactivating Split Tunnel extension and exiting...");
+  splitTunnelHelperMacOS.UninstallExtensionAndWait(() => app.quit());
+  // Safety net only - in case the addon never reports completion. Deactivation
+  // can wait on the OS administrator password prompt, so this must be generous.
+  setTimeout(() => app.quit(), 120000);
+  isAllowedToStart = false;
+}
+if (process.argv.find(arg => arg === 'st-debug-logging')) {
+  // Testing aid: the Split Tunnel extension logs at debug level for every
+  // session this process starts (see split-tunnel-helper.js). Does not change
+  // the startup flow.
+  console.log(
+    "'st-debug-logging' argument detected. Split Tunnel extension debug logging enabled.\n" +
+      "  To watch it: /usr/bin/log stream --predicate 'subsystem == \"com.electron.ivpn-ui.SplitTunnel\"' --level debug"
+  );
 }
 
-// Only one instance of application can be started
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  console.log("Another instance of application is running.");
-  app.quit();
-} else {
-  app.on("second-instance", () => {
-    // Someone tried to run a second instance, we should focus our window.
-    console.log("The second app instance was tried to start.");
-    menuOnShow();
-  });
+// Only one instance of application can be started.
+// Maintenance runs (isAllowedToStart == false) do not take part: they must not
+// be turned away because the main instance has not finished quitting yet.
+let gotTheLock = false;
+if (isAllowedToStart) {
+  gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    console.log("Another instance of application is running.");
+    app.quit();
+  } else {
+    app.on("second-instance", () => {
+      // Someone tried to run a second instance, we should focus our window.
+      console.log("The second app instance was tried to start.");
+      menuOnShow();
+    });
+  }
 }
 
 // Specify locale. We do not use other languages, so we can remove all other languages from "locales" folder in production build
@@ -233,11 +258,55 @@ function onWindowReady(win) {
   wifiHelperMacOS.InitWifiHelper(win, () => {showSettings("networks");} );
 }
 
+// MACOS ONLY: last Split Tunnel extension readiness report; kept so it can be
+// (re)sent whenever the daemon connection is established.
+let _lastStExtensionReport = null;
+
+// Only states the user cannot get out of by waiting disable the functionality
+// in the daemon (SplitTunnelStatus.NoFuncReason). Transient lifecycle states
+// (installing/notInstalled/needsUserApproval) are shown by the Settings page
+// banner instead - reporting them here would disable Split Tunnel and so
+// prevent the extension activation that resolves them.
+function macOSStExtensionDisabledReason(s) {
+  switch (s.extensionState) {
+    case SplitTunnelMacExtStateEnum.NeedsReboot:
+      return "Restart your Mac to finish installing the Split Tunnel system extension.";
+    case SplitTunnelMacExtStateEnum.Error:
+      return `Split Tunnel system extension error: ${s.lastError || "unknown error"}`;
+    default:
+      return "";
+  }
+}
+
+function reportStExtensionState() {
+  if (!_lastStExtensionReport) return;
+  if (store.state.daemonConnectionState !== DaemonConnectionType.Connected) return;
+  daemonClient
+    .SplitTunnelMacExtensionState(_lastStExtensionReport.isReady, _lastStExtensionReport.reason)
+    .catch((e) => {
+      console.error("SplitTunnelMacExtensionState report failed:", e);
+    });
+}
+
 // INITIALIZATION
 if (gotTheLock && isAllowedToStart) {
   // TODO: get rid of persistent settings in UI. It should get all data from the daemon
   InitPersistentSettings(); 
   connectToDaemon();
+
+  // MACOS ONLY: track and report Split Tunnel system extension readiness to
+  // the daemon. Extension activation itself only happens once Split Tunnel
+  // is actually enabled (see split-tunnel-helper.js).
+  if (Platform() === PlatformEnum.macOS) {
+    splitTunnelHelperMacOS.Init((s) => {
+      const reason = macOSStExtensionDisabledReason(s);
+      // The addon reports every session status change; the daemon only needs
+      // to hear about a change of the readiness verdict.
+      if (_lastStExtensionReport && _lastStExtensionReport.reason === reason) return;
+      _lastStExtensionReport = { isReady: reason === "", reason };
+      reportStExtensionState();
+    });
+  }
   
   // INIT COLOR SCHEME
   try {
@@ -454,7 +523,17 @@ if (gotTheLock && isAllowedToStart) {
     // if we are waiting to save settings - save it immediately
     SaveSettings();
 
-    if (isAppReadyToQuit == true) return; // quit
+    if (isAppReadyToQuit == true) {
+      // macOS: stop the Split Tunnel extension session before exiting (see StopAndWait)
+      if (!isStSessionStopRequested) {
+        isStSessionStopRequested = true;
+        if (splitTunnelHelperMacOS.StopAndWait(() => app.quit())) {
+          event.preventDefault();
+          return;
+        }
+      }
+      return; // quit
+    }
 
     // discard exiting
     event.preventDefault();
@@ -781,6 +860,13 @@ function createWindow(doNotShowWhenReady) {
   // Note: 'will-resize' fires only on Windows and macOS, not on Linux.
   win.on("will-resize", (event) => { event.preventDefault(); });
 
+  // MACOS ONLY: re-check Split Tunnel extension approval whenever the user
+  // brings the window back into focus (e.g. after approving it in System
+  // Settings) - getExtensionState() alone won't notice the change on its own.
+  if (Platform() === PlatformEnum.macOS) {
+    win.on("focus", () => splitTunnelHelperMacOS.RecheckExtensionStateOnFocus());
+  }
+
   // restore window position
   let lastPos = store.state.settings.windowRestorePosition;
   if (lastPos && lastPos.x && lastPos.y) {
@@ -905,6 +991,7 @@ function createSettingsWindow(viewName) {
 
   // Block user drag-resizing on Windows (see IsResizableWindow()).
   settingsWindow.on("will-resize", (event) => { event.preventDefault(); });
+  settingsWindow.on("focus", () => splitTunnelHelperMacOS.RecheckExtensionStateOnFocus());
 
   console.log("ELECTRON_RENDERER_URL: ", process.env['ELECTRON_RENDERER_URL'])
 
@@ -1095,6 +1182,9 @@ async function connectToDaemon() {
 
     store.commit("daemonConnectionState", DaemonConnectionType.Connected);
     store.commit("daemonIsInstalling", false);
+    // The report may have been produced before the socket was up (or lost on a
+    // previous disconnect) - the daemon has no other source for this state.
+    reportStExtensionState();
     // Connection is live. When the socket closes unexpectedly,
     // onDisconnected() will fire and scheduleReconnect() will be called.
   } catch (e) {

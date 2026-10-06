@@ -165,7 +165,7 @@ func (s *Service) Connect(params types.ConnectionParams) (err error) {
 	if params.V2Ray() == v2r.QUIC || params.V2Ray() == v2r.TCP {
 		disabledFuncs := s.GetDisabledFunctions()
 		if len(disabledFuncs.V2RayError) > 0 {
-			return fmt.Errorf(disabledFuncs.V2RayError)
+			return errors.New(disabledFuncs.V2RayError)
 		}
 
 		log.Info("Starting V2Ray...")
@@ -320,10 +320,10 @@ func (s *Service) connectOpenVPN(originalEntryServerInfo *svrConnInfo, connectio
 		// checking if functionality accessible
 		disabledFuncs := s.GetDisabledFunctions()
 		if len(disabledFuncs.OpenVPNError) > 0 {
-			return nil, fmt.Errorf(disabledFuncs.OpenVPNError)
+			return nil, errors.New(disabledFuncs.OpenVPNError)
 		}
 		if obfsproxyConfig.IsObfsproxy() && len(disabledFuncs.ObfsproxyError) > 0 {
-			return nil, fmt.Errorf(disabledFuncs.ObfsproxyError)
+			return nil, errors.New(disabledFuncs.ObfsproxyError)
 		}
 
 		connectionParams.SetCredentials(prefs.Session.OpenVPNUser, prefs.Session.OpenVPNPass)
@@ -451,7 +451,7 @@ func (s *Service) connectWireGuard(originalEntryServerInfo *svrConnInfo, connect
 	// checking if functionality accessible
 	disabledFuncs := s.GetDisabledFunctions()
 	if len(disabledFuncs.WireGuardError) > 0 {
-		return fmt.Errorf(disabledFuncs.WireGuardError)
+		return errors.New(disabledFuncs.WireGuardError)
 	}
 
 	// Update WG keys, if necessary

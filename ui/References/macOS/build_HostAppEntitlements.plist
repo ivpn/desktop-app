@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Entitlements for IVPN.app ONLY (see sign_image.sh).
+
+	     The three Split Tunnel keys below are restricted entitlements: at launch
+	     AMFI requires them to be authorised by an embedded provisioning profile,
+	     and kills the process with "Code Signature Invalid" if they are not. Only
+	     IVPN.app ships a Contents/embedded.provisionprofile, so these keys must
+	     never reach any other binary; in particular they must never be passed to
+	     codesign's "deep" mode, which applies them to every nested bundle.
+	     Everything else is signed with build_HarderingEntitlements.plist.
+
+	     Hardened Runtime relaxations: allow-jit ONLY. A process that carries
+	     system-extension.install is refused at launch by AMFI with "Hardened
+	     Runtime relaxation entitlements disallowed on System Extensions" if it
+	     also carries allow-unsigned-executable-memory, disable-library-validation
+	     or disable-executable-page-protection (verified on macOS 15.5 and 26 with
+	     SIP enabled; allow-jit alone is accepted and is all Electron needs). -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<key>com.apple.developer.networking.networkextension</key>
+	<array>
+		<string>app-proxy-provider-systemextension</string>
+	</array>
+	<!-- Required for the host app to call OSSystemExtensionRequest at all
+	     (distinct from the networkextension entitlement above). -->
+	<key>com.apple.developer.system-extension.install</key>
+	<true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.electron.ivpn-ui</string>
+	</array>
+</dict>
+</plist>

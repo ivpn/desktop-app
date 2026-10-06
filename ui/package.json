@@ -41,7 +41,8 @@
     "winreg": "1.2.5"
   },
   "optionalDependencies": {
-    "wifi-info-macos": "file:addons/wifi-info-macos"
+    "wifi-info-macos": "file:addons/wifi-info-macos",
+    "split-tunnel-macos": "file:addons/split-tunnel-macos"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "1.0.2",

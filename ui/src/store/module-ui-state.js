@@ -49,6 +49,10 @@ export default {
     // if not empty, then UI settings view will show this message 
     // (e.g. message text about the Location Services permission required for ability to get WiFi info)
     wifiWarningMessage: "",
+
+    // macOS only: last state reported by the Split Tunnel system extension/session
+    // addon (ui/addons/split-tunnel-macos) - { extensionState, sessionStatus, lastError } - or null before it has reported anything
+    splitTunnelMacOS: null,
   },
 
   mutations: {
@@ -72,6 +76,9 @@ export default {
     },
     wifiWarningMessage(state, value) {
       state.wifiWarningMessage = value;
+    },
+    splitTunnelMacOS(state, value) {
+      state.splitTunnelMacOS = value;
     },
   },
 

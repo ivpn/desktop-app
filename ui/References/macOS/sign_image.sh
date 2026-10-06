@@ -115,3 +115,41 @@ do
   codesign --verbose=4 --force --sign "${_SIGN_CERT}" --options runtime "$f" --deep --entitlements build_HarderingEntitlements.plist
   CheckLastResult "Signing failed"
 done
+
+# IVPN.app's --deep pass above just re-signed everything nested inside it, including
+# the Split Tunnel system extension - overwriting its distinct entitlements
+# (NetworkExtension/App Groups only, no Hardened Runtime relaxations) with
+# build_HarderingEntitlements.plist's. Re-sign it here to restore the correct ones.
+_ST_EXT_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "HelperProjects/SplitTunnelExtension/Info.plist")"
+_ST_EXT_BUNDLE="${_IMAGE_DIR}/IVPN.app/Contents/Library/SystemExtensions/${_ST_EXT_BUNDLE_ID}.systemextension"
+if [ -d "${_ST_EXT_BUNDLE}" ]; then
+  echo "[+] Re-signing Split Tunnel system extension (own entitlements)..."
+  codesign --verbose=4 --force --timestamp --sign "${_SIGN_CERT}" --options runtime \
+    --entitlements "HelperProjects/SplitTunnelExtension/splittunnel.entitlements" "${_ST_EXT_BUNDLE}"
+  CheckLastResult "Signing failed"
+fi
+
+# Final pass on IVPN.app, WITHOUT --deep, for two reasons:
+#
+#  1. The Split Tunnel entitlements (networkextension / system-extension.install /
+#     application-groups) are *restricted*: AMFI kills any process carrying one that
+#     isn't authorised by an embedded provisioning profile, with SIGKILL "Code
+#     Signature Invalid". Only IVPN.app and the extension bundle ship a profile, so
+#     those entitlements must never be handed to --deep - it would apply them to
+#     every nested binary (IVPN Installer.app, IVPN Agent, wireguard-go, ...), none
+#     of which can launch afterwards. Hence build_HostAppEntitlements.plist is
+#     applied here, alone, and build_HarderingEntitlements.plist (profile-free
+#     Hardened Runtime exceptions only) is what --deep spreads around.
+#  2. IVPN.app's own CodeResources sealed the extension's pre-re-sign bytes, so
+#     without this `codesign --verify --deep` fails with "a sealed resource is
+#     missing or invalid" (confirmed empirically).
+_HOST_ENTITLEMENTS="build_HarderingEntitlements.plist"
+if [ -f "${_IMAGE_DIR}/IVPN.app/Contents/embedded.provisionprofile" ]; then
+  _HOST_ENTITLEMENTS="build_HostAppEntitlements.plist"
+else
+  echo "[!] WARNING: no 'IVPN.app/Contents/embedded.provisionprofile' - signing without the Split Tunnel entitlements (with no profile to authorise them the app would not launch at all). Split Tunnel will not work in this build."
+fi
+echo "[+] Re-signing IVPN.app (no --deep) with '${_HOST_ENTITLEMENTS}'..."
+codesign --verbose=4 --force --sign "${_SIGN_CERT}" --options runtime \
+  --entitlements "${_HOST_ENTITLEMENTS}" "${_IMAGE_DIR}/IVPN.app"
+CheckLastResult "Signing failed"

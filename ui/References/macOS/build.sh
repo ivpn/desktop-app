@@ -28,8 +28,13 @@ _SIGN_CERT=""
 _VERSION=""
 
 _FILE_TO_INTEGRATE_IN_BUNDLE=""
+# Embedded provisioning profiles for the Split Tunnel feature (System Extension +
+# App Groups entitlements need one on both the host app and the extension). Optional:
+# a build without them just can't activate a real System Extension (today's status quo).
+_HOST_PROVISION_PROFILE=""
+_EXT_PROVISION_PROFILE=""
 # reading version info from arguments
-while getopts ":v:c:i:" opt; do
+while getopts ":v:c:i:P:E:" opt; do
   case $opt in
     v) _VERSION="$OPTARG"
     ;;
@@ -37,7 +42,25 @@ while getopts ":v:c:i:" opt; do
     ;;
     i) _FILE_TO_INTEGRATE_IN_BUNDLE="$OPTARG"
     ;;
+    P) _HOST_PROVISION_PROFILE="$OPTARG"
+    ;;
+    E) _EXT_PROVISION_PROFILE="$OPTARG"
+    ;;
   esac
+done
+
+# The two profiles only work as a pair: a host app without its profile cannot
+# activate the extension, and an extension without its profile fails to load.
+if { [ -n "${_HOST_PROVISION_PROFILE}" ] && [ -z "${_EXT_PROVISION_PROFILE}" ]; } || \
+   { [ -z "${_HOST_PROVISION_PROFILE}" ] && [ -n "${_EXT_PROVISION_PROFILE}" ]; }; then
+  echo "[!] ERROR: -P and -E must be given together (host app and Split Tunnel extension provisioning profiles)."
+  exit 1
+fi
+for _profile in "${_HOST_PROVISION_PROFILE}" "${_EXT_PROVISION_PROFILE}"; do
+  if [ -n "${_profile}" ] && [ ! -f "${_profile}" ]; then
+    echo "[!] ERROR: provisioning profile not found: ${_profile}"
+    exit 1
+  fi
 done
 
 if [ -z "${_VERSION}" ]; then
@@ -153,6 +176,13 @@ ARCH_TARGET="${ARCH_TARGET}" ${_PATH_ABS_REPO_UI}/References/macOS/HelperProject
 CheckLastResult "[!] ERROR building Uninstaller/Installer"
 cd ${_SCRIPT_DIR}
 
+echo "[+] Building Split Tunnel system extension ..."
+_ST_EXT_BUILD_ARGS=()
+[ -n "${_EXT_PROVISION_PROFILE}" ] && _ST_EXT_BUILD_ARGS=(-E "${_EXT_PROVISION_PROFILE}")
+ARCH_TARGET="${ARCH_TARGET}" ${_PATH_ABS_REPO_UI}/References/macOS/HelperProjects/SplitTunnelExtension/build.sh -v ${_VERSION} "${_ST_EXT_BUILD_ARGS[@]}"
+CheckLastResult "[!] ERROR building Split Tunnel system extension"
+cd ${_SCRIPT_DIR}
+
 echo "[+] Building IVPN CLI (${_PATH_ABS_REPO_CLI})...";
 ARCH_TARGET="${ARCH_TARGET}" ${_PATH_ABS_REPO_CLI}/References/macOS/build.sh -v ${_VERSION}
 CheckLastResult "[!] ERROR building IVPN CLI"
@@ -258,6 +288,15 @@ echo "[+] Copying installer/uninstaller app bundles..."
 # net.ivpn.client.Helper is already embedded inside IVPN Installer.app by uninstaller/build.sh
 cp -R "${_HELPERS}/uninstaller/bin/${ARCH_TARGET}/IVPN Installer.app"   "${_D}"                   || CheckLastResult
 cp -R "${_HELPERS}/uninstaller/bin/${ARCH_TARGET}/IVPN Uninstaller.app" "${_PATH_IMAGE_FOLDER}"   || CheckLastResult
+
+echo "[+] Copying Split Tunnel system extension..."
+_ST_EXT_BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "${_HELPERS}/SplitTunnelExtension/Info.plist")"
+mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/Library/SystemExtensions"
+cp -R "${_HELPERS}/SplitTunnelExtension/bin/${ARCH_TARGET}/${_ST_EXT_BUNDLE_ID}.systemextension" \
+      "${_PATH_UI_COMPILED_IMAGE}/Contents/Library/SystemExtensions/" || CheckLastResult
+if [ -n "${_HOST_PROVISION_PROFILE}" ]; then
+  cp "${_HOST_PROVISION_PROFILE}" "${_PATH_UI_COMPILED_IMAGE}/Contents/embedded.provisionprofile" || CheckLastResult
+fi
 
 echo "[+] Copying LaunchAgent plist..."
 mkdir -p "${_PATH_UI_COMPILED_IMAGE}/Contents/Library/LaunchAgents"

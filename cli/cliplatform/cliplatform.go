@@ -25,13 +25,26 @@ package cliplatform
 import "runtime"
 
 func IsSplitTunSupported() bool {
-	return runtime.GOOS == "windows" || runtime.GOOS == "linux"
+	return runtime.GOOS == "windows" || runtime.GOOS == "linux" || runtime.GOOS == "darwin"
+}
+
+// IsSplitTunAppBundles reports whether applications are added as '.app'
+// bundle directories rather than executable files (macOS).
+func IsSplitTunAppBundles() bool {
+	return runtime.GOOS == "darwin"
 }
 func IsSplitTunRunsApp() bool {
 	if !IsSplitTunSupported() {
 		return false
 	}
 	return runtime.GOOS == "linux"
+}
+
+// IsSplitTunInverseSupported reports whether Inverse Split Tunnel mode (only the
+// selected applications use the VPN) exists on this platform. The daemon refuses
+// it where it does not; this only keeps the corresponding options out of the CLI.
+func IsSplitTunInverseSupported() bool {
+	return IsSplitTunSupported() && runtime.GOOS != "darwin"
 }
 func IsDnsOverHttpsSupported() bool {
 	return true

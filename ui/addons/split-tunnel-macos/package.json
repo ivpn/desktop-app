@@ -1,0 +1,23 @@
+{
+  "name": "split-tunnel-macos",
+  "version": "1.0.0",
+  "os": [
+    "darwin"
+  ],
+  "description": "macOS Split Tunnel system extension lifecycle and proxy session control",
+  "main": "lib/binding.js",
+  "gypfile": true,
+  "author": "IVPN",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ivpn/desktop-app/ui/addons/split-tunnel-macos"
+  },
+  "scripts": {
+    "install": "node-gyp rebuild"
+  },
+  "keywords": [
+    "split-tunnel",
+    "macos"
+  ]
+}

@@ -91,6 +91,7 @@ const daemonRequests = Object.freeze({
   SplitTunnelAddApp: "SplitTunnelAddApp",
   SplitTunnelRemoveApp: "SplitTunnelRemoveApp",
   SplitTunnelAddedPidInfo: "SplitTunnelAddedPidInfo",
+  SplitTunnelMacExtensionState: "SplitTunnelMacExtensionState",
   GetInstalledApps: "GetInstalledApps",
   GetAppIcon: "GetAppIcon",
 
@@ -123,6 +124,8 @@ const daemonResponses = Object.freeze({
   VpnStateResp: "VpnStateResp",
   ConnectedResp: "ConnectedResp",
   DisconnectedResp: "DisconnectedResp",
+  ConnectionStarting: "ConnectionStarting",
+  ConnectionStopped: "ConnectionStopped",
   ServerListResp: "ServerListResp",
   PingServersResp: "PingServersResp",
   CheckAccessiblePortsResponse: "CheckAccessiblePortsResponse",
@@ -480,6 +483,25 @@ async function processResponse(response) {
       store.commit("vpnState/tunnelIsUnhealthy", obj.IsUnhealthy);
       break;
 
+    // Sent before every connection (and on Hello when GetActiveRemoteEndpoint
+    // is set) with the endpoint the tunnel uses on the physical network; the
+    // matching ConnectionStopped follows the disconnect.
+    case daemonResponses.ConnectionStarting:
+      if (!obj.Address || !obj.Port) {
+        log.error(`Ignoring ConnectionStarting without endpoint: ${response}`);
+        break;
+      }
+      store.commit("vpnState/remoteEndpoint", {
+        Address: obj.Address,
+        Port: obj.Port,
+        Protocol: obj.Protocol,
+      });
+      break;
+
+    case daemonResponses.ConnectionStopped:
+      store.commit("vpnState/remoteEndpoint", null);
+      break;
+
     case daemonResponses.DisconnectedResp:
       store.commit(`vpnState/disconnected`, obj.ReasonDescription);
       store.commit("vpnState/connectionState", VpnStateEnum.DISCONNECTED); // to properly raise value-changed event
@@ -647,6 +669,7 @@ function makeHelloRequest(isSimpleConnect) {
     helloReq = Object.assign(helloReq, {
       GetServersList: true,
       GetStatus: true,
+      GetActiveRemoteEndpoint: true,
       GetConfigParams: true,
       GetSplitTunnelStatus: true,
       GetWiFiCurrentState: true,
@@ -1494,6 +1517,17 @@ async function SplitTunnelGetStatus() {
   );
   return ret;
 }
+
+// macOS only: reports the Split Tunnel system extension/session state, as
+// observed by the addon (ui/addons/split-tunnel-macos), so the daemon can
+// keep SplitTunnelStatus.NoFuncReason authoritative.
+async function SplitTunnelMacExtensionState(isReady, reason) {
+  await sendRecv({
+    Command: daemonRequests.SplitTunnelMacExtensionState,
+    IsReady: isReady === true,
+    Reason: reason || "",
+  });
+}
 async function SplitTunnelSetConfig(
   IsEnabled,
   IsInversed,
@@ -1700,6 +1734,10 @@ async function GetInstalledApps() {
         EnvVar_XDG_DATA_DIRS: XDG_DATA_DIRS,
         EnvVar_HOME: HOME,
       });
+    } else if (Platform() == PlatformEnum.macOS) {
+      // macOS: the daemon runs as root, so it can only enumerate '~/Applications'
+      // if the user's home directory is passed to it.
+      extraArgsJson = JSON.stringify({ EnvVar_HOME: process.env["HOME"] });
     }
 
     const responseTimeoutMs = 25 * 1000;
@@ -1932,6 +1970,7 @@ export default {
   SplitTunnelSetConfig,
   SplitTunnelAddApp,
   SplitTunnelRemoveApp,
+  SplitTunnelMacExtensionState,
   GetInstalledApps,
   GetAppIcon,
 

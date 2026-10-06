@@ -23,7 +23,7 @@
 package types
 
 import (
-	"github.com/ivpn/desktop-app/daemon/oshelpers"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 	"github.com/ivpn/desktop-app/daemon/splittun"
 )
 
@@ -46,7 +46,7 @@ type GetInstalledApps struct {
 // InstalledAppsResp (response) contains information about installed applications on the system
 type InstalledAppsResp struct {
 	CommandBase
-	Apps []oshelpers.AppInfo
+	Apps []apptypes.AppInfo
 }
 
 // GetAppIcon (request) requests shell icon for binary file (application)
@@ -156,4 +156,16 @@ type SplitTunnelRemoveApp struct {
 	Pid int
 	// (applicable for Windows) full path to the app binary to be excluded from ST
 	Exec string
+}
+
+// SplitTunnelMacExtensionState (request, macOS only) reports the current
+// state of the client-side Split Tunnel system extension/proxy session.
+// Routed by the daemon into the existing SplitTunnelling_SetDisabledReason()
+// mechanism (the same one already used e.g. for the Portmaster-conflict
+// check), so this reuses SplitTunnelStatus.NoFuncReason rather than
+// introducing a parallel availability concept.
+type SplitTunnelMacExtensionState struct {
+	RequestBase
+	IsReady bool
+	Reason  string // description of why not, when IsReady == false
 }

@@ -41,7 +41,7 @@ import (
 	api_types "github.com/ivpn/desktop-app/daemon/api/types"
 	"github.com/ivpn/desktop-app/daemon/interoperability"
 	"github.com/ivpn/desktop-app/daemon/logger"
-	"github.com/ivpn/desktop-app/daemon/oshelpers"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 	"github.com/ivpn/desktop-app/daemon/protocol/eaa"
 	"github.com/ivpn/desktop-app/daemon/protocol/ivpnclient"
 	"github.com/ivpn/desktop-app/daemon/protocol/types"
@@ -96,14 +96,14 @@ type Service interface {
 	SetConnectionParams(params service_types.ConnectionParams) error
 	SetWiFiSettings(params preferences.WiFiParams) error
 
-	SplitTunnelling_SetDisabledReason(reason string)
+	SplitTunnelling_SetDisabledReason(source, reason string)
 	SplitTunnelling_SetConfig(isEnabled, isInversed, isAnyDns, isAllowWhenNoVpn, reset bool) error
 	SplitTunnelling_GetStatus() (types.SplitTunnelStatus, error)
 	SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error)
 	SplitTunnelling_RemoveApp(pid int, exec string) (err error)
 	SplitTunnelling_AddedPidInfo(pid int, exec string, cmdToExecute string) error
 
-	GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error)
+	GetInstalledApps(extraArgsJSON string) ([]apptypes.AppInfo, error)
 	GetBinaryIcon(binaryPath string) (string, error)
 
 	Preferences() preferences.Preferences
@@ -820,6 +820,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+		if err := p.checkSplitTunnelConfigChangeAllowed(); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
 		if err := p._service.SplitTunnelling_SetConfig(req.IsEnabled, req.IsInversed, req.IsAnyDns, req.IsAllowWhenNoVpn, req.Reset); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
@@ -843,6 +847,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 		// 	<execute shell command: types.SplitTunnelAddAppCmdResp.CmdToExecute and get PID>
 		//  SplitTunnelAddedPidInfo	->
 		// 							<-	types.EmptyResp (success)
+		if err := p.checkSplitTunnelConfigChangeAllowed(); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
 		cmdToExecute, isAlreadyRunning, err := p._service.SplitTunnelling_AddApp(req.Exec)
 		if err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
@@ -872,6 +880,10 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
 		}
+		if err := p.checkSplitTunnelConfigChangeAllowed(); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
 		if err := p._service.SplitTunnelling_RemoveApp(req.Pid, req.Exec); err != nil {
 			p.sendErrorResponse(conn, reqCmd, err)
 			break
@@ -891,6 +903,24 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			break
 		}
 		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+
+	case "SplitTunnelMacExtensionState":
+		var req types.SplitTunnelMacExtensionState
+		if err := json.Unmarshal(messageData, &req); err != nil {
+			p.sendErrorResponse(conn, reqCmd, err)
+			break
+		}
+		// Reuses the existing disabled-reason mechanism (the same one already
+		// used e.g. for the Portmaster-conflict check) rather than a
+		// parallel macOS-only availability concept - this keeps
+		// SplitTunnelStatus.NoFuncReason authoritative from a single source.
+		reason := ""
+		if !req.IsReady {
+			reason = req.Reason
+		}
+		p._service.SplitTunnelling_SetDisabledReason(stDisabledReasonMacExtension, reason)
+		p.sendResponse(conn, &types.EmptyResp{}, reqCmd.Idx)
+		// all clients will be notified about the status change by service in OnSplitTunnelStatusChanged() handler
 
 	case "GenerateDiagnostics":
 		if log, log0, extraInfo, err := p._service.GetDiagnosticLogs(); err != nil {

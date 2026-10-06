@@ -28,10 +28,10 @@ import (
 	"net"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/ivpn/desktop-app/daemon/api"
@@ -40,6 +40,7 @@ import (
 	"github.com/ivpn/desktop-app/daemon/logger"
 	"github.com/ivpn/desktop-app/daemon/netinfo"
 	"github.com/ivpn/desktop-app/daemon/oshelpers"
+	"github.com/ivpn/desktop-app/daemon/oshelpers/apptypes"
 	protocolTypes "github.com/ivpn/desktop-app/daemon/protocol/types"
 	"github.com/ivpn/desktop-app/daemon/service/dns"
 	"github.com/ivpn/desktop-app/daemon/service/firewall"
@@ -143,8 +144,11 @@ type Service struct {
 	TempPrioritizedDns types.TempDnsSettings
 
 	// When not empty - it indicates that Split-Tunneling functionality is disabled
-	// due to some reason and contains the description why it is disabled
-	_splitTunnelNoFuncReason atomic.Pointer[string]
+	// due to some reason and contains the description why it is disabled.
+	// Keyed by the writer (see the protocol package's stDisabledReason* constants): the
+	// reasons are independent, so one writer clearing its slot must not erase another's.
+	_splitTunnelNoFuncReasons     map[string]string
+	_splitTunnelNoFuncReasonMutex sync.Mutex
 }
 
 // VpnSessionInfo - Additional information about current VPN connection
@@ -479,7 +483,7 @@ func (s *Service) findOpenVpnHost(hostname string, ip net.IP, svrs []api_types.O
 		}
 	}
 
-	return api_types.OpenVPNServerHostInfo{}, fmt.Errorf(fmt.Sprintf("host '%s' not found", hostname))
+	return api_types.OpenVPNServerHostInfo{}, fmt.Errorf("host '%s' not found", hostname)
 }
 
 // ServersListForceUpdate returns servers list info.
@@ -1081,7 +1085,7 @@ func (s *Service) SetWiFiSettings(params preferences.WiFiParams) error {
 // SPLIT TUNNEL
 //////////////////////////////////////////////////////////
 
-func (s *Service) GetInstalledApps(extraArgsJSON string) ([]oshelpers.AppInfo, error) {
+func (s *Service) GetInstalledApps(extraArgsJSON string) ([]apptypes.AppInfo, error) {
 	return oshelpers.GetInstalledApps(extraArgsJSON)
 }
 
@@ -1279,12 +1283,22 @@ func (s *Service) splitTunnelling_ApplyConfig() (retError error) {
 	return splittun.ApplyConfig(enabled, prefs.IsInverseSplitTunneling(), prefs.SplitTunnelAllowWhenNoVpn, isVpnConnected, addressesCfg, prefs.SplitTunnelApps)
 }
 
-// SplitTunnelling_SetDisabledReason disables Split Tunnel functionality with specific reason
-// If reason is empty - it will be considered as "no reason", and Split Tunnel functionality will be available
-func (s *Service) SplitTunnelling_SetDisabledReason(reason string) {
+// SplitTunnelling_SetDisabledReason disables Split Tunnel functionality with a specific reason.
+// 'source' identifies the writer, so independent checks do not overwrite each other.
+// If reason is empty - the source's objection is withdrawn.
+func (s *Service) SplitTunnelling_SetDisabledReason(source, reason string) {
 	disabledStateOld := len(s.splitTunnelling_getDisabledReason()) > 0
 
-	s._splitTunnelNoFuncReason.Store(&reason)
+	s._splitTunnelNoFuncReasonMutex.Lock()
+	if s._splitTunnelNoFuncReasons == nil {
+		s._splitTunnelNoFuncReasons = make(map[string]string)
+	}
+	if len(reason) > 0 {
+		s._splitTunnelNoFuncReasons[source] = reason
+	} else {
+		delete(s._splitTunnelNoFuncReasons, source)
+	}
+	s._splitTunnelNoFuncReasonMutex.Unlock()
 
 	disabledStateNew := len(s.splitTunnelling_getDisabledReason()) > 0
 
@@ -1294,11 +1308,20 @@ func (s *Service) SplitTunnelling_SetDisabledReason(reason string) {
 }
 
 func (s *Service) splitTunnelling_getDisabledReason() string {
-	reason := s._splitTunnelNoFuncReason.Load()
-	if reason != nil && len(*reason) > 0 {
-		return *reason
+	s._splitTunnelNoFuncReasonMutex.Lock()
+	defer s._splitTunnelNoFuncReasonMutex.Unlock()
+
+	// Sorted, so the reported reason does not change on every map iteration.
+	sources := make([]string, 0, len(s._splitTunnelNoFuncReasons))
+	for source := range s._splitTunnelNoFuncReasons {
+		sources = append(sources, source)
 	}
-	return ""
+	sort.Strings(sources)
+
+	if len(sources) == 0 {
+		return ""
+	}
+	return s._splitTunnelNoFuncReasons[sources[0]]
 }
 
 func (s *Service) SplitTunnelling_AddApp(exec string) (cmdToExecute string, isAlreadyRunning bool, err error) {
