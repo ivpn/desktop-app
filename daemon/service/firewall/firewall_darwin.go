@@ -118,6 +118,11 @@ func applyConnectedRules() error {
 	}
 	inf, err := netinfo.InterfaceByIPAddr(connectedClientInterfaceIP)
 	if err != nil {
+		if isClientPaused {
+			// WireGuard pause stops the tunnel process, so its interface is gone;
+			// ClientConnected() reapplies the rules once the connection is back.
+			return nil
+		}
 		return fmt.Errorf("failed to get local interface by IP: %w", err)
 	}
 
