@@ -532,7 +532,7 @@ func (p *Protocol) processRequest(conn net.Conn, message string) {
 			helloResponse.ServiceBinary, _ = os.Executable()
 			helloResponse.ServiceBinary, _ = filepath.EvalSymlinks(helloResponse.ServiceBinary)
 		}
-		p.sendResponse(conn, helloResponse, req.Idx)
+		p.sendResponse(conn, helloForClient(helloResponse, p.clientIsAuthenticated(conn), p._eaa.IsEnabled()), req.Idx)
 		if req.SendResponseToAllClients {
 			p.notifyClients(helloResponse)
 		}

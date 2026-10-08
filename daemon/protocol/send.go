@@ -67,9 +67,26 @@ func Send(conn net.Conn, cmd ICommandBase, idx uint32) error {
 func (p *Protocol) notifyClients(cmd ICommandBase) {
 	p._connectionsMutex.RLock()
 	defer p._connectionsMutex.RUnlock()
-	for conn := range p._connections {
-		p.sendResponse(conn, cmd, 0)
+	for conn, info := range p._connections {
+		authenticated := info != nil && info.IsAuthenticated
+		p.sendResponse(conn, helloForClient(cmd, authenticated, p._eaa.IsEnabled()), 0)
 	}
+}
+
+// helloForClient drops the account session from a Hello reply until EAA
+// has been checked on this connection. Other commands are unchanged.
+func helloForClient(cmd ICommandBase, authenticated bool, eaaEnabled bool) ICommandBase {
+	if authenticated || !eaaEnabled {
+		return cmd
+	}
+	hello, ok := cmd.(*types.HelloResp)
+	if !ok || hello == nil {
+		return cmd
+	}
+	redacted := *hello
+	redacted.Session.Session = ""
+	redacted.Session.AccountID = ""
+	return &redacted
 }
 
 func (p *Protocol) sendError(conn net.Conn, errorText string, cmdIdx uint32) {
