@@ -159,7 +159,7 @@ function detectDefRouteVars()
 
     if [ -z ${_def_gatewayIPv6} ] || [ -z ${_def_interface_nameIPv6} ]; then
         if [ -f /proc/net/if_inet6 ]; then
-            read -r _def_gatewayIPv6 _def_interface_nameIPv6 <<< $(${_bin_ip} -6 route | awk '/default/  {print $3, $5}')
+            read -r _def_gatewayIPv6 _def_interface_nameIPv6 <<< $(${_bin_ip} -6 route | awk '/default/  {print $5, $7}')
             echo "[+] Detected default IPv6 route: gateway='${_def_gatewayIPv6}' interface='${_def_interface_nameIPv6}'"
         fi
     fi
