@@ -60,31 +60,6 @@ unsafe:
     return is_safe;
 }
 
-int check_signature()
-{
-    int result;
-
-    // Check the validity of certificate
-    result = system("/usr/bin/codesign -v \"" AGENT_APP "\"");
-    if (result != 0)
-    {
-        syslog(LOG_ALERT, "[helper] The agent app seems to be not signed or was modified");
-        puts("[helper] The agent app seems to be not signed or was modified");
-        return -1;
-    }
-
-    // Check who signed the app (authority field)
-    result = system("/usr/bin/codesign -dvv \"" AGENT_APP "\" 2>&1|grep -q \"^Authority=.*(" TEAM_IDENTIFIER ")\"");
-    if (result != 0)
-    {
-        syslog(LOG_ALERT, "[helper] The app seems to be signed by the wrong party");
-        puts("[helper] The app seems to be signed by the wrong party");
-        return -2;
-    }
-
-    return 0;
-}
-
 int main(int argc, char **argv)
 {
     syslog(LOG_ALERT, "[helper] Start");
@@ -94,12 +69,7 @@ int main(int argc, char **argv)
     {
         syslog(LOG_ALERT, "[helper] IVPN Agent seems not to have the correct(root) privileges.");
         puts("[helper] IVPN Agent seems not to have the correct(root) privileges.");
-
-        if (check_signature() != 0)
-            return 1;
-
-        system("/usr/sbin/chown -R 0:0 " IVPN_APP);
-        system("/bin/chmod 755 " IVPN_APP);
+        return 1;
     }
 
     syslog(LOG_ALERT, "[helper] Launching:" AGENT_APP);
