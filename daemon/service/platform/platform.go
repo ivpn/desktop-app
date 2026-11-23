@@ -94,7 +94,7 @@ func Init() (warnings []string, errors []error, logInfo []string) {
 	}
 
 	// creating required folders
-	if err := makeDir("servicePortFile", filepath.Dir(servicePortFile), os.ModePerm); err != nil {
+	if err := makeDir("servicePortFile", filepath.Dir(servicePortFile), 0o700); err != nil {
 		errors = append(errors, err)
 	}
 	if err := makeDir("paranoidModeSecretFile", filepath.Dir(paranoidModeSecretFile), os.ModePerm); err != nil {
