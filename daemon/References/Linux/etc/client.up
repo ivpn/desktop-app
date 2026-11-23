@@ -35,10 +35,12 @@ else
   # if we get no DOMAINS, then don't use either domain or search.
 
   while true; do
-    eval fopt=\$foreign_option_${i}
+    # Quote the expansion. A bare eval of the value runs command
+    # substitution from the server PUSH.
+    eval "fopt=\$(printf '%s' \"\${foreign_option_${i}}\")"
     [ -z "${fopt}" ] && break
 
-    case ${fopt} in
+    case "$fopt" in
       dhcp-option\ DOMAIN\ *)
             ndoms=$((ndoms + 1))
             domains="${domains} ${fopt#dhcp-option DOMAIN }"
