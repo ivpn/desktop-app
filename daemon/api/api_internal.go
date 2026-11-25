@@ -258,12 +258,14 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 		}
 	}
 
-	bodyBuffer := bytes.NewBuffer(data)
+	// Every attempt needs its own reader: a reader is consumed by the attempt which used it.
+	// (A shared reader makes all attempts after the first one send a truncated or empty body.)
+	newBody := func() io.Reader { return bytes.NewReader(data) }
 
 	// access API by last good IP (if defined)
 	lastGoodIP := a.GetLastGoodAlternateIP(isIPv6)
 	if lastGoodIP != nil {
-		req, err := newRequest(getURL_IPHost(lastGoodIP, isIPv6, urlPath), method, contentType, bodyBuffer)
+		req, err := newRequest(getURL_IPHost(lastGoodIP, isIPv6, urlPath), method, contentType, newBody())
 		if err != nil {
 			return nil, err
 		}
@@ -272,13 +274,14 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 		if err == nil {
 			return resp, nil
 		}
+		log.Warning(fmt.Sprintf("Failed to access API server by last good IP: %v", err))
 	}
 
 	// try to access API server by host DNS
 	var firstResp *http.Response
 	var firstErr error
 	if isCanUseDNS {
-		req, err := newRequest(getURL(_apiHost, urlPath), method, contentType, bodyBuffer)
+		req, err := newRequest(getURL(_apiHost, urlPath), method, contentType, newBody())
 		if err != nil {
 			return nil, err
 		}
@@ -307,7 +310,7 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 			log.Info(fmt.Sprintf("Trying to use alternate API IPs %s...", ipVerStr))
 		}
 
-		req, err := newRequest(getURL_IPHost(ip, isIPv6, urlPath), method, contentType, bodyBuffer)
+		req, err := newRequest(getURL_IPHost(ip, isIPv6, urlPath), method, contentType, newBody())
 		if err != nil {
 			return nil, err
 		}

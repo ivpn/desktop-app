@@ -51,6 +51,16 @@ const (
 	_geoLookupPath         = _apiPathPrefix + "/geo-lookup"
 )
 
+// _kemRequestTimeoutMs - per-attempt timeout (ms) for requests carrying KEM public keys ('session/new', 'session/wg/set').
+//
+// Such a request is ~350 KB (almost all of it is the Classic McEliece public key) and must be uploaded within the timeout.
+// Minimum uplink speed required: ~340 kbit/s with the default 10 s timeout, ~110 kbit/s with 30 s.
+// Trade-off: an API host that accepts the connection but does not respond is abandoned after 30 s instead of 10 s.
+//
+// TODO: use the default timeout again once the Classic McEliece key is removed or replaced by a smaller one
+// (a Kyber-only request is ~2.5 KB, so the uplink speed is no longer a constraint).
+const _kemRequestTimeoutMs = 30 * 1000
+
 // Alias - alias description of API request (can be requested by UI client)
 type Alias struct {
 	host string
@@ -311,7 +321,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, kemKeys types.Kem
 		Captcha:         captcha,
 		Confirmation2FA: confirmation2FA}
 
-	data, httpResp, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, 0, 0)
+	data, httpResp, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, _kemRequestTimeoutMs, 0)
 	if err != nil {
 		return nil, nil, nil, rawResponse, err
 	}
@@ -399,7 +409,7 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 
 	resp := types.SessionsWireGuardResponse{}
 
-	if err := a.request("", _wgKeySetPath, "POST", "application/json", request, &resp); err != nil {
+	if err := a.requestEx("", _wgKeySetPath, "POST", "application/json", request, &resp, _kemRequestTimeoutMs, 0); err != nil {
 		return resp, err
 	}
 
