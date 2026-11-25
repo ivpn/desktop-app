@@ -29,6 +29,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -328,6 +329,21 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 
 		log.Info("Success!")
 		return resp, err
+	}
+
+	// Timeout or failed connection: return an error which is understandable for the user (it is shown in the UI as is).
+	// The technical details are saved in the log.
+	// All other errors (e.g. certificate check errors) are returned unchanged.
+	var netErr net.Error
+	if errors.As(firstErr, &netErr) && netErr.Timeout() {
+		log.Warning(fmt.Sprintf("Unable to access IVPN API server (timeout): %v", firstErr))
+		return nil, errors.New("unable to access IVPN API server (the request timed out). Possible reasons: a slow or unstable internet connection, or access to the server is blocked on your network")
+	}
+	// (the "dial" operation fails when the host name cannot be resolved or the connection cannot be established)
+	var opErr *net.OpError
+	if errors.As(firstErr, &opErr) && opErr.Op == "dial" {
+		log.Warning(fmt.Sprintf("Unable to access IVPN API server (connection failed): %v", firstErr))
+		return nil, errors.New("unable to access IVPN API server (connection failed). Please check your internet connection. Access to the server may also be blocked by a firewall or by your network")
 	}
 
 	return nil, fmt.Errorf("unable to access IVPN API server: %w", firstErr)
