@@ -163,7 +163,7 @@ func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, ur
 			if err4 != nil && !errors.As(err4, new(finalError)) {
 				// checking if IPv6 connectivity exists
 				_, errIPv6 := netinfo.GetOutboundIP(true)
-				if errIPv6 == nil && len(a.getAlternateIPs(true)) >= 0 {
+				if errIPv6 == nil && len(a.getAlternateIPs(true)) > 0 {
 					log.Info("Failed to access API server using IPv4. Trying IPv6 ...")
 					canUseDNS = false // we already tried to access using DNS. No sense to try it again
 					resp6, err6 := a.doRequestAPIHost(types.IPv6, canUseDNS, urlPath, method, contentType, request, timeoutMs, timeoutDialMs, noRetryAfterConnect)
@@ -190,6 +190,9 @@ func (a *API) doRequestUpdateHost(urlPath string, method string, contentType str
 
 		// using certificate key pinning
 		DialTLS: makeDialer(UpdateIvpnHashes, _updateHost, 0),
+
+		// the transport is created for one request: do not keep its connection open after the response
+		DisableKeepAlives: true,
 	}
 
 	// configure http-client with preconfigured TLS transport
@@ -259,6 +262,9 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 
 		// using certificate key pinning
 		DialTLS: makeDialer(APIIvpnHashes, _apiHost, timeoutDial),
+
+		// the transport is created for one request: do not keep its connection open after the response
+		DisableKeepAlives: true,
 	}
 
 	// configure http-client with preconfigured TLS transport
@@ -396,6 +402,8 @@ func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, u
 	if resp.StatusCode != 200 {
 		log.Debug(fmt.Sprintf("API response: (HTTP status code %d); status=%s", resp.StatusCode, resp.Status))
 	}
+
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
