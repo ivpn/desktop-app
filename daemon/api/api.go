@@ -256,7 +256,7 @@ func (a *API) doSetAlternateIPs(IPv6 bool, IPs []string) error {
 // DownloadServersList - download servers list form API IVPN server
 func (a *API) DownloadServersList() (*types.ServersInfoResponse, error) {
 	servers := new(types.ServersInfoResponse)
-	if err := a.request("", _serversPath, "GET", "", nil, servers); err != nil {
+	if err := a.request(apiRequest{urlPath: _serversPath, method: "GET"}, servers); err != nil {
 		return nil, err
 	}
 
@@ -397,7 +397,7 @@ func (a *API) SessionStatus(session string) (
 func (a *API) SessionDelete(session string) error {
 	request := &types.SessionDeleteRequest{Session: session}
 	resp := &types.APIErrorResponse{}
-	if err := a.request("", _sessionDeletePath, "POST", "application/json", request, resp); err != nil {
+	if err := a.request(apiRequest{urlPath: _sessionDeletePath, method: "POST", contentType: "application/json", body: request}, resp); err != nil {
 		return err
 	}
 	if resp.Status != types.CodeSuccess {
@@ -425,7 +425,7 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 		timeoutMs:           _kemRequestTimeoutMs, // big body (KEM keys): longer timeout for slow connections
 		noRetryAfterConnect: true,                 // do not resend the big body to other hosts once connected
 	}
-	if err := a.requestEx(r, &resp); err != nil {
+	if err := a.request(r, &resp); err != nil {
 		return resp, err
 	}
 

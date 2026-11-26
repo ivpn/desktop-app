@@ -433,11 +433,7 @@ func (a *API) requestRaw(r apiRequest) (responseData []byte, httpResp *http.Resp
 	return body, resp, nil
 }
 
-func (a *API) request(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}) error {
-	return a.requestEx(apiRequest{host: host, urlPath: urlPath, method: method, contentType: contentType, body: requestObject}, responseObject)
-}
-
-func (a *API) requestEx(r apiRequest, responseObject interface{}) error {
+func (a *API) request(r apiRequest, responseObject interface{}) error {
 	body, _, err := a.requestRaw(r)
 	if err != nil {
 		return err
