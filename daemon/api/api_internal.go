@@ -46,6 +46,20 @@ import (
 // finalError is an error after which the request must not be repeated for the other API hosts (see doRequestAPIHost)
 type finalError struct{ error }
 
+// apiRequest describes a request to the IVPN API server (or to the update server).
+// Zero values mean defaults.
+type apiRequest struct {
+	ipTypeRequired      types.RequiredIPProtocol // IPvAny (default): IPv4 is used first, IPv6 as a fallback
+	host                string                   // "" or _apiHost: API server; _updateHost: update server
+	urlPath             string                   // path of the request on the server
+	method              string                   // default: "GET"
+	contentType         string                   // value of the "Content-type" header; "": header is not added
+	body                interface{}              // object to send (serialized to JSON); nil: no body
+	timeoutMs           int                      // timeout for the full request; 0: default
+	timeoutDialMs       int                      // timeout for the dial; 0: default (API server only)
+	noRetryAfterConnect bool                     // see doRequestAPIHost (API server only)
+}
+
 func getURL(host string, urlpath string) string {
 	return "https://" + path.Join(host, urlpath)
 }
@@ -142,7 +156,7 @@ func makeDialer(certHashes []string, serverName string, dialTimeout time.Duratio
 	}
 }
 
-func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, request interface{}, timeoutMs int, timeoutDialMs int, noRetryAfterConnect bool) (resp *http.Response, err error) {
+func (a *API) doRequest(r apiRequest) (resp *http.Response, err error) {
 	connectivityChecker := a.connectivityChecker
 	if connectivityChecker != nil {
 		if err := connectivityChecker.IsConnectivityBlocked(); err != nil {
@@ -150,23 +164,24 @@ func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, ur
 		}
 	}
 
-	if len(host) == 0 || host == _apiHost {
-		if ipTypeRequired != types.IPvAny {
+	if len(r.host) == 0 || r.host == _apiHost {
+		if r.ipTypeRequired != types.IPvAny {
 			// The specific IP version required to use
-			return a.doRequestAPIHost(ipTypeRequired, false, urlPath, method, contentType, request, timeoutMs, timeoutDialMs, noRetryAfterConnect)
+			return a.doRequestAPIHost(r, false)
 		} else {
 			// No specific IP version required to use
 			// Trying first to use IPv4, as fallback - try to use IPv6
-			// (except for finalError: the request must not be repeated)
 			canUseDNS := true
-			resp4, err4 := a.doRequestAPIHost(types.IPv4, canUseDNS, urlPath, method, contentType, request, timeoutMs, timeoutDialMs, noRetryAfterConnect)
+			r.ipTypeRequired = types.IPv4
+			resp4, err4 := a.doRequestAPIHost(r, canUseDNS)
 			if err4 != nil && !errors.As(err4, new(finalError)) {
 				// checking if IPv6 connectivity exists
 				_, errIPv6 := netinfo.GetOutboundIP(true)
 				if errIPv6 == nil && len(a.getAlternateIPs(true)) > 0 {
 					log.Info("Failed to access API server using IPv4. Trying IPv6 ...")
 					canUseDNS = false // we already tried to access using DNS. No sense to try it again
-					resp6, err6 := a.doRequestAPIHost(types.IPv6, canUseDNS, urlPath, method, contentType, request, timeoutMs, timeoutDialMs, noRetryAfterConnect)
+					r.ipTypeRequired = types.IPv6
+					resp6, err6 := a.doRequestAPIHost(r, canUseDNS)
 					if err6 == nil {
 						return resp6, err6
 					}
@@ -175,13 +190,15 @@ func (a *API) doRequest(ipTypeRequired types.RequiredIPProtocol, host string, ur
 			return resp4, err4
 		}
 
-	} else if host == _updateHost {
-		return a.doRequestUpdateHost(urlPath, method, contentType, request, timeoutMs)
+	} else if r.host == _updateHost {
+		return a.doRequestUpdateHost(r)
 	}
 	return nil, fmt.Errorf("unknown host type")
 }
 
-func (a *API) doRequestUpdateHost(urlPath string, method string, contentType string, request interface{}, timeoutMs int) (resp *http.Response, err error) {
+// doRequestUpdateHost sends the request to the update server.
+// (r.host, r.ipTypeRequired, r.timeoutDialMs and r.noRetryAfterConnect are not used)
+func (a *API) doRequestUpdateHost(r apiRequest) (resp *http.Response, err error) {
 	transCfg := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			MinVersion: tls.VersionTLS12, // seems, it is redundant (since we use custom DialTLS)
@@ -197,14 +214,14 @@ func (a *API) doRequestUpdateHost(urlPath string, method string, contentType str
 
 	// configure http-client with preconfigured TLS transport
 	timeout := _defaultRequestTimeout
-	if timeoutMs > 0 {
-		timeout = time.Millisecond * time.Duration(timeoutMs)
+	if r.timeoutMs > 0 {
+		timeout = time.Millisecond * time.Duration(r.timeoutMs)
 	}
 	client := &http.Client{Transport: transCfg, Timeout: timeout}
 
 	data := []byte{}
-	if request != nil {
-		data, err = json.Marshal(request)
+	if r.body != nil {
+		data, err = json.Marshal(r.body)
 		if err != nil {
 			return nil, err
 		}
@@ -213,7 +230,7 @@ func (a *API) doRequestUpdateHost(urlPath string, method string, contentType str
 	bodyBuffer := bytes.NewBuffer(data)
 
 	// try to access API server by host DNS
-	req, err := newRequest(getURL(_updateHost, urlPath), method, contentType, bodyBuffer)
+	req, err := newRequest(getURL(_updateHost, r.urlPath), r.method, r.contentType, bodyBuffer)
 	if err != nil {
 		return nil, err
 	}
@@ -230,22 +247,25 @@ func (a *API) doRequestUpdateHost(urlPath string, method string, contentType str
 // doRequestAPIHost sends the request to the API server. A failed request is repeated for the next host
 // (last good IP -> DNS name -> alternate IPs).
 //
-// noRetryAfterConnect - do not repeat the request once a connection to a host was established: if the request fails
+// r.ipTypeRequired - IP version to use: IPv4 or IPv6 (IPvAny is handled by doRequest; here it is treated as IPv4).
+// r.host is not used.
+//
+// r.noRetryAfterConnect - do not repeat the request once a connection to a host was established: if the request fails
 // after that, finalError is returned. It is intended for the requests with a big body and a long timeout:
 //   - such a failure most likely means a slow connection, so the other hosts will not help;
 //   - the server may have already received the request, so it must not be sent again.
-func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUseDNS bool, urlPath string, method string, contentType string, request interface{}, timeoutMs int, timeoutDialMs int, noRetryAfterConnect bool) (resp *http.Response, err error) {
-	isIPv6 := ipTypeRequired == types.IPv6
+func (a *API) doRequestAPIHost(r apiRequest, isCanUseDNS bool) (resp *http.Response, err error) {
+	isIPv6 := r.ipTypeRequired == types.IPv6
 
 	// timeout time for full request
 	timeout := _defaultRequestTimeout
-	if timeoutMs > 0 {
-		timeout = time.Millisecond * time.Duration(timeoutMs)
+	if r.timeoutMs > 0 {
+		timeout = time.Millisecond * time.Duration(r.timeoutMs)
 	}
 	// timeout for the dial
 	timeoutDial := _defaultDialTimeout
-	if timeoutDialMs > 0 {
-		timeoutDial = time.Millisecond * time.Duration(timeoutDialMs)
+	if r.timeoutDialMs > 0 {
+		timeoutDial = time.Millisecond * time.Duration(r.timeoutDialMs)
 	}
 	if timeoutDial > timeout {
 		timeoutDial = 0
@@ -271,8 +291,8 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 	client := &http.Client{Transport: transCfg, Timeout: timeout}
 
 	data := []byte{}
-	if request != nil {
-		data, err = json.Marshal(request)
+	if r.body != nil {
+		data, err = json.Marshal(r.body)
 		if err != nil {
 			return nil, err
 		}
@@ -286,7 +306,7 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 	// isConnected - a connection to the host was established (tracked only when noRetryAfterConnect is set)
 	var isConnected atomic.Bool
 	doAttempt := client.Do
-	if noRetryAfterConnect {
+	if r.noRetryAfterConnect {
 		trace := &httptrace.ClientTrace{GotConn: func(httptrace.GotConnInfo) { isConnected.Store(true) }}
 		doAttempt = func(req *http.Request) (*http.Response, error) {
 			return client.Do(req.WithContext(httptrace.WithClientTrace(req.Context(), trace)))
@@ -296,7 +316,7 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 	// access API by last good IP (if defined)
 	lastGoodIP := a.GetLastGoodAlternateIP(isIPv6)
 	if lastGoodIP != nil {
-		req, err := newRequest(getURL_IPHost(lastGoodIP, isIPv6, urlPath), method, contentType, newBody())
+		req, err := newRequest(getURL_IPHost(lastGoodIP, isIPv6, r.urlPath), r.method, r.contentType, newBody())
 		if err != nil {
 			return nil, err
 		}
@@ -315,7 +335,7 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 	var firstResp *http.Response
 	var firstErr error
 	if isCanUseDNS {
-		req, err := newRequest(getURL(_apiHost, urlPath), method, contentType, newBody())
+		req, err := newRequest(getURL(_apiHost, r.urlPath), r.method, r.contentType, newBody())
 		if err != nil {
 			return nil, err
 		}
@@ -341,13 +361,13 @@ func (a *API) doRequestAPIHost(ipTypeRequired types.RequiredIPProtocol, isCanUse
 			isLogNotificationPrinted = true
 
 			ipVerStr := ""
-			if ipTypeRequired == types.IPv6 {
+			if r.ipTypeRequired == types.IPv6 {
 				ipVerStr = "(IPv6)"
 			}
 			log.Info(fmt.Sprintf("Trying to use alternate API IPs %s...", ipVerStr))
 		}
 
-		req, err := newRequest(getURL_IPHost(ip, isIPv6, urlPath), method, contentType, newBody())
+		req, err := newRequest(getURL_IPHost(ip, isIPv6, r.urlPath), r.method, r.contentType, newBody())
 		if err != nil {
 			return nil, err
 		}
@@ -393,8 +413,8 @@ func toUserFacingAccessError(err error) error {
 	return fmt.Errorf("unable to access IVPN API server: %w", err)
 }
 
-func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, urlPath string, method string, contentType string, requestObject interface{}, timeoutMs int, timeoutDialMs int, noRetryAfterConnect bool) (responseData []byte, httpResp *http.Response, err error) {
-	resp, err := a.doRequest(ipTypeRequired, host, urlPath, method, contentType, requestObject, timeoutMs, timeoutDialMs, noRetryAfterConnect)
+func (a *API) requestRaw(r apiRequest) (responseData []byte, httpResp *http.Response, err error) {
+	resp, err := a.doRequest(r)
 	if err != nil {
 		return nil, nil, fmt.Errorf("API request failed: %w", err)
 	}
@@ -414,11 +434,11 @@ func (a *API) requestRaw(ipTypeRequired types.RequiredIPProtocol, host string, u
 }
 
 func (a *API) request(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}) error {
-	return a.requestEx(host, urlPath, method, contentType, requestObject, responseObject, 0, 0, false)
+	return a.requestEx(apiRequest{host: host, urlPath: urlPath, method: method, contentType: contentType, body: requestObject}, responseObject)
 }
 
-func (a *API) requestEx(host string, urlPath string, method string, contentType string, requestObject interface{}, responseObject interface{}, timeoutMs int, timeoutDialMs int, noRetryAfterConnect bool) error {
-	body, _, err := a.requestRaw(types.IPvAny, host, urlPath, method, contentType, requestObject, timeoutMs, timeoutDialMs, noRetryAfterConnect)
+func (a *API) requestEx(r apiRequest, responseObject interface{}) error {
+	body, _, err := a.requestRaw(r)
 	if err != nil {
 		return err
 	}

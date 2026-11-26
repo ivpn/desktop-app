@@ -295,7 +295,7 @@ func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.Req
 		}
 	}
 
-	responseData, _, err = a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0, 0, false)
+	responseData, _, err = a.requestRaw(apiRequest{ipTypeRequired: ipTypeRequired, host: alias.host, urlPath: alias.path})
 	return responseData, err
 }
 
@@ -322,7 +322,14 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, kemKeys types.Kem
 		Captcha:         captcha,
 		Confirmation2FA: confirmation2FA}
 
-	data, httpResp, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, _kemRequestTimeoutMs, 0, true)
+	data, httpResp, err := a.requestRaw(apiRequest{
+		urlPath:             _sessionNewPath,
+		method:              "POST",
+		contentType:         "application/json",
+		body:                request,
+		timeoutMs:           _kemRequestTimeoutMs, // big body (KEM keys): longer timeout for slow connections
+		noRetryAfterConnect: true,                 // do not resend the big body to other hosts once connected
+	})
 	if err != nil {
 		return nil, nil, nil, rawResponse, err
 	}
@@ -365,7 +372,7 @@ func (a *API) SessionStatus(session string) (
 
 	request := &types.SessionStatusRequest{Session: session}
 
-	data, _, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionStatusPath, "POST", "application/json", request, 0, 0, false)
+	data, _, err := a.requestRaw(apiRequest{urlPath: _sessionStatusPath, method: "POST", contentType: "application/json", body: request})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -410,7 +417,15 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 
 	resp := types.SessionsWireGuardResponse{}
 
-	if err := a.requestEx("", _wgKeySetPath, "POST", "application/json", request, &resp, _kemRequestTimeoutMs, 0, true); err != nil {
+	r := apiRequest{
+		urlPath:             _wgKeySetPath,
+		method:              "POST",
+		contentType:         "application/json",
+		body:                request,
+		timeoutMs:           _kemRequestTimeoutMs, // big body (KEM keys): longer timeout for slow connections
+		noRetryAfterConnect: true,                 // do not resend the big body to other hosts once connected
+	}
+	if err := a.requestEx(r, &resp); err != nil {
 		return resp, err
 	}
 
@@ -454,7 +469,7 @@ func (a *API) GeoLookup(timeoutMs int, ipTypeRequired protocolTypes.RequiredIPPr
 					gl.isRunning = false
 					close(gl.done)
 				}()
-				gl.response, _, gl.err = a.requestRaw(ipType, "", _geoLookupPath, "GET", "", nil, timeoutMs, 0, false)
+				gl.response, _, gl.err = a.requestRaw(apiRequest{ipTypeRequired: ipType, urlPath: _geoLookupPath, method: "GET", timeoutMs: timeoutMs})
 				if err := json.Unmarshal(gl.response, &gl.location); err != nil {
 					gl.err = fmt.Errorf("failed to deserialize API response: %w", err)
 				}
