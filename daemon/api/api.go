@@ -53,13 +53,14 @@ const (
 
 // _kemRequestTimeoutMs - per-attempt timeout (ms) for requests carrying KEM public keys ('session/new', 'session/wg/set').
 //
-// Such a request is ~350 KB (almost all of it is the Classic McEliece public key) and must be uploaded within the timeout.
-// Minimum uplink speed required: ~340 kbit/s with the default 10 s timeout, ~110 kbit/s with 30 s.
-// Trade-off: an API host that accepts the connection but does not respond is abandoned after 30 s instead of 10 s.
+// Such a request is ~350 KB (almost all of it is the Classic McEliece public key), which is too much for a slow
+// connection to upload within the default timeout.
+//
+// The clients (UI, CLI) wait for the daemon response for 3 minutes. In the worst case, all API hosts except the last one
+// fail to connect, so the following must hold:	_defaultDialTimeout * <number of API hosts (IPv4 + IPv6)> + _kemRequestTimeoutMs < 3 minutes
 //
 // TODO: use the default timeout again once the Classic McEliece key is removed or replaced by a smaller one
-// (a Kyber-only request is ~2.5 KB, so the uplink speed is no longer a constraint).
-const _kemRequestTimeoutMs = 30 * 1000
+const _kemRequestTimeoutMs = 90 * 1000
 
 // Alias - alias description of API request (can be requested by UI client)
 type Alias struct {
@@ -294,7 +295,7 @@ func (a *API) DoRequestByAlias(apiAlias string, ipTypeRequired protocolTypes.Req
 		}
 	}
 
-	responseData, _, err = a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0, 0)
+	responseData, _, err = a.requestRaw(ipTypeRequired, alias.host, alias.path, "", "", nil, 0, 0, false)
 	return responseData, err
 }
 
@@ -321,7 +322,7 @@ func (a *API) SessionNew(accountID string, wgPublicKey string, kemKeys types.Kem
 		Captcha:         captcha,
 		Confirmation2FA: confirmation2FA}
 
-	data, httpResp, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, _kemRequestTimeoutMs, 0)
+	data, httpResp, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionNewPath, "POST", "application/json", request, _kemRequestTimeoutMs, 0, true)
 	if err != nil {
 		return nil, nil, nil, rawResponse, err
 	}
@@ -364,7 +365,7 @@ func (a *API) SessionStatus(session string) (
 
 	request := &types.SessionStatusRequest{Session: session}
 
-	data, _, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionStatusPath, "POST", "application/json", request, 0, 0)
+	data, _, err := a.requestRaw(protocolTypes.IPvAny, "", _sessionStatusPath, "POST", "application/json", request, 0, 0, false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -409,7 +410,7 @@ func (a *API) WireGuardKeySet(session string, newPublicWgKey string, activePubli
 
 	resp := types.SessionsWireGuardResponse{}
 
-	if err := a.requestEx("", _wgKeySetPath, "POST", "application/json", request, &resp, _kemRequestTimeoutMs, 0); err != nil {
+	if err := a.requestEx("", _wgKeySetPath, "POST", "application/json", request, &resp, _kemRequestTimeoutMs, 0, true); err != nil {
 		return resp, err
 	}
 
@@ -453,7 +454,7 @@ func (a *API) GeoLookup(timeoutMs int, ipTypeRequired protocolTypes.RequiredIPPr
 					gl.isRunning = false
 					close(gl.done)
 				}()
-				gl.response, _, gl.err = a.requestRaw(ipType, "", _geoLookupPath, "GET", "", nil, timeoutMs, 0)
+				gl.response, _, gl.err = a.requestRaw(ipType, "", _geoLookupPath, "GET", "", nil, timeoutMs, 0, false)
 				if err := json.Unmarshal(gl.response, &gl.location); err != nil {
 					gl.err = fmt.Errorf("failed to deserialize API response: %w", err)
 				}
